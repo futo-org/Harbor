@@ -18,8 +18,7 @@ use dm_server::{
     db::DatabaseManager,
     handlers::{auth, dm, keys, AppState},
     websocket::{
-        connection::{handle_axum_websocket_connection, handle_websocket_connection},
-        manager::run_websocket_manager,
+        connection::handle_axum_websocket_connection, manager::run_websocket_manager,
         WebSocketManager,
     },
 };
@@ -47,17 +46,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Arc::new(DatabaseManager::new(pool));
     let ws_manager = WebSocketManager::new();
 
-    let app_state = AppState { db: db.clone() };
+    let app_state = AppState {
+        db: db.clone(),
+        ws_manager: ws_manager.clone(),
+    };
 
     // Create routes
     let routes = create_routes(app_state.clone());
-
-    // Start WebSocket server
-    let ws_manager_clone = ws_manager.clone();
-    let db_clone = db.clone();
-    tokio::spawn(async move {
-        start_websocket_server(ws_manager_clone, db_clone).await;
-    });
 
     // Start WebSocket manager background task
     let ws_manager_clone = ws_manager.clone();
@@ -185,38 +180,6 @@ async fn websocket_handler(
     axum::extract::State(state): axum::extract::State<AppState>,
 ) -> axum::response::Response {
     ws.on_upgrade(|socket| async move {
-        // For now, we'll use a simple WebSocket manager instance
-        // In production, you'd want to use the shared WebSocket manager
-        let ws_manager = WebSocketManager::new();
-        handle_axum_websocket_connection(socket, ws_manager, state.db).await;
+        handle_axum_websocket_connection(socket, state.ws_manager, state.db).await;
     })
-}
-
-async fn start_websocket_server(ws_manager: WebSocketManager, db: Arc<DatabaseManager>) {
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", CONFIG.websocket_port))
-        .await
-        .expect("Failed to bind WebSocket server");
-
-    log::info!(
-        "WebSocket server listening on port {}",
-        CONFIG.websocket_port
-    );
-
-    while let Ok((stream, addr)) = listener.accept().await {
-        log::debug!("New WebSocket connection from {}", addr);
-
-        let ws_manager = ws_manager.clone();
-        let db = db.clone();
-
-        tokio::spawn(async move {
-            match tokio_tungstenite::accept_async(stream).await {
-                Ok(websocket) => {
-                    handle_websocket_connection(websocket, ws_manager, db).await;
-                }
-                Err(e) => {
-                    log::error!("WebSocket connection failed: {}", e);
-                }
-            }
-        });
-    }
 }

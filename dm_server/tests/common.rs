@@ -19,11 +19,11 @@ use dm_server::{
     crypto::DMCrypto,
     db::DatabaseManager,
     handlers::{
-        auth,
-        auth::{AuthRequest, ChallengeBody, ChallengeResponse},
+        auth::{self, AuthRequest, ChallengeBody, ChallengeResponse},
         dm, keys, AppState,
     },
     models::PolycentricIdentity,
+    websocket::WebSocketManager,
 };
 
 /// Test utilities and common setup
@@ -71,8 +71,11 @@ impl TestSetup {
         });
 
         let db = Arc::new(DatabaseManager::new(pool.clone()));
-
-        let app_state = AppState { db: db.clone() };
+        let ws_manager = WebSocketManager::new();
+        let app_state = AppState {
+            db: db.clone(),
+            ws_manager: ws_manager.clone(),
+        };
 
         Self {
             db,

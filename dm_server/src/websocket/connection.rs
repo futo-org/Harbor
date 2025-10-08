@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use serde_json;
@@ -18,177 +19,6 @@ use crate::models::{PolycentricIdentity, WSAuthChallenge, WSAuthResponse, WSMess
 const PING_INTERVAL: Duration = Duration::from_secs(30);
 const _PONG_TIMEOUT: Duration = Duration::from_secs(10);
 const AUTH_TIMEOUT: Duration = Duration::from_secs(30);
-
-/// Handle a new WebSocket connection
-pub async fn handle_websocket_connection(
-    websocket: WebSocket,
-    ws_manager: WebSocketManager,
-    db: Arc<DatabaseManager>,
-) {
-    let connection_id = Uuid::new_v4();
-    log::info!("New WebSocket connection: {}", connection_id);
-
-    let (mut ws_sender, mut ws_receiver) = websocket.split();
-    let (tx, mut rx) = mpsc::unbounded_channel();
-
-    // Authentication challenge
-    let challenge = DMCrypto::generate_challenge();
-    let created_on = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
-
-    let auth_challenge = WSAuthChallenge {
-        challenge: challenge.to_vec(),
-        created_on,
-    };
-
-    let _challenge_msg = WSMessage::ConnectionAck {
-        connection_id: connection_id.to_string(),
-    };
-
-    if let Ok(challenge_json) = serde_json::to_string(&auth_challenge) {
-        if let Err(e) = ws_sender.send(Message::Text(challenge_json)).await {
-            log::error!("Failed to send auth challenge: {}", e);
-            return;
-        }
-    } else {
-        log::error!("Failed to serialize auth challenge");
-        return;
-    }
-
-    // Wait for authentication response
-    let identity = match timeout(
-        AUTH_TIMEOUT,
-        authenticate_connection(&mut ws_receiver, &challenge),
-    )
-    .await
-    {
-        Ok(Ok(identity)) => identity,
-        Ok(Err(e)) => {
-            log::warn!(
-                "Authentication failed for connection {}: {}",
-                connection_id,
-                e
-            );
-            let _ = ws_sender
-                .send(Message::Text(
-                    serde_json::to_string(&WSMessage::Error {
-                        message: "Authentication failed".to_string(),
-                    })
-                    .unwrap_or_default(),
-                ))
-                .await;
-            return;
-        }
-        Err(_) => {
-            log::warn!("Authentication timeout for connection {}", connection_id);
-            return;
-        }
-    };
-
-    log::info!(
-        "WebSocket connection {} authenticated as {:?}",
-        connection_id,
-        identity
-    );
-
-    // Register connection in database
-    if let Err(e) = db.register_connection(connection_id, &identity, None).await {
-        log::error!("Failed to register connection in database: {}", e);
-        return;
-    }
-
-    // Register with WebSocket manager
-    ws_manager
-        .register_connection(connection_id, identity.clone(), tx.clone())
-        .await;
-
-    // Send connection acknowledgment
-    let ack_msg = WSMessage::ConnectionAck {
-        connection_id: connection_id.to_string(),
-    };
-    if let Ok(ack_json) = serde_json::to_string(&ack_msg) {
-        let _ = ws_sender.send(Message::Text(ack_json)).await;
-    }
-
-    // Deliver any pending messages
-    if let Err(e) = deliver_pending_messages(&identity, &db, &ws_manager).await {
-        log::error!("Failed to deliver pending messages: {}", e);
-    }
-
-    // Spawn tasks for handling the connection
-    let ws_manager_clone = ws_manager.clone();
-    let db_clone = db.clone();
-    let identity_clone = identity.clone();
-
-    // Task to handle outgoing messages
-    let outgoing_task = tokio::spawn(async move {
-        while let Some(message) = rx.recv().await {
-            if let Err(e) = ws_sender.send(message).await {
-                log::error!("WebSocket send error: {}", e);
-                break;
-            }
-        }
-    });
-
-    // Task to handle incoming messages and ping/pong
-    let incoming_task = tokio::spawn(async move {
-        let mut ping_interval = interval(PING_INTERVAL);
-
-        loop {
-            tokio::select! {
-                msg = ws_receiver.next() => {
-                    match msg {
-                        Some(Ok(Message::Text(text))) => {
-                            if let Err(e) = handle_websocket_message(&text, &identity_clone, &ws_manager_clone).await {
-                                log::error!("Error handling WebSocket message: {}", e);
-                            }
-                        }
-                        Some(Ok(Message::Pong(_))) => {
-                            // Update ping timestamp in database
-                            if let Err(e) = db_clone.update_connection_ping(connection_id).await {
-                                log::error!("Failed to update ping timestamp: {}", e);
-                            }
-                        }
-                        Some(Ok(Message::Close(_))) => {
-                            log::info!("WebSocket connection {} closed by client", connection_id);
-                            break;
-                        }
-                        Some(Err(e)) => {
-                            log::error!("WebSocket error: {}", e);
-                            break;
-                        }
-                        None => {
-                            log::info!("WebSocket connection {} terminated", connection_id);
-                            break;
-                        }
-                        _ => {}
-                    }
-                }
-                _ = ping_interval.tick() => {
-                    // Send ping
-                    let ping_msg = WSMessage::Ping;
-                    ws_manager_clone.send_to_connection(connection_id, ping_msg).await;
-                }
-            }
-        }
-    });
-
-    // Wait for either task to complete
-    tokio::select! {
-        _ = outgoing_task => {},
-        _ = incoming_task => {},
-    }
-
-    // Cleanup
-    ws_manager.unregister_connection(connection_id).await;
-    if let Err(e) = db.remove_connection(connection_id).await {
-        log::error!("Failed to remove connection from database: {}", e);
-    }
-
-    log::info!("WebSocket connection {} cleaned up", connection_id);
-}
 
 /// Authenticate a WebSocket connection
 async fn authenticate_connection(
@@ -217,51 +47,6 @@ async fn authenticate_connection(
     } else {
         Err(anyhow::anyhow!("No auth response received"))
     }
-}
-
-/// Handle incoming WebSocket messages
-async fn handle_websocket_message(
-    text: &str,
-    sender_identity: &PolycentricIdentity,
-    _ws_manager: &WebSocketManager,
-) -> anyhow::Result<()> {
-    let message: WSMessage =
-        serde_json::from_str(text).map_err(|e| anyhow::anyhow!("Invalid message format: {}", e))?;
-
-    match message {
-        WSMessage::TypingIndicator {
-            sender: _,
-            is_typing,
-        } => {
-            // For typing indicators, we would typically need to know the recipient
-            // This might require a separate message format or including recipient in the message
-            log::debug!(
-                "Received typing indicator from {:?}: {}",
-                sender_identity,
-                is_typing
-            );
-        }
-        WSMessage::ReadReceipt {
-            message_id,
-            reader: _,
-            read_timestamp: _,
-        } => {
-            // Handle read receipt
-            log::debug!(
-                "Received read receipt from {:?} for message {}",
-                sender_identity,
-                message_id
-            );
-        }
-        WSMessage::Pong => {
-            log::debug!("Received pong from {:?}", sender_identity);
-        }
-        _ => {
-            log::warn!("Unexpected message type from {:?}", sender_identity);
-        }
-    }
-
-    Ok(())
 }
 
 /// Deliver pending messages to a newly connected user
@@ -339,6 +124,8 @@ pub async fn handle_axum_websocket_connection(
     let mut authenticated = false;
     let mut _user_identity: Option<PolycentricIdentity> = None;
 
+    let ping = serde_json::to_string(&WSMessage::Ping).unwrap();
+
     loop {
         tokio::select! {
             // Handle incoming messages
@@ -346,47 +133,90 @@ pub async fn handle_axum_websocket_connection(
                 match msg {
                     Some(Ok(axum::extract::ws::Message::Text(text))) => {
                         if !authenticated {
-                            // Try to authenticate
-                            if let Ok(auth_response) = serde_json::from_str::<WSAuthResponse>(&text) {
-                                // Verify the challenge matches
-                                if auth_response.challenge == challenge {
-                                    // Verify the signature
-                                    if let Ok(verifying_key) = auth_response.identity.verifying_key() {
-                                        if DMCrypto::verify_signature(&verifying_key, &challenge, &auth_response.signature).is_ok() {
-                                            authenticated = true;
-                                            _user_identity = Some(auth_response.identity.clone());
-                                            log::info!("WebSocket connection {} authenticated for user: {:?}", connection_id, auth_response.identity);
-
-                                            // Register user with manager
-                                            ws_manager.register_connection(connection_id, auth_response.identity, tx.clone()).await;
-                                        } else {
-                                            log::warn!("Signature verification failed for connection {}", connection_id);
-                                            break;
-                                        }
-                                    } else {
-                                        log::warn!("Invalid identity key for connection {}", connection_id);
+                            match serde_json::from_str::<WSAuthResponse>(&text) {
+                                Ok(auth_response) => {
+                                    if auth_response.challenge != challenge {
+                                        log::warn!("Challenge mismatch for connection {}", connection_id);
                                         break;
                                     }
-                                } else {
-                                    log::warn!("Challenge mismatch for connection {}", connection_id);
+
+                                    let Ok(verifying_key) = auth_response.identity.verifying_key() else {
+                                        log::warn!("Invalid identity key for connection {}", connection_id);
+                                        break;
+                                    };
+
+                                    if DMCrypto::verify_signature(&verifying_key, &challenge, &auth_response.signature).is_err() {
+                                        log::warn!("Signature verification failed for connection {}", connection_id);
+                                        break;
+                                    }
+
+                                    authenticated = true;
+                                    _user_identity = Some(auth_response.identity.clone());
+                                    log::info!("WebSocket connection {} authenticated for user: {:?}", connection_id, auth_response.identity);
+
+                                    // Register user with manager
+                                    ws_manager.register_connection(connection_id, auth_response.identity, tx.clone()).await;
+
+                                }
+                                Err(err) => {
+                                    log::warn!("Invalid auth response format from connection {}: {:?}", connection_id, err);
                                     break;
                                 }
-                            } else {
-                                log::warn!("Invalid auth response format from connection {}", connection_id);
-                                break;
                             }
-                        } else {
-                            // Handle regular messages after authentication
-                            if let Ok(ws_msg) = serde_json::from_str::<WSMessage>(&text) {
-                                match ws_msg {
-                                    WSMessage::Pong => {
-                                        // Handle pong
-                                    }
-                                    _ => {
-                                        log::debug!("Received message from connection {}: {:?}", connection_id, ws_msg);
-                                    }
+                        }
+                        let ws_msg = match serde_json::from_str::<WSMessage>(&text) {
+                            Ok(ws_msg) => {
+                                log::debug!("Received message from connection {}: {:?}", connection_id, ws_msg);
+                                ws_msg
+                            }
+                            Err(err) => {
+                                log::error!("Failed to deserialize message: {:?}", err);
+                                continue
+                            }
+                        };
+
+                        match ws_msg {
+                            WSMessage::TypingIndicator {
+                                sender: sender_identity,
+                                is_typing,
+                            } => {
+                                // For typing indicators, we would typically need to know the recipient
+                                // This might require a separate message format or including recipient in the message
+                                log::debug!(
+                                    "Received typing indicator from {:?}: {}",
+                                    sender_identity,
+                                    is_typing
+                                );
+                            }
+                            WSMessage::ReadReceipt {
+                                message_id,
+                                reader: reader_identity,
+                                read_timestamp: _,
+                            } => {
+                                // Handle read receipt
+                                log::debug!(
+                                    "Received read receipt from {:?} for message {}",
+                                    reader_identity,
+                                    message_id
+                                );
+                            }
+                            WSMessage::Pong => {
+                                if let Err(e) = ws_sender.send(axum::extract::ws::Message::Text(ping.clone().into())).await {
+                                    log::error!("Failed to send message to connection {}: {}", connection_id, e);
+                                    break;
                                 }
+                                continue
                             }
+                            _=> {
+                                log::debug!("Received message other than Typing, Read and Pong");
+                                continue
+                            }
+
+                        }
+
+                        if let Err(e) = ws_sender.send(axum::extract::ws::Message::Text(text.clone())).await {
+                            log::error!("Failed to send message to connection {}: {}", connection_id, e);
+                            break;
                         }
                     }
                     Some(Ok(axum::extract::ws::Message::Close(_))) => {

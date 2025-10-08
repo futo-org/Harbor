@@ -47,3 +47,4 @@ state
 
 # DM Server specific
 dm_server/.env
+dm_server/ignore
