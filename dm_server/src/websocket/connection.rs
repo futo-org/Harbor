@@ -1,11 +1,10 @@
-use bytes::Bytes;
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use serde_json;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
-use tokio::time::{interval, timeout};
+use tokio::time::interval;
 use tokio_tungstenite::tungstenite::Message;
 use tracing as log;
 use uuid::Uuid;

@@ -4,7 +4,6 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
-use tokio::net::TcpListener;
 use tower_http::{
     classify::StatusInRangeAsFailures,
     cors::CorsLayer,
