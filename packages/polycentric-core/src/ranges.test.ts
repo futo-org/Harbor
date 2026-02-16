@@ -127,7 +127,7 @@ describe('takeRangeMaxItems', () => {
         [makeRange(5, 10), makeRange(11, 15), makeRange(20, 25)],
         Long.fromNumber(8, true),
       ),
-    ).toStrictEqual([makeRange(5, 10), makeRange(11, 13)]);
+    ).toStrictEqual([makeRange(5, 10), makeRange(11, 12)]);
   });
 
   test('more than total uses all', () => {

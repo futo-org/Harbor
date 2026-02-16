@@ -1356,9 +1356,11 @@ pub mod tests {
                 vec![],
             );
 
-        let result =
-            crate::ingest::ingest_event_postgres(&mut transaction, &signed_event)
-                .await;
+        let result = crate::ingest::ingest_event_postgres(
+            &mut transaction,
+            &signed_event,
+        )
+        .await;
 
         assert!(result.is_err());
 
