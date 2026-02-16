@@ -1,6 +1,6 @@
+import * as Models from './models';
 import * as ProcessHandle from './process-handle';
 import * as Util from './util';
-import * as Models from './models';
 
 async function waitForEvent(
   processHandle: ProcessHandle.ProcessHandle,

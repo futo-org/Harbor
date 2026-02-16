@@ -25,7 +25,7 @@ pub(crate) async fn handler(
     let end_base64 = crate::warp_try_err_500!(url
         .path_segments()
         .expect("expected end")
-        .last()
+        .next_back()
         .ok_or(Error));
 
     let bytes2 = crate::warp_try_err_500!(base64::decode_config(

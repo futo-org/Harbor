@@ -1,7 +1,7 @@
 ---
-
-variables: 
-  DOCKERFILE_MD5: c8420899f90a361bc5189c4c738eb8db
+variables:
+  BUILDER_IMAGE: "${CI_REGISTRY_IMAGE}:builder"
+  BUILDER_IMAGE_TAG: "${CI_REGISTRY_IMAGE}:builder-${CI_COMMIT_TAG}"
   POSTGRES_IMAGE: "postgres:14"
   SEARCH_IMAGE: "opensearchproject/opensearch:2.1.0"
   FF_USE_FASTZIP: "true"
@@ -11,23 +11,20 @@ variables:
   GIT_DEPTH: 1
   SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   RUSTC_WRAPPER: /opt/sccache/sccache
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
-image: "gitlab.futo.org:5050/polycentric/polycentric:dev-container-${DOCKERFILE_MD5}"
+image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
 default:
   tags:
-    - linux  # s3-cache is faster if available otherwise use linux
+    - dind
 
-.node-cache-config: &node-cache-config
+.npm-cache-config: &npm-cache-config
   key:
     files:
-      - package-lock.json  
+      - package-lock.json
   paths:
-    - ${CI_PROJECT_DIR}/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-react/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-core/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-desktop/node_modules/
-    - ${CI_PROJECT_DIR}/packages/harbor-web/node_modules/
+    - $npm_config_cache
   policy: pull
 
 .rust-cache-config: &rust-cache-config
@@ -40,20 +37,11 @@ default:
     - ${CI_PROJECT_DIR}/.cargo/
   policy: pull-push
 
-.forum-server-cache-config: &forum-server-cache-config
-  key:
-    files:
-      - forum_server/Cargo.toml
-  paths:
-    - ${CI_PROJECT_DIR}/forum_server/.sqlx/
-  policy: pull-push
-
 .rust-cache-build-config: &rust-cache-build-config
   key: ${CI_COMMIT_REF_SLUG}
   paths:
     - ${CI_PROJECT_DIR}/server/target
     - ${CI_PROJECT_DIR}/polycentric-protocol/target
-    - ${CI_PROJECT_DIR}/forum_server/target
   policy: pull-push
 
 .rust-cache-config-server: &rust-cache-config-server
@@ -95,78 +83,93 @@ default:
   policy: pull-push
 
 stages:
+  - builder
   - check
   - format
   - build
   - lint
-  # - test
+  - test
   - deploy
+
+builder:
+  stage: builder
+  needs: []
+  services:
+    - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
+      command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
+      alias: docker
+  script:
+    - |
+      timeout 30s /bin/sh -c 'until docker info > /dev/null; do
+        echo "Waiting for docker to be ready..."
+        sleep 1
+      done'
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker buildx build --push -t "$BUILDER_IMAGE" -t "$BUILDER_IMAGE_TAG" .
+  only:
+    - tags
 
 check:
   stage: check
+  image: "$BUILDER_IMAGE"
   script: ./gitlab-ci/check-images.sh
 
-format-server: 
+format-server:
   stage: format
-  script: 
+  image: "$BUILDER_IMAGE"
+  script:
     - ./version.sh
     - cd server
     - cargo-fmt --check
 
-format-forum-server: 
+format-protocol:
   stage: format
-  script: 
-    - ./version.sh
-    - cd forum_server
-    - cargo-fmt --check
-
-format-protocol: 
-  stage: format
-  script: 
+  image: "$BUILDER_IMAGE"
+  script:
     - ./version.sh
     - cd polycentric-protocol
     - cargo-fmt --check
 
 format-core:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-core/src
 
 format-react:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-react/src
 
 format-web:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-web/src
 
 format-desktop:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-desktop/src
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-desktop/electron
 
-format-harbor:
-  stage: format
-  script:
-    - ./version.sh
-    - ./gitlab-ci/prettier-diff.sh ./packages/harbor-web/src
-
 format-verifiers:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/verifiers/src
 
-build-protocol: 
+build-protocol:
   stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config
     - <<: *rust-cache-build-protocol
   script:
@@ -180,14 +183,15 @@ build-protocol:
     - cargo test
   needs: ["check"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./polycentric-protocol/target/release/polycentric-protocol
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./polycentric-protocol/target/release/polycentric-protocol
 
-build-server: 
+build-server:
   stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
   script:
@@ -200,57 +204,24 @@ build-server:
     - cargo build --locked
     - echo "Building test binary"
     - cargo test --no-run --frozen --locked &> out.txt
-    - TEST_BIN=`cat out.txt | grep target/debug/deps/server | grep -oP '(?<=\()[^\)]+'` 
+    - TEST_BIN=`cat out.txt | grep target/debug/deps/server | grep -oP '(?<=\()[^\)]+'`
     - echo "Test binary built at $TEST_BIN"
     - mv ./$TEST_BIN ../build-artifacts/server-test
     - mv ./target/debug/server ../build-artifacts/server
   needs: ["check"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
         - ./build-artifacts
 
-build-forum-server:
+build-server-release:
   stage: build
-  services:
-    - name: $POSTGRES_IMAGE
-      alias: postgres
-  variables:
-    DATABASE_URL: "postgres://postgres:testing@postgres/forum_db"
-    POSTGRES_PASSWORD: "testing"
-    PGPASSWORD: "testing"
-  cache: 
-   - <<: *rust-cache-config
-   - <<: *forum-server-cache-config
-   - <<: *rust-cache-build-config
-     key: ${CI_COMMIT_REF_SLUG}-rs-build
-  script:
-    - ./version.sh
-    - cd forum_server
-    - echo "Setting up database for SQLx compilation"
-    - apt-get update && apt-get install -y postgresql-client
-    - createdb -h postgres -U postgres forum_db || true
-    - psql -h postgres -U postgres -d forum_db -f migrations/20250515000001_consolidated_schema.sql
-    - psql -h postgres -U postgres -d forum_db -f migrations/20250116000000_add_banned_users.sql
-    - echo "Building forum server binary"
-    - cargo build --locked
-    - echo "Moving build artifacts"
-    - mkdir -p ../build-artifacts
-    - mv ./target/debug/forum_server ../build-artifacts/forum_server
-  needs: ["check"]
-  artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./build-artifacts
-
-build-server-release: 
-  stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
-  script: 
+  script:
     - ./version.sh
     - cd server
     - echo "Starting sccache server"
@@ -258,142 +229,122 @@ build-server-release:
     - cargo build --release
   needs: ["build-server"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./server/target/release/server
-        - ./server/target/release/health_probe
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./server/target/release/server
+      - ./server/target/release/health_probe
 
 build-core:
   stage: build
+  image: "$BUILDER_IMAGE"
+  needs: ["check"]
   cache:
-    - <<: *node-cache-config
+    - <<: *npm-cache-config
       policy: pull-push
   script:
+    - npm ci
     - ./version.sh
-    - npm install
     - make proto
     - cd packages/polycentric-core
     - npm run build
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./packages/polycentric-core/dist/
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - node_modules/
+      - packages/*/node_modules/
+      - ./packages/polycentric-core/dist/
 
-build-react: 
+build-react:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/polycentric-react && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/polycentric-react && npm run build
   needs: ["build-core"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./packages/polycentric-react/dist/
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./packages/polycentric-react/dist/
 
-build-leveldb: 
+build-leveldb:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/polycentric-leveldb && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/polycentric-leveldb && npm run build
   needs: ["build-core"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./packages/polycentric-leveldb/dist/
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./packages/polycentric-leveldb/dist/
 
-build-desktop: 
+build-desktop:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/polycentric-desktop && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/polycentric-desktop && npm run build
   needs: ["build-core", "build-react", "build-leveldb"]
 
-build-web: 
+build-web:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/polycentric-web && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/polycentric-web && npm run build
   needs: ["build-react", "build-core"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./packages/polycentric-web/dist/
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./packages/polycentric-web/dist/
 
-build-capacitor: 
+build-capacitor:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/polycentric-capacitor && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/polycentric-capacitor && npm run build
   needs: ["build-core", "build-react"]
-
-build-harbor: 
-  stage: build
-  cache: *node-cache-config
-  script: cd packages/harbor-web && npm run build
-  needs: ["build-core"]
 
 build-verifiers:
   stage: build
-  cache: *node-cache-config
-  script: cd packages/verifiers && npm run build
+  image: "$BUILDER_IMAGE"
+  script:
+    - cd packages/verifiers && npm run build
   needs: ["build-core", "build-leveldb"]
   artifacts:
-      name: "artifacts"
-      expire_in: 60 mins
-      paths:
-        - ./packages/verifiers/dist/
+    name: "artifacts"
+    expire_in: 60 mins
+    paths:
+      - ./packages/verifiers/dist/
 
-lint-protocol: 
+lint-protocol:
   stage: lint
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config
     - <<: *rust-cache-build-protocol
-  script: 
+  script:
     - ./version.sh
     - cd polycentric-protocol
     - cargo-clippy --no-deps -- -D warnings
   needs: ["build-protocol"]
 
-lint-server: 
+lint-server:
   stage: lint
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
-  script: 
+  script:
     - ./version.sh
     - cd server
     - cargo-clippy --no-deps --locked -- -D warnings
   needs: ["build-server"]
 
-lint-forum-server: 
-  stage: lint
-  services:
-    - name: $POSTGRES_IMAGE
-      alias: postgres
-  variables:
-    DATABASE_URL: "postgres://postgres:testing@postgres/forum_db"
-    POSTGRES_PASSWORD: "testing"
-    PGPASSWORD: "testing"
-  cache: 
-    - <<: *rust-cache-config
-    - <<: *forum-server-cache-config
-    - <<: *rust-cache-build-config
-      key: ${CI_COMMIT_REF_SLUG}-rs-lint
-  script: 
-    - ./version.sh
-    - cd forum_server
-    - echo "Setting up database for SQLx compilation"
-    - apt-get update && apt-get install -y postgresql-client
-    - createdb -h postgres -U postgres forum_db || true
-    - psql -h postgres -U postgres -d forum_db -f migrations/20250515000001_consolidated_schema.sql
-    - psql -h postgres -U postgres -d forum_db -f migrations/20250116000000_add_banned_users.sql
-    - echo "Running clippy linting"
-    - cargo-clippy --no-deps --locked -- -D warnings
-  needs: ["build-forum-server"]
-
 lint-core:
   stage: lint
-  cache: *node-cache-config
+  image: "$BUILDER_IMAGE"
   script:
     - make proto
     - ./version.sh
@@ -401,90 +352,81 @@ lint-core:
     - npx eslint ./src --max-warnings=0
   needs: ["build-core"]
 
-lint-harbor:
-  stage: lint
-  cache: *node-cache-config
-  script:
-    - ./version.sh
-    - cd packages/harbor-web
-    - npx eslint ./src --max-warnings=0
-  needs: ["build-harbor"]
-
 lint-react:
   stage: lint
-  cache: *node-cache-config
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - cd packages/polycentric-react
     - npx eslint ./src --max-warnings=0
-  needs: ["build-react"]
+  needs: ["build-core", "build-react"]
 
 lint-web:
   stage: lint
-  cache: *node-cache-config
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - cd packages/polycentric-web
     - npx eslint ./src --max-warnings=0
-  needs: ["build-web"]
+  needs: ["build-core", "build-web"]
 
-# test: 
-#   stage: test
-#   services: 
-#     - name: $POSTGRES_IMAGE
-#       alias: postgres
-#     - name: $SEARCH_IMAGE
-#       alias: opensearch-node1
-#       command: ["bash", "-c", "env 'discovery.type=single-node' 'cluster.name=opensearch-cluster' 'node.name=opensearch-node1' 'bootstrap.memory_lock=true' 'DISABLE_INSTALL_DEMO_CONFIG=true' 'DISABLE_SECURITY_PLUGIN=true' 'OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m' ./opensearch-docker-entrypoint.sh"]
-#     - name: statsd/statsd:v0.10.1
-#       alias: telegraf
-#   variables: 
-#       POSTGRES_PASSWORD: "testing"
-#       DATABASE_URL: "postgres://postgres:testing@postgres"
-#       ADMIN_TOKEN: "123"
-#       RUSTC_BOOTSTRAP: "1"
-#       CHALLENGE_KEY: "456"
-#   cache:
-#     - <<: *node-cache-config
-#       policy: pull
-#   script:
-#     - ./version.sh
-#     - make proto
-#     - RUSTC_BOOTSTRAP=1 ./build-artifacts/server-test -Z unstable-options --format junit > junit-server.xml
-#     - ./build-artifacts/server &
-#     - cd ./packages/polycentric-core && npm run test:ci
-#   needs: ["check", "build-server", "build-core"]
-#   dependencies: 
-#     - build-server
-#     - build-core
-#   artifacts:
-#     when: always
-#     paths:
-#       - packages/polycentric-core/junit.xml
-#       - junit-server.xml
-#     reports:
-#       junit: 
-#         - packages/polycentric-core/junit.xml
-#         - junit-server.xml
+test:
+  stage: test
+  image: "$BUILDER_IMAGE"
+  services:
+    - name: $POSTGRES_IMAGE
+      alias: postgres
+    - name: $SEARCH_IMAGE
+      alias: opensearch-node1
+      command: ["bash", "-c", "env 'discovery.type=single-node' 'cluster.name=opensearch-cluster' 'node.name=opensearch-node1' 'bootstrap.memory_lock=true' 'DISABLE_INSTALL_DEMO_CONFIG=true' 'DISABLE_SECURITY_PLUGIN=true' 'OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m' ./opensearch-docker-entrypoint.sh"]
+    - name: statsd/statsd:v0.10.1
+      alias: telegraf
+  variables:
+    POSTGRES_PASSWORD: "testing"
+    DATABASE_URL: "postgres://postgres:testing@postgres"
+    ADMIN_TOKEN: "123"
+    RUSTC_BOOTSTRAP: "1"
+    CHALLENGE_KEY: "456"
+  script:
+    - ./version.sh
+    - make proto
+    - RUSTC_BOOTSTRAP=1 ./build-artifacts/server-test -Z unstable-options --format junit > junit-server.xml
+    - ./build-artifacts/server &
+    - cd ./packages/polycentric-core && npm run test:ci
+  needs: ["check", "build-server", "build-core"]
+  dependencies:
+    - build-server
+    - build-core
+  artifacts:
+    when: always
+    paths:
+      - packages/polycentric-core/junit.xml
+      - junit-server.xml
+    reports:
+      junit:
+        - packages/polycentric-core/junit.xml
+        - junit-server.xml
 
 # LEGACY
 deploy-polycentric-web-staging:
   stage: deploy
+  image: "$BUILDER_IMAGE"
   script: make deploy-polycentric-web-staging
-  needs: ["check", "build-web"] #test is disabled
+  needs: ["check", "build-web", "test"]
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
 
 deploy-polycentric-web-production:
   stage: deploy
+  image: "$BUILDER_IMAGE"
   script: make deploy-polycentric-web-production
-  needs: ["check", "build-web"] #test is disabled
+  needs: ["check", "build-web", "test"]
   rules:
     - if: $CI_COMMIT_BRANCH == "production"
 
 push-server-image-production:
   stage: deploy
-  needs: ["check", "build-server-release"] #test is disabled
+  needs: ["check", "build-server-release", "test"]
   image:
     name: gcr.io/kaniko-project/executor:v1.14.0-debug
     entrypoint: [""]
@@ -498,10 +440,9 @@ push-server-image-production:
 
 # LEGACY
 
-
 push-server-image-tag:
   stage: deploy
-  needs: ["check", "build-server-release"] #test is disabled
+  needs: ["check", "build-server-release", "test"]
   image:
     name: gcr.io/kaniko-project/executor:v1.14.0-debug
     entrypoint: [""]
@@ -628,36 +569,3 @@ push-verifiers-image-staging:
       --destination "${CI_REGISTRY_IMAGE}/verifiers:stg"
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
-
-push-forum-server-image-master:
-  stage: deploy
-  needs: ["check", "build-forum-server"]
-  image:
-    name: gcr.io/kaniko-project/executor:v1.14.0-debug
-    entrypoint: [""]
-  script:
-    - /kaniko/executor
-      --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/forum.dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/forum:master"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master"
-
-push-forum-server-image-staging:
-  stage: deploy
-  needs: ["check", "build-forum-server"]
-  image:
-    name: gcr.io/kaniko-project/executor:v1.14.0-debug
-    entrypoint: [""]
-  script:
-    - /kaniko/executor
-      --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/forum.dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/forum:stg"
-  rules:
-    - if: $CI_COMMIT_BRANCH == "staging"
-
-    # - ./version.sh
-    # - echo "{\"auths\":{\"$DO_OCI_REGISTRY\":{\"username\":\"doadmin\",\"password\":\"$CI_DO_OCI_TOKEN\"}}}" > /kaniko/.docker/config.json
-    # - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/server.dockerfile" --destination $DO_OCI_REGISTRY/$CI_PROJECT_DIR:$VERSION
-

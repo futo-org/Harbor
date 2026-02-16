@@ -1,14 +1,14 @@
 import 'long';
 import * as RXJS from 'rxjs';
 
+import { CancelContext } from '../cancel-context';
+import * as Models from '../models';
 import * as ProcessHandle from '../process-handle';
 import * as Util from '../util';
-import * as Models from '../models';
-import { QueryLatest } from './query-latest';
+import { QueryCRDT, queryCRDTObservable } from './query-crdt';
 import { QueryHead } from './query-head';
+import { QueryLatest } from './query-latest';
 import { QueryServers } from './query-servers';
-import { queryCRDTObservable, QueryCRDT } from './query-crdt';
-import { CancelContext } from '../cancel-context';
 
 function expectToBeDefined<T>(value: T): asserts value is NonNullable<T> {
   expect(value).toBeDefined();

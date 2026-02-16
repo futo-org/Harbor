@@ -1,12 +1,12 @@
-import * as RXJS from 'rxjs';
 import Long from 'long';
+import * as RXJS from 'rxjs';
 
-import * as ProcessHandle from '../process-handle';
-import * as Models from '../models';
-import * as Protocol from '../protocol';
-import { queryEventObservable, QueryEvent } from './query-event';
-import { QueryServers } from './query-servers';
 import { CancelContext } from '../cancel-context';
+import * as Models from '../models';
+import * as ProcessHandle from '../process-handle';
+import * as Protocol from '../protocol';
+import { QueryEvent, queryEventObservable } from './query-event';
+import { QueryServers } from './query-servers';
 
 function expectToBeDefined<T>(value: T): asserts value is NonNullable<T> {
   expect(value).toBeDefined();

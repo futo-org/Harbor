@@ -298,13 +298,7 @@ async fn pull_queue_events(
                             {
                                 if let Some(lww) = username_event.lww_element()
                                 {
-                                    if let Ok(name_str) =
-                                        String::from_utf8(lww.value.clone())
-                                    {
-                                        Some(name_str)
-                                    } else {
-                                        None
-                                    }
+                                    String::from_utf8(lww.value.clone()).ok()
                                 } else {
                                     None
                                 }
@@ -483,13 +477,13 @@ async fn pull_queue_events(
                 };
 
                 // Only create queue item if we have a valid blob
-                if blob.is_some() {
+                if let Some(blob) = blob {
                     debug!("Creating AVATAR queue item: id={}", row.id);
                     result_set.push(ModerationQueueItem {
                         id: row.id,
                         content: None,
                         blobs: vec![BlobData {
-                            blob: blob.unwrap(),
+                            blob,
                             blob_db_ids: blob_db_ids.unwrap(),
                         }],
                     });

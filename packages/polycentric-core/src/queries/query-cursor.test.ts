@@ -1,8 +1,8 @@
 /* eslint jest/no-conditional-expect: 0 */
 
+import * as Models from '../models';
 import * as ProcessHandle from '../process-handle';
 import * as QueryCursor from './query-cursor';
-import * as Models from '../models';
 
 function makeResult(
   signedEvents: Models.SignedEvent.SignedEvent[],
@@ -23,7 +23,7 @@ describe('query cursor', () => {
   test('no servers', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
 
-    const server = 'http://localhost.com';
+    const server = 'http://127.0.0.1:1';
 
     await s1p1.addServer(server);
 

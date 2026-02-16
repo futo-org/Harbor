@@ -436,8 +436,26 @@ pub(crate) async fn ingest_event_search(
         };
 
     if let Some(doc) = search_doc {
+        let (index_name, index_id): (&str, String) = match content_type {
+            t if t == known_message_types::USERNAME => {
+                let system_id =
+                    polycentric_protocol::model::public_key::to_base64(
+                        event.system(),
+                    )?;
+                ("profile_names", system_id)
+            }
+            t if t == known_message_types::DESCRIPTION => {
+                let system_id =
+                    polycentric_protocol::model::public_key::to_base64(
+                        event.system(),
+                    )?;
+                ("profile_descriptions", system_id)
+            }
+            _ => ("messages", doc_id.clone()),
+        };
+
         let response_result = search
-            .index(IndexParts::IndexId("messages", &doc_id))
+            .index(IndexParts::IndexId(index_name, &index_id))
             .body(&doc)
             .send()
             .await;

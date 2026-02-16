@@ -1,12 +1,12 @@
 import * as RXJS from 'rxjs';
 
+import { CancelContext } from '../cancel-context';
+import * as Models from '../models';
 import * as ProcessHandle from '../process-handle';
 import * as Util from '../util';
-import * as Models from '../models';
-import { QueryServers } from './query-servers';
 import { QueryHead } from './query-head';
 import { QueryLatest, queryLatestObservable } from './query-latest';
-import { CancelContext } from '../cancel-context';
+import { QueryServers } from './query-servers';
 
 enum SharedTestMode {
   NetworkOnly,

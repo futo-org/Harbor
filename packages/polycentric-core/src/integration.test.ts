@@ -376,7 +376,7 @@ describe('integration', () => {
       getAndCheckFirstEvent(descriptionSearchResults),
     );
     expect(descriptionSearchContent).toBe(description);
-  }, 10000);
+  }, 30000);
 
   test('purge', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();

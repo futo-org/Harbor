@@ -27,6 +27,7 @@ pub(crate) enum CensorshipType {
     RefuseStorage,
 }
 
+#[allow(dead_code)]
 #[derive(::sqlx::Type)]
 #[sqlx(type_name = "link_type")]
 #[sqlx(rename_all = "snake_case")]
@@ -1332,6 +1333,37 @@ pub mod tests {
             .await?
                 == system1
         );
+
+        Ok(())
+    }
+
+    #[::sqlx::test]
+    async fn test_ingest_junk_post_content_returns_error(
+        pool: ::sqlx::PgPool,
+    ) -> ::anyhow::Result<()> {
+        let mut transaction = pool.begin().await?;
+        crate::postgres::prepare_database(&mut transaction).await?;
+
+        let keypair = polycentric_protocol::test_utils::make_test_keypair();
+        let process = polycentric_protocol::test_utils::make_test_process();
+
+        let signed_event =
+            polycentric_protocol::test_utils::make_test_event_with_content(
+                &keypair,
+                &process,
+                1,
+                polycentric_protocol::model::known_message_types::POST,
+                &[0, 1, 2, 3], // invalid protobuf bytes
+                vec![],
+            );
+
+        let result = crate::ingest::ingest_event_postgres(
+            &mut transaction,
+            &signed_event,
+        )
+        .await;
+
+        assert!(result.is_err());
 
         Ok(())
     }

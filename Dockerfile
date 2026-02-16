@@ -35,6 +35,7 @@ RUN apt-get update -y && \
 	npm install --global \
 		wrangler \
 		prettier \
-		eslint
+		eslint \
+		typescript
 
 

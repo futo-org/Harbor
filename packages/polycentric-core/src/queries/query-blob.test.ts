@@ -1,12 +1,12 @@
 import 'long';
 import * as RXJS from 'rxjs';
 
+import { CancelContext } from '../cancel-context';
 import * as ProcessHandle from '../process-handle';
 import * as Util from '../util';
+import { QueryBlob, queryBlobObservable } from './query-blob';
 import { QueryEvent } from './query-event';
 import { QueryServers } from './query-servers';
-import { QueryBlob, queryBlobObservable } from './query-blob';
-import { CancelContext } from '../cancel-context';
 
 const testBlob = (() => {
   const blob = new Uint8Array(1024 * 512 * 3);
