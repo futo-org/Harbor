@@ -1,6 +1,12 @@
 use protobuf::Message;
 use rand::Rng;
 
+pub fn make_valid_post_bytes() -> Vec<u8> {
+    let mut post = crate::protocol::Post::new();
+    post.content = Some("test".to_string());
+    post.write_to_bytes().unwrap()
+}
+
 pub fn make_test_keypair() -> ::ed25519_dalek::SigningKey {
     ::ed25519_dalek::SigningKey::generate(&mut ::rand::thread_rng())
 }
@@ -54,7 +60,7 @@ pub fn make_test_event(
         process.clone(),
         logical_clock,
         3,
-        vec![0, 1, 2, 3],
+        make_valid_post_bytes(),
         crate::protocol::VectorClock::new(),
         crate::protocol::Indices::new(),
         vec![],
@@ -83,7 +89,7 @@ pub fn make_test_event_with_time(
         process.clone(),
         logical_clock,
         crate::model::known_message_types::POST,
-        vec![0, 1, 2, 3],
+        make_valid_post_bytes(),
         crate::protocol::VectorClock::new(),
         crate::protocol::Indices::new(),
         vec![],
