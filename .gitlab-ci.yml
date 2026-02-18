@@ -1,7 +1,8 @@
 ---
 
-variables: 
-  DOCKERFILE_MD5: c8420899f90a361bc5189c4c738eb8db
+variables:
+  BUILDER_IMAGE: "${CI_REGISTRY_IMAGE}:builder"
+  BUILDER_IMAGE_TAG: "${CI_REGISTRY_IMAGE}:builder-${CI_COMMIT_TAG}"
   POSTGRES_IMAGE: "postgres:14"
   SEARCH_IMAGE: "opensearchproject/opensearch:2.1.0"
   FF_USE_FASTZIP: "true"
@@ -12,7 +13,7 @@ variables:
   SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   RUSTC_WRAPPER: /opt/sccache/sccache
 
-image: "gitlab.futo.org:5050/polycentric/polycentric:dev-container-${DOCKERFILE_MD5}"
+image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
 default:
   tags:
@@ -21,7 +22,7 @@ default:
 .node-cache-config: &node-cache-config
   key:
     files:
-      - package-lock.json  
+      - package-lock.json
   paths:
     - ${CI_PROJECT_DIR}/node_modules/
     - ${CI_PROJECT_DIR}/packages/polycentric-react/node_modules/
@@ -94,6 +95,7 @@ default:
   policy: pull-push
 
 stages:
+  - builder
   - check
   - format
   - build
@@ -101,13 +103,33 @@ stages:
   - test
   - deploy
 
+builder:
+  stage: builder
+  needs: []
+  services:
+    - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
+      command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
+      alias: docker
+  script:
+    - |
+      timeout 30s /bin/sh -c 'until docker info > /dev/null; do
+        echo "Waiting for docker to be ready..."
+        sleep 1
+      done'
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker buildx build --push -t "$BUILDER_IMAGE" -t "$BUILDER_IMAGE_TAG" .
+  only:
+    - tags
+
 check:
   stage: check
+  image: "$BUILDER_IMAGE"
   script: ./gitlab-ci/check-images.sh
 
-format-server: 
+format-server:
   stage: format
-  script: 
+  image: "$BUILDER_IMAGE"
+  script:
     - ./version.sh
     - cd server
     - cargo-fmt --check
@@ -119,33 +141,38 @@ format-server:
 #     - cd forum_server
 #     - cargo-fmt --check
 
-format-protocol: 
+format-protocol:
   stage: format
-  script: 
+  image: "$BUILDER_IMAGE"
+  script:
     - ./version.sh
     - cd polycentric-protocol
     - cargo-fmt --check
 
 format-core:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-core/src
 
 format-react:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-react/src
 
 format-web:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-web/src
 
 format-desktop:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/polycentric-desktop/src
@@ -153,19 +180,22 @@ format-desktop:
 
 format-harbor:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/harbor-web/src
 
 format-verifiers:
   stage: format
+  image: "$BUILDER_IMAGE"
   script:
     - ./version.sh
     - ./gitlab-ci/prettier-diff.sh ./packages/verifiers/src
 
-build-protocol: 
+build-protocol:
   stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config
     - <<: *rust-cache-build-protocol
   script:
@@ -184,9 +214,10 @@ build-protocol:
       paths:
         - ./polycentric-protocol/target/release/polycentric-protocol
 
-build-server: 
+build-server:
   stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
   script:
@@ -199,7 +230,7 @@ build-server:
     - cargo build --locked
     - echo "Building test binary"
     - cargo test --no-run --frozen --locked &> out.txt
-    - TEST_BIN=`cat out.txt | grep target/debug/deps/server | grep -oP '(?<=\()[^\)]+'` 
+    - TEST_BIN=`cat out.txt | grep target/debug/deps/server | grep -oP '(?<=\()[^\)]+'`
     - echo "Test binary built at $TEST_BIN"
     - mv ./$TEST_BIN ../build-artifacts/server-test
     - mv ./target/debug/server ../build-artifacts/server
@@ -244,12 +275,13 @@ build-server:
 #       paths:
 #         - ./build-artifacts
 
-build-server-release: 
+build-server-release:
   stage: build
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
-  script: 
+  script:
     - ./version.sh
     - cd server
     - echo "Starting sccache server"
@@ -265,6 +297,7 @@ build-server-release:
 
 build-core:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache:
     - <<: *node-cache-config
       policy: pull-push
@@ -280,8 +313,9 @@ build-core:
       paths:
         - ./packages/polycentric-core/dist/
 
-build-react: 
+build-react:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/polycentric-react && npm run build
   needs: ["build-core"]
@@ -291,8 +325,9 @@ build-react:
       paths:
         - ./packages/polycentric-react/dist/
 
-build-leveldb: 
+build-leveldb:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/polycentric-leveldb && npm run build
   needs: ["build-core"]
@@ -302,14 +337,16 @@ build-leveldb:
       paths:
         - ./packages/polycentric-leveldb/dist/
 
-build-desktop: 
+build-desktop:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/polycentric-desktop && npm run build
   needs: ["build-core", "build-react", "build-leveldb"]
 
-build-web: 
+build-web:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/polycentric-web && npm run build
   needs: ["build-react", "build-core"]
@@ -319,20 +356,23 @@ build-web:
       paths:
         - ./packages/polycentric-web/dist/
 
-build-capacitor: 
+build-capacitor:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/polycentric-capacitor && npm run build
   needs: ["build-core", "build-react"]
 
-build-harbor: 
+build-harbor:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/harbor-web && npm run build
   needs: ["build-core"]
 
 build-verifiers:
   stage: build
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script: cd packages/verifiers && npm run build
   needs: ["build-core", "build-leveldb"]
@@ -342,23 +382,25 @@ build-verifiers:
       paths:
         - ./packages/verifiers/dist/
 
-lint-protocol: 
+lint-protocol:
   stage: lint
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config
     - <<: *rust-cache-build-protocol
-  script: 
+  script:
     - ./version.sh
     - cd polycentric-protocol
     - cargo-clippy --no-deps -- -D warnings
   needs: ["build-protocol"]
 
-lint-server: 
+lint-server:
   stage: lint
-  cache: 
+  image: "$BUILDER_IMAGE"
+  cache:
     - <<: *rust-cache-config-server
     - <<: *rust-cache-build-server
-  script: 
+  script:
     - ./version.sh
     - cd server
     - cargo-clippy --no-deps --locked -- -D warnings
@@ -392,6 +434,7 @@ lint-server:
 
 lint-core:
   stage: lint
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script:
     - make proto
@@ -402,6 +445,7 @@ lint-core:
 
 lint-harbor:
   stage: lint
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script:
     - ./version.sh
@@ -411,6 +455,7 @@ lint-harbor:
 
 lint-react:
   stage: lint
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script:
     - ./version.sh
@@ -420,6 +465,7 @@ lint-react:
 
 lint-web:
   stage: lint
+  image: "$BUILDER_IMAGE"
   cache: *node-cache-config
   script:
     - ./version.sh
@@ -429,6 +475,7 @@ lint-web:
 
 test:
   stage: test
+  image: "$BUILDER_IMAGE"
   services:
     - name: $POSTGRES_IMAGE
       alias: postgres
@@ -469,6 +516,7 @@ test:
 # LEGACY
 deploy-polycentric-web-staging:
   stage: deploy
+  image: "$BUILDER_IMAGE"
   script: make deploy-polycentric-web-staging
   needs: ["check", "build-web", "test"]
   rules:
@@ -476,6 +524,7 @@ deploy-polycentric-web-staging:
 
 deploy-polycentric-web-production:
   stage: deploy
+  image: "$BUILDER_IMAGE"
   script: make deploy-polycentric-web-production
   needs: ["check", "build-web", "test"]
   rules:
@@ -659,4 +708,3 @@ push-verifiers-image-staging:
     # - ./version.sh
     # - echo "{\"auths\":{\"$DO_OCI_REGISTRY\":{\"username\":\"doadmin\",\"password\":\"$CI_DO_OCI_TOKEN\"}}}" > /kaniko/.docker/config.json
     # - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/server.dockerfile" --destination $DO_OCI_REGISTRY/$CI_PROJECT_DIR:$VERSION
-
