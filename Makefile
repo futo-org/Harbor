@@ -63,7 +63,6 @@ devcert:
 		localhost 127.0.0.1 ::1 $$IPS
 
 proto: proto/protocol.proto
-	npm install
 	protoc \
 		--plugin=./node_modules/.bin/protoc-gen-ts_proto \
 		--ts_proto_opt=esModuleInterop=true \
