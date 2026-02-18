@@ -12,6 +12,7 @@ variables:
   GIT_DEPTH: 1
   SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   RUSTC_WRAPPER: /opt/sccache/sccache
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
 
 image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
@@ -19,16 +20,12 @@ default:
   tags:
     - dind
 
-.node-cache-config: &node-cache-config
+.npm-cache-config: &npm-cache-config
   key:
     files:
       - package-lock.json
   paths:
-    - ${CI_PROJECT_DIR}/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-react/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-core/node_modules/
-    - ${CI_PROJECT_DIR}/packages/polycentric-desktop/node_modules/
-    - ${CI_PROJECT_DIR}/packages/harbor-web/node_modules/
+    - $npm_config_cache
   policy: pull
 
 .rust-cache-config: &rust-cache-config
@@ -299,11 +296,11 @@ build-core:
   stage: build
   image: "$BUILDER_IMAGE"
   cache:
-    - <<: *node-cache-config
+    - <<: *npm-cache-config
       policy: pull-push
   script:
     - ./version.sh
-    - npm install
+    - npm ci
     - make proto
     - cd packages/polycentric-core
     - npm run build
@@ -316,8 +313,10 @@ build-core:
 build-react:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/polycentric-react && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/polycentric-react && npm run build
   needs: ["build-core"]
   artifacts:
       name: "artifacts"
@@ -328,8 +327,10 @@ build-react:
 build-leveldb:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/polycentric-leveldb && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/polycentric-leveldb && npm run build
   needs: ["build-core"]
   artifacts:
       name: "artifacts"
@@ -340,15 +341,19 @@ build-leveldb:
 build-desktop:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/polycentric-desktop && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/polycentric-desktop && npm run build
   needs: ["build-core", "build-react", "build-leveldb"]
 
 build-web:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/polycentric-web && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/polycentric-web && npm run build
   needs: ["build-react", "build-core"]
   artifacts:
       name: "artifacts"
@@ -359,22 +364,28 @@ build-web:
 build-capacitor:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/polycentric-capacitor && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/polycentric-capacitor && npm run build
   needs: ["build-core", "build-react"]
 
 build-harbor:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/harbor-web && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/harbor-web && npm run build
   needs: ["build-core"]
 
 build-verifiers:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
-  script: cd packages/verifiers && npm run build
+  cache: *npm-cache-config
+  script:
+    - npm ci
+    - cd packages/verifiers && npm run build
   needs: ["build-core", "build-leveldb"]
   artifacts:
       name: "artifacts"
@@ -435,8 +446,9 @@ lint-server:
 lint-core:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
+  cache: *npm-cache-config
   script:
+    - npm ci
     - make proto
     - ./version.sh
     - cd packages/polycentric-core
@@ -446,8 +458,9 @@ lint-core:
 lint-harbor:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
+  cache: *npm-cache-config
   script:
+    - npm ci
     - ./version.sh
     - cd packages/harbor-web
     - npx eslint ./src --max-warnings=0
@@ -456,8 +469,9 @@ lint-harbor:
 lint-react:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
+  cache: *npm-cache-config
   script:
+    - npm ci
     - ./version.sh
     - cd packages/polycentric-react
     - npx eslint ./src --max-warnings=0
@@ -466,8 +480,9 @@ lint-react:
 lint-web:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *node-cache-config
+  cache: *npm-cache-config
   script:
+    - npm ci
     - ./version.sh
     - cd packages/polycentric-web
     - npx eslint ./src --max-warnings=0
@@ -490,10 +505,9 @@ test:
       ADMIN_TOKEN: "123"
       RUSTC_BOOTSTRAP: "1"
       CHALLENGE_KEY: "456"
-  cache:
-    - <<: *node-cache-config
-      policy: pull
+  cache: *npm-cache-config
   script:
+    - npm ci
     - ./version.sh
     - make proto
     - RUSTC_BOOTSTRAP=1 ./build-artifacts/server-test -Z unstable-options --format junit > junit-server.xml
