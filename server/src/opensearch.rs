@@ -3,6 +3,7 @@ use opensearch::{
     OpenSearch,
 };
 
+#[allow(dead_code)]
 #[derive(::serde::Deserialize, ::serde::Serialize)]
 struct OpenSearchSearchDocumentMessage {
     author_public_key: String,
@@ -11,6 +12,7 @@ struct OpenSearchSearchDocumentMessage {
     message: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(::serde::Deserialize, ::serde::Serialize)]
 struct OpenSearchSearchDocumentProfile {
     pub(crate) author_public_key: String,

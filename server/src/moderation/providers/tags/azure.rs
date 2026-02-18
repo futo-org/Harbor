@@ -27,12 +27,14 @@ pub enum Category {
     Violence,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Action {
     Accept = 1,
     Reject = 2,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DetectionException {
     pub code: String,
@@ -47,6 +49,7 @@ impl std::fmt::Display for DetectionException {
 
 impl std::error::Error for DetectionException {}
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Decision {
     pub suggested_action: Action,
@@ -91,6 +94,7 @@ pub struct DetectionResult {
     pub categories_analysis: Vec<CategoriesAnalysis>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlocklistDetailedResult {
     pub blocklist_name: Option<String>,
@@ -100,6 +104,7 @@ pub struct BlocklistDetailedResult {
     pub length: Option<i32>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextDetectionResult {
     #[serde(flatten)]

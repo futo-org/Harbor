@@ -455,7 +455,7 @@ pub(crate) async fn ingest_event_search(
         };
 
         let response_result = search
-            .index(IndexParts::IndexId(&index_name, &index_id))
+            .index(IndexParts::IndexId(index_name, &index_id))
             .body(&doc)
             .send()
             .await;

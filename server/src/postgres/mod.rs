@@ -27,6 +27,7 @@ pub(crate) enum CensorshipType {
     RefuseStorage,
 }
 
+#[allow(dead_code)]
 #[derive(::sqlx::Type)]
 #[sqlx(type_name = "link_type")]
 #[sqlx(rename_all = "snake_case")]
