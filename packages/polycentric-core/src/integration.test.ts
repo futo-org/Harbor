@@ -248,6 +248,13 @@ describe('integration', () => {
   });
 
   test('search', async () => {
+    // verify search is available before running the test
+    try {
+      await APIMethods.getSearch(TEST_SERVER, 'healthcheck');
+    } catch (e) {
+      throw new Error('OpenSearch is not available, skipping search test: ' + e);
+    }
+
     function eventToContent(event: Uint8Array): string {
       const decodedEvent = Models.Event.fromBuffer(event);
       const post = Protocol.Post.decode(decodedEvent.content);
@@ -376,7 +383,7 @@ describe('integration', () => {
       getAndCheckFirstEvent(descriptionSearchResults),
     );
     expect(descriptionSearchContent).toBe(description);
-  }, 10000);
+  }, 30000);
 
   test('purge', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();

@@ -36,6 +36,7 @@ describe('processHandle', () => {
 
   test('addAndRemoveServer', async () => {
     const processHandle = await ProcessHandle.createTestProcessHandle();
+    processHandle.synchronizer.cleanup();
 
     await processHandle.addServer('http://127.0.0.1');
     await processHandle.addServer('http://127.0.0.2');

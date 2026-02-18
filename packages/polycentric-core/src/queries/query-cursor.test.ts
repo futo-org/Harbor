@@ -22,8 +22,9 @@ function makeResult(
 describe('query cursor', () => {
   test('no servers', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
+    s1p1.synchronizer.cleanup();
 
-    const server = 'http://localhost.com';
+    const server = 'http://127.0.0.1:1';
 
     await s1p1.addServer(server);
 

@@ -279,7 +279,8 @@ export class QueryManager implements HasUpdate {
           contentType,
         );
       } catch (err) {
-        console.log(err);
+        // TODO: commented out because it spams CI test output
+        // console.log(err);
       }
     }
   }
