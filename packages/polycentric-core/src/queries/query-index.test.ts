@@ -4,7 +4,7 @@ import * as ProcessHandle from '../process-handle';
 import * as Protocol from '../protocol';
 import * as QueryIndex from './query-index';
 
-const TEST_SERVER = 'http://127.0.0.1:8081';
+const TEST_SERVER = ProcessHandle.TEST_SERVER;
 
 function extractGenericClaim(cell: QueryIndex.Cell): string | undefined {
   if (cell.signedEvent === undefined) {
@@ -51,6 +51,10 @@ async function copyEventBetweenHandles(
 }
 
 describe('query index', () => {
+  beforeAll(async () => {
+    await ProcessHandle.ensureServerIsAvailable();
+  });
+
   test('non existant', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
 

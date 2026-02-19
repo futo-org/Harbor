@@ -13,6 +13,10 @@ function expectToBeDefined<T>(value: T): asserts value is NonNullable<T> {
 }
 
 describe('query event2', () => {
+  beforeAll(async () => {
+    await ProcessHandle.ensureServerIsAvailable();
+  });
+
   test('hit disk basic', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
     const queryServers = new QueryServers(s1p1);

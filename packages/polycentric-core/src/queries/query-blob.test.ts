@@ -110,6 +110,10 @@ async function sharedTestCase(mode: SharedTestMode): Promise<void> {
 }
 
 describe('query blob2', () => {
+  beforeAll(async () => {
+    await ProcessHandle.ensureServerIsAvailable();
+  });
+
   test('hit disk', async () => {
     await sharedTestCase(SharedTestMode.DiskOnly);
   });

@@ -1189,6 +1189,16 @@ export async function fullSync(handle: ProcessHandle) {
 
 export const TEST_SERVER = 'http://127.0.0.1:8081';
 
+export async function ensureServerIsAvailable(): Promise<void> {
+  try {
+    await fetch(TEST_SERVER + '/health');
+  } catch (e) {
+    throw new Error(
+      'Test server is not available at ' + TEST_SERVER + ': ' + String(e),
+    );
+  }
+}
+
 export async function copyEventBetweenHandles(
   pointer: Models.Pointer.Pointer,
   from: ProcessHandle,

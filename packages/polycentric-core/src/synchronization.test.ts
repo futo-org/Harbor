@@ -24,6 +24,10 @@ async function waitForEvent(
 }
 
 describe('synchronizer', () => {
+  beforeAll(async () => {
+    await ProcessHandle.ensureServerIsAvailable();
+  });
+
   test('syncs following', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
     await s1p1.addServer(ProcessHandle.TEST_SERVER);

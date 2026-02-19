@@ -67,6 +67,10 @@ async function createHandleWithNameAndIdentityHandle(username: string) {
 }
 
 describe('integration', () => {
+  beforeAll(async () => {
+    await ProcessHandle.ensureServerIsAvailable();
+  });
+
   test('resolveAndQuery', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
     await s1p1.addServer(TEST_SERVER);
@@ -248,15 +252,6 @@ describe('integration', () => {
   });
 
   test('search', async () => {
-    // verify search is available before running the test
-    try {
-      await APIMethods.getSearch(TEST_SERVER, 'healthcheck');
-    } catch (e) {
-      throw new Error(
-        'OpenSearch is not available, skipping search test: ' + String(e),
-      );
-    }
-
     function eventToContent(event: Uint8Array): string {
       const decodedEvent = Models.Event.fromBuffer(event);
       const post = Protocol.Post.decode(decodedEvent.content);
