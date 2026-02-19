@@ -123,6 +123,21 @@ check:
   image: "$BUILDER_IMAGE"
   script: ./gitlab-ci/check-images.sh
 
+deps:
+  stage: check
+  image: "$BUILDER_IMAGE"
+  needs: []
+  cache:
+    - <<: *npm-cache-config
+      policy: pull-push
+  script:
+    - npm ci
+  artifacts:
+    expire_in: 60 mins
+    paths:
+      - node_modules/
+      - packages/*/node_modules/
+
 format-server:
   stage: format
   image: "$BUILDER_IMAGE"
@@ -295,12 +310,9 @@ build-server-release:
 build-core:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache:
-    - <<: *npm-cache-config
-      policy: pull-push
+  needs: ["deps"]
   script:
     - ./version.sh
-    - npm ci
     - make proto
     - cd packages/polycentric-core
     - npm run build
@@ -313,11 +325,9 @@ build-core:
 build-react:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/polycentric-react && npm run build
-  needs: ["build-core"]
+  needs: ["deps", "build-core"]
   artifacts:
       name: "artifacts"
       expire_in: 60 mins
@@ -327,11 +337,9 @@ build-react:
 build-leveldb:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/polycentric-leveldb && npm run build
-  needs: ["build-core"]
+  needs: ["deps", "build-core"]
   artifacts:
       name: "artifacts"
       expire_in: 60 mins
@@ -341,20 +349,16 @@ build-leveldb:
 build-desktop:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/polycentric-desktop && npm run build
-  needs: ["build-core", "build-react", "build-leveldb"]
+  needs: ["deps", "build-core", "build-react", "build-leveldb"]
 
 build-web:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/polycentric-web && npm run build
-  needs: ["build-react", "build-core"]
+  needs: ["deps", "build-react", "build-core"]
   artifacts:
       name: "artifacts"
       expire_in: 60 mins
@@ -364,29 +368,23 @@ build-web:
 build-capacitor:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/polycentric-capacitor && npm run build
-  needs: ["build-core", "build-react"]
+  needs: ["deps", "build-core", "build-react"]
 
 build-harbor:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/harbor-web && npm run build
-  needs: ["build-core"]
+  needs: ["deps", "build-core"]
 
 build-verifiers:
   stage: build
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - cd packages/verifiers && npm run build
-  needs: ["build-core", "build-leveldb"]
+  needs: ["deps", "build-core", "build-leveldb"]
   artifacts:
       name: "artifacts"
       expire_in: 60 mins
@@ -446,47 +444,39 @@ lint-server:
 lint-core:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - make proto
     - ./version.sh
     - cd packages/polycentric-core
     - npx eslint ./src --max-warnings=0
-  needs: ["build-core"]
+  needs: ["deps", "build-core"]
 
 lint-harbor:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - ./version.sh
     - cd packages/harbor-web
     - npx eslint ./src --max-warnings=0
-  needs: ["build-harbor"]
+  needs: ["deps", "build-harbor"]
 
 lint-react:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - ./version.sh
     - cd packages/polycentric-react
     - npx eslint ./src --max-warnings=0
-  needs: ["build-react"]
+  needs: ["deps", "build-react"]
 
 lint-web:
   stage: lint
   image: "$BUILDER_IMAGE"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - ./version.sh
     - cd packages/polycentric-web
     - npx eslint ./src --max-warnings=0
-  needs: ["build-web"]
+  needs: ["deps", "build-web"]
 
 test:
   stage: test
@@ -505,16 +495,15 @@ test:
       ADMIN_TOKEN: "123"
       RUSTC_BOOTSTRAP: "1"
       CHALLENGE_KEY: "456"
-  cache: *npm-cache-config
   script:
-    - npm ci
     - ./version.sh
     - make proto
     - RUSTC_BOOTSTRAP=1 ./build-artifacts/server-test -Z unstable-options --format junit > junit-server.xml
     - ./build-artifacts/server &
     - cd ./packages/polycentric-core && npm run test:ci
-  needs: ["check", "build-server", "build-core"]
+  needs: ["deps", "check", "build-server", "build-core"]
   dependencies:
+    - deps
     - build-server
     - build-core
   artifacts:
