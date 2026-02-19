@@ -253,7 +253,7 @@ describe('integration', () => {
       await APIMethods.getSearch(TEST_SERVER, 'healthcheck');
     } catch (e) {
       throw new Error(
-        'OpenSearch is not available, skipping search test: ' + e,
+        'OpenSearch is not available, skipping search test: ' + String(e),
       );
     }
 
