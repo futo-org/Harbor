@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Pure sidebar profile display component.
+ */
+
 import { Models, Protocol } from '@polycentric/polycentric-core';
 import Long from 'long';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { BlockedList } from '../../BlockedList';
 import { ClaimGrid } from '../../ClaimGrid';
@@ -24,6 +28,7 @@ export interface PureSidebarProfileData {
   system: Models.PublicKey.PublicKey;
 }
 
+// Sidebar profile display with centered layout and action buttons
 export const PureSidebarProfile = ({
   profile,
   follow,
@@ -50,8 +55,16 @@ export const PureSidebarProfile = ({
   const [followingPanelOpen, setFollowingPanelOpen] = useState(false);
   const [blockedPanelOpen, setBlockedPanelOpen] = useState(false);
 
+  // Truncate description to 256 characters to match the edit form limit
+  const truncatedDescription = useMemo(() => {
+    if (!profile.description) return '';
+    return profile.description.length > 256
+      ? profile.description.slice(0, 256) + '...'
+      : profile.description;
+  }, [profile.description]);
+
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full overflow-y-auto">
       <PureEditProfile
         open={editProfileOpen}
         setOpen={setEditProfileOpen}
@@ -150,8 +163,8 @@ export const PureSidebarProfile = ({
               </div>
             </div>
 
-            <div className="mt-4 text-gray-500 text-pretty px-8 break-words max-w-full prose prose-sm dark:prose-invert">
-              <ReactMarkdown>{profile.description || ''}</ReactMarkdown>
+            <div className="mt-4 text-gray-500 text-pretty px-8 break-words max-w-full prose prose-sm dark:prose-invert overflow-hidden">
+              <ReactMarkdown>{truncatedDescription}</ReactMarkdown>
             </div>
 
             <ClaimGrid

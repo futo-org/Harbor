@@ -417,7 +417,7 @@ impl ModerationTaggingProvider for AzureTagProvider {
         let detector = self.content_safety.as_ref().unwrap();
 
         // Log event details for debugging
-        debug!("Processing moderation event: id={}, has_content={}, has_blobs={}, content_len={}, blobs_count={}", 
+        debug!("Processing moderation event: id={}, has_content={}, has_blobs={}, content_len={}, blobs_count={}",
             event.id,
             event.content.is_some(),
             !event.blobs.is_empty(),

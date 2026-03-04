@@ -327,12 +327,31 @@ async fn pull_queue_events(
                         (None, content) => content,
                     };
 
-                let blobs = if post.images.is_empty() {
+                // Filter images by dimension before fetching blobs
+                let mut filtered_post = post.clone();
+                filtered_post.images.retain(|img| {
+                    if img.width < 50 || img.height < 50 {
+                        debug!("Skipping POST event {} - image too small ({}x{} pixels)",
+                            row.id, img.width, img.height);
+                        false
+                    } else if img.width > 2000 || img.height > 2000 {
+                        debug!("Skipping POST event {} - image too large ({}x{} pixels), frontend should downscale",
+                            row.id, img.width, img.height);
+                        false
+                    } else if img.sections.is_empty() {
+                        debug!("Skipping POST event {} - no image sections", row.id);
+                        false
+                    } else {
+                        true
+                    }
+                });
+
+                let blobs = if filtered_post.images.is_empty() {
                     vec![]
                 } else {
                     let mut valid_blobs = vec![];
                     let all_blobs =
-                        get_blobs(transaction, &event, &post).await?;
+                        get_blobs(transaction, &event, &filtered_post).await?;
 
                     for blob_data in all_blobs {
                         // Skip if the blob is empty *or* exceeds Azure Content Safety's 4 MiB limit.
@@ -430,7 +449,15 @@ async fn pull_queue_events(
                 let (blob, blob_db_ids) = if let Some(manifest) =
                     largest_manifest
                 {
-                    if manifest.process.as_ref().is_some() {
+                    if manifest.width < 50 || manifest.height < 50 {
+                        debug!("Skipping AVATAR event {} - image too small ({}x{} pixels)",
+                            row.id, manifest.width, manifest.height);
+                        (None, None)
+                    } else if manifest.width > 2000 || manifest.height > 2000 {
+                        debug!("Skipping AVATAR event {} - image too large ({}x{} pixels)",
+                            row.id, manifest.width, manifest.height);
+                        (None, None)
+                    } else if manifest.process.as_ref().is_some() {
                         let logical_clocks: Vec<u64> = manifest
                             .sections
                             .iter()

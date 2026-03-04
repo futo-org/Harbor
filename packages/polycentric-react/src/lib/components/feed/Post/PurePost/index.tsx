@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Pure post display component with actions and moderation.
+ */
+
 import {
   ArrowPathIcon,
   CloudArrowUpIcon,
@@ -31,6 +35,7 @@ import {
 import { useTopicLink } from '../../../../hooks/utilHooks';
 import './style.css';
 
+// Convert date to relative time string (e.g., "2h ago")
 const dateToAgoString = (date: Date | undefined) => {
   if (date == null) {
     return '';
@@ -60,6 +65,7 @@ const dateToAgoString = (date: Date | undefined) => {
   }
 };
 
+// Reusable action button component for post interactions
 export const PostActionButton = ({
   name,
   DefaultIcon,
@@ -97,6 +103,7 @@ export const PostActionButton = ({
   );
 };
 
+// Like button icons
 const LikeIconOutline = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -191,6 +198,7 @@ const ShareIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Like button with state management
 export const LikeButton = ({
   onClick,
   count,
@@ -214,6 +222,7 @@ export const LikeButton = ({
   );
 };
 
+// Dislike button with state management
 export const DislikeButton = ({
   onClick,
   count,
@@ -238,6 +247,7 @@ export const DislikeButton = ({
   );
 };
 
+// Comment button component
 const CommentButton = ({
   onClick,
   count,
@@ -255,6 +265,7 @@ const CommentButton = ({
   );
 };
 
+// Share button component
 const SharePostButton = ({ onClick }: { onClick: () => void }) => {
   return (
     <PostActionButton name="Share" DefaultIcon={ShareIcon} onClick={onClick} />
@@ -316,6 +327,7 @@ export interface PurePostProps {
   moderationTags?: Array<{ name: string; level: number }>;
 }
 
+// Container that handles post linking behavior
 const PostLinkContainer = ({
   children,
   doesLink,
@@ -350,6 +362,7 @@ const PostLinkContainer = ({
 
 const basicURLRegex = /^(https?:\/\/)?(www\.)?/;
 
+// Username display for claim owners
 function ClaimOwnerUsername({
   system,
 }: {
@@ -365,6 +378,7 @@ function ClaimOwnerUsername({
   );
 }
 
+// Main post display component with sync status and moderation
 export const PurePost = forwardRef<HTMLDivElement, PurePostProps>(
   (
     {

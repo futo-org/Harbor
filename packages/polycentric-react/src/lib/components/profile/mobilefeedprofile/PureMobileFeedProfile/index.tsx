@@ -1,7 +1,11 @@
+/**
+ * @fileoverview Pure mobile feed profile display component.
+ */
+
 import { ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
 import { Models, Protocol } from '@polycentric/polycentric-core';
 import Long from 'long';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ClaimGrid } from '../../ClaimGrid';
 import {
@@ -11,6 +15,7 @@ import {
 import { FollowingList } from '../../FollowingList';
 import { PureSidebarProfileData } from '../../sidebarprofile/PureSidebarProfile';
 
+// Mobile profile display with background, avatar, and action buttons
 export const PureMobileFeedProfile = ({
   profile,
   follow,
@@ -37,6 +42,14 @@ export const PureMobileFeedProfile = ({
 }) => {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [followingPanelOpen, setFollowingPanelOpen] = useState(false);
+
+  // Truncate description to 256 characters to match the edit form limit
+  const truncatedDescription = useMemo(() => {
+    if (!profile.description) return '';
+    return profile.description.length > 256
+      ? profile.description.slice(0, 256) + '...'
+      : profile.description;
+  }, [profile.description]);
 
   return (
     <div className="border-b">
@@ -141,8 +154,8 @@ export const PureMobileFeedProfile = ({
               See following
             </button>
 
-            <div className="mt-4 text-gray-600 min-w-0 break-words">
-              <ReactMarkdown>{profile.description || ''}</ReactMarkdown>
+            <div className="mt-4 text-gray-600 min-w-0 break-words overflow-hidden">
+              <ReactMarkdown>{truncatedDescription}</ReactMarkdown>
             </div>
 
             <ClaimGrid

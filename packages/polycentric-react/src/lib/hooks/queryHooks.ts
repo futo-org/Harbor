@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Comprehensive data querying hooks with CRDT synchronization, cursor management, and real-time updates.
+ *
+ * Key Design Decisions:
+ * - CRDT-based queries for real-time synchronization across distributed systems
+ * - CancelContext pattern for preventing race conditions and memory leaks
+ * - Cursor-based pagination for efficient data loading and infinite scroll
+ * - Observable patterns for reactive data updates and caching
+ * - Content type separation for independent query optimization
+ * - Reference-based queries for complex relationship traversal
+ */
+
 import {
   APIMethods,
   CancelContext,
@@ -22,16 +34,19 @@ import {
 import { useModeration } from './moderationHooks';
 import { useProcessHandleManager } from './processHandleManagerHooks';
 
+// Query manager context for dependency injection of query capabilities
 // Since we create query managers based on the driver passed in, we set the query managers value at the root of the app.
 // With this, it will never be undefined - but since typescript doesn't know that, we ignore the error.
 export const QueryManagerContext =
   // @ts-ignore
   createContext<Queries.QueryManager.QueryManager>();
 
+// Query manager hook for accessing query capabilities
 export function useQueryManager(): Queries.QueryManager.QueryManager {
   return useContext(QueryManagerContext);
 }
 
+// Generic CRDT query hook with cancel context for race condition prevention
 export function useCRDTQuery<T>(
   system: Models.PublicKey.PublicKey | undefined,
   contentType: Models.ContentType.ContentType,
@@ -73,6 +88,7 @@ export function useCRDTQuery<T>(
   return state;
 }
 
+// Username CRDT query with text decoding
 export const useUsernameCRDTQuery = (
   system?: Models.PublicKey.PublicKey,
 ): string | undefined => {
@@ -84,6 +100,7 @@ export const useUsernameCRDTQuery = (
   return username ?? undefined;
 };
 
+// Description CRDT query with text decoding
 export const useDescriptionCRDTQuery = (
   system?: Models.PublicKey.PublicKey,
 ) => {
@@ -95,6 +112,7 @@ export const useDescriptionCRDTQuery = (
   return description ?? undefined;
 };
 
+// Public key text representation with optional length truncation
 export const useTextPublicKey = (
   system?: Models.PublicKey.PublicKey,
   maxLength?: number,
@@ -111,6 +129,7 @@ export const useTextPublicKey = (
   }, [system, maxLength]);
 };
 
+// System link generation with ProcessHandle.makeSystemLink for user profile navigation
 export const useSystemLink = (system: Models.PublicKey.PublicKey) => {
   const { processHandle } = useProcessHandleManager();
 
@@ -132,6 +151,7 @@ export const useSystemLink = (system: Models.PublicKey.PublicKey) => {
   return link;
 };
 
+// Event link generation with ProcessHandle.makeEventLink for post navigation
 export const useEventLink = (
   system?: Models.PublicKey.PublicKey,
   pointer?: Models.Pointer.Pointer,
@@ -158,6 +178,7 @@ export const useEventLink = (
   return link;
 };
 
+// Unix timestamp conversion with Long.toNumber() for JavaScript Date compatibility
 export const useDateFromUnixMS = (unixMS: Long | undefined) => {
   return useMemo<Date | undefined>(() => {
     if (unixMS === undefined) {
@@ -168,6 +189,7 @@ export const useDateFromUnixMS = (unixMS: Long | undefined) => {
   }, [unixMS]);
 };
 
+// Blob query with range-based retrieval and content parsing for binary data
 export function useBlobQueries<T>(
   system: Models.PublicKey.PublicKey | undefined,
   manifestInfo: {
@@ -229,6 +251,7 @@ export function useBlobQueries<T>(
   return state;
 }
 
+// Parsed event wrapper combining signed event, event data, and parsed content
 export class ParsedEvent<T> {
   signedEvent: Models.SignedEvent.SignedEvent;
   event: Models.Event.Event;
@@ -245,11 +268,13 @@ export class ParsedEvent<T> {
   }
 }
 
+// Claim information with cell data and parsed event
 export type ClaimInfo<T> = {
   cell: Queries.QueryIndex.Cell;
   parsedEvent: ParsedEvent<T> | undefined;
 };
 
+// Server query with observable subscription for real-time server list updates
 export function useQueryServers(
   system: Models.PublicKey.PublicKey,
 ): ReadonlySet<string> {
@@ -271,6 +296,7 @@ export function useQueryServers(
   return servers;
 }
 
+// Index query with batch loading and pagination for efficient data retrieval
 export function useIndex<T>(
   system: Models.PublicKey.PublicKey,
   contentType: Models.ContentType.ContentType,
@@ -356,6 +382,7 @@ export function useIndex<T>(
   return [parsedEvents, advanceCallback, allSourcesAttempted];
 }
 
+// Reference-based queries with multi-server aggregation and Promise.allSettled for fault tolerance
 export const useQueryReferences = (
   system: Models.PublicKey.PublicKey | undefined,
   reference: Protocol.Reference | undefined,
@@ -430,6 +457,7 @@ export const useQueryReferences = (
   return state;
 };
 
+// Pointer-based reference queries with automatic reference conversion
 export const useQueryPointerReferences = (
   pointer: Models.Pointer.Pointer,
   cursor?: Uint8Array,
@@ -453,7 +481,7 @@ export const useQueryPointerReferences = (
   );
 };
 
-// Declare explicitly so they don't cause a useEffect rerender
+// Post statistics request configuration to prevent useEffect re-renders
 const postStatsRequestEvents = {
   fromType: Models.ContentType.ContentTypePost,
   countLwwElementReferences: [],
@@ -477,6 +505,7 @@ const postStatReferences = [
   },
 ];
 
+// Post statistics with opinion counting and reference aggregation
 export const usePostStats = (pointer: Models.Pointer.Pointer) => {
   const out = useQueryPointerReferences(
     pointer,
@@ -514,6 +543,7 @@ export const usePostStats = (pointer: Models.Pointer.Pointer) => {
   return counts;
 };
 
+// CRDT element existence check with mounted component validation
 export const useQueryIfAdded = (
   contentType: Models.ContentType.ContentType,
   system: Models.PublicKey.PublicKey,
@@ -543,6 +573,7 @@ export const useQueryIfAdded = (
   return added;
 };
 
+// Opinion query with subject reference and cancel context for race condition prevention
 export const useQueryOpinion = (
   system?: Models.PublicKey.PublicKey,
   subject?: Protocol.Reference,
@@ -577,6 +608,7 @@ export const useQueryOpinion = (
   return opinion;
 };
 
+// Cursor-based pagination with moderation level dependency for content filtering
 export function useQueryCursor<T>(
   loadCallback: Queries.QueryCursor.LoadCallback,
   parse: (e: Models.Event.Event) => T,
@@ -657,6 +689,7 @@ export function useQueryCursor<T>(
   return [state, advance, nothingFound];
 }
 
+// Single event query with pointer-based identification and content parsing
 export function useQueryEvent<T>(
   system: Models.PublicKey.PublicKey,
   process: Models.Process.Process,
@@ -706,6 +739,7 @@ export function useQueryEvent<T>(
   return parsedEvent;
 }
 
+// Post-specific event query with Protocol.Post decoding
 export function useQueryPost(
   system: Models.PublicKey.PublicKey,
   process: Models.Process.Process,
@@ -714,6 +748,7 @@ export function useQueryPost(
   return useQueryEvent(system, process, logicalClock, Protocol.Post.decode);
 }
 
+// Reference-based event feed with moderation filtering and server-side pagination
 export const useQueryReferenceEventFeed = <T>(
   decode: (buffer: Uint8Array) => T,
   reference?: Protocol.Reference,
@@ -766,6 +801,7 @@ export const useQueryReferenceEventFeed = <T>(
   return useQueryCursor(loadCallback, decodeMemo);
 };
 
+// CRDT set query with patch-based updates and batch loading for efficient synchronization
 export function useQueryCRDTSet(
   system: Models.PublicKey.PublicKey | undefined,
   contentType: Models.ContentType.ContentType,
@@ -826,6 +862,7 @@ export interface QueryTopStringReferencesOptions {
   limit?: number;
 }
 
+// Top string references query with debounced search and time range filtering
 export function useQueryTopStringReferences(
   options?: QueryTopStringReferencesOptions,
 ): Models.AggregationBucket.Type[] {
@@ -862,6 +899,7 @@ export function useQueryTopStringReferences(
   return state;
 }
 
+// Claims query with automatic advancement and pointer conversion for display
 export const useClaims = (system: Models.PublicKey.PublicKey) => {
   const [claims, advance, allSourcesAttempted] = useIndex(
     system,
@@ -897,6 +935,7 @@ const claimVouchRequestEvents: Protocol.QueryReferencesRequestEvents = {
   countReferences: [],
 };
 
+// Claim vouches query with event extraction and filtering for verification display
 export const useClaimVouches = (
   system: Models.PublicKey.PublicKey,
   claimReference: Protocol.Reference,

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Settings page with account management, server configuration, and moderation controls.
+ */
+
 import { IonContent } from '@ionic/react';
 import { Page } from '../../app/routes';
 import { Header } from '../../components/layout/header';
@@ -13,6 +17,7 @@ import { PrivateKeyDisplay } from '../../components/settings/PrivateKeyDisplay';
 import { PublicKeyDisplay } from '../../components/settings/PublicKeyDisplay';
 import { ServerListTable } from '../../components/settings/ServerTable';
 
+// Settings page with account management, server configuration, and moderation controls
 export const SettingsPage: Page = () => {
   return (
     <>
@@ -39,6 +44,13 @@ export const SettingsPage: Page = () => {
                 in your forum server&apos;s ADMIN_PUBKEYS environment variable.
               </p>
               <PublicKeyDisplay />
+            </div>
+            <div className="flex flex-col space-y-3">
+              <h2 className="font-medium">Your Private Key</h2>
+              <p className="text-gray-600 text-xs">
+                This is your private key. Keep it safe.
+              </p>
+              <PrivateKeyDisplay />
             </div>
             <div className="flex flex-col space-y-3">
               <h2 className="font-medium">Backup account login token</h2>

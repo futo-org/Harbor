@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Social media and identity claim creation components.
+ */
+
 import { PhotoIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import * as Core from '@polycentric/polycentric-core';
 import { Models, ProcessHandle, Protocol } from '@polycentric/polycentric-core';
@@ -127,6 +131,7 @@ const extractOdyseeIdentifier = (urlOrId: string): string | null => {
   return null;
 };
 
+// Modal for creating identity claims with verification flow
 export const MakeClaim = ({ onClose, system }: MakeClaimProps) => {
   const [step, setStep] = useState<'type' | 'input'>('type');
   const [claimType, setClaimType] = useState<ClaimData['type'] | null>(null);
@@ -190,6 +195,7 @@ export const MakeClaim = ({ onClose, system }: MakeClaimProps) => {
   );
 };
 
+// Claim type selection with server verification requirements
 export const ClaimTypePopup = ({
   onSelect,
 }: {
@@ -363,6 +369,7 @@ const handleOAuthLogin = async (claimType: Core.Models.ClaimType.ClaimType) => {
   }
 };
 
+// Social media claim input with OAuth and token verification
 export const SocialMediaInput = ({
   platform,
   system,
@@ -870,6 +877,7 @@ const publishImageBlobs = async (
   return imageManifests;
 };
 
+// Occupation claim input form
 export const OccupationInput = ({
   onCancel,
   system,
@@ -991,6 +999,7 @@ export const OccupationInput = ({
   );
 };
 
+// Generic text claim input for skills and freeform claims
 export const TextInput = ({
   type,
   onCancel,
