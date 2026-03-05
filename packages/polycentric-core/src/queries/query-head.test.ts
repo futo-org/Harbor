@@ -190,16 +190,8 @@ describe('query head', () => {
 
     const head = await RXJS.firstValueFrom(
       queryHeadObservable(s1p2.queryManager.queryHead, s1p2.system()).pipe(
-        RXJS.switchMap((head) => {
-          if (
-            head.attemptedSources.has('disk') &&
-            head.attemptedSources.has(ProcessHandle.TEST_SERVER)
-          ) {
-            return RXJS.of(head);
-          } else {
-            return RXJS.NEVER;
-          }
-        }),
+        RXJS.filter((head) => !head.missingData),
+        RXJS.timeout(10000),
       ),
     );
 
