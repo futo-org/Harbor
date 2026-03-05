@@ -5,9 +5,9 @@ import * as Models from './models';
 import * as Protocol from './protocol';
 import * as Version from './version';
 
-async function checkResponse(name: string, response: Response): Promise<void> {
+function checkResponse(name: string, response: Response): void {
   if (!response.ok) {
-    console.warn(name, response.status, await response.text());
+    // console.warn(name, response.status, await response.text());
     throw new Error(name + ' !ok');
   }
 }

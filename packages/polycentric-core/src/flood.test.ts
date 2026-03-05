@@ -5,6 +5,7 @@ describe('flood', () => {
   test('flood', async () => {
     const s1p1 = await ProcessHandle.createTestProcessHandle();
     await s1p1.addServer(ProcessHandle.TEST_SERVER);
+    s1p1.synchronizer.cleanup();
     for (let i = 0; i < 1000; i++) {
       await s1p1.post(i.toString());
     }

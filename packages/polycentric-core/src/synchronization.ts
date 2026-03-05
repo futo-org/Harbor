@@ -107,7 +107,7 @@ export async function backFillServers(
         progress = true;
       }
     } catch (err) {
-      console.warn(err);
+      // console.warn(err);
     }
   }
 
@@ -245,7 +245,7 @@ export class Synchronizer {
           } catch (err) {
             incomplete = true;
 
-            console.warn(err);
+            // console.warn(err);
           }
 
           serverState.active = false;
@@ -366,7 +366,7 @@ export class Synchronizer {
         ))
       ) {}
     } catch (err) {
-      console.warn(err);
+      // console.warn(err);
     }
   }
 
@@ -504,7 +504,7 @@ async function syncToServerSingleBatch(
         processHandle.recordServerAck(event, server);
       }
     } catch (err) {
-      console.warn('Failed to post events to server:', err);
+      // console.warn('Failed to post events to server:', err);
       return progress;
     }
 
