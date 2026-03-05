@@ -57,7 +57,7 @@ export async function postEvents(
     }).finish(),
   });
 
-  await checkResponse('postEvents', response);
+  checkResponse('postEvents', response);
 }
 
 export async function postCensor(
@@ -78,7 +78,7 @@ export async function postCensor(
     },
   );
 
-  await checkResponse('postCensor', response);
+  checkResponse('postCensor', response);
 }
 
 export async function getRanges(
@@ -98,7 +98,7 @@ export async function getRanges(
     }),
   });
 
-  await checkResponse('getRanges', response);
+  checkResponse('getRanges', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -140,7 +140,7 @@ export const getEvents: GetEventsType = async (
     }),
   });
 
-  await checkResponse('getEvents', response);
+  checkResponse('getEvents', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -170,7 +170,7 @@ export async function getResolveClaim(
     }),
   });
 
-  await checkResponse('getResolveClaim', response);
+  checkResponse('getResolveClaim', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -208,7 +208,7 @@ export const getQueryLatest: GetQueryLatestType = async (
     }),
   });
 
-  await checkResponse('getQueryLatest', response);
+  checkResponse('getQueryLatest', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -239,7 +239,7 @@ export async function getQueryIndex(
     }),
   });
 
-  await checkResponse('getQueryIndex', response);
+  checkResponse('getQueryIndex', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -282,7 +282,7 @@ export async function getQueryReferences(
     }),
   });
 
-  await checkResponse('getQueryReferences', response);
+  checkResponse('getQueryReferences', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -327,7 +327,7 @@ export async function getSearch(
     }),
   });
 
-  await checkResponse('getSearch', response);
+  checkResponse('getSearch', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -369,7 +369,7 @@ export async function getTopStringReferences(
     }),
   });
 
-  await checkResponse('getTopStringReferences', response);
+  checkResponse('getTopStringReferences', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -393,7 +393,7 @@ export async function getHead(
     }),
   });
 
-  await checkResponse('getHead', response);
+  checkResponse('getHead', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -434,7 +434,7 @@ export async function getExplore(
     }),
   });
 
-  await checkResponse('getExplore', response);
+  checkResponse('getExplore', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -472,7 +472,7 @@ export async function getFindClaimAndVouch(
     return undefined;
   }
 
-  await checkResponse('getFindClaimAndVouch', response);
+  checkResponse('getFindClaimAndVouch', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -489,7 +489,7 @@ export async function getChallenge(
     }),
   });
 
-  await checkResponse('getChallenge', response);
+  checkResponse('getChallenge', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -508,7 +508,7 @@ export async function postPurge(
     }),
   });
 
-  await checkResponse('postPurge', response);
+  checkResponse('postPurge', response);
 }
 
 export async function postClaimHandle(
@@ -524,7 +524,7 @@ export async function postClaimHandle(
     body: Protocol.ClaimHandleRequest.encode(claimRequest).finish(),
   });
 
-  await checkResponse('postClaimHandle', response);
+  checkResponse('postClaimHandle', response);
 }
 
 export async function getResolveHandle(
@@ -539,7 +539,7 @@ export async function getResolveHandle(
     }),
   });
 
-  await checkResponse('getResolveHandle', response);
+  checkResponse('getResolveHandle', response);
 
   const rawBody = new Uint8Array(await response.arrayBuffer());
 
@@ -583,7 +583,7 @@ export async function requestVerification(
       throw new Error(`Verification failed: ${text}`);
     }
 
-    await checkResponse('requestVerification', response);
+    checkResponse('requestVerification', response);
   } catch (error) {
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       console.error('CORS or network error:', {
@@ -623,7 +623,7 @@ export async function getOAuthURL(
       mode: 'cors',
     });
 
-    await checkResponse('getOAuthURL', response);
+    checkResponse('getOAuthURL', response);
     const data = (await response.json()) as string | { url: string };
 
     // Handle both string and object responses
@@ -654,7 +654,7 @@ export async function getOAuthUsername(
     }),
   });
 
-  await checkResponse('getOAuthUsername', response);
+  checkResponse('getOAuthUsername', response);
   return (await response.json()) as OAuthUsernameResponse;
 }
 
@@ -674,7 +674,7 @@ export async function getClaimFieldsByUrl(
     body: JSON.stringify({ url: subject }),
   });
 
-  await checkResponse('getClaimFieldsByUrl', response);
+  checkResponse('getClaimFieldsByUrl', response);
 
   type ClaimFieldEntryResponse = { key: number; value: string }[];
   const decoded = (await response.json()) as ClaimFieldEntryResponse;
