@@ -11,7 +11,7 @@ variables:
   GIT_DEPTH: 1
   SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   RUSTC_WRAPPER: /opt/sccache/sccache
-  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  node_config_cache: "$CI_PROJECT_DIR/.npm"
 
 image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
@@ -19,12 +19,12 @@ default:
   tags:
     - dind
 
-.npm-cache-config: &npm-cache-config
+.node-cache-config: &node-cache-config
   key:
     files:
       - package-lock.json
   paths:
-    - $npm_config_cache
+    - $node_config_cache
   policy: pull
 
 .rust-cache-config: &rust-cache-config
@@ -240,7 +240,7 @@ build-core:
   image: "$BUILDER_IMAGE"
   needs: ["check"]
   cache:
-    - <<: *npm-cache-config
+    - <<: *node-cache-config
       policy: pull-push
   script:
     - npm ci
