@@ -11,7 +11,6 @@ import { BlockedTopicsTable } from '../../components/settings/BlockedTopicsTable
 import { DarkModeSelector } from '../../components/settings/DarkModeSelector';
 import { DeleteAccount } from '../../components/settings/DeleteAccount';
 import { ExportKey } from '../../components/settings/ExportKey';
-import { ForumServerListTable } from '../../components/settings/ForumServerTable';
 import { ModerationTable } from '../../components/settings/ModerationTable';
 import { PrivateKeyDisplay } from '../../components/settings/PrivateKeyDisplay';
 import { PublicKeyDisplay } from '../../components/settings/PublicKeyDisplay';
@@ -28,7 +27,6 @@ export const SettingsPage: Page = () => {
             <div className="flex flex-col space-y-3">
               <h2 className="font-medium">Edit Servers</h2>
               <ServerListTable />
-              <ForumServerListTable />
             </div>
             <div className="flex flex-col space-y-3">
               <h2 className="font-medium">Your Private Key</h2>
@@ -40,8 +38,8 @@ export const SettingsPage: Page = () => {
             <div className="flex flex-col space-y-3">
               <h2 className="font-medium">Your Public Key</h2>
               <p className="text-gray-600 text-xs">
-                This is your public key. Copy this to set up forum admin access
-                in your forum server&apos;s ADMIN_PUBKEYS environment variable.
+                This is your public key. Share it with others to identify your
+                account.
               </p>
               <PublicKeyDisplay />
             </div>

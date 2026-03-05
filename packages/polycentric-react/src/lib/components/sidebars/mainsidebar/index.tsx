@@ -36,18 +36,13 @@ export const SidebarLink = ({
       {isMobile ? (
         <Link
           onClick={() => {
-            // For Forums, navigate to the forums page instead of setting it as a topic
-            if (topicName === 'Forums') {
-              // Don't set topic, let the router handle navigation
-              return;
-            }
             setTopic(topicName);
           }}
           className={`rounded p-2 mb-2 hover:bg-gray-200 transition-colors duration-200 text-left ${
             isCurrentTopic ? 'bg-gray-100' : ''
           } ${className}`}
           style={style}
-          routerLink={topicName === 'Forums' ? '/forums' : '/'}
+          routerLink="/"
           routerDirection="root"
         >
           {children}
@@ -83,9 +78,6 @@ export const MainSidebar = () => {
           </SidebarLink>
           <SidebarLink to="/" topicName="Explore">
             Explore
-          </SidebarLink>
-          <SidebarLink to="/forums" topicName="Forums">
-            Forums
           </SidebarLink>
           {/* empty div of same size */}
           <div className="h-5 flex-shrink-0" />
