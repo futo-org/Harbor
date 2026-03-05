@@ -2,6 +2,7 @@
  * @fileoverview Profile avatar input with cropping functionality.
  */
 
+import { PencilIcon } from '@heroicons/react/24/outline';
 import { useEffect, useRef, useState } from 'react';
 import { useBlobDisplayURL } from '../../../../../hooks/imageHooks';
 import { cropImageToBlob } from '../../../../../util/imageProcessing';
@@ -62,11 +63,18 @@ export const ProfileAvatarInput = ({
     <div className="flex flex-col gap-y-1">
       <h3 className="font-medium">{title}</h3>
       <div className="">
-        <label htmlFor="upload-button" className="">
-          <ProfilePicture
-            className="w-16 h-16"
-            src={previewURL || originalImageURL}
-          />
+        <label
+          htmlFor="upload-button"
+          className="relative flex w-16 h-16 cursor-pointer items-center justify-center rounded-full overflow-hidden border border-gray-300 bg-gray-200"
+        >
+          {previewURL || originalImageURL ? (
+            <ProfilePicture
+              className="w-16 h-16"
+              src={previewURL || originalImageURL}
+            />
+          ) : (
+            <PencilIcon className="h-8 w-8 text-gray-500" />
+          )}
         </label>
         <input
           id="upload-button"

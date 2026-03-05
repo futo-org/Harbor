@@ -4,45 +4,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import 'swiper/css';
 import { Swiper, SwiperRef, SwiperSlide } from 'swiper/react';
 import { useIsMobile } from '../../../hooks/styleHooks';
-
-// Left navigation arrow icon
-const LeftArrow = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-8 h-8"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-    />
-  </svg>
-);
-
-// Right navigation arrow icon
-const RightArrow = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-8 h-8"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-    />
-  </svg>
-);
 
 // Assumes that components will just modify application setting state so no direct state sharing is needed between components
 // Takes in an array of component types that take in a nextSlide function
@@ -51,14 +16,18 @@ const RightArrow = () => (
 export const Carousel = ({
   childComponents,
   className,
+  onSlideChange,
   swiperClassName,
 }: {
   childComponents: (({
     nextSlide,
+    goBack,
   }: {
     nextSlide: () => void;
+    goBack?: () => void;
   }) => JSX.Element)[];
   className?: string;
+  onSlideChange?: (index: number) => void;
   swiperClassName?: string;
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -79,8 +48,10 @@ export const Carousel = ({
   return (
     <div className={`${className} relative`}>
       <Swiper
-        onSlideChange={(swiper) => {
-          setCurrentSlide(swiper.activeIndex);
+        onSlideChange={(swiperInstance) => {
+          const index = swiperInstance.activeIndex;
+          setCurrentSlide(index);
+          onSlideChange?.(index);
         }}
         allowSlideNext={currentSlide < maxVisitedSlide || isTransitioning}
         allowSlidePrev={currentSlide > 0 || isTransitioning}
@@ -100,6 +71,12 @@ export const Carousel = ({
                   );
                 }
               }}
+              goBack={() => {
+                if (currentSlide > 0) {
+                  setCurrentSlide(currentSlide - 1);
+                  setIsTransitioning(true);
+                }
+              }}
             />
           </SwiperSlide>
         ))}
@@ -107,7 +84,8 @@ export const Carousel = ({
       <div className="hidden md:flex absolute top-1/2 w-full justify-between space-x-5 z-20 pointer-events-none">
         {currentSlide > 0 ? (
           <button
-            className={`swiper-button-prev md:flex justify-self-end w-20 h-20 rounded-full bg-white border justify-center items-center pointer-events-auto`}
+            type="button"
+            className="swiper-button-prev md:flex justify-self-end w-20 h-20 rounded-full bg-white border justify-center items-center pointer-events-auto"
             onClick={() => {
               if (currentSlide > 0) {
                 setCurrentSlide(currentSlide - 1);
@@ -115,7 +93,7 @@ export const Carousel = ({
               }
             }}
           >
-            <LeftArrow />
+            <ArrowLeftIcon className="w-8 h-8" />
           </button>
         ) : (
           <div />
@@ -131,7 +109,7 @@ export const Carousel = ({
               }
             }}
           >
-            <RightArrow />
+            <ArrowRightIcon className="w-8 h-8" />
           </button>
         ) : (
           <div />

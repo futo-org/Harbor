@@ -3,6 +3,7 @@
  */
 
 import { encode } from '@borderless/base64';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { isPlatform } from '@ionic/react';
 import { Models } from '@polycentric/polycentric-core';
 import {
@@ -27,6 +28,18 @@ import { publishBlobToAvatar } from '../../../util/imageProcessing';
 import { ProfileAvatarInput } from '../../profile/edit/inputs/ProfileAvatarInput';
 import { Carousel } from '../../util/carousel';
 
+// Mobile-only back button for carousel (previous slide)
+const MobileBackButton = ({ onBack }: { onBack: () => void }) => (
+  <button
+    type="button"
+    className="flex items-center gap-2 rounded-full border bg-white py-2 px-4 text-lg font-bold md:hidden"
+    onClick={onBack}
+  >
+    <ArrowLeftIcon className="h-6 w-6" />
+    Go back
+  </button>
+);
+
 // Responsive panel wrapper for onboarding screens
 const OnboardingPanel = ({
   children,
@@ -35,17 +48,17 @@ const OnboardingPanel = ({
   children: ReactNode;
   imgSrc: string;
 }) => (
-  <div className="relative h-screen md:h-auto w-full flex flex-col justify- md:grid md:grid-cols-2 md:grid-rows-1 md:gap-5 md:px-14 md:py-10">
-    <div className="border rounded-[2.5rem] bg-white">{children}</div>
+  <div className="relative h-[100dvh] md:h-auto w-full flex flex-col md:grid md:grid-cols-2 md:grid-rows-1 md:gap-5 md:px-14 md:py-10">
+    <div className="border rounded-[2.5rem] bg-white m-[2.5vw] md:m-0 min-h-0 flex flex-col">
+      {children}
+    </div>
     {/* Desktop graphic */}
     <br className="md:hidden" />
-    <div className="hidden md:block w-full justify-center bg-[#0096E6] max-h-72 md:max-h-none rounded-[2.5rem] overflow-hidden">
-      <img className="h-full" src={imgSrc} />
+    <div className="hidden md:block w-full h-full min-h-0 bg-[#0096E6] max-h-72 md:max-h-none rounded-[2.5rem] overflow-hidden">
+      <img className="w-full h-full object-cover" src={imgSrc} alt="" />
     </div>
-    {/* Mobile graphic */}
-    <div className="md:hidden absolute top-0 left-0 w-full h-full flex flex-col justify-end items-center bg-[#0096E6] -z-10">
-      <img className="h-1/2" src={imgSrc} />
-    </div>
+    {/* Mobile: solid blue bg */}
+    <div className="md:hidden absolute inset-0 w-full h-full bg-[#0096E6] -z-10" />
   </div>
 );
 
@@ -102,7 +115,10 @@ const WelcomePanel = ({ nextSlide }: { nextSlide: () => void }) => {
           <div className="text-gray-400 text-lg">Posting for communities</div>
           <button
             className="bg-blue-500 text-white border rounded-full md:rounded-md py-2 px-4 font-bold text-lg"
-            onClick={nextSlide}
+            onClick={() => {
+              setIsSigningIn(false);
+              nextSlide();
+            }}
           >
             Create Account (no email necessary)
           </button>
@@ -135,9 +151,12 @@ const WelcomePanel = ({ nextSlide }: { nextSlide: () => void }) => {
 // Notification permission request for Chromium browsers
 const RequestNotificationsPanel = ({
   nextSlide,
+  goBack,
 }: {
   nextSlide: () => void;
+  goBack?: () => void;
 }) => {
+  const isMobile = useIsMobile();
   const [state, setState] = useState<
     | 'init'
     | 'notifications_request_failed'
@@ -202,13 +221,21 @@ const RequestNotificationsPanel = ({
               ? 'Something went wrong'
               : 'Continue'}
         </button>
+        {isMobile && goBack ? <MobileBackButton onBack={goBack} /> : null}
       </div>
     </OnboardingPanel>
   );
 };
 
 // Storage persistence request for non-Chromium browsers
-const RequestPersistencePanel = ({ nextSlide }: { nextSlide: () => void }) => {
+const RequestPersistencePanel = ({
+  nextSlide,
+  goBack,
+}: {
+  nextSlide: () => void;
+  goBack?: () => void;
+}) => {
+  const isMobile = useIsMobile();
   const [state, setState] = useState<
     'init' | 'persist_call_failed' | 'persisted'
   >('init');
@@ -258,6 +285,7 @@ const RequestPersistencePanel = ({ nextSlide }: { nextSlide: () => void }) => {
             ? 'Persistence request denied'
             : 'Continue'}
         </button>
+        {isMobile && goBack ? <MobileBackButton onBack={goBack} /> : null}
       </div>
     </OnboardingPanel>
   );
@@ -372,9 +400,9 @@ const CredsPanelSignUp = () => {
   const stackRouterContext = useContext(StackRouterContext);
 
   const validateUsername = (value: string): boolean => {
-    if (!value.trim()) {
-      setUsernameError("Username can't be empty");
-      return false;
+    if (value.trim()) {
+      setUsernameError(null);
+      return true;
     }
     setUsernameError(null);
     return true;
@@ -394,17 +422,16 @@ const CredsPanelSignUp = () => {
       onSubmit={async (e) => {
         e.preventDefault();
 
-        // Validate username before proceeding
-        if (!validateUsername(username)) {
-          return;
-        }
+        const effectiveUsername =
+          username.trim() ||
+          `explorer_${Math.random().toString(36).substring(2, 8)}`;
 
         const defaultServers: Array<string> =
           import.meta.env.VITE_DEFAULT_SERVERS?.split(',') ?? [];
         const processHandle = await createHandle(
           privateKey,
           defaultServers,
-          username.trim(), // Ensure we trim whitespace
+          effectiveUsername,
         );
 
         // Set the new account flag
@@ -422,7 +449,7 @@ const CredsPanelSignUp = () => {
         if (window.PasswordCredential) {
           // @ts-ignore
           const cred = new window.PasswordCredential({
-            name: username,
+            name: effectiveUsername,
             id: encode(processHandle.system().key),
             password: encode(privateKey.key),
           });
@@ -440,7 +467,7 @@ const CredsPanelSignUp = () => {
           title="What's your username?"
           hint="You can change this later"
           value={username}
-          required={true}
+          required={false}
           onChange={handleUsernameChange}
           onBlur={() => validateUsername(username)}
         />
@@ -459,7 +486,6 @@ const CredsPanelSignUp = () => {
       <button
         type="submit"
         className="bg-blue-500 text-white border rounded-full md:rounded-md py-2 px-4 font-bold text-lg"
-        disabled={!username.trim()}
       >
         Lets go
       </button>
@@ -541,7 +567,13 @@ const CredsPanelSignIn = () => {
 };
 
 // Credentials panel with sign-up/sign-in toggle
-const CredsPanel = ({}: { nextSlide: () => void }) => {
+const CredsPanel = ({
+  goBack,
+}: {
+  nextSlide: () => void;
+  goBack?: () => void;
+}) => {
+  const isMobile = useIsMobile();
   const { isSigningIn, setIsSigningIn } = useContext(SignInContext);
 
   return (
@@ -556,6 +588,7 @@ const CredsPanel = ({}: { nextSlide: () => void }) => {
           </button>
         </div>
         {isSigningIn === false ? <CredsPanelSignUp /> : <CredsPanelSignIn />}
+        {isMobile && goBack ? <MobileBackButton onBack={goBack} /> : null}
       </div>
     </OnboardingPanel>
   );

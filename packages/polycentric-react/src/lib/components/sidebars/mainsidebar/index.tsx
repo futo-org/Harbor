@@ -70,7 +70,12 @@ export const MainSidebar = () => {
     <div className="h-full w-full flex flex-col space-y-5 justify-between md:p-5">
       <div className="flex flex-col space-y-5 flex-grow min-h-0">
         <Link routerLink="/" className="text-lg">
-          <img src={polycentricIcon} className="inline h-[20px]" /> Polycentric
+          <div className="flex flex-row items-center gap-2 p-2 rounded hover:bg-gray-200 transition-colors duration-200">
+            <div className="flex items-center">
+              <img src={polycentricIcon} className="h-[20px]" alt="" />
+            </div>
+            <span className="flex items-center">Polycentric</span>
+          </div>
         </Link>
         <div className="flex flex-col text-left min-h-0">
           <SidebarLink to="/following" topicName="Following">
