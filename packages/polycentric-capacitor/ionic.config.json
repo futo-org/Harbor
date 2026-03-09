@@ -1,7 +1,0 @@
-{
-  "name": "polycentric-capacitor",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "react-vite"
-}

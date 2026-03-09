@@ -1,3 +1,0 @@
-serv1.polycentric.io {
-    reverse_proxy http://varnish:80
-}
