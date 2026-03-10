@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package polycentric_ffi;
+
+message NetworkRequest {
+  string server = 1;
+  string method = 2;
+  string endpoint = 3;
+  map<string, string> parameters = 4;
+  optional bytes body = 5;
+}
+
+message NetworkResponse {
+  optional bytes body = 1;
+}
+
+message NetworkRequestResponses {
+  repeated NetworkRequestResponse pairs = 1;
+}
+
+message NetworkRequestResponse {
+  NetworkRequest request = 1;
+  optional NetworkResponse response = 2;
+}
+
+message Result {
+  oneof result {
+    NetworkRequestResponses requests = 1;
+    string error = 2;
+    bytes value = 3;
+  }
+}
+message Option {
+  optional bytes value = 1;
+}
+
+message SyncResult {
+  bytes events_bytes = 1;
+  repeated ServerError errors = 3;
+}
+
+
+message ServerError {
+  string server = 1;
+  string error = 2;
+}
+
+message ResultAndServerErrors {
+  bytes result = 1;
+  repeated ServerError errors = 2;
+}
+
+message Cursor {
+  optional bytes cursor = 1;
+}
+
+message ServerCursors {
+  map<string, Option> cursors = 1;
+}
+
+message ServerFeedQuery {
+  optional uint64 per_server_limit = 2;
+  optional string moderation_filters = 3;
+}
+
+message InternalFeedResult {
+  ResultAndServerErrors result = 1;
+  Cursor cursor = 2;
+}
+
+
+message SearchQuery {
+  string query = 1;
+  SearchType type = 2;
+}
+
+enum SearchType {
+  messages = 0;
+  profiles = 1;
+}
+
+message CommentsFeedState {
+  bytes event = 1;
+  ServerCursors cursors = 2;
+}
+
+
+message FeedQuery {
+  bytes system_bytes = 1;
+  optional uint64 start_time = 2;
+  optional uint64 end_time = 3;
+  optional uint64 limit = 4;
+  optional bytes cursor = 5;
+}
+
+message LogicalClock {
+  uint64 clock = 1;
+}

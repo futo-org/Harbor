@@ -1,0 +1,487 @@
+syntax = "proto3";
+
+package polycentric;
+
+enum ContentType {
+  UNKNOWN = 0;
+  DELETE = 1;
+  SYSTEM_PROCESSES = 2;
+  POST = 3;
+  FOLLOW = 4;
+  USERNAME = 5;
+  DESCRIPTION = 6;
+  BLOB_META = 7;
+  BLOB_SECTION = 8;
+  AVATAR = 9;
+  SERVER = 10;
+  VOUCH = 11;
+  CLAIM = 12;
+  BANNER = 13;
+  OPINION = 14;
+  STORE = 15;
+  AUTHORITY = 16;
+  JOIN_TOPIC = 17;
+  BLOCK = 18;
+}
+
+enum Opinion {
+  UNSPECIFIED = 0;
+  LIKE = 1;
+  DISLIKE = 2;
+  NEUTRAL = 3;
+}
+
+message PublicKey {
+  uint64 key_type = 1;
+  bytes  key      = 2;
+}
+
+message PrivateKey {
+  uint64 key_type = 1;
+  bytes  key      = 2;
+}
+
+message VectorClock {
+  repeated uint64 logical_clocks = 1;
+}
+
+message Index {
+  uint64 index_type    = 1;
+  uint64 logical_clock = 2;
+}
+
+message Indices {
+  repeated Index indices = 1;
+}
+
+message Process {
+  bytes process = 1;
+}
+
+message Digest {
+  enum DigestType {
+    Unknown = 0;
+    SHA256 = 1;
+  }
+  uint64 digest_type = 1;
+  bytes  digest      = 2;
+}
+
+message Pointer {
+  PublicKey system        = 1;
+  Process   process       = 2;
+  uint64    logical_clock = 3;
+  Digest    event_digest  = 4;
+}
+
+message LWWElementSet {
+  enum Operation {
+    ADD    = 0;
+    REMOVE = 1;
+  }
+  Operation operation         = 1;
+  bytes     value             = 2;
+  uint64    unix_milliseconds = 3;
+}
+
+message LWWElement {
+  bytes  value             = 1;
+  uint64 unix_milliseconds = 2;
+}
+
+
+message Reference {
+  enum ReferenceType {
+    Unknown = 0;
+    System = 1;
+    Pointer = 2;
+    Bytes = 3;
+  }
+  uint64 reference_type = 1;
+  bytes  reference      = 2;
+}
+
+message ProcessSecret {
+  PrivateKey system  = 1;
+  Process    process = 2;
+}
+
+message ModerationTag {
+  string name  = 1;
+  uint32 level = 2;
+}
+
+message SignedEvent {
+  bytes                  signature       = 1;
+  bytes                  event           = 2;
+  repeated ModerationTag moderation_tags = 3;
+}
+
+message Events {
+  repeated SignedEvent events = 1;
+}
+
+message Post {
+  string content = 1;
+  optional ImageManifest image = 2;
+}
+
+message ImageManifest {
+  string mime = 1;
+  uint32 width = 2;
+  uint32 height = 3;
+  bytes digest = 4;
+}
+
+message ImageBundle {
+  repeated ImageManifest images = 1;
+}
+
+message Claim {
+  uint64 claim_type = 1;
+  repeated ClaimFieldEntry fields = 2;
+}
+
+message ClaimFieldEntry {
+  uint64 key = 1;
+  string value = 2;
+}
+
+message Delete {
+  Process process = 1;
+  uint64 logical_clock = 2;
+  Indices indices = 3;
+  optional uint64 unix_milliseconds = 4;
+  ContentType content_type = 5;
+}
+
+message SystemProcesses {
+  repeated Process processes = 1;
+}
+
+message SystemState {
+  repeated string servers = 1;
+  repeated string authorities = 2;
+  repeated Process processes = 3;
+}
+
+message ProcessState {
+  uint64 logical_clock = 1;
+  uint64 unix_milliseconds = 2;
+  repeated Range ranges = 3;
+}
+
+message Range {
+  uint64 low = 1;
+  uint64 high = 2;
+}
+
+message RangesForProcess {
+             Process process = 1;
+    repeated Range   ranges  = 2;
+}
+
+message RangesForSystem {
+    repeated RangesForProcess ranges_for_processes = 1;
+}
+
+message OpinionSummary {
+  uint64 like_count = 1;
+  uint64 dislike_count = 2;
+  uint64 neutral_count = 3;
+  optional uint32 user_opinion = 4;
+}
+
+message BlobMeta {
+  string mime = 1;
+  uint64 size = 2;
+  repeated BlobSection sections = 3;
+}
+
+message BlobSection {
+  bytes digest = 1;
+  uint64 size = 2;
+}
+
+message URLInfo {
+  uint64 url_type = 1;
+  bytes body = 2;
+}
+
+message URLInfoSystemLink {
+  PublicKey system = 1;
+  repeated string servers = 2;
+}
+
+message URLInfoEventLink {
+  PublicKey system = 1;
+  Process process = 2;
+  uint64 logical_clock = 3;
+  repeated string servers = 4;
+}
+
+message ExportBundle {
+  repeated SignedEvent events = 1;
+  repeated URLInfoSystemLink system_links = 2;
+  repeated URLInfoEventLink event_links = 3;
+}
+
+message HarborChallengeResponse {
+  HarborChallengeResponseBody body = 1;
+  bytes signature = 2;
+}
+
+message HarborChallengeResponseBody {
+  string challenge = 1;
+  uint64 unix_milliseconds = 2;
+}
+
+message HarborValidateRequest {
+  string solution = 1;
+  HarborChallengeResponse challenge_response = 2;
+}
+
+message StorageTypeSystemState {
+  repeated string servers = 1;
+  repeated string authorities = 2;
+  repeated Process processes = 3;
+}
+
+message StorageTypeProcessSecret {
+  PrivateKey system = 1;
+  Process process = 2;
+}
+
+message QueryEngineStats {
+  uint64 total_events  = 1;
+  uint64 system_count  = 2;
+  uint64 process_count = 3;
+  
+  message MemoryUsage {
+    uint64 bytes = 1;
+  }
+  
+  optional MemoryUsage memory_usage = 4;
+}
+
+message EventCreationData {
+  PublicKey              system            = 1;
+  Process                process           = 2;
+  ContentType            content_type      = 3;
+  bytes                  content           = 4;
+  optional Indices       indices           = 5;
+  optional LWWElementSet lww_element_set   = 6;
+  optional LWWElement    lww_element       = 7;
+  repeated Reference     references        = 8;
+  optional uint64        unix_milliseconds = 9;
+  optional uint64        logical_clock     = 10;
+}
+
+message Event {
+  PublicKey              system            = 1;
+  Process                process           = 2;
+  uint64                 logical_clock     = 3;
+  ContentType            content_type      = 4;
+  bytes                  content           = 5;
+  VectorClock            vector_clock      = 6;
+  Indices                indices           = 7;
+  optional LWWElementSet lww_element_set   = 8;
+  optional LWWElement    lww_element       = 9;
+  repeated Reference     references        = 10;
+  optional uint64        unix_milliseconds = 11;
+}
+
+message ReferencesResult {
+  repeated SignedEvent events         = 1;
+  repeated SignedEvent related_events = 2;
+  bytes                cursor         = 3;
+}
+
+message FeedResult {
+  repeated SignedEvent events = 1;
+  bytes                cursor = 2;
+}
+
+message CountReferencesResult {
+  repeated uint64 counts = 1 [packed = false];
+}
+
+message EventCreationResult {
+  bytes  event         = 1;
+  uint64 logical_clock = 2;
+}
+
+message EventKey {
+  uint64 system_key_type = 1;
+  bytes  system_key      = 2;
+  bytes  process         = 3;
+  uint64 logical_clock   = 4;
+}
+
+message FeedCursor {
+  uint64   unix_milliseconds = 1;
+  EventKey event_key         = 2;
+}
+
+message ReferenceCursor {
+  EventKey last_event_key   = 1;
+  uint64   offset           = 2;
+  uint64   processed_count  = 3;
+}
+
+message DebugReferenceDigestResult {
+  bool           success                    = 1;
+  bool           pointer_parsed             = 2;
+  bool           has_digest                 = 3;
+  optional Digest reference_digest          = 4;
+  Digest         calculated_digest          = 5;
+  bool           digests_match              = 6;
+  string         error                      = 7;
+  uint32         reference_bytes_length     = 8;
+  uint32         event_bytes_length         = 9;
+  bool           pointer_system_present     = 10;
+  bool           pointer_process_present    = 11;
+  uint64         pointer_logical_clock      = 12;
+}
+
+message Server {
+    string server = 1;
+}
+
+message AggregationBucket {
+    bytes key = 1;
+    int64 value = 2;
+}
+
+message PublicKeys {
+    repeated PublicKey systems = 1;
+}
+
+message KeyPair {
+    uint64 key_type    = 1;
+    bytes  private_key = 2;
+    bytes  public_key  = 3;
+}
+
+message ResultEventsAndRelatedEventsAndCursor {
+    Events                  result_events  = 1;
+    Events                  related_events = 2;
+    optional bytes          cursor         = 3;
+}
+
+message ResultTopStringReferences {
+    repeated AggregationBucket buckets = 1;
+}
+
+message StorageTypeCRDTSetItem {
+    uint64                  content_type      = 1;
+    bytes                   value             = 2;
+    uint64                  unix_milliseconds = 3;
+    LWWElementSet.Operation operation         = 4;
+}
+
+message StorageTypeCRDTItem {
+    uint64 content_type      = 1;
+    bytes  value             = 2;
+    uint64 unix_milliseconds = 3;
+}
+
+message StorageTypeProcessState {
+             uint64  logical_clock = 1;
+    repeated Range   ranges        = 2;
+             Indices indices       = 3;
+}
+
+message RepeatedUInt64 {
+    repeated uint64 numbers = 1;
+}
+
+message QueryReferencesRequest {
+             Reference                                       reference                    = 1;
+    optional bytes                                           cursor                       = 2;
+    optional QueryReferencesRequestEvents                    request_events               = 3;
+    repeated QueryReferencesRequestCountLWWElementReferences count_lww_element_references = 4;
+    repeated QueryReferencesRequestCountReferences           count_references             = 5;
+    repeated bytes                                           extra_byte_references        = 6;
+}
+
+message QueryReferencesRequestEvents {
+    optional uint64                                          from_type                    = 1;
+    repeated QueryReferencesRequestCountLWWElementReferences count_lww_element_references = 2;
+    repeated QueryReferencesRequestCountReferences           count_references             = 3;
+}
+
+message QueryReferencesRequestCountLWWElementReferences {
+             bytes  value     = 1;
+    optional uint64 from_type = 2;
+}
+
+message QueryReferencesRequestCountReferences {
+    optional uint64 from_type = 1;
+}
+
+message QueryReferencesResponseEventItem {
+             SignedEvent event  = 1;
+    repeated uint64      counts = 2;
+}
+
+message QueryReferencesResponse {
+    repeated QueryReferencesResponseEventItem items          = 1;
+    repeated SignedEvent                      related_events = 2;
+    optional bytes                            cursor         = 3;
+    repeated uint64                           counts         = 4;
+}
+
+message QueryClaimToSystemRequest {
+    uint64    claim_type      = 1;
+    PublicKey trust_root      = 2;
+
+    oneof query {
+        string                            match_any_field  = 3;
+        QueryClaimToSystemRequestMatchAll match_all_fields = 4;
+    }
+}
+
+message QueryClaimToSystemRequestMatchAll {
+    repeated ClaimFieldEntry fields = 1;
+}
+
+message QueryClaimToSystemResponse {
+    repeated QueryClaimToSystemResponseMatch matches = 1;
+}
+
+message QueryClaimToSystemResponseMatch {
+             SignedEvent claim       = 1;
+    repeated SignedEvent proof_chain = 2;
+}
+
+message QueryIndexResponse {
+    repeated SignedEvent events = 1;
+    repeated SignedEvent proof = 2;
+}
+
+message URLInfoDataLink {
+             PublicKey system     = 1;
+             Process   process    = 2;
+    repeated string    servers    = 3;
+             uint64    byte_count = 4;
+    repeated Range     sections   = 5;
+    optional string    mime       = 6;
+}
+
+message FindClaimAndVouchRequest {
+             PublicKey       vouching_system  = 1;
+             PublicKey       claiming_system  = 2;
+    repeated ClaimFieldEntry fields           = 3;
+             uint64          claim_type       = 4;
+}
+
+message FindClaimAndVouchResponse {
+    SignedEvent vouch = 1;
+    SignedEvent claim = 2;
+}
+
+message ClaimHandleRequest {
+    PublicKey system = 1;
+    string  handle       = 2;
+}

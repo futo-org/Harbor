@@ -1,0 +1,40 @@
+{
+  "name": "@polycentric/js-core",
+  "version": "0.0.0",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.es.js",
+  "module": "./dist/index.es.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto",
+    "build": "webpack",
+    "test": "echo 'No tests'"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "@polycentric/rs-core-wasm-browser": "workspace:*",
+    "@protobuf-ts/runtime": "^2.10.0",
+    "@sqlite.org/sqlite-wasm": "3.49.1-build4",
+    "base64url": "^3.0.1",
+    "eventemitter3": "^5.0.1",
+    "js-base64": "^3.7.8"
+  },
+  "devDependencies": {
+    "@polycentric/tsconfig": "workspace:*",
+    "@protobuf-ts/plugin": "^2.11.1",
+    "typescript": "catalog:",
+    "ts-loader": "^9.5.4",
+    "webpack": "^5.100.1",
+    "webpack-cli": "^6.0.1"
+  }
+}

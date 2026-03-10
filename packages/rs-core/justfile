@@ -1,0 +1,141 @@
+_default:
+    @just --list
+
+_ensure-submodules:
+    @if [ ! -f proto/protos/polycentric.proto ]; then \
+        echo "Initializing git submodules..."; \
+        git submodule update --init; \
+    fi
+
+_check-wasm-pack:
+    @if ! command -v wasm-pack; then \
+        echo "Error: 'wasm-pack' command not found."; \
+        echo "Please install it with the following command and ensure it's in your PATH:"; \
+        echo "  cargo install wasm-pack"; \
+        exit 1; \
+    fi
+
+_check-node:
+    @if ! command -v node; then \
+        echo "Error: 'node' command not found."; \
+        echo "Please install Node.js and ensure it's in your PATH."; \
+        exit 1; \
+    fi
+
+# Run all tests
+test: _ensure-submodules
+    @echo "Running tests..."
+    @cargo test
+
+# Check for compile errors
+check: _ensure-submodules
+    @echo "Checking for compile errors..."
+    @cargo check
+
+# Format the code using cargo fmt
+format:
+    @echo "Formatting code..."
+    @cargo fmt
+    @echo "Formatting complete."
+
+# Check that code is formatted correctly
+format-check:
+    @echo "Checking code formatting..."
+    @cargo fmt --check
+    @echo "Formatting check passed."
+
+# Lint code using cargo clippy
+clippy:
+    @echo "Linting code with clippy..."
+    @cargo clippy -- -D warnings # Treat warnings as errors
+    @echo "All clippy checks passed."
+
+# Build and open the documentation
+doc:
+    @echo "Building documentation..."
+    @cargo doc --open
+
+# Open the documentation without rebuilding
+open-docs:
+    @echo "Opening documentation..."
+    @open target/doc/polycentric_core/index.html
+
+# Build FFI for real iOS devices (ARM64)
+build-ffi-ios: _ensure-submodules
+    @echo "Building FFI for iOS devices (aarch64-apple-ios)..."
+    @cargo rustc --release --target aarch64-apple-ios --features ffi --no-default-features --crate-type staticlib
+    @echo "Build completed: target/aarch64-apple-ios/release/librs_core.a"
+
+# Build FFI for iOS simulator on Apple Silicon Macs
+build-ffi-ios-sim: _ensure-submodules
+    @echo "Building FFI for iOS simulator on Apple Silicon (aarch64-apple-ios-sim)..."
+    @cargo rustc --release --target aarch64-apple-ios-sim --features ffi --no-default-features --crate-type staticlib
+    @echo "Build completed: target/aarch64-apple-ios-sim/release/librs_core.a"
+
+# Build FFI for iOS simulator on Intel Macs
+build-ffi-ios-sim-x86: _ensure-submodules
+    @echo "Building FFI for iOS simulator on Intel (x86_64-apple-ios)..."
+    @cargo rustc --release --target x86_64-apple-ios --features ffi --no-default-features --crate-type staticlib
+    @echo "Build completed: target/x86_64-apple-ios/release/librs_core.a"
+
+# Build FFI for Android ARM64
+build-ffi-android-arm64: _ensure-submodules
+    @echo "Building FFI for Android ARM64 (aarch64-linux-android)..."
+    @cargo build --release --target aarch64-linux-android --features ffi --no-default-features
+    @echo "Build completed: target/aarch64-linux-android/release/librs_core.so"
+
+# Build FFI for Android ARMv7
+build-ffi-android-armv7: _ensure-submodules
+    @echo "Building FFI for Android ARMv7 (armv7-linux-androideabi)..."
+    @cargo build --release --target armv7-linux-androideabi --features ffi --no-default-features
+    @echo "Build completed: target/armv7-linux-androideabi/release/librs_core.so"
+
+# Build FFI for Android x86
+build-ffi-android-x86: _ensure-submodules
+    @echo "Building FFI for Android x86 (i686-linux-android)..."
+    @cargo build --release --target i686-linux-android --features ffi --no-default-features
+    @echo "Build completed: target/i686-linux-android/release/librs_core.so"
+
+# Build FFI for Android x86_64
+build-ffi-android-x86_64: _ensure-submodules
+    @echo "Building FFI for Android x86_64 (x86_64-linux-android)..."
+    @cargo build --release --target x86_64-linux-android --features ffi --no-default-features
+    @echo "Build completed: target/x86_64-linux-android/release/librs_core.so"
+
+# Build all Android targets
+build-ffi-android: build-ffi-android-arm64 build-ffi-android-armv7 build-ffi-android-x86 build-ffi-android-x86_64
+    @echo "All Android FFI builds completed"
+
+# Build the WASM package for web target
+build-wasm-web: _ensure-submodules _check-wasm-pack _check-node
+    @echo "Building WASM package (target: web)..."
+    @wasm-pack build --target web --scope lib-polycentric --out-dir ../rs-core-wasm-browser
+    @node -e "const p=JSON.parse(require('fs').readFileSync('../rs-core-wasm-browser/package.json','utf8')); p.name='@polycentric/rs-core-wasm-browser'; require('fs').writeFileSync('../rs-core-wasm-browser/package.json', JSON.stringify(p, null, 2))"
+    @echo "Build completed successfully."
+
+# Build the WASM package for nodejs
+build-wasm-node: _ensure-submodules _check-wasm-pack _check-node
+    @echo "Building WASM package (target: node)..."
+    @wasm-pack build --target nodejs --scope lib-polycentric --out-dir ../rs-core-wasm-node
+    @node -e "const p=JSON.parse(require('fs').readFileSync('../rs-core-wasm-node/package.json','utf8')); p.name='@polycentric/rs-core-wasm-node'; require('fs').writeFileSync('../rs-core-wasm-node/package.json', JSON.stringify(p, null, 2))"
+    @echo "Build completed successfully."
+
+# Update proto submodule to latest commit
+update-proto-submodule:
+    @echo "Updating proto submodule..."
+    @git submodule update --remote proto
+    @if git diff --quiet proto; then \
+        echo "Proto submodule is already up to date."; \
+    else \
+        echo "Proto submodule updated. Don't forget to commit the change."; \
+    fi
+
+# Clean build artifacts
+clean:
+    @echo "Cleaning build artifacts..."
+    @cargo clean
+    @if [ -d pkg-web ]; then rm -rf pkg-web; echo "Removed pkg-web directory."; fi
+    @if [ -d pkg-node ]; then rm -rf pkg-node; echo "Removed pkg-node directory."; fi
+    @echo "Build artifacts have been removed."
+
+

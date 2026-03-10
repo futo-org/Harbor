@@ -1,0 +1,8 @@
+{
+  "name": "polycentric",
+  "author": "FUTO",
+  "packageManager": "pnpm@10.19.0",
+  "devDependencies": {
+    "turbo": "^2.6.1"
+  }
+}

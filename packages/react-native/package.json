@@ -1,0 +1,187 @@
+{
+  "name": "@polycentric/react-native",
+  "version": "0.1.0",
+  "description": "Polycentric SDK for react native applications",
+  "main": "./lib/module/index.js",
+  "types": "./lib/typescript/src/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.tsx",
+      "types": "./lib/typescript/src/index.d.ts",
+      "default": "./lib/module/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "cpp",
+    "*.podspec",
+    "react-native.config.js",
+    "!ios/build",
+    "!android/build",
+    "!android/gradle",
+    "!android/gradlew",
+    "!android/gradlew.bat",
+    "!android/local.properties",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "!**/.*"
+  ],
+  "scripts": {
+    "example": "yarn workspace @lib-polycentric/react-native-example",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/android/app/.cxx example/android/.gradle example/ios/build lib",
+    "prepare": "bob build",
+    "typecheck": "tsc",
+    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "test": "jest",
+    "release": "release-it --only-version",
+    "proto:generate": "npx pbjs -t static-module -w es6 -o ./src/generated/protocol.js ../../protobuf-types/protos/polycentric.proto ../../protobuf-types/protos/rs-core-ffi.proto && npx pbts -o ./src/generated/protocol.d.ts ./src/generated/protocol.js"
+  },
+  "keywords": [
+    "react-native",
+    "ios",
+    "android"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.futo.org/polycentric/lib-polycentric/react-native.git"
+  },
+  "author": "austin <austin@futo.org> (https://www.npmjs.com/~austinwhite)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://gitlab.futo.org/polycentric/lib-polycentric/react-native/issues"
+  },
+  "homepage": "https://gitlab.futo.org/polycentric/lib-polycentric/react-native#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/compat": "^1.3.2",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.35.0",
+    "@react-native/babel-preset": "0.83.0",
+    "@react-native/eslint-config": "0.83.0",
+    "@release-it/conventional-changelog": "^10.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.2.0",
+    "commitlint": "^19.8.1",
+    "del-cli": "^6.0.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^29.7.0",
+    "lefthook": "^2.0.3",
+    "prettier": "^3.4.2",
+    "protobufjs-cli": "^2.0.0",
+    "react": "19.2.0",
+    "react-native": "0.83.0",
+    "react-native-builder-bob": "^0.40.17",
+    "release-it": "^19.0.4",
+    "turbo": "^2.5.6",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@op-engineering/op-sqlite": "*",
+    "react": ">=19.0.0",
+    "react-native": ">=0.83.0"
+  },
+  "peerDependenciesMeta": {
+    "@op-engineering/op-sqlite": {
+      "optional": true
+    }
+  },
+  "workspaces": [
+    "example"
+  ],
+  "packageManager": "yarn@4.11.0",
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "module",
+        {
+          "esm": true
+        }
+      ],
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  },
+  "codegenConfig": {
+    "name": "PolycentricSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "ios": {
+      "modulesProvider": {
+        "PolycentricCore": "PolycentricCoreProvider"
+      }
+    }
+  },
+  "prettier": {
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false
+  },
+  "jest": {
+    "preset": "react-native",
+    "modulePathIgnorePatterns": [
+      "<rootDir>/example/node_modules",
+      "<rootDir>/lib/"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}"
+    },
+    "npm": {
+      "publish": true
+    },
+    "github": {
+      "release": true
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": {
+          "name": "angular"
+        }
+      }
+    }
+  },
+  "create-react-native-library": {
+    "type": "turbo-module",
+    "languages": "kotlin-objc",
+    "tools": [
+      "eslint",
+      "jest",
+      "lefthook",
+      "release-it"
+    ],
+    "version": "0.56.1"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.28.6",
+    "@noble/ed25519": "2.1.0",
+    "@noble/hashes": "1.4.0",
+    "fast-text-encoding": "^1.0.6",
+    "protobufjs": "^7.0.0",
+    "react-native-get-random-values": "^1.11.0"
+  }
+}

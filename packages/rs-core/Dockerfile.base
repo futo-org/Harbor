@@ -1,0 +1,14 @@
+FROM rust:slim-bookworm
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN rustup set profile default && rustup component add clippy rustfmt
+
+RUN cargo install just && rm -rf /usr/local/cargo/registry
+

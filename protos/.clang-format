@@ -1,0 +1,6 @@
+{
+  BasedOnStyle: Google,
+  AlignConsecutiveDeclarations: true,
+  AlignConsecutiveAssignments: true,
+  ColumnLimit: 0,
+}

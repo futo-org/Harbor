@@ -1,0 +1,68 @@
+import { createContext, StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
+import {
+  IndexedDBStorageDriver,
+  BrowserCryptoManager,
+  BrowserWasmBridge,
+} from '@polycentric/js-browser';
+import { HydrationStrategy, PolycentricClient } from '@polycentric/js-core';
+import { currentSelectedIdentity } from './utils/identities.ts';
+import { HydrationStatus } from '@polycentric/js-core';
+
+export const ClientContext = createContext<PolycentricClient | null>(null);
+
+try {
+  console.log('1. Starting client initialization...');
+
+  const storageDriver = await IndexedDBStorageDriver.create('test');
+  console.log('2. Storage driver created');
+
+  const cryptoManager = new BrowserCryptoManager();
+  console.log('3. Crypto manager created');
+
+  const wasmManager = new BrowserWasmBridge();
+  console.log('4. WASM bridge created');
+
+  const clientInstance = await PolycentricClient.create({
+    storageDriver,
+    cryptoManager,
+    wasmManager,
+    hydration: {
+      strategy: HydrationStrategy.FULL_ASYNC,
+      batchSize: 100,
+    },
+  });
+
+  clientInstance.events.onHydrationStatus(async (status) => {
+    if (status === HydrationStatus.COMPLETED) {
+      console.log('Hydration complete, syncing...');
+      await clientInstance.sync();
+      console.log('Sync complete.');
+    }
+  });
+
+  console.log('5. PolycentricClient created successfully');
+
+  console.log('6. Loading identities...');
+  const identities = await clientInstance.getAllIdentities();
+  let keyPair;
+  if (identities.length > 0) {
+    keyPair = await clientInstance.switchIdentity(
+      currentSelectedIdentity(identities).publicKey,
+    );
+    console.log('7. Identity loaded', keyPair);
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ClientContext.Provider value={clientInstance}>
+        <App />
+      </ClientContext.Provider>
+    </StrictMode>,
+  );
+} catch (error) {
+  alert('Unable to initialize client');
+  console.error(error);
+}

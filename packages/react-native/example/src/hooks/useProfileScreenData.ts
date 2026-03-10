@@ -1,0 +1,72 @@
+import { useMemo, useState, useEffect } from 'react';
+import { types } from '@lib-polycentric/react-native';
+import {
+  useCurrentIdentity,
+  useUsername,
+  useProfile,
+  useAuthorFeed,
+  useLikesFeed,
+  useFollowStatus,
+} from './PolycentricProvider';
+import {
+  getIdentityId,
+  identiconUrl,
+  stringURLSafeToPublicKey,
+} from './helpers';
+
+export type ProfileScreenData = {
+  publicKey: types.IPublicKey;
+  isSelf: boolean;
+  username: string;
+  profile: ReturnType<typeof useProfile>;
+  authorFeed: ReturnType<typeof useAuthorFeed>;
+  likesFeed: ReturnType<typeof useLikesFeed>;
+  followStatus: ReturnType<typeof useFollowStatus>;
+  short: string;
+  avatarUrl: string;
+  activeFeed: 'posts' | 'likes';
+  setActiveFeed: (tab: 'posts' | 'likes') => void;
+};
+
+export function useProfileScreenData(
+  publicKeyParam: string | undefined
+): ProfileScreenData {
+  const publicKey = useMemo(
+    () =>
+      publicKeyParam
+        ? stringURLSafeToPublicKey(publicKeyParam)
+        : types.PublicKey.create(),
+    [publicKeyParam]
+  );
+
+  const { isCurrentIdentity } = useCurrentIdentity();
+  const isSelf = isCurrentIdentity(publicKey);
+
+  const username = useUsername(publicKey);
+  const profile = useProfile(publicKey);
+  const authorFeed = useAuthorFeed(publicKey);
+  const likesFeed = useLikesFeed({ enabled: isSelf });
+  const followStatus = useFollowStatus(publicKey);
+
+  const short = getIdentityId(publicKey);
+  const avatarUrl = identiconUrl(publicKey);
+
+  const [activeFeed, setActiveFeed] = useState<'posts' | 'likes'>('posts');
+  useEffect(() => {
+    if (!isSelf) setActiveFeed('posts');
+  }, [isSelf]);
+
+  return {
+    publicKey,
+    isSelf,
+    username,
+    profile,
+    authorFeed,
+    likesFeed,
+    followStatus,
+    short,
+    avatarUrl,
+    activeFeed,
+    setActiveFeed,
+  };
+}
