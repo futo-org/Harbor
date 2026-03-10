@@ -32,7 +32,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @lib-polycentric/react-native-example",
+    "example": "yarn workspace @polycentric/react-native-example",
     "clean": "del-cli android/build example/android/build example/android/app/build example/android/app/.cxx example/android/.gradle example/ios/build lib",
     "prepare": "bob build",
     "typecheck": "tsc",

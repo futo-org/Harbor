@@ -2497,14 +2497,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lib-polycentric/react-native-example@workspace:example":
+"@polycentric/react-native-example@workspace:example":
   version: 0.0.0-use.local
-  resolution: "@lib-polycentric/react-native-example@workspace:example"
+  resolution: "@polycentric/react-native-example@workspace:example"
   dependencies:
     "@babel/core": "npm:^7.25.2"
     "@babel/preset-env": "npm:^7.25.3"
     "@babel/runtime": "npm:^7.25.0"
-    "@lib-polycentric/react-native": "npm:*"
+    "@polycentric/react-native": "npm:*"
     "@op-engineering/op-sqlite": "npm:^15.2.5"
     "@react-native-community/cli": "npm:20.0.0"
     "@react-native-community/cli-platform-android": "npm:20.0.0"
@@ -2529,9 +2529,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@lib-polycentric/react-native@npm:*, @lib-polycentric/react-native@workspace:.":
+"@polycentric/react-native@npm:*, @polycentric/react-native@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@lib-polycentric/react-native@workspace:."
+  resolution: "@polycentric/react-native@workspace:."
   dependencies:
     "@babel/runtime": "npm:^7.28.6"
     "@commitlint/config-conventional": "npm:^19.8.1"

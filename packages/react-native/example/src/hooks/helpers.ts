@@ -1,5 +1,5 @@
-import { types } from '@lib-polycentric/react-native';
-import type { PolycentricClient } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native';
 
 export function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode.apply(null, Array.from(bytes)));

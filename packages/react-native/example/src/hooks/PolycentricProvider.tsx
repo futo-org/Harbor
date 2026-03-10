@@ -13,7 +13,7 @@ import {
   ReactNativeCryptoManager,
   FeedQuery,
   types,
-} from '@lib-polycentric/react-native';
+} from '@polycentric/react-native';
 import {
   createPolycentricStore,
   useStore,
@@ -78,7 +78,8 @@ import { Platform } from 'react-native';
 
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 export const DEFAULT_SERVER =
-  (process.env.POLYCENTRIC_SERVER ?? '').trim() || `http://${DEFAULT_HOST}:8081`;
+  (process.env.POLYCENTRIC_SERVER ?? '').trim() ||
+  `http://${DEFAULT_HOST}:8081`;
 
 interface PolycentricProviderProps {
   children: ReactNode;

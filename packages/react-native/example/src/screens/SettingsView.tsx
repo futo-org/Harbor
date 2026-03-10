@@ -11,8 +11,8 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { types } from '@lib-polycentric/react-native';
-import type { PolycentricClient } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native';
 import {
   usePolycentricContext,
   useCurrentIdentity,
@@ -24,7 +24,8 @@ import { COLORS } from '../colors';
 
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const DEFAULT_SERVER =
-  (process.env.POLYCENTRIC_SERVER ?? '').trim() || `http://${DEFAULT_HOST}:8081`;
+  (process.env.POLYCENTRIC_SERVER ?? '').trim() ||
+  `http://${DEFAULT_HOST}:8081`;
 
 interface UserProfile {
   publicKey: types.IPublicKey;

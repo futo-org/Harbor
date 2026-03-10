@@ -11,7 +11,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
-import { types } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
 import {
   usePolycentricContext,
   useExploreFeed,

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { types } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
 import {
   useCurrentIdentity,
   useUsername,

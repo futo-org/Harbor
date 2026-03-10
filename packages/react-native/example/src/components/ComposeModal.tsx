@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { types } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
 import { usePolycentricContext, truncateName } from '../hooks';
 import { COLORS } from '../colors';
 

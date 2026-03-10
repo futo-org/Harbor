@@ -1,6 +1,6 @@
 import { createStore, useStore as useZustandStore } from 'zustand';
-import { types } from '@lib-polycentric/react-native';
-import type { PolycentricClient } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
+import type { PolycentricClient } from '@polycentric/react-native';
 import { getPointer, type PostData } from './helpers';
 import { fetchPostStats } from './fetchPostStats';
 

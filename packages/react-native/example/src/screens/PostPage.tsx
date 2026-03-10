@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
-import { types } from '@lib-polycentric/react-native';
+import { types } from '@polycentric/react-native';
 import {
   usePolycentricContext,
   useCurrentIdentity,
