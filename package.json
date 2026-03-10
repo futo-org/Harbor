@@ -2,6 +2,10 @@
   "name": "polycentric",
   "author": "FUTO",
   "packageManager": "pnpm@10.19.0",
+  "scripts": {
+    "build": "turbo run build",
+    "generate": "turbo run generate"
+  },
   "devDependencies": {
     "turbo": "^2.6.1"
   }
