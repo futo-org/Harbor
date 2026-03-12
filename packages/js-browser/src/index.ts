@@ -22,5 +22,5 @@ export {
 export {
   _createIndexedDBDatabase,
   IndexedDBDatabase,
-} from './storage/indexedDB/indexedDB-database';
-export { IndexedDBStorageDriver } from './storage/indexedDB/indexedDB-storage-driver';
+} from './storage/indexeddb/database';
+export { IndexedDBStorageDriver } from './storage/indexeddb/storage-driver';

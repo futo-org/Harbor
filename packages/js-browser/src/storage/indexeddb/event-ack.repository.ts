@@ -1,9 +1,6 @@
 import type { IEventAckRepository } from '@polycentric/js-core';
 import { DatabaseError } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 interface PersistedEventAck {
   system_key_type: number;
@@ -68,16 +65,6 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     this.database = database;
   }
 
-  /**
-   * Store an event acknowledgment in the database.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the acknowledged event
-   * @param serverUrl - The server URL that acknowledged the event
-   * @throws {DatabaseError} If storing fails
-   */
   async storeEventAck(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -113,15 +100,6 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     }
   }
 
-  /**
-   * Retrieve event acknowledgments for a specific event.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
-   * @returns Promise that resolves to an array of server URLs that acknowledged the event
-   */
   async getEventAcks(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -144,8 +122,8 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
           .index(IndexedDBEventAckRepository.idx_event_acks_natural_key)
           .getAll([
             Number(systemKeyType),
-            systemKey,
-            process,
+            systemKey as IDBValidKey,
+            process as IDBValidKey,
             Number(logicalClock),
           ]),
       );
@@ -158,16 +136,6 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     }
   }
 
-  /**
-   * Check if a specific event has been acknowledged by a specific server.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
-   * @param serverUrl - The server URL to check
-   * @returns Promise that resolves to true if acknowledged, false otherwise
-   */
   async hasEventAck(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -189,8 +157,8 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
           .index(IndexedDBEventAckRepository.idx_event_acks_server_has_ack)
           .getAll([
             Number(systemKeyType),
-            systemKey,
-            process,
+            systemKey as IDBValidKey,
+            process as IDBValidKey,
             Number(logicalClock),
             serverUrl,
           ]),
@@ -202,15 +170,6 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     }
   }
 
-  /**
-   * Remove event acknowledgments for a specific event.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
-   * @throws {DatabaseError} If removal fails
-   */
   async removeEventAcks(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -231,8 +190,8 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
           .index(IndexedDBEventAckRepository.idx_event_acks_natural_key)
           .getAll([
             Number(systemKeyType),
-            systemKey,
-            process,
+            systemKey as IDBValidKey,
+            process as IDBValidKey,
             Number(logicalClock),
           ]),
       );

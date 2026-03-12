@@ -1,9 +1,6 @@
 import type { IKeysRepository } from '@polycentric/js-core';
 import { PrivateKey, PublicKey, DatabaseError } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 interface PersistedKey {
   key_type: bigint;
@@ -41,12 +38,6 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     this.database = database;
   }
 
-  /**
-   * Store a key pair in the database.
-   *
-   * @param keys - A key pair to store
-   * @throws {DatabaseError} If the keys are invalid or storing fails
-   */
   async storeKeys(keys: {
     privateKey: PrivateKey;
     publicKey: PublicKey;
@@ -81,12 +72,6 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     }
   }
 
-  /**
-   * Retrieve a key pair by public key.
-   *
-   * @param publicKey - The public key to look up
-   * @returns Promise that resolves to the key pair, or null if not found
-   */
   async retrieveKeysByPublicKey(publicKey: PublicKey): Promise<{
     privateKey: PrivateKey;
     publicKey: PublicKey;
@@ -99,7 +84,7 @@ export class IndexedDBKeysRepository implements IKeysRepository {
       const store = transaction.objectStore(IndexedDBKeysRepository.STORE_NAME);
 
       const result = await IndexedDBDatabase.requestAsPromise<PersistedKey>(
-        store.get(publicKey.key),
+        store.get(publicKey.key as IDBValidKey),
       );
 
       if (!result) {
@@ -121,12 +106,6 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     }
   }
 
-  /**
-   * Removes a key pair from storage
-   *
-   * @param keys - A key pair containing private and public keys
-   * @throws {Error} If the keys are invalid or removal fails
-   */
   async removeKeys(publicKey: PublicKey): Promise<void> {
     try {
       const transaction = this.database.createTransaction(
@@ -135,18 +114,15 @@ export class IndexedDBKeysRepository implements IKeysRepository {
       );
       const store = transaction.objectStore(IndexedDBKeysRepository.STORE_NAME);
 
-      await IndexedDBDatabase.requestAsPromise(store.delete(publicKey.key));
+      await IndexedDBDatabase.requestAsPromise(
+        store.delete(publicKey.key as IDBValidKey),
+      );
       transaction.commit();
     } catch (error) {
       throw new DatabaseError('Failed to remove keys by public key: ', error);
     }
   }
 
-  /**
-   * Gets all stored key pairs
-   *
-   * @returns Promise that resolves to a list of all stored key pairs
-   */
   async getAllKeys(): Promise<
     {
       privateKey: PrivateKey;

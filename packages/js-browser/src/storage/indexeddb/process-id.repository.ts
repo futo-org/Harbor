@@ -1,10 +1,7 @@
 import type { IProcessIdRepository } from '@polycentric/js-core';
 import { DatabaseError } from '@polycentric/js-core';
 import { Process } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 interface PersistedProcessId {
   id: 1;

@@ -1,13 +1,10 @@
 import type { IStorageDriver } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
-import { IndexedDBProcessIdRepository } from './process-id-indexedDB';
-import { IndexedDBEventAckRepository } from './event-ack-indexedDB';
-import { IndexedDBKeysRepository } from './keys-indexedDB';
-import { IndexedDBProcessStateRepository } from './process-state-indexedDB';
-import { IndexedDBEventRepository } from './event-store-indexedDB';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBProcessIdRepository } from './process-id.repository';
+import { IndexedDBEventAckRepository } from './event-ack.repository';
+import { IndexedDBKeysRepository } from './keys.repository';
+import { IndexedDBProcessStateRepository } from './process-state.repository';
+import { IndexedDBEventRepository } from './event.repository';
 
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;

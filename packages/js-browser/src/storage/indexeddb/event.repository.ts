@@ -1,9 +1,6 @@
 import type { IEventRepository } from '@polycentric/js-core';
 import { SignedEvent, DatabaseError } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 /**
  * IndexedDBEventRepository provides IndexedDB-based storage for polycentric signed events.
@@ -36,12 +33,6 @@ export class IndexedDBEventRepository implements IEventRepository {
     this.database = database;
   }
 
-  /**
-   * Persist a single event in the database.
-   *
-   * @param signedEvent - A signed event to persist
-   * @throws {DatabaseError} If the event is invalid or persisting fails
-   */
   async persistEvent(signedEvent: SignedEvent): Promise<void> {
     try {
       //const eventToPersist = IndexedDBEventRepository.signedEventToPersistedEvent(signedEvent);
@@ -61,23 +52,12 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
-  /**
-   * Persist multiple events in a single database transaction.
-   *
-   * @param signedEvents - An array of signed events to persist
-   * @throws {DatabaseError} If any event is invalid or the transaction fails
-   */
   async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
     for (const signedEvent of signedEvents) {
       await this.persistEvent(signedEvent);
     }
   }
 
-  /**
-   * Get all events from the repository
-   *
-   * @returns An array of signed events
-   */
   async getAllEvents(): Promise<SignedEvent[]> {
     try {
       const transaction = this.database.createTransaction(
@@ -98,13 +78,6 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
-  /**
-   * Get events in batches, ordered by id
-   *
-   * @param batchSize The number of events to retrieve
-   * @param offset The offset from which to start retrieving events
-   * @returns An object containing an array of signed events and the new offset
-   */
   async getEventsBatch(
     batchSize: number,
     offset?: number,

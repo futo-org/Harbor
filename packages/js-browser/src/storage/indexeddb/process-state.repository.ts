@@ -1,9 +1,6 @@
 import type { IProcessStateRepository } from '@polycentric/js-core';
 import { DatabaseError } from '@polycentric/js-core';
-import {
-  IndexedDBDatabase,
-  IndexedDBDatabaseLayout,
-} from './indexedDB-database';
+import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 interface PersistedProcessState {
   system_key_type: number; // We are never going to have more key types than the number type can support, so this field can just be a number
@@ -43,15 +40,6 @@ export class IndexedDBProcessStateRepository implements IProcessStateRepository 
     this.database = database;
   }
 
-  /**
-   * Persist the logical clock for a given process.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @param logicalClock - The logical clock value to persist
-   * @throws {DatabaseError} If the operation fails
-   */
   async persistCurrentLogicalClock(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -87,15 +75,6 @@ export class IndexedDBProcessStateRepository implements IProcessStateRepository 
     }
   }
 
-  /**
-   * Get the current logical clock for a given process.
-   *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @returns Promise that resolves to the current logical clock or 0 if not found
-   * @throws {DatabaseError} If the query fails
-   */
   async getCurrentLogicalClock(
     systemKeyType: bigint,
     systemKey: Uint8Array,
@@ -112,7 +91,11 @@ export class IndexedDBProcessStateRepository implements IProcessStateRepository 
 
       const result =
         await IndexedDBDatabase.requestAsPromise<PersistedProcessState>(
-          store.get([Number(systemKeyType), systemKey, process]),
+          store.get([
+            Number(systemKeyType),
+            systemKey as IDBValidKey,
+            process as IDBValidKey,
+          ]),
         );
 
       if (!result) {
@@ -126,16 +109,10 @@ export class IndexedDBProcessStateRepository implements IProcessStateRepository 
   }
 
   /**
-   * Convenience method to determine the next logical clock for a given process.
-   *
    * Note: This method does not persist the new logical clock value.
    * Use persistCurrentLogicalClock to persist the new logical clock value.
    *
-   * @param systemKeyType - The system key type
-   * @param systemKey - The system key bytes
-   * @param process - The process ID bytes
-   * @returns Promise that resolves to the next logical clock value
-   * @throws {DatabaseError} If the operation fails
+   * @inheritdoc
    */
   async getNextLogicalClock(
     systemKeyType: bigint,
