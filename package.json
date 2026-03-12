@@ -3,6 +3,7 @@
   "author": "FUTO",
   "packageManager": "pnpm@10.19.0",
   "scripts": {
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "generate": "turbo run generate"
   },

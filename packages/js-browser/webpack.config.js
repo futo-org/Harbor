@@ -20,7 +20,7 @@ export default [
     },
     externals: {
       '@polycentric/js-core': '@polycentric/js-core',
-      '@lib-polycentric/rs-core': '@lib-polycentric/rs-core',
+      '@polycentric/rs-core-wasm-browser': '@polycentric/rs-core-wasm-browser',
     },
     output: {
       filename: 'index.es.js',
@@ -47,7 +47,7 @@ export default [
     },
     externals: {
       '@polycentric/js-core': '@polycentric/js-core',
-      '@lib-polycentric/rs-core': '@lib-polycentric/rs-core',
+      '@polycentric/rs-core-wasm-browser': '@polycentric/rs-core-wasm-browser',
     },
     output: {
       filename: 'index.cjs.js',

@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   optimizeDeps: {
-    exclude: ['@sqlite.org/sqlite-wasm', '@lib-polycentric/rs-core'],
+    exclude: ['@sqlite.org/sqlite-wasm', '@polycentric/rs-core-wasm-browser'],
     include: ['@polycentric/js-core', '@polycentric/js-browser'],
   },
   server: {
