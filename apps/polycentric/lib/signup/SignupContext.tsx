@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "expo-router";
-import { getNextStep, isLastStep, SignupRoute } from "./_flow";
+import { getNextStep, isLastStep, SignupRoute } from "./flow";
 import { usePolycentricContext } from "@/lib/polycentric-hooks";
 
 type ModerationLevel = 1 | 2 | 3;

@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "generate": "turbo run generate"
+    "generate": "turbo run generate",
+    "run:ios": "pnpm -C apps/polycentric run ios",
+    "run:android": "pnpm -C apps/polycentric run android",
+    "run:web": "pnpm -C apps/polycentric run web"
   },
   "devDependencies": {
     "turbo": "^2.6.1"

@@ -1,6 +1,6 @@
 import { Screen, Box, Text, Button, PageHeader } from "@/components";
 import { useRouter } from "expo-router";
-import { useSignup } from "./_SignupContext";
+import { useSignup } from "@/lib/signup/SignupContext";
 
 type ModerationLevel = 1 | 2 | 3;
 

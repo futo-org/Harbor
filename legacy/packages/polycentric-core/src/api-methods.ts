@@ -3,7 +3,6 @@ import fetch, { Headers } from 'cross-fetch';
 import Long from 'long';
 import * as Models from './models';
 import * as Protocol from './protocol';
-import * as Version from './version';
 
 function checkResponse(name: string, response: Response): void {
   if (!response.ok) {
@@ -24,7 +23,7 @@ function encodeModerationLevels(
   );
 }
 
-const userAgent = 'polycentric-core-' + Version.SHA.substring(0, 8);
+const userAgent = 'polycentric-core';
 
 // Guard access to process.env
 let verifierServer = 'https://verify.polycentric.io';

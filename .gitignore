@@ -5,12 +5,14 @@
 node_modules/
 **/node_modules
 **/node_modules/**
+.pnpm-store
 /.pnp
 .pnp.js
 devcert
 
 # testing
 /coverage
+**/__screenshots__/
 junit.xml
 junit-server.xml
 

@@ -106,6 +106,9 @@ export class PolycentricClient {
               id.publicKey.key?.toString() === lastUsedKey.key?.toString()
           )
         : undefined;
+      if (lastUsedKey && !restored) {
+        this._storage.currentIdentity.clear();
+      }
       const active = restored ?? allIdentities[0]!;
       this._currentKeyPair = active;
       if (active.processId) {
@@ -252,13 +255,19 @@ export class PolycentricClient {
     return this.identityManager.getAllIdentities();
   }
 
-  async deleteIdentity(): Promise<void> {
-    if (this._storage) {
+  async deleteIdentity(publicKey?: polycentric.IPublicKey): Promise<void> {
+    if (!this._storage) return;
+
+    const isCurrent =
+      !publicKey ||
+      (this._currentKeyPair &&
+        this._currentKeyPair.publicKey.key?.toString() ===
+          publicKey.key?.toString());
+
+    if (isCurrent) {
       if (this._currentKeyPair) {
         this._storage.identities.remove(this._currentKeyPair.publicKey);
       }
-
-      // Check if other identities remain
       const remaining = this._storage.identities.getAll();
       if (remaining.length === 0) {
         this._storage.currentIdentity.clear();
@@ -267,16 +276,18 @@ export class PolycentricClient {
         this._logicalClock = 1;
         this.events.emitIdentityChanged(null);
       } else {
-        // Auto-switch to the first remaining identity (which has its own processId)
         this._currentKeyPair = null;
         this._logicalClock = 1;
         await this.switchIdentity(remaining[0]!.publicKey);
       }
     } else {
-      this._currentKeyPair = null;
-      this._currentProcess = null;
-      this._logicalClock = 1;
-      this.events.emitIdentityChanged(null);
+      this._storage.identities.remove(publicKey!);
+      if (this._currentKeyPair && this._currentProcess) {
+        this.events.emitIdentityChanged({
+          keyPair: this._currentKeyPair,
+          process: this._currentProcess,
+        });
+      }
     }
   }
 

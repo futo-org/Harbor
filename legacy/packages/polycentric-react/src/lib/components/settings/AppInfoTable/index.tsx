@@ -3,7 +3,7 @@
  */
 
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import { PersistenceDriver, Version } from '@polycentric/legacy-polycentric-core';
+import { PersistenceDriver } from '@polycentric/legacy-polycentric-core';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { usePersistenceDriver } from '../../../hooks/persistenceDriverHooks';
 
@@ -75,22 +75,8 @@ export const AppInfoTable = () => {
     };
   }, [storageEstimate]);
 
-  const version = Version.SHA;
-
   const table = useMemo(
     () => [
-      {
-        key: 'Version',
-        value: (
-          <a
-            href={`https://gitlab.futo.org/polycentric/polycentric/-/tree/${version}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {version}
-          </a>
-        ),
-      },
       {
         key: 'Storage Persistent',
         value: persisted ? 'Yes' : 'No',
@@ -108,7 +94,7 @@ export const AppInfoTable = () => {
         value: bytesUsed ? byteAmountToString(bytesUsed) : undefined,
       },
     ],
-    [version, persisted, implementationName, bytesAvailable, bytesUsed],
+    [persisted, implementationName, bytesAvailable, bytesUsed],
   );
 
   const [expanded, setExpanded] = useState(false);

@@ -72,7 +72,7 @@ pub(crate) async fn ingest_event_batch(
             "user_agent",
             &user_agent.clone().unwrap_or("unknown".to_string()),
         )
-        .try_send()?;
+        .try_send().ok();
 
     // Collect the newly ingested signed events
     let filtered_events = batch

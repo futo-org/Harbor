@@ -1,17 +1,12 @@
 import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+import { usePolycentricContext } from "@/lib/polycentric-hooks";
 
 export default function Index() {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [userOnboarded, setUserOnboarded] = useState(false);
+  const { client, isLoading, isReady } = usePolycentricContext();
 
-  useEffect(() => {
-    setIsInitialized(true);
-  }, []);
-
-  // wait for initialization to check if user is onboarded.
-  if (!isInitialized) {
+  if (isLoading || !isReady || !client) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator />
@@ -19,9 +14,13 @@ export default function Index() {
     );
   }
 
-  if (userOnboarded) {
-    return <Redirect href="/(tabs)/feed" />;
-  }
+  SplashScreen.hideAsync();
 
-  return <Redirect href="/(onboarding)" />;
+  // TODO: re-enable onboarding flow when ready
+  // const hasIdentity = client.currentIdentity !== null;
+  // if (!hasIdentity) {
+  //   return <Redirect href="/(onboarding)" />;
+  // }
+
+  return <Redirect href="/(tabs)/feed" />;
 }

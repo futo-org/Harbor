@@ -6,7 +6,7 @@
 //!   • Exits with code 0 if the status is 200, otherwise exits 1.
 //!
 //! Environment variables (optional):
-//!   HTTP_PORT_API   — Port to query (default: 8081)
+//!   HTTP_PORT_API   — Port to query (default: 8787)
 //!   HOST            — Hostname (default: localhost)
 //!   HEALTH_PATH     — Path to query (default: /health)
 //!
@@ -19,7 +19,7 @@ use std::{env, process::exit, time::Duration};
 
 #[tokio::main]
 async fn main() {
-    let port = env::var("HTTP_PORT_API").unwrap_or_else(|_| "8081".into());
+    let port = env::var("HTTP_PORT_API").unwrap_or_else(|_| "8787".into());
     let host = env::var("HOST").unwrap_or_else(|_| "localhost".into());
     let path = env::var("HEALTH_PATH").unwrap_or_else(|_| "/health".into());
 

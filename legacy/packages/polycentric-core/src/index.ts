@@ -1,4 +1,3 @@
-export * as Version from './version';
 export * as Models from './models';
 export * as PersistenceDriver from './persistence-driver';
 export * as MetaStore from './meta-store';

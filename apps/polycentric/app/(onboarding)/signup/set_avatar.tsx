@@ -1,6 +1,6 @@
 import { Screen, Box, Button, PageHeader, Avatar } from "@/components";
 import { useRouter } from "expo-router";
-import { useSignup } from "./_SignupContext";
+import { useSignup } from "@/lib/signup/SignupContext";
 import { useImagePicker } from "@/lib/fs-pickers/useImagePicker";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";

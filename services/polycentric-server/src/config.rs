@@ -43,7 +43,7 @@ impl ::std::str::FromStr for ModerationMode {
 
 #[derive(::envconfig::Envconfig)]
 pub(crate) struct Config {
-    #[envconfig(from = "HTTP_PORT_API", default = "8081")]
+    #[envconfig(from = "HTTP_PORT_API", default = "8787")]
     pub http_port_api: u16,
 
     #[envconfig(

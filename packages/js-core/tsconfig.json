@@ -2,6 +2,7 @@
   "extends": "@polycentric/tsconfig/compiled-package.json",
   "include": ["src"],
   "compilerOptions": {
-    "emitDeclarationOnly": false
+    "emitDeclarationOnly": false,
+    "lib": ["ES2022", "DOM"]
   }
 }
