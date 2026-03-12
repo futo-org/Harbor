@@ -17,6 +17,7 @@
   "scripts": {
     "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto",
     "build": "webpack",
+    "dev": "webpack --watch",
     "test": "echo 'No tests'"
   },
   "dependencies": {

@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "build": "webpack",
+    "dev": "webpack --watch",
     "test": "vitest",
     "test:run": "vitest run"
   },

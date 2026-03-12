@@ -47,12 +47,15 @@ try {
 
   console.log('6. Loading identities...');
   const identities = await clientInstance.getAllIdentities();
+
+  console.log('7. Identities loaded', identities);
+
   let keyPair;
   if (identities.length > 0) {
     keyPair = await clientInstance.switchIdentity(
       currentSelectedIdentity(identities).publicKey,
     );
-    console.log('7. Identity loaded', keyPair);
+    console.log('8. Identity loaded', keyPair);
   }
 
   createRoot(document.getElementById('root')!).render(
