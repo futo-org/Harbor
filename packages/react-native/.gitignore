@@ -85,3 +85,7 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+
+# rs-core FFI build artifacts (built from packages/rs-core)
+ios/libs/
+android/libs/**/*.a

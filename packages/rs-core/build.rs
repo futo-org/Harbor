@@ -3,17 +3,17 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let types_base_dir = PathBuf::from("proto");
-    if !types_base_dir.is_dir() {
-        return Err("Proto submodule not initialized. Run `git submodule update --init`.".into());
+    let protos_dir = PathBuf::from("../../protos");
+    if !protos_dir.is_dir() {
+        return Err("Proto directory not found at ../../protos".into());
     }
 
-    let proto_file_path = types_base_dir.join("protos/polycentric.proto");
-    let ffi_proto_file_path = types_base_dir.join("protos/rs-core-ffi.proto");
+    let proto_file_path = protos_dir.join("polycentric.proto");
+    let ffi_proto_file_path = protos_dir.join("rs-core-ffi.proto");
 
     prost_build::Config::new().compile_protos(
         &[proto_file_path.as_path(), ffi_proto_file_path.as_path()],
-        &[types_base_dir.as_path()],
+        &[protos_dir.as_path()],
     )?;
 
     // Post-process the generated code to fix packed encoding for CountReferencesResult.counts
