@@ -1,4 +1,4 @@
-package com.polycentric.app
+package org.futo.polycentric
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
