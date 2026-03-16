@@ -439,10 +439,19 @@ async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         Mode::ServeAPI => {
             info!("mode: ServeAPI");
 
-            let pool = ::sqlx::postgres::PgPoolOptions::new()
+            let pool = match ::sqlx::postgres::PgPoolOptions::new()
                 .max_connections(10)
                 .connect(&config.postgres_string)
-                .await?;
+                .await
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    // Your error handling logic here
+                    error!("Failed to connect to the database: {}", e);
+                    // You can decide to exit gracefully, retry, or return the error
+                    return Err(e.into());
+                }
+            };
 
             let mut transaction = pool.begin().await?;
 
