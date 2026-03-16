@@ -3,10 +3,11 @@ package tech.futo.libPolycentric.services
 import PolycentricException
 import polycentric_ffi.NetworkRequestResponses
 import polycentric_ffi.Result
+import tech.futo.libPolycentric.PolycentricClient
 
 public open class FFIException(message: String) : PolycentricException(message)
 
-class FFIService {
+class FFIService(private val client: PolycentricClient){
     companion object {
         init {
             System.loadLibrary("jni_bindings")

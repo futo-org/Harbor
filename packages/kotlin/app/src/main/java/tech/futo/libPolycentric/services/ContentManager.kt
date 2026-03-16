@@ -4,17 +4,9 @@ import PolycentricException
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import polycentric.*
-import tech.futo.libPolycentric.interfaces.Identity
+import tech.futo.libPolycentric.PolycentricClient
 
-class ContentManager(
-    private val ffiService: FFIService,
-    private val identity: Identity,
-) {
-    private fun signEventCallback(eventBytes: ByteArray): ByteArray {
-        // TODO: implement event signing
-        return ByteArray(0)
-    }
-
+class ContentManager(private val client: PolycentricClient) {
     private fun createLWWElementSetEvent(
         contentType: ContentType,
         value: ByteArray,
@@ -43,7 +35,7 @@ class ContentManager(
 
     private fun getReference(pointer: Pointer): EventKey? {
         val pointerBytes = Pointer.ADAPTER.encode(pointer)
-        val result = ffiService.getReference(pointerBytes)
+        val result = this.client.ffiService.getReference(pointerBytes)
         if (result.isEmpty()) return null
         return EventKey.ADAPTER.decode(result)
     }
@@ -111,8 +103,14 @@ class ContentManager(
     fun createEvent(eventData: EventCreationData): SignedEvent {
         val eventDataBytes = EventCreationData.ADAPTER.encode(eventData)
         val unixMs = System.currentTimeMillis().toInt()
-        val result = ffiService.createEvent(eventDataBytes, unixMs)
-        return SignedEvent.ADAPTER.decode(result)
+
+        val event = this.client.ffiService.createEvent(eventDataBytes, unixMs)
+        val signature = this.client.identityManager.sign(event.toByteString())
+
+        val signedEvent = SignedEvent(event = event.toByteString(), signature = signature)
+
+        this.client.ffiService.ingestEvent(signedEvent.encode())
+        return signedEvent
     }
 
     fun createPost(content: String, image: ImageManifest? = null, reference: Reference? = null): SignedEvent {

@@ -1,10 +1,14 @@
 package tech.futo.libPolycentric
 
 import PolycentricException
+import tech.futo.libPolycentric.services.ContentManager
 import tech.futo.libPolycentric.services.FFIService
+import tech.futo.libPolycentric.services.IdentityManager
 
 class PolycentricClient {
-    private val ffiService = FFIService()
+    internal val ffiService = FFIService(this)
+    internal val contentManager = ContentManager(this)
+    internal val identityManager = IdentityManager(this)
 
     fun init() {
         this.ffiService.init()
