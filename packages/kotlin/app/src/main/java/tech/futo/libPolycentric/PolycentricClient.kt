@@ -11,11 +11,11 @@ class PolycentricClient {
 
 
     fun init() {
-        this.ffiService.ffiResult { this.ffiService.initialize() }
+        this.ffiService.init()
     }
 
     fun isInitialized(): Boolean {
-        val result = this.ffiService.ffiResult { this.ffiService.is_initialized() }
+        val result = this.ffiService.isInitialized()
 
         if(result.isNotEmpty())
             return result[0] == 1.toByte()
