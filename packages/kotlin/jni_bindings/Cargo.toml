@@ -1,0 +1,13 @@
+[package]
+name = "jni_bindings"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rs-core = { path = "../../rs-core", features = ["ffi"] }
+jni = { version = "0.22.0", default-features = false }
+libc = "0.2.172"
+
