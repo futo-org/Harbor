@@ -38,7 +38,7 @@ android {
 
 wire {
     sourcePath {
-        srcDir("../../protobuf-types/protos")
+        srcDir("../../../protos")
     }
     kotlin {}
 }
