@@ -1,7 +1,10 @@
 package tech.futo.libPolycentric.services
 
+import PolycentricException
 import polycentric_ffi.NetworkRequestResponses
 import polycentric_ffi.Result
+
+public open class FFIException(message: String) : PolycentricException(message)
 
 class FFIService {
     companion object {
@@ -10,7 +13,15 @@ class FFIService {
         }
     }
 
-    private fun ffiResult(callback: (networkRequests: ByteArray) -> ByteArray): ByteArray {
+    private fun fulfillRequests(requests: NetworkRequestResponses) {
+        for(pair in requests.pairs) {
+            if(pair.response !== null) continue
+
+
+        }
+    }
+
+    public fun ffiResult(callback: (networkRequests: ByteArray) -> ByteArray): ByteArray {
         var requests = NetworkRequestResponses()
 
         for(i in 0..100) {
@@ -32,7 +43,7 @@ class FFIService {
             }
         }
 
-        throw PolycentricException("FFI Boundary network request limit exceeded")
+        throw FFIException("FFI Boundary network request limit exceeded")
     }
 
     external fun initialize(): ByteArray
