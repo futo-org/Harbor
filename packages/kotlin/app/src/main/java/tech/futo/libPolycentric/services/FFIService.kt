@@ -142,28 +142,28 @@ class FFIService {
         return this.ffiResult { this.query_feed_with_cursor(feedQuery) }
     }
 
-    external fun initialize(): ByteArray
-    external fun is_initialized(): ByteArray
-    external fun ingest_event(signed_event: ByteArray): ByteArray
-    external fun create_event(event_creation_data: ByteArray, unix_ms: Int): ByteArray
-    external fun sync_events_for_system(system: ByteArray, network_requests: ByteArray): ByteArray
-    external fun get_reference(pointer: ByteArray): ByteArray
-    external fun get_pointer(event: ByteArray): ByteArray
-    external fun query_explore_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, cursor: ByteArray): ByteArray
-    external fun query_search_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, search_query: ByteArray, cursor: ByteArray): ByteArray
-    external fun query_author_feed(current_system: ByteArray, target_system: ByteArray, network_requests: ByteArray, limit: Int, cursor: ByteArray): ByteArray
-    external fun query_following_feed(current_system: ByteArray, limit: Int, cursor: ByteArray): ByteArray
-    external fun query_references_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, reference: ByteArray, cursor: ByteArray): ByteArray
-    external fun query_comments_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, cursor: ByteArray): ByteArray
-    external fun query_likes_feed(current_system: ByteArray, limit: Int, cursor: ByteArray): ByteArray
-    external fun query_events(system: ByteArray, process: ByteArray, start_clock: Int, end_clock: Int): ByteArray
-    external fun query_crdt_for_system(target_system: ByteArray, content_type: Int, current_system: ByteArray, network_requests: ByteArray): ByteArray
-    external fun query_opinion(current_system: ByteArray, target_pointer: ByteArray): ByteArray
-    external fun query_event_is_deleted(pointer: ByteArray): ByteArray
-    external fun query_follows_for_system(system: ByteArray): ByteArray
-    external fun query_blocks_for_system(system: ByteArray): ByteArray
-    external fun query_servers_for_system(system: ByteArray): ByteArray
-    external fun query_authorities_for_system(system: ByteArray): ByteArray
-    external fun query_topics_for_system(system: ByteArray): ByteArray
-    external fun query_feed_with_cursor(feed_query: ByteArray): ByteArray
+    private external fun initialize(): ByteArray
+    private external fun is_initialized(): ByteArray
+    private external fun ingest_event(signed_event: ByteArray): ByteArray
+    private external fun create_event(event_creation_data: ByteArray, unix_ms: Int): ByteArray
+    private external fun sync_events_for_system(system: ByteArray, network_requests: ByteArray): ByteArray
+    private external fun get_reference(pointer: ByteArray): ByteArray
+    private external fun get_pointer(event: ByteArray): ByteArray
+    private external fun query_explore_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, cursor: ByteArray): ByteArray
+    private external fun query_search_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, search_query: ByteArray, cursor: ByteArray): ByteArray
+    private external fun query_author_feed(current_system: ByteArray, target_system: ByteArray, network_requests: ByteArray, limit: Int, cursor: ByteArray): ByteArray
+    private external fun query_following_feed(current_system: ByteArray, limit: Int, cursor: ByteArray): ByteArray
+    private external fun query_references_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, reference: ByteArray, cursor: ByteArray): ByteArray
+    private external fun query_comments_feed(system: ByteArray, network_requests: ByteArray, feed_query: ByteArray, cursor: ByteArray): ByteArray
+    private external fun query_likes_feed(current_system: ByteArray, limit: Int, cursor: ByteArray): ByteArray
+    private external fun query_events(system: ByteArray, process: ByteArray, start_clock: Int, end_clock: Int): ByteArray
+    private external fun query_crdt_for_system(target_system: ByteArray, content_type: Int, current_system: ByteArray, network_requests: ByteArray): ByteArray
+    private external fun query_opinion(current_system: ByteArray, target_pointer: ByteArray): ByteArray
+    private external fun query_event_is_deleted(pointer: ByteArray): ByteArray
+    private external fun query_follows_for_system(system: ByteArray): ByteArray
+    private external fun query_blocks_for_system(system: ByteArray): ByteArray
+    private external fun query_servers_for_system(system: ByteArray): ByteArray
+    private external fun query_authorities_for_system(system: ByteArray): ByteArray
+    private external fun query_topics_for_system(system: ByteArray): ByteArray
+    private external fun query_feed_with_cursor(feed_query: ByteArray): ByteArray
 }
