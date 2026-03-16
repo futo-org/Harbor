@@ -1,0 +1,1 @@
+public class PolycentricException(message: String) : Exception(message)
