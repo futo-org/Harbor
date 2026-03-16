@@ -1,0 +1,262 @@
+package tech.futo.libPolycentric.services
+
+import PolycentricException
+import okio.ByteString
+import okio.ByteString.Companion.toByteString
+import polycentric.*
+import tech.futo.libPolycentric.interfaces.Identity
+
+class ContentManager(
+    private val ffiService: FFIService,
+    private val identity: Identity,
+) {
+    private fun signEventCallback(eventBytes: ByteArray): ByteArray {
+        // TODO: implement event signing
+        return ByteArray(0)
+    }
+
+    private fun createLWWElementSetEvent(
+        contentType: ContentType,
+        value: ByteArray,
+        operation: LWWElementSet.Operation,
+    ): SignedEvent {
+        val lwwElementSet = LWWElementSet(
+            operation = operation,
+            value_ = value.toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = contentType,
+            lww_element_set = lwwElementSet,
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    private fun getReference(pointer: Pointer): EventKey? {
+        val pointerBytes = Pointer.ADAPTER.encode(pointer)
+        val result = ffiService.getReference(pointerBytes)
+        if (result.isEmpty()) return null
+        return EventKey.ADAPTER.decode(result)
+    }
+
+    private fun createOpinion(opinion: Opinion, subjectPointer: Pointer): SignedEvent {
+        getReference(subjectPointer)
+            ?: throw PolycentricException("Could not get reference from pointer")
+
+        val subjectReference = Reference(
+            reference_type = 2L,
+            reference = Pointer.ADAPTER.encode(subjectPointer).toByteString(),
+        )
+
+        val lwwElement = LWWElement(
+            value_ = byteArrayOf(opinion.value.toByte()).toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.OPINION,
+            lww_element = lwwElement,
+            references = listOf(subjectReference),
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    private fun createDelete(targetPointer: Pointer, contentType: ContentType): SignedEvent {
+        val deleteEvent = Delete(
+            process = targetPointer.process,
+            logical_clock = targetPointer.logical_clock,
+            unix_milliseconds = System.currentTimeMillis(),
+            indices = Indices(),
+            content_type = contentType,
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.DELETE,
+            content = Delete.ADAPTER.encode(deleteEvent).toByteString(),
+            references = listOf(
+                Reference(
+                    reference_type = 2L,
+                    reference = Pointer.ADAPTER.encode(targetPointer).toByteString(),
+                )
+            ),
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createEvent(eventData: EventCreationData): SignedEvent {
+        val eventDataBytes = EventCreationData.ADAPTER.encode(eventData)
+        val unixMs = System.currentTimeMillis().toInt()
+        val result = ffiService.createEvent(eventDataBytes, unixMs)
+        return SignedEvent.ADAPTER.decode(result)
+    }
+
+    fun createPost(content: String, image: ImageManifest? = null, reference: Reference? = null): SignedEvent {
+        val post = Post(content = content, image = image)
+
+        val eventData = EventCreationData(
+            content_type = ContentType.POST,
+            content = Post.ADAPTER.encode(post).toByteString(),
+            references = if (reference != null) listOf(reference) else emptyList(),
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createLike(subjectPointer: Pointer): SignedEvent =
+        createOpinion(Opinion.LIKE, subjectPointer)
+
+    fun createDislike(subjectPointer: Pointer): SignedEvent =
+        createOpinion(Opinion.DISLIKE, subjectPointer)
+
+    fun createNeutral(subjectPointer: Pointer): SignedEvent =
+        createOpinion(Opinion.NEUTRAL, subjectPointer)
+
+    fun createUsername(username: String): SignedEvent {
+        val lwwElement = LWWElement(
+            value_ = username.encodeToByteArray().toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.USERNAME,
+            lww_element = lwwElement,
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createDescription(description: String): SignedEvent {
+        val lwwElement = LWWElement(
+            value_ = description.encodeToByteArray().toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.DESCRIPTION,
+            lww_element = lwwElement,
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createAvatar(avatar: ImageManifest): SignedEvent {
+        val lwwElement = LWWElement(
+            value_ = ImageManifest.ADAPTER.encode(avatar).toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.AVATAR,
+            lww_element = lwwElement,
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createBanner(banner: ImageManifest): SignedEvent {
+        val lwwElement = LWWElement(
+            value_ = ImageManifest.ADAPTER.encode(banner).toByteString(),
+            unix_milliseconds = System.currentTimeMillis(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.BANNER,
+            lww_element = lwwElement,
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createFollow(system: PublicKey): SignedEvent =
+        createLWWElementSetEvent(ContentType.FOLLOW, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.ADD)
+
+    fun createUnfollow(system: PublicKey): SignedEvent =
+        createLWWElementSetEvent(ContentType.FOLLOW, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.REMOVE)
+
+    fun createBlock(system: PublicKey): SignedEvent =
+        createLWWElementSetEvent(ContentType.BLOCK, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.ADD)
+
+    fun createUnblock(system: PublicKey): SignedEvent =
+        createLWWElementSetEvent(ContentType.BLOCK, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.REMOVE)
+
+    fun createAddServer(server: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.SERVER, server.encodeToByteArray(), LWWElementSet.Operation.ADD)
+
+    fun createRemoveServer(server: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.SERVER, server.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
+
+    fun createAddAuthority(authority: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.AUTHORITY, authority.encodeToByteArray(), LWWElementSet.Operation.ADD)
+
+    fun createRemoveAuthority(authority: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.AUTHORITY, authority.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
+
+    fun createJoinTopic(topic: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.JOIN_TOPIC, topic.encodeToByteArray(), LWWElementSet.Operation.ADD)
+
+    fun createLeaveTopic(topic: String): SignedEvent =
+        createLWWElementSetEvent(ContentType.JOIN_TOPIC, topic.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
+
+    fun deletePost(postPointer: Pointer): SignedEvent =
+        createDelete(postPointer, ContentType.POST)
+}
