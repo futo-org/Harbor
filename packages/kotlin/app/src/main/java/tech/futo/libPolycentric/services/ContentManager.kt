@@ -257,6 +257,48 @@ class ContentManager(
     fun createLeaveTopic(topic: String): SignedEvent =
         createLWWElementSetEvent(ContentType.JOIN_TOPIC, topic.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
 
+    fun createClaim(claimType: Long, fields: List<ClaimFieldEntry>): SignedEvent {
+        val claim = Claim(
+            claim_type = claimType,
+            fields = fields,
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.CLAIM,
+            content = Claim.ADAPTER.encode(claim).toByteString(),
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
+    fun createVerifyClaim(targetPointer: Pointer): SignedEvent {
+        val targetReference = Reference(
+            reference_type = 0L,
+            reference = Pointer.ADAPTER.encode(targetPointer).toByteString(),
+        )
+
+        val eventData = EventCreationData(
+            content_type = ContentType.VOUCH,
+            references = listOf(targetReference),
+            system = PublicKey(
+                key_type = identity.keyPair.keyType,
+                key = identity.keyPair.publicKey.key,
+            ),
+            process = Process(
+                process = identity.process.process,
+            ),
+        )
+
+        return createEvent(eventData)
+    }
+
     fun deletePost(postPointer: Pointer): SignedEvent =
         createDelete(postPointer, ContentType.POST)
 }
