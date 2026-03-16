@@ -1,12 +1,14 @@
 services:
   postgres:
-    image: postgres:14
+    image: postgres:18
     environment:
       POSTGRES_PASSWORD: testing
+    volumes:
+      - postgres-data:/var/lib/postgresql/18/docker
     ports:
-      - "127.0.0.1:5432:5432"
+      - 5432:5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres || exit 1"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres || exit 1']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -15,17 +17,17 @@ services:
   opensearch:
     image: opensearchproject/opensearch:2.1.0
     ports:
-      - "127.0.0.1:9200:9200"
+      - '127.0.0.1:9200:9200'
     environment:
       - cluster.name=opensearch-cluster
       - node.name=opensearch-node1
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - "DISABLE_INSTALL_DEMO_CONFIG=true"
-      - "DISABLE_SECURITY_PLUGIN=true"
-      - "discovery.type=single-node"
+      - 'OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m'
+      - 'DISABLE_INSTALL_DEMO_CONFIG=true'
+      - 'DISABLE_SECURITY_PLUGIN=true'
+      - 'discovery.type=single-node'
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 || exit 1"]
+      test: ['CMD-SHELL', 'curl -s http://localhost:9200 || exit 1']
       interval: 5s
       timeout: 5s
       retries: 30
@@ -33,11 +35,12 @@ services:
 
   polycentric-server:
     build:
-      context: ..
+      context: .
       dockerfile: services/polycentric-server/Dockerfile
     ports:
-      - "127.0.0.1:8081:8081"
+      - '127.0.0.1:8081:8081'
     environment:
+      - RUST_LOG=debug
       - DATABASE_URL=postgres://postgres:testing@postgres:5432
       - OPENSEARCH_STRING=http://opensearch:9200
       - ADMIN_TOKEN=123
@@ -50,15 +53,18 @@ services:
         condition: service_healthy
 
   polycentric-verifiers:
-    build: ./verifiers-server
+    build: ./services/verifiers-server
     working_dir: /app/services/verifiers-server
     volumes:
       - ../:/app
     ports:
-      - "127.0.0.1:3002:3002"
+      - '127.0.0.1:3002:3002'
     environment:
       - SERVER_URL=http://polycentric-server:8081
     command: npx nodemon src/app.ts
     depends_on:
       postgres:
         condition: service_healthy
+
+volumes:
+  postgres-data:
