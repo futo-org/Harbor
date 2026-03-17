@@ -9,8 +9,7 @@ _ensure-protos:
 
 _ensure-ffi: _ensure-protos
     @if ! command -v llvm-strip > /dev/null; then \
-        echo "Error: 'llvm-strip' not found."; \
-        exit 1; \
+        echo "llvm-strip not found, skipping."; \
     fi
 
 _ensure-wasm: _ensure-protos
@@ -64,12 +63,12 @@ open-docs:
 # Build, strip, and deploy FFI static lib for a given target
 _build-ffi target dest: _ensure-ffi
     #!/usr/bin/env bash
-    if ! cargo rustc --release --target {{target}} --features ffi --no-default-features --crate-type staticlib > /dev/null 2>&1; then
+    if ! cargo rustc --release --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
         echo "FAILED: {{target}}"
         exit 1
     fi
     lib="target/{{target}}/release/librs_core.a"
-    llvm-strip --strip-debug "$lib"
+    if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
     mkdir -p "{{dest}}"
     cp "$lib" "{{dest}}/librs_core.a"
     size=$(du -sh "{{dest}}/librs_core.a" | cut -f1 | xargs)
@@ -113,7 +112,7 @@ _rename-wasm-package out-dir pkg-name:
 # Build WASM package for a given target
 _build-wasm wasm-target out-dir pkg-name: _ensure-wasm
     #!/usr/bin/env bash
-    if ! wasm-pack build --target {{wasm-target}} --scope lib-polycentric --out-dir {{out-dir}} > /dev/null 2>&1; then
+    if ! wasm-pack build --target {{wasm-target}} --scope lib-polycentric --out-dir {{out-dir}} 2>&1; then
         echo "FAILED: wasm-{{wasm-target}}"
         exit 1
     fi

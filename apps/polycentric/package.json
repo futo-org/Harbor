@@ -5,11 +5,11 @@
   "private": true,
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android --port 9090",
-    "ios": "expo run:ios --port 9090",
-    "web": "expo start --web",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "echo 'TODO: implement react native web client'",
     "lint": "expo lint",
-    "clean": "rm -rf node_modules ios/Pods ios/build ios/Podfile.lock android/app/build android/.gradle .expo"
+    "prebuild": "expo prebuild --clean"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

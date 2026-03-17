@@ -11,6 +11,7 @@ import {
   FlatList,
   ListRenderItemInfo,
   Animated,
+  Alert,
 } from 'react-native';
 import Reanimated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import DraggableFlatList, {
@@ -32,6 +33,7 @@ import { useSheetContext } from '@/lib/sheet';
 import {
   usePolycentric,
   useCurrentIdentity,
+  useIdentities,
   pubkeyStr,
   DEFAULT_SERVER,
 } from '@/lib/polycentric-hooks';
@@ -49,6 +51,7 @@ interface IdentitySwitcherContextType {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   dismiss: () => Promise<void>;
+  onDeleteIdentity: (publicKey: types.IPublicKey) => void;
 }
 
 const IdentitySwitcherContext =
@@ -73,22 +76,37 @@ export function IdentitySwitcherSheetInner({
 }: IdentitySwitcherSheetInnerProps) {
   const client = usePolycentric();
   const { isOpen, setHeader, setFooter } = useSheetContext();
-  const [identities, setIdentities] = useState<IdentityKeyPair[]>([]);
+  const identities = useIdentities();
   const [isEditing, setIsEditing] = useState(false);
-
-  const refreshIdentities = useCallback(() => {
-    setIdentities(client.getAllIdentities());
-  }, [client]);
 
   const handleCreateIdentity = useCallback(async () => {
     await client.createIdentity(DEFAULT_SERVER);
     await client.sync().catch(() => {});
-    refreshIdentities();
-  }, [client, refreshIdentities]);
+  }, [client]);
+
+  const handleDeleteIdentity = useCallback(
+    (publicKey: types.IPublicKey) => {
+      Alert.alert(
+        'Delete identity',
+        'Are you sure? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await client.deleteIdentity(publicKey);
+            },
+          },
+        ],
+      );
+    },
+    [client],
+  );
 
   const contextValue = useMemo(
-    () => ({ isEditing, setIsEditing, dismiss }),
-    [isEditing, dismiss],
+    () => ({ isEditing, setIsEditing, dismiss, onDeleteIdentity: handleDeleteIdentity }),
+    [isEditing, dismiss, handleDeleteIdentity],
   );
 
   useEffect(() => {
@@ -104,10 +122,6 @@ export function IdentitySwitcherSheetInner({
     );
   }, [isEditing, handleCreateIdentity]);
 
-  useEffect(() => {
-    refreshIdentities();
-  }, [refreshIdentities]);
-
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
       {isEditing ? (
@@ -115,7 +129,7 @@ export function IdentitySwitcherSheetInner({
           data={identities}
           keyExtractor={(item) => pubkeyStr(item.publicKey)}
           renderItem={(props) => <DraggableIdentityListItem {...props} />}
-          onDragEnd={({ data }) => setIdentities(data)}
+          onDragEnd={() => {}}
         />
       ) : (
         <FlatList
@@ -169,7 +183,7 @@ function IdentityListItemContent({
         <IdentityBadge publicKey={item.publicKey} />
         <Box flexDirection="row" alignItems="center" gap="md">
           {isCurrent && <SelectionIndicator />}
-          {isEditing && <DeleteButton />}
+          {isEditing && <DeleteButton publicKey={item.publicKey} />}
         </Box>
       </Box>
     </Box>
@@ -214,9 +228,10 @@ function DraggableIdentityListItem({
   );
 }
 
-function DeleteButton() {
+function DeleteButton({ publicKey }: { publicKey: types.IPublicKey }) {
   const { theme } = useTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
+  const { onDeleteIdentity } = useIdentitySwitcher();
 
   return (
     <Animated.View style={animatedStyle}>
@@ -226,7 +241,7 @@ function DeleteButton() {
         icon={() => (
           <Ionicons name="close-sharp" size={24} color={theme.colors.text} />
         )}
-        onPress={() => {}}
+        onPress={() => onDeleteIdentity(publicKey)}
       />
     </Animated.View>
   );

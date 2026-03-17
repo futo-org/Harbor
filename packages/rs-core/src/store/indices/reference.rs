@@ -24,7 +24,7 @@ impl ReferenceIndex {
         event: &Event,
     ) -> Result<(), crate::error::CoreError> {
         for reference in &event.references {
-            if let Some(target_event_key) = reference.to_event_key()? {
+            if let Some(target_event_key) = reference.to_event_key() {
                 self.add_reference(event_key, &target_event_key);
             }
         }

@@ -23,7 +23,7 @@ export {
 } from "./useConversation";
 
 // Action hooks
-export { useCurrentIdentity, useFollowStatus } from "./PolycentricProvider";
+export { useCurrentIdentity, useIdentities, useFollowStatus } from "./PolycentricProvider";
 
 // Store
 export { useStore } from "./store";

@@ -38,14 +38,14 @@ services:
       context: .
       dockerfile: services/polycentric-server/Dockerfile
     ports:
-      - '127.0.0.1:8081:8081'
+      - '127.0.0.1:${POLYCENTRIC_PORT:-8787}:8787'
     environment:
       - RUST_LOG=debug
       - DATABASE_URL=postgres://postgres:testing@postgres:5432
       - OPENSEARCH_STRING=http://opensearch:9200
       - ADMIN_TOKEN=123
       - CHALLENGE_KEY=456
-      - STATSD_ADDRESS=localhost
+      - STATSD_ADDRESS=127.0.0.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,10 +58,10 @@ services:
     volumes:
       - ../:/app
     ports:
-      - '127.0.0.1:3002:3002'
+      - '127.0.0.1:${VERIFIERS_PORT:-3002}:3002'
     environment:
-      - SERVER_URL=http://polycentric-server:8081
-    command: npx nodemon src/app.ts
+      - SERVER_URL=http://polycentric-server:8787
+    command: sh -c "npm install && npx nodemon src/app.ts"
     depends_on:
       postgres:
         condition: service_healthy

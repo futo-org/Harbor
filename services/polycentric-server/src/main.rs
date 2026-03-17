@@ -18,7 +18,6 @@ mod migrate;
 mod moderation;
 mod opensearch;
 mod postgres;
-mod version;
 use config::{Config, Mode};
 
 #[macro_export]
