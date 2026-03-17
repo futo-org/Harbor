@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { SignupProvider } from "./_SignupContext";
+import { SignupProvider } from "@/lib/signup/SignupContext";
 
 export default function SignupLayout() {
   return (

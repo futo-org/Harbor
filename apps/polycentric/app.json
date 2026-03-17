@@ -19,11 +19,6 @@
       "edgeToEdgeEnabled": true,
       "package": "org.futo.polycentric"
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
     "plugins": [
       "expo-router",
       [

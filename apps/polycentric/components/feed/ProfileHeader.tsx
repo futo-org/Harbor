@@ -4,12 +4,11 @@ import { Box } from "@/components/layouts";
 import {
   Text,
   Avatar,
-  BackButton,
   Button,
   TextInput,
-  FeedChip,
   HorizontalScrollGroup,
-} from "@/components";
+} from "@/components/primitives";
+import { BackButton, FeedChip } from "@/components/composites";
 import { truncateName } from "@/lib/polycentric-hooks";
 import type { ProfileScreenData } from "@/lib/polycentric-hooks";
 import type { ProfileEditState } from "@/lib/polycentric-hooks";
