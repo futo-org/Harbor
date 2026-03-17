@@ -22,11 +22,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = contentType,
             lww_element_set = lwwElementSet,
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -59,11 +59,11 @@ class ContentManager(private val client: PolycentricClient) {
             lww_element = lwwElement,
             references = listOf(subjectReference),
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -89,11 +89,11 @@ class ContentManager(private val client: PolycentricClient) {
                 )
             ),
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -101,15 +101,35 @@ class ContentManager(private val client: PolycentricClient) {
     }
 
     fun createEvent(eventData: EventCreationData): SignedEvent {
-        val eventDataBytes = EventCreationData.ADAPTER.encode(eventData)
+        val identity = client.currentIdentity
+        val processBytes = identity.process.process.toByteArray()
+        val systemKeyType = identity.keyPair.keyType
+        val systemKeyBytes = identity.keyPair.publicKey.key.toByteArray()
+
+        val logicalClock = client.processStateRepository.getNextLogicalClock(
+            systemKeyType,
+            systemKeyBytes,
+            processBytes,
+        )
+
+        val eventDataWithClock = eventData.copy(logical_clock = logicalClock)
+        val eventDataBytes = EventCreationData.ADAPTER.encode(eventDataWithClock)
         val unixMs = System.currentTimeMillis().toInt()
 
-        val event = this.client.ffiService.createEvent(eventDataBytes, unixMs)
-        val signature = this.client.identityManager.sign(event.toByteString())
+        val event = client.ffiService.createEvent(eventDataBytes, unixMs)
+        val signature = client.identityManager.sign(event.toByteString())
 
         val signedEvent = SignedEvent(event = event.toByteString(), signature = signature)
 
-        this.client.ffiService.ingestEvent(signedEvent.encode())
+        client.ffiService.ingestEvent(signedEvent.encode())
+
+        client.processStateRepository.persistCurrentLogicalClock(
+            systemKeyType,
+            systemKeyBytes,
+            processBytes,
+            logicalClock,
+        )
+
         return signedEvent
     }
 
@@ -121,11 +141,11 @@ class ContentManager(private val client: PolycentricClient) {
             content = Post.ADAPTER.encode(post).toByteString(),
             references = if (reference != null) listOf(reference) else emptyList(),
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -151,11 +171,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.USERNAME,
             lww_element = lwwElement,
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -172,11 +192,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.DESCRIPTION,
             lww_element = lwwElement,
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -193,11 +213,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.AVATAR,
             lww_element = lwwElement,
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -214,11 +234,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.BANNER,
             lww_element = lwwElement,
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -265,11 +285,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.CLAIM,
             content = Claim.ADAPTER.encode(claim).toByteString(),
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
@@ -286,11 +306,11 @@ class ContentManager(private val client: PolycentricClient) {
             content_type = ContentType.VOUCH,
             references = listOf(targetReference),
             system = PublicKey(
-                key_type = identity.keyPair.keyType,
-                key = identity.keyPair.publicKey.key,
+                key_type = client.currentIdentity.keyPair.keyType,
+                key = client.currentIdentity.keyPair.publicKey.key,
             ),
             process = Process(
-                process = identity.process.process,
+                process = client.process!!.process,
             ),
         )
 
