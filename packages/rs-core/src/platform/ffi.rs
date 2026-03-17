@@ -2628,12 +2628,8 @@ fn query_opinion_internal(
 
     match engine.query_opinion(&current_system, &target_pointer) {
         Ok(Some(lww_element)) => {
-            let lww_element_bytes = lww_element.to_bytes().map_err(|e| {
-                PlatformError::SerializationError(format!("Failed to serialize LwwElement: {}", e))
-            })?;
-
             let bytes = ProtobufOption {
-                value: Some(lww_element_bytes.encode_to_vec()),
+                value: Some(lww_element.encode_to_vec()),
             }
             .encode_to_vec();
 

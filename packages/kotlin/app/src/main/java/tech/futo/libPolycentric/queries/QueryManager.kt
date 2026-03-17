@@ -144,7 +144,10 @@ class QueryManager(private val client: PolycentricClient) {
         val result = client.ffiService.queryOpinion(currentSystemBytes, targetPointerBytes)
         if (result.isEmpty()) return null
 
-        return LWWElement.ADAPTER.decode(result)
+        val option = Option.ADAPTER.decode(result)
+        val valueBytes = option.value_ ?: return null
+
+        return LWWElement.ADAPTER.decode(valueBytes.toByteArray())
     }
 
     fun queryIsDeleted(targetPointer: Pointer): Boolean {
