@@ -25,7 +25,16 @@ type FeedEntry = {
   hasMore: boolean;
 };
 
+type IdentityKeyPair = {
+  keyType: number;
+  privateKey: types.PrivateKey;
+  publicKey: types.PublicKey;
+};
+
 export interface PolycentricStore {
+  identities: IdentityKeyPair[];
+  refreshIdentities: () => void;
+
   feeds: Record<string, FeedEntry>;
   feedVersions: Record<string, number>;
   getFeedIds: (feedKey: string) => string[];
@@ -93,6 +102,11 @@ function toggleOpinion(
 
 export function createPolycentricStore(client: PolycentricClient) {
   return createStore<PolycentricStore>()((set, get) => ({
+    identities: client.getAllIdentities(),
+    refreshIdentities() {
+      set({ identities: client.getAllIdentities() });
+    },
+
     feeds: {},
     feedVersions: {},
 

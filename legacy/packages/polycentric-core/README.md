@@ -9,6 +9,6 @@ Shared client library used by:
 
 `npm test`
 
-Integration tests default to `http://127.0.0.1:8081`. To use a different server, set the `TEST_SERVER` environment variable.
+Integration tests default to `http://127.0.0.1:8787`. To use a different server, set the `TEST_SERVER` environment variable.
 
 **WARNING:** These tests create tons of spam posts to your TEST_SERVER.

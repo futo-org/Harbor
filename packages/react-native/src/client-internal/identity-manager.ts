@@ -70,7 +70,8 @@ export class IdentityManager {
     }
 
     if (!keyPair.processId) {
-      throw new Error('Identity has no process ID');
+      this.client.storage.identities.remove(publicKey);
+      return this.client.createIdentity();
     }
 
     this.setCurrentIdentity(keyPair, keyPair.processId);

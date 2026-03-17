@@ -229,7 +229,7 @@ describe('integration', () => {
     await APIMethods.postCensor(
       TEST_SERVER,
       Models.CensorshipType.DoNotRecommend,
-      `https://localhost:8081/profile/${censorSystem}`,
+      `${TEST_SERVER}/profile/${censorSystem}`,
       '123',
     );
 
@@ -241,7 +241,7 @@ describe('integration', () => {
     await APIMethods.postCensor(
       TEST_SERVER,
       Models.CensorshipType.DoNotRecommend,
-      `https://localhost:8081/post/${censorEvent}`,
+      `${TEST_SERVER}/post/${censorEvent}`,
       '123',
     );
   });

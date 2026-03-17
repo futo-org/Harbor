@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Screen, Box, Text, Button, TextInput, PageHeader } from "@/components";
 import { useRouter } from "expo-router";
-import { useSignup } from "./_SignupContext";
+import { useSignup } from "@/lib/signup/SignupContext";
 import { validateUsername } from "@/util/validation";
 
 export default function SetUsername() {

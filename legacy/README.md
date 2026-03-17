@@ -2,35 +2,11 @@
 
 npm workspace for the legacy Polycentric web client.
 
-### Setup
+From this directory, use the justfile:
 
-```
-npm install
-```
-
-Generate `protocol.ts` for `polycentric-core`:
-
-```
-cd packages/polycentric-core && npm run generate
-```
-
-### Build
-
-Core and React must be built before running the web app.
-
-```
-cd packages/polycentric-core && npm run build
-cd ../polycentric-react && npm run build
-```
-
-### Run
-
-```
-cd packages/polycentric-web
-npm run dev
-```
-
-The web app will be at `http://localhost:3000`.
+- `just run-web` — install deps, generate protocol, build core + react, then run web dev server (app at `http://localhost:3000`)
+- `just test-core` — run `polycentric-core` tests
+- `just` — list all recipes
 
 ### Packages
 
@@ -40,12 +16,4 @@ The web app will be at `http://localhost:3000`.
 
 `polycentric-web` is the web client (currently at polycentric.io).
 
-### Test
-
-`polycentric-core` has integration tests that default to `http://127.0.0.1:8081`. To use a different server, set the `TEST_SERVER` environment variable.
-
-**WARNING:** These tests create tons of spam posts to your TEST_SERVER.
-
-```
-cd packages/polycentric-core && npm test
-```
+Integration tests default to `http://127.0.0.1:8787`. Set `TEST_SERVER` to use a different server. **WARNING:** These tests create tons of spam posts to your TEST_SERVER.

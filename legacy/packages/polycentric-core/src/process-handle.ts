@@ -1189,7 +1189,7 @@ export async function fullSync(handle: ProcessHandle) {
 
 export const TEST_SERVER =
   (typeof process !== 'undefined' && process.env?.TEST_SERVER) ||
-  'http://127.0.0.1:8081';
+  'http://127.0.0.1:8787';
 
 export async function copyEventBetweenHandles(
   pointer: Models.Pointer.Pointer,

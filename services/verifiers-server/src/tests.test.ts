@@ -27,7 +27,7 @@ import { Spreadshop } from './platforms/spreadshop';
 
 import * as Core from '@polycentric/legacy-polycentric-core';
 
-//const TEST_SERVER = 'http://127.0.0.1:8081';
+//const TEST_SERVER = 'http://127.0.0.1:8787';
 const TEST_SERVER = 'https://serv1-stg.polycentric.io';
 
 export const tests: { ci: boolean; platform: Platform }[] = [

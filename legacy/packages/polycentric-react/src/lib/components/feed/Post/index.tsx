@@ -334,9 +334,10 @@ export const Post = forwardRef<HTMLDivElement, PostProps>(
 
           if (rawAcks[stableKey]) {
             const stableServers = rawAcks[stableKey];
-            if (stableServers.includes('http://localhost:8081')) {
+            const defaultServer = import.meta.env.VITE_DEFAULT_SERVERS?.split(',')[0]?.trim();
+            if (defaultServer && stableServers.includes(defaultServer)) {
               hasSeenExternalServersRef.current = true;
-              setServers(['local', 'http://localhost:8081']);
+              setServers(['local', defaultServer]);
               setAckCount(2);
               return;
             }

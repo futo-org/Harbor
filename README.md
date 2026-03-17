@@ -9,21 +9,23 @@
 
 ## Polycentric is an open-source, distributed social network
 
-[Polycentric](https://polycentric.io) is an open-source, distributed social network that lets you publish content to multiple servers. If you’re censored on one server, your content remains accessible from other servers. I
+[Polycentric](https://polycentric.io) is an open-source, distributed social network that lets you publish content to multiple servers. If you're censored on one server, your content remains accessible from other servers.
 
 ## Getting started
 
 > :warning: **We're working on this.**
 
-### Install dependencies
+You will need [just](https://github.com/casey/just), Docker, and pnpm.
 
-`pnpm i`
+1. **Run the local server:** `just services/start`
+2. **Build rs-core for all platforms:** `just packages/rs-core/build-all`
+3. **Install dependencies:** `pnpm install`
+4. **Run the app:** `pnpm run:ios` or `pnpm run:android`
 
-### Run dev build
+## Development
 
-The following will build all the sdks in watch mode.
-
-`pnpm dev`
+- `pnpm dev` builds all SDKs in watch mode.
+- `just legacy/test-core` runs integration test on local server
 
 ## Project Structure
 

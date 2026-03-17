@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen, Box } from '@/components/layouts';
-import { Text, BackButton, ComposeModal } from '@/components';
+import { Text, BackButton, ComposeSheetInner } from '@/components';
 import { ConversationView } from '@/components/feed';
 import { types } from '@polycentric/react-native';
 import {
@@ -11,14 +11,15 @@ import {
   usePolycentricContext,
 } from '@/lib/polycentric-hooks';
 import { Routes } from '@/constants';
+import { useSheet } from '@/lib/sheet';
 
 export default function PostScreen() {
   const router = useRouter();
   const { store } = usePolycentricContext();
   const { publicKey: myPublicKey } = useCurrentIdentity();
   const { postId } = useLocalSearchParams<{ postId: string }>();
+  const { Sheet, present, dismiss } = useSheet();
 
-  const [composeVisible, setComposeVisible] = useState(false);
   const [replyToEvent, setReplyToEvent] = useState<types.ISignedEvent | null>(
     null,
   );
@@ -40,8 +41,8 @@ export default function PostScreen() {
 
   const handleReply = useCallback((se: types.ISignedEvent) => {
     setReplyToEvent(se);
-    setComposeVisible(true);
-  }, []);
+    present();
+  }, [present]);
 
   const handlePostCreated = useCallback(
     (se: types.SignedEvent) => {
@@ -80,18 +81,16 @@ export default function PostScreen() {
           onReply={handleReply}
         />
       </Box>
-      <ComposeModal
-        visible={composeVisible}
-        onClose={() => {
-          setComposeVisible(false);
-          setReplyToEvent(null);
-        }}
-        onPostCreated={handlePostCreated}
-        onAvatarPress={() => {
-          if (myPublicKey) handleAuthorPress(myPublicKey);
-        }}
-        replyToEvent={replyToEvent}
-      />
+      <Sheet detents={[1]} scrollable>
+        <ComposeSheetInner
+          dismiss={dismiss}
+          onPostCreated={handlePostCreated}
+          onAvatarPress={() => {
+            if (myPublicKey) handleAuthorPress(myPublicKey);
+          }}
+          replyToEvent={replyToEvent}
+        />
+      </Sheet>
     </Screen>
   );
 }

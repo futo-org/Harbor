@@ -81,7 +81,7 @@ const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 export const DEFAULT_SERVER =
   (process.env.EXPO_PUBLIC_POLYCENTRIC_SERVER ?? '').trim() ||
-  `http://${DEFAULT_HOST}:8081`;
+  `http://${DEFAULT_HOST}:8787`;
 
 interface PolycentricProviderProps {
   children: ReactNode;
@@ -145,10 +145,15 @@ export function PolycentricProvider({
         setCurrentIdentity(c.currentIdentity);
         setIsLoading(false);
 
-        c.events.onIdentityChanged((identity) => {
-          if (!cancelled) {
+        c.events.onIdentityChanged(async (identity) => {
+          if (cancelled) return;
+          if (!identity && c.getAllIdentities().length === 0) {
+            await c.createIdentity(DEFAULT_SERVER);
+            await c.sync().catch(() => {});
+          } else {
             setCurrentIdentity(identity);
           }
+          s.getState().refreshIdentities();
         });
       } catch (err) {
         if (!cancelled) {
@@ -272,7 +277,9 @@ function useFeedQuery(
         }
         store.getState().setFeed(feedKey, ids, hasMore);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error(`[feed:${feedKey}] fetch failed:`, err);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, store, feedKey, enabled, currentIdentity, version, ...deps]);
 
@@ -289,7 +296,8 @@ function useFeedQuery(
       const { ids, hasMore } = await readUntilPosts(feedRef.current, store);
       if (getIsAborted?.()) return;
       store.getState().appendFeed(feedKey, ids, hasMore);
-    } catch {
+    } catch (err) {
+      console.error(`[feed:${feedKey}] loadMore failed:`, err);
     } finally {
       loadingMoreRef.current = false;
     }
@@ -303,7 +311,9 @@ function useFeedQuery(
         if (getIsAborted?.()) return;
         store.getState().setFeed(feedKey, ids, hasMore);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error(`[feed:${feedKey}] refresh failed:`, err);
+      });
   }, [client, createQuery, store, feedKey, getIsAborted]);
 
   return { items, isLoading, error: null, loadMore, hasMore, refresh };
@@ -430,6 +440,11 @@ export function useProfile(
   }, []);
 
   return { description, isLoading, error, refresh };
+}
+
+export function useIdentities() {
+  const { store } = usePolycentricContext();
+  return useStore(store, (s) => s.identities);
 }
 
 export function useCurrentIdentity() {

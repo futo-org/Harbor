@@ -297,13 +297,13 @@ impl QueryEngine {
                 .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
 
             if self.query_is_deleted(&EventKey::from_event(&event)?) {
-                break;
+                continue;
             }
 
             if let Some(system) = event.system {
                 let system_key = SystemKey::from_public_key(&system);
                 if blocked_profiles.contains(&system_key) {
-                    break;
+                    continue;
                 }
             }
 
