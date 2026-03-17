@@ -22,7 +22,7 @@ build_ios_sim_arm64_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios-sim
-    - cp target/aarch64-apple-ios-sim/release/librs_core.a ../../librs_core-ios-sim-arm64.a
+    - cp target/aarch64-apple-ios/release/librs_core.a ../../librs_core-ios-sim-arm64.a
   binary_artifacts:
     path: 'librs_core-ios-sim-arm64.a'
 
