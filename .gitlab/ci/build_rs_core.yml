@@ -1,44 +1,59 @@
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/rs-core/*
+        - .gitlab/ci/build_rs_core.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH
+      changes:
+        - packages/rs-core/*
+        - .gitlab/ci/build_rs_core.yml
 
-image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
-
-services:
-  - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
-    command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
-    alias: docker
+default:
+  tags:
+    - dind
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
 variables:
   RUNNER_SCRIPT_TIMEOUT: 179m
-  DOCKER_FULL_IMAGE_NAME: "${CI_REGISTRY}/${CI_PROJECT_PATH}"
-  RUST_IMAGE: "${CI_REGISTRY}/${CI_PROJECT_PATH}:base"
-  WASM_IMAGE: "${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm"
-  ANDROID_IMAGE: "${CI_REGISTRY}/${CI_PROJECT_PATH}:android"
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SUBMODULE_FORCE_HTTPS: "true"
+  DOCKER_FULL_IMAGE_NAME: '${CI_REGISTRY}/${CI_PROJECT_PATH}'
+  RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'
+  WASM_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm'
+  ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
+  RUST_CORE_PATH: packages/rs-core
 
 stages:
   - setup
   - check
-  - verify
+  - build
   - publish
 
 before_script:
-  - |
-    timeout 30s /bin/sh -c 'until docker info > /dev/null; do
-      echo "Waiting for docker to be ready..."
-      sleep 1
-    done'
-  - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+  - cd packages/rs-core
+
+.build-images:
+  tags:
+    - dind
+  services:
+    - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
+      command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
+      alias: docker
+  before_script:
+    - cd packages/rs-core
+    - |
+      timeout 30s /bin/sh -c 'until docker info > /dev/null; do
+        echo "Waiting for docker to be ready..."
+        sleep 1
+      done'
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+  rules:
+    - if: $BUILD_IMAGES == "true"
 
 build-base-image:
   stage: setup
-  tags:
-    - dind
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" .
@@ -46,8 +61,7 @@ build-base-image:
 
 build-wasm-image:
   stage: setup
-  tags:
-    - dind
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" .
@@ -55,8 +69,7 @@ build-wasm-image:
 
 build-android-image:
   stage: setup
-  tags:
-    - dind
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" .
@@ -65,32 +78,14 @@ build-android-image:
 .rust-check:
   image: ${RUST_IMAGE}
   stage: check
-  services: []
-  before_script: []
-  tags:
-    - dind
 
 .wasm-check:
   image: ${WASM_IMAGE}
-  stage: verify
-  services: []
-  before_script: []
-  tags:
-    - dind
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
+  stage: build
 
 .android-check:
   image: ${ANDROID_IMAGE}
-  stage: verify
-  services: []
-  before_script: []
-  tags:
-    - dind
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
+  stage: build
 
 format-check:
   extends: .rust-check
@@ -102,13 +97,13 @@ clippy:
   script:
     - just clippy
 
-build-wasm-web:
+build-wasm-browser:
   extends: .wasm-check
   script:
     - just build-wasm-web
   artifacts:
     paths:
-      - pkg-web/
+      - $RUST_CORE_PATH/../rs-core-wasm-browser/
     expire_in: 1 week
 
 build-wasm-node:
@@ -117,7 +112,7 @@ build-wasm-node:
     - just build-wasm-node
   artifacts:
     paths:
-      - pkg-node/
+      - $RUST_CORE_PATH/../rs-core-wasm-node/
     expire_in: 1 week
 
 .ios-build:
@@ -129,33 +124,39 @@ build-wasm-node:
     - env | grep '^CI_' > .cienv
   artifacts:
     expire_in: 1 week
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
 
 build-ios-device:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSDevice --artifacts-dir . --env-file .cienv
+    - |
+      cirrus run buildRsCoreIOSDevice \
+      --artifacts-dir . \
+      --env-file .cienv
   artifacts:
     paths:
       - buildRsCoreIOSDevice/binary/*.a
 
 build-ios-sim-arm64:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSSimArm64 --artifacts-dir . --env-file .cienv
+    - |
+      cirrus run buildRsCoreIOSSimArm64 \
+        --artifacts-dir . \
+        --env-file .cienv
   artifacts:
     paths:
       - buildRsCoreIOSSimArm64/binary/*.a
 
 build-ios-sim-x86_64:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSSimX86 --artifacts-dir . --env-file .cienv
+    - |
+      cirrus run buildRsCoreIOSSimX86 \
+      --artifacts-dir . \
+      --env-file .cienv
   artifacts:
     paths:
       - buildRsCoreIOSSimX86/binary/*.a
@@ -166,7 +167,7 @@ build-android-arm64:
     - just build-ffi-android-arm64
   artifacts:
     paths:
-      - target/aarch64-linux-android/release/librs_core.so
+      - $RUST_CORE_PATH/target/aarch64-linux-android/release/librs_core.so
     expire_in: 1 week
 
 build-android-armv7:
@@ -175,7 +176,7 @@ build-android-armv7:
     - just build-ffi-android-armv7
   artifacts:
     paths:
-      - target/armv7-linux-androideabi/release/librs_core.so
+      - $RUST_CORE_PATH/target/armv7-linux-androideabi/release/librs_core.so
     expire_in: 1 week
 
 build-android-x86:
@@ -184,7 +185,7 @@ build-android-x86:
     - just build-ffi-android-x86
   artifacts:
     paths:
-      - target/i686-linux-android/release/librs_core.so
+      - $RUST_CORE_PATH/target/i686-linux-android/release/librs_core.so
     expire_in: 1 week
 
 build-android-x86_64:
@@ -193,18 +194,14 @@ build-android-x86_64:
     - just build-ffi-android-x86_64
   artifacts:
     paths:
-      - target/x86_64-linux-android/release/librs_core.so
+      - $RUST_CORE_PATH/target/x86_64-linux-android/release/librs_core.so
     expire_in: 1 week
 
 publish:
   stage: publish
   image: ${RUST_IMAGE}
-  services: []
-  before_script: []
-  tags:
-    - dind
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   needs:
     - job: build-ios-device
       artifacts: true
@@ -220,7 +217,7 @@ publish:
       artifacts: true
     - job: build-android-x86_64
       artifacts: true
-    - job: build-wasm-web
+    - job: build-wasm-browser
       artifacts: true
     - job: build-wasm-node
       artifacts: true
@@ -228,8 +225,8 @@ publish:
     - |
       VERSION=${CI_COMMIT_SHORT_SHA}
       REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rs-core/${VERSION}"
-      tar -czf pkg-web.tar.gz -C pkg-web .
-      tar -czf pkg-node.tar.gz -C pkg-node .
+      tar -czf ../rs-core-wasm-browser.tar.gz -C ../rs-core-wasm-browser .
+      tar -czf ../rs-core-wasm-node.tar.gz -C ../rs-core-wasm-node .
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSDevice/binary/librs_core-ios-device.a "${REGISTRY_URL}/librs_core-ios-device.a"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSSimArm64/binary/librs_core-ios-sim-arm64.a "${REGISTRY_URL}/librs_core-ios-sim-arm64.a"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSSimX86/binary/librs_core-ios-sim-x86_64.a "${REGISTRY_URL}/librs_core-ios-sim-x86_64.a"
@@ -237,5 +234,36 @@ publish:
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/armv7-linux-androideabi/release/librs_core.so "${REGISTRY_URL}/librs_core-android-armv7.so"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/i686-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-x86.so"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/x86_64-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-x86_64.so"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file pkg-web.tar.gz "${REGISTRY_URL}/pkg-web.tar.gz"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file pkg-node.tar.gz "${REGISTRY_URL}/pkg-node.tar.gz"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../rs-core-wasm-browser.tar.gz "${REGISTRY_URL}/../rs-core-wasm-browser.tar.gz"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../rs-core-wasm-node.tar.gz "${REGISTRY_URL}/../rs-core-wasm-node.tar.gz"
+
+.publish-npm:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: node:latest
+  stage: publish
+  script:
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+
+publish-npm-browser:
+  extends: .publish-npm
+  needs:
+    - job: build-wasm-browser
+      artifacts: true
+  script:
+    - cd ../rs-core-wasm-browser
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - npm publish
+
+publish-npm-node:
+  extends: .publish-npm
+  needs:
+    - job: build-wasm-node
+      artifacts: true
+  script:
+    - cd ../rs-core-wasm-node
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - npm publish
