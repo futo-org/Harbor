@@ -130,7 +130,7 @@ build-ios-device:
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSDevice \
-      --config $RUST_CORE_PATH/.cirrus.yml
+      --config $RUST_CORE_PATH/.cirrus.yml \
       --artifacts-dir $RUST_CORE_PATH \
       --env-file .cienv
   artifacts:
@@ -142,7 +142,7 @@ build-ios-sim-arm64:
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSSimArm64 \
-      --config $RUST_CORE_PATH/.cirrus.yml
+      --config $RUST_CORE_PATH/.cirrus.yml \
       --artifacts-dir $RUST_CORE_PATH \
       --env-file .cienv
   artifacts:
@@ -154,7 +154,7 @@ build-ios-sim-x86_64:
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSSimX86 \
-      --config $RUST_CORE_PATH/.cirrus.yml
+      --config $RUST_CORE_PATH/.cirrus.yml \
       --artifacts-dir $RUST_CORE_PATH \
       --env-file .cienv
   artifacts:
