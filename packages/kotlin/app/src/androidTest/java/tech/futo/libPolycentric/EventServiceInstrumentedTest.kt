@@ -1,12 +1,14 @@
 package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
-import tech.futo.libPolycentric.drivers.storage.memory.InMemoryStorageDriver
+import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.ClientState
 import tech.futo.libPolycentric.services.Identity
 import tech.futo.libPolycentric.services.IdentityOptions
@@ -19,8 +21,15 @@ class EventServiceInstrumentedTest {
 
     @Before
     fun setUp() {
-        client = PolycentricClient(Ed25519CryptoManager(), InMemoryStorageDriver())
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-eventservice.db"))
         client.init()
+    }
+
+    @After
+    fun tearDown() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase("test-eventservice.db")
     }
 
     @Test

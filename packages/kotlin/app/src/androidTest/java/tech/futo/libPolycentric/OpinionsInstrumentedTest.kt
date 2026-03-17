@@ -1,6 +1,8 @@
 package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -8,7 +10,7 @@ import org.junit.runner.RunWith
 import polycentric.Event
 import polycentric.Opinion
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
-import tech.futo.libPolycentric.drivers.storage.memory.InMemoryStorageDriver
+import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.IdentityOptions
 
 @RunWith(AndroidJUnit4::class)
@@ -18,11 +20,18 @@ class OpinionsInstrumentedTest {
 
     @Before
     fun setUp() {
-        client = PolycentricClient(Ed25519CryptoManager(), InMemoryStorageDriver())
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-opinions.db"))
         client.init()
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
+    }
+
+    @After
+    fun tearDown() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase("test-opinions.db")
     }
 
     private fun opinionByte(lwwValue: okio.ByteString) = lwwValue.toByteArray()[0]

@@ -1,6 +1,8 @@
 package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -8,7 +10,7 @@ import org.junit.runner.RunWith
 import polycentric.ClaimFieldEntry
 import polycentric.Event
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
-import tech.futo.libPolycentric.drivers.storage.memory.InMemoryStorageDriver
+import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.IdentityOptions
 
 @RunWith(AndroidJUnit4::class)
@@ -19,8 +21,9 @@ class ClaimsInstrumentedTest {
 
     @Before
     fun setUp() {
-        client1 = PolycentricClient(Ed25519CryptoManager(), InMemoryStorageDriver())
-        client2 = PolycentricClient(Ed25519CryptoManager(), InMemoryStorageDriver())
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        client1 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-1.db"))
+        client2 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-2.db"))
         client1.init()
         client2.init()
         client1.identityManager.createIdentity(
@@ -29,6 +32,13 @@ class ClaimsInstrumentedTest {
         client2.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
+    }
+
+    @After
+    fun tearDown() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase("test-claims-1.db")
+        context.deleteDatabase("test-claims-2.db")
     }
 
     @Test
