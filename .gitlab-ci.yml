@@ -1,0 +1,2 @@
+include:
+  - local: .gitlab/ci/build_rs_core.yml

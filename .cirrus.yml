@@ -5,11 +5,12 @@ build_ios_device_task:
   buildRsCoreIOSDevice_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
-    - brew install just protobuf
+    - cd packages/rs-core
+    - brew install just protobuf llvm
     - just build-ffi-ios
-    - cp target/aarch64-apple-ios/release/librs_core.a librs_core-ios-device.a
+    - cp target/aarch64-apple-ios/release/librs_core.a ../../librs_core-ios-device.a
   binary_artifacts:
-    path: "librs_core-ios-device.a"
+    path: 'librs_core-ios-device.a'
 
 build_ios_sim_arm64_task:
   name: buildRsCoreIOSSimArm64
@@ -18,11 +19,12 @@ build_ios_sim_arm64_task:
   buildRsCoreIOSSimArm64_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
-    - brew install just protobuf
+    - cd packages/rs-core
+    - brew install just protobuf llvm
     - just build-ffi-ios-sim
-    - cp target/aarch64-apple-ios-sim/release/librs_core.a librs_core-ios-sim-arm64.a
+    - cp target/aarch64-apple-ios/release/librs_core.a ../../librs_core-ios-sim-arm64.a
   binary_artifacts:
-    path: "librs_core-ios-sim-arm64.a"
+    path: 'librs_core-ios-sim-arm64.a'
 
 build_ios_sim_x86_task:
   name: buildRsCoreIOSSimX86
@@ -31,8 +33,9 @@ build_ios_sim_x86_task:
   buildRsCoreIOSSimX86_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
-    - brew install just protobuf
+    - cd packages/rs-core
+    - brew install just protobuf llvm
     - just build-ffi-ios-sim-x86
-    - cp target/x86_64-apple-ios/release/librs_core.a librs_core-ios-sim-x86_64.a
+    - cp target/x86_64-apple-ios/release/librs_core.a ../../librs_core-ios-sim-x86_64.a
   binary_artifacts:
-    path: "librs_core-ios-sim-x86_64.a"
+    path: 'librs_core-ios-sim-x86_64.a'
