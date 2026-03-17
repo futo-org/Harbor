@@ -232,6 +232,8 @@ publish:
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../rs-core-wasm-node.tar.gz "${REGISTRY_URL}/../rs-core-wasm-node.tar.gz"
 
 .publish-npm:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   image: node:latest
   stage: publish
   script:
