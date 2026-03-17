@@ -45,7 +45,7 @@ build-base-image:
     - dind
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f packages/rs-core/Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" packages/rs-core
     - docker push "${DOCKER_FULL_IMAGE_NAME}:base"
 
 build-wasm-image:
@@ -54,7 +54,7 @@ build-wasm-image:
     - dind
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f packages/rs-core/Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" packages/rs-core
     - docker push "${DOCKER_FULL_IMAGE_NAME}:wasm"
 
 build-android-image:
@@ -63,7 +63,7 @@ build-android-image:
     - dind
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f packages/rs-core/Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" packages/rs-core
     - docker push "${DOCKER_FULL_IMAGE_NAME}:android"
 
 .rust-check:
