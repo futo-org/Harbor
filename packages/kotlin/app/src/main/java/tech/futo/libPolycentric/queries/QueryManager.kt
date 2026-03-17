@@ -35,11 +35,8 @@ class QueryManager(private val client: PolycentricClient) {
         )
         val feedQueryBytes = ServerFeedQuery.ADAPTER.encode(feedQuery)
 
-        return FeedQuery(client) { cursors, _ ->
-            val cursorBytes = encodeCursors(cursors)
-            val result = client.ffiService.queryExploreFeed(currentSystemBytes, feedQueryBytes, cursorBytes)
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryExploreFeed(currentSystemBytes, feedQueryBytes, cursor)
         }
     }
 
@@ -68,13 +65,8 @@ class QueryManager(private val client: PolycentricClient) {
         )
         val searchQueryBytes = SearchQuery.ADAPTER.encode(search)
 
-        return FeedQuery(client) { cursors, _ ->
-            val cursorBytes = encodeCursors(cursors)
-            val result = client.ffiService.querySearchFeed(
-                currentSystemBytes, feedQueryBytes, searchQueryBytes, cursorBytes,
-            )
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.querySearchFeed(currentSystemBytes, feedQueryBytes, searchQueryBytes, cursor)
         }
     }
 
@@ -83,14 +75,8 @@ class QueryManager(private val client: PolycentricClient) {
             client.currentIdentity.keyPair.publicKey
         )
 
-        return FeedQuery(client) { _, latestEvent ->
-            val cursorBytes = if (latestEvent != null) {
-                Event.ADAPTER.encode(latestEvent)
-            } else ByteArray(0)
-
-            val result = client.ffiService.queryFollowingFeed(currentSystemBytes, limit, cursorBytes)
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryFollowingFeed(currentSystemBytes, limit, cursor)
         }
     }
 
@@ -100,16 +86,8 @@ class QueryManager(private val client: PolycentricClient) {
         )
         val profileBytes = PublicKey.ADAPTER.encode(profile)
 
-        return FeedQuery(client) { _, latestEvent ->
-            val cursorBytes = if (latestEvent != null) {
-                Event.ADAPTER.encode(latestEvent)
-            } else ByteArray(0)
-
-            val result = client.ffiService.queryAuthorFeed(
-                currentSystemBytes, profileBytes, limit, cursorBytes,
-            )
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryAuthorFeed(currentSystemBytes, profileBytes, limit, cursor)
         }
     }
 
@@ -127,13 +105,8 @@ class QueryManager(private val client: PolycentricClient) {
         val feedQueryBytes = ServerFeedQuery.ADAPTER.encode(feedQuery)
         val referenceBytes = Reference.ADAPTER.encode(reference)
 
-        return FeedQuery(client) { cursors, _ ->
-            val cursorBytes = encodeCursors(cursors)
-            val result = client.ffiService.queryReferencesFeed(
-                currentSystemBytes, feedQueryBytes, referenceBytes, cursorBytes,
-            )
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryReferencesFeed(currentSystemBytes, feedQueryBytes, referenceBytes, cursor)
         }
     }
 
@@ -142,14 +115,8 @@ class QueryManager(private val client: PolycentricClient) {
             client.currentIdentity.keyPair.publicKey
         )
 
-        return FeedQuery(client) { _, latestEvent ->
-            val cursorBytes = if (latestEvent != null) {
-                Event.ADAPTER.encode(latestEvent)
-            } else ByteArray(0)
-
-            val result = client.ffiService.queryLikesFeed(currentSystemBytes, limit, cursorBytes)
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryLikesFeed(currentSystemBytes, limit, cursor)
         }
     }
 
@@ -163,13 +130,8 @@ class QueryManager(private val client: PolycentricClient) {
         )
         val feedQueryBytes = ServerFeedQuery.ADAPTER.encode(feedQuery)
 
-        return FeedQuery(client) { cursors, _ ->
-            val cursorBytes = encodeCursors(cursors)
-            val result = client.ffiService.queryCommentsFeed(
-                currentSystemBytes, feedQueryBytes, cursorBytes,
-            )
-            val events = Events.ADAPTER.decode(result)
-            ResultEventsAndServerErrors(events = events, errors = emptyList())
+        return FeedQuery(client) { cursor ->
+            client.ffiService.queryCommentsFeed(currentSystemBytes, feedQueryBytes, cursor)
         }
     }
 
@@ -324,13 +286,4 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    private fun encodeCursors(cursors: MutableMap<String, ByteArray>): ByteArray {
-        if (cursors.isEmpty()) return ByteArray(0)
-        // Encode cursors as ServerCursors protobuf
-        val entries = cursors.map { (server, cursor) ->
-            server to polycentric_ffi.Option(value_ = cursor.toByteString())
-        }.toMap()
-        val serverCursors = polycentric_ffi.ServerCursors(cursors = entries)
-        return polycentric_ffi.ServerCursors.ADAPTER.encode(serverCursors)
-    }
 }

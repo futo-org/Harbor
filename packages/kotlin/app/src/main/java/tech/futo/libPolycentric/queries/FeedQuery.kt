@@ -1,15 +1,12 @@
 package tech.futo.libPolycentric.queries
 
+import PolycentricException
 import android.util.Base64
-import polycentric.Event
 import polycentric.Events
-import polycentric.SignedEvent
+import polycentric_ffi.Cursor
+import polycentric_ffi.InternalFeedResult
+import polycentric_ffi.ServerError
 import tech.futo.libPolycentric.PolycentricClient
-
-data class ServerError(
-    val server: String,
-    val error: String,
-)
 
 data class ResultEventsAndServerErrors(
     val events: Events,
@@ -18,30 +15,26 @@ data class ResultEventsAndServerErrors(
 
 class FeedQuery(
     private val client: PolycentricClient,
-    private val feedCallback: (cursors: MutableMap<String, ByteArray>, latestEvent: Event?) -> ResultEventsAndServerErrors,
+    private val feedCallback: (cursor: ByteArray) -> ByteArray
 ) {
-    private val cursors: MutableMap<String, ByteArray> = mutableMapOf()
-    private var latestEvent: Event? = null
-    private val result: MutableSet<String> = mutableSetOf()
+    private var cursor: Cursor = Cursor()
+    private var result: MutableSet<String> = mutableSetOf()
 
-    fun read(): ResultEventsAndServerErrors {
-        val callbackResult = feedCallback(cursors, latestEvent)
+    public fun read(): ResultEventsAndServerErrors {
+        val resultBytes = this.feedCallback(this.cursor.encode())
+        val result = InternalFeedResult.ADAPTER.decode(resultBytes)
 
-        val newEvents = callbackResult.events.events.filter { signedEvent ->
-            val encoded = Base64.encodeToString(signedEvent.event.toByteArray(), Base64.NO_WRAP)
-            !result.contains(encoded)
+        if(result.cursor != null) this.cursor = result.cursor
+
+        if(result.result == null) throw PolycentricException("rs-core did not return a valid feed result")
+        val eventsUnfiltered = Events.ADAPTER.decode(result.result.result)
+
+        val events = eventsUnfiltered.events.filter { signedEvent ->
+            !this.result.contains(Base64.encodeToString(signedEvent.event.toByteArray(), Base64.NO_WRAP))
         }
 
-        for (signedEvent in newEvents) {
-            val encoded = Base64.encodeToString(signedEvent.event.toByteArray(), Base64.NO_WRAP)
-            result.add(encoded)
-        }
+        this.result.addAll(events.map { signedEvent -> Base64.encodeToString(signedEvent.event.toByteArray(), Base64.NO_WRAP) })
 
-        if (newEvents.isNotEmpty()) {
-            val latestSignedEvent = newEvents.last()
-            latestEvent = Event.ADAPTER.decode(latestSignedEvent.event.toByteArray())
-        }
-
-        return callbackResult
+        return ResultEventsAndServerErrors(Events(events), errors = result.result.errors)
     }
 }

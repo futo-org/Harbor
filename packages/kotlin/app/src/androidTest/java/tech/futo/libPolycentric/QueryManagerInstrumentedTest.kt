@@ -19,10 +19,10 @@ class QueryManagerInstrumentedTest {
     @Before
     fun setUp() {
         client = PolycentricClient(Ed25519CryptoManager(), InMemoryStorageDriver())
+        client.init()
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
-        client.init()
     }
 
     @Test
