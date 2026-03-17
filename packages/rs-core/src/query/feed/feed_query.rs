@@ -65,10 +65,9 @@ impl FeedQueryEngine {
 
         for (i, (signed_event, timestamp, event_key)) in events_with_time.iter().enumerate() {
             if i >= limit {
-                // Create cursor for next page
-                cursor_state = Some(FeedCursor::new(*timestamp, Some(event_key.clone())));
                 break;
             }
+            cursor_state = Some(FeedCursor::new(*timestamp, Some(event_key.clone())));
             result_events.push(signed_event.clone());
         }
 
