@@ -97,10 +97,10 @@ clippy:
   script:
     - just clippy
 
-build-wasm-web:
+build-wasm-browser:
   extends: .wasm-check
   script:
-    - just build-wasm-web
+    - just build-wasm-browser
   artifacts:
     paths:
       - $RUST_CORE_PATH/../rs-core-wasm-browser/
@@ -211,7 +211,7 @@ publish:
       artifacts: true
     - job: build-android-x86_64
       artifacts: true
-    - job: build-wasm-web
+    - job: build-wasm-browser
       artifacts: true
     - job: build-wasm-node
       artifacts: true
@@ -230,3 +230,32 @@ publish:
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/x86_64-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-x86_64.so"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../rs-core-wasm-browser.tar.gz "${REGISTRY_URL}/../rs-core-wasm-browser.tar.gz"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../rs-core-wasm-node.tar.gz "${REGISTRY_URL}/../rs-core-wasm-node.tar.gz"
+
+.publish-npm:
+  image: node:latest
+  stage: publish
+  script:
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+
+publish-npm-browser:
+  extends: .publish-npm
+  needs:
+    - job: build-wasm-browser
+      artifacts: true
+  script:
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - cd packages/rs-core-wasm-browser
+    - npm publish
+
+publish-npm-node:
+  extends: .publish-npm
+  needs:
+    - job: build-wasm-node
+      artifacts: true
+  script:
+    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - cd packages/rs-core-wasm-node
+    - npm publish
