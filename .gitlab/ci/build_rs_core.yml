@@ -1,0 +1,241 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+
+services:
+  - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
+    command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
+    alias: docker
+
+variables:
+  RUNNER_SCRIPT_TIMEOUT: 179m
+  DOCKER_FULL_IMAGE_NAME: '${CI_REGISTRY}/${CI_PROJECT_PATH}'
+  RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'
+  WASM_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm'
+  ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_FORCE_HTTPS: 'true'
+
+stages:
+  - setup
+  - check
+  - verify
+  - publish
+
+before_script:
+  - |
+    timeout 30s /bin/sh -c 'until docker info > /dev/null; do
+      echo "Waiting for docker to be ready..."
+      sleep 1
+    done'
+  - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+
+build-base-image:
+  stage: setup
+  tags:
+    - dind
+  script:
+    - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" .
+    - docker push "${DOCKER_FULL_IMAGE_NAME}:base"
+
+build-wasm-image:
+  stage: setup
+  tags:
+    - dind
+  script:
+    - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" .
+    - docker push "${DOCKER_FULL_IMAGE_NAME}:wasm"
+
+build-android-image:
+  stage: setup
+  tags:
+    - dind
+  script:
+    - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" .
+    - docker push "${DOCKER_FULL_IMAGE_NAME}:android"
+
+.rust-check:
+  image: ${RUST_IMAGE}
+  stage: check
+  services: []
+  before_script: []
+  tags:
+    - dind
+
+.wasm-check:
+  image: ${WASM_IMAGE}
+  stage: verify
+  services: []
+  before_script: []
+  tags:
+    - dind
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == "main"
+
+.android-check:
+  image: ${ANDROID_IMAGE}
+  stage: verify
+  services: []
+  before_script: []
+  tags:
+    - dind
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == "main"
+
+format-check:
+  extends: .rust-check
+  script:
+    - just format-check
+
+clippy:
+  extends: .rust-check
+  script:
+    - just clippy
+
+build-wasm-web:
+  extends: .wasm-check
+  script:
+    - just build-wasm-web
+  artifacts:
+    paths:
+      - pkg-web/
+    expire_in: 1 week
+
+build-wasm-node:
+  extends: .wasm-check
+  script:
+    - just build-wasm-node
+  artifacts:
+    paths:
+      - pkg-node/
+    expire_in: 1 week
+
+.ios-build:
+  tags:
+    - macscript
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    - env | grep '^CI_' > .cienv
+  artifacts:
+    expire_in: 1 week
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == "main"
+
+build-ios-device:
+  stage: verify
+  extends: .ios-build
+  script:
+    - cirrus run buildRsCoreIOSDevice --artifacts-dir . --env-file .cienv
+  artifacts:
+    paths:
+      - buildRsCoreIOSDevice/binary/*.a
+
+build-ios-sim-arm64:
+  stage: verify
+  extends: .ios-build
+  script:
+    - cirrus run buildRsCoreIOSSimArm64 --artifacts-dir . --env-file .cienv
+  artifacts:
+    paths:
+      - buildRsCoreIOSSimArm64/binary/*.a
+
+build-ios-sim-x86_64:
+  stage: verify
+  extends: .ios-build
+  script:
+    - cirrus run buildRsCoreIOSSimX86 --artifacts-dir . --env-file .cienv
+  artifacts:
+    paths:
+      - buildRsCoreIOSSimX86/binary/*.a
+
+build-android-arm64:
+  extends: .android-check
+  script:
+    - just build-ffi-android-arm64
+  artifacts:
+    paths:
+      - target/aarch64-linux-android/release/librs_core.so
+    expire_in: 1 week
+
+build-android-armv7:
+  extends: .android-check
+  script:
+    - just build-ffi-android-armv7
+  artifacts:
+    paths:
+      - target/armv7-linux-androideabi/release/librs_core.so
+    expire_in: 1 week
+
+build-android-x86:
+  extends: .android-check
+  script:
+    - just build-ffi-android-x86
+  artifacts:
+    paths:
+      - target/i686-linux-android/release/librs_core.so
+    expire_in: 1 week
+
+build-android-x86_64:
+  extends: .android-check
+  script:
+    - just build-ffi-android-x86_64
+  artifacts:
+    paths:
+      - target/x86_64-linux-android/release/librs_core.so
+    expire_in: 1 week
+
+publish:
+  stage: publish
+  image: ${RUST_IMAGE}
+  services: []
+  before_script: []
+  tags:
+    - dind
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  needs:
+    - job: build-ios-device
+      artifacts: true
+    - job: build-ios-sim-arm64
+      artifacts: true
+    - job: build-ios-sim-x86_64
+      artifacts: true
+    - job: build-android-arm64
+      artifacts: true
+    - job: build-android-armv7
+      artifacts: true
+    - job: build-android-x86
+      artifacts: true
+    - job: build-android-x86_64
+      artifacts: true
+    - job: build-wasm-web
+      artifacts: true
+    - job: build-wasm-node
+      artifacts: true
+  script:
+    - |
+      VERSION=${CI_COMMIT_SHORT_SHA}
+      REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rs-core/${VERSION}"
+      tar -czf pkg-web.tar.gz -C pkg-web .
+      tar -czf pkg-node.tar.gz -C pkg-node .
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSDevice/binary/librs_core-ios-device.a "${REGISTRY_URL}/librs_core-ios-device.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSSimArm64/binary/librs_core-ios-sim-arm64.a "${REGISTRY_URL}/librs_core-ios-sim-arm64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file buildRsCoreIOSSimX86/binary/librs_core-ios-sim-x86_64.a "${REGISTRY_URL}/librs_core-ios-sim-x86_64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/aarch64-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-arm64.so"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/armv7-linux-androideabi/release/librs_core.so "${REGISTRY_URL}/librs_core-android-armv7.so"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/i686-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-x86.so"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/x86_64-linux-android/release/librs_core.so "${REGISTRY_URL}/librs_core-android-x86_64.so"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file pkg-web.tar.gz "${REGISTRY_URL}/pkg-web.tar.gz"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file pkg-node.tar.gz "${REGISTRY_URL}/pkg-node.tar.gz"
