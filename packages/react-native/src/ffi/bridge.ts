@@ -362,7 +362,7 @@ export async function performNetworkRequests(
       (req.parameters ?? {}) as Record<string, string>
     );
     // Expected format: full URL without trailing slash
-    // (e.g. http://localhost:8081 or https://serv1.polycentric.io).
+    // (e.g. http://localhost:8787 or https://serv1.polycentric.io).
     const server = req.server ?? '';
     const endpoint = '/' + req.endpoint;
     const queryString = params.toString();
@@ -377,7 +377,7 @@ export async function performNetworkRequests(
       };
 
       if (req.body && req.body.length > 0) {
-        fetchOptions.body = req.body.buffer as ArrayBuffer;
+        fetchOptions.body = req.body.slice().buffer;
       }
 
       const response = await fetch(url, fetchOptions);

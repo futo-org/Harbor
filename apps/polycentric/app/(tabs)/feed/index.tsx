@@ -9,7 +9,7 @@ import {
   FeedChip,
   FeedViewer,
   Fab,
-  ComposeModal,
+  ComposeSheetInner,
   type FeedType,
 } from '@/components';
 import {
@@ -22,14 +22,15 @@ import {
 } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Routes, TAB_BAR_HEIGHT } from '@/constants';
+import { useSheet } from '@/lib/sheet';
 
 export default function Feed() {
   const router = useRouter();
   const { store } = usePolycentricContext();
   const { publicKey: myPublicKey } = useCurrentIdentity();
+  const { Sheet, present, dismiss } = useSheet();
 
   const [selectedFeed, setSelectedFeed] = useState<FeedType>('explore');
-  const [composeVisible, setComposeVisible] = useState(false);
   const [replyToEvent, setReplyToEvent] = useState<types.ISignedEvent | null>(
     null,
   );
@@ -65,12 +66,12 @@ export default function Feed() {
 
   const handleReply = useCallback((signedEvent: types.ISignedEvent) => {
     setReplyToEvent(signedEvent);
-    setComposeVisible(true);
-  }, []);
+    present();
+  }, [present]);
 
   const handleFabPress = () => {
     setReplyToEvent(null);
-    setComposeVisible(true);
+    present();
   };
 
   const bottomPadding = TAB_BAR_HEIGHT * 2.5;
@@ -143,18 +144,16 @@ export default function Feed() {
         onPress={handleFabPress}
         icon={() => <Ionicons name="add-circle" size={22} color="white" />}
       />
-      <ComposeModal
-        visible={composeVisible}
-        onClose={() => {
-          setComposeVisible(false);
-          setReplyToEvent(null);
-        }}
-        onPostCreated={handlePostCreated}
-        onAvatarPress={() => {
-          if (myPublicKey) handleAuthorPress(myPublicKey);
-        }}
-        replyToEvent={replyToEvent}
-      />
+      <Sheet detents={[1]} scrollable>
+        <ComposeSheetInner
+          dismiss={dismiss}
+          onPostCreated={handlePostCreated}
+          onAvatarPress={() => {
+            if (myPublicKey) handleAuthorPress(myPublicKey);
+          }}
+          replyToEvent={replyToEvent}
+        />
+      </Sheet>
     </Screen>
   );
 }

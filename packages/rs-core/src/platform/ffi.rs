@@ -1118,13 +1118,13 @@ fn query_explore_feed_internal(
 
             if let Some(events) = result.related_events {
                 for event in events.events {
-                    ingest_event_internal(&event.encode_to_vec())?;
+                    let _ = ingest_event_internal(&event.encode_to_vec());
                 }
             }
 
             if let Some(events) = result.result_events.clone() {
                 for event in events.events {
-                    ingest_event_internal(&event.encode_to_vec())?;
+                    let _ = ingest_event_internal(&event.encode_to_vec());
                 }
             }
 
@@ -1340,13 +1340,13 @@ fn query_search_feed_internal(
 
             if let Some(events) = result.related_events {
                 for event in events.events {
-                    ingest_event_internal(&event.encode_to_vec())?;
+                    let _ = ingest_event_internal(&event.encode_to_vec());
                 }
             }
 
             if let Some(events) = result.result_events.clone() {
                 for event in events.events {
-                    ingest_event_internal(&event.encode_to_vec())?;
+                    let _ = ingest_event_internal(&event.encode_to_vec());
                 }
             }
 
@@ -1856,13 +1856,15 @@ fn query_references_feed_internal(
 
             if let Some(events) = result.related_events {
                 for event in events.events {
-                    ingest_event_internal(&event.encode_to_vec())?;
+                    let _ = ingest_event_internal(&event.encode_to_vec());
                 }
             }
 
             if let Some(events) = result.result_events.clone() {
                 for signed_event in events.events {
-                    ingest_event_internal(&signed_event.encode_to_vec())?;
+                    if ingest_event_internal(&signed_event.encode_to_vec()).is_err() {
+                        continue;
+                    }
 
                     let event = Event::from_bytes(&signed_event.event).map_err(|e| {
                         PlatformError::DeserializationError(format!(

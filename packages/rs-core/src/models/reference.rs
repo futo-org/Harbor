@@ -103,37 +103,22 @@ impl Reference {
     }
 
     /// Parse this reference and return the target event key if valid
-    pub fn to_event_key(
-        &self,
-    ) -> std::result::Result<Option<InternalEventKey>, crate::error::CoreError> {
-        match crate::models::protos::Pointer::decode(self.reference.as_slice()) {
-            Ok(pointer) => {
-                let system = pointer.system.ok_or_else(|| {
-                    crate::error::CoreError::InvalidEvent(
-                        "Reference pointer missing system".to_string(),
-                    )
-                })?;
-
-                let process = pointer.process.ok_or_else(|| {
-                    crate::error::CoreError::InvalidEvent(
-                        "Reference pointer missing process".to_string(),
-                    )
-                })?;
-
-                let event_key = InternalEventKey {
-                    system_key_type: system.key_type,
-                    system_key: system.key,
-                    process: process.process,
-                    logical_clock: pointer.logical_clock,
-                };
-
-                Ok(Some(event_key))
-            }
-            Err(e) => Err(crate::error::CoreError::InvalidEvent(format!(
-                "Failed to decode pointer from reference: {}",
-                e
-            ))),
+    /// otherwise return None
+    pub fn to_event_key(&self) -> Option<InternalEventKey> {
+        if self.reference_type != 2 {
+            return None;
         }
+
+        let pointer = crate::models::protos::Pointer::decode(self.reference.as_slice()).ok()?;
+        let system = pointer.system?;
+        let process = pointer.process?;
+
+        Some(InternalEventKey {
+            system_key_type: system.key_type,
+            system_key: system.key,
+            process: process.process,
+            logical_clock: pointer.logical_clock,
+        })
     }
 }
 

@@ -29,7 +29,7 @@ impl OpinionIndex {
         event: &Event,
     ) -> Result<(), crate::error::CoreError> {
         for reference in &event.references {
-            if let Some(target_event_key) = reference.to_event_key()? {
+            if let Some(target_event_key) = reference.to_event_key() {
                 let system = event.system.as_ref().ok_or_else(|| {
                     crate::error::CoreError::InvalidEvent("Event missing system".to_string())
                 })?;

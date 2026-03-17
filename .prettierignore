@@ -2,3 +2,7 @@ coverage
 public
 dist
 pnpm-lock.yaml
+justfile
+**/justfile
+README.md
+**/README.md
