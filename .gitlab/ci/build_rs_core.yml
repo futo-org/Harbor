@@ -100,7 +100,7 @@ clippy:
 build-wasm-browser:
   extends: .wasm-check
   script:
-    - just build-wasm-browser
+    - just build-wasm-web
   artifacts:
     paths:
       - $RUST_CORE_PATH/../rs-core-wasm-browser/
