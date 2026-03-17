@@ -135,16 +135,7 @@ fn protobuf_result_incomplete(requests: NetworkRequestResponses) -> CBuffer {
 }
 
 fn initialize_internal() -> Result<(), PlatformError> {
-    let initialized = is_initialized_internal()?;
-
-    if initialized {
-        return Err(PlatformError::InvalidState(
-            "Core is already initialized".to_owned(),
-        ));
-    }
-
     let mut writelock = get_engine_write_lock()?;
-
     *writelock = Some(QueryEngine::new());
 
     Ok(())
