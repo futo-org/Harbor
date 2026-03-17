@@ -244,9 +244,9 @@ publish-npm-browser:
     - job: build-wasm-browser
       artifacts: true
   script:
+    - cd ../rs-core-wasm-browser
     - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-    - cd ../rs-core-wasm-browser
     - npm publish
 
 publish-npm-node:
@@ -255,7 +255,7 @@ publish-npm-node:
     - job: build-wasm-node
       artifacts: true
   script:
+    - cd ../rs-core-wasm-node
     - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-    - cd ../rs-core-wasm-node
     - npm publish
