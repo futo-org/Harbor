@@ -6,7 +6,7 @@ build_ios_device_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
     - cd packages/rs-core
-    - brew install just protobuf
+    - brew install just protobuf llvm
     - just build-ffi-ios
     - cp target/aarch64-apple-ios/release/librs_core.a librs_core-ios-device.a
   binary_artifacts:
@@ -20,7 +20,7 @@ build_ios_sim_arm64_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
     - cd packages/rs-core
-    - brew install just protobuf
+    - brew install just protobuf llvm
     - just build-ffi-ios-sim
     - cp target/aarch64-apple-ios-sim/release/librs_core.a librs_core-ios-sim-arm64.a
   binary_artifacts:
@@ -34,7 +34,7 @@ build_ios_sim_x86_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
     - cd packages/rs-core
-    - brew install just protobuf
+    - brew install just protobuf llvm
     - just build-ffi-ios-sim-x86
     - cp target/x86_64-apple-ios/release/librs_core.a librs_core-ios-sim-x86_64.a
   binary_artifacts:
