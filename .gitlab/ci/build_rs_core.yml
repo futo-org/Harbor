@@ -120,6 +120,7 @@ build-wasm-node:
     - macscript
   variables:
     GIT_STRATEGY: clone
+    CIRRUS_CONFIG: $RUST_CORE_PATH/.cirrus.yml
   before_script:
     - env | grep '^CI_' > .cienv
   artifacts:
@@ -131,7 +132,6 @@ build-ios-device:
   script:
     - |
       cirrus run buildRsCoreIOSDevice \
-      --config $RUST_CORE_PATH/.cirrus.yml \
       --artifacts-dir $RUST_CORE_PATH \
       --env-file .cienv
   artifacts:
@@ -144,7 +144,6 @@ build-ios-sim-arm64:
   script:
     - |
       cirrus run buildRsCoreIOSSimArm64 \
-        --config $RUST_CORE_PATH/.cirrus.yml \
         --artifacts-dir $RUST_CORE_PATH \
         --env-file .cienv
   artifacts:
@@ -157,7 +156,6 @@ build-ios-sim-x86_64:
   script:
     - |
       cirrus run buildRsCoreIOSSimX86 \
-      --config $RUST_CORE_PATH/.cirrus.yml \
       --artifacts-dir $RUST_CORE_PATH \
       --env-file .cienv
   artifacts:
