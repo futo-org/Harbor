@@ -81,6 +81,8 @@ android-libs := "../react-native/android/libs"
 build-ffi-ios: (_build-ffi "aarch64-apple-ios" (ios-libs / "aarch64-apple-ios"))
 # Build FFI for iOS simulator on Apple Silicon Macs
 build-ffi-ios-sim: (_build-ffi "aarch64-apple-ios-sim" (ios-libs / "aarch64-apple-ios-sim"))
+# Build FFI for iOS simulator on Intel Macs
+build-ffi-ios-sim-x86: (_build-ffi "x86_64-apple-ios-sim" (ios-libs / "x86_64-apple-ios-sim"))
 # Build FFI for Android ARM64
 build-ffi-android-arm64: (_build-ffi "aarch64-linux-android" (android-libs / "arm64-v8a"))
 # Build FFI for Android ARMv7
