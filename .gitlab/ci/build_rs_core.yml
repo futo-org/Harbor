@@ -27,7 +27,7 @@ variables:
 stages:
   - setup
   - check
-  - verify
+  - build
   - publish
 
 before_script:
@@ -81,11 +81,11 @@ build-android-image:
 
 .wasm-check:
   image: ${WASM_IMAGE}
-  stage: verify
+  stage: build
 
 .android-check:
   image: ${ANDROID_IMAGE}
-  stage: verify
+  stage: build
 
 format-check:
   extends: .rust-check
@@ -129,7 +129,7 @@ build-wasm-node:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 build-ios-device:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSDevice --artifacts-dir . --env-file .cienv
@@ -138,7 +138,7 @@ build-ios-device:
       - $RUST_CORE_PATH/buildRsCoreIOSDevice/binary/*.a
 
 build-ios-sim-arm64:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSSimArm64 --artifacts-dir . --env-file .cienv
@@ -147,7 +147,7 @@ build-ios-sim-arm64:
       - $RUST_CORE_PATH/buildRsCoreIOSSimArm64/binary/*.a
 
 build-ios-sim-x86_64:
-  stage: verify
+  stage: build
   extends: .ios-build
   script:
     - cirrus run buildRsCoreIOSSimX86 --artifacts-dir . --env-file .cienv
@@ -246,7 +246,7 @@ publish-npm-browser:
   script:
     - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-    - cd packages/rs-core-wasm-browser
+    - cd ../rs-core-wasm-browser
     - npm publish
 
 publish-npm-node:
@@ -257,5 +257,5 @@ publish-npm-node:
   script:
     - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-    - cd packages/rs-core-wasm-node
+    - cd ../rs-core-wasm-node
     - npm publish
