@@ -129,7 +129,10 @@ build-ios-device:
   stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSDevice --artifacts-dir $RUST_CORE_PATH --env-file .cienv
+    - cirrus run buildRsCoreIOSDevice \
+      --config $RUST_CORE_PATH/.cirrus.yml
+      --artifacts-dir $RUST_CORE_PATH \
+      --env-file .cienv
   artifacts:
     paths:
       - $RUST_CORE_PATH/buildRsCoreIOSDevice/binary/*.a
@@ -138,7 +141,10 @@ build-ios-sim-arm64:
   stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSSimArm64 --artifacts-dir $RUST_CORE_PATH --env-file .cienv
+    - cirrus run buildRsCoreIOSSimArm64 \
+      --config $RUST_CORE_PATH/.cirrus.yml
+      --artifacts-dir $RUST_CORE_PATH \
+      --env-file .cienv
   artifacts:
     paths:
       - $RUST_CORE_PATH/buildRsCoreIOSSimArm64/binary/*.a
@@ -147,7 +153,10 @@ build-ios-sim-x86_64:
   stage: build
   extends: .ios-build
   script:
-    - cirrus run buildRsCoreIOSSimX86 --artifacts-dir $RUST_CORE_PATH --env-file .cienv
+    - cirrus run buildRsCoreIOSSimX86 \
+      --config $RUST_CORE_PATH/.cirrus.yml
+      --artifacts-dir $RUST_CORE_PATH \
+      --env-file .cienv
   artifacts:
     paths:
       - $RUST_CORE_PATH/buildRsCoreIOSSimX86/binary/*.a
