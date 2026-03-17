@@ -13,11 +13,6 @@ workflow:
 
 image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
 
-services:
-  - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
-    command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
-    alias: docker
-
 variables:
   RUNNER_SCRIPT_TIMEOUT: 179m
   DOCKER_FULL_IMAGE_NAME: '${CI_REGISTRY}/${CI_PROJECT_PATH}'
@@ -34,69 +29,59 @@ stages:
   - publish
 
 before_script:
-  - |
-    timeout 30s /bin/sh -c 'until docker info > /dev/null; do
-      echo "Waiting for docker to be ready..."
-      sleep 1
-    done'
-  - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+  - cd packages/rs-core
+
+.docker-base:
+  tags:
+    - dind
+  services:
+    - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
+      command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
+      alias: docker
+  before_script:
+    - cd packages/rs-core
+    - |
+      timeout 30s /bin/sh -c 'until docker info > /dev/null; do
+        echo "Waiting for docker to be ready..."
+        sleep 1
+      done'
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
 
 build-base-image:
   stage: setup
-  tags:
-    - dind
+  extends: .docker-base
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f packages/rs-core/Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" .
     - docker push "${DOCKER_FULL_IMAGE_NAME}:base"
 
 build-wasm-image:
   stage: setup
-  tags:
-    - dind
+  extends: .docker-base
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f packages/rs-core/Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" .
     - docker push "${DOCKER_FULL_IMAGE_NAME}:wasm"
 
 build-android-image:
   stage: setup
-  tags:
-    - dind
+  extends: .docker-base
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f packages/rs-core/Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" packages/rs-core
+    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" .
     - docker push "${DOCKER_FULL_IMAGE_NAME}:android"
 
 .rust-check:
   image: ${RUST_IMAGE}
   stage: check
-  services: []
-  before_script: []
-  tags:
-    - dind
 
 .wasm-check:
   image: ${WASM_IMAGE}
   stage: verify
-  services: []
-  before_script: []
-  tags:
-    - dind
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
 
 .android-check:
   image: ${ANDROID_IMAGE}
   stage: verify
-  services: []
-  before_script: []
-  tags:
-    - dind
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
 
 format-check:
   extends: .rust-check
@@ -137,7 +122,7 @@ build-wasm-node:
     expire_in: 1 week
   rules:
     - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 build-ios-device:
   stage: verify
@@ -205,12 +190,8 @@ build-android-x86_64:
 publish:
   stage: publish
   image: ${RUST_IMAGE}
-  services: []
-  before_script: []
-  tags:
-    - dind
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   needs:
     - job: build-ios-device
       artifacts: true
