@@ -131,11 +131,11 @@ build-ios-device:
   script:
     - |
       cirrus run buildRsCoreIOSDevice \
-      --artifacts-dir $RUST_CORE_PATH \
+      --artifacts-dir . \
       --env-file .cienv
   artifacts:
     paths:
-      - $RUST_CORE_PATH/buildRsCoreIOSDevice/binary/*.a
+      - buildRsCoreIOSDevice/binary/*.a
 
 build-ios-sim-arm64:
   stage: build
@@ -143,11 +143,11 @@ build-ios-sim-arm64:
   script:
     - |
       cirrus run buildRsCoreIOSSimArm64 \
-        --artifacts-dir $RUST_CORE_PATH \
+        --artifacts-dir . \
         --env-file .cienv
   artifacts:
     paths:
-      - $RUST_CORE_PATH/buildRsCoreIOSSimArm64/binary/*.a
+      - buildRsCoreIOSSimArm64/binary/*.a
 
 build-ios-sim-x86_64:
   stage: build
@@ -155,11 +155,11 @@ build-ios-sim-x86_64:
   script:
     - |
       cirrus run buildRsCoreIOSSimX86 \
-      --artifacts-dir $RUST_CORE_PATH \
+      --artifacts-dir . \
       --env-file .cienv
   artifacts:
     paths:
-      - $RUST_CORE_PATH/buildRsCoreIOSSimX86/binary/*.a
+      - buildRsCoreIOSSimX86/binary/*.a
 
 build-android-arm64:
   extends: .android-check
