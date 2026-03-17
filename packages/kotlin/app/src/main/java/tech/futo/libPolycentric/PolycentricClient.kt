@@ -4,10 +4,13 @@ import PolycentricException
 import tech.futo.libPolycentric.platform.ICryptoManager
 import tech.futo.libPolycentric.platform.IStorageDriver
 import tech.futo.libPolycentric.queries.QueryManager
+import tech.futo.libPolycentric.services.ClientState
 import tech.futo.libPolycentric.services.ContentManager
+import tech.futo.libPolycentric.services.EventService
 import tech.futo.libPolycentric.services.FFIService
 import tech.futo.libPolycentric.services.IdentityManager
 import tech.futo.libPolycentric.services.Identity
+import tech.futo.libPolycentric.services.InitializationStep
 import tech.futo.libPolycentric.services.KeyPair
 import okio.ByteString.Companion.toByteString
 import polycentric.Process
@@ -27,6 +30,11 @@ class PolycentricClient(
     val eventRepository by lazy { storage.createEventRepository() }
     val eventAckRepository by lazy { storage.createEventAckRepository() }
 
+    val events = EventService()
+
+    var state: ClientState = ClientState.UNINITIALIZED
+        private set
+
     var currentKeyPair: KeyPair? = null
         private set
 
@@ -41,14 +49,39 @@ class PolycentricClient(
     }
 
     fun init() {
-        this.ffiService.init()
-        loadProcessId()
+        try {
+            setState(ClientState.INITIALIZING)
+
+            setStep(InitializationStep.STARTING)
+            setStep(InitializationStep.INITIALIZING_FFI)
+            this.ffiService.init()
+
+            setStep(InitializationStep.LOADING_PROCESS_ID)
+            loadProcessId()
+
+            setStep(InitializationStep.COMPLETE)
+            setState(ClientState.READY)
+        } catch (e: Exception) {
+            state = ClientState.ERROR
+            events.emitError(e)
+            throw e
+        }
+    }
+
+    private fun setState(newState: ClientState) {
+        state = newState
+        events.emitStateChanged(newState)
+    }
+
+    private fun setStep(step: InitializationStep) {
+        events.emitProgress(step)
     }
 
     private fun loadProcessId() {
         process = processIdRepository.getProcessId()
 
         if (process == null) {
+            setStep(InitializationStep.CREATING_PROCESS_ID)
             process = createAndStoreProcessId()
         }
     }
@@ -69,6 +102,9 @@ class PolycentricClient(
         throw PolycentricException("Invalid response received from is_initialized")
     }
 
+    val isReady: Boolean
+        get() = state == ClientState.READY
+
     val currentIdentity: Identity
         get() {
             val keyPair = currentKeyPair
@@ -81,5 +117,6 @@ class PolycentricClient(
     fun setCurrentKeyPair(keyPair: KeyPair, ephemeral: Boolean = false) {
         currentKeyPair = keyPair
         currentIdentityIsEphemeral = ephemeral
+        events.emitIdentityChanged(currentIdentity)
     }
 }

@@ -123,12 +123,15 @@ class ContentManager(private val client: PolycentricClient) {
 
         client.ffiService.ingestEvent(signedEvent.encode())
 
+        client.eventRepository.persistEvent(signedEvent)
         client.processStateRepository.persistCurrentLogicalClock(
             systemKeyType,
             systemKeyBytes,
             processBytes,
             logicalClock,
         )
+
+        client.events.emitContentCreated(Event.ADAPTER.decode(event))
 
         return signedEvent
     }
