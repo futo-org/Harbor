@@ -36,7 +36,7 @@ class LWWInstrumentedTest {
         assertNotNull(signedEvent.event)
 
         val event = Event.ADAPTER.decode(signedEvent.event.toByteArray())
-        assertEquals(ContentType.USERNAME.value, event.content_type)
+        assertEquals(ContentType.USERNAME, event.content_type)
         assertNotNull(event.lww_element)
         assertEquals(username, event.lww_element!!.value_.toByteArray().decodeToString())
     }
@@ -50,7 +50,7 @@ class LWWInstrumentedTest {
         assertNotNull(signedEvent.event)
 
         val event = Event.ADAPTER.decode(signedEvent.event.toByteArray())
-        assertEquals(ContentType.DESCRIPTION.value, event.content_type)
+        assertEquals(ContentType.DESCRIPTION, event.content_type)
         assertNotNull(event.lww_element)
         assertEquals(description, event.lww_element!!.value_.toByteArray().decodeToString())
     }
@@ -69,7 +69,7 @@ class LWWInstrumentedTest {
         assertNotNull(signedEvent.event)
 
         val event = Event.ADAPTER.decode(signedEvent.event.toByteArray())
-        assertEquals(ContentType.AVATAR.value, event.content_type)
+        assertEquals(ContentType.AVATAR, event.content_type)
         assertNotNull(event.lww_element)
 
         val decodedAvatar = ImageManifest.ADAPTER.decode(event.lww_element!!.value_.toByteArray())
@@ -92,7 +92,7 @@ class LWWInstrumentedTest {
         assertNotNull(signedEvent.event)
 
         val event = Event.ADAPTER.decode(signedEvent.event.toByteArray())
-        assertEquals(ContentType.BANNER.value, event.content_type)
+        assertEquals(ContentType.BANNER, event.content_type)
         assertNotNull(event.lww_element)
 
         val decodedBanner = ImageManifest.ADAPTER.decode(event.lww_element!!.value_.toByteArray())
