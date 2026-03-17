@@ -33,7 +33,7 @@ stages:
 before_script:
   - cd packages/rs-core
 
-.docker-base:
+.build-images:
   tags:
     - dind
   services:
@@ -48,10 +48,12 @@ before_script:
         sleep 1
       done'
     - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+  rules:
+    - if: $BUILD_IMAGES == "true"
 
 build-base-image:
   stage: setup
-  extends: .docker-base
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" .
@@ -59,7 +61,7 @@ build-base-image:
 
 build-wasm-image:
   stage: setup
-  extends: .docker-base
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" .
@@ -67,7 +69,7 @@ build-wasm-image:
 
 build-android-image:
   stage: setup
-  extends: .docker-base
+  extends: .build-images
   script:
     - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
     - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" .
