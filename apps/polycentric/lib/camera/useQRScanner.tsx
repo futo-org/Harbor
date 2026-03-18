@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
-import { useCameraDevice, useCodeScanner } from "react-native-vision-camera";
-import { useCameraPermission } from "./useCameraPermission";
+import { useState, useCallback } from 'react';
+import { useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
+import { useCameraPermission } from './useCameraPermission';
 
 export type QRScanResult =
-  | { type: "text"; data: string }
-  | { type: "json"; data: unknown };
+  | { type: 'text'; data: string }
+  | { type: 'json'; data: unknown };
 
 export interface UseQRScannerOptions {
   parseJSON?: boolean;
@@ -24,29 +24,29 @@ export interface UseQRScannerReturn {
 }
 
 export function useQRScanner(
-  options: UseQRScannerOptions = {}
+  options: UseQRScannerOptions = {},
 ): UseQRScannerReturn {
   const { parseJSON = false, onScan, onError } = options;
 
   const { hasPermission, isLoading, requestPermission } = useCameraPermission();
-  const device = useCameraDevice("back");
+  const device = useCameraDevice('back');
   const [isActive, setIsActive] = useState(false);
   const [scannedData, setScannedData] = useState<QRScanResult | null>(null);
 
   const parseQRData = useCallback(
     (rawData: string): QRScanResult => {
       if (!parseJSON) {
-        return { type: "text", data: rawData };
+        return { type: 'text', data: rawData };
       }
 
       try {
         const parsed = JSON.parse(rawData);
-        return { type: "json", data: parsed };
+        return { type: 'json', data: parsed };
       } catch {
-        return { type: "text", data: rawData };
+        return { type: 'text', data: rawData };
       }
     },
-    [parseJSON]
+    [parseJSON],
   );
 
   const handleCodeScanned = useCallback(
@@ -71,17 +71,17 @@ export function useQRScanner(
         const err =
           error instanceof Error
             ? error
-            : new Error("Failed to process QR code");
+            : new Error('Failed to process QR code');
         if (onError) {
           onError(err);
         }
       }
     },
-    [parseQRData, onScan, onError]
+    [parseQRData, onScan, onError],
   );
 
   const codeScanner = useCodeScanner({
-    codeTypes: ["qr"],
+    codeTypes: ['qr'],
     onCodeScanned: handleCodeScanned,
   });
 

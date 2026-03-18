@@ -1,5 +1,5 @@
-import { useState } from "react";
-import * as DocumentPicker from "expo-document-picker";
+import { useState } from 'react';
+import * as DocumentPicker from 'expo-document-picker';
 
 export interface UseFilePickerOptions {
   type?: string | string[];
@@ -15,10 +15,10 @@ export interface UseFilePickerReturn {
 }
 
 export function useFilePicker(
-  options: UseFilePickerOptions = {}
+  options: UseFilePickerOptions = {},
 ): UseFilePickerReturn {
   const {
-    type = "*/*",
+    type = '*/*',
     copyToCacheDirectory = true,
     onSelect,
     onCancel,
@@ -53,7 +53,7 @@ export function useFilePicker(
         return null;
       } catch (err) {
         const error =
-          err instanceof Error ? err : new Error("Failed to pick file");
+          err instanceof Error ? err : new Error('Failed to pick file');
         setError(error);
         if (onError) {
           onError(error);

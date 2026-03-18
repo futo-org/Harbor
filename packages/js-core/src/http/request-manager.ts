@@ -1,4 +1,4 @@
-import { HTTPError } from "../errors";
+import { HTTPError } from '../errors';
 
 export class RequestManager {
   constructor(
@@ -23,7 +23,7 @@ export class RequestManager {
       const response = await fetch(url, {
         ...options,
         headers: {
-          "x-polycentric-user-agent": this.userAgent,
+          'x-polycentric-user-agent': this.userAgent,
           ...options.headers,
         },
         signal: controller.signal,
@@ -60,7 +60,7 @@ export class RequestManager {
 
   private isRetryableError(error: unknown): boolean {
     if (error instanceof HTTPError) {
-      const status = parseInt(error.message.match(/HTTP (\d+)/)?.[1] || "0");
+      const status = parseInt(error.message.match(/HTTP (\d+)/)?.[1] || '0');
       return status >= 500 && status < 600; // Server error are retryable.
     }
 
@@ -68,7 +68,7 @@ export class RequestManager {
       return true; // Network errors are retryable.
     }
 
-    if (error instanceof Error && error.name === "AbortError") {
+    if (error instanceof Error && error.name === 'AbortError') {
       return true; // Timeout errors are retryable.
     }
 

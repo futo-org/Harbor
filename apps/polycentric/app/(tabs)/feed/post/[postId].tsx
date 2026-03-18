@@ -39,10 +39,13 @@ export default function PostScreen() {
     [router],
   );
 
-  const handleReply = useCallback((se: types.ISignedEvent) => {
-    setReplyToEvent(se);
-    present();
-  }, [present]);
+  const handleReply = useCallback(
+    (se: types.ISignedEvent) => {
+      setReplyToEvent(se);
+      present();
+    },
+    [present],
+  );
 
   const handlePostCreated = useCallback(
     (se: types.SignedEvent) => {

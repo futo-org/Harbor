@@ -1,8 +1,8 @@
-import { Chip } from "@/components/primitives";
-import { FontAwesome6 } from "@expo/vector-icons";
-import { useTheme } from "@/theme";
+import { Chip } from '@/components/primitives';
+import { FontAwesome6 } from '@expo/vector-icons';
+import { useTheme } from '@/theme';
 
-export type FeedType = "explore" | "following" | "topic" | "posts" | "likes";
+export type FeedType = 'explore' | 'following' | 'topic' | 'posts' | 'likes';
 
 interface FeedChipProps {
   type: FeedType;
@@ -12,11 +12,11 @@ interface FeedChipProps {
 }
 
 const ICON_MAP: Record<FeedType, string> = {
-  explore: "earth-americas",
-  following: "user",
-  topic: "hashtag",
-  posts: "newspaper",
-  likes: "heart",
+  explore: 'earth-americas',
+  following: 'user',
+  topic: 'hashtag',
+  posts: 'newspaper',
+  likes: 'heart',
 };
 
 export function FeedChip({
@@ -39,11 +39,11 @@ export function FeedChip({
       leftIcon={() => <FontAwesome6 name={icon} size={14} color={iconColor} />}
       onPress={onPress}
       backgroundColor={
-        isSelected ? "primaryOpacity20" : "neutralSurfaceOpacity20"
+        isSelected ? 'primaryOpacity20' : 'neutralSurfaceOpacity20'
       }
-      fontWeight={"regular"}
-      borderColor={isSelected ? "primaryOpacity40" : "neutralSurfaceOpacity20"}
-      textColor={isSelected ? "primary" : "text"}
+      fontWeight={'regular'}
+      borderColor={isSelected ? 'primaryOpacity40' : 'neutralSurfaceOpacity20'}
+      textColor={isSelected ? 'primary' : 'text'}
     />
   );
 }

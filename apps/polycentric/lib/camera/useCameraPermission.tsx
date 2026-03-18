@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Camera } from "react-native-vision-camera";
+import { useState, useEffect } from 'react';
+import { Camera } from 'react-native-vision-camera';
 
 export interface UseCameraPermissionReturn {
   hasPermission: boolean | null;
@@ -15,9 +15,9 @@ export function useCameraPermission(): UseCameraPermissionReturn {
   const checkPermission = () => {
     try {
       const status = Camera.getCameraPermissionStatus();
-      setHasPermission(status === "granted");
+      setHasPermission(status === 'granted');
     } catch (error) {
-      console.error("Error checking camera permission:", error);
+      console.error('Error checking camera permission:', error);
       setHasPermission(false);
     } finally {
       setIsLoading(false);
@@ -27,11 +27,11 @@ export function useCameraPermission(): UseCameraPermissionReturn {
   const requestPermission = async (): Promise<boolean> => {
     try {
       const status = await Camera.requestCameraPermission();
-      const granted = status === "granted";
+      const granted = status === 'granted';
       setHasPermission(granted);
       return granted;
     } catch (error) {
-      console.error("Error requesting camera permission:", error);
+      console.error('Error requesting camera permission:', error);
       setHasPermission(false);
       return false;
     }

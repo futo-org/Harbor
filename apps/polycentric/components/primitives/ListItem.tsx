@@ -1,7 +1,7 @@
-import { Pressable, Animated } from "react-native";
-import { Box } from "@/components/layouts";
-import { SpacingToken } from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
+import { Pressable, Animated } from 'react-native';
+import { Box } from '@/components/layouts';
+import { SpacingToken } from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
 
 interface ListItemProps {
   children?: React.ReactNode;
@@ -14,8 +14,8 @@ interface ListItemProps {
 export function ListItem({
   children,
   pressable = true,
-  marginHorizontal = "md",
-  marginVertical = "lg",
+  marginHorizontal = 'md',
+  marginVertical = 'lg',
   onPress,
   ...props
 }: ListItemProps) {

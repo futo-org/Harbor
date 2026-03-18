@@ -86,26 +86,27 @@ export function IdentitySwitcherSheetInner({
 
   const handleDeleteIdentity = useCallback(
     (publicKey: types.IPublicKey) => {
-      Alert.alert(
-        'Delete identity',
-        'Are you sure? This cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              await client.deleteIdentity(publicKey);
-            },
+      Alert.alert('Delete identity', 'Are you sure? This cannot be undone.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await client.deleteIdentity(publicKey);
           },
-        ],
-      );
+        },
+      ]);
     },
     [client],
   );
 
   const contextValue = useMemo(
-    () => ({ isEditing, setIsEditing, dismiss, onDeleteIdentity: handleDeleteIdentity }),
+    () => ({
+      isEditing,
+      setIsEditing,
+      dismiss,
+      onDeleteIdentity: handleDeleteIdentity,
+    }),
     [isEditing, dismiss, handleDeleteIdentity],
   );
 

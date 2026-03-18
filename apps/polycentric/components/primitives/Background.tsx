@@ -1,5 +1,5 @@
-import { StyleSheet } from "react-native";
-import { View, useWindowDimensions } from "react-native";
+import { StyleSheet } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import {
   Canvas,
   RadialGradient,
@@ -7,11 +7,11 @@ import {
   Rect,
   Group,
   Circle,
-} from "@shopify/react-native-skia";
-import { useTheme } from "@/theme";
+} from '@shopify/react-native-skia';
+import { useTheme } from '@/theme';
 
-type GradientVariant = "top" | "surround";
-type MatrixOverlayVariant = "neutral" | "colored";
+type GradientVariant = 'top' | 'surround';
+type MatrixOverlayVariant = 'neutral' | 'colored';
 
 // TODO: this is tough to get right. Will need to tinker for a while to replicate figma mockups.
 export type BackgroundProps =
@@ -66,7 +66,7 @@ function GradientLayer({ gradient }: { gradient: GradientVariant }) {
           ]}
         />
       </Rect>
-      {gradient === "surround" && (
+      {gradient === 'surround' && (
         <Rect x={0} y={height - width} width={width} height={width}>
           <RadialGradient
             c={vec(width * 0.75, height * 1.25)}
@@ -91,7 +91,7 @@ function MatrixOverlay({
   const { width, height } = useWindowDimensions();
 
   const dotColor =
-    matrixOverlay === "neutral"
+    matrixOverlay === 'neutral'
       ? theme.colors.neutralSurface
       : theme.colors.primary;
 
@@ -127,12 +127,12 @@ function DotPattern({
 
   const rgbaMatch = dotColor.match(/rgba?\(([^)]+)\)/);
   if (rgbaMatch) {
-    const colorParts = rgbaMatch[1].split(",").map((s) => s.trim());
+    const colorParts = rgbaMatch[1].split(',').map((s) => s.trim());
     baseR = colorParts[0];
     baseG = colorParts[1];
     baseB = colorParts[2];
-  } else if (dotColor.startsWith("#")) {
-    const hex = dotColor.replace("#", "");
+  } else if (dotColor.startsWith('#')) {
+    const hex = dotColor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
@@ -160,7 +160,7 @@ function DotPattern({
           cy={y}
           r={dotRadius}
           color={`rgba(${baseR}, ${baseG}, ${baseB}, ${opacity * 0.3})`}
-        />
+        />,
       );
     }
   }

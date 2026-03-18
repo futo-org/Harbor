@@ -1,6 +1,6 @@
-import { IEventRepository } from "../platform-interfaces";
-import { SignedEvent } from "../proto/polycentric";
-import { DatabaseError } from "../errors";
+import { IEventRepository } from '../platform-interfaces';
+import { SignedEvent } from '../proto/polycentric';
+import { DatabaseError } from '../errors';
 
 /**
  * EventStore provides operations for persisting events.
@@ -23,11 +23,11 @@ export class EventStore {
     // TODO: will need to return a bool so rs-core doesn't ingest a malfmored event
 
     if (!signedEvent.signature || signedEvent.signature.length === 0) {
-      throw new DatabaseError("SignedEvent must have a valid signature");
+      throw new DatabaseError('SignedEvent must have a valid signature');
     }
 
     if (!signedEvent.event || signedEvent.event.length === 0) {
-      throw new DatabaseError("SignedEvent must have valid event data");
+      throw new DatabaseError('SignedEvent must have valid event data');
     }
 
     await this.repository.persistEvent(signedEvent);
@@ -44,7 +44,7 @@ export class EventStore {
 
     for (const signedEvent of signedEvents) {
       if (!signedEvent) {
-        throw new DatabaseError("SignedEvent cannot be null or undefined");
+        throw new DatabaseError('SignedEvent cannot be null or undefined');
       }
     }
 
@@ -60,7 +60,7 @@ export class EventStore {
     return this.repository.getAllEvents();
   }
 
-    /**
+  /**
    * Get events in batches, ordered by id
    *
    * @param batchSize The number of events to retrieve

@@ -4,8 +4,8 @@ export const spacing = {
   md: 10,
   lg: 15,
   xl: 24,
-  "2xl": 32,
-  "3xl": 48,
+  '2xl': 32,
+  '3xl': 48,
 } as const;
 
 export const borderRadius = {
@@ -23,9 +23,9 @@ export const typography = {
     xl: 24,
   } as const,
   fontWeight: {
-    regular: "400",
-    semibold: "600",
-    bold: "700",
+    regular: '400',
+    semibold: '600',
+    bold: '700',
   } as const,
   lineHeight: {
     xs: 16,

@@ -1,13 +1,13 @@
-import { Text as RNText, TextProps as RNTextProps } from "react-native";
+import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 import {
   useTheme,
   FontWeightToken,
   ColorToken,
   FontSizeToken,
   LineHeightToken,
-} from "@/theme";
+} from '@/theme';
 
-export type TextVariant = "title" | "subtitle" | "body" | "secondary" | "small";
+export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
@@ -19,7 +19,7 @@ interface TextProps extends RNTextProps {
 }
 
 export function Text({
-  variant = "body",
+  variant = 'body',
   color,
   fontWeight,
   fontSize,
@@ -32,18 +32,18 @@ export function Text({
 
   const config = VARIANT_CONFIG[variant];
   const fontFamily =
-    italic && variant !== "title" && variant !== "subtitle"
-      ? "Inter-Italic"
-      : "Inter";
+    italic && variant !== 'title' && variant !== 'subtitle'
+      ? 'Inter-Italic'
+      : 'Inter';
 
   const resolvedFontSize = fontSize
-    ? typeof fontSize === "number"
+    ? typeof fontSize === 'number'
       ? fontSize
       : theme.typography.fontSize[fontSize]
     : theme.typography.fontSize[config.size];
 
   const resolvedLineHeight = lineHeight
-    ? typeof lineHeight === "number"
+    ? typeof lineHeight === 'number'
       ? lineHeight
       : theme.typography.lineHeight[lineHeight]
     : theme.typography.lineHeight[config.size];
@@ -73,9 +73,9 @@ const VARIANT_CONFIG: Record<
   TextVariant,
   { size: FontSizeToken; defaultWeight: FontWeightToken }
 > = {
-  title: { size: "xl", defaultWeight: "bold" },
-  subtitle: { size: "lg", defaultWeight: "semibold" },
-  body: { size: "md", defaultWeight: "regular" },
-  secondary: { size: "sm", defaultWeight: "regular" },
-  small: { size: "xs", defaultWeight: "semibold" },
+  title: { size: 'xl', defaultWeight: 'bold' },
+  subtitle: { size: 'lg', defaultWeight: 'semibold' },
+  body: { size: 'md', defaultWeight: 'regular' },
+  secondary: { size: 'sm', defaultWeight: 'regular' },
+  small: { size: 'xs', defaultWeight: 'semibold' },
 } as const;

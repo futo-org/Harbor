@@ -1,9 +1,9 @@
-import { Screen, Box, Button, PageHeader, Avatar } from "@/components";
-import { useRouter } from "expo-router";
-import { useSignup } from "@/lib/signup/SignupContext";
-import { useImagePicker } from "@/lib/fs-pickers/useImagePicker";
-import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import { Screen, Box, Button, PageHeader, Avatar } from '@/components';
+import { useRouter } from 'expo-router';
+import { useSignup } from '@/lib/signup/SignupContext';
+import { useImagePicker } from '@/lib/fs-pickers/useImagePicker';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SetAvatar() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function SetAvatar() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
+    if (status !== 'granted') {
       return;
     }
 
@@ -37,7 +37,7 @@ export default function SetAvatar() {
   };
 
   return (
-    <Screen background={{ gradient: "surround" }}>
+    <Screen background={{ gradient: 'surround' }}>
       <Box flexDirection="column" marginHorizontal="lg" height="100%">
         <PageHeader onBack={() => router.back()} onClose={close} />
         <Box flex={1} alignItems="center" marginTop="2xl">

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import * as ImagePicker from "expo-image-picker";
+import { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 
 export interface UseImagePickerOptions {
   allowsEditing?: boolean;
@@ -16,7 +16,7 @@ export interface UseImagePickerReturn {
 }
 
 export function useImagePicker(
-  options: UseImagePickerOptions = {}
+  options: UseImagePickerOptions = {},
 ): UseImagePickerReturn {
   const {
     allowsEditing = false,
@@ -35,9 +35,9 @@ export function useImagePicker(
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
+      if (status !== 'granted') {
         const permissionError = new Error(
-          "Permission to access media library is required"
+          'Permission to access media library is required',
         );
         setError(permissionError);
         if (onError) {
@@ -69,7 +69,7 @@ export function useImagePicker(
       return null;
     } catch (err) {
       const error =
-        err instanceof Error ? err : new Error("Failed to pick photo");
+        err instanceof Error ? err : new Error('Failed to pick photo');
       setError(error);
       if (onError) {
         onError(error);

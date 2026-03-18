@@ -15,7 +15,7 @@ export const validateUsername = (username: string): string | null => {
     return `Username must be ${USERNAME_MAX_LENGTH} characters or less`;
   }
   if (!USERNAME_REGEX.test(username)) {
-    return "Username can only contain letters, numbers, and underscores";
+    return 'Username can only contain letters, numbers, and underscores';
   }
   return null;
 };

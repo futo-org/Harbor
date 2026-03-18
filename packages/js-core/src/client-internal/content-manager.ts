@@ -1,4 +1,4 @@
-import type { PolycentricClient } from "../polycentric-client";
+import type { PolycentricClient } from '../polycentric-client';
 import {
   ContentType,
   EventCreationData,
@@ -16,7 +16,7 @@ import {
   EventKey,
   Delete,
   Indices,
-} from "../proto/polycentric";
+} from '../proto/polycentric';
 
 export class ContentManager {
   constructor(private readonly client: PolycentricClient) {}
@@ -62,7 +62,7 @@ export class ContentManager {
   ): Promise<SignedEvent> {
     const eventKey = this._getReference(subjectPointer);
     if (!eventKey) {
-      throw new Error("Could not get reference from pointer");
+      throw new Error('Could not get reference from pointer');
     }
 
     const subjectReference = Reference.create({
@@ -174,7 +174,7 @@ export class ContentManager {
   async _createEvent(eventData: EventCreationData): Promise<SignedEvent> {
     if (this.client.currentIdentityIsEphemeral) {
       const error = new Error(
-        "You cannot create events when using an ephemeral identity",
+        'You cannot create events when using an ephemeral identity',
       );
       this.client.events.emitError(error);
       throw error;

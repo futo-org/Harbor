@@ -1,4 +1,4 @@
-import { SignedEvent } from "../proto/polycentric";
+import { SignedEvent } from '../proto/polycentric';
 
 /**
  * EventRepository interface for storing and retrieving signed events in a database

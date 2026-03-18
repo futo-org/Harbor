@@ -1,5 +1,5 @@
-import { colors, ColorScheme } from "./colors";
-import { spacing, borderRadius, typography } from "./tokens";
+import { colors, ColorScheme } from './colors';
+import { spacing, borderRadius, typography } from './tokens';
 
 export interface Theme {
   colors: ColorScheme;

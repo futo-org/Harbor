@@ -1,55 +1,55 @@
-import path from "path";
+import path from 'path';
 
 export default [
   {
-    entry: "./src/index.ts",
-    target: "node",
+    entry: './src/index.ts',
+    target: 'node',
     module: {
       rules: [
         {
           test: /\.tsx?$/,
-          use: "ts-loader",
+          use: 'ts-loader',
           exclude: /node_modules/,
         },
       ],
     },
     resolve: {
-      extensions: [".tsx", ".ts", ".js"],
+      extensions: ['.tsx', '.ts', '.js'],
     },
     experiments: {
       outputModule: true,
     },
     output: {
-      filename: "index.es.js",
-      path: path.join(import.meta.dirname, "dist"),
+      filename: 'index.es.js',
+      path: path.join(import.meta.dirname, 'dist'),
       library: {
-        type: "module",
+        type: 'module',
       },
     },
-    mode: "development",
+    mode: 'development',
   },
   {
-    entry: "./src/index.ts",
-    target: "node",
+    entry: './src/index.ts',
+    target: 'node',
     module: {
       rules: [
         {
           test: /\.tsx?$/,
-          use: "ts-loader",
+          use: 'ts-loader',
           exclude: /node_modules/,
         },
       ],
     },
     resolve: {
-      extensions: [".tsx", ".ts", ".js"],
+      extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-      filename: "index.cjs.js",
-      path: path.join(import.meta.dirname, "dist"),
+      filename: 'index.cjs.js',
+      path: path.join(import.meta.dirname, 'dist'),
       library: {
-        type: "commonjs2",
+        type: 'commonjs2',
       },
     },
-    mode: "development",
+    mode: 'development',
   },
 ];

@@ -6,3 +6,12 @@ justfile
 **/justfile
 README.md
 **/README.md
+apps/polycentric/build
+apps/polycentric/android
+apps/polycentric/ios
+packages/react-native/android
+packages/react-native/ios
+packages/rs-core
+legacy
+services/polycentric-server
+services/verifiers-server

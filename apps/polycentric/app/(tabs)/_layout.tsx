@@ -1,9 +1,9 @@
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { StyleSheet } from "react-native";
-import { TAB_BAR_HEIGHT } from "@/constants";
-import { useTheme } from "@/theme";
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { StyleSheet } from 'react-native';
+import { TAB_BAR_HEIGHT } from '@/constants';
+import { useTheme } from '@/theme';
 
 function TabBarBackground() {
   return (
@@ -12,7 +12,7 @@ function TabBarBackground() {
       tint="systemThickMaterialDark"
       style={[
         StyleSheet.absoluteFill,
-        { backgroundColor: "rgba(2, 4, 8, 0.82)" },
+        { backgroundColor: 'rgba(2, 4, 8, 0.82)' },
       ]}
     />
   );
@@ -32,9 +32,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: theme.colors.neutralSurface,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
-          position: "absolute",
+          position: 'absolute',
           borderTopWidth: 0,
-          backgroundColor: "transparent",
+          backgroundColor: 'transparent',
           elevation: 0,
           height: TAB_BAR_HEIGHT,
           paddingTop: 8,

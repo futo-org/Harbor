@@ -6,7 +6,7 @@ import {
   ViewStyle,
   StyleProp,
   View,
-} from "react-native";
+} from 'react-native';
 import {
   Canvas,
   RoundedRect,
@@ -14,27 +14,27 @@ import {
   vec,
   Path,
   Skia,
-} from "@shopify/react-native-skia";
-import { Text } from "./Text";
+} from '@shopify/react-native-skia';
+import { Text } from './Text';
 import {
   useTheme,
   FontWeightToken,
   BorderRadiusToken,
   ColorToken,
   Theme,
-} from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
-import { useMemo, useState } from "react";
+} from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
+import { useMemo, useState } from 'react';
 
 // TODO: add expo blur to all non primary
 type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "tertiary"
-  | "disabled"
-  | "destructive";
+  | 'primary'
+  | 'secondary'
+  | 'tertiary'
+  | 'disabled'
+  | 'destructive';
 
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonSize = 'sm' | 'md' | 'lg';
 
 type IconRenderFn = (props: {
   size: number;
@@ -42,7 +42,7 @@ type IconRenderFn = (props: {
   style?: object;
 }) => React.ReactNode;
 
-interface ButtonProps extends Omit<PressableProps, "style"> {
+interface ButtonProps extends Omit<PressableProps, 'style'> {
   onPress: () => void;
   title: string;
   variant?: ButtonVariant;
@@ -61,16 +61,16 @@ const SIZE_CONFIG: Record<
     borderRadius: BorderRadiusToken;
   }
 > = {
-  sm: { paddingV: 4, paddingH: 6, iconSize: 16, borderRadius: "sm" },
-  md: { paddingV: 12, paddingH: 18, iconSize: 20, borderRadius: "lg" },
-  lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: "lg" },
+  sm: { paddingV: 4, paddingH: 6, iconSize: 16, borderRadius: 'sm' },
+  md: { paddingV: 12, paddingH: 18, iconSize: 20, borderRadius: 'lg' },
+  lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: 'lg' },
 };
 
 export function Button({
   onPress,
   title,
-  variant = "primary",
-  size = "md",
+  variant = 'primary',
+  size = 'md',
   style,
   icon,
   fullWidth = false,
@@ -94,13 +94,13 @@ export function Button({
     borderRadius,
   };
 
-  const isDisabled = variant === "disabled";
+  const isDisabled = variant === 'disabled';
   const iconColor = theme.colors[textColorMap[variant]];
-  const isPrimary = variant === "primary";
+  const isPrimary = variant === 'primary';
 
   const textShadowStyle = isPrimary
     ? {
-        textShadowColor: "rgba(0, 0, 0, 0.5)",
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 6,
       }
@@ -193,7 +193,7 @@ function PrimaryButtonBackground({
       outerInset,
       outerR + outerInset,
       outerInset,
-      outerR
+      outerR,
     );
     // Across top (outer edge)
     path.lineTo(width - outerR - outerInset, outerInset);
@@ -203,7 +203,7 @@ function PrimaryButtonBackground({
       outerInset,
       rightTaperX,
       leftTaperY,
-      outerR
+      outerR,
     );
 
     // Line to right taper point (inner edge starts here too)
@@ -214,7 +214,7 @@ function PrimaryButtonBackground({
       innerInset,
       width - innerR - innerInset,
       innerInset,
-      innerR
+      innerR,
     );
     // Across top (inner edge)
     path.lineTo(innerR + innerInset, innerInset);
@@ -231,7 +231,7 @@ function PrimaryButtonBackground({
   return (
     <Canvas
       style={{
-        position: "absolute",
+        position: 'absolute',
         top: -BORDER_WIDTH,
         left: -BORDER_WIDTH,
         width: width,
@@ -266,52 +266,52 @@ const BORDER_WIDTH = 1.5;
 
 const styles = StyleSheet.create({
   base: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: BORDER_WIDTH,
-    borderColor: "transparent",
+    borderColor: 'transparent',
   },
   fitContent: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   content: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
 });
 
 const textColorMap: Record<ButtonVariant, ColorToken> = {
-  primary: "white",
-  secondary: "primary",
-  tertiary: "text",
-  disabled: "neutralSurfaceOpacity80",
-  destructive: "destructive",
+  primary: 'white',
+  secondary: 'primary',
+  tertiary: 'text',
+  disabled: 'neutralSurfaceOpacity80',
+  destructive: 'destructive',
 };
 
-const FONT_WEIGHT: FontWeightToken = "semibold";
+const FONT_WEIGHT: FontWeightToken = 'semibold';
 
 function getVariantStyle(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
-    case "primary":
+    case 'primary':
       // uses Skia for rendering, no styles here
       return {};
-    case "secondary":
+    case 'secondary':
       return {
         backgroundColor: theme.colors.primaryOpacity20,
         borderColor: theme.colors.primaryOpacity40,
       };
-    case "tertiary":
+    case 'tertiary':
       return {
-        backgroundColor: "transparent",
+        backgroundColor: 'transparent',
         borderColor: theme.colors.neutralSurfaceOpacity60,
       };
-    case "disabled":
+    case 'disabled':
       return {
         backgroundColor: theme.colors.neutralSurfaceOpacity20,
         borderColor: theme.colors.neutralSurfaceOpacity40,
       };
-    case "destructive":
+    case 'destructive':
       return {
         backgroundColor: theme.colors.destructiveOpacity15,
         borderColor: theme.colors.destructiveOpacity80,

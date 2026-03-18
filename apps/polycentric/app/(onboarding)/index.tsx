@@ -1,6 +1,6 @@
-import { Screen, Box, Text, Button } from "@/components";
-import { useRouter } from "expo-router";
-import { Routes } from "@/constants/routes";
+import { Screen, Box, Text, Button } from '@/components';
+import { useRouter } from 'expo-router';
+import { Routes } from '@/constants/routes';
 
 function PlaceholderLogo() {
   return (
@@ -13,9 +13,9 @@ function PlaceholderLogo() {
       marginBottom="lg"
       style={{
         borderWidth: 2,
-        borderColor: "rgba(255, 255, 255, 0.2)",
-        borderStyle: "dashed",
-        backgroundColor: "rgba(255, 255, 255, 0.05)",
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        borderStyle: 'dashed',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
       }}
     >
       <Text variant="small" color="neutralSurface">
@@ -29,7 +29,7 @@ export default function Welcome() {
   const router = useRouter();
 
   return (
-    <Screen background={{ gradient: "surround" }}>
+    <Screen background={{ gradient: 'surround' }}>
       <Box
         flexDirection="column"
         justifyContent="space-between"

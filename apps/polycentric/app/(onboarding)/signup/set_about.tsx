@@ -1,13 +1,13 @@
-import { Screen, Box, Text, Button, TextInput, PageHeader } from "@/components";
-import { useRouter } from "expo-router";
-import { useSignup } from "@/lib/signup/SignupContext";
+import { Screen, Box, Text, Button, TextInput, PageHeader } from '@/components';
+import { useRouter } from 'expo-router';
+import { useSignup } from '@/lib/signup/SignupContext';
 
 export default function SetAbout() {
   const router = useRouter();
   const { data, setAbout, goToNextStep, close } = useSignup();
 
   return (
-    <Screen background={{ gradient: "surround" }} keyboardAvoiding>
+    <Screen background={{ gradient: 'surround' }} keyboardAvoiding>
       <Box flexDirection="column" marginHorizontal="lg" height="100%">
         <PageHeader onBack={() => router.back()} onClose={close} />
         <Box flex={1} gap="lg">
