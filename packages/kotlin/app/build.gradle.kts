@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.application)
+    id("com.android.library")
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.wire)
 }
@@ -9,12 +9,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "tech.futo.lib_polycentric"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

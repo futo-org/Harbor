@@ -10,10 +10,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
 import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
-import tech.futo.libPolycentric.services.ClientState
 import tech.futo.libPolycentric.services.Identity
 import tech.futo.libPolycentric.services.IdentityOptions
-import tech.futo.libPolycentric.services.InitializationStep
 
 @RunWith(AndroidJUnit4::class)
 class EventServiceInstrumentedTest {

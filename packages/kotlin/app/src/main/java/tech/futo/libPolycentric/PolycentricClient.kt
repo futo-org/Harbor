@@ -4,33 +4,47 @@ import PolycentricException
 import tech.futo.libPolycentric.platform.ICryptoManager
 import tech.futo.libPolycentric.platform.IStorageDriver
 import tech.futo.libPolycentric.queries.QueryManager
-import tech.futo.libPolycentric.services.ClientState
 import tech.futo.libPolycentric.services.ContentManager
 import tech.futo.libPolycentric.services.EventService
 import tech.futo.libPolycentric.services.FFIService
 import tech.futo.libPolycentric.services.IdentityManager
 import tech.futo.libPolycentric.services.Identity
-import tech.futo.libPolycentric.services.InitializationStep
 import tech.futo.libPolycentric.services.KeyPair
 import okio.ByteString.Companion.toByteString
 import polycentric.Process
 
+enum class ClientState {
+    UNINITIALIZED,
+    INITIALIZING,
+    READY,
+    ERROR,
+}
+
+enum class InitializationStep(val message: String) {
+    STARTING("Starting initialization..."),
+    INITIALIZING_FFI("Initializing FFI..."),
+    LOADING_PROCESS_ID("Loading process ID..."),
+    CREATING_PROCESS_ID("Creating process ID..."),
+    COMPLETE("Initialization complete."),
+}
+
+
 class PolycentricClient(
-    val crypto: ICryptoManager,
-    val storage: IStorageDriver,
+    internal val crypto: ICryptoManager,
+    internal val storage: IStorageDriver,
 ) {
-    internal val ffiService = FFIService(this)
-    internal val contentManager = ContentManager(this)
-    internal val identityManager = IdentityManager(this)
-    internal val queryManager = QueryManager(this)
-
-    val keysRepository by lazy { storage.createKeysRepository() }
-    val processIdRepository by lazy { storage.createProcessIdRepository() }
-    val processStateRepository by lazy { storage.createProcessStateRepository() }
-    val eventRepository by lazy { storage.createEventRepository() }
-    val eventAckRepository by lazy { storage.createEventAckRepository() }
-
+    val ffiService = FFIService(this)
+    val contentManager = ContentManager(this)
+    val identityManager = IdentityManager(this)
+    val queryManager = QueryManager(this)
     val events = EventService()
+
+    internal val keysRepository by lazy { storage.createKeysRepository() }
+    internal val processIdRepository by lazy { storage.createProcessIdRepository() }
+    internal val processStateRepository by lazy { storage.createProcessStateRepository() }
+    internal val eventRepository by lazy { storage.createEventRepository() }
+    internal val eventAckRepository by lazy { storage.createEventAckRepository() }
+
 
     var state: ClientState = ClientState.UNINITIALIZED
         private set
@@ -43,10 +57,6 @@ class PolycentricClient(
 
     var process: Process? = null
         private set
-
-    fun setProcess(process: Process) {
-        this.process = process
-    }
 
     suspend fun init() {
         try {

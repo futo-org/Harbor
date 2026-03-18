@@ -1,6 +1,8 @@
 package tech.futo.libPolycentric.services
 
 import polycentric.Event
+import tech.futo.libPolycentric.ClientState
+import tech.futo.libPolycentric.InitializationStep
 import tech.futo.libPolycentric.services.Identity
 
 class EventService {
