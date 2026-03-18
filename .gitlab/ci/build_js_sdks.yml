@@ -19,6 +19,7 @@ build-js-sdks:
   stage: build
   before_script:
     - npm install -g pnpm@9.5.0
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
   script:
     - pnpm install
     - pnpm build
