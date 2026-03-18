@@ -5,14 +5,18 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "format:check": "prettier --check .",
+    "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "generate": "turbo run generate",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
     "run:ios": "pnpm -C apps/polycentric run ios",
     "run:android": "pnpm -C apps/polycentric run android",
     "run:web": "pnpm -C apps/polycentric run web"
   },
   "devDependencies": {
-    "turbo": "^2.6.1"
+    "eslint": "^9.38.0",
+    "turbo": "^2.6.1",
+    "typescript-eslint": "^8.46.2"
   }
 }
