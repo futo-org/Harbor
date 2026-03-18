@@ -1,0 +1,72 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^js-sdk-/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/js-*/*
+        - .gitlab/ci/build_js_sdks.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - packages/js-*/*
+        - .gitlab/ci/build_js_sdks.yml
+
+default:
+  tags:
+    - dind
+  image: node:24
+
+.js-base:
+  before_script:
+    - npm install -g pnpm@9.5.0
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+
+format-check:
+  extends: .js-base
+  stage: build
+  script:
+    - pnpm format
+
+build-js-sdks:
+  extends: .js-base
+  stage: build
+  script:
+    - pnpm build
+  artifacts:
+    paths:
+      - packages/js-*/dist
+    expire_in: 1 week
+
+.publish-npm:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^js-sdk-/
+  image: node:latest
+  stage: publish
+  needs:
+    - job: build-js-sdks
+      artifacts: true
+  script:
+    - |
+      VERSION=${CI_COMMIT_TAG#js-sdk-}
+      cd $PKG_DIR
+      sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
+      echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+      echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+      npm publish
+
+publish-js-core:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-core
+
+publish-js-browser:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-browser
+
+publish-js-node:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-node

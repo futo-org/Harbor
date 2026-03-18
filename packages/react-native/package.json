@@ -37,6 +37,7 @@
     "prepare": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "test": "jest",
     "proto:generate": "npx pbjs -t static-module -w es6 -o ./src/generated/protocol.js ../../protobuf-types/protos/polycentric.proto ../../protobuf-types/protos/rs-core-ffi.proto && npx pbts -o ./src/generated/protocol.d.ts ./src/generated/protocol.js"
   },

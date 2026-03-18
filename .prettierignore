@@ -11,6 +11,7 @@ apps/polycentric/android
 apps/polycentric/ios
 packages/react-native/android
 packages/react-native/ios
+packages/react-native/lib
 packages/rs-core
 legacy
 services/polycentric-server

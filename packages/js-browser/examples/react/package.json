@@ -12,7 +12,7 @@
   "dependencies": {
     "@polycentric/js-browser": "file:../../",
     "@polycentric/js-core": "file:../../../js-core",
-    "@polycentric/rs-core-wasm-browser": "file:../../../rs-core-wasm-browser",
+    "@polycentric/rs-core-wasm-browser": "*",
     "js-base64": "^3.7.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
