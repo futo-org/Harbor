@@ -18,20 +18,20 @@ default:
     - dind
   image: node:24
 
-.js-base:
+.js-sdks-base:
   before_script:
     - npm install -g pnpm@9.5.0
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
-format-check:
-  extends: .js-base
+js-sdks-format-check:
+  extends: .js-sdks-base
   stage: build
   script:
     - pnpm format
 
-build-js-sdks:
-  extends: .js-base
+js-sdks-build:
+  extends: .js-sdks-base
   stage: build
   script:
     - pnpm build
@@ -40,13 +40,13 @@ build-js-sdks:
       - packages/js-*/dist
     expire_in: 1 week
 
-.publish-npm:
+.js-sdks-publish-npm:
   rules:
     - if: $CI_COMMIT_TAG =~ /^js-sdk-/
   image: node:latest
   stage: publish
   needs:
-    - job: build-js-sdks
+    - job: js-sdks-build
       artifacts: true
   script:
     - |
@@ -57,17 +57,17 @@ build-js-sdks:
       echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
       npm publish
 
-publish-js-core:
-  extends: .publish-npm
+js-sdks-publish-js-core:
+  extends: .js-sdks-publish-npm
   variables:
     PKG_DIR: packages/js-core
 
-publish-js-browser:
-  extends: .publish-npm
+js-sdks-publish-js-browser:
+  extends: .js-sdks-publish-npm
   variables:
     PKG_DIR: packages/js-browser
 
-publish-js-node:
-  extends: .publish-npm
+js-sdks-publish-js-node:
+  extends: .js-sdks-publish-npm
   variables:
     PKG_DIR: packages/js-node
