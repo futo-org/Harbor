@@ -2,7 +2,6 @@
   "name": "@polycentric/js-node",
   "version": "0.0.0",
   "type": "module",
-  "private": true,
   "module": "./dist/index.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
