@@ -1,9 +1,38 @@
-include:
-  - local: .gitlab/ci/build_rs_core.yml
-  - local: .gitlab/ci/build_js_sdks.yml
-
 stages:
-  - setup
-  - check
-  - build
-  - publish
+  - triggers
+
+trigger-rs_core:
+  stage: triggers
+  trigger:
+    include: .gitlab/ci/build_rs_core.yml
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^rs-sdk-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/rs-core/*
+        - .gitlab/ci/build_rs_core.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - packages/rs-core/*
+        - .gitlab/ci/build_rs_core.yml
+
+trigger-js-sdks:
+  stage: triggers
+  trigger:
+    include: .gitlab/ci/build_js_sdks.yml
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^js-sdk-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/js-*/*
+        - .gitlab/ci/build_js_sdks.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - packages/js-*/*
+        - .gitlab/ci/build_js_sdks.yml
