@@ -15,12 +15,12 @@ data class ResultEventsAndServerErrors(
 
 class FeedQuery(
     private val client: PolycentricClient,
-    private val feedCallback: (cursor: ByteArray) -> ByteArray
+    private val feedCallback: suspend (cursor: ByteArray) -> ByteArray
 ) {
     private var cursor: Cursor = Cursor()
     private var result: MutableSet<String> = mutableSetOf()
 
-    public fun read(): ResultEventsAndServerErrors {
+    public suspend fun read(): ResultEventsAndServerErrors {
         val resultBytes = this.feedCallback(this.cursor.encode())
         val result = InternalFeedResult.ADAPTER.decode(resultBytes)
 

@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -22,7 +23,7 @@ class QueryManagerInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-querymanager.db"))
-        client.init()
+        runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -35,7 +36,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnEmptyResultWhenNoEventsExist() {
+    fun shouldReturnEmptyResultWhenNoEventsExist() = runBlocking {
         val emptySystem = PublicKey(
             key_type = 999L,
             key = byteArrayOf(1, 2, 3, 4, 5).toByteString(),
@@ -48,7 +49,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryFeedEventsWithPagination() {
+    fun shouldQueryFeedEventsWithPagination() = runBlocking {
         client.contentManager.createPost("First post for feed testing")
         client.contentManager.createPost("Second post for feed testing")
         client.contentManager.createPost("Third post for feed testing")
@@ -76,7 +77,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryFeedEventsWithTimeRange() {
+    fun shouldQueryFeedEventsWithTimeRange() = runBlocking {
         client.contentManager.createPost("Time range test post")
 
         val now = System.currentTimeMillis()
@@ -93,7 +94,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleCursorPaginationCorrectly() {
+    fun shouldHandleCursorPaginationCorrectly() = runBlocking {
         for (i in 1..5) {
             client.contentManager.createPost("Post $i for pagination test")
         }
@@ -125,7 +126,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryUsernameAfterSetting() {
+    fun shouldQueryUsernameAfterSetting() = runBlocking {
         client.contentManager.createUsername("testuser")
 
         val username = client.queryManager.queryUsername(
@@ -136,7 +137,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnNullUsernameWhenNotSet() {
+    fun shouldReturnNullUsernameWhenNotSet() = runBlocking {
         val username = client.queryManager.queryUsername(
             client.currentIdentity.keyPair.publicKey
         )
@@ -145,7 +146,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryDescriptionAfterSetting() {
+    fun shouldQueryDescriptionAfterSetting() = runBlocking {
         client.contentManager.createDescription("A test description")
 
         val description = client.queryManager.queryDescription(
@@ -156,7 +157,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnNullDescriptionWhenNotSet() {
+    fun shouldReturnNullDescriptionWhenNotSet() = runBlocking {
         val description = client.queryManager.queryDescription(
             client.currentIdentity.keyPair.publicKey
         )
@@ -165,7 +166,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryFollowsAfterFollowing() {
+    fun shouldQueryFollowsAfterFollowing() = runBlocking {
         val otherPublicKey = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         ).publicKey
@@ -181,7 +182,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnEmptyFollowsWhenNoneExist() {
+    fun shouldReturnEmptyFollowsWhenNoneExist() = runBlocking {
         val follows = client.queryManager.queryFollows(
             client.currentIdentity.keyPair.publicKey
         )
@@ -190,7 +191,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryBlocksAfterBlocking() {
+    fun shouldQueryBlocksAfterBlocking() = runBlocking {
         val otherPublicKey = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         ).publicKey
@@ -206,7 +207,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryServersAfterAdding() {
+    fun shouldQueryServersAfterAdding() = runBlocking {
         client.contentManager.createAddServer("https://example.com")
 
         val servers = client.queryManager.queryServers(
@@ -218,7 +219,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnEmptyServersWhenNoneExist() {
+    fun shouldReturnEmptyServersWhenNoneExist() = runBlocking {
         val servers = client.queryManager.queryServers(
             client.currentIdentity.keyPair.publicKey
         )
@@ -227,7 +228,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryAuthoritiesAfterAdding() {
+    fun shouldQueryAuthoritiesAfterAdding() = runBlocking {
         client.contentManager.createAddAuthority("example.authority")
 
         val authorities = client.queryManager.queryAuthorities(
@@ -239,7 +240,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryTopicsAfterJoining() {
+    fun shouldQueryTopicsAfterJoining() = runBlocking {
         client.contentManager.createJoinTopic("test-topic")
 
         val topics = client.queryManager.queryTopics(
@@ -251,7 +252,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnEmptyTopicsWhenNoneExist() {
+    fun shouldReturnEmptyTopicsWhenNoneExist() = runBlocking {
         val topics = client.queryManager.queryTopics(
             client.currentIdentity.keyPair.publicKey
         )
@@ -260,7 +261,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryCurrentOpinionAfterLiking() {
+    fun shouldQueryCurrentOpinionAfterLiking() = runBlocking {
         val post = client.contentManager.createPost("A post to like")
         val pointer = client.queryManager.eventPointer(
             polycentric.Event.ADAPTER.decode(post.event.toByteArray())
@@ -274,7 +275,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnNullOpinionWhenNoOpinionExists() {
+    fun shouldReturnNullOpinionWhenNoOpinionExists() = runBlocking {
         val post = client.contentManager.createPost("A post with no opinion")
         val pointer = client.queryManager.eventPointer(
             polycentric.Event.ADAPTER.decode(post.event.toByteArray())
@@ -286,7 +287,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldCheckDeletedStatusForDeletedPost() {
+    fun shouldCheckDeletedStatusForDeletedPost() = runBlocking {
         val post = client.contentManager.createPost("A post to delete")
         val pointer = client.queryManager.eventPointer(
             polycentric.Event.ADAPTER.decode(post.event.toByteArray())
@@ -300,7 +301,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnNotDeletedForExistingPost() {
+    fun shouldReturnNotDeletedForExistingPost() = runBlocking {
         val post = client.contentManager.createPost("A post that exists")
         val pointer = client.queryManager.eventPointer(
             polycentric.Event.ADAPTER.decode(post.event.toByteArray())
@@ -312,7 +313,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldGetEventPointer() {
+    fun shouldGetEventPointer() = runBlocking {
         val post = client.contentManager.createPost("A post for pointer test")
         val event = polycentric.Event.ADAPTER.decode(post.event.toByteArray())
 
@@ -325,7 +326,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldGetEventKey() {
+    fun shouldGetEventKey() = runBlocking {
         val post = client.contentManager.createPost("A post for event key test")
         val event = polycentric.Event.ADAPTER.decode(post.event.toByteArray())
 
@@ -335,7 +336,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryLatestUsernameAfterMultipleUpdates() {
+    fun shouldQueryLatestUsernameAfterMultipleUpdates() = runBlocking {
         client.contentManager.createUsername("first_username")
         client.contentManager.createUsername("second_username")
         client.contentManager.createUsername("final_username")
@@ -348,7 +349,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldQueryLatestDescriptionAfterMultipleUpdates() {
+    fun shouldQueryLatestDescriptionAfterMultipleUpdates() = runBlocking {
         client.contentManager.createDescription("first description")
         client.contentManager.createDescription("final description")
 
@@ -360,7 +361,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleFollowThenUnfollow() {
+    fun shouldHandleFollowThenUnfollow() = runBlocking {
         val otherPublicKey = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         ).publicKey
@@ -376,7 +377,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleServerAddThenRemove() {
+    fun shouldHandleServerAddThenRemove() = runBlocking {
         client.contentManager.createAddServer("https://temp-server.com")
         client.contentManager.createRemoveServer("https://temp-server.com")
 
@@ -388,7 +389,7 @@ class QueryManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleTopicJoinThenLeave() {
+    fun shouldHandleTopicJoinThenLeave() = runBlocking {
         client.contentManager.createJoinTopic("temp-topic")
         client.contentManager.createLeaveTopic("temp-topic")
 

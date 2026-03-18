@@ -7,7 +7,7 @@ import polycentric.*
 import tech.futo.libPolycentric.PolycentricClient
 
 class ContentManager(private val client: PolycentricClient) {
-    private fun createLWWElementSetEvent(
+    private suspend fun createLWWElementSetEvent(
         contentType: ContentType,
         value: ByteArray,
         operation: LWWElementSet.Operation,
@@ -33,14 +33,14 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    private fun getReference(pointer: Pointer): EventKey? {
+    private suspend fun getReference(pointer: Pointer): EventKey? {
         val pointerBytes = Pointer.ADAPTER.encode(pointer)
         val result = this.client.ffiService.getReference(pointerBytes)
         if (result.isEmpty()) return null
         return EventKey.ADAPTER.decode(result)
     }
 
-    private fun createOpinion(opinion: Opinion, subjectPointer: Pointer): SignedEvent {
+    private suspend fun createOpinion(opinion: Opinion, subjectPointer: Pointer): SignedEvent {
         getReference(subjectPointer)
             ?: throw PolycentricException("Could not get reference from pointer")
 
@@ -70,7 +70,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    private fun createDelete(targetPointer: Pointer, contentType: ContentType): SignedEvent {
+    private suspend fun createDelete(targetPointer: Pointer, contentType: ContentType): SignedEvent {
         val deleteEvent = Delete(
             process = targetPointer.process,
             logical_clock = targetPointer.logical_clock,
@@ -100,7 +100,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createEvent(eventData: EventCreationData): SignedEvent {
+    suspend fun createEvent(eventData: EventCreationData): SignedEvent {
         val identity = client.currentIdentity
         val processBytes = identity.process.process.toByteArray()
         val systemKeyType = identity.keyPair.keyType
@@ -136,7 +136,7 @@ class ContentManager(private val client: PolycentricClient) {
         return signedEvent
     }
 
-    fun createPost(content: String, image: ImageManifest? = null, reference: Reference? = null): SignedEvent {
+    suspend fun createPost(content: String, image: ImageManifest? = null, reference: Reference? = null): SignedEvent {
         val post = Post(content = content, image = image)
 
         val eventData = EventCreationData(
@@ -155,16 +155,16 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createLike(subjectPointer: Pointer): SignedEvent =
+    suspend fun createLike(subjectPointer: Pointer): SignedEvent =
         createOpinion(Opinion.LIKE, subjectPointer)
 
-    fun createDislike(subjectPointer: Pointer): SignedEvent =
+    suspend fun createDislike(subjectPointer: Pointer): SignedEvent =
         createOpinion(Opinion.DISLIKE, subjectPointer)
 
-    fun createNeutral(subjectPointer: Pointer): SignedEvent =
+    suspend fun createNeutral(subjectPointer: Pointer): SignedEvent =
         createOpinion(Opinion.NEUTRAL, subjectPointer)
 
-    fun createUsername(username: String): SignedEvent {
+    suspend fun createUsername(username: String): SignedEvent {
         val lwwElement = LWWElement(
             value_ = username.encodeToByteArray().toByteString(),
             unix_milliseconds = System.currentTimeMillis(),
@@ -185,7 +185,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createDescription(description: String): SignedEvent {
+    suspend fun createDescription(description: String): SignedEvent {
         val lwwElement = LWWElement(
             value_ = description.encodeToByteArray().toByteString(),
             unix_milliseconds = System.currentTimeMillis(),
@@ -206,7 +206,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createAvatar(avatar: ImageManifest): SignedEvent {
+    suspend fun createAvatar(avatar: ImageManifest): SignedEvent {
         val lwwElement = LWWElement(
             value_ = ImageManifest.ADAPTER.encode(avatar).toByteString(),
             unix_milliseconds = System.currentTimeMillis(),
@@ -227,7 +227,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createBanner(banner: ImageManifest): SignedEvent {
+    suspend fun createBanner(banner: ImageManifest): SignedEvent {
         val lwwElement = LWWElement(
             value_ = ImageManifest.ADAPTER.encode(banner).toByteString(),
             unix_milliseconds = System.currentTimeMillis(),
@@ -248,37 +248,37 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createFollow(system: PublicKey): SignedEvent =
+    suspend fun createFollow(system: PublicKey): SignedEvent =
         createLWWElementSetEvent(ContentType.FOLLOW, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.ADD)
 
-    fun createUnfollow(system: PublicKey): SignedEvent =
+    suspend fun createUnfollow(system: PublicKey): SignedEvent =
         createLWWElementSetEvent(ContentType.FOLLOW, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.REMOVE)
 
-    fun createBlock(system: PublicKey): SignedEvent =
+    suspend fun createBlock(system: PublicKey): SignedEvent =
         createLWWElementSetEvent(ContentType.BLOCK, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.ADD)
 
-    fun createUnblock(system: PublicKey): SignedEvent =
+    suspend fun createUnblock(system: PublicKey): SignedEvent =
         createLWWElementSetEvent(ContentType.BLOCK, PublicKey.ADAPTER.encode(system), LWWElementSet.Operation.REMOVE)
 
-    fun createAddServer(server: String): SignedEvent =
+    suspend fun createAddServer(server: String): SignedEvent =
         createLWWElementSetEvent(ContentType.SERVER, server.encodeToByteArray(), LWWElementSet.Operation.ADD)
 
-    fun createRemoveServer(server: String): SignedEvent =
+    suspend fun createRemoveServer(server: String): SignedEvent =
         createLWWElementSetEvent(ContentType.SERVER, server.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
 
-    fun createAddAuthority(authority: String): SignedEvent =
+    suspend fun createAddAuthority(authority: String): SignedEvent =
         createLWWElementSetEvent(ContentType.AUTHORITY, authority.encodeToByteArray(), LWWElementSet.Operation.ADD)
 
-    fun createRemoveAuthority(authority: String): SignedEvent =
+    suspend fun createRemoveAuthority(authority: String): SignedEvent =
         createLWWElementSetEvent(ContentType.AUTHORITY, authority.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
 
-    fun createJoinTopic(topic: String): SignedEvent =
+    suspend fun createJoinTopic(topic: String): SignedEvent =
         createLWWElementSetEvent(ContentType.JOIN_TOPIC, topic.encodeToByteArray(), LWWElementSet.Operation.ADD)
 
-    fun createLeaveTopic(topic: String): SignedEvent =
+    suspend fun createLeaveTopic(topic: String): SignedEvent =
         createLWWElementSetEvent(ContentType.JOIN_TOPIC, topic.encodeToByteArray(), LWWElementSet.Operation.REMOVE)
 
-    fun createClaim(claimType: Long, fields: List<ClaimFieldEntry>): SignedEvent {
+    suspend fun createClaim(claimType: Long, fields: List<ClaimFieldEntry>): SignedEvent {
         val claim = Claim(
             claim_type = claimType,
             fields = fields,
@@ -299,7 +299,7 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun createVerifyClaim(targetPointer: Pointer): SignedEvent {
+    suspend fun createVerifyClaim(targetPointer: Pointer): SignedEvent {
         val targetReference = Reference(
             reference_type = 0L,
             reference = Pointer.ADAPTER.encode(targetPointer).toByteString(),
@@ -320,6 +320,6 @@ class ContentManager(private val client: PolycentricClient) {
         return createEvent(eventData)
     }
 
-    fun deletePost(postPointer: Pointer): SignedEvent =
+    suspend fun deletePost(postPointer: Pointer): SignedEvent =
         createDelete(postPointer, ContentType.POST)
 }

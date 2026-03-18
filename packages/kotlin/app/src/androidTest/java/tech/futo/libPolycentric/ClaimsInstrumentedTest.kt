@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -24,8 +25,10 @@ class ClaimsInstrumentedTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client1 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-1.db"))
         client2 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-2.db"))
-        client1.init()
-        client2.init()
+        runBlocking {
+            client1.init()
+            client2.init()
+        }
         client1.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -42,7 +45,7 @@ class ClaimsInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateAClaimOnAnIdentity() {
+    fun shouldCreateAClaimOnAnIdentity() = runBlocking {
         val claimEvent = client1.contentManager.createClaim(
             claimType = 1L,
             fields = listOf(
@@ -63,7 +66,7 @@ class ClaimsInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateAVouchForAnotherIdentityClaim() {
+    fun shouldCreateAVouchForAnotherIdentityClaim() = runBlocking {
         val claimSignedEvent = client1.contentManager.createClaim(
             claimType = 1L,
             fields = listOf(
@@ -89,7 +92,7 @@ class ClaimsInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateMultipleClaimsAndVouches() {
+    fun shouldCreateMultipleClaimsAndVouches() = runBlocking {
         data class ClaimSpec(val type: Long, val fields: List<ClaimFieldEntry>)
 
         val claims = listOf(
@@ -130,7 +133,7 @@ class ClaimsInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleClaimWithComplexFieldData() {
+    fun shouldHandleClaimWithComplexFieldData() = runBlocking {
         val claimSignedEvent = client1.contentManager.createClaim(
             claimType = 100L,
             fields = listOf(

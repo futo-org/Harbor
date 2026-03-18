@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -26,7 +27,7 @@ class LWWInstrumentedTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         storage = SQLiteStorageDriver(context, "test-lww.db")
         client = PolycentricClient(Ed25519CryptoManager(), storage)
-        client.init()
+        runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -39,7 +40,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateUsernameEvent() {
+    fun shouldCreateUsernameEvent() = runBlocking {
         val username = "testuser123"
         val signedEvent = client.contentManager.createUsername(username)
 
@@ -53,7 +54,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateDescriptionEvent() {
+    fun shouldCreateDescriptionEvent() = runBlocking {
         val description = "This is a test description for the user profile"
         val signedEvent = client.contentManager.createDescription(description)
 
@@ -67,7 +68,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateAvatarEvent() {
+    fun shouldCreateAvatarEvent() = runBlocking {
         val avatar = ImageManifest(
             mime = "image/png",
             width = 256,
@@ -90,7 +91,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateBannerEvent() {
+    fun shouldCreateBannerEvent() = runBlocking {
         val banner = ImageManifest(
             mime = "image/jpeg",
             width = 1200,
@@ -113,7 +114,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleMultipleDescriptionsWithLWWSemantics() {
+    fun shouldHandleMultipleDescriptionsWithLWWSemantics() = runBlocking {
         client.contentManager.createDescription("First description")
         client.contentManager.createDescription("Second description")
         client.contentManager.createDescription("Third description")
@@ -132,7 +133,7 @@ class LWWInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleSystemSpecificLWWElementsAcrossIdentities() {
+    fun shouldHandleSystemSpecificLWWElementsAcrossIdentities() = runBlocking {
         val firstIdentity = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = true)
         )

@@ -3,6 +3,7 @@ package tech.futo.libPolycentric
 import PolycentricException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -23,7 +24,7 @@ class IdentityManagerInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-identitymanager.db"))
-        client.init()
+        runBlocking { client.init() }
     }
 
     @After

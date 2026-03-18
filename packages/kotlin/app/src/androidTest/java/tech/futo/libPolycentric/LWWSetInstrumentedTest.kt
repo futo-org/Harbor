@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -20,7 +21,7 @@ class LWWSetInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-lwwset.db"))
-        client.init()
+        runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -35,7 +36,7 @@ class LWWSetInstrumentedTest {
     // Follow Set
 
     @Test
-    fun shouldAddAndRemoveFollowsCorrectly() {
+    fun shouldAddAndRemoveFollowsCorrectly() = runBlocking {
         val system1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -68,7 +69,7 @@ class LWWSetInstrumentedTest {
     // Block Set
 
     @Test
-    fun shouldAddAndRemoveBlocksCorrectly() {
+    fun shouldAddAndRemoveBlocksCorrectly() = runBlocking {
         val system1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -97,7 +98,7 @@ class LWWSetInstrumentedTest {
     // Server Set
 
     @Test
-    fun shouldAddAndRemoveServersCorrectly() {
+    fun shouldAddAndRemoveServersCorrectly() = runBlocking {
         var servers = client.queryManager.queryServers(client.currentIdentity.keyPair.publicKey)
         assertTrue(servers.isEmpty())
 
@@ -120,7 +121,7 @@ class LWWSetInstrumentedTest {
     // Authority Set
 
     @Test
-    fun shouldAddAndRemoveAuthoritiesCorrectly() {
+    fun shouldAddAndRemoveAuthoritiesCorrectly() = runBlocking {
         var authorities = client.queryManager.queryAuthorities(client.currentIdentity.keyPair.publicKey)
         assertTrue(authorities.isEmpty())
 
@@ -142,7 +143,7 @@ class LWWSetInstrumentedTest {
     // Topic Set
 
     @Test
-    fun shouldAddAndRemoveTopicsCorrectly() {
+    fun shouldAddAndRemoveTopicsCorrectly() = runBlocking {
         var topics = client.queryManager.queryTopics(client.currentIdentity.keyPair.publicKey)
         assertTrue(topics.isEmpty())
 
@@ -165,7 +166,7 @@ class LWWSetInstrumentedTest {
     // Cross-System Isolation
 
     @Test
-    fun shouldMaintainSeparateSetsForDifferentSystems() {
+    fun shouldMaintainSeparateSetsForDifferentSystems() = runBlocking {
         val identity1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = true)
         )
@@ -203,7 +204,7 @@ class LWWSetInstrumentedTest {
     // LWW Semantics
 
     @Test
-    fun shouldHandleLWWSemanticsForAddRemoveOperations() {
+    fun shouldHandleLWWSemanticsForAddRemoveOperations() = runBlocking {
         val testServer = "https://lww-test.example.com"
 
         client.contentManager.createAddServer(testServer)

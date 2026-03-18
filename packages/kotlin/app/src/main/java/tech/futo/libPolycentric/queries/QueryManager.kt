@@ -135,7 +135,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryCurrentOpinion(targetPointer: Pointer): LWWElement? {
+    suspend fun queryCurrentOpinion(targetPointer: Pointer): LWWElement? {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )
@@ -150,14 +150,14 @@ class QueryManager(private val client: PolycentricClient) {
         return LWWElement.ADAPTER.decode(valueBytes.toByteArray())
     }
 
-    fun queryIsDeleted(targetPointer: Pointer): Boolean {
+    suspend fun queryIsDeleted(targetPointer: Pointer): Boolean {
         val result = client.ffiService.queryEventIsDeleted(
             Pointer.ADAPTER.encode(targetPointer)
         )
         return result.isNotEmpty() && result[0] == 1.toByte()
     }
 
-    fun queryFeed(
+    suspend fun queryFeed(
         system: PublicKey,
         startTime: Long? = null,
         endTime: Long? = null,
@@ -180,27 +180,27 @@ class QueryManager(private val client: PolycentricClient) {
         return FeedResult.ADAPTER.decode(result)
     }
 
-    fun queryUsername(system: PublicKey): String? {
+    suspend fun queryUsername(system: PublicKey): String? {
         val lwwElement = querySystemCRDT(ContentType.USERNAME, system) ?: return null
         return lwwElement.value_.toByteArray().decodeToString()
     }
 
-    fun queryDescription(system: PublicKey): String? {
+    suspend fun queryDescription(system: PublicKey): String? {
         val lwwElement = querySystemCRDT(ContentType.DESCRIPTION, system) ?: return null
         return lwwElement.value_.toByteArray().decodeToString()
     }
 
-    fun queryAvatar(system: PublicKey): ImageManifest? {
+    suspend fun queryAvatar(system: PublicKey): ImageManifest? {
         val lwwElement = querySystemCRDT(ContentType.AVATAR, system) ?: return null
         return ImageManifest.ADAPTER.decode(lwwElement.value_.toByteArray())
     }
 
-    fun queryBanner(system: PublicKey): ImageManifest? {
+    suspend fun queryBanner(system: PublicKey): ImageManifest? {
         val lwwElement = querySystemCRDT(ContentType.BANNER, system) ?: return null
         return ImageManifest.ADAPTER.decode(lwwElement.value_.toByteArray())
     }
 
-    fun queryFollows(system: PublicKey): List<PublicKey> {
+    suspend fun queryFollows(system: PublicKey): List<PublicKey> {
         val systemBytes = PublicKey.ADAPTER.encode(system)
         val result = client.ffiService.queryFollowsForSystem(systemBytes)
         if (result.isEmpty()) return emptyList()
@@ -208,7 +208,7 @@ class QueryManager(private val client: PolycentricClient) {
         return extractPublicKeysFromLWWSetEvents(result)
     }
 
-    fun queryBlocks(system: PublicKey): List<PublicKey> {
+    suspend fun queryBlocks(system: PublicKey): List<PublicKey> {
         val systemBytes = PublicKey.ADAPTER.encode(system)
         val result = client.ffiService.queryBlocksForSystem(systemBytes)
         if (result.isEmpty()) return emptyList()
@@ -216,7 +216,7 @@ class QueryManager(private val client: PolycentricClient) {
         return extractPublicKeysFromLWWSetEvents(result)
     }
 
-    fun queryServers(system: PublicKey): List<String> {
+    suspend fun queryServers(system: PublicKey): List<String> {
         val systemBytes = PublicKey.ADAPTER.encode(system)
         val result = client.ffiService.queryServersForSystem(systemBytes)
         if (result.isEmpty()) return emptyList()
@@ -224,7 +224,7 @@ class QueryManager(private val client: PolycentricClient) {
         return extractStringsFromLWWSetEvents(result)
     }
 
-    fun queryAuthorities(system: PublicKey): List<String> {
+    suspend fun queryAuthorities(system: PublicKey): List<String> {
         val systemBytes = PublicKey.ADAPTER.encode(system)
         val result = client.ffiService.queryAuthoritiesForSystem(systemBytes)
         if (result.isEmpty()) return emptyList()
@@ -232,7 +232,7 @@ class QueryManager(private val client: PolycentricClient) {
         return extractStringsFromLWWSetEvents(result)
     }
 
-    fun queryTopics(system: PublicKey): List<String> {
+    suspend fun queryTopics(system: PublicKey): List<String> {
         val systemBytes = PublicKey.ADAPTER.encode(system)
         val result = client.ffiService.queryTopicsForSystem(systemBytes)
         if (result.isEmpty()) return emptyList()
@@ -240,13 +240,13 @@ class QueryManager(private val client: PolycentricClient) {
         return extractStringsFromLWWSetEvents(result)
     }
 
-    fun eventPointer(event: Event): Pointer {
+    suspend fun eventPointer(event: Event): Pointer {
         val eventBytes = Event.ADAPTER.encode(event)
         val pointerBytes = client.ffiService.getPointer(eventBytes)
         return Pointer.ADAPTER.decode(pointerBytes)
     }
 
-    fun eventKey(event: Event): EventKey {
+    suspend fun eventKey(event: Event): EventKey {
         val pointer = eventPointer(event)
         val pointerBytes = Pointer.ADAPTER.encode(pointer)
         val eventKeyBytes = client.ffiService.getReference(pointerBytes)
@@ -254,7 +254,7 @@ class QueryManager(private val client: PolycentricClient) {
         return EventKey.ADAPTER.decode(eventKeyBytes)
     }
 
-    private fun querySystemCRDT(contentType: ContentType, system: PublicKey): LWWElement? {
+    private suspend fun querySystemCRDT(contentType: ContentType, system: PublicKey): LWWElement? {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )

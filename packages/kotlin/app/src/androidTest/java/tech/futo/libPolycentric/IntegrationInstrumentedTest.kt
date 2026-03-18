@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -21,7 +22,7 @@ class IntegrationInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-integration.db"))
-        client.init()
+        runBlocking { client.init() }
     }
 
     @After
@@ -44,7 +45,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldRetrieveExistingProcessIdOnSecondInit() {
+    fun shouldRetrieveExistingProcessIdOnSecondInit() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
 
         val client1 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-integration-shared.db"))
@@ -56,6 +57,8 @@ class IntegrationInstrumentedTest {
         assertEquals(client1.process, client2.process)
 
         context.deleteDatabase("test-integration-shared.db")
+
+        Unit // This is needed here to prevent kotlin from giving this test an inferred boolean return type, which breaks everything
     }
 
     @Test
@@ -73,7 +76,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldCreatePostAndPersistEventAndLogicalClock() {
+    fun shouldCreatePostAndPersistEventAndLogicalClock() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -94,7 +97,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateMultiplePostsAndIncrementLogicalClock() {
+    fun shouldCreateMultiplePostsAndIncrementLogicalClock() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -115,7 +118,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleConcurrentPostCreation() {
+    fun shouldHandleConcurrentPostCreation() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -138,7 +141,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldMaintainEventOrderWithLogicalClocks() {
+    fun shouldMaintainEventOrderWithLogicalClocks() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )

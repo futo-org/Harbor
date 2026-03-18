@@ -48,7 +48,7 @@ class PolycentricClient(
         this.process = process
     }
 
-    fun init() {
+    suspend fun init() {
         try {
             setState(ClientState.INITIALIZING)
 
@@ -93,7 +93,7 @@ class PolycentricClient(
         return newProcess
     }
 
-    fun isInitialized(): Boolean {
+    suspend fun isInitialized(): Boolean {
         val result = this.ffiService.isInitialized()
 
         if(result.isNotEmpty())

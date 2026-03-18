@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -22,7 +23,7 @@ class OpinionsInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-opinions.db"))
-        client.init()
+        runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -37,7 +38,7 @@ class OpinionsInstrumentedTest {
     private fun opinionByte(lwwValue: okio.ByteString) = lwwValue.toByteArray()[0]
 
     @Test
-    fun shouldCreatePostAndLikeIt() {
+    fun shouldCreatePostAndLikeIt() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post for opinion testing")
         assertNotNull(signedEvent)
 
@@ -54,7 +55,7 @@ class OpinionsInstrumentedTest {
     }
 
     @Test
-    fun shouldCreatePostAndDislikeIt() {
+    fun shouldCreatePostAndDislikeIt() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post for dislike testing")
         assertNotNull(signedEvent)
 
@@ -70,7 +71,7 @@ class OpinionsInstrumentedTest {
     }
 
     @Test
-    fun shouldCreatePostAndSetNeutralOpinion() {
+    fun shouldCreatePostAndSetNeutralOpinion() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post for neutral testing")
         assertNotNull(signedEvent)
 
@@ -86,7 +87,7 @@ class OpinionsInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleMultipleOpinionsWithLWWSemantics() {
+    fun shouldHandleMultipleOpinionsWithLWWSemantics() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post for multiple opinions")
         assertNotNull(signedEvent)
 
@@ -109,7 +110,7 @@ class OpinionsInstrumentedTest {
     }
 
     @Test
-    fun shouldReturnNullWhenQueryingOpinionForPostWithNoOpinions() {
+    fun shouldReturnNullWhenQueryingOpinionForPostWithNoOpinions() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post with no opinions")
         assertNotNull(signedEvent)
 
@@ -121,7 +122,7 @@ class OpinionsInstrumentedTest {
     }
 
     @Test
-    fun shouldHandleOpinionsAcrossDifferentIdentities() {
+    fun shouldHandleOpinionsAcrossDifferentIdentities() = runBlocking {
         val signedEvent = client.contentManager.createPost("Test post for cross-identity opinion testing")
         assertNotNull(signedEvent)
 
