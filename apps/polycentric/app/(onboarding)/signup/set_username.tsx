@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Screen, Box, Text, Button, TextInput, PageHeader } from "@/components";
-import { useRouter } from "expo-router";
-import { useSignup } from "@/lib/signup/SignupContext";
-import { validateUsername } from "@/util/validation";
+import { useState } from 'react';
+import { Screen, Box, Text, Button, TextInput, PageHeader } from '@/components';
+import { useRouter } from 'expo-router';
+import { useSignup } from '@/lib/signup/SignupContext';
+import { validateUsername } from '@/util/validation';
 
 export default function SetUsername() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function SetUsername() {
 
   return (
     <Screen
-      background={{ gradient: "surround", matrixOverlay: "colored" }}
+      background={{ gradient: 'surround', matrixOverlay: 'colored' }}
       keyboardAvoiding
     >
       <Box flexDirection="column" marginHorizontal="lg" height="100%">
@@ -53,7 +53,7 @@ export default function SetUsername() {
         </Box>
         <Button
           title="Continue"
-          variant={canContinue ? "primary" : "disabled"}
+          variant={canContinue ? 'primary' : 'disabled'}
           fullWidth
           onPress={handleContinue}
         />

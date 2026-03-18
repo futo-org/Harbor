@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { usePolycentric } from "./PolycentricProvider";
+import { useState, useEffect, useCallback } from 'react';
+import { usePolycentric } from './PolycentricProvider';
 
 interface ProfileRef {
   description: string | null;
@@ -20,13 +20,13 @@ export type ProfileEditState = {
 
 export function useProfileEdit(
   username: string,
-  profile: ProfileRef
+  profile: ProfileRef,
 ): ProfileEditState {
   const client = usePolycentric();
 
   const [editing, setEditing] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
-  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [nameDraft, setNameDraft] = useState('');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useProfileEdit(
   }, [username]);
 
   useEffect(() => {
-    setDescriptionDraft(profile.description ?? "");
+    setDescriptionDraft(profile.description ?? '');
   }, [profile.description]);
 
   const handleSave = useCallback(async () => {
@@ -46,7 +46,7 @@ export function useProfileEdit(
       profile.refresh();
       setEditing(false);
     } catch (err) {
-      console.error("Failed to save profile:", err);
+      console.error('Failed to save profile:', err);
     } finally {
       setSaving(false);
     }
@@ -54,7 +54,7 @@ export function useProfileEdit(
 
   const handleCancel = useCallback(() => {
     setNameDraft(username);
-    setDescriptionDraft(profile.description ?? "");
+    setDescriptionDraft(profile.description ?? '');
     setEditing(false);
   }, [username, profile.description]);
 

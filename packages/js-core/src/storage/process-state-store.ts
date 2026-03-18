@@ -1,4 +1,4 @@
-import { IProcessStateRepository } from "../platform-interfaces";
+import { IProcessStateRepository } from '../platform-interfaces';
 
 /**
  * ProcessState provides operations for the logical clock of a given process.

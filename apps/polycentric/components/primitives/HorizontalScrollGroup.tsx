@@ -1,5 +1,5 @@
-import { ScrollView, StyleSheet } from "react-native";
-import { useTheme } from "@/theme";
+import { ScrollView, StyleSheet } from 'react-native';
+import { useTheme } from '@/theme';
 
 interface HorizontalScrollGroupProps {
   children: React.ReactNode;
@@ -23,7 +23,7 @@ export function HorizontalScrollGroup({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

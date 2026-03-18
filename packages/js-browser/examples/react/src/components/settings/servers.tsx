@@ -1,6 +1,5 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ClientContext } from "../../main";
-
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { ClientContext } from '../../main';
 
 export const ServerSelector = () => {
   const client = useContext(ClientContext);
@@ -10,7 +9,9 @@ export const ServerSelector = () => {
 
   const loadIdentities = useCallback(async () => {
     if (client === null) return;
-    setServers(await client.queryServers(client.currentIdentity.keyPair.publicKey));
+    setServers(
+      await client.queryServers(client.currentIdentity.keyPair.publicKey),
+    );
   }, [client]);
 
   useEffect(() => {
@@ -22,27 +23,29 @@ export const ServerSelector = () => {
   const addServer = async (server: string) => {
     await client.createAddServer(server);
     loadIdentities();
-  }
+  };
 
   const removeServer = async (server: string) => {
     await client.createRemoveServer(server);
     loadIdentities();
-  }
+  };
 
   const addServerFromInput = () => {
-    if(!serverField.current) return;
+    if (!serverField.current) return;
 
     addServer(serverField.current.value);
-  }
+  };
 
-  return <div>
-    {servers.map((server) => (
-    <div key={server}>
-      <div>{server}</div>
-      <button onClick={() => removeServer(server)}>Remove</button>
+  return (
+    <div>
+      {servers.map((server) => (
+        <div key={server}>
+          <div>{server}</div>
+          <button onClick={() => removeServer(server)}>Remove</button>
+        </div>
+      ))}
+      <input ref={serverField}></input>
+      <button onClick={addServerFromInput}>Add Server</button>
     </div>
-    ))}
-    <input ref={serverField}></input>
-    <button onClick={addServerFromInput}>Add Server</button>
-  </div>
+  );
 };

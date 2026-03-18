@@ -1,4 +1,4 @@
-import { TrueSheet, SheetDetent } from "@lodev09/react-native-true-sheet";
+import { TrueSheet, SheetDetent } from '@lodev09/react-native-true-sheet';
 import {
   createContext,
   useContext,
@@ -9,9 +9,9 @@ import {
   ReactNode,
   forwardRef,
   useImperativeHandle,
-} from "react";
-import { Platform } from "react-native";
-import { useTheme } from "@/theme";
+} from 'react';
+import { Platform } from 'react-native';
+import { useTheme } from '@/theme';
 
 interface SheetContextType {
   isOpen: boolean;
@@ -24,7 +24,7 @@ const SheetContext = createContext<SheetContextType | undefined>(undefined);
 export function useSheetContext() {
   const context = useContext(SheetContext);
   if (!context) {
-    throw new Error("useSheetContext must be used within Sheet");
+    throw new Error('useSheetContext must be used within Sheet');
   }
   return context;
 }
@@ -44,7 +44,7 @@ interface SheetHandle {
 const SheetInner = forwardRef<SheetHandle, SheetProps>(
   (
     { children, detents = [0.5], dismissible = true, scrollable = false },
-    ref
+    ref,
   ) => {
     const { theme, isDark } = useTheme();
     const sheetRef = useRef<TrueSheet>(null);
@@ -72,9 +72,9 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
 
     const platformProps = Platform.select({
       ios: {
-        backgroundBlur: "system-thick-material-dark" as const,
+        backgroundBlur: 'system-thick-material-dark' as const,
         blurOptions: { intensity: 80, interaction: true },
-        backgroundColor: "transparent",
+        backgroundColor: 'transparent',
       },
       android: { backgroundColor: theme.colors.backgroundPrimary },
     });
@@ -100,7 +100,7 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
         </TrueSheet>
       </SheetContext.Provider>
     );
-  }
+  },
 );
 
 interface UseSheetReturn {

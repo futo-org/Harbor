@@ -1,17 +1,17 @@
-import { memo } from "react";
-import { Canvas, Rect, RadialGradient, vec } from "@shopify/react-native-skia";
-import { Box } from "@/components/layouts";
+import { memo } from 'react';
+import { Canvas, Rect, RadialGradient, vec } from '@shopify/react-native-skia';
+import { Box } from '@/components/layouts';
 import {
   Text,
   Avatar,
   Button,
   TextInput,
   HorizontalScrollGroup,
-} from "@/components/primitives";
-import { BackButton, FeedChip } from "@/components/composites";
-import { truncateName } from "@/lib/polycentric-hooks";
-import type { ProfileScreenData } from "@/lib/polycentric-hooks";
-import type { ProfileEditState } from "@/lib/polycentric-hooks";
+} from '@/components/primitives';
+import { BackButton, FeedChip } from '@/components/composites';
+import { truncateName } from '@/lib/polycentric-hooks';
+import type { ProfileScreenData } from '@/lib/polycentric-hooks';
+import type { ProfileEditState } from '@/lib/polycentric-hooks';
 
 const BANNER_HEIGHT = 150;
 
@@ -32,7 +32,7 @@ function ProfileHeaderInner({
 }: ProfileHeaderProps) {
   return (
     <>
-      <Box style={{ position: "relative" }}>
+      <Box style={{ position: 'relative' }}>
         <Canvas style={{ width: screenWidth, height: BANNER_HEIGHT }}>
           <Rect x={0} y={0} width={screenWidth} height={BANNER_HEIGHT}>
             <RadialGradient
@@ -43,7 +43,7 @@ function ProfileHeaderInner({
           </Rect>
         </Canvas>
         <Box
-          style={{ position: "absolute", top: 0, left: 0 }}
+          style={{ position: 'absolute', top: 0, left: 0 }}
           marginHorizontal="lg"
           marginTop="md"
         >
@@ -75,7 +75,7 @@ function ProfileHeaderInner({
             />
             <Box flexDirection="row" gap="sm">
               <Button
-                title={edit.saving ? "Saving..." : "Save"}
+                title={edit.saving ? 'Saving...' : 'Save'}
                 onPress={edit.handleSave}
                 variant="primary"
                 size="sm"
@@ -120,8 +120,8 @@ function ProfileHeaderInner({
       {!data.isSelf && (
         <Box marginHorizontal="lg" marginTop="md">
           <Button
-            title={data.followStatus.isFollowing ? "Following" : "Follow"}
-            variant={data.followStatus.isFollowing ? "secondary" : "primary"}
+            title={data.followStatus.isFollowing ? 'Following' : 'Follow'}
+            variant={data.followStatus.isFollowing ? 'secondary' : 'primary'}
             size="sm"
             onPress={data.followStatus.toggleFollow}
           />
@@ -133,15 +133,15 @@ function ProfileHeaderInner({
           <FeedChip
             type="posts"
             title="Posts"
-            isSelected={data.activeFeed === "posts"}
-            onPress={() => data.setActiveFeed("posts")}
+            isSelected={data.activeFeed === 'posts'}
+            onPress={() => data.setActiveFeed('posts')}
           />
           {data.isSelf && (
             <FeedChip
               type="likes"
               title="Likes"
-              isSelected={data.activeFeed === "likes"}
-              onPress={() => data.setActiveFeed("likes")}
+              isSelected={data.activeFeed === 'likes'}
+              onPress={() => data.setActiveFeed('likes')}
             />
           )}
         </HorizontalScrollGroup>

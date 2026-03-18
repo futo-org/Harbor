@@ -1,4 +1,4 @@
-import type { PolycentricClient } from "../polycentric-client";
+import type { PolycentricClient } from '../polycentric-client';
 import {
   ClaimFieldEntry,
   SignedEvent,
@@ -9,7 +9,7 @@ import {
   EventCreationData,
   Pointer,
   Reference,
-} from "../proto/polycentric";
+} from '../proto/polycentric';
 
 export class ClaimManager {
   constructor(private readonly client: PolycentricClient) {}

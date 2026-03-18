@@ -346,9 +346,8 @@ export class QueryManager {
     if (result.result === 'error' && result.error) {
       throw new Error(`queryFollows error: ${result.error}`);
     }
-    return this._decodeSystemLWWElementSetEvents(
-      result,
-      (value) => polycentric.PublicKey.decode(value)
+    return this._decodeSystemLWWElementSetEvents(result, (value) =>
+      polycentric.PublicKey.decode(value)
     );
   }
 
@@ -357,9 +356,8 @@ export class QueryManager {
     if (result.result === 'error' && result.error) {
       throw new Error(`queryBlocks error: ${result.error}`);
     }
-    return this._decodeSystemLWWElementSetEvents(
-      result,
-      (value) => polycentric.PublicKey.decode(value)
+    return this._decodeSystemLWWElementSetEvents(result, (value) =>
+      polycentric.PublicKey.decode(value)
     );
   }
 
@@ -368,9 +366,8 @@ export class QueryManager {
     if (result.result === 'error' && result.error) {
       throw new Error(`queryServers error: ${result.error}`);
     }
-    return this._decodeSystemLWWElementSetEvents(
-      result,
-      (value) => new TextDecoder().decode(value)
+    return this._decodeSystemLWWElementSetEvents(result, (value) =>
+      new TextDecoder().decode(value)
     );
   }
 
@@ -379,9 +376,8 @@ export class QueryManager {
     if (result.result === 'error' && result.error) {
       throw new Error(`queryAuthorities error: ${result.error}`);
     }
-    return this._decodeSystemLWWElementSetEvents(
-      result,
-      (value) => new TextDecoder().decode(value)
+    return this._decodeSystemLWWElementSetEvents(result, (value) =>
+      new TextDecoder().decode(value)
     );
   }
 
@@ -390,9 +386,8 @@ export class QueryManager {
     if (result.result === 'error' && result.error) {
       throw new Error(`queryTopics error: ${result.error}`);
     }
-    return this._decodeSystemLWWElementSetEvents(
-      result,
-      (value) => new TextDecoder().decode(value)
+    return this._decodeSystemLWWElementSetEvents(result, (value) =>
+      new TextDecoder().decode(value)
     );
   }
 
@@ -415,7 +410,6 @@ export class QueryManager {
     }
     return items;
   }
-
 
   queryFeed(
     _system: polycentric.IPublicKey,
@@ -514,7 +508,6 @@ export class QueryManager {
 
     return null;
   }
-
 
   private _buildServerFeedQuery(
     perServerLimit: number,

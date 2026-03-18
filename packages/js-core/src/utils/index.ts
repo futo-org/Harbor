@@ -1,1 +1,1 @@
-export * from "./rust-types";
+export * from './rust-types';

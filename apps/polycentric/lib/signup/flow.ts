@@ -1,4 +1,4 @@
-import { Routes } from "@/constants/routes";
+import { Routes } from '@/constants/routes';
 
 export const SIGNUP_STEPS = [
   Routes.onboarding.signup.setUsername,

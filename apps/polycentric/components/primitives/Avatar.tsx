@@ -5,7 +5,7 @@ import {
   StyleSheet,
   View,
   ViewProps,
-} from "react-native";
+} from 'react-native';
 import {
   LinearGradient,
   Circle,
@@ -14,11 +14,11 @@ import {
   Group,
   Mask,
   vec,
-} from "@shopify/react-native-skia";
-import { useTheme } from "@/theme";
-import { Images } from "@/assets";
+} from '@shopify/react-native-skia';
+import { useTheme } from '@/theme';
+import { Images } from '@/assets';
 
-export type AvatarSizePreset = "xs" | "sm" | "md" | "lg" | "xl" | "massive";
+export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
 const SIZE_MAP: Record<AvatarSizePreset, number> = {
   xs: 24,
@@ -29,25 +29,25 @@ const SIZE_MAP: Record<AvatarSizePreset, number> = {
   massive: 170,
 };
 
-interface AvatarProps extends Omit<ImageProps, "source"> {
+interface AvatarProps extends Omit<ImageProps, 'source'> {
   source?: ImageSourcePropType;
   size?: AvatarSizePreset | number;
-  border?: false | "neutral" | "primary";
+  border?: false | 'neutral' | 'primary';
   borderWidth?: number;
   containerProps?: ViewProps;
 }
 
 export function Avatar({
   source,
-  size: sizeProp = "md",
-  border = "primary",
+  size: sizeProp = 'md',
+  border = 'primary',
   borderWidth = 2,
   containerProps,
   ...imageProps
 }: AvatarProps) {
   const { theme } = useTheme();
 
-  const size = typeof sizeProp === "number" ? sizeProp : SIZE_MAP[sizeProp];
+  const size = typeof sizeProp === 'number' ? sizeProp : SIZE_MAP[sizeProp];
   const inset = borderWidth + Math.round(size * 0.08);
   const imgSize = size - inset * 2;
   const center = size / 2;
@@ -57,7 +57,7 @@ export function Avatar({
     if (!border) return null;
 
     const fill =
-      border === "primary" ? (
+      border === 'primary' ? (
         <LinearGradient
           start={vec(0, 0)}
           end={vec(0, size)}
@@ -69,7 +69,7 @@ export function Avatar({
       ) : null;
 
     const color =
-      border === "neutral" ? theme.colors.neutralSurface : undefined;
+      border === 'neutral' ? theme.colors.neutralSurface : undefined;
 
     return (
       <Canvas style={StyleSheet.absoluteFill}>
@@ -121,9 +121,9 @@ export function Avatar({
 
 const styles = StyleSheet.create({
   avatarCanvas: {
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   avatarImage: {
-    position: "absolute",
+    position: 'absolute',
   },
 });

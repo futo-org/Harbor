@@ -1,14 +1,14 @@
-import { Pressable, StyleSheet, Animated, View } from "react-native";
-import { Text } from "./Text";
+import { Pressable, StyleSheet, Animated, View } from 'react-native';
+import { Text } from './Text';
 import {
   useTheme,
   BorderRadiusToken,
   ColorToken,
   FontWeightToken,
-} from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
+} from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
 
-type ChipSize = "sm" | "md" | "lg";
+type ChipSize = 'sm' | 'md' | 'lg';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
@@ -31,7 +31,7 @@ const SIZE_CONFIG: Record<
     paddingV: number;
     paddingH: number;
     iconSize: number;
-    fontSize: "xs" | "sm" | "md";
+    fontSize: 'xs' | 'sm' | 'md';
     borderRadius: BorderRadiusToken;
   }
 > = {
@@ -39,42 +39,42 @@ const SIZE_CONFIG: Record<
     paddingV: 4,
     paddingH: 6,
     iconSize: 12,
-    fontSize: "xs",
-    borderRadius: "sm",
+    fontSize: 'xs',
+    borderRadius: 'sm',
   },
   md: {
     paddingV: 6,
     paddingH: 6,
     iconSize: 14,
-    fontSize: "sm",
-    borderRadius: "md",
+    fontSize: 'sm',
+    borderRadius: 'md',
   },
   lg: {
     paddingV: 6,
     paddingH: 18,
     iconSize: 16,
-    fontSize: "md",
-    borderRadius: "md",
+    fontSize: 'md',
+    borderRadius: 'md',
   },
 };
 
 const FONT_WEIGHT_MAP: Record<ChipSize, FontWeightToken> = {
-  sm: "regular",
-  md: "semibold",
-  lg: "semibold",
+  sm: 'regular',
+  md: 'semibold',
+  lg: 'semibold',
 };
 
 export function Chip({
   title,
-  size = "md",
+  size = 'md',
   leftIcon,
   rightIcon,
   fontWeight,
   isPressable = true,
   onPress,
-  backgroundColor = "neutralSurfaceOpacity20",
-  borderColor = "neutralSurfaceOpacity40",
-  textColor = "text",
+  backgroundColor = 'neutralSurfaceOpacity20',
+  borderColor = 'neutralSurfaceOpacity40',
+  textColor = 'text',
 }: ChipProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
@@ -133,9 +133,9 @@ export function Chip({
 
 const styles = StyleSheet.create({
   base: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 5,
     borderWidth: 1,
   },

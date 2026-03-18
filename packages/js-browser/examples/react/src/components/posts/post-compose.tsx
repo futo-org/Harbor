@@ -1,6 +1,5 @@
-import { useContext, useRef } from "react";
-import { ClientContext } from "../../main";
-
+import { useContext, useRef } from 'react';
+import { ClientContext } from '../../main';
 
 export const PostCompose = () => {
   const client = useContext(ClientContext);
@@ -8,18 +7,18 @@ export const PostCompose = () => {
 
   if (client === null) return <div>Error: No client object provided</div>;
 
-
-
   const post = async () => {
-    if(!postField.current) return;
+    if (!postField.current) return;
 
     await client.createPost(postField.current.value);
 
-    postField.current.value = "";
-  }
+    postField.current.value = '';
+  };
 
-  return <div>
-    <textarea ref={postField}></textarea>
-    <button onClick={post}>Create Post</button>
-  </div>
+  return (
+    <div>
+      <textarea ref={postField}></textarea>
+      <button onClick={post}>Create Post</button>
+    </div>
+  );
 };

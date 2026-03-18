@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 
 export default function FeedLayout() {
   return (
@@ -6,7 +6,7 @@ export default function FeedLayout() {
       screenOptions={{
         headerShown: false,
         fullScreenGestureEnabled: true,
-        title: "Feed",
+        title: 'Feed',
       }}
     />
   );

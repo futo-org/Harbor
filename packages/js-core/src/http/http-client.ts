@@ -1,10 +1,7 @@
-import {
-  Events,
-  RangesForSystem,
-} from "../proto/polycentric";
-import { RequestManager } from "./request-manager";
-import { Defaults } from "../constants";
-import { Base64 } from "js-base64";
+import { Events, RangesForSystem } from '../proto/polycentric';
+import { RequestManager } from './request-manager';
+import { Defaults } from '../constants';
+import { Base64 } from 'js-base64';
 
 export interface HTTPClientConfig {
   userAgent?: string;
@@ -33,7 +30,6 @@ export class HTTPClient {
   private requestManager: RequestManager;
 
   constructor(config: HTTPClientConfig = {}) {
-
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.requestManager = new RequestManager(
       this.config.userAgent,
@@ -46,12 +42,9 @@ export class HTTPClient {
    * Sync callbacks
    */
 
-  async postEvents(
-    server: string, 
-    events: Uint8Array,
-  ): Promise<void> {
+  async postEvents(server: string, events: Uint8Array): Promise<void> {
     await this.requestManager.makeRequest(`${server}/events`, {
-      method: "POST",
+      method: 'POST',
       body: events.slice(),
     });
   }
@@ -72,10 +65,7 @@ export class HTTPClient {
       : Events.toBinary({ events: [] });
   }
 
-  async getRanges(
-    server: string,
-    system: Uint8Array,
-  ): Promise<Uint8Array> {
+  async getRanges(server: string, system: Uint8Array): Promise<Uint8Array> {
     const systemQuery = encodeBase64(system);
     const response = await this.requestManager.makeRequest(
       `${server}/ranges?system=${systemQuery}`,
@@ -85,10 +75,7 @@ export class HTTPClient {
       : RangesForSystem.toBinary({ rangesForProcesses: [] });
   }
 
-  async getHead(
-    server: string,
-    system: Uint8Array,
-  ): Promise<Uint8Array> {
+  async getHead(server: string, system: Uint8Array): Promise<Uint8Array> {
     const systemQuery = encodeBase64(system);
     const response = await this.requestManager.makeRequest(
       `${server}/head?system=${systemQuery}`,
@@ -105,26 +92,24 @@ export class HTTPClient {
     moderationFilters?: string,
   ): Promise<Uint8Array> {
     const url = new URL(server);
-    url.pathname = "explore";
+    url.pathname = 'explore';
 
-    
-    if(cursor) {
-      url.searchParams.append("cursor", encodeBase64(cursor));
+    if (cursor) {
+      url.searchParams.append('cursor', encodeBase64(cursor));
     }
-    if(limit) {
-      url.searchParams.append("limit", limit.toString());
+    if (limit) {
+      url.searchParams.append('limit', limit.toString());
     }
-    if(moderationFilters) {
-      url.searchParams.append("moderation_filters", moderationFilters);
+    if (moderationFilters) {
+      url.searchParams.append('moderation_filters', moderationFilters);
     }
-    
 
     const response = await this.requestManager.makeRequest(url.toString());
 
-    if(!response.ok) {
+    if (!response.ok) {
       // Proper error handling
       // TODO replicate this across other HTTP methods and handle errors in the rust core instead
-      throw new Error("Server did not respond with OK");
+      throw new Error('Server did not respond with OK');
     }
 
     return new Uint8Array(await response.arrayBuffer());
@@ -139,32 +124,30 @@ export class HTTPClient {
     moderationFilters?: string,
   ): Promise<Uint8Array> {
     const url = new URL(server);
-    url.pathname = "search";
+    url.pathname = 'search';
 
-
-    if(searchQuery) {
-      url.searchParams.append("search", searchQuery);
+    if (searchQuery) {
+      url.searchParams.append('search', searchQuery);
     }
-    if(searchType) {
-      url.searchParams.append("search_type", searchType);
+    if (searchType) {
+      url.searchParams.append('search_type', searchType);
     }
-    if(cursor) {
-      url.searchParams.append("cursor", encodeBase64(cursor));
+    if (cursor) {
+      url.searchParams.append('cursor', encodeBase64(cursor));
     }
-    if(limit) {
-      url.searchParams.append("limit", limit.toString());
+    if (limit) {
+      url.searchParams.append('limit', limit.toString());
     }
-    if(moderationFilters) {
-      url.searchParams.append("moderation_filters", moderationFilters);
+    if (moderationFilters) {
+      url.searchParams.append('moderation_filters', moderationFilters);
     }
-    
 
     const response = await this.requestManager.makeRequest(url.toString());
 
-    if(!response.ok) {
+    if (!response.ok) {
       // Proper error handling
       // TODO replicate this across other HTTP methods and handle errors in the rust core instead
-      throw new Error("Server did not respond with OK");
+      throw new Error('Server did not respond with OK');
     }
 
     return new Uint8Array(await response.arrayBuffer());
@@ -176,21 +159,21 @@ export class HTTPClient {
     eventTypes: Uint8Array,
   ): Promise<Uint8Array> {
     const url = new URL(server);
-    url.pathname = "query_latest";
+    url.pathname = 'query_latest';
 
-    if(system) {
-      url.searchParams.append("system", encodeBase64(system));
+    if (system) {
+      url.searchParams.append('system', encodeBase64(system));
     }
-    if(eventTypes) {
-      url.searchParams.append("event_types", encodeBase64(eventTypes));
+    if (eventTypes) {
+      url.searchParams.append('event_types', encodeBase64(eventTypes));
     }
 
     const response = await this.requestManager.makeRequest(url.toString());
 
-    if(!response.ok) {
+    if (!response.ok) {
       // Proper error handling
       // TODO replicate this across other HTTP methods and handle errors in the rust core instead
-      throw new Error("Server did not respond with OK");
+      throw new Error('Server did not respond with OK');
     }
 
     return new Uint8Array(await response.arrayBuffer());
@@ -202,20 +185,20 @@ export class HTTPClient {
     moderationFilters?: string,
   ): Promise<Uint8Array> {
     const url = new URL(server);
-    url.pathname = "query_references";
+    url.pathname = 'query_references';
 
-    url.searchParams.append("query", encodeBase64(request));
+    url.searchParams.append('query', encodeBase64(request));
 
-    if(moderationFilters) {
-      url.searchParams.append("moderation_filters", moderationFilters);
+    if (moderationFilters) {
+      url.searchParams.append('moderation_filters', moderationFilters);
     }
-    
+
     const response = await this.requestManager.makeRequest(url.toString());
 
-    if(!response.ok) {
+    if (!response.ok) {
       // Proper error handling
       // TODO replicate this across other HTTP methods and handle errors in the rust core instead
-      throw new Error("Server did not respond with OK");
+      throw new Error('Server did not respond with OK');
     }
 
     return new Uint8Array(await response.arrayBuffer());

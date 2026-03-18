@@ -102,8 +102,7 @@ export class PolycentricClient {
       const lastUsedKey = this._storage.currentIdentity.get();
       const restored = lastUsedKey
         ? allIdentities.find(
-            (id) =>
-              id.publicKey.key?.toString() === lastUsedKey.key?.toString()
+            (id) => id.publicKey.key?.toString() === lastUsedKey.key?.toString()
           )
         : undefined;
       if (lastUsedKey && !restored) {
@@ -116,14 +115,12 @@ export class PolycentricClient {
       }
     }
     if (this._currentKeyPair && this._currentProcess && this._storage) {
-      const processBytes =
-        this._currentProcess.process ?? new Uint8Array();
-      const currentClock =
-        this._storage.processStates.getCurrentLogicalClock(
-          this._currentKeyPair.keyType,
-          this._currentKeyPair.publicKey.key,
-          processBytes
-        );
+      const processBytes = this._currentProcess.process ?? new Uint8Array();
+      const currentClock = this._storage.processStates.getCurrentLogicalClock(
+        this._currentKeyPair.keyType,
+        this._currentKeyPair.publicKey.key,
+        processBytes
+      );
       this._logicalClock = currentClock > 0 ? currentClock + 1 : 1;
     }
   }

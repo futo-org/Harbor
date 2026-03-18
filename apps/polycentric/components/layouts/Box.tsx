@@ -1,12 +1,12 @@
-import { useMemo, ReactNode } from "react";
+import { useMemo, ReactNode } from 'react';
 import {
   View,
   DimensionValue,
   ViewProps,
   ViewStyle,
   StyleProp,
-} from "react-native";
-import { useTheme, SpacingToken, BorderRadiusToken, ColorToken } from "@/theme";
+} from 'react-native';
+import { useTheme, SpacingToken, BorderRadiusToken, ColorToken } from '@/theme';
 
 interface BoxProps extends ViewProps {
   children?: ReactNode;
@@ -33,12 +33,12 @@ interface BoxProps extends ViewProps {
   minWidth?: DimensionValue;
   maxHeight?: DimensionValue;
   maxWidth?: DimensionValue;
-  flex?: ViewStyle["flex"];
-  flexDirection?: ViewStyle["flexDirection"];
-  alignItems?: ViewStyle["alignItems"];
-  alignSelf?: ViewStyle["alignSelf"];
-  justifyContent?: ViewStyle["justifyContent"];
-  flexWrap?: ViewStyle["flexWrap"];
+  flex?: ViewStyle['flex'];
+  flexDirection?: ViewStyle['flexDirection'];
+  alignItems?: ViewStyle['alignItems'];
+  alignSelf?: ViewStyle['alignSelf'];
+  justifyContent?: ViewStyle['justifyContent'];
+  flexWrap?: ViewStyle['flexWrap'];
   style?: StyleProp<ViewStyle>;
 }
 

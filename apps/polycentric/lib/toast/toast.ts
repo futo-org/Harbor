@@ -1,6 +1,6 @@
-import Toast from "react-native-toast-message";
+import Toast from 'react-native-toast-message';
 
-type ToastType = "success" | "error" | "info" | "warning";
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface ToastOptions {
   duration?: number;
@@ -12,7 +12,7 @@ const show = (
   type: ToastType,
   message: string,
   description?: string,
-  options?: ToastOptions
+  options?: ToastOptions,
 ) => {
   Toast.show({
     type,
@@ -26,16 +26,16 @@ const show = (
 
 export const toast = {
   success: (message: string, description?: string, options?: ToastOptions) =>
-    show("success", message, description, options),
+    show('success', message, description, options),
 
   error: (message: string, description?: string, options?: ToastOptions) =>
-    show("error", message, description, options),
+    show('error', message, description, options),
 
   info: (message: string, description?: string, options?: ToastOptions) =>
-    show("info", message, description, options),
+    show('info', message, description, options),
 
   warning: (message: string, description?: string, options?: ToastOptions) =>
-    show("warning", message, description, options),
+    show('warning', message, description, options),
 
   hide: () => Toast.hide(),
 };

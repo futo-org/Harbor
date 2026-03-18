@@ -1,1 +1,1 @@
-export * as NodeSQLStorage from "./sqlite";
+export * as NodeSQLStorage from './sqlite';

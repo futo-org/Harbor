@@ -1,1 +1,1 @@
-export * from "./clientSettingsStore";
+export * from './clientSettingsStore';

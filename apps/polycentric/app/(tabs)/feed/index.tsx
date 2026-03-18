@@ -64,10 +64,13 @@ export default function Feed() {
     [currentFeed, router, store],
   );
 
-  const handleReply = useCallback((signedEvent: types.ISignedEvent) => {
-    setReplyToEvent(signedEvent);
-    present();
-  }, [present]);
+  const handleReply = useCallback(
+    (signedEvent: types.ISignedEvent) => {
+      setReplyToEvent(signedEvent);
+      present();
+    },
+    [present],
+  );
 
   const handleFabPress = () => {
     setReplyToEvent(null);

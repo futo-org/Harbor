@@ -1,5 +1,5 @@
-import { IProcessIdRepository } from "../platform-interfaces";
-import { Process } from "../proto/polycentric";
+import { IProcessIdRepository } from '../platform-interfaces';
+import { Process } from '../proto/polycentric';
 
 export class ProcessIdStore {
   constructor(private readonly repository: IProcessIdRepository) {}

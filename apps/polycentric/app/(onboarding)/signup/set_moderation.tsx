@@ -1,13 +1,13 @@
-import { Screen, Box, Text, Button, PageHeader } from "@/components";
-import { useRouter } from "expo-router";
-import { useSignup } from "@/lib/signup/SignupContext";
+import { Screen, Box, Text, Button, PageHeader } from '@/components';
+import { useRouter } from 'expo-router';
+import { useSignup } from '@/lib/signup/SignupContext';
 
 type ModerationLevel = 1 | 2 | 3;
 
 const MODERATION_LABELS: Record<ModerationLevel, string> = {
-  1: "Strict",
-  2: "Moderate",
-  3: "Relaxed",
+  1: 'Strict',
+  2: 'Moderate',
+  3: 'Relaxed',
 };
 
 export default function SetModeration() {
@@ -15,8 +15,8 @@ export default function SetModeration() {
   const { data, setModeration, close, finish } = useSignup();
 
   const updateCategory = (
-    category: "violence" | "sexual" | "hate",
-    level: ModerationLevel
+    category: 'violence' | 'sexual' | 'hate',
+    level: ModerationLevel,
   ) => {
     setModeration({
       ...data.moderation,
@@ -25,7 +25,7 @@ export default function SetModeration() {
   };
 
   return (
-    <Screen background={{ gradient: "surround" }}>
+    <Screen background={{ gradient: 'surround' }}>
       <Box flexDirection="column" marginHorizontal="lg" height="100%">
         <PageHeader onBack={() => router.back()} onClose={close} />
         <Box flex={1} gap="sm">
@@ -72,7 +72,7 @@ function ModerationCategory({
           <Button
             key={level}
             title={MODERATION_LABELS[level]}
-            variant={value === level ? "secondary" : "tertiary"}
+            variant={value === level ? 'secondary' : 'tertiary'}
             size="sm"
             onPress={() => onChange(level)}
           />
