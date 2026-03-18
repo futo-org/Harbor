@@ -15,6 +15,11 @@ workflow:
 default:
   image: node:24
 
+format-check:
+  stage: build
+  script:
+    - pnpm format:check
+
 build-js-sdks:
   stage: build
   before_script:
