@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.material)
     implementation(libs.wire.runtime)
     implementation(libs.bouncycastle)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

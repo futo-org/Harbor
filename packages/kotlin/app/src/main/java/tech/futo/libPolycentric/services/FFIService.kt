@@ -1,7 +1,16 @@
 package tech.futo.libPolycentric.services
 
 import PolycentricException
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.request
+import io.ktor.client.request.setBody
+import io.ktor.http.HttpMethod
+import io.ktor.http.appendPathSegments
+import okio.ByteString
+import polycentric_ffi.NetworkRequestResponse
 import polycentric_ffi.NetworkRequestResponses
+import polycentric_ffi.NetworkResponse
 import polycentric_ffi.Result
 import tech.futo.libPolycentric.PolycentricClient
 
@@ -14,14 +23,26 @@ class FFIService(private val client: PolycentricClient){
         }
     }
 
+    private val http = HttpClient()
+
     private suspend fun fulfillRequests(requests: NetworkRequestResponses): NetworkRequestResponses {
-        for(pair in requests.pairs) {
-            if(pair.response !== null) continue
+        val newPairs = requests.pairs.map { pair ->
+            if(pair.response != null) return@map pair
+            if(pair.request == null) return@map pair
 
+            val response = http.request(pair.request.server) {
+                method = HttpMethod(pair.request.method)
+                url.appendPathSegments(pair.request.endpoint)
+                for((key, value) in pair.request.parameters){
+                    url.parameters.append(key, value)
+                }
+                setBody(pair.request.body)
+            }
 
+            return@map NetworkRequestResponse(request = pair.request, response = NetworkResponse(response.body<ByteString>()))
         }
 
-        return requests
+        return NetworkRequestResponses(newPairs)
     }
 
     private suspend fun ffiResult(callback: (networkRequests: ByteArray) -> ByteArray): ByteArray {
