@@ -28,7 +28,7 @@
     "js-base64": "^3.7.8"
   },
   "peerDependencies": {
-    "@polycentric/rs-core-wasm-browser": "workspace:*"
+    "@polycentric/rs-core-wasm-browser": "*"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
