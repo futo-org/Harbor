@@ -27,7 +27,7 @@ format-check:
   extends: .js-base
   stage: build
   script:
-    - pnpm format:check
+    - pnpm format
 
 build-js-sdks:
   extends: .js-base
