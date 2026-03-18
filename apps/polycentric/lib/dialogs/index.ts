@@ -1,1 +1,1 @@
-export { showAlert, confirm, confirmDelete, showInfo } from "./alert";
+export { showAlert, confirm, confirmDelete, showInfo } from './alert';

@@ -1,19 +1,19 @@
-import { View, StyleSheet, Pressable, Keyboard } from "react-native";
-import { Text } from "@/components/primitives";
-import { useTheme, ColorToken } from "@/theme";
-import { BlurView } from "expo-blur";
-import Toast, { ToastConfigParams } from "react-native-toast-message";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect, useState } from "react";
-import { TAB_BAR_HEIGHT } from "@/constants";
+import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
+import { Text } from '@/components/primitives';
+import { useTheme, ColorToken } from '@/theme';
+import { BlurView } from 'expo-blur';
+import Toast, { ToastConfigParams } from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { TAB_BAR_HEIGHT } from '@/constants';
 
-type ToastType = "success" | "error" | "info" | "warning";
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 const typeBorderColors: Record<ToastType, ColorToken> = {
-  success: "successOpacity80",
-  error: "destructiveOpacity80",
-  info: "infoOpacity80",
-  warning: "warningOpacity80",
+  success: 'successOpacity80',
+  error: 'destructiveOpacity80',
+  info: 'infoOpacity80',
+  warning: 'warningOpacity80',
 };
 
 interface ToastProps {
@@ -31,7 +31,7 @@ function ToastContent({ text1, text2, type, onPress }: ToastProps) {
     <Pressable onPress={onPress} style={styles.pressable}>
       <BlurView
         intensity={80}
-        tint={isDark ? "dark" : "light"}
+        tint={isDark ? 'dark' : 'light'}
         style={[
           styles.container,
           {
@@ -97,10 +97,10 @@ export function Toasts() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
       setKeyboardVisible(true);
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
       setKeyboardVisible(false);
     });
 
@@ -122,10 +122,10 @@ export function Toasts() {
 
 const styles = StyleSheet.create({
   pressable: {
-    width: "90%",
+    width: '90%',
   },
   container: {
-    overflow: "hidden",
+    overflow: 'hidden',
     borderWidth: 1.5,
   },
   content: {

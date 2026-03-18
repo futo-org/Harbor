@@ -32,7 +32,7 @@ export class WrapperError extends Error {
   ) {
     super(message);
     Object.setPrototypeOf(this, WrapperError.prototype);
-    this.name = "WrapperError";
+    this.name = 'WrapperError';
   }
 }
 
@@ -56,7 +56,7 @@ export class WasmError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, WasmError.prototype);
-    this.name = "WasmError";
+    this.name = 'WasmError';
   }
 }
 
@@ -89,7 +89,7 @@ export class InvalidKeyLengthError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, InvalidKeyLengthError.prototype);
-    this.name = "InvalidKeyLengthError";
+    this.name = 'InvalidKeyLengthError';
   }
 }
 
@@ -120,7 +120,7 @@ export class InvalidSignatureError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, InvalidSignatureError.prototype);
-    this.name = "InvalidSignatureError";
+    this.name = 'InvalidSignatureError';
   }
 }
 
@@ -152,7 +152,7 @@ export class EncryptionError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, EncryptionError.prototype);
-    this.name = "EncryptionError";
+    this.name = 'EncryptionError';
   }
 }
 
@@ -185,7 +185,7 @@ export class DecryptionError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, DecryptionError.prototype);
-    this.name = "DecryptionError";
+    this.name = 'DecryptionError';
   }
 }
 
@@ -217,7 +217,7 @@ export class ConfigurationError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, ConfigurationError.prototype);
-    this.name = "ConfigurationError";
+    this.name = 'ConfigurationError';
   }
 }
 
@@ -250,7 +250,7 @@ export class DatabaseError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, DatabaseError.prototype);
-    this.name = "DatabaseError";
+    this.name = 'DatabaseError';
   }
 }
 
@@ -265,7 +265,7 @@ export class IdentityManagerError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, IdentityManagerError.prototype);
-    this.name = "IdentityManagerError";
+    this.name = 'IdentityManagerError';
   }
 }
 
@@ -298,7 +298,7 @@ export class QueryError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, QueryError.prototype);
-    this.name = "QueryError";
+    this.name = 'QueryError';
   }
 }
 
@@ -312,6 +312,6 @@ export class HTTPError extends WrapperError {
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, HTTPError.prototype);
-    this.name = "HTTPError";
+    this.name = 'HTTPError';
   }
 }

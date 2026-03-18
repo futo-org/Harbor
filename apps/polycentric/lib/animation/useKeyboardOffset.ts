@@ -1,11 +1,11 @@
-import { useEffect } from "react";
-import { Keyboard, Platform } from "react-native";
+import { useEffect } from 'react';
+import { Keyboard, Platform } from 'react-native';
 import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
 interface UseKeyboardOffsetOptions {
   extraOffset?: number;
@@ -27,20 +27,20 @@ export function useKeyboardOffset(options: UseKeyboardOffsetOptions = {}) {
 
   useEffect(() => {
     const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSubscription = Keyboard.addListener(showEvent, (e) => {
       keyboardHeight.value = withTiming(e.endCoordinates.height + extraOffset, {
-        duration: Platform.OS === "ios" ? 250 : 200,
+        duration: Platform.OS === 'ios' ? 250 : 200,
         easing: Easing.out(Easing.ease),
       });
     });
 
     const hideSubscription = Keyboard.addListener(hideEvent, () => {
       keyboardHeight.value = withTiming(0, {
-        duration: Platform.OS === "ios" ? 250 : 200,
+        duration: Platform.OS === 'ios' ? 250 : 200,
         easing: Easing.out(Easing.ease),
       });
     });

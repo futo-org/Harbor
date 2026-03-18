@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { Pressable, ActivityIndicator } from "react-native";
-import { Box } from "@/components/layouts";
+import { useState, useEffect } from 'react';
+import { Pressable, ActivityIndicator } from 'react-native';
+import { Box } from '@/components/layouts';
 import {
   Avatar,
   Text,
@@ -8,7 +8,7 @@ import {
   LinkButton,
   PubkeyTag,
   Button,
-} from "@/components/primitives";
+} from '@/components/primitives';
 import {
   usePolycentric,
   useCurrentIdentity,
@@ -17,10 +17,10 @@ import {
   truncateName,
   decodePostEvent,
   getPointer,
-} from "@/lib/polycentric-hooks";
-import { types } from "@polycentric/react-native";
-import { useSheetContext } from "@/lib/sheet";
-import { useTheme } from "@/theme";
+} from '@/lib/polycentric-hooks';
+import { types } from '@polycentric/react-native';
+import { useSheetContext } from '@/lib/sheet';
+import { useTheme } from '@/theme';
 
 interface ComposeSheetInnerProps {
   dismiss: () => Promise<void>;
@@ -47,14 +47,14 @@ export function ComposeSheetInner({
   const replyAuthorPubkey =
     replyDecoded?.authorPublicKey ?? types.PublicKey.create();
   const replyAuthorName = useUsername(replyAuthorPubkey);
-  const replyContent = replyDecoded?.content ?? "";
+  const replyContent = replyDecoded?.content ?? '';
 
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isReply = !!replyToEvent;
-  const title = isReply ? "Reply" : "New Post";
+  const title = isReply ? 'Reply' : 'New Post';
   const canPost = text.trim().length > 0 && !submitting;
 
   const handleClose = () => {
@@ -81,7 +81,7 @@ export function ComposeSheetInner({
         reference,
       );
       await client.sync();
-      setText("");
+      setText('');
       onPostCreated(signedEvent);
       dismiss();
     } catch (err) {
@@ -94,7 +94,7 @@ export function ComposeSheetInner({
 
   useEffect(() => {
     if (!isOpen) {
-      setText("");
+      setText('');
       setError(null);
     }
   }, [isOpen]);
@@ -116,7 +116,7 @@ export function ComposeSheetInner({
           title="Cancel"
           onPress={handleClose}
           disabled={submitting}
-          color={submitting ? "neutralSurface" : "primary"}
+          color={submitting ? 'neutralSurface' : 'primary'}
         />
         <Text variant="body" fontWeight="semibold">
           {title}
@@ -127,7 +127,7 @@ export function ComposeSheetInner({
           <Button
             title="Post"
             onPress={handlePost}
-            variant={canPost ? "primary" : "disabled"}
+            variant={canPost ? 'primary' : 'disabled'}
             size="sm"
           />
         )}
@@ -216,7 +216,7 @@ export function ComposeSheetInner({
           <Box
             flexDirection="row"
             gap="xs"
-            style={{ alignItems: "baseline", marginTop: -1 }}
+            style={{ alignItems: 'baseline', marginTop: -1 }}
           >
             <Pressable onPress={onAvatarPress} disabled={!onAvatarPress}>
               <Text

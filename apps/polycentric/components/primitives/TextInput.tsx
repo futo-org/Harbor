@@ -3,16 +3,16 @@ import {
   TextInputProps as RNTextInputProps,
   TextStyle,
   StyleSheet,
-} from "react-native";
-import { forwardRef, useState } from "react";
-import { useTheme, ColorToken } from "@/theme";
-import { BlurView } from "expo-blur";
+} from 'react-native';
+import { forwardRef, useState } from 'react';
+import { useTheme, ColorToken } from '@/theme';
+import { BlurView } from 'expo-blur';
 
 export interface TextInputProps extends Omit<
   RNTextInputProps,
-  "placeholderTextColor"
+  'placeholderTextColor'
 > {
-  variant?: "default" | "plain";
+  variant?: 'default' | 'plain';
   placeholderTextColor?: ColorToken;
   disabled?: boolean;
   error?: boolean;
@@ -25,7 +25,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       multiline,
       style,
       placeholderTextColor,
-      variant = "default",
+      variant = 'default',
       disabled = false,
       error = false,
       autoCorrect = false,
@@ -34,12 +34,12 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       onBlur,
       ...props
     },
-    ref
+    ref,
   ) => {
     const { theme, isDark } = useTheme();
 
     const [isFocused, setIsFocused] = useState(false);
-    const isPlain = variant === "plain";
+    const isPlain = variant === 'plain';
 
     const baseStyle: TextStyle = {
       paddingVertical: 12,
@@ -54,7 +54,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
           ...(numberOfLines && {
             minHeight: numberOfLines * theme.typography.lineHeight.md,
           }),
-          textAlignVertical: "top",
+          textAlignVertical: 'top',
         }
       : {};
 
@@ -63,7 +63,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         ref={ref}
         editable={!disabled}
         autoCorrect={autoCorrect}
-        autoCapitalize={autoCapitalize ?? (autoCorrect ? "sentences" : "none")}
+        autoCapitalize={autoCapitalize ?? (autoCorrect ? 'sentences' : 'none')}
         multiline={multiline}
         numberOfLines={numberOfLines}
         style={[baseStyle, multilineStyle, style]}
@@ -92,7 +92,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     return (
       <BlurView
         intensity={40}
-        tint={isDark ? "dark" : "light"}
+        tint={isDark ? 'dark' : 'light'}
         style={[
           styles.blurContainer,
           {
@@ -108,14 +108,14 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         {input}
       </BlurView>
     );
-  }
+  },
 );
 
-TextInput.displayName = "TextInput";
+TextInput.displayName = 'TextInput';
 
 const styles = StyleSheet.create({
   blurContainer: {
-    overflow: "hidden",
+    overflow: 'hidden',
     borderWidth: 1,
   },
 });

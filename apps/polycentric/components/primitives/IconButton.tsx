@@ -5,13 +5,13 @@ import {
   View,
   StyleProp,
   ViewStyle,
-} from "react-native";
-import { BlurView } from "expo-blur";
-import { useTheme, ColorToken, BorderRadiusToken } from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useTheme, ColorToken, BorderRadiusToken } from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
 
-type IconButtonSize = "sm" | "md" | "lg";
-type IconButtonVariant = "filled" | "ghost";
+type IconButtonSize = 'sm' | 'md' | 'lg';
+type IconButtonVariant = 'filled' | 'ghost';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
@@ -40,9 +40,9 @@ const SIZE_CONFIG: Record<
 export function IconButton({
   icon,
   onPress,
-  size = "md",
-  variant = "filled",
-  iconColor = "text",
+  size = 'md',
+  variant = 'filled',
+  iconColor = 'text',
   blurIntensity = 80,
   borderRadius,
   style,
@@ -73,7 +73,7 @@ export function IconButton({
         style={style}
         {...props}
       >
-        {variant === "ghost" ? (
+        {variant === 'ghost' ? (
           compact ? (
             iconElement
           ) : (
@@ -92,7 +92,7 @@ export function IconButton({
         ) : (
           <BlurView
             intensity={blurIntensity}
-            tint={isDark ? "dark" : "light"}
+            tint={isDark ? 'dark' : 'light'}
             style={[
               styles.container,
               {
@@ -113,8 +113,8 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
 });

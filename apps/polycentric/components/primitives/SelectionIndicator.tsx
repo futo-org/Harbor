@@ -1,6 +1,6 @@
-import { View, StyleSheet } from "react-native";
-import { useTheme } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet } from 'react-native';
+import { useTheme } from '@/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 const SIZE = 20;
 
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     width: SIZE,
     height: SIZE,
     borderRadius: 9999,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

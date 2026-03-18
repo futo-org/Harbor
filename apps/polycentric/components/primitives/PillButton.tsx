@@ -1,13 +1,13 @@
-import { Pressable, PressableProps, StyleSheet, Animated } from "react-native";
-import { Text } from "./Text";
-import { useTheme, ColorToken, FontWeightToken } from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
+import { Pressable, PressableProps, StyleSheet, Animated } from 'react-native';
+import { Text } from './Text';
+import { useTheme, ColorToken, FontWeightToken } from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
 
-type SmallButtonVariant = "primary" | "secondary" | "destructive";
+type SmallButtonVariant = 'primary' | 'secondary' | 'destructive';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
-interface SmallButtonProps extends Omit<PressableProps, "style"> {
+interface SmallButtonProps extends Omit<PressableProps, 'style'> {
   onPress: () => void;
   title: string;
   variant?: SmallButtonVariant;
@@ -15,17 +15,17 @@ interface SmallButtonProps extends Omit<PressableProps, "style"> {
 }
 
 const textColorMap: Record<SmallButtonVariant, ColorToken> = {
-  primary: "white",
-  secondary: "primary",
-  destructive: "destructive",
+  primary: 'white',
+  secondary: 'primary',
+  destructive: 'destructive',
 };
 
-const FONT_WEIGHT: FontWeightToken = "semibold";
+const FONT_WEIGHT: FontWeightToken = 'semibold';
 
 export function PillButton({
   onPress,
   title,
-  variant = "primary",
+  variant = 'primary',
   icon,
   ...props
 }: SmallButtonProps) {
@@ -36,15 +36,15 @@ export function PillButton({
 
   const variantStyle = (() => {
     switch (variant) {
-      case "primary":
+      case 'primary':
         return {
           backgroundColor: theme.colors.neutralSurfaceOpacity20,
         };
-      case "secondary":
+      case 'secondary':
         return {
           backgroundColor: theme.colors.primaryOpacity20,
         };
-      case "destructive":
+      case 'destructive':
         return {
           backgroundColor: theme.colors.destructiveOpacity20,
         };
@@ -76,9 +76,9 @@ export function PillButton({
 
 const styles = StyleSheet.create({
   base: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,

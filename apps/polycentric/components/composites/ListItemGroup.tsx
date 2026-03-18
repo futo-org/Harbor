@@ -1,5 +1,5 @@
-import { Box } from "@/components/layouts";
-import { Text } from "@/components/primitives";
+import { Box } from '@/components/layouts';
+import { Text } from '@/components/primitives';
 
 interface ListItemGroupProps {
   label?: string;

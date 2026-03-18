@@ -1,4 +1,4 @@
-import { Alert, AlertButton } from "react-native";
+import { Alert, AlertButton } from 'react-native';
 
 interface AlertOptions {
   title: string;
@@ -14,7 +14,7 @@ export function showAlert(options: AlertOptions): Promise<number> {
   return new Promise((resolve) => {
     const buttons: AlertButton[] = options.buttons || [
       {
-        text: "OK",
+        text: 'OK',
         onPress: () => resolve(0),
       },
     ];
@@ -51,23 +51,23 @@ export function confirm(options: {
       options.message,
       [
         {
-          text: options.cancelText || "Cancel",
-          style: "cancel",
+          text: options.cancelText || 'Cancel',
+          style: 'cancel',
           onPress: async () => {
             await options.onCancel?.();
             resolve(false);
           },
         },
         {
-          text: options.confirmText || "Confirm",
-          style: "default",
+          text: options.confirmText || 'Confirm',
+          style: 'default',
           onPress: async () => {
             await options.onConfirm?.();
             resolve(true);
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   });
 }
@@ -83,11 +83,11 @@ export function confirmDelete(options: {
   onCancel?: () => void;
 }): Promise<boolean> {
   return confirm({
-    title: options.title || "Delete",
+    title: options.title || 'Delete',
     message:
       options.message ||
       `Are you sure you want to delete ${options.itemName}? This action cannot be undone.`,
-    confirmText: "Delete",
+    confirmText: 'Delete',
     onConfirm: options.onConfirm,
     onCancel: options.onCancel,
   });
@@ -107,14 +107,14 @@ export function showInfo(options: {
       options.message,
       [
         {
-          text: "OK",
+          text: 'OK',
           onPress: () => {
             options.onDismiss?.();
             resolve();
           },
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   });
 }

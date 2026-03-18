@@ -1,8 +1,8 @@
-import { View, StyleSheet } from "react-native";
-import { Text } from "@/components/primitives";
-import { BackButton } from "./BackButton";
-import { CloseButton } from "./CloseButton";
-import { useTheme } from "@/theme";
+import { View, StyleSheet } from 'react-native';
+import { Text } from '@/components/primitives';
+import { BackButton } from './BackButton';
+import { CloseButton } from './CloseButton';
+import { useTheme } from '@/theme';
 
 interface PageHeaderProps {
   title?: string;
@@ -40,19 +40,19 @@ export function PageHeader({ title, onBack, onClose }: PageHeaderProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   left: {
     flex: 1,
-    alignItems: "flex-start",
+    alignItems: 'flex-start',
   },
   center: {
     flex: 2,
-    alignItems: "center",
+    alignItems: 'center',
   },
   right: {
     flex: 1,
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
 });

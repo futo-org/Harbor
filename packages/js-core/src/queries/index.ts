@@ -1,2 +1,2 @@
-export * from "./query-manager";
-export * from "./feed-query";
+export * from './query-manager';
+export * from './feed-query';

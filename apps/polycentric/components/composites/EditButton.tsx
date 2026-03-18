@@ -1,5 +1,5 @@
-import { PillButton } from "@/components/primitives";
-import { Ionicons } from "@expo/vector-icons";
+import { PillButton } from '@/components/primitives';
+import { Ionicons } from '@expo/vector-icons';
 
 export function EditButton() {
   return (

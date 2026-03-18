@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-import { useRouter, usePathname } from "expo-router";
-import { getNextStep, isLastStep, SignupRoute } from "./flow";
-import { usePolycentricContext } from "@/lib/polycentric-hooks";
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { useRouter, usePathname } from 'expo-router';
+import { getNextStep, isLastStep, SignupRoute } from './flow';
+import { usePolycentricContext } from '@/lib/polycentric-hooks';
 
 type ModerationLevel = 1 | 2 | 3;
 
@@ -32,8 +32,8 @@ interface SignupContextValue {
 }
 
 const defaultData: SignupData = {
-  username: "",
-  about: "",
+  username: '',
+  about: '',
   avatarUri: null,
   moderation: {
     violence: 2,
@@ -83,7 +83,7 @@ export function SignupProvider({ children }: { children: ReactNode }) {
 
   const finish = async () => {
     if (!client) {
-      console.error("Client not available");
+      console.error('Client not available');
       return;
     }
 
@@ -103,9 +103,9 @@ export function SignupProvider({ children }: { children: ReactNode }) {
       // }
 
       // Navigate to the main app
-      router.replace("/(tabs)/feed");
+      router.replace('/(tabs)/feed');
     } catch (error) {
-      console.error("Failed to create identity:", error);
+      console.error('Failed to create identity:', error);
     }
   };
 
@@ -132,7 +132,7 @@ export function SignupProvider({ children }: { children: ReactNode }) {
 export function useSignup() {
   const context = useContext(SignupContext);
   if (!context) {
-    throw new Error("useSignup must be used within a SignupProvider");
+    throw new Error('useSignup must be used within a SignupProvider');
   }
   return context;
 }

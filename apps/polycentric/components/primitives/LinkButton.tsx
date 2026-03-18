@@ -5,14 +5,14 @@ import {
   Animated,
   StyleProp,
   ViewStyle,
-} from "react-native";
-import { Text, TextVariant } from "./Text";
-import { useTheme, ColorToken, FontWeightToken } from "@/theme";
-import { usePressAnimation } from "@/lib/animation";
+} from 'react-native';
+import { Text, TextVariant } from './Text';
+import { useTheme, ColorToken, FontWeightToken } from '@/theme';
+import { usePressAnimation } from '@/lib/animation';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
-interface LinkButtonProps extends Omit<PressableProps, "style"> {
+interface LinkButtonProps extends Omit<PressableProps, 'style'> {
   onPress: () => void;
   title: string;
   color?: ColorToken;
@@ -26,11 +26,11 @@ interface LinkButtonProps extends Omit<PressableProps, "style"> {
 export function LinkButton({
   onPress,
   title,
-  color = "primary",
+  color = 'primary',
   icon,
   style,
-  variant = "body",
-  fontWeight = "semibold",
+  variant = 'body',
+  fontWeight = 'semibold',
   italic,
   ...props
 }: LinkButtonProps) {
@@ -65,9 +65,9 @@ export function LinkButton({
 
 const styles = StyleSheet.create({
   base: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
 });

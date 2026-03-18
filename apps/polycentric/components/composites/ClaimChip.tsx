@@ -1,6 +1,6 @@
-import { Chip } from "@/components/primitives";
+import { Chip } from '@/components/primitives';
 
-type ClaimType = "all" | "verified" | "unverified" | "pending";
+type ClaimType = 'all' | 'verified' | 'unverified' | 'pending';
 
 interface ClaimChipProps {
   type: ClaimType;
@@ -9,10 +9,10 @@ interface ClaimChipProps {
 }
 
 const TITLE_MAP: Record<ClaimType, string> = {
-  all: "All",
-  verified: "Verified",
-  unverified: "Unverified",
-  pending: "Pending",
+  all: 'All',
+  verified: 'Verified',
+  unverified: 'Unverified',
+  pending: 'Pending',
 };
 
 export function ClaimChip({
@@ -26,10 +26,10 @@ export function ClaimChip({
       size="md"
       onPress={onPress}
       backgroundColor={
-        isSelected ? "primaryOpacity20" : "neutralSurfaceOpacity20"
+        isSelected ? 'primaryOpacity20' : 'neutralSurfaceOpacity20'
       }
-      borderColor={isSelected ? "primaryOpacity40" : "neutralSurfaceOpacity20"}
-      textColor={isSelected ? "primary" : "text"}
+      borderColor={isSelected ? 'primaryOpacity40' : 'neutralSurfaceOpacity20'}
+      textColor={isSelected ? 'primary' : 'text'}
     />
   );
 }

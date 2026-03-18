@@ -1,18 +1,18 @@
-import { Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { Text, Avatar, PubkeyTag } from "@/components/primitives";
-import { Box } from "@/components/layouts";
-import { IdentitySwitcherSheetInner } from "@/components/composites/IdentitySwitcherSheetInner";
+import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Text, Avatar, PubkeyTag } from '@/components/primitives';
+import { Box } from '@/components/layouts';
+import { IdentitySwitcherSheetInner } from '@/components/composites/IdentitySwitcherSheetInner';
 import {
   useCurrentIdentity,
   useUsername,
   publicKeyToStringURLSafe,
   identiconUrl,
-} from "@/lib/polycentric-hooks";
-import { Routes } from "@/constants";
-import { useSheet } from "@/lib/sheet";
-import { useTheme } from "@/theme";
+} from '@/lib/polycentric-hooks';
+import { Routes } from '@/constants';
+import { useSheet } from '@/lib/sheet';
+import { useTheme } from '@/theme';
 
 export function CurrIdentityHeader() {
   const { identity: currentIdentity } = useCurrentIdentity();

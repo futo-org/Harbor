@@ -1,14 +1,14 @@
-import { Redirect } from "expo-router";
-import { View, ActivityIndicator } from "react-native";
-import * as SplashScreen from "expo-splash-screen";
-import { usePolycentricContext } from "@/lib/polycentric-hooks";
+import { Redirect } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { usePolycentricContext } from '@/lib/polycentric-hooks';
 
 export default function Index() {
   const { client, isLoading, isReady } = usePolycentricContext();
 
   if (isLoading || !isReady || !client) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator />
       </View>
     );

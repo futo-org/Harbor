@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "format:check": "prettier --check .",
+    "format:fix": "prettier --write .",
     "generate": "turbo run generate",
     "run:ios": "pnpm -C apps/polycentric run ios",
     "run:android": "pnpm -C apps/polycentric run android",
