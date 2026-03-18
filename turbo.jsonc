@@ -13,5 +13,8 @@
     "generate": {
       "dependsOn": ["^generate"],
     },
+    "lint": {
+      "outputs": [".cache/.eslintcache"],
+    },
   },
 }
