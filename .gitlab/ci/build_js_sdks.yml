@@ -38,3 +38,35 @@ build-js-sdks:
     paths:
       - packages/js-*/dist
     expire_in: 1 week
+
+.publish-npm:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^js-sdk-/
+  image: node:latest
+  stage: publish
+  needs:
+    - job: build-js-sdks
+      artifacts: true
+  script:
+    - |
+      VERSION=${CI_COMMIT_TAG#js-sdk-}
+      cd $PKG_DIR
+      sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
+      echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
+      echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+      npm publish
+
+publish-js-core:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-core
+
+publish-js-browser:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-browser
+
+publish-js-node:
+  extends: .publish-npm
+  variables:
+    PKG_DIR: packages/js-node
