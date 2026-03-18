@@ -19,8 +19,8 @@ build-js-sdks:
   stage: build
   before_script:
     - npm install -g pnpm@9.5.0
-    - pnpm add turbo --global
   script:
+    - pnpm install
     - pnpm build
   artifacts:
     paths:
