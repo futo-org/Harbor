@@ -1,3 +1,9 @@
 include:
   - local: .gitlab/ci/build_rs_core.yml
   - local: .gitlab/ci/build_js_sdks.yml
+
+stages:
+  - setup
+  - check
+  - build
+  - publish

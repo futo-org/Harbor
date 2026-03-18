@@ -25,12 +25,6 @@ workflow:
 #   ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
 #   RUST_CORE_PATH: packages/rs-core
 
-# stages:
-#   - setup
-#   - check
-#   - build
-#   - publish
-
 # before_script:
 #   - cd packages/rs-core
 
