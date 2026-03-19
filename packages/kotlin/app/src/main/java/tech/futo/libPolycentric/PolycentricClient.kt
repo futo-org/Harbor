@@ -12,6 +12,7 @@ import tech.futo.libPolycentric.services.Identity
 import tech.futo.libPolycentric.services.KeyPair
 import okio.ByteString.Companion.toByteString
 import polycentric.Process
+import tech.futo.libPolycentric.services.SyncService
 
 enum class ClientState {
     UNINITIALIZED,
@@ -34,6 +35,7 @@ class PolycentricClient(
     internal val storage: IStorageDriver,
 ) {
     val ffiService = FFIService(this)
+    val syncService = SyncService(this)
     val contentManager = ContentManager(this)
     val identityManager = IdentityManager(this)
     val queryManager = QueryManager(this)
