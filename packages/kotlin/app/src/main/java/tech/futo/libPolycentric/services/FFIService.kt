@@ -8,6 +8,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
 import okio.ByteString
+import okio.ByteString.Companion.toByteString
 import polycentric_ffi.NetworkRequestResponse
 import polycentric_ffi.NetworkRequestResponses
 import polycentric_ffi.NetworkResponse
@@ -30,16 +31,20 @@ class FFIService(private val client: PolycentricClient){
             if(pair.response != null) return@map pair
             if(pair.request == null) return@map pair
 
+            val body = pair.request.body
+
             val response = http.request(pair.request.server) {
                 method = HttpMethod(pair.request.method)
                 url.appendPathSegments(pair.request.endpoint)
                 for((key, value) in pair.request.parameters){
                     url.parameters.append(key, value)
                 }
-                setBody(pair.request.body)
+                if(body != null) setBody(body.toByteArray())
             }
 
-            return@map NetworkRequestResponse(request = pair.request, response = NetworkResponse(response.body<ByteString>()))
+            val responseBody: ByteArray = response.body()
+
+            return@map NetworkRequestResponse(request = pair.request, response = NetworkResponse(responseBody.toByteString()))
         }
 
         return NetworkRequestResponses(newPairs)
@@ -82,7 +87,7 @@ class FFIService(private val client: PolycentricClient){
         return this.ffiResult { this.ingest_event(signedEvent) }
     }
 
-    public suspend fun createEvent(eventCreationData: ByteArray, unixMs: Int): ByteArray {
+    public suspend fun createEvent(eventCreationData: ByteArray, unixMs: Long): ByteArray {
         return this.ffiResult { this.create_event(eventCreationData, unixMs) }
     }
 
@@ -169,7 +174,7 @@ class FFIService(private val client: PolycentricClient){
     private external fun initialize(): ByteArray
     private external fun is_initialized(): ByteArray
     private external fun ingest_event(signed_event: ByteArray): ByteArray
-    private external fun create_event(event_creation_data: ByteArray, unix_ms: Int): ByteArray
+    private external fun create_event(event_creation_data: ByteArray, unix_ms: Long): ByteArray
     private external fun sync_events_for_system(system: ByteArray, network_requests: ByteArray): ByteArray
     private external fun get_reference(pointer: ByteArray): ByteArray
     private external fun get_pointer(event: ByteArray): ByteArray
