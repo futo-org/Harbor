@@ -112,11 +112,11 @@ class ContentManager(private val client: PolycentricClient) {
             processBytes,
         )
 
+        val unixMs = System.currentTimeMillis()
         val eventDataWithClock = eventData.copy(logical_clock = logicalClock)
         val eventDataBytes = EventCreationData.ADAPTER.encode(eventDataWithClock)
-        val unixMs = System.currentTimeMillis().toInt()
 
-        val event = client.ffiService.createEvent(eventDataBytes, unixMs)
+        val event = client.ffiService.createEvent(eventDataBytes, unixMs.toLong())
         val signature = client.identityManager.sign(event.toByteString())
 
         val signedEvent = SignedEvent(event = event.toByteString(), signature = signature)

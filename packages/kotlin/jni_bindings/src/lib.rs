@@ -2,7 +2,7 @@ use jni::EnvUnowned;
 use jni::elements::ReleaseMode;
 use jni::objects::{JClass, JByteArray};
 
-use jni::sys::jint;
+use jni::sys::{jint, jlong};
 use rs_core::platform::ffi;
 use rs_core::platform::ffi::CBuffer;
 use std::ffi::c_int;
@@ -156,7 +156,7 @@ pub extern "system" fn Java_tech_futo_libPolycentric_services_FFIService_create_
     mut unowned_env: EnvUnowned<'caller>,
     _class: JClass<'caller>,
     event_creation_data: JByteArray<'caller>,
-    unix_ms: jint
+    unix_ms: jlong
 )
     -> JByteArray<'caller>
 {
