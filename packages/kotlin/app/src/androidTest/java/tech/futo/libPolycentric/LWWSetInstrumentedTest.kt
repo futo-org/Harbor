@@ -25,7 +25,7 @@ class LWWSetInstrumentedTest {
         client = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-lwwset.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         runBlocking { client.init() }
         client.identityManager.createIdentity(

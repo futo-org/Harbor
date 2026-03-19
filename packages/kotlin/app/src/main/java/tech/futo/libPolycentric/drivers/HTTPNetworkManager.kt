@@ -6,15 +6,15 @@ import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import okio.ByteString.Companion.toByteString
 import polycentric_ffi.NetworkRequestResponse
 import polycentric_ffi.NetworkRequestResponses
 import polycentric_ffi.NetworkResponse
 import tech.futo.libPolycentric.platform.INetworkManager
 
-class HTTPNetworkManager(private val scope: CoroutineScope) : INetworkManager {
+class HTTPNetworkManager : INetworkManager {
     private val http = HttpClient()
 
     private suspend fun fulfillRequest(pair: NetworkRequestResponse): NetworkRequestResponse {
@@ -38,12 +38,12 @@ class HTTPNetworkManager(private val scope: CoroutineScope) : INetworkManager {
     }
 
      override suspend fun fulfillRequests(requests: NetworkRequestResponses): NetworkRequestResponses {
-        val httpRequests = requests.pairs.map { pair ->
-            this.scope.async { fulfillRequest(pair) }
-        }
+         val newPairs = coroutineScope {
+             requests.pairs.map { pair -> async { fulfillRequest(pair) } }
+         }.map {
+             it.await()
+         }
 
-        val newPairs = httpRequests.map{ request -> request.await() }
-
-        return NetworkRequestResponses(newPairs)
+         return NetworkRequestResponses(newPairs)
     }
 }

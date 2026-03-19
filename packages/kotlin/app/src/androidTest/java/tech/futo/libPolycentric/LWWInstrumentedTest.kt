@@ -28,7 +28,7 @@ class LWWInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         storage = SQLiteStorageDriver(context, "test-lww.db")
-        client = PolycentricClient(Ed25519CryptoManager(), storage, HTTPNetworkManager(MainScope()))
+        client = PolycentricClient(Ed25519CryptoManager(), storage, HTTPNetworkManager())
         runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)

@@ -26,7 +26,7 @@ class IntegrationInstrumentedTest {
         client = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         runBlocking { client.init() }
     }
@@ -57,14 +57,14 @@ class IntegrationInstrumentedTest {
         val client1 = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration-shared.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         client1.init()
 
         val client2 = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration-shared.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         client2.init()
 

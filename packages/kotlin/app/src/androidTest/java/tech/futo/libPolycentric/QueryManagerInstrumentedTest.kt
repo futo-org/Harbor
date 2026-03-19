@@ -27,7 +27,7 @@ class QueryManagerInstrumentedTest {
         client = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-querymanager.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         runBlocking { client.init() }
         client.identityManager.createIdentity(

@@ -28,12 +28,12 @@ class ClaimsInstrumentedTest {
         client1 = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context,"test-claims-1.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         client2 = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-claims-2.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         runBlocking {
             client1.init()

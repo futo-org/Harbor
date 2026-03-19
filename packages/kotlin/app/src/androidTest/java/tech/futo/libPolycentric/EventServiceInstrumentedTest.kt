@@ -26,7 +26,7 @@ class EventServiceInstrumentedTest {
         client = PolycentricClient(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-eventservice.db"),
-            HTTPNetworkManager(MainScope())
+            HTTPNetworkManager()
         )
         runBlocking { client.init() }
     }
