@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -10,6 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import polycentric.Event
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
+import tech.futo.libPolycentric.drivers.HTTPNetworkManager
 import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.IdentityOptions
 
@@ -21,7 +23,11 @@ class IntegrationInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-integration.db"))
+        client = PolycentricClient(
+            Ed25519CryptoManager(),
+            SQLiteStorageDriver(context, "test-integration.db"),
+            HTTPNetworkManager(MainScope())
+        )
         runBlocking { client.init() }
     }
 
@@ -48,10 +54,18 @@ class IntegrationInstrumentedTest {
     fun shouldRetrieveExistingProcessIdOnSecondInit() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
 
-        val client1 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-integration-shared.db"))
+        val client1 = PolycentricClient(
+            Ed25519CryptoManager(),
+            SQLiteStorageDriver(context, "test-integration-shared.db"),
+            HTTPNetworkManager(MainScope())
+        )
         client1.init()
 
-        val client2 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-integration-shared.db"))
+        val client2 = PolycentricClient(
+            Ed25519CryptoManager(),
+            SQLiteStorageDriver(context, "test-integration-shared.db"),
+            HTTPNetworkManager(MainScope())
+        )
         client2.init()
 
         assertEquals(client1.process, client2.process)

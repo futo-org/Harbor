@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -11,6 +12,7 @@ import org.junit.runner.RunWith
 import polycentric.ClaimFieldEntry
 import polycentric.Event
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
+import tech.futo.libPolycentric.drivers.HTTPNetworkManager
 import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.IdentityOptions
 
@@ -23,8 +25,16 @@ class ClaimsInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client1 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-1.db"))
-        client2 = PolycentricClient(Ed25519CryptoManager(), SQLiteStorageDriver(context, "test-claims-2.db"))
+        client1 = PolycentricClient(
+            Ed25519CryptoManager(),
+            SQLiteStorageDriver(context,"test-claims-1.db"),
+            HTTPNetworkManager(MainScope())
+        )
+        client2 = PolycentricClient(
+            Ed25519CryptoManager(),
+            SQLiteStorageDriver(context, "test-claims-2.db"),
+            HTTPNetworkManager(MainScope())
+        )
         runBlocking {
             client1.init()
             client2.init()

@@ -2,6 +2,7 @@ package tech.futo.libPolycentric
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -13,6 +14,7 @@ import polycentric.Event
 import polycentric.ImageManifest
 import okio.ByteString.Companion.toByteString
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
+import tech.futo.libPolycentric.drivers.HTTPNetworkManager
 import tech.futo.libPolycentric.drivers.storage.sqlite.SQLiteStorageDriver
 import tech.futo.libPolycentric.services.IdentityOptions
 
@@ -26,7 +28,7 @@ class LWWInstrumentedTest {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         storage = SQLiteStorageDriver(context, "test-lww.db")
-        client = PolycentricClient(Ed25519CryptoManager(), storage)
+        client = PolycentricClient(Ed25519CryptoManager(), storage, HTTPNetworkManager(MainScope()))
         runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
