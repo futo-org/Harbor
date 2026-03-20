@@ -1565,11 +1565,7 @@ pub extern "C" fn query_following_feed(
         }
     };
 
-    match query_following_feed_internal(
-        current_system_rust,
-        limit as usize,
-        latest_event_rust,
-    ) {
+    match query_following_feed_internal(current_system_rust, limit as usize, latest_event_rust) {
         Ok(NetworkResult::Complete(events)) => protobuf_result_ok(events),
         Ok(NetworkResult::Incomplete(responses)) => protobuf_result_incomplete(responses),
         Err(err) => protobuf_result_err(err.to_string()),
@@ -2182,8 +2178,7 @@ pub extern "C" fn query_likes_feed(
         }
     };
 
-    match query_likes_feed_internal(current_system_rust, limit as usize, latest_event_rust)
-    {
+    match query_likes_feed_internal(current_system_rust, limit as usize, latest_event_rust) {
         Ok(NetworkResult::Complete(events)) => protobuf_result_ok(events),
         Ok(NetworkResult::Incomplete(responses)) => protobuf_result_incomplete(responses),
         Err(err) => protobuf_result_err(err.to_string()),
