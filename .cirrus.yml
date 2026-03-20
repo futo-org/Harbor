@@ -22,7 +22,7 @@ build_ios_sim_arm64_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios-sim
-    - cp ../../target/aarch64-apple-ios/release/libpolycentric_core.a ../../libpolycentric_core-ios-sim-arm64.a
+    - cp ../../target/aarch64-apple-ios-sim/release/libpolycentric_core.a ../../libpolycentric_core-ios-sim-arm64.a
   binary_artifacts:
     path: 'libpolycentric_core-ios-sim-arm64.a'
 
