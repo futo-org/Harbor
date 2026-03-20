@@ -1,5 +1,5 @@
-use crate::models::internal::{EventKey, ProcessId, SystemKey};
-use crate::models::protos::Pointer;
+use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey};
+use polycentric_common::models::protos::Pointer;
 use crate::query::{CountReferencesResult, QueryError, QueryResult, ReferencesResult};
 use crate::store::ReferenceStorage;
 

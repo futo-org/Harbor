@@ -1,5 +1,5 @@
-use crate::error::CoreError;
-use crate::models::internal::EventKey;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::EventKey;
 use crate::query::internal::{ProcessHeadsQuery, ProcessHeadsResult};
 use crate::store::EventStore;
 use std::collections::HashMap;

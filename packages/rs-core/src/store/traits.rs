@@ -1,5 +1,5 @@
-use crate::models::internal::EventKey;
-use crate::models::protos::SignedEvent;
+use polycentric_common::models::internal::EventKey;
+use polycentric_common::models::protos::SignedEvent;
 
 /// Trait for event storage operations needed by query engines
 pub trait EventStorage {

@@ -16,7 +16,7 @@ use std::{
 };
 
 use crate::feeds::feed_helpers;
-use crate::models::protos::reference::ReferenceType;
+use polycentric_common::models::protos::reference::ReferenceType;
 use crate::{
     models::internal::{EventKey, ProcessId, SystemKey, TimelineKey},
     models::{
@@ -2385,7 +2385,7 @@ fn query_events_internal(
     let result = engine
         .query_events(query)
         .map_err(|e| PlatformError::QueryError(format!("Query events failed: {}", e)))?;
-    Ok(crate::models::event_array::serialize_signed_events(
+    Ok(polycentric_common::models::event_array::serialize_signed_events(
         &result.events,
     ))
 }
@@ -2404,7 +2404,7 @@ fn query_cached_crdt_for_system(
         PlatformError::DeserializationError(format!("Failed to parse system key: {}", e))
     })?;
 
-    let content_type_enum = crate::models::protos::ContentType::try_from(content_type as i32)
+    let content_type_enum = polycentric_common::models::protos::ContentType::try_from(content_type as i32)
         .map_err(|_| {
             PlatformError::DeserializationError(format!("Invalid content type: {}", content_type))
         })?;

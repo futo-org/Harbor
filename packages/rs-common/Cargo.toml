@@ -1,0 +1,27 @@
+[package]
+name = "polycentric-common"
+version = "0.0.0"
+edition = "2024"
+description = "Common rust code for the Polycentric protocol"
+license-file = "../../LICENSE"
+repository = ""
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+thiserror = "2.0"
+prost = "0.13"
+prost-types = "0.13"
+ed25519-dalek = "2.2.0"
+hmac-sha256 = "1.1.12"
+
+[build-dependencies]
+prost-build = "0.13"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

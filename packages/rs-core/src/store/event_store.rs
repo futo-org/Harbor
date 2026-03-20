@@ -1,7 +1,7 @@
-use crate::error::CoreError;
-use crate::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
-use crate::models::protos::{ContentType, Event, SignedEvent};
-use crate::models::VectorClock;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
+use polycentric_common::models::protos::{ContentType, Event, SignedEvent};
+use polycentric_common::models::VectorClock;
 use crate::store::indices::{
     ContentTypeIndex, OpinionIndex, ProcessIndex, ReferenceIndex, TimeIndex, TombstoneIndex,
     VectorClockIndex,

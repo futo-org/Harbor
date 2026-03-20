@@ -3,20 +3,20 @@ use std::cell::RefCell;
 use std::cell::RefMut;
 
 use crate::feeds::feed_helpers;
-use crate::models::internal::{EventKey, TimelineKey};
-use crate::models::internal::{ProcessId, SystemKey};
-use crate::models::protos::reference::ReferenceType;
-use crate::models::protos::QueryReferencesRequestEvents;
-use crate::models::protos::{
+use polycentric_common::models::internal::{EventKey, TimelineKey};
+use polycentric_common::models::internal::{ProcessId, SystemKey};
+use polycentric_common::models::protos::reference::ReferenceType;
+use polycentric_common::models::protos::QueryReferencesRequestEvents;
+use polycentric_common::models::protos::{
     ContentType, Event, EventCreationData, EventKey as ProtobufEventKey, Events, Indices, Pointer,
     Process, PublicKey, RangesForSystem, ResultEventsAndRelatedEventsAndCursor, SignedEvent,
     VectorClock,
 };
-use crate::models::protos::{
+use polycentric_common::models::protos::{
     QueryReferencesRequest, QueryReferencesResponse, Reference, RepeatedUInt64,
 };
-use crate::models::traits::Serializable;
-use crate::models::Digest;
+use polycentric_common::models::traits::Serializable;
+use polycentric_common::models::Digest;
 use crate::platform::error::PlatformError;
 use crate::query::{EventRangeQuery, QueryEngine};
 use crate::synchronization::sync_helpers::fetch_event_request;
@@ -1932,7 +1932,7 @@ impl PolycentricWasm {
         let result = engine
             .query_events(query)
             .map_err(|e| JsError::new(&format!("Query events failed: {}", e)))?;
-        Ok(crate::models::event_array::serialize_signed_events(
+        Ok(polycentric_common::models::event_array::serialize_signed_events(
             &result.events,
         ))
     }
@@ -1950,7 +1950,7 @@ impl PolycentricWasm {
             .map_err(|e| JsError::new(&format!("Failed to parse system key: {}", e)))?;
 
         let content_type_enum =
-            crate::models::protos::ContentType::try_from(content_type as i32)
+            polycentric_common::models::protos::ContentType::try_from(content_type as i32)
                 .map_err(|_| JsError::new(&format!("Invalid content type: {}", content_type)))?;
 
         match engine.query_crdt_for_system(&system_key, content_type_enum) {

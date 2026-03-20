@@ -1,8 +1,8 @@
 use prost::Message;
 
-use crate::error::CoreError;
-use crate::models::protos::{Event};
-use crate::models::{ContentType, PublicKey};
+use polycentric_common::error::CoreError;
+use polycentric_common::models::protos::{Event};
+use polycentric_common::models::{ContentType, PublicKey};
 use crate::store::internal::EventKey;
 use crate::store::SystemKey;
 use std::cmp::Reverse;
@@ -36,7 +36,7 @@ impl FollowingIndex {
         event_key: &EventKey,
         event: &Event,
         follower_system: &SystemKey
-    ) -> Result<(), crate::error::CoreError> {
+    ) -> Result<(), polycentric_common::error::CoreError> {
         if event.content_type == ContentType::Follow.into() {
             return Ok(());
         }
@@ -85,7 +85,7 @@ impl FollowingIndex {
         &mut self,
         event_key: &EventKey,
         event: &Event,
-    ) -> Result<(), crate::error::CoreError> {
+    ) -> Result<(), polycentric_common::error::CoreError> {
         let system = match &event.system {
             Some(sys) => sys,
             None => return Ok(())
