@@ -22,13 +22,13 @@ try {
   const cryptoManager = new BrowserCryptoManager();
   console.log('3. Crypto manager created');
 
-  const wasmManager = new BrowserWasmBridge();
+  const coreBridge = new BrowserWasmBridge();
   console.log('4. WASM bridge created');
 
   const clientInstance = await PolycentricClient.create({
     storageDriver,
     cryptoManager,
-    wasmManager,
+    coreBridge,
     hydration: {
       strategy: HydrationStrategy.FULL_ASYNC,
       batchSize: 100,

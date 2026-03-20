@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "icon": "./assets/images/AppIcon.png",
     "scheme": "polycentric",
+    "web": {
+      "output": "static"
+    },
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,

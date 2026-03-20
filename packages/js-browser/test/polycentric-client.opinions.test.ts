@@ -21,7 +21,7 @@ describe('PolycentricClient Opinions', () => {
     }
 
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };

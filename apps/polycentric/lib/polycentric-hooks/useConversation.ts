@@ -83,6 +83,7 @@ export function useNavigateToParentPost(onPostPress: (postId: string) => void) {
       try {
         const feed = client.queryManager.queryAuthorFeed(
           decoded.parentAuthorPublicKey,
+          200,
         );
         const items = await feed.read();
         for (const fetched of items) {

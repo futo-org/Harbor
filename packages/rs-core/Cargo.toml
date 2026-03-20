@@ -48,6 +48,15 @@ wasm = [
 ]
 ffi = ["dep:libc"]
 
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+omit-default-module-path = true
+
+[package.metadata.wasm-pack.profile.profiling.wasm-bindgen]
+omit-default-module-path = true
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+omit-default-module-path = true
+
 [profile.release]
 opt-level = "s"
 lto = "fat"

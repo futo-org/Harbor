@@ -27,13 +27,13 @@ describe('PolycentricClient Claims and Vouches', () => {
 
     // Create two different clients with different identities
     const clientConfig1: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME_1, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
 
     const clientConfig2: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME_2, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };

@@ -1,37 +1,29 @@
+import { DEFAULT_IDENTITY_NAME } from '@/constants';
+import {
+  FeedQuery,
+  PolycentricClient,
+  createIdentityWithDefaultServer,
+  createPolycentricClient,
+  types,
+  type Identity,
+} from '@polycentric/react-native';
 import {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   useCallback,
-  useRef,
+  useContext,
+  useEffect,
   useMemo,
+  useRef,
+  useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
-import {
-  PolycentricClient,
-  ReactNativeCryptoManager,
-  FeedQuery,
-  types,
-} from '@polycentric/react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { decodePostEvent, pubkeyStr } from './helpers';
 import {
   createPolycentricStore,
   useStore,
   type PolycentricStoreApi,
 } from './store';
-import { pubkeyStr, decodePostEvent } from './helpers';
-import { DEFAULT_IDENTITY_NAME } from '@/constants';
-
-type Identity = {
-  keyPair: {
-    keyType: number;
-    privateKey: types.PrivateKey;
-    publicKey: types.PublicKey;
-    processId?: types.IProcess;
-  };
-  process: types.IProcess;
-};
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -40,7 +32,7 @@ export interface PolycentricContextValue {
   isReady: boolean;
   error: Error | null;
   currentIdentity: Identity | null;
-  switchIdentity: (publicKey: types.IPublicKey) => Promise<void>;
+  switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
 }
 
 interface FeedHookResult {
@@ -66,17 +58,9 @@ interface FollowStatusResult {
   refresh: () => void;
 }
 
-const isWeb =
-  typeof window !== 'undefined' &&
-  typeof navigator !== 'undefined' &&
-  navigator.product !== 'ReactNative';
-
-function WebNotSupported() {
-  return null;
-}
-
 const PolycentricContext = createContext<PolycentricContextValue | null>(null);
 
+// Defaults for local development
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 export const DEFAULT_SERVER =
@@ -86,17 +70,46 @@ export const DEFAULT_SERVER =
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
-  webFallback?: ReactNode;
+  onInitialized: () => void;
+}
+
+function DefaultLoadingComponent() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <ActivityIndicator />
+    </View>
+  );
+}
+
+function DefaultErrorComponent({ error }: { error: Error }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+      }}
+    >
+      <Text style={{ fontWeight: '600', marginBottom: 8 }}>
+        Failed to start Polycentric
+      </Text>
+      <Text selectable>{error.message}</Text>
+    </View>
+  );
 }
 
 export function PolycentricProvider({
   children,
   loadingComponent,
-  webFallback,
+  onInitialized,
 }: PolycentricProviderProps) {
-  if (isWeb) {
-    return <>{webFallback ?? <WebNotSupported />}</>;
-  }
   const [client, setClient] = useState<PolycentricClient | null>(null);
   const [store, setStore] = useState<PolycentricStoreApi | null>(null);
   const [currentIdentity, setCurrentIdentity] = useState<Identity | null>(null);
@@ -104,31 +117,35 @@ export function PolycentricProvider({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (!isLoading) {
+      onInitialized();
+    }
+  }, [isLoading, onInitialized]);
+
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const c = await PolycentricClient.create({
-          cryptoManager: new ReactNativeCryptoManager(),
+        const c = await createPolycentricClient({
           databaseName: 'polycentric.db',
         });
 
         if (cancelled) return;
 
-        if (!c.hasIdentity()) {
-          await c.createIdentity(DEFAULT_SERVER);
+        if ((await c.getAllIdentities()).length === 0) {
+          await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
         }
-
-        await c.sync().catch(() => {});
 
         if (cancelled) return;
 
         const s = createPolycentricStore(c);
+        await s.getState().refreshIdentities();
 
         // Wire username event ingestion
         c.events.onContentCreated((event) => {
           try {
-            const ev = types.Event.decode(event.event ?? new Uint8Array());
+            const ev = types.Event.fromBinary(event.event);
             if (Number(ev.contentType) !== types.ContentType.USERNAME) return;
             if (!ev.system) return;
             const key = pubkeyStr(ev.system);
@@ -145,18 +162,24 @@ export function PolycentricProvider({
         setCurrentIdentity(c.currentIdentity);
         setIsLoading(false);
 
+        void c.sync().catch((syncError) => {
+          console.warn('Initial Polycentric sync failed:', syncError);
+        });
+
         c.events.onIdentityChanged(async (identity) => {
           if (cancelled) return;
-          if (!identity && c.getAllIdentities().length === 0) {
-            await c.createIdentity(DEFAULT_SERVER);
+          if (!identity && (await c.getAllIdentities()).length === 0) {
+            await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
             await c.sync().catch(() => {});
+            setCurrentIdentity(c.currentIdentity);
           } else {
             setCurrentIdentity(identity);
           }
-          s.getState().refreshIdentities();
+          await s.getState().refreshIdentities();
         });
       } catch (err) {
         if (!cancelled) {
+          console.error('Failed to initialize PolycentricProvider:', err);
           setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         }
@@ -169,7 +192,7 @@ export function PolycentricProvider({
   }, []);
 
   const switchIdentity = useCallback(
-    async (publicKey: types.IPublicKey) => {
+    async (publicKey: types.PublicKey) => {
       if (!client) return;
       await client.switchIdentity(publicKey);
       await client.sync().catch(() => {});
@@ -190,8 +213,12 @@ export function PolycentricProvider({
     };
   }, [client, store, isLoading, error, currentIdentity, switchIdentity]);
 
+  if (error) {
+    return <DefaultErrorComponent error={error} />;
+  }
+
   if (!value || isLoading) {
-    return <>{loadingComponent ?? null}</>;
+    return <>{loadingComponent ?? <DefaultLoadingComponent />}</>;
   }
 
   return (
@@ -217,7 +244,7 @@ export function usePolycentric(): PolycentricClient {
 }
 
 function ingestEvents(
-  events: types.ISignedEvent[],
+  events: types.SignedEvent[],
   store: PolycentricStoreApi,
 ): string[] {
   const ids: string[] = [];
@@ -339,21 +366,21 @@ export function useFollowingFeed(options?: {
 }): FeedHookResult {
   return useFeedQuery(
     'following',
-    (c) => c.queryManager.queryFollowingFeed(options?.limit),
+    (c) => c.queryManager.queryFollowingFeed(options?.limit ?? 20),
     [options?.limit],
     { enabled: options?.enabled ?? true },
   );
 }
 
 export function useAuthorFeed(
-  system: types.IPublicKey,
+  system: types.PublicKey,
   limit?: number,
   options?: { getIsAborted?: () => boolean },
 ): FeedHookResult {
   const systemKey = pubkeyStr(system);
   return useFeedQuery(
     `author:${systemKey}`,
-    (c) => c.queryManager.queryAuthorFeed(system, limit),
+    (c) => c.queryManager.queryAuthorFeed(system, limit ?? 200),
     [systemKey, limit],
     { getIsAborted: options?.getIsAborted },
   );
@@ -366,14 +393,14 @@ export function useLikesFeed(options?: {
 }): FeedHookResult {
   return useFeedQuery(
     'likes',
-    (c) => c.queryManager.queryLikesFeed(options?.limit),
+    (c) => c.queryManager.queryLikesFeed(options?.limit ?? 20),
     [options?.limit],
     { enabled: options?.enabled ?? true, getIsAborted: options?.getIsAborted },
   );
 }
 
 export function useProfile(
-  system: types.IPublicKey,
+  system: types.PublicKey,
   options?: { getIsAborted?: () => boolean },
 ): ProfileHookResult {
   const { client, currentIdentity } = usePolycentricContext();
@@ -394,7 +421,7 @@ export function useProfile(
     setIsLoading(true);
     setError(null);
 
-    client.ffiBridge
+    client
       .syncEventsForSystem(system)
       .then(() => {
         if (cancelled || getIsAborted?.()) return;
@@ -421,7 +448,7 @@ export function useProfile(
   useEffect(() => {
     const listener = (event: types.SignedEvent) => {
       try {
-        const ev = types.Event.decode(event.event ?? new Uint8Array());
+        const ev = types.Event.fromBinary(event.event);
         if (Number(ev.contentType) !== types.ContentType.DESCRIPTION) return;
         const eventSystemKey = ev.system?.key ? pubkeyStr(ev.system) : '';
         if (eventSystemKey === systemKey) {
@@ -451,7 +478,7 @@ export function useCurrentIdentity() {
   const { client, currentIdentity, switchIdentity } = usePolycentricContext();
 
   const isCurrentIdentity = useCallback(
-    (pubkey: types.IPublicKey) => {
+    (pubkey: types.PublicKey) => {
       if (!currentIdentity) return false;
       return pubkeyStr(currentIdentity.keyPair.publicKey) === pubkeyStr(pubkey);
     },
@@ -467,7 +494,7 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useFollowStatus(system: types.IPublicKey): FollowStatusResult {
+export function useFollowStatus(system: types.PublicKey): FollowStatusResult {
   const { client, store, currentIdentity } = usePolycentricContext();
 
   const currentPubkey = currentIdentity?.keyPair.publicKey;
@@ -504,7 +531,7 @@ export function useFollowStatus(system: types.IPublicKey): FollowStatusResult {
       await client.sync();
       setIsFollowing(!isFollowing);
       if (!isFollowing) {
-        await client.ffiBridge.syncEventsForSystem(system).catch(() => {});
+        await client.syncEventsForSystem(system).catch(() => {});
       }
       store.getState().clearFeed('following');
     } catch (err) {
@@ -521,7 +548,7 @@ export function useFollowStatus(system: types.IPublicKey): FollowStatusResult {
   return { isFollowing, isLoading, toggleFollow, refresh };
 }
 
-export function useUsername(pubkey: types.IPublicKey): string {
+export function useUsername(pubkey: types.PublicKey): string {
   const { store } = usePolycentricContext();
   const key = pubkeyStr(pubkey);
   const stablePubkey = useMemo(() => pubkey, [key]);

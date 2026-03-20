@@ -3,8 +3,9 @@ import type {
   KeyPair,
   Identity,
   IdentityOptions,
-} from '../polycentric-client';
-import { PrivateKey, PublicKey } from '../proto/polycentric';
+} from "../polycentric-client";
+import { KEY_TYPE } from '../constants';
+import { PrivateKey, PublicKey } from "../proto/polycentric";
 
 export class IdentityManager {
   constructor(private readonly client: PolycentricClient) {}
@@ -27,7 +28,7 @@ export class IdentityManager {
 
   async createIdentity(options: IdentityOptions): Promise<KeyPair> {
     const { privateKey, publicKey } = await this._constructIdentity(
-      options.keyType,
+      options.keyType ?? KEY_TYPE.ED25519,
     );
 
     if (!options.ephemeral) {

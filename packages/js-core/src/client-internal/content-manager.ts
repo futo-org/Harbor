@@ -49,7 +49,7 @@ export class ContentManager {
 
   private _getReference(pointer: Pointer): EventKey | null {
     const pointerBytes = Pointer.toBinary(pointer);
-    const result = this.client.wasmCore.get_reference(pointerBytes);
+    const result = this.client.core.get_reference(pointerBytes);
 
     if (!result) return null;
 
@@ -181,14 +181,16 @@ export class ContentManager {
     }
 
     const eventDataBytes = EventCreationData.toBinary(eventData);
-    const signedEvent = await this.client.wasmCore.create_event(
+    const signedEventBytes = await this.client.core.create_event(
       eventDataBytes,
       this._signEventCallback.bind(this),
       this._persistEventCallback.bind(this),
       this._getNextLogicalClockCallback.bind(this),
       this._persistLogicalClockCallback.bind(this),
     );
-    return SignedEvent.fromBinary(signedEvent);
+    const signedEvent = SignedEvent.fromBinary(signedEventBytes);
+    this.client.events.emitContentCreated(signedEvent);
+    return signedEvent;
   }
 
   async createPost(
@@ -224,6 +226,13 @@ export class ContentManager {
 
   async createNeutral(subjectPointer: Pointer): Promise<SignedEvent> {
     return this._createOpinion(Opinion.NEUTRAL, subjectPointer);
+  }
+
+  async setOpinion(
+    subjectPointer: Pointer,
+    opinion: Opinion,
+  ): Promise<SignedEvent> {
+    return this._createOpinion(opinion, subjectPointer);
   }
 
   async createUsername(username: string): Promise<SignedEvent> {

@@ -12,7 +12,7 @@ export const GenericFeed = ({ query }: { query: FeedQuery }) => {
 
     let events = await query.read();
 
-    newFeed.push(...events.events.events);
+    newFeed.push(...events);
     setFeed(newFeed);
   }, [query, feed]);
 

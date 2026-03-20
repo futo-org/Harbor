@@ -99,14 +99,14 @@ jsi::Object PolycentricCore::querySearchFeed(jsi::Runtime& rt, jsi::Object syste
     return toUint8Array(rt, ::query_search_feed(sysInput, netInput, feedQueryInput, searchQueryInput, cursorInput));
 }
 
-jsi::Object PolycentricCore::queryAuthorFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object author, jsi::Object networkRequests, double limit, jsi::Object cursor) {
+jsi::Object PolycentricCore::queryAuthorFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object author, jsi::Object networkRequests, double limit, jsi::Object latestEvent) {
     CBuffer sysInput = toCBuffer(rt, system);
     CBuffer authorInput = toCBuffer(rt, author);
     CBuffer netInput = toCBuffer(rt, networkRequests);
-    CBuffer cursorInput = toCBuffer(rt, cursor);
+    CBuffer latestEventInput = toCBuffer(rt, latestEvent);
     return toUint8Array(
         rt,
-        ::query_author_feed(sysInput, authorInput, netInput, static_cast<unsigned long>(limit), cursorInput)
+        ::query_author_feed(sysInput, authorInput, netInput, static_cast<unsigned long>(limit), latestEventInput)
     );
 }
 
@@ -134,16 +134,16 @@ jsi::Object PolycentricCore::queryCommentsFeed(jsi::Runtime& rt, jsi::Object sys
     return toUint8Array(rt, ::query_comments_feed(sysInput, netInput, feedQueryInput, cursorInput));
 }
 
-jsi::Object PolycentricCore::queryFollowingFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object cursor) {
+jsi::Object PolycentricCore::queryFollowingFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object latestEvent) {
     CBuffer sysInput = toCBuffer(rt, system);
-    CBuffer cursorInput = toCBuffer(rt, cursor);
-    return toUint8Array(rt, ::query_following_feed(sysInput, static_cast<unsigned long>(limit), cursorInput));
+    CBuffer latestEventInput = toCBuffer(rt, latestEvent);
+    return toUint8Array(rt, ::query_following_feed(sysInput, static_cast<unsigned long>(limit), latestEventInput));
 }
 
-jsi::Object PolycentricCore::queryLikesFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object cursor) {
+jsi::Object PolycentricCore::queryLikesFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object latestEvent) {
     CBuffer sysInput = toCBuffer(rt, system);
-    CBuffer cursorInput = toCBuffer(rt, cursor);
-    return toUint8Array(rt, ::query_likes_feed(sysInput, static_cast<unsigned long>(limit), cursorInput));
+    CBuffer latestEventInput = toCBuffer(rt, latestEvent);
+    return toUint8Array(rt, ::query_likes_feed(sysInput, static_cast<unsigned long>(limit), latestEventInput));
 }
 
 jsi::Object PolycentricCore::queryOpinion(jsi::Runtime& rt, jsi::Object currentSystem, jsi::Object targetPointer) {

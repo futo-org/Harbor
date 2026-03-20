@@ -30,7 +30,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should have correct initial state after creation', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -46,7 +46,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit progress events during initialization', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -67,7 +67,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit identity change events when creating identity', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -92,7 +92,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit identity change events when switching identity', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -125,7 +125,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit state change events', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -149,7 +149,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit error events', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -173,7 +173,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit error events', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -197,7 +197,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should track current identity state', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -218,7 +218,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should emit multiple events in sequence', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -244,7 +244,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should handle multiple listeners for the same event', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -270,7 +270,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should allow removing listeners', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -292,7 +292,7 @@ describe('PolycentricClient EventService', () => {
 
   it('should allow removing all listeners', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };

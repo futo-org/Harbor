@@ -1758,30 +1758,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-skia (2.5.1):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React
-    - React-callinvoker
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - react-native-webview (13.16.0):
     - hermes-engine
     - RCTRequired
@@ -2559,7 +2535,6 @@ DEPENDENCIES:
   - "React-microtasksnativemodule (from `../../../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)"
   - "react-native-get-random-values (from `../../../node_modules/.pnpm/react-native-get-random-values@1.11.0_react-native@0.83.0_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/react-native-get-random-values`)"
   - "react-native-safe-area-context (from `../../../node_modules/.pnpm/react-native-safe-area-context@5.6.2_react-native@0.83.2_@babel+core@7.29.0_@types+reac_833795ee5509317bfb8345b63d367817/node_modules/react-native-safe-area-context`)"
-  - "react-native-skia (from `../../../node_modules/.pnpm/@shopify+react-native-skia@2.5.1_react-native-reanimated@4.2.2_react-native-worklets@0._b3026f715dd195f0454740d4347399ae/node_modules/@shopify/react-native-skia`)"
   - "react-native-webview (from `../../../node_modules/.pnpm/react-native-webview@13.16.0_react-native@0.83.2_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-webview`)"
   - "React-NativeModulesApple (from `../../../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)"
   - "React-networking (from `../../../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0/node_modules/react-native/ReactCommon/react/networking`)"
@@ -2757,8 +2732,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/react-native-get-random-values@1.11.0_react-native@0.83.0_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0_/node_modules/react-native-get-random-values"
   react-native-safe-area-context:
     :path: "../../../node_modules/.pnpm/react-native-safe-area-context@5.6.2_react-native@0.83.2_@babel+core@7.29.0_@types+reac_833795ee5509317bfb8345b63d367817/node_modules/react-native-safe-area-context"
-  react-native-skia:
-    :path: "../../../node_modules/.pnpm/@shopify+react-native-skia@2.5.1_react-native-reanimated@4.2.2_react-native-worklets@0._b3026f715dd195f0454740d4347399ae/node_modules/@shopify/react-native-skia"
   react-native-webview:
     :path: "../../../node_modules/.pnpm/react-native-webview@13.16.0_react-native@0.83.2_@babel+core@7.29.0_@types+react@19.2.14_react@19.2.0__react@19.2.0/node_modules/react-native-webview"
   React-NativeModulesApple:
@@ -2922,7 +2895,6 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: bef4a47c7efd42421de52201e6d76a73cf6c816e
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-safe-area-context: 37e680fc4cace3c0030ee46e8987d24f5d3bdab2
-  react-native-skia: 6a51463f8391c82f675f490c8078135925285a8f
   react-native-webview: 3e303e80cadb5f17118c8c1502aa398e9287e415
   React-NativeModulesApple: f9fa097fc24cec967b77bfc05f72d2ea7db05b87
   React-networking: 29a9ae1a2e6ce8bb19174cc47110b36ae7ffcbcd

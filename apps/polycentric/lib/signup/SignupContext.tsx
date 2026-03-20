@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'expo-router';
+import { createIdentityWithDefaultServer } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
-import { usePolycentricContext } from '@/lib/polycentric-hooks';
+import { DEFAULT_SERVER, usePolycentricContext } from '@/lib/polycentric-hooks';
 
 type ModerationLevel = 1 | 2 | 3;
 
@@ -89,7 +90,7 @@ export function SignupProvider({ children }: { children: ReactNode }) {
 
     try {
       // Create the identity
-      await client.createIdentity();
+      await createIdentityWithDefaultServer(client, DEFAULT_SERVER);
 
       // Set profile data
       // if (data.username) {

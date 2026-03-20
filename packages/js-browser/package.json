@@ -8,6 +8,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./src/runtime.ts",
+      "react-native": "./src/runtime.ts",
+      "source": "./src/runtime.ts",
       "import": "./dist/index.es.js"
     }
   },
@@ -22,6 +25,7 @@
   },
   "dependencies": {
     "@polycentric/js-core": "workspace:*",
+    "@polycentric/rs-core-wasm-browser": "workspace:*",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",

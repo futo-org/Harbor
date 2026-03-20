@@ -80,25 +80,25 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
     });
 
     return (
-      <SheetContext.Provider value={{ isOpen, setFooter, setHeader }}>
-        <TrueSheet
-          onWillDismiss={() => setIsAnimating(true)}
-          onDidDismiss={() => {
-            setIsOpen(false);
-            setIsAnimating(false);
-          }}
-          onDidPresent={() => setIsOpen(true)}
-          ref={sheetRef}
-          detents={detents}
-          dismissible={dismissible}
-          footer={footer || undefined}
-          header={header || undefined}
-          scrollable={scrollable}
-          {...platformProps}
-        >
+      <TrueSheet
+        onWillDismiss={() => setIsAnimating(true)}
+        onDidDismiss={() => {
+          setIsOpen(false);
+          setIsAnimating(false);
+        }}
+        onDidPresent={() => setIsOpen(true)}
+        ref={sheetRef}
+        detents={detents}
+        dismissible={dismissible}
+        footer={footer || undefined}
+        header={header || undefined}
+        scrollable={scrollable}
+        {...platformProps}
+      >
+        <SheetContext.Provider value={{ isOpen, setFooter, setHeader }}>
           {children}
-        </TrueSheet>
-      </SheetContext.Provider>
+        </SheetContext.Provider>
+      </TrueSheet>
     );
   },
 );

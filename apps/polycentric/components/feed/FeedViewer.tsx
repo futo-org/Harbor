@@ -15,8 +15,8 @@ interface FeedViewerProps {
   error: Error | null;
   onRefresh: () => void;
   onPostPress: (postId: string) => void;
-  onAuthorPress?: (publicKey: types.IPublicKey) => void;
-  onReply?: (signedEvent: types.ISignedEvent) => void;
+  onAuthorPress?: (publicKey: types.PublicKey) => void;
+  onReply?: (signedEvent: types.SignedEvent) => void;
   onEndReached?: () => void;
   hasMore?: boolean;
   bottomPadding?: number;
