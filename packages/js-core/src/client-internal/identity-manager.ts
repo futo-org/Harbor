@@ -3,9 +3,9 @@ import type {
   KeyPair,
   Identity,
   IdentityOptions,
-} from "../polycentric-client";
+} from '../polycentric-client';
 import { KEY_TYPE } from '../constants';
-import { PrivateKey, PublicKey } from "../proto/polycentric";
+import { PrivateKey, PublicKey } from '../proto/polycentric';
 
 export class IdentityManager {
   constructor(private readonly client: PolycentricClient) {}

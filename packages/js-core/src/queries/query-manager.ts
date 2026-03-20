@@ -188,9 +188,7 @@ export class QueryManager {
     const getQueryReferencesCallback =
       this.client.httpClient.getQueryReferences.bind(this.client.httpClient);
 
-    const referenceBytes = Reference.toBinary(
-      this.toReference(reference),
-    );
+    const referenceBytes = Reference.toBinary(this.toReference(reference));
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
       : undefined;
@@ -472,8 +470,7 @@ export class QueryManager {
 
   queryAuthorities(system: PublicKey): string[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result =
-      this.client.core.query_authorities_for_system(systemBytes);
+    const result = this.client.core.query_authorities_for_system(systemBytes);
 
     if (!result) return [];
 

@@ -48,7 +48,11 @@ export interface Spec extends TurboModule {
     feedQuery: Object,
     cursor: Object
   ): Object;
-  queryFollowingFeed(system: Object, limit: number, latestEvent: Object): Object;
+  queryFollowingFeed(
+    system: Object,
+    limit: number,
+    latestEvent: Object
+  ): Object;
   queryLikesFeed(system: Object, limit: number, latestEvent: Object): Object;
   queryOpinion(currentSystem: Object, targetPointer: Object): Object;
   queryEventIsDeleted(pointer: Object): Object;

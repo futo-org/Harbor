@@ -1,4 +1,4 @@
-import type { Database } from './database'
+import type { Database } from './database';
 import {
   ContentType,
   Delete,
@@ -6,52 +6,56 @@ import {
   Pointer,
   SignedEvent,
   type IEventRepository,
-} from '@polycentric/js-core'
+} from '@polycentric/js-core';
 
 export class EventRepository implements IEventRepository {
   constructor(private readonly database: Database) {}
 
   async persistEvent(signedEvent: SignedEvent): Promise<void> {
-    const rawEventBytes = signedEvent.event
-    const event = Event.fromBinary(rawEventBytes)
+    const rawEventBytes = signedEvent.event;
+    const event = Event.fromBinary(rawEventBytes);
 
-    const systemKeyType = Number(event.system?.keyType ?? 0n)
-    const systemKey = event.system?.key ?? new Uint8Array()
-    const process = event.process?.process ?? new Uint8Array()
-    const logicalClock = Number(event.logicalClock ?? 0n)
+    const systemKeyType = Number(event.system?.keyType ?? 0n);
+    const systemKey = event.system?.key ?? new Uint8Array();
+    const process = event.process?.process ?? new Uint8Array();
+    const logicalClock = Number(event.logicalClock ?? 0n);
 
-    const signature = signedEvent.signature
-    const rawEvent = rawEventBytes
+    const signature = signedEvent.signature;
+    const rawEvent = rawEventBytes;
     const moderationTags =
       signedEvent.moderationTags.length > 0
         ? JSON.stringify(signedEvent.moderationTags)
-        : null
+        : null;
 
-    const isTombstone = event.contentType === ContentType.DELETE
+    const isTombstone = event.contentType === ContentType.DELETE;
 
-    let mutationPointerSystemKeyType: number | null = null
-    let mutationPointerSystemKey: Uint8Array | null = null
-    let mutationPointerProcess: Uint8Array | null = null
-    let mutationPointerLogicalClock: number | null = null
+    let mutationPointerSystemKeyType: number | null = null;
+    let mutationPointerSystemKey: Uint8Array | null = null;
+    let mutationPointerProcess: Uint8Array | null = null;
+    let mutationPointerLogicalClock: number | null = null;
 
     if (isTombstone) {
       try {
-        const deleteEvent = Delete.fromBinary(event.content)
+        const deleteEvent = Delete.fromBinary(event.content);
 
         if (deleteEvent.process && deleteEvent.logicalClock) {
-          mutationPointerProcess = deleteEvent.process.process ?? null
-          mutationPointerLogicalClock = Number(deleteEvent.logicalClock)
+          mutationPointerProcess = deleteEvent.process.process ?? null;
+          mutationPointerLogicalClock = Number(deleteEvent.logicalClock);
 
           if (event.references.length > 0) {
-            const targetPointer = Pointer.fromBinary(event.references[0]!.reference)
+            const targetPointer = Pointer.fromBinary(
+              event.references[0]!.reference
+            );
             if (targetPointer.system) {
-              mutationPointerSystemKeyType = Number(targetPointer.system.keyType)
-              mutationPointerSystemKey = targetPointer.system.key ?? null
+              mutationPointerSystemKeyType = Number(
+                targetPointer.system.keyType
+              );
+              mutationPointerSystemKey = targetPointer.system.key ?? null;
             }
           }
         }
       } catch (error) {
-        console.warn('Failed to parse delete event content:', error)
+        console.warn('Failed to parse delete event content:', error);
       }
     }
 
@@ -76,47 +80,49 @@ export class EventRepository implements IEventRepository {
         mutationPointerSystemKey,
         mutationPointerProcess,
         mutationPointerLogicalClock,
-      ],
-    )
+      ]
+    );
   }
 
   async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
     for (const signedEvent of signedEvents) {
-      await this.persistEvent(signedEvent)
+      await this.persistEvent(signedEvent);
     }
   }
 
   async getAllEvents(): Promise<SignedEvent[]> {
     const results = this.database.execute<{
-      signature: ArrayBuffer
-      raw_event: ArrayBuffer
-      moderation_tags: string | null
-    }>('SELECT signature, raw_event, moderation_tags FROM events')
+      signature: ArrayBuffer;
+      raw_event: ArrayBuffer;
+      moderation_tags: string | null;
+    }>('SELECT signature, raw_event, moderation_tags FROM events');
 
     return results.map((row) =>
       SignedEvent.create({
         signature: new Uint8Array(row.signature),
         event: new Uint8Array(row.raw_event),
-        moderationTags: row.moderation_tags ? JSON.parse(row.moderation_tags) : [],
-      }),
-    )
+        moderationTags: row.moderation_tags
+          ? JSON.parse(row.moderation_tags)
+          : [],
+      })
+    );
   }
 
   async getEventsBatch(
     batchSize: number,
-    offset = 0,
+    offset = 0
   ): Promise<{ events: SignedEvent[]; offset: number }> {
     const results = this.database.execute<{
-      signature: ArrayBuffer
-      raw_event: ArrayBuffer
-      moderation_tags: string | null
+      signature: ArrayBuffer;
+      raw_event: ArrayBuffer;
+      moderation_tags: string | null;
     }>(
       `SELECT signature, raw_event, moderation_tags
        FROM events
        ORDER BY id
        LIMIT ? OFFSET ?`,
-      [batchSize, offset],
-    )
+      [batchSize, offset]
+    );
 
     return {
       events: results.map((row) =>
@@ -126,9 +132,9 @@ export class EventRepository implements IEventRepository {
           moderationTags: row.moderation_tags
             ? JSON.parse(row.moderation_tags)
             : [],
-        }),
+        })
       ),
       offset: offset + results.length,
-    }
+    };
   }
 }

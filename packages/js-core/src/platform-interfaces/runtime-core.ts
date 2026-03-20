@@ -26,9 +26,7 @@ export type PostEventsCallback = (
   events: Uint8Array,
 ) => Promise<void>;
 
-export type PersistEventsCallback = (
-  eventsBytes: Uint8Array,
-) => Promise<void>;
+export type PersistEventsCallback = (eventsBytes: Uint8Array) => Promise<void>;
 
 export type GetExploreCallback = (
   server: string,
@@ -58,9 +56,7 @@ export type GetQueryLatestCallback = (
   eventTypes: Uint8Array,
 ) => Promise<Uint8Array>;
 
-export type SignEventCallback = (
-  eventBytes: Uint8Array,
-) => Promise<Uint8Array>;
+export type SignEventCallback = (eventBytes: Uint8Array) => Promise<Uint8Array>;
 
 export type GetNextLogicalClockCallback = () => Promise<bigint>;
 

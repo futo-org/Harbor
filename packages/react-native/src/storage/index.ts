@@ -1,1 +1,1 @@
-export * as OpSqliteStorage from './op-sqlite'
+export * as OpSqliteStorage from './op-sqlite';
