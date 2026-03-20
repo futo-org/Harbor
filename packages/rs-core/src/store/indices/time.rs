@@ -76,9 +76,9 @@ impl TimeIndex {
             for event_key in event_keys {
                 if !is_event_deleted(event_key) {
                     if let Some(event) = events.get(event_key) {
-                        if let Ok(decoded_event) =
-                            polycentric_common::models::protos::Event::decode(event.event.as_slice())
-                        {
+                        if let Ok(decoded_event) = polycentric_common::models::protos::Event::decode(
+                            event.event.as_slice(),
+                        ) {
                             if decoded_event.content_type == ContentType::Post as i32
                                 || decoded_event.content_type == ContentType::Claim as i32
                             {

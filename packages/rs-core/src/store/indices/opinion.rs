@@ -31,10 +31,13 @@ impl OpinionIndex {
         for reference in &event.references {
             if let Some(target_event_key) = reference.to_event_key() {
                 let system = event.system.as_ref().ok_or_else(|| {
-                    polycentric_common::error::CoreError::InvalidEvent("Event missing system".to_string())
+                    polycentric_common::error::CoreError::InvalidEvent(
+                        "Event missing system".to_string(),
+                    )
                 })?;
 
-                let system_key = polycentric_common::models::internal::SystemKey::from_public_key(system);
+                let system_key =
+                    polycentric_common::models::internal::SystemKey::from_public_key(system);
 
                 self.opinion_index
                     .entry(target_event_key.clone())

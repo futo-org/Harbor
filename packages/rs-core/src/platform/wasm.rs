@@ -3,6 +3,14 @@ use std::cell::RefCell;
 use std::cell::RefMut;
 
 use crate::feeds::feed_helpers;
+use crate::platform::error::PlatformError;
+use crate::query::{EventRangeQuery, QueryEngine};
+use crate::synchronization::sync_helpers::fetch_event_request;
+use crate::synchronization::sync_helpers::prepare_sync_requests;
+use js_sys::Array;
+use js_sys::Boolean;
+use js_sys::Reflect;
+use js_sys::{BigInt, Date as JsDate, Error as JsError, Uint8Array};
 use polycentric_common::models::internal::{EventKey, TimelineKey};
 use polycentric_common::models::internal::{ProcessId, SystemKey};
 use polycentric_common::models::protos::reference::ReferenceType;
@@ -17,14 +25,6 @@ use polycentric_common::models::protos::{
 };
 use polycentric_common::models::traits::Serializable;
 use polycentric_common::models::Digest;
-use crate::platform::error::PlatformError;
-use crate::query::{EventRangeQuery, QueryEngine};
-use crate::synchronization::sync_helpers::fetch_event_request;
-use crate::synchronization::sync_helpers::prepare_sync_requests;
-use js_sys::Array;
-use js_sys::Boolean;
-use js_sys::Reflect;
-use js_sys::{BigInt, Date as JsDate, Error as JsError, Uint8Array};
 use prost::Message;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
@@ -1932,9 +1932,7 @@ impl PolycentricWasm {
         let result = engine
             .query_events(query)
             .map_err(|e| JsError::new(&format!("Query events failed: {}", e)))?;
-        Ok(polycentric_common::models::event_array::serialize_signed_events(
-            &result.events,
-        ))
+        Ok(polycentric_common::models::event_array::serialize_signed_events(&result.events))
     }
 
     /// Helper method to query a system-specific CRDT without making any network requests

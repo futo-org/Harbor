@@ -1,6 +1,6 @@
+use crate::store::{ProcessState, SystemState};
 use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey};
 use polycentric_common::models::protos::SignedEvent;
-use crate::store::{ProcessState, SystemState};
 use std::collections::{BTreeMap, HashMap};
 
 /// Index for events by process

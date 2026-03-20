@@ -1,10 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashSet};
 
-use polycentric_common::error::CoreError;
-use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
-use polycentric_common::models::protos::{Event, LwwElement, Pointer, SignedEvent, VectorClock};
-use polycentric_common::models::Serializable;
 use crate::query::references::ReferencesQueryEngine;
 use crate::query::{
     CRDTQuery, CountReferencesQuery, CountReferencesResult, CrdtResolver, CrdtResult,
@@ -13,6 +9,10 @@ use crate::query::{
     ProcessHeadsResult, ReferencesQuery, ReferencesResult,
 };
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
+use polycentric_common::models::protos::{Event, LwwElement, Pointer, SignedEvent, VectorClock};
+use polycentric_common::models::Serializable;
 use prost::Message;
 
 /// Query engine for providing access to the event store

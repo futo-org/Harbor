@@ -25,11 +25,16 @@ impl TombstoneIndex {
         delete_event_key: &EventKey,
     ) -> Result<(), polycentric_common::error::CoreError> {
         let delete_content = Delete::decode(delete_event.content.as_slice()).map_err(|e| {
-            polycentric_common::error::CoreError::InvalidEvent(format!("Failed to decode delete content: {}", e))
+            polycentric_common::error::CoreError::InvalidEvent(format!(
+                "Failed to decode delete content: {}",
+                e
+            ))
         })?;
 
         let target_process = delete_content.process.as_ref().ok_or_else(|| {
-            polycentric_common::error::CoreError::InvalidEvent("Delete event missing target process".to_string())
+            polycentric_common::error::CoreError::InvalidEvent(
+                "Delete event missing target process".to_string(),
+            )
         })?;
 
         // The tombstone key uses:

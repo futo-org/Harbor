@@ -1,9 +1,9 @@
-use polycentric_common::error::CoreError;
-use polycentric_common::models::internal::{EventKey, SystemKey};
-use polycentric_common::models::protos::{Event, FeedResult, SignedEvent};
 use crate::query::feed::cursor::FeedCursor;
 use crate::query::internal::FeedQuery;
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, SystemKey};
+use polycentric_common::models::protos::{Event, FeedResult, SignedEvent};
 use prost::Message;
 
 /// Feed query engine for handling feed-related queries

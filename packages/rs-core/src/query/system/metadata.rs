@@ -1,8 +1,8 @@
+use crate::query::crdt::CrdtResolver;
+use crate::store::EventStore;
 use polycentric_common::error::CoreError;
 use polycentric_common::models::internal::SystemKey;
 use polycentric_common::models::protos::{ContentType, SignedEvent};
-use crate::query::crdt::CrdtResolver;
-use crate::store::EventStore;
 use prost::Message;
 
 /// System metadata query engine for handling system metadata queries
@@ -180,15 +180,20 @@ impl MetadataQueryEngine {
         > = std::collections::HashMap::new();
 
         for (idx, signed_event) in events.iter().enumerate() {
-            if let Ok(event) = polycentric_common::models::protos::Event::decode(signed_event.event.as_slice()) {
+            if let Ok(event) =
+                polycentric_common::models::protos::Event::decode(signed_event.event.as_slice())
+            {
                 if let Some(lww_element_set) = &event.lww_element_set {
                     let key = lww_element_set.value.clone();
                     let timestamp = lww_element_set.unix_milliseconds;
                     let logical_clock = event.logical_clock;
-                    let operation = polycentric_common::models::protos::lww_element_set::Operation::try_from(
-                        lww_element_set.operation,
-                    )
-                    .unwrap_or(polycentric_common::models::protos::lww_element_set::Operation::Add);
+                    let operation =
+                        polycentric_common::models::protos::lww_element_set::Operation::try_from(
+                            lww_element_set.operation,
+                        )
+                        .unwrap_or(
+                            polycentric_common::models::protos::lww_element_set::Operation::Add,
+                        );
                     match element_map.get(&key) {
                         Some((existing_timestamp, existing_logical_clock, _, _)) => {
                             if (timestamp, logical_clock)
