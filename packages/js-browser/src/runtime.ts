@@ -4,9 +4,3 @@ export { __killWasmInstance, BrowserWasmBridge } from './wasm-bridge';
 
 export type { PolycentricWasm } from '@polycentric/rs-core-wasm-browser';
 
-// Storage constructors/factories used by unit tests.
-export {
-  _createIndexedDBDatabase,
-  IndexedDBDatabase
-} from './storage/indexeddb/database';
-

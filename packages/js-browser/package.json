@@ -12,6 +12,12 @@
       "react-native": "./src/runtime.ts",
       "source": "./src/runtime.ts",
       "import": "./dist/index.es.js"
+    },
+    "./full": {
+      "types": "./dist/index.d.ts",
+      "browser": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "files": [

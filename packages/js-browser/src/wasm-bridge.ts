@@ -11,18 +11,14 @@ let wasmInstance: PolycentricWasm | null = null;
 export type ModuleOrPath = Parameters<typeof init>[0];
 
 export class BrowserWasmBridge implements ICoreBridge {
-  constructor(private readonly moduleOrPath?: ModuleOrPath) {}
+  constructor(private readonly moduleOrPath: ModuleOrPath) {}
 
   public async initialize(): Promise<IPolycentricCore> {
     if (wasmInstance) {
       return this.getCoreInstance();
     }
 
-    if (this.moduleOrPath === undefined) {
-      await (init as unknown as () => Promise<unknown>)();
-    } else {
-      await init(this.moduleOrPath);
-    }
+    await init(this.moduleOrPath);
 
     const core = new PolycentricWasm();
 
