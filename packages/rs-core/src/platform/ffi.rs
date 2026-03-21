@@ -17,6 +17,11 @@ use std::{
 
 use crate::feeds::feed_helpers;
 use crate::{
+    query::{EventRangeQuery, QueryEngine},
+    synchronization::sync_helpers::{fetch_event_request, prepare_sync_requests},
+};
+use polycentric_common::models::protos::reference::ReferenceType;
+use polycentric_common::{
     models::internal::{EventKey, ProcessId, SystemKey, TimelineKey},
     models::{
         protos::{
@@ -31,10 +36,7 @@ use crate::{
         LwwElement, Pointer, Process, PublicKey, Reference, Serializable, SignedEvent, VectorClock,
     },
     platform::PlatformError,
-    query::{EventRangeQuery, QueryEngine},
-    synchronization::sync_helpers::{fetch_event_request, prepare_sync_requests},
 };
-use polycentric_common::models::protos::reference::ReferenceType;
 
 static ENGINE: RwLock<Option<QueryEngine>> = RwLock::new(None);
 

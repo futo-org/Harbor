@@ -4,6 +4,7 @@
 ///
 
 #[derive(Debug, thiserror::Error)]
+#[cfg(target_arch = "wasm32")]
 pub enum PlatformError {
     #[error("Key has invalid type: expected {expected}, got {actual}")]
     KeyInvalidType { expected: u64, actual: u64 },
