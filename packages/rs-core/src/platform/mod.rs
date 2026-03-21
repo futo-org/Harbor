@@ -1,3 +1,5 @@
+mod error;
+
 #[cfg(feature = "ffi")]
 pub mod ffi;
 

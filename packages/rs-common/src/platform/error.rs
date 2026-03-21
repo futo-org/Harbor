@@ -51,13 +51,6 @@ pub enum PlatformError {
     ServerError { server: String, error: String },
 }
 
-#[cfg(target_arch = "wasm32")]
-impl From<PlatformError> for wasm_bindgen::JsValue {
-    fn from(error: PlatformError) -> Self {
-        js_sys::Error::new(&error.to_string()).into()
-    }
-}
-
 pub type PlatformResult<T> = std::result::Result<T, PlatformError>;
 
 #[repr(i32)]
