@@ -126,7 +126,7 @@ rs-sdk-build-ios-device:
   script:
     - |
       cirrus run buildRsCoreIOSDevice \
-      --artifacts-dir . \
+      --artifacts-dir ../../ \
       --env-file .cienv
   artifacts:
     paths:
@@ -138,7 +138,7 @@ rs-sdk-build-ios-sim-arm64:
   script:
     - |
       cirrus run buildRsCoreIOSSimArm64 \
-        --artifacts-dir . \
+        --artifacts-dir ../../ \
         --env-file .cienv
   artifacts:
     paths:
@@ -150,7 +150,7 @@ rs-sdk-build-ios-sim-x86_64:
   script:
     - |
       cirrus run buildRsCoreIOSSimX86 \
-      --artifacts-dir . \
+      --artifacts-dir ../../ \
       --env-file .cienv
   artifacts:
     paths:
@@ -162,7 +162,7 @@ rs-sdk-build-android-arm64:
     - just build-ffi-android-arm64
   artifacts:
     paths:
-      - $RUST_CORE_PATH/target/aarch64-linux-android/release
+      - target/aarch64-linux-android/release
     expire_in: 1 week
 
 rs-sdk-build-android-armv7:
@@ -171,7 +171,7 @@ rs-sdk-build-android-armv7:
     - just build-ffi-android-armv7
   artifacts:
     paths:
-      - $RUST_CORE_PATH/target/armv7-linux-androideabi/release
+      - target/armv7-linux-androideabi/release
     expire_in: 1 week
 
 rs-sdk-build-android-x86:
@@ -180,7 +180,7 @@ rs-sdk-build-android-x86:
     - just build-ffi-android-x86
   artifacts:
     paths:
-      - $RUST_CORE_PATH/target/i686-linux-android/release
+      - target/i686-linux-android/release
     expire_in: 1 week
 
 rs-sdk-build-android-x86_64:
@@ -189,7 +189,7 @@ rs-sdk-build-android-x86_64:
     - just build-ffi-android-x86_64
   artifacts:
     paths:
-      - $RUST_CORE_PATH/target/x86_64-linux-android/release
+      - target/x86_64-linux-android/release
     expire_in: 1 week
 
 rs-sdk-publish:
