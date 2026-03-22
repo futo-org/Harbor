@@ -126,7 +126,7 @@ rs-sdk-build-ios-device:
   script:
     - |
       cirrus run buildRsCoreIOSDevice \
-      --artifacts-dir ../../ \
+      --artifacts-dir . \
       --env-file .cienv
   artifacts:
     paths:
@@ -138,7 +138,7 @@ rs-sdk-build-ios-sim-arm64:
   script:
     - |
       cirrus run buildRsCoreIOSSimArm64 \
-        --artifacts-dir ../../ \
+        --artifacts-dir ./ \
         --env-file .cienv
   artifacts:
     paths:
@@ -150,7 +150,7 @@ rs-sdk-build-ios-sim-x86_64:
   script:
     - |
       cirrus run buildRsCoreIOSSimX86 \
-      --artifacts-dir ../../ \
+      --artifacts-dir . \
       --env-file .cienv
   artifacts:
     paths:
@@ -220,10 +220,10 @@ rs-sdk-publish:
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSDevice/binary/librs_core-ios-device.a "${REGISTRY_URL}/librs_core-ios-device.a"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimArm64/binary/librs_core-ios-sim-arm64.a "${REGISTRY_URL}/librs_core-ios-sim-arm64.a"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimX86/binary/librs_core-ios-sim-x86_64.a "${REGISTRY_URL}/librs_core-ios-sim-x86_64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/aarch64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/armv7-linux-androideabi/release/librs_core.a "${REGISTRY_URL}/librs_core-android-armv7.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/i686-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file target/x86_64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86_64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-arm64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release/librs_core.a "${REGISTRY_URL}/librs_core-android-armv7.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86_64.a"
 
 .rs-sdk-publish-npm:
   rules:
