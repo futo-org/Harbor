@@ -30,3 +30,7 @@ cp target/i686-linux-android/release/libjni_bindings.so \
 mkdir ../app/src/main/jniLibs/x86_64/
 cp target/x86_64-linux-android/release/libjni_bindings.so \
    ../app/src/main/jniLibs/x86_64/
+   
+cd ..
+   
+./gradlew :app:assembleRelease
