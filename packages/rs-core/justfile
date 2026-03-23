@@ -67,7 +67,7 @@ _build-ffi target dest: _ensure-ffi
         echo "FAILED: {{target}}"
         exit 1
     fi
-    lib="target/{{target}}/release/libpolycentric_core.a"
+    lib="../../target/{{target}}/release/libpolycentric_core.a"
     if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
     mkdir -p "{{dest}}"
     cp "$lib" "{{dest}}/libpolycentric_core.a"
