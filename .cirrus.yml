@@ -8,7 +8,7 @@ build_ios_device_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios
-    - pwd && ls
+    - pwd && ls && ls ../../
     - cp target/aarch64-apple-ios/release/librs_core.a librs_core-ios-device.a
   binary_artifacts:
     path: 'librs_core-ios-device.a'
