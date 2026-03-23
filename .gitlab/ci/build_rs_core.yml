@@ -217,13 +217,13 @@ rs-sdk-publish:
     - |
       VERSION=${CI_COMMIT_TAG#rs-sdk-}
       REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rs-core/${VERSION}"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSDevice/binary/librs_core-ios-device.a "${REGISTRY_URL}/librs_core-ios-device.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimArm64/binary/librs_core-ios-sim-arm64.a "${REGISTRY_URL}/librs_core-ios-sim-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimX86/binary/librs_core-ios-sim-x86_64.a "${REGISTRY_URL}/librs_core-ios-sim-x86_64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release/librs_core.a "${REGISTRY_URL}/librs_core-android-armv7.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release/librs_core.a "${REGISTRY_URL}/librs_core-android-x86_64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSDevice/binary/libpolycentric_core-ios-device.a "${REGISTRY_URL}/libpolycentric_core-ios-device.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimArm64/binary/libpolycentric_core-ios-sim-arm64.a "${REGISTRY_URL}/libpolycentric_core-ios-sim-arm64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimX86/binary/libpolycentric_core-ios-sim-x86_64.a "${REGISTRY_URL}/libpolycentric_core-ios-sim-x86_64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-arm64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-armv7.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86_64.a"
 
 .rs-sdk-publish-npm:
   rules:

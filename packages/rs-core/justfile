@@ -67,11 +67,11 @@ _build-ffi target dest: _ensure-ffi
         echo "FAILED: {{target}}"
         exit 1
     fi
-    lib="target/{{target}}/release/librs_core.a"
+    lib="target/{{target}}/release/libpolycentric_core.a"
     if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
     mkdir -p "{{dest}}"
-    cp "$lib" "{{dest}}/librs_core.a"
-    size=$(du -sh "{{dest}}/librs_core.a" | cut -f1 | xargs)
+    cp "$lib" "{{dest}}/libpolycentric_core.a"
+    size=$(du -sh "{{dest}}/libpolycentric_core.a" | cut -f1 | xargs)
     printf "%-30s %s\n" "{{target}}" "$size"
 
 ios-libs := "../react-native/ios/libs"
