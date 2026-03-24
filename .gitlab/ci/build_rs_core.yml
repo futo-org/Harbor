@@ -242,7 +242,7 @@ rs-sdk-publish-npm-browser:
   script:
     - |
       VERSION=${CI_COMMIT_TAG#rs-sdk-}
-      cd ../rs-core-wasm-browser
+      cd packages/rs-core-wasm-browser
       sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
       echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
       echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
@@ -256,7 +256,7 @@ rs-sdk-publish-npm-node:
   script:
     - |
       VERSION=${CI_COMMIT_TAG#rs-sdk-}
-      cd ../rs-core-wasm-node
+      cd packages/rs-core-wasm-node
       sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
       echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
       echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
