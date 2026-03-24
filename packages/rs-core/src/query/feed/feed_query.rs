@@ -1,9 +1,9 @@
-use crate::error::CoreError;
-use crate::models::internal::{EventKey, SystemKey};
-use crate::models::protos::{Event, FeedResult, SignedEvent};
 use crate::query::feed::cursor::FeedCursor;
 use crate::query::internal::FeedQuery;
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, SystemKey};
+use polycentric_common::models::protos::{Event, FeedResult, SignedEvent};
 use prost::Message;
 
 /// Feed query engine for handling feed-related queries
@@ -93,7 +93,7 @@ impl FeedQueryEngine {
         event_store: &EventStore,
     ) -> Result<Vec<u8>, CoreError> {
         let system_key = SystemKey::from_public_key(
-            &crate::models::protos::PublicKey::decode(system_bytes).map_err(|e| {
+            &polycentric_common::models::protos::PublicKey::decode(system_bytes).map_err(|e| {
                 CoreError::InvalidEvent(format!("Failed to decode system key: {}", e))
             })?,
         );
@@ -110,7 +110,7 @@ impl FeedQueryEngine {
             .query_feed(query, event_store)
             .map_err(|e| CoreError::InvalidEvent(format!("Query feed failed: {}", e)))?;
 
-        let feed_result_proto = crate::models::protos::FeedResult {
+        let feed_result_proto = polycentric_common::models::protos::FeedResult {
             events: result.events,
             cursor: result.cursor,
         };

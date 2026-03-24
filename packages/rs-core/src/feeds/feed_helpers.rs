@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use crate::{error::CoreError, models::SignedEvent};
+use polycentric_common::{error::CoreError, models::SignedEvent};
 
 /// Combines multiple feeds from different servers while ensuring that each server feed shows up equally often and no server can dominate.
 ///

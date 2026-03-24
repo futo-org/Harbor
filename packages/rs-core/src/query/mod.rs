@@ -1,4 +1,4 @@
-use crate::models::protos::{CountReferencesResult, FeedResult, ReferencesResult};
+use polycentric_common::models::protos::{CountReferencesResult, FeedResult, ReferencesResult};
 
 pub mod crdt;
 pub mod engine;

@@ -1,7 +1,7 @@
-use crate::error::CoreError;
-use crate::models::protos::lww_element_set::Operation;
-use crate::models::protos::{Event, LwwElement, SignedEvent};
 use crate::query::internal::CrdtResult;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::protos::lww_element_set::Operation;
+use polycentric_common::models::protos::{Event, LwwElement, SignedEvent};
 use prost::Message;
 use std::collections::HashMap;
 

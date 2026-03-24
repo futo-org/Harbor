@@ -1,5 +1,7 @@
-use crate::models::internal::EventKey;
-use crate::models::protos::{EventKey as ProtobufEventKey, FeedCursor as ProtobufFeedCursor};
+use polycentric_common::models::internal::EventKey;
+use polycentric_common::models::protos::{
+    EventKey as ProtobufEventKey, FeedCursor as ProtobufFeedCursor,
+};
 use prost::Message;
 
 /// Feed cursor for pagination

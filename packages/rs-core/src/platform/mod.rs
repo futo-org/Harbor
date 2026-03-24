@@ -1,6 +1,4 @@
-pub mod error;
-
-pub use error::{ErrorCode, PlatformError, PlatformResult};
+mod error;
 
 #[cfg(feature = "ffi")]
 pub mod ffi;

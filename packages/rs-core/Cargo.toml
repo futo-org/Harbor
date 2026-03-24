@@ -1,9 +1,9 @@
 [package]
-name = "rs-core"
-version = "0.1.0"
+name = "polycentric-core"
+version = "0.0.0"
 edition = "2021"
 description = "Rust core for the Polycentric protocol"
-license-file = "LICENSE.md"
+license-file = "../../LICENSE"
 repository = ""
 
 [lib]
@@ -14,6 +14,7 @@ thiserror = "2.0"
 prost = "0.13"
 prost-types = "0.13"
 rand = "0.8"
+polycentric-common = { path = "../rs-common" }
 getrandom = { version = "0.2", features = ["js"] }
 sha2 = "0.10"
 

@@ -1,0 +1,12 @@
+/target/
+
+
+.vscode/
+.idea/
+*.swp
+*~
+
+**/.DS_Store
+
+./pkg-node
+./pkg-web

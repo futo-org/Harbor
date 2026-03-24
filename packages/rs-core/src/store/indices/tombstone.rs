@@ -1,5 +1,5 @@
-use crate::models::internal::EventKey;
-use crate::models::protos::{Delete, Event, SignedEvent};
+use polycentric_common::models::internal::EventKey;
+use polycentric_common::models::protos::{Delete, Event, SignedEvent};
 use prost::Message;
 use std::collections::BTreeMap;
 
@@ -23,13 +23,18 @@ impl TombstoneIndex {
         &mut self,
         delete_event: &Event,
         delete_event_key: &EventKey,
-    ) -> Result<(), crate::error::CoreError> {
+    ) -> Result<(), polycentric_common::error::CoreError> {
         let delete_content = Delete::decode(delete_event.content.as_slice()).map_err(|e| {
-            crate::error::CoreError::InvalidEvent(format!("Failed to decode delete content: {}", e))
+            polycentric_common::error::CoreError::InvalidEvent(format!(
+                "Failed to decode delete content: {}",
+                e
+            ))
         })?;
 
         let target_process = delete_content.process.as_ref().ok_or_else(|| {
-            crate::error::CoreError::InvalidEvent("Delete event missing target process".to_string())
+            polycentric_common::error::CoreError::InvalidEvent(
+                "Delete event missing target process".to_string(),
+            )
         })?;
 
         // The tombstone key uses:

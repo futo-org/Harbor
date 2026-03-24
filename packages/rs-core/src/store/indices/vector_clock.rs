@@ -1,5 +1,5 @@
-use crate::models::internal::SystemKey;
-use crate::models::VectorClock;
+use polycentric_common::models::internal::SystemKey;
+use polycentric_common::models::VectorClock;
 use std::collections::BTreeMap;
 
 /// Index for vector clock state tracking
