@@ -1,0 +1,17 @@
+syntax = "proto3";
+package polycentric;
+
+message ListEventsRequest {
+   int32 limit = 1; // Max number of events to return
+}
+
+message ListEventsReply {
+    string message = 1;
+}
+
+// Example doc 1
+service Events {
+    // Example doc 2
+    rpc ListEvents (ListEventsRequest) returns (ListEventsReply);
+}
+

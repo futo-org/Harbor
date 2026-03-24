@@ -1,7 +1,11 @@
 {
-  "eslint.workingDirectories": [{ "pattern": "packages/*" }],
+  "eslint.workingDirectories": [
+    {
+      "pattern": "packages/*"
+    }
+  ],
   "editor.suggest.showSnippets": false,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",

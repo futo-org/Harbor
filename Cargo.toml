@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "packages/rs-common",
-    "packages/rs-core"
+    "packages/rs-core",
+    "services/server"
 ]
 resolver = "2"
