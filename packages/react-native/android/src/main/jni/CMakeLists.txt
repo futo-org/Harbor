@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
 # Pre-built Rust core library
-add_library(rs_core STATIC IMPORTED)
-set_target_properties(rs_core PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${ANDROID_ABI}/librs_core.a"
+add_library(polycentric_core STATIC IMPORTED)
+set_target_properties(polycentric_core PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${ANDROID_ABI}/libpolycentric_core.a"
 )
 
 # C++ TurboModule implementation (shared with iOS via cpp/ directory)
@@ -18,7 +18,7 @@ target_include_directories(polycentric_cxx PUBLIC
 )
 
 target_link_libraries(polycentric_cxx
-    rs_core
+    polycentric_core
     jsi
     reactnative
 )

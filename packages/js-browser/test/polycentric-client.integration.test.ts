@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { KEY_TYPE, PolycentricClient, Event } from '@polycentric/js-core';
 import type { PolycentricClientConfig, KeyPair } from '@polycentric/js-core';
-import wasmUrl from '@polycentric/rs-core-wasm-browser/rs_core_bg.wasm';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   BrowserWasmBridge,
   SqlStorageDriver,

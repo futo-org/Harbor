@@ -282,8 +282,8 @@ importers:
         specifier: workspace:*
         version: link:../js-core
       '@polycentric/rs-core-wasm-node':
-        specifier: '*'
-        version: 0.0.1
+        specifier: workspace:*
+        version: link:../rs-core-wasm-node
       sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
@@ -1783,9 +1783,6 @@ packages:
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
-
-  '@polycentric/rs-core-wasm-node@0.0.1':
-    resolution: {integrity: sha1-GRZDLPToXYt9UejEagBnu0uzc2w=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-node/-/@polycentric/rs-core-wasm-node-0.0.1.tgz}
 
   '@protobuf-ts/plugin@2.11.1':
     resolution: {integrity: sha512-HyuprDcw0bEEJqkOWe1rnXUP0gwYLij8YhPuZyZk6cJbIgc/Q0IFgoHQxOXNIXAcXM4Sbehh6kjVnCzasElw1A==}
@@ -9103,8 +9100,6 @@ snapshots:
   '@pkgr/core@0.2.9': {}
 
   '@polka/url@1.0.0-next.29': {}
-
-  '@polycentric/rs-core-wasm-node@0.0.1': {}
 
   '@protobuf-ts/plugin@2.11.1':
     dependencies:

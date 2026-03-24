@@ -1,7 +1,7 @@
 import { expect, test, describe, afterEach } from 'vitest';
 import { BrowserWasmBridge, __killWasmInstance } from '@polycentric/js-browser';
 import { WasmError } from '@polycentric/js-core';
-import wasmUrl from '@polycentric/rs-core-wasm-browser/rs_core_bg.wasm';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 
 describe('WASM Initialization', () => {
   afterEach(() => {

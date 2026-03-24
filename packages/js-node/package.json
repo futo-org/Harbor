@@ -27,7 +27,7 @@
     "sqlite3": "^5.1.7"
   },
   "peerDependencies": {
-    "@polycentric/rs-core-wasm-node": "*"
+    "@polycentric/rs-core-wasm-node": "workspace:*"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",

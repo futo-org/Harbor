@@ -4,7 +4,7 @@ import {
   BrowserWasmBridge,
   IndexedDBStorageDriver,
 } from '@polycentric/js-browser';
-import polycentricWasmUrl from '@polycentric/rs-core-wasm-browser/rs_core_bg.wasm';
+import polycentricWasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   createIdentityWithDefaultServer,
   normalizeDatabaseName,

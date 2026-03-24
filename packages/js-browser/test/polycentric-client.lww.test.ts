@@ -7,7 +7,7 @@ import {
   ImageManifest,
 } from '@polycentric/js-core';
 import type { PolycentricClientConfig } from '@polycentric/js-core';
-import wasmUrl from '@polycentric/rs-core-wasm-browser/rs_core_bg.wasm';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   BrowserWasmBridge,
   SqlStorageDriver,
