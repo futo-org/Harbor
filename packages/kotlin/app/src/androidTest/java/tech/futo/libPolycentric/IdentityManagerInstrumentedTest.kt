@@ -236,14 +236,19 @@ class IdentityManagerInstrumentedTest {
 
     @Test
     fun shouldTrackCurrentIdentityState() {
-        assertNull(client.currentKeyPair)
-
-        val keyPair = client.identityManager.createIdentity(
+        val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
 
         assertNotNull(client.currentKeyPair)
-        assertEquals(keyPair, client.currentKeyPair)
+        assertEquals(keyPair1, client.currentKeyPair)
+
+        val keyPair2 = client.identityManager.createIdentity(
+            IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
+        )
+
+        assertNotNull(client.currentKeyPair)
+        assertEquals(keyPair2, client.currentKeyPair)
     }
 
     @Test

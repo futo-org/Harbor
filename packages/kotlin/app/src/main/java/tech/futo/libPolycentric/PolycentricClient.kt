@@ -16,6 +16,8 @@ import tech.futo.libPolycentric.services.KeyPair
 import okio.ByteString.Companion.toByteString
 import polycentric.Process
 import tech.futo.libPolycentric.platform.INetworkManager
+import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
+import tech.futo.libPolycentric.services.IdentityOptions
 import tech.futo.libPolycentric.services.SyncService
 
 enum class ClientState {
@@ -43,6 +45,7 @@ enum class InitializationStep(val message: String) {
     LOADING_PROCESS_ID("Loading process ID..."),
     CREATING_PROCESS_ID("Creating process ID..."),
     HYDRATING_EVENTS("Hydrating events..."),
+    CREATING_EPHEMERAL_IDENTITY("Creating ephemeral identity..."),
     COMPLETE("Initialization complete."),
 }
 
@@ -105,6 +108,11 @@ class PolycentricClient(
 
             setStep(InitializationStep.HYDRATING_EVENTS)
             hydrate()
+
+            setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY)
+            identityManager.createIdentity(
+                IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = true, ephemeral = true)
+            )
 
             setStep(InitializationStep.COMPLETE)
             setState(ClientState.READY)
