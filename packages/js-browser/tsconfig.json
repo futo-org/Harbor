@@ -1,9 +1,8 @@
 {
   "extends": "@polycentric/tsconfig/compiled-package.json",
-  "include": ["src", "test"],
+  "include": ["src"],
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "emitDeclarationOnly": false,
-    "rootDir": "."
+    "emitDeclarationOnly": false
   }
 }
