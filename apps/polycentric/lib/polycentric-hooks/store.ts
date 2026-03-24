@@ -1,6 +1,6 @@
 import { createStore, useStore as useZustandStore } from 'zustand';
 import { types } from '@polycentric/react-native';
-import type { PolycentricClient } from '@polycentric/react-native';
+import type { KeyPair, PolycentricClient } from '@polycentric/react-native';
 import {
   getPointer,
   type PostData,
@@ -12,9 +12,9 @@ import { fetchPostStats } from './fetchPostStats';
 const EMPTY_IDS: string[] = [];
 
 export type PostState = {
-  signedEvent: types.ISignedEvent;
+  signedEvent: types.SignedEvent;
   decoded: PostData;
-  pointer: types.IPointer;
+  pointer: types.Pointer;
   stats: { likes: number; dislikes: number; comments: number };
   myOpinion: types.Opinion;
   metadataFetched: boolean;
@@ -25,15 +25,9 @@ type FeedEntry = {
   hasMore: boolean;
 };
 
-type IdentityKeyPair = {
-  keyType: number;
-  privateKey: types.PrivateKey;
-  publicKey: types.PublicKey;
-};
-
 export interface PolycentricStore {
-  identities: IdentityKeyPair[];
-  refreshIdentities: () => void;
+  identities: KeyPair[];
+  refreshIdentities: () => Promise<void>;
 
   feeds: Record<string, FeedEntry>;
   feedVersions: Record<string, number>;
@@ -48,13 +42,13 @@ export interface PolycentricStore {
 
   usernames: Record<string, string>;
   fetchedUsernames: Record<string, boolean>;
-  ensureUsernameLoaded: (key: string, pubkey: types.IPublicKey) => void;
+  ensureUsernameLoaded: (key: string, pubkey: types.PublicKey) => void;
   ingestUsernameEvent: (key: string, name: string) => void;
 
   posts: Record<string, PostState>;
   ingestPost: (
     postId: string,
-    signedEvent: types.ISignedEvent,
+    signedEvent: types.SignedEvent,
     decoded: PostData,
   ) => void;
   ensurePostMetadataLoaded: (postId: string) => void;
@@ -102,9 +96,9 @@ function toggleOpinion(
 
 export function createPolycentricStore(client: PolycentricClient) {
   return createStore<PolycentricStore>()((set, get) => ({
-    identities: client.getAllIdentities(),
-    refreshIdentities() {
-      set({ identities: client.getAllIdentities() });
+    identities: [],
+    async refreshIdentities() {
+      set({ identities: await client.getAllIdentities() });
     },
 
     feeds: {},
@@ -305,7 +299,7 @@ async function ensurePostLoaded(
       parsed.logicalClock,
       parsed.logicalClock,
     );
-    let signedEvent = events?.[0];
+    let signedEvent: types.SignedEvent | null | undefined = events[0];
     if (!signedEvent) {
       try {
         signedEvent = await client.queryManager.fetchEvent(
@@ -317,7 +311,7 @@ async function ensurePostLoaded(
         // fetchEvent failed
       }
       if (signedEvent) {
-        await client.ffiBridge.ingestEvent(signedEvent);
+        await client.ingestEvent(signedEvent);
       }
     }
     if (signedEvent) {
@@ -334,13 +328,13 @@ async function ensurePostLoaded(
 function resolvePointer(
   get: () => PolycentricStore,
   postId: string,
-): types.IPointer | undefined {
+): types.Pointer | undefined {
   return get().posts[postId]?.pointer;
 }
 
 function ingestEvent(
   get: () => PolycentricStore,
-  ev: types.ISignedEvent,
+  ev: types.SignedEvent,
 ): string | null {
   const d = decodePostEvent(ev);
   if (!d) return null;

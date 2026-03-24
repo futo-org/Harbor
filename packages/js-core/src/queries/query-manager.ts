@@ -1,24 +1,21 @@
-import { CommentsFeedState, ModerationFilters, ServerError } from '../utils';
+import { CommentsFeedState, ModerationFilters } from '../utils';
 import type { PolycentricClient } from '../polycentric-client';
 import {
   ContentType,
   LWWElement,
   Pointer,
+  Process,
   PublicKey,
   Event as ProtobufEvent,
   FeedResult,
   ImageManifest,
   Events,
+  RangesForSystem,
   ResultEventsAndRelatedEventsAndCursor,
   Reference,
   EventKey,
 } from '../proto/polycentric';
 import { FeedQuery } from './feed-query';
-
-interface ResultAndServerErrors {
-  result: Uint8Array;
-  errors: ServerError[];
-}
 
 export class QueryManager {
   constructor(private readonly client: PolycentricClient) {}
@@ -32,19 +29,19 @@ export class QueryManager {
 
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
-      : null;
+      : undefined;
     const getExploreCallback = this.client.httpClient.getExplore.bind(
       this.client.httpClient,
     );
 
     return new FeedQuery(this.client, async (cursors, _latestEvent) => {
-      const result = (await this.client.wasmCore.query_explore_feed(
+      const result = await this.client.core.query_explore_feed(
         currentSystemBytes,
         getExploreCallback,
         cursors,
         perServerLimit,
         filters,
-      )) as ResultAndServerErrors;
+      );
 
       return {
         events: Events.fromBinary(result.result),
@@ -60,14 +57,14 @@ export class QueryManager {
   ): FeedQuery {
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
-      : null;
+      : undefined;
     const getExploreCallback = this.client.httpClient.getExplore.bind(
       this.client.httpClient,
     );
 
     return new FeedQuery(this.client, async (cursors, _latestEvent) => {
       const response =
-        await this.client.wasmCore.query_explore_feed_specific_server(
+        await this.client.core.query_explore_feed_specific_server(
           server,
           getExploreCallback,
           cursors.get(server),
@@ -101,10 +98,10 @@ export class QueryManager {
 
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
-      : null;
+      : undefined;
 
     return new FeedQuery(this.client, async (cursors, _latestEvent) => {
-      const result = (await this.client.wasmCore.query_search(
+      const result = await this.client.core.query_search(
         currentSystemBytes,
         getSearchCallback,
         searchQuery,
@@ -112,7 +109,7 @@ export class QueryManager {
         cursors,
         perServerLimit,
         filters,
-      )) as ResultAndServerErrors;
+      );
 
       return {
         events: Events.fromBinary(result.result),
@@ -130,7 +127,7 @@ export class QueryManager {
         ? ProtobufEvent.toBinary(latestEvent)
         : undefined;
 
-      const result = this.client.wasmCore.query_following_feed(
+      const result = this.client.core.query_following_feed(
         currentSystemBytes,
         limit,
         latestEventBytes,
@@ -164,7 +161,7 @@ export class QueryManager {
         ? ProtobufEvent.toBinary(latestEvent)
         : undefined;
 
-      const result = await this.client.wasmCore.query_author_feed(
+      const result = await this.client.core.query_author_feed(
         currentSystemBytes,
         profileBytes,
         limit,
@@ -182,7 +179,7 @@ export class QueryManager {
   }
 
   queryReferencesFeed(
-    reference: Reference,
+    reference: Reference | Pointer,
     moderationFilters?: ModerationFilters,
   ): FeedQuery {
     const currentSystem = this.client.currentIdentity.keyPair.publicKey;
@@ -191,13 +188,13 @@ export class QueryManager {
     const getQueryReferencesCallback =
       this.client.httpClient.getQueryReferences.bind(this.client.httpClient);
 
-    const referenceBytes = Reference.toBinary(reference);
+    const referenceBytes = Reference.toBinary(this.toReference(reference));
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
-      : null;
+      : undefined;
 
     return new FeedQuery(this.client, async (cursors, _latestEvent) => {
-      const result = await this.client.wasmCore.query_references_feed(
+      const result = await this.client.core.query_references_feed(
         currentSystemBytes,
         getQueryReferencesCallback,
         referenceBytes,
@@ -221,7 +218,7 @@ export class QueryManager {
         ? ProtobufEvent.toBinary(latestEvent)
         : undefined;
 
-      const result = this.client.wasmCore.query_likes_feed(
+      const result = this.client.core.query_likes_feed(
         currentSystemBytes,
         limit,
         latestEventBytes,
@@ -243,12 +240,12 @@ export class QueryManager {
 
     const filters = moderationFilters
       ? JSON.stringify(moderationFilters)
-      : null;
+      : undefined;
 
     const feedState: CommentsFeedState = {};
 
     return new FeedQuery(this.client, async (_cursors, _latestEvent) => {
-      const result = await this.client.wasmCore.query_comments_feed(
+      const result = await this.client.core.query_comments_feed(
         currentSystemBytes,
         getQueryReferencesCallback,
         feedState,
@@ -267,7 +264,7 @@ export class QueryManager {
     const currentSystemBytes = PublicKey.toBinary(currentSystem);
     const targetPointerBytes = Pointer.toBinary(targetPointer);
 
-    const result = this.client.wasmCore.query_opinion(
+    const result = this.client.core.query_opinion(
       currentSystemBytes,
       targetPointerBytes,
     );
@@ -278,7 +275,7 @@ export class QueryManager {
   }
 
   queryIsDeleted(targetPointer: Pointer): boolean {
-    return this.client.wasmCore.query_event_is_deleted(
+    return this.client.core.query_event_is_deleted(
       Pointer.toBinary(targetPointer),
     );
   }
@@ -295,7 +292,7 @@ export class QueryManager {
     const systemBytes = PublicKey.toBinary(system);
     const { startTime, endTime, limit, cursor } = options;
 
-    const result = this.client.wasmCore.query_feed_with_cursor(
+    const result = this.client.core.query_feed_with_cursor(
       systemBytes,
       startTime,
       endTime,
@@ -311,6 +308,86 @@ export class QueryManager {
     }
 
     return FeedResult.fromBinary(result);
+  }
+
+  queryEvents(
+    system: PublicKey,
+    process: Process,
+    startClock: number | bigint,
+    endClock: number | bigint,
+  ) {
+    const result = this.client.core.query_events(
+      PublicKey.toBinary(system),
+      Process.toBinary(process),
+      BigInt(startClock),
+      BigInt(endClock),
+    );
+
+    return Events.fromBinary(result).events;
+  }
+
+  async fetchEvent(
+    system: PublicKey,
+    process: Process,
+    logicalClock: number | bigint,
+  ) {
+    const systemBytes = PublicKey.toBinary(system);
+    const rangesBytes = RangesForSystem.toBinary({
+      rangesForProcesses: [
+        {
+          process,
+          ranges: [
+            {
+              low: BigInt(logicalClock),
+              high: BigInt(logicalClock),
+            },
+          ],
+        },
+      ],
+    });
+
+    const servers = this.queryServers(this.client.currentSystem);
+
+    for (const server of servers) {
+      try {
+        const result = await this.client.httpClient.getEvents(
+          server,
+          systemBytes,
+          rangesBytes,
+        );
+        const events = Events.fromBinary(result).events;
+        if (events.length > 0) {
+          return events[0] ?? null;
+        }
+      } catch {
+        // Fall through to the next server.
+      }
+    }
+
+    return null;
+  }
+
+  async queryReplies(pointer: Pointer) {
+    const feed = this.queryReferencesFeed(pointer);
+    const replies = [];
+    let page = await feed.read();
+
+    while (page.length > 0) {
+      replies.push(
+        ...page.filter((item) => {
+          const event = ProtobufEvent.fromBinary(item.event);
+          return event.contentType === ContentType.POST;
+        }),
+      );
+
+      if (!feed.hasMore) {
+        break;
+      }
+
+      page = await feed.read();
+    }
+
+    return replies;
   }
 
   async queryUsername(system: PublicKey): Promise<string | null> {
@@ -345,7 +422,7 @@ export class QueryManager {
 
   queryFollows(system: PublicKey): PublicKey[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result = this.client.wasmCore.query_follows_for_system(systemBytes);
+    const result = this.client.core.query_follows_for_system(systemBytes);
 
     if (!result) return [];
 
@@ -361,7 +438,7 @@ export class QueryManager {
 
   queryBlocks(system: PublicKey): PublicKey[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result = this.client.wasmCore.query_blocks_for_system(systemBytes);
+    const result = this.client.core.query_blocks_for_system(systemBytes);
 
     if (!result) return [];
 
@@ -377,7 +454,7 @@ export class QueryManager {
 
   queryServers(system: PublicKey): string[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result = this.client.wasmCore.query_servers_for_system(systemBytes);
+    const result = this.client.core.query_servers_for_system(systemBytes);
 
     if (!result) return [];
 
@@ -393,8 +470,7 @@ export class QueryManager {
 
   queryAuthorities(system: PublicKey): string[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result =
-      this.client.wasmCore.query_authorities_for_system(systemBytes);
+    const result = this.client.core.query_authorities_for_system(systemBytes);
 
     if (!result) return [];
 
@@ -410,7 +486,7 @@ export class QueryManager {
 
   queryTopics(system: PublicKey): string[] {
     const systemBytes = PublicKey.toBinary(system);
-    const result = this.client.wasmCore.query_topics_for_system(systemBytes);
+    const result = this.client.core.query_topics_for_system(systemBytes);
 
     if (!result) return [];
 
@@ -432,7 +508,7 @@ export class QueryManager {
     const currentSystemBytes = PublicKey.toBinary(currentSystem);
 
     const systemBytes = PublicKey.toBinary(system);
-    const result = await this.client.wasmCore.query_crdt_for_system(
+    const result = await this.client.core.query_crdt_for_system(
       systemBytes,
       BigInt(contentType),
       currentSystemBytes,
@@ -446,16 +522,27 @@ export class QueryManager {
 
   eventPointer(event: ProtobufEvent): Pointer {
     const eventBytes = ProtobufEvent.toBinary(event);
-    const pointerBytes = this.client.wasmCore.get_pointer(eventBytes);
+    const pointerBytes = this.client.core.get_pointer(eventBytes);
     return Pointer.fromBinary(pointerBytes);
   }
 
   eventKey(event: ProtobufEvent): EventKey {
     const pointer = Pointer.toBinary(this.eventPointer(event));
-    const eventKeyBytes = this.client.wasmCore.get_reference(pointer);
+    const eventKeyBytes = this.client.core.get_reference(pointer);
 
     if (!eventKeyBytes) throw new TypeError('Event is missing required fields');
 
     return EventKey.fromBinary(eventKeyBytes);
+  }
+
+  private toReference(reference: Reference | Pointer): Reference {
+    if ('referenceType' in reference) {
+      return reference;
+    }
+
+    return Reference.create({
+      referenceType: BigInt(2),
+      reference: Pointer.toBinary(reference),
+    });
   }
 }

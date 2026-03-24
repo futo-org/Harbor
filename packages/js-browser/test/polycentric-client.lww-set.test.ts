@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { KEY_TYPE, PolycentricClient } from '@polycentric/js-core';
 import type { PolycentricClientConfig } from '@polycentric/js-core';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   BrowserWasmBridge,
   SqlStorageDriver,
   BrowserCryptoManager,
   OPFSSQLiteDatabase,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-browser/full';
 
 describe('PolycentricClient LWW Element Sets', () => {
   const TEST_DB_NAME = 'test-db-lww-set';
@@ -20,7 +21,7 @@ describe('PolycentricClient LWW Element Sets', () => {
     }
 
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };

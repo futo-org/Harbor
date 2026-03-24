@@ -20,7 +20,7 @@ export default function PostScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const { Sheet, present, dismiss } = useSheet();
 
-  const [replyToEvent, setReplyToEvent] = useState<types.ISignedEvent | null>(
+  const [replyToEvent, setReplyToEvent] = useState<types.SignedEvent | null>(
     null,
   );
 
@@ -33,14 +33,14 @@ export default function PostScreen() {
   );
 
   const handleAuthorPress = useCallback(
-    (publicKey: types.IPublicKey) => {
+    (publicKey: types.PublicKey) => {
       router.replace(Routes.profile(publicKeyToStringURLSafe(publicKey)));
     },
     [router],
   );
 
   const handleReply = useCallback(
-    (se: types.ISignedEvent) => {
+    (se: types.SignedEvent) => {
       setReplyToEvent(se);
       present();
     },
@@ -84,7 +84,7 @@ export default function PostScreen() {
           onReply={handleReply}
         />
       </Box>
-      <Sheet detents={[1]} scrollable>
+      <Sheet detents={[0.82]}>
         <ComposeSheetInner
           dismiss={dismiss}
           onPostCreated={handlePostCreated}

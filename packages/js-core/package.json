@@ -23,7 +23,6 @@
   "dependencies": {
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
-    "@polycentric/rs-core-wasm-browser": "*",
     "@protobuf-ts/runtime": "^2.10.0",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",
     "base64url": "^3.0.1",

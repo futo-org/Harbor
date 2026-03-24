@@ -1,4 +1,4 @@
-import { open, type DB } from '@op-engineering/op-sqlite';
+import { open, type DB, type Scalar } from '@op-engineering/op-sqlite';
 import { type DatabaseSchema, schemaV1 } from './schema';
 
 export class Database {
@@ -36,7 +36,7 @@ export class Database {
     }
   }
 
-  execute<T>(sql: string, params?: unknown[]): T[] {
+  execute<T>(sql: string, params?: Scalar[]): T[] {
     if (!this.db) {
       throw new Error('Database not opened');
     }
@@ -48,7 +48,7 @@ export class Database {
     return (result.rows ?? []) as T[];
   }
 
-  run(sql: string, params?: unknown[]): void {
+  run(sql: string, params?: Scalar[]): void {
     if (!this.db) {
       throw new Error('Database not opened');
     }
@@ -61,7 +61,7 @@ export class Database {
    * protobuf.js reader.bytes() returns subarrays (non-zero byteOffset),
    * and op-sqlite binds the entire backing ArrayBuffer, ignoring the view.
    */
-  private static sanitizeParams(params: unknown[]): unknown[] {
+  private static sanitizeParams(params: Scalar[]): Scalar[] {
     return params.map((p) => {
       if (
         p instanceof Uint8Array &&

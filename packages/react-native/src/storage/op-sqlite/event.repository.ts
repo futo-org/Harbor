@@ -1,34 +1,33 @@
-import type { Database } from '../database';
-import { polycentric as proto } from '../../generated/protocol';
+import type { Database } from './database';
+import {
+  ContentType,
+  Delete,
+  Event,
+  Pointer,
+  SignedEvent,
+  type IEventRepository,
+} from '@polycentric/js-core';
 
-export class EventRepository {
-  private readonly database: Database;
+export class EventRepository implements IEventRepository {
+  constructor(private readonly database: Database) {}
 
-  constructor(database: Database) {
-    this.database = database;
-  }
+  async persistEvent(signedEvent: SignedEvent): Promise<void> {
+    const rawEventBytes = signedEvent.event;
+    const event = Event.fromBinary(rawEventBytes);
 
-  persistEvent(signedEvent: proto.ISignedEvent): void {
-    const rawEventBytes = signedEvent.event!;
-
-    const event = proto.Event.decode(rawEventBytes);
-
-    const systemKeyType = Number(event.system?.keyType ?? 0);
+    const systemKeyType = Number(event.system?.keyType ?? 0n);
     const systemKey = event.system?.key ?? new Uint8Array();
     const process = event.process?.process ?? new Uint8Array();
-    const logicalClock =
-      typeof event.logicalClock === 'number'
-        ? event.logicalClock
-        : Number(event.logicalClock);
+    const logicalClock = Number(event.logicalClock ?? 0n);
 
-    const signature = signedEvent.signature!;
+    const signature = signedEvent.signature;
     const rawEvent = rawEventBytes;
     const moderationTags =
-      signedEvent.moderationTags && signedEvent.moderationTags.length > 0
+      signedEvent.moderationTags.length > 0
         ? JSON.stringify(signedEvent.moderationTags)
         : null;
 
-    const isTombstone = event.contentType === proto.ContentType.DELETE;
+    const isTombstone = event.contentType === ContentType.DELETE;
 
     let mutationPointerSystemKeyType: number | null = null;
     let mutationPointerSystemKey: Uint8Array | null = null;
@@ -37,18 +36,15 @@ export class EventRepository {
 
     if (isTombstone) {
       try {
-        const deleteEvent = proto.Delete.decode(event.content);
+        const deleteEvent = Delete.fromBinary(event.content);
 
         if (deleteEvent.process && deleteEvent.logicalClock) {
           mutationPointerProcess = deleteEvent.process.process ?? null;
-          mutationPointerLogicalClock =
-            typeof deleteEvent.logicalClock === 'number'
-              ? deleteEvent.logicalClock
-              : Number(deleteEvent.logicalClock);
+          mutationPointerLogicalClock = Number(deleteEvent.logicalClock);
 
-          if (event.references && event.references.length > 0) {
-            const targetPointer = proto.Pointer.decode(
-              event.references[0]!.reference!
+          if (event.references.length > 0) {
+            const targetPointer = Pointer.fromBinary(
+              event.references[0]!.reference
             );
             if (targetPointer.system) {
               mutationPointerSystemKeyType = Number(
@@ -88,27 +84,57 @@ export class EventRepository {
     );
   }
 
-  persistEvents(signedEvents: proto.ISignedEvent[]): void {
-    for (const event of signedEvents) {
-      this.persistEvent(event);
+  async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
+    for (const signedEvent of signedEvents) {
+      await this.persistEvent(signedEvent);
     }
   }
 
-  getAllEvents(): proto.SignedEvent[] {
+  async getAllEvents(): Promise<SignedEvent[]> {
     const results = this.database.execute<{
       signature: ArrayBuffer;
       raw_event: ArrayBuffer;
       moderation_tags: string | null;
     }>('SELECT signature, raw_event, moderation_tags FROM events');
 
-    return results.map((row) => {
-      return proto.SignedEvent.create({
+    return results.map((row) =>
+      SignedEvent.create({
         signature: new Uint8Array(row.signature),
         event: new Uint8Array(row.raw_event),
         moderationTags: row.moderation_tags
           ? JSON.parse(row.moderation_tags)
           : [],
-      });
-    });
+      })
+    );
+  }
+
+  async getEventsBatch(
+    batchSize: number,
+    offset = 0
+  ): Promise<{ events: SignedEvent[]; offset: number }> {
+    const results = this.database.execute<{
+      signature: ArrayBuffer;
+      raw_event: ArrayBuffer;
+      moderation_tags: string | null;
+    }>(
+      `SELECT signature, raw_event, moderation_tags
+       FROM events
+       ORDER BY id
+       LIMIT ? OFFSET ?`,
+      [batchSize, offset]
+    );
+
+    return {
+      events: results.map((row) =>
+        SignedEvent.create({
+          signature: new Uint8Array(row.signature),
+          event: new Uint8Array(row.raw_event),
+          moderationTags: row.moderation_tags
+            ? JSON.parse(row.moderation_tags)
+            : [],
+        })
+      ),
+      offset: offset + results.length,
+    };
   }
 }

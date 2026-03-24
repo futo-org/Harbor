@@ -3,7 +3,7 @@ import {
   _createIndexedDBDatabase,
   IndexedDBDatabase,
   IndexedDBStorageDriver,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-browser/full';
 import { DatabaseError } from '@polycentric/js-core';
 
 const testLayout = {

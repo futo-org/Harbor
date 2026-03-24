@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   _createOPFSSQLiteDatabase,
   OPFSSQLiteDatabase,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-browser/full';
 import { DatabaseError } from '@polycentric/js-core';
 import type { DatabaseSchema } from '@polycentric/js-core';
 

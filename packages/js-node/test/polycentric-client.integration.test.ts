@@ -30,7 +30,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new client', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -41,7 +41,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new process id if none exists', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -56,7 +56,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to retrieve the process id if one exists', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -68,7 +68,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new identity', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -89,7 +89,7 @@ describe('PolycentricClient', () => {
 
   it('should create a post and persist the event and logical clock', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -143,7 +143,7 @@ describe('PolycentricClient', () => {
 
   it('should create multiple posts and increment logical clock', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -190,7 +190,7 @@ describe('PolycentricClient', () => {
 
   it('should handle concurrent post creation', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };
@@ -242,7 +242,7 @@ describe('PolycentricClient', () => {
 
   it('should maintain event order with logical clocks', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };

@@ -1,6 +1,6 @@
 import EventEmitter from 'eventemitter3';
 import type { Identity } from '../polycentric-client';
-import type { Event } from '../proto/polycentric';
+import type { SignedEvent } from '../proto/polycentric';
 
 export enum ClientState {
   UNINITIALIZED = 'uninitialized',
@@ -11,7 +11,7 @@ export enum ClientState {
 
 export enum InitializationStep {
   STARTING = 'Starting initialization...',
-  INITIALIZING_WASM = 'Initializing WASM...',
+  INITIALIZING_CORE = 'Initializing core...',
   SETTING_UP_STORAGE = 'Setting up storage...',
   LOADING_PROCESS_ID = 'Loading process ID...',
   CREATING_PROCESS_ID = 'Creating process ID...',
@@ -30,7 +30,7 @@ export enum HydrationStatus {
 // For type safety, this interface maps event names to their payload types
 interface EventMap {
   identityChanged: Identity | null;
-  contentCreated: Event;
+  contentCreated: SignedEvent;
   stateChanged: ClientState;
   hydrationStatus: HydrationStatus;
   progress: InitializationStep;
@@ -70,13 +70,13 @@ export class EventService {
   }
 
   // Content events
-  emitContentCreated(event: Event) {
+  emitContentCreated(event: SignedEvent) {
     this.emit('contentCreated', event);
   }
-  onContentCreated(listener: (event: Event) => void) {
+  onContentCreated(listener: (event: SignedEvent) => void) {
     this.on('contentCreated', listener);
   }
-  offContentCreated(listener: (event: Event) => void) {
+  offContentCreated(listener: (event: SignedEvent) => void) {
     this.off('contentCreated', listener);
   }
 

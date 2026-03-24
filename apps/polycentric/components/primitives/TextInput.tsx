@@ -3,6 +3,7 @@ import {
   TextInputProps as RNTextInputProps,
   TextStyle,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { forwardRef, useState } from 'react';
 import { useTheme, ColorToken } from '@/theme';
@@ -47,6 +48,13 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       fontSize: theme.typography.fontSize.md,
       color: disabled ? theme.colors.neutralSurface : theme.colors.text,
       opacity: disabled ? 0.5 : 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            outlineStyle: 'none',
+            outlineWidth: 0,
+            resize: 'none',
+          } as unknown as TextStyle)
+        : null),
     };
 
     const multilineStyle: TextStyle = multiline

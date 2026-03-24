@@ -17,12 +17,12 @@ export type PostStats = {
  */
 export async function fetchPostStats(
   client: PolycentricClient,
-  pointer: types.IPointer,
+  pointer: types.Pointer,
 ): Promise<PostStats> {
   const feed = client.queryManager.queryReferencesFeed(pointer);
   const myKey = bytesToHex(client.currentSystem.key ?? new Uint8Array());
 
-  const allEvents: types.ISignedEvent[] = [];
+  const allEvents: types.SignedEvent[] = [];
   let page = await feed.read();
   while (page.length > 0) {
     allEvents.push(...page);
@@ -38,7 +38,7 @@ export async function fetchPostStats(
 
   for (const signedEvent of allEvents) {
     try {
-      const ev = types.Event.decode(signedEvent.event ?? new Uint8Array());
+      const ev = types.Event.fromBinary(signedEvent.event);
       const ct = Number(ev.contentType);
 
       if (ct === types.ContentType.OPINION) {

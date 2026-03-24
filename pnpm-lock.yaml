@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: ^9.38.0
         version: 9.39.4(jiti@2.6.1)
+      prettier:
+        specifier: ^3.8.0
+        version: 3.8.1
       turbo:
         specifier: ^2.6.1
         version: 2.8.14
@@ -56,9 +59,6 @@ importers:
       '@shopify/flash-list':
         specifier: 2.0.2
         version: 2.0.2(@babel/runtime@7.28.6)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
-      '@shopify/react-native-skia':
-        specifier: ^2.4.18
-        version: 2.5.1(react-native-reanimated@4.2.2(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.6.2
@@ -171,6 +171,9 @@ importers:
       only-allow:
         specifier: ^1.2.1
         version: 1.2.2
+      prettier:
+        specifier: ^3.8.1
+        version: 3.8.1
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -188,7 +191,7 @@ importers:
         version: link:../js-core
       '@polycentric/rs-core-wasm-browser':
         specifier: '*'
-        version: 0.0.1
+        version: 0.0.3
       '@sqlite.org/sqlite-wasm':
         specifier: 3.49.1-build4
         version: 3.49.1-build4
@@ -232,9 +235,6 @@ importers:
       '@noble/hashes':
         specifier: ^1.8.0
         version: 1.8.0
-      '@polycentric/rs-core-wasm-browser':
-        specifier: '*'
-        version: 0.0.1
       '@protobuf-ts/runtime':
         specifier: ^2.10.0
         version: 2.11.1
@@ -283,7 +283,7 @@ importers:
         version: link:../js-core
       '@polycentric/rs-core-wasm-node':
         specifier: '*'
-        version: 0.0.1
+        version: 0.0.3
       sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
@@ -315,15 +315,21 @@ importers:
       '@babel/runtime':
         specifier: ^7.28.6
         version: 7.28.6
-      '@noble/ed25519':
-        specifier: 2.1.0
-        version: 2.1.0
-      '@noble/hashes':
-        specifier: 1.4.0
-        version: 1.4.0
+      '@noble/curves':
+        specifier: ^1.9.0
+        version: 1.9.7
       '@op-engineering/op-sqlite':
         specifier: '*'
         version: 15.2.5(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+      '@polycentric/js-browser':
+        specifier: workspace:*
+        version: link:../js-browser
+      '@polycentric/js-core':
+        specifier: workspace:*
+        version: link:../js-core
+      '@polycentric/rs-core-wasm-browser':
+        specifier: '*'
+        version: 0.0.3
       fast-text-encoding:
         specifier: ^1.0.6
         version: 1.0.6
@@ -1733,13 +1739,6 @@ packages:
     resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@noble/ed25519@2.1.0':
-    resolution: {integrity: sha512-KM4qTyXPinyCgMzeYJH/UudpdL+paJXtY3CHtHYZQtBkS8MZoPr4rOikZllIutJe0d06QDQKisyn02gxZ8TcQA==}
-
-  '@noble/hashes@1.4.0':
-    resolution: {integrity: sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==}
-    engines: {node: '>= 16'}
-
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
@@ -1785,11 +1784,11 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@polycentric/rs-core-wasm-browser@0.0.1':
-    resolution: {integrity: sha1-n8MIq9s+E9er7hKVwAUjhe72674=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-browser/-/@polycentric/rs-core-wasm-browser-0.0.1.tgz}
+  '@polycentric/rs-core-wasm-browser@0.0.3':
+    resolution: {integrity: sha1-g0cUvUsjw6TW00ThvYPCUfGXx9A=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-browser/-/@polycentric/rs-core-wasm-browser-0.0.3.tgz}
 
-  '@polycentric/rs-core-wasm-node@0.0.1':
-    resolution: {integrity: sha1-GRZDLPToXYt9UejEagBnu0uzc2w=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-node/-/@polycentric/rs-core-wasm-node-0.0.1.tgz}
+  '@polycentric/rs-core-wasm-node@0.0.3':
+    resolution: {integrity: sha1-NNS+y/DQyrE5cmwOV1Fu42MwgBk=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-node/-/@polycentric/rs-core-wasm-node-0.0.3.tgz}
 
   '@protobuf-ts/plugin@2.11.1':
     resolution: {integrity: sha512-HyuprDcw0bEEJqkOWe1rnXUP0gwYLij8YhPuZyZk6cJbIgc/Q0IFgoHQxOXNIXAcXM4Sbehh6kjVnCzasElw1A==}
@@ -9063,10 +9062,6 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
 
-  '@noble/ed25519@2.1.0': {}
-
-  '@noble/hashes@1.4.0': {}
-
   '@noble/hashes@1.8.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -9112,9 +9107,9 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@polycentric/rs-core-wasm-browser@0.0.1': {}
+  '@polycentric/rs-core-wasm-browser@0.0.3': {}
 
-  '@polycentric/rs-core-wasm-node@0.0.1': {}
+  '@polycentric/rs-core-wasm-node@0.0.3': {}
 
   '@protobuf-ts/plugin@2.11.1':
     dependencies:
@@ -9789,6 +9784,7 @@ snapshots:
     optionalDependencies:
       react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)
       react-native-reanimated: 4.2.2(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+    optional: true
 
   '@sinclair/typebox@0.27.10': {}
 
@@ -10306,7 +10302,8 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webgpu/types@0.1.21': {}
+  '@webgpu/types@0.1.21':
+    optional: true
 
   '@webpack-cli/configtest@3.0.1(webpack-cli@6.0.1)(webpack@5.105.4)':
     dependencies:
@@ -10824,6 +10821,7 @@ snapshots:
   canvaskit-wasm@0.40.0:
     dependencies:
       '@webgpu/types': 0.1.21
+    optional: true
 
   catharsis@0.9.0:
     dependencies:
@@ -14313,13 +14311,17 @@ snapshots:
       react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)
       warn-once: 0.1.1
 
-  react-native-skia-android@144.3.0: {}
+  react-native-skia-android@144.3.0:
+    optional: true
 
-  react-native-skia-apple-ios@144.3.0: {}
+  react-native-skia-apple-ios@144.3.0:
+    optional: true
 
-  react-native-skia-apple-macos@144.3.0: {}
+  react-native-skia-apple-macos@144.3.0:
+    optional: true
 
-  react-native-skia-apple-tvos@144.3.0: {}
+  react-native-skia-apple-tvos@144.3.0:
+    optional: true
 
   react-native-toast-message@2.3.3(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
     dependencies:
@@ -14475,6 +14477,7 @@ snapshots:
     dependencies:
       react: 19.2.0
       scheduler: 0.25.0
+    optional: true
 
   react-refresh@0.14.2: {}
 
@@ -14679,7 +14682,8 @@ snapshots:
     dependencies:
       xmlchars: 2.2.0
 
-  scheduler@0.25.0: {}
+  scheduler@0.25.0:
+    optional: true
 
   scheduler@0.27.0: {}
 

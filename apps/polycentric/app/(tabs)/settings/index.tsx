@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ScrollView, Linking, Alert, ActivityIndicator } from 'react-native';
+import { ScrollView, Linking, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Screen,
@@ -28,6 +28,7 @@ import {
 import { types } from '@polycentric/react-native';
 import { useTheme } from '@/theme';
 import { TAB_BAR_HEIGHT, SOURCE_CODE_URL, REPORT_BUG_URL } from '@/constants';
+import { confirm } from '@/lib/dialogs/alert';
 
 export default function Settings() {
   const { theme } = useTheme();
@@ -82,7 +83,7 @@ export default function Settings() {
 function IdentitySettingsContent({
   publicKey,
 }: {
-  publicKey: types.IPublicKey;
+  publicKey: types.PublicKey;
 }) {
   const { theme } = useTheme();
   const client = usePolycentric();
@@ -93,10 +94,36 @@ function IdentitySettingsContent({
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [eventCount, setEventCount] = useState(0);
 
   useEffect(() => {
     setNameDraft(username);
   }, [username]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    client.storage.processStates
+      .getCurrentLogicalClock(
+        client.currentIdentity.keyPair.keyType,
+        client.currentIdentity.keyPair.publicKey.key,
+        client.process.process,
+      )
+      .then((logicalClock) => {
+        if (!cancelled) {
+          setEventCount(Number(logicalClock));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEventCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, identity]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -125,7 +152,6 @@ function IdentitySettingsContent({
       )
     : '';
   const displayName = username;
-  const eventCount = Math.max(0, client.logicalClock - 1);
   const avatarUrl = identiconUrl(publicKey, 160);
 
   return (
@@ -261,27 +287,24 @@ function ServersSheetContent() {
     }
   };
 
-  const handleRemoveServer = (server: string) => {
-    Alert.alert('Remove Server', `Remove ${server}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          setIsBusy(true);
-          try {
-            await client.contentManager.createRemoveServer(server);
-            refreshServers();
-            store.getState().clearFeed('explore');
-            client.sync().catch(() => {});
-          } catch (err) {
-            console.error('Failed to remove server:', err);
-          } finally {
-            setIsBusy(false);
-          }
-        },
-      },
-    ]);
+  const handleRemoveServer = async (server: string) => {
+    const ok = await confirm({
+      title: 'Remove Server',
+      message: `Remove ${server}?`,
+      confirmText: 'Remove',
+    });
+    if (!ok) return;
+    setIsBusy(true);
+    try {
+      await client.contentManager.createRemoveServer(server);
+      refreshServers();
+      store.getState().clearFeed('explore');
+      client.sync().catch(() => {});
+    } catch (err) {
+      console.error('Failed to remove server:', err);
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   return (
