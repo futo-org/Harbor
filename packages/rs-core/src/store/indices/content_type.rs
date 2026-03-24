@@ -1,5 +1,5 @@
-use crate::models::internal::{EventKey, EventPointer, SystemKey};
-use crate::models::protos::{ContentType, SignedEvent};
+use polycentric_common::models::internal::{EventKey, EventPointer, SystemKey};
+use polycentric_common::models::protos::{ContentType, SignedEvent};
 use prost::Message;
 use std::collections::BTreeMap;
 
@@ -66,7 +66,7 @@ impl ContentTypeIndex {
             for pointer in pointers {
                 if let Some(event) = events.get(&pointer.key) {
                     if let Ok(decoded_event) =
-                        crate::models::protos::Event::decode(event.event.as_slice())
+                        polycentric_common::models::protos::Event::decode(event.event.as_slice())
                     {
                         if let Some(process) = &decoded_event.process {
                             let process_id = process.process.clone();

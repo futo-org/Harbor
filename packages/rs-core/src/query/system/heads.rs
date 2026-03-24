@@ -1,7 +1,7 @@
-use crate::error::CoreError;
-use crate::models::internal::EventKey;
 use crate::query::internal::{ProcessHeadsQuery, ProcessHeadsResult};
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::EventKey;
 use std::collections::HashMap;
 
 /// Process heads query engine for handling process heads queries

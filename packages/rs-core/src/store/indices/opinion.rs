@@ -1,6 +1,6 @@
-use crate::models::internal::EventKey;
-use crate::models::internal::SystemKey;
-use crate::models::protos::{Event, SignedEvent};
+use polycentric_common::models::internal::EventKey;
+use polycentric_common::models::internal::SystemKey;
+use polycentric_common::models::protos::{Event, SignedEvent};
 use std::collections::BTreeMap;
 
 /// Index for opinion events
@@ -27,14 +27,17 @@ impl OpinionIndex {
         &mut self,
         event_key: &EventKey,
         event: &Event,
-    ) -> Result<(), crate::error::CoreError> {
+    ) -> Result<(), polycentric_common::error::CoreError> {
         for reference in &event.references {
             if let Some(target_event_key) = reference.to_event_key() {
                 let system = event.system.as_ref().ok_or_else(|| {
-                    crate::error::CoreError::InvalidEvent("Event missing system".to_string())
+                    polycentric_common::error::CoreError::InvalidEvent(
+                        "Event missing system".to_string(),
+                    )
                 })?;
 
-                let system_key = crate::models::internal::SystemKey::from_public_key(system);
+                let system_key =
+                    polycentric_common::models::internal::SystemKey::from_public_key(system);
 
                 self.opinion_index
                     .entry(target_event_key.clone())

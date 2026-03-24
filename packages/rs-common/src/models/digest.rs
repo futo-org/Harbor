@@ -1,4 +1,4 @@
-use crate::models::{protos::digest::DigestType, Digest};
+use crate::models::{Digest, protos::digest::DigestType};
 
 impl Digest {
     pub fn compute(bytes: &[u8]) -> Digest {

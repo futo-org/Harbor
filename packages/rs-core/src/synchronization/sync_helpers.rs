@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::error::CoreError;
-use crate::models::internal::{EventKey, ProcessId, SystemKey};
-use crate::models::protos::{
+use crate::query::{EventRangeQuery, ProcessHeadsQuery, QueryEngine};
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey};
+use polycentric_common::models::protos::{
     Event, Events, Process, PublicKey, Range, RangesForProcess, RangesForSystem,
 };
-use crate::models::traits::Serializable;
-use crate::query::{EventRangeQuery, ProcessHeadsQuery, QueryEngine};
+use polycentric_common::models::traits::Serializable;
 
 pub struct SyncRequests {
     pub ranges_to_get: RangesForSystem,

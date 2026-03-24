@@ -1,10 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashSet};
 
-use crate::error::CoreError;
-use crate::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
-use crate::models::protos::{Event, LwwElement, Pointer, SignedEvent, VectorClock};
-use crate::models::Serializable;
 use crate::query::references::ReferencesQueryEngine;
 use crate::query::{
     CRDTQuery, CountReferencesQuery, CountReferencesResult, CrdtResolver, CrdtResult,
@@ -13,6 +9,10 @@ use crate::query::{
     ProcessHeadsResult, ReferencesQuery, ReferencesResult,
 };
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::{EventKey, ProcessId, SystemKey, TimelineKey};
+use polycentric_common::models::protos::{Event, LwwElement, Pointer, SignedEvent, VectorClock};
+use polycentric_common::models::Serializable;
 use prost::Message;
 
 /// Query engine for providing access to the event store
@@ -530,7 +530,7 @@ impl QueryEngine {
     pub fn query_crdt_for_system(
         &self,
         system: &SystemKey,
-        content_type: crate::models::protos::ContentType,
+        content_type: polycentric_common::models::protos::ContentType,
     ) -> Result<Option<LwwElement>, CoreError> {
         let latest_query = LatestEventsQuery {
             system: system.clone(),
@@ -560,7 +560,7 @@ impl QueryEngine {
     pub fn query_follows_for_system(
         &self,
         system: &SystemKey,
-    ) -> Result<Vec<crate::models::protos::PublicKey>, CoreError> {
+    ) -> Result<Vec<polycentric_common::models::protos::PublicKey>, CoreError> {
         self.metadata_engine
             .query_follows_for_system(system, &self.event_store)
     }
@@ -569,7 +569,7 @@ impl QueryEngine {
     pub fn query_blocks_for_system(
         &self,
         system: &SystemKey,
-    ) -> Result<Vec<crate::models::protos::PublicKey>, CoreError> {
+    ) -> Result<Vec<polycentric_common::models::protos::PublicKey>, CoreError> {
         self.metadata_engine
             .query_blocks_for_system(system, &self.event_store)
     }
@@ -684,7 +684,7 @@ impl QueryEngine {
 
     /// Parse system key from bytes
     pub fn parse_system_key(&self, system_bytes: &[u8]) -> Result<SystemKey, CoreError> {
-        let public_key = crate::models::protos::PublicKey::decode(system_bytes)
+        let public_key = polycentric_common::models::protos::PublicKey::decode(system_bytes)
             .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode system key: {}", e)))?;
         Ok(SystemKey::from_public_key(&public_key))
     }
