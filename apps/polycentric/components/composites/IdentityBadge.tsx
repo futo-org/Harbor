@@ -13,7 +13,7 @@ import { SpacingToken } from '@/theme/tokens';
 type BadgeSize = 'md' | 'lg';
 
 interface IdentityBadgeProps {
-  publicKey: types.IPublicKey;
+  publicKey: types.PublicKey;
   size?: BadgeSize;
   showAvatar?: boolean;
   showId?: boolean;

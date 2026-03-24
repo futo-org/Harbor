@@ -21,7 +21,9 @@ export function CurrIdentityHeader() {
   const { Sheet, present, dismiss } = useSheet();
 
   const pubkey = currentIdentity?.keyPair.publicKey;
-  const username = useUsername(pubkey ?? { keyType: 0, key: new Uint8Array() });
+  const username = useUsername(
+    pubkey ?? { keyType: 0n, key: new Uint8Array() },
+  );
 
   // this should never happen, root layout handles auth state
   if (!currentIdentity || !pubkey) {

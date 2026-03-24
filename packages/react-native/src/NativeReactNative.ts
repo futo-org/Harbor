@@ -27,7 +27,7 @@ export interface Spec extends TurboModule {
     author: Object,
     networkRequests: Object,
     limit: number,
-    cursor: Object
+    latestEvent: Object
   ): Object;
   queryReferencesFeed(
     system: Object,
@@ -48,8 +48,12 @@ export interface Spec extends TurboModule {
     feedQuery: Object,
     cursor: Object
   ): Object;
-  queryFollowingFeed(system: Object, limit: number, cursor: Object): Object;
-  queryLikesFeed(system: Object, limit: number, cursor: Object): Object;
+  queryFollowingFeed(
+    system: Object,
+    limit: number,
+    latestEvent: Object
+  ): Object;
+  queryLikesFeed(system: Object, limit: number, latestEvent: Object): Object;
   queryOpinion(currentSystem: Object, targetPointer: Object): Object;
   queryEventIsDeleted(pointer: Object): Object;
   queryFollowsForSystem(system: Object): Object;

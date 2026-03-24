@@ -15,7 +15,7 @@ import {
 } from './helpers';
 
 export type ProfileScreenData = {
-  publicKey: types.IPublicKey;
+  publicKey: types.PublicKey;
   isSelf: boolean;
   username: string;
   profile: ReturnType<typeof useProfile>;

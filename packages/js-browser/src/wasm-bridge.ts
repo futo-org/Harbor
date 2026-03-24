@@ -1,23 +1,31 @@
+import {
+  type ICoreBridge,
+  type IPolycentricCore,
+  WasmError,
+} from '@polycentric/js-core';
 import init, { PolycentricWasm } from '@polycentric/rs-core-wasm-browser';
-import { WasmError, IWasmBridge } from '@polycentric/js-core';
 
 /** Global WASM singleton - only one instance is maintained per session */
 let wasmInstance: PolycentricWasm | null = null;
 
-export class BrowserWasmBridge implements IWasmBridge {
-  public async initialize(): Promise<PolycentricWasm> {
+export type ModuleOrPath = Parameters<typeof init>[0];
+
+export class BrowserWasmBridge implements ICoreBridge {
+  constructor(private readonly moduleOrPath: ModuleOrPath) {}
+
+  public async initialize(): Promise<IPolycentricCore> {
     if (wasmInstance) {
-      return wasmInstance;
+      return this.getCoreInstance();
     }
 
-    await init();
+    await init(this.moduleOrPath);
 
     const core = new PolycentricWasm();
 
     try {
       core.initialize();
       wasmInstance = core;
-      return core;
+      return this.getCoreInstance();
     } catch (error) {
       throw new WasmError(
         'WASM Bridge: Failed to initialize WASM core.',
@@ -30,6 +38,10 @@ export class BrowserWasmBridge implements IWasmBridge {
     return wasmInstance !== null;
   }
 
+  public getCoreInstance(): IPolycentricCore {
+    return this.getWasmInstance() as unknown as IPolycentricCore;
+  }
+
   public getWasmInstance(): PolycentricWasm {
     if (!wasmInstance) {
       throw new WasmError(
@@ -38,6 +50,10 @@ export class BrowserWasmBridge implements IWasmBridge {
     }
 
     return wasmInstance;
+  }
+
+  public supportedOnPlatform(): boolean {
+    return this._wasmSupportedOnPlatform();
   }
 
   public _wasmSupportedOnPlatform(): boolean {

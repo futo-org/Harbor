@@ -1,37 +1,40 @@
-import type { ICryptoManager, IStorageDriver } from './platform-interfaces';
-import { StorageHandle } from './storage/storage-handle';
-import type { IWasmBridge } from './platform-interfaces';
-import { PolycentricWasm } from '@polycentric/rs-core-wasm-browser';
 import {
-  Pointer,
-  LWWElement,
-  PublicKey,
-  ImageManifest,
-  FeedResult,
-  PrivateKey,
-  Process,
-  Reference,
-  SignedEvent,
+  ClaimManager,
+  ClientState,
+  ContentManager,
+  EventService,
+  HydrationStatus,
+  IdentityManager,
+  InitializationStep,
+  SyncService,
+} from './client-internal';
+import { Defaults, HydrationStrategy, KEY_TYPE } from './constants';
+import { HTTPClient } from './http';
+import type {
+  ICoreBridge,
+  ICryptoManager,
+  IPolycentricCore,
+  IStorageDriver,
+} from './platform-interfaces';
+import {
   ClaimFieldEntry,
   EventCreationData,
-  Event as ProtobufEvent,
   EventKey,
   Events,
+  FeedResult,
+  ImageManifest,
+  LWWElement,
+  Pointer,
+  PrivateKey,
+  Process,
+  Event as ProtobufEvent,
+  PublicKey,
+  Reference,
+  SignedEvent,
 } from './proto/polycentric';
-import { Defaults, HydrationStrategy, KEY_TYPE } from './constants';
-import {
-  EventService,
-  SyncService,
-  ClientState,
-  InitializationStep,
-  IdentityManager,
-  ClaimManager,
-  ContentManager,
-  HydrationStatus,
-} from './client-internal';
+import { FeedQuery, QueryManager } from './queries';
+import { StorageHandle } from './storage/storage-handle';
 import { ModerationFilters, ServerError } from './utils';
-import { HTTPClient } from './http';
-import { QueryManager, FeedQuery } from './queries';
 
 export interface KeyPair {
   keyType: bigint;
@@ -45,7 +48,7 @@ export interface Identity {
 }
 
 export interface IdentityOptions {
-  keyType: bigint;
+  keyType?: bigint;
   setAsCurrent?: boolean;
   ephemeral?: boolean;
 }
@@ -53,14 +56,14 @@ export interface IdentityOptions {
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
  *
- * @param wasmManager - A WASM bridge for a given platform.
+ * @param coreBridge - A runtime bridge for a given platform.
  * @param storageDriver - A storage backend for a given platform (e.g. sql, in-memory, indexedDB etc).
  * @param cryptoManager - A crypto manager for a given platform.
  * @param hydrationStrategy - How the runtime cache is hydrated from the database.
  *   Defaults to {@link HydrationStrategy.FULL}.
  */
 export interface PolycentricClientConfig {
-  wasmManager: IWasmBridge;
+  coreBridge: ICoreBridge;
   storageDriver: IStorageDriver;
   cryptoManager: ICryptoManager;
   hydration?: {
@@ -81,7 +84,7 @@ export interface PolycentricClientConfig {
  * } from "@polycentric/browser";
  *
  * const client = await PolycentricClient.create({
- *   wasmManager: new BrowserWasmBridge(),
+ *   coreBridge: new BrowserWasmBridge(),
  *   storageDriver: await SqlStorageDriver.create(),
  *   cryptoManager: new BrowserCryptoManager(),
  * });
@@ -105,8 +108,8 @@ export class PolycentricClient {
   private _hydrationStatus: HydrationStatus = HydrationStatus.NOT_STARTED;
   private _error: Error | null = null;
 
-  private _core: PolycentricWasm | undefined;
-  private readonly _wasmBridge: IWasmBridge;
+  private _core: IPolycentricCore | undefined;
+  private readonly _coreBridge: ICoreBridge;
 
   private _process: Process | null = null;
   private _currentKeyPair: KeyPair | null = null;
@@ -121,7 +124,7 @@ export class PolycentricClient {
   };
 
   private constructor(config: PolycentricClientConfig) {
-    this._wasmBridge = config.wasmManager;
+    this._coreBridge = config.coreBridge;
     this._cryptoManager = config.cryptoManager;
     this._storageDriver = config.storageDriver;
     this._hydration = {
@@ -149,12 +152,12 @@ export class PolycentricClient {
       this.setState(ClientState.INITIALIZING);
       this.setStep(InitializationStep.STARTING);
 
-      this.setStep(InitializationStep.INITIALIZING_WASM);
-      if (this._wasmBridge.initialized()) {
-        this._core = this._wasmBridge.getWasmInstance();
+      this.setStep(InitializationStep.INITIALIZING_CORE);
+      if (this._coreBridge.initialized()) {
+        this._core = this._coreBridge.getCoreInstance();
       } else {
-        await this._wasmBridge.initialize();
-        this._core = this._wasmBridge.getWasmInstance();
+        await this._coreBridge.initialize();
+        this._core = this._coreBridge.getCoreInstance();
       }
 
       this.setStep(InitializationStep.SETTING_UP_STORAGE);
@@ -178,12 +181,15 @@ export class PolycentricClient {
       this.setStep(InitializationStep.HYDRATING_EVENTS);
       await this._hydrate();
 
-      this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
-      await this.createIdentity({
-        keyType: KEY_TYPE.ED25519,
-        setAsCurrent: true,
-        ephemeral: true,
-      });
+      const restoredIdentity = await this._restoreStoredIdentity();
+      if (!restoredIdentity) {
+        this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
+        await this.createIdentity({
+          keyType: KEY_TYPE.ED25519,
+          setAsCurrent: true,
+          ephemeral: true,
+        });
+      }
 
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
@@ -226,7 +232,7 @@ export class PolycentricClient {
 
     console.log(`Ingesting ${events.length} events into WASM core`);
 
-    this.wasmCore.ingest_events(Events.toBinary({ events }));
+    this.core.ingest_events(Events.toBinary({ events }));
 
     this.setHydrationStatus(HydrationStatus.COMPLETED);
   }
@@ -271,7 +277,7 @@ export class PolycentricClient {
 
     if (result.events.length === 0) return undefined;
 
-    this.wasmCore.ingest_events(Events.toBinary({ events: result.events }));
+    this.core.ingest_events(Events.toBinary({ events: result.events }));
 
     return result.offset;
   }
@@ -302,11 +308,48 @@ export class PolycentricClient {
     return process;
   }
 
+  private async _restoreStoredIdentity(): Promise<boolean> {
+    const identities = await this.getAllIdentities();
+    const identity = identities[0];
+
+    if (!identity) {
+      return false;
+    }
+
+    this.setCurrentKeyPair(identity, false);
+    return true;
+  }
+
   /**
    * Synchronizes the client's events with those of the selected servers
    */
   public async sync(): Promise<ServerError[]> {
     return await this.synchronization.sync();
+  }
+
+  public async syncEventsForSystem(system: PublicKey): Promise<ServerError[]> {
+    const result = await this.core.sync_events_for_system(
+      PublicKey.toBinary(system),
+      this.httpClient.getHead.bind(this.httpClient),
+      this.httpClient.getRanges.bind(this.httpClient),
+      this.httpClient.getEvents.bind(this.httpClient),
+      this.httpClient.postEvents.bind(this.httpClient),
+      async (eventsBytes: Uint8Array) => {
+        const events = Events.fromBinary(eventsBytes);
+        await this.storage.events.persistEvents(events.events);
+      },
+    );
+
+    return result.errors;
+  }
+
+  public async ingestEvent(signedEvent: SignedEvent): Promise<void> {
+    this.core.ingest_events(
+      Events.toBinary({
+        events: [signedEvent],
+      }),
+    );
+    await this.storage.events.persistEvent(signedEvent);
   }
 
   /**
@@ -326,8 +369,12 @@ export class PolycentricClient {
    * @param setAsCurrent - Whether to set the new identity as the current identity. @default true
    * @returns The new key pair.
    */
-  async createIdentity(options: IdentityOptions): Promise<KeyPair> {
-    return this.identityManager.createIdentity(options);
+  async createIdentity(options: IdentityOptions = {}): Promise<KeyPair> {
+    return this.identityManager.createIdentity({
+      keyType: options.keyType ?? KEY_TYPE.ED25519,
+      setAsCurrent: options.setAsCurrent,
+      ephemeral: options.ephemeral,
+    });
   }
 
   /**
@@ -358,6 +405,39 @@ export class PolycentricClient {
    */
   async removeIdentity(publicKey: PublicKey) {
     await this.identityManager.removeIdentity(publicKey);
+  }
+
+  async deleteIdentity(publicKey?: PublicKey): Promise<void> {
+    const isCurrent =
+      !publicKey ||
+      (this._currentKeyPair &&
+        this._currentKeyPair.publicKey.key?.toString() ===
+          publicKey.key?.toString());
+
+    if (isCurrent) {
+      const currentPublicKey = this.currentIdentity.keyPair.publicKey;
+      await this.removeIdentity(currentPublicKey);
+
+      const remaining = await this.getAllIdentities();
+      if (remaining.length > 0) {
+        await this.switchIdentity(remaining[0]!.publicKey);
+        return;
+      }
+
+      await this.createIdentity({
+        keyType: KEY_TYPE.ED25519,
+        setAsCurrent: true,
+        ephemeral: true,
+      });
+    } else {
+      await this.removeIdentity(publicKey!);
+      if (this._currentKeyPair && this._process) {
+        this.events.emitIdentityChanged({
+          keyPair: this._currentKeyPair,
+          process: this._process,
+        });
+      }
+    }
   }
 
   /**
@@ -775,6 +855,10 @@ export class PolycentricClient {
     return this.contentManager.createAddServer(server);
   }
 
+  async addServer(server: string): Promise<SignedEvent> {
+    return this.createAddServer(server);
+  }
+
   /**
    * Removes a server from the current identity's server list.
    *
@@ -783,6 +867,10 @@ export class PolycentricClient {
    */
   async createRemoveServer(server: string): Promise<SignedEvent> {
     return this.contentManager.createRemoveServer(server);
+  }
+
+  async removeServer(server: string): Promise<SignedEvent> {
+    return this.createRemoveServer(server);
   }
 
   /**
@@ -879,9 +967,13 @@ export class PolycentricClient {
     return this._identityIsEphemeral;
   }
 
-  get wasmCore(): PolycentricWasm {
+  get currentSystem(): PublicKey {
+    return this.currentIdentity.keyPair.publicKey;
+  }
+
+  get core(): IPolycentricCore {
     if (!this._core) {
-      throw new Error('WASM core not initialized');
+      throw new Error('Core runtime not initialized');
     }
     return this._core;
   }

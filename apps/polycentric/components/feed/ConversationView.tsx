@@ -13,8 +13,8 @@ import {
 interface ConversationViewProps {
   postId: string;
   onPostPress: (postId: string) => void;
-  onAuthorPress?: (publicKey: types.IPublicKey) => void;
-  onReply?: (signedEvent: types.ISignedEvent) => void;
+  onAuthorPress?: (publicKey: types.PublicKey) => void;
+  onReply?: (signedEvent: types.SignedEvent) => void;
 }
 
 /** Each row subscribes to its own post. One post updates → one row re-renders. */
@@ -29,8 +29,8 @@ function PostRow({
   postId: string;
   isFocus: boolean;
   onPostPress: (postId: string) => void;
-  onAuthorPress?: (publicKey: types.IPublicKey) => void;
-  onReply?: (signedEvent: types.ISignedEvent) => void;
+  onAuthorPress?: (publicKey: types.PublicKey) => void;
+  onReply?: (signedEvent: types.SignedEvent) => void;
   onReplyingToPress: (postId: string) => void;
 }) {
   const { store } = usePolycentricContext();

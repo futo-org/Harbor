@@ -6,6 +6,8 @@
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
+      "react-native": "./src/index.tsx",
+      "browser": "./src/index.tsx",
       "source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
@@ -34,12 +36,12 @@
   "scripts": {
     "dev": "bob build --watch",
     "clean": "del-cli android/build lib",
-    "prepare": "bob build",
+    "build": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "test": "jest",
-    "proto:generate": "npx pbjs -t static-module -w es6 -o ./src/generated/protocol.js ../../protobuf-types/protos/polycentric.proto ../../protobuf-types/protos/rs-core-ffi.proto && npx pbts -o ./src/generated/protocol.d.ts ./src/generated/protocol.js"
+    "generate": "mkdir -p ./src/generated && npx pbjs -t static-module -w es6 -o ./src/generated/protocol.js ../../protos/polycentric.proto ../../protos/rs-core-ffi.proto && npx pbts -o ./src/generated/protocol.d.ts ./src/generated/protocol.js"
   },
   "keywords": [
     "react-native",
@@ -125,8 +127,10 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
-    "@noble/ed25519": "2.1.0",
-    "@noble/hashes": "1.4.0",
+    "@polycentric/js-browser": "workspace:*",
+    "@polycentric/js-core": "workspace:*",
+    "@polycentric/rs-core-wasm-browser": "*",
+    "@noble/curves": "^1.9.0",
     "fast-text-encoding": "^1.0.6",
     "protobufjs": "^7.0.0",
     "react-native-get-random-values": "^1.11.0"

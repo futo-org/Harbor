@@ -16,6 +16,8 @@ export type {
   Identity,
 } from './polycentric-client';
 
+export { FeedQuery, QueryManager } from './queries';
+
 export * from './errors';
 export * as Errors from './errors';
 export * from './utils';

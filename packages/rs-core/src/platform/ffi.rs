@@ -1377,7 +1377,7 @@ fn query_search_feed_internal(
 /// * `target_system_bytes` - Serialized PublicKey protobuf bytes representing the target system whose author feed should be queried
 /// * `network_requests_bytes` - Serialized NetworkRequestResponses protobuf bytes representing prior network requests and responses
 /// * `limit` - Maximum number of events to return
-/// * `cursor_bytes` - Serialized Cursor protobuf bytes representing the current feed cursor
+/// * `latest_event_bytes` - Serialized Event bytes for the latest event from the previous page, or empty bytes for first page
 ///
 /// # Returns
 /// * `CBuffer` - Serialized protobuf Result containing Serialized InternalFeedResult bytes representing the result of this query
@@ -1387,7 +1387,7 @@ pub extern "C" fn query_author_feed(
     target_system_bytes: CBuffer,
     network_requests_bytes: CBuffer,
     limit: u64,
-    cursor_bytes: CBuffer,
+    latest_event_bytes: CBuffer,
 ) -> CBuffer {
     let current_system_rust = match c_pointer_to_byte_array(current_system_bytes) {
         Some(result) => result,
@@ -1413,7 +1413,7 @@ pub extern "C" fn query_author_feed(
             )
         }
     };
-    let cursor_rust = match c_pointer_to_byte_array(cursor_bytes) {
+    let latest_event_rust = match c_pointer_to_byte_array(latest_event_bytes) {
         Some(result) => result,
         None => {
             return protobuf_result_err(
@@ -1427,7 +1427,7 @@ pub extern "C" fn query_author_feed(
         target_system_rust,
         network_requests_rust,
         limit as usize,
-        cursor_rust,
+        latest_event_rust,
     ) {
         Ok(NetworkResult::Complete(events)) => protobuf_result_ok(events),
         Ok(NetworkResult::Incomplete(responses)) => protobuf_result_incomplete(responses),
@@ -1440,7 +1440,7 @@ fn query_author_feed_internal(
     target_system: &[u8],
     network_requests: &[u8],
     limit: usize,
-    cursor: &[u8],
+    latest_event: &[u8],
 ) -> Result<NetworkResult, PlatformError> {
     let current_system_protobuf = PublicKey::from_bytes(current_system).map_err(|e| {
         PlatformError::DeserializationError(format!(
@@ -1480,34 +1480,7 @@ fn query_author_feed_internal(
         key: target_system_protobuf.key,
     };
 
-    let cursor_protobuf = Cursor::decode(cursor).map_err(|e| {
-        PlatformError::DeserializationError(format!("Unable to deserialize cursor: {:?}", e))
-    })?;
-
-    let latest = match cursor_protobuf.cursor {
-        None => None,
-        Some(ref evt) => {
-            let signed_event = SignedEvent::from_bytes(&evt.to_vec()[..]).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided event object: {:?}",
-                    e
-                ))
-            })?;
-            let event = Event::from_bytes(&signed_event.event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided event object: {:?}",
-                    e
-                ))
-            })?;
-
-            Some(TimelineKey::from_event(&event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to derive timeline key from provided event: {:?}",
-                    e
-                ))
-            })?)
-        }
-    };
+    let latest = decode_latest_event(latest_event)?;
 
     let engine_lock = get_engine_read_lock()?;
     let engine = engine_lock.as_ref().ok_or(PlatformError::InvalidState(
@@ -1518,13 +1491,6 @@ fn query_author_feed_internal(
         .query_author_feed(&system_key, limit, latest)
         .map_err(|e| PlatformError::QueryError(format!("Unable to query author feed: {:?}", e)))?;
 
-    let cursor = match feed.last() {
-        None => cursor_protobuf, // If we didn't get any events, we are finished reading the feed so we don't read the cursor
-        Some(evt) => Cursor {
-            cursor: Some(evt.encode_to_vec()),
-        },
-    };
-
     let events_protobuf = Events { events: feed };
 
     let result_full = InternalFeedResult {
@@ -1532,10 +1498,30 @@ fn query_author_feed_internal(
             result: events_protobuf.encode_to_vec(),
             errors: vec![],
         }),
-        cursor: Some(cursor),
+        cursor: None,
     };
 
     Ok(NetworkResult::Complete(result_full.encode_to_vec()))
+}
+
+fn decode_latest_event(latest_event: &[u8]) -> Result<Option<TimelineKey>, PlatformError> {
+    if latest_event.is_empty() {
+        return Ok(None);
+    }
+
+    let event = Event::from_bytes(latest_event).map_err(|e| {
+        PlatformError::DeserializationError(format!(
+            "Unable to deserialize provided event object: {:?}",
+            e
+        ))
+    })?;
+
+    Ok(Some(TimelineKey::from_event(&event).map_err(|e| {
+        PlatformError::DeserializationError(format!(
+            "Unable to derive timeline key from provided event: {:?}",
+            e
+        ))
+    })?))
 }
 
 /// Queries the feed of events from users that the current system is following
@@ -1543,7 +1529,7 @@ fn query_author_feed_internal(
 /// # Arguments
 /// * `current_system_bytes` - Serialized PublicKey protobuf bytes representing the current system
 /// * `limit` - Maximum number of events to return
-/// * `cursor_bytes` - Serialized Cursor protobuf bytes representing the current feed cursor
+/// * `latest_event_bytes` - Serialized Event bytes for the latest event from the previous page, or empty bytes for first page
 ///
 /// # Returns
 /// * `CBuffer` - Serialized protobuf Result containing Serialized InternalFeedResult bytes representing the result of this query
@@ -1551,7 +1537,7 @@ fn query_author_feed_internal(
 pub extern "C" fn query_following_feed(
     current_system_bytes: CBuffer,
     limit: u64,
-    cursor_bytes: CBuffer,
+    latest_event_bytes: CBuffer,
 ) -> CBuffer {
     let current_system_rust = match c_pointer_to_byte_array(current_system_bytes) {
         Some(result) => result,
@@ -1561,7 +1547,7 @@ pub extern "C" fn query_following_feed(
             )
         }
     };
-    let cursor_rust = match c_pointer_to_byte_array(cursor_bytes) {
+    let latest_event_rust = match c_pointer_to_byte_array(latest_event_bytes) {
         Some(result) => result,
         None => {
             return protobuf_result_err(
@@ -1570,7 +1556,7 @@ pub extern "C" fn query_following_feed(
         }
     };
 
-    match query_following_feed_internal(current_system_rust, limit as usize, cursor_rust) {
+    match query_following_feed_internal(current_system_rust, limit as usize, latest_event_rust) {
         Ok(NetworkResult::Complete(events)) => protobuf_result_ok(events),
         Ok(NetworkResult::Incomplete(responses)) => protobuf_result_incomplete(responses),
         Err(err) => protobuf_result_err(err.to_string()),
@@ -1580,7 +1566,7 @@ pub extern "C" fn query_following_feed(
 fn query_following_feed_internal(
     system: &[u8],
     limit: usize,
-    cursor: &[u8],
+    latest_event: &[u8],
 ) -> Result<NetworkResult, PlatformError> {
     let system_protobuf = PublicKey::from_bytes(system).map_err(|e| {
         PlatformError::DeserializationError(format!(
@@ -1589,42 +1575,12 @@ fn query_following_feed_internal(
         ))
     })?;
 
-    let cursor_protobuf = Cursor::decode(cursor).map_err(|e| {
-        PlatformError::DeserializationError(format!("Unable to deserialize cursor: {:?}", e))
-    })?;
-
     let system_key = SystemKey {
         key_type: system_protobuf.key_type,
         key: system_protobuf.key,
     };
 
-    let latest = match cursor_protobuf.cursor {
-        None => None,
-        Some(ref evt) => {
-            let event_bytes = &evt.to_vec()[..];
-
-            let signed_event = SignedEvent::from_bytes(event_bytes).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided signed event object: {:?}",
-                    e
-                ))
-            })?;
-
-            let event = Event::from_bytes(&signed_event.event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided event object: {:?}",
-                    e
-                ))
-            })?;
-
-            Some(TimelineKey::from_event(&event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to derive timeline key from provided event: {:?}",
-                    e
-                ))
-            })?)
-        }
-    };
+    let latest = decode_latest_event(latest_event)?;
 
     let engine_lock = get_engine_read_lock()?;
     let engine = engine_lock.as_ref().ok_or(PlatformError::InvalidState(
@@ -1637,13 +1593,6 @@ fn query_following_feed_internal(
             PlatformError::QueryError(format!("Unable to query following feed: {:?}", e))
         })?;
 
-    let cursor = match feed.last() {
-        None => cursor_protobuf, // If we didn't get any events, we are finished reading the feed so we don't read the cursor
-        Some(evt) => Cursor {
-            cursor: Some(evt.encode_to_vec()),
-        },
-    };
-
     let events_protobuf = Events { events: feed };
 
     let result_full = InternalFeedResult {
@@ -1651,7 +1600,7 @@ fn query_following_feed_internal(
             result: events_protobuf.encode_to_vec(),
             errors: vec![],
         }),
-        cursor: Some(cursor),
+        cursor: None,
     };
 
     Ok(NetworkResult::Complete(result_full.encode_to_vec()))
@@ -2193,7 +2142,7 @@ fn query_comments_feed_internal(
 /// # Arguments
 /// * `current_system_bytes` - Serialized PublicKey protobuf bytes representing the current system
 /// * `limit` - Maximum number of events to return
-/// * `cursor_bytes` - Serialized Cursor protobuf bytes representing the current feed cursor
+/// * `latest_event_bytes` - Serialized Event bytes for the latest event from the previous page, or empty bytes for first page
 ///
 /// # Returns
 /// * `CBuffer` - Serialized protobuf Result containing Serialized InternalFeedResult bytes representing the result of this query
@@ -2201,7 +2150,7 @@ fn query_comments_feed_internal(
 pub extern "C" fn query_likes_feed(
     current_system_bytes: CBuffer,
     limit: u64,
-    cursor_bytes: CBuffer,
+    latest_event_bytes: CBuffer,
 ) -> CBuffer {
     let current_system_rust = match c_pointer_to_byte_array(current_system_bytes) {
         Some(result) => result,
@@ -2211,7 +2160,7 @@ pub extern "C" fn query_likes_feed(
             )
         }
     };
-    let cursor_rust = match c_pointer_to_byte_array(cursor_bytes) {
+    let latest_event_rust = match c_pointer_to_byte_array(latest_event_bytes) {
         Some(result) => result,
         None => {
             return protobuf_result_err(
@@ -2220,7 +2169,7 @@ pub extern "C" fn query_likes_feed(
         }
     };
 
-    match query_likes_feed_internal(current_system_rust, limit as usize, cursor_rust) {
+    match query_likes_feed_internal(current_system_rust, limit as usize, latest_event_rust) {
         Ok(NetworkResult::Complete(events)) => protobuf_result_ok(events),
         Ok(NetworkResult::Incomplete(responses)) => protobuf_result_incomplete(responses),
         Err(err) => protobuf_result_err(err.to_string()),
@@ -2230,7 +2179,7 @@ pub extern "C" fn query_likes_feed(
 fn query_likes_feed_internal(
     system: &[u8],
     limit: usize,
-    cursor: &[u8],
+    latest_event: &[u8],
 ) -> Result<NetworkResult, PlatformError> {
     let system_protobuf = PublicKey::from_bytes(system).map_err(|e| {
         PlatformError::DeserializationError(format!(
@@ -2239,42 +2188,12 @@ fn query_likes_feed_internal(
         ))
     })?;
 
-    let cursor_protobuf = Cursor::decode(cursor).map_err(|e| {
-        PlatformError::DeserializationError(format!("Unable to deserialize cursor: {:?}", e))
-    })?;
-
     let system_key = SystemKey {
         key_type: system_protobuf.key_type,
         key: system_protobuf.key,
     };
 
-    let latest = match cursor_protobuf.cursor {
-        None => None,
-        Some(ref evt) => {
-            let event_bytes = &evt.to_vec()[..];
-
-            let signed_event = SignedEvent::from_bytes(event_bytes).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided signed event object: {:?}",
-                    e
-                ))
-            })?;
-
-            let event = Event::from_bytes(&signed_event.event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to deserialize provided event object: {:?}",
-                    e
-                ))
-            })?;
-
-            Some(TimelineKey::from_event(&event).map_err(|e| {
-                PlatformError::DeserializationError(format!(
-                    "Unable to derive timeline key from provided event: {:?}",
-                    e
-                ))
-            })?)
-        }
-    };
+    let latest = decode_latest_event(latest_event)?;
 
     let engine_lock = get_engine_read_lock()?;
     let engine = engine_lock.as_ref().ok_or(PlatformError::InvalidState(
@@ -2283,16 +2202,7 @@ fn query_likes_feed_internal(
 
     let feed = engine
         .query_likes_feed(&system_key, limit, latest)
-        .map_err(|e| {
-            PlatformError::QueryError(format!("Unable to query following feed: {:?}", e))
-        })?;
-
-    let cursor = match feed.last() {
-        None => cursor_protobuf, // If we didn't get any events, we are finished reading the feed so we don't read the cursor
-        Some(evt) => Cursor {
-            cursor: Some(evt.encode_to_vec()),
-        },
-    };
+        .map_err(|e| PlatformError::QueryError(format!("Unable to query likes feed: {:?}", e)))?;
 
     let events_protobuf = Events { events: feed };
 
@@ -2301,7 +2211,7 @@ fn query_likes_feed_internal(
             result: events_protobuf.encode_to_vec(),
             errors: vec![],
         }),
-        cursor: Some(cursor),
+        cursor: None,
     };
 
     Ok(NetworkResult::Complete(result_full.encode_to_vec()))

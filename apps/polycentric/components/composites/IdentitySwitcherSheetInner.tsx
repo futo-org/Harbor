@@ -11,7 +11,6 @@ import {
   FlatList,
   ListRenderItemInfo,
   Animated,
-  Alert,
 } from 'react-native';
 import Reanimated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import DraggableFlatList, {
@@ -37,21 +36,22 @@ import {
   pubkeyStr,
   DEFAULT_SERVER,
 } from '@/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
+import {
+  createIdentityWithDefaultServer,
+  type KeyPair,
+  types,
+} from '@polycentric/react-native';
 import { useTheme } from '@/theme';
 import { useFadeIn } from '@/lib/animation';
+import { confirm } from '@/lib/dialogs/alert';
 
-type IdentityKeyPair = {
-  keyType: number;
-  privateKey: types.PrivateKey;
-  publicKey: types.PublicKey;
-};
+type IdentityKeyPair = KeyPair;
 
 interface IdentitySwitcherContextType {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   dismiss: () => Promise<void>;
-  onDeleteIdentity: (publicKey: types.IPublicKey) => void;
+  onDeleteIdentity: (publicKey: types.PublicKey) => void;
 }
 
 const IdentitySwitcherContext =
@@ -80,22 +80,19 @@ export function IdentitySwitcherSheetInner({
   const [isEditing, setIsEditing] = useState(false);
 
   const handleCreateIdentity = useCallback(async () => {
-    await client.createIdentity(DEFAULT_SERVER);
+    await createIdentityWithDefaultServer(client, DEFAULT_SERVER);
     await client.sync().catch(() => {});
   }, [client]);
 
   const handleDeleteIdentity = useCallback(
-    (publicKey: types.IPublicKey) => {
-      Alert.alert('Delete identity', 'Are you sure? This cannot be undone.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await client.deleteIdentity(publicKey);
-          },
-        },
-      ]);
+    async (publicKey: types.PublicKey) => {
+      const ok = await confirm({
+        title: 'Delete identity',
+        message: 'Are you sure? This cannot be undone.',
+        confirmText: 'Delete',
+      });
+      if (!ok) return;
+      await client.deleteIdentity(publicKey);
     },
     [client],
   );
@@ -229,7 +226,7 @@ function DraggableIdentityListItem({
   );
 }
 
-function DeleteButton({ publicKey }: { publicKey: types.IPublicKey }) {
+function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
   const { theme } = useTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
   const { onDeleteIdentity } = useIdentitySwitcher();

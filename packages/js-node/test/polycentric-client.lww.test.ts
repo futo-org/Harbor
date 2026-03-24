@@ -21,7 +21,7 @@ describe('PolycentricClient LWW Elements', () => {
     }
 
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new NodeWasmBridge(),
+      coreBridge: new NodeWasmBridge(),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME, TEST_DB_DIR),
       cryptoManager: new NodeCryptoManager(),
     };

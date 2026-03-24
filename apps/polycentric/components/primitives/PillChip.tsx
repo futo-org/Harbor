@@ -4,7 +4,7 @@ import { getIdentityIdShort } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 
 interface PubkeyTagProps {
-  publicKey: types.IPublicKey;
+  publicKey: types.PublicKey;
   style?: ComponentProps<typeof Text>['style'];
 }
 

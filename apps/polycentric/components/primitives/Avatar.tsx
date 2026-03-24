@@ -6,17 +6,7 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import {
-  LinearGradient,
-  Circle,
-  Canvas,
-  Rect,
-  Group,
-  Mask,
-  vec,
-} from '@shopify/react-native-skia';
 import { useTheme } from '@/theme';
-import { Images } from '@/assets';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -48,82 +38,71 @@ export function Avatar({
   const { theme } = useTheme();
 
   const size = typeof sizeProp === 'number' ? sizeProp : SIZE_MAP[sizeProp];
-  const inset = borderWidth + Math.round(size * 0.08);
+  const hasBorder = border !== false;
+  const inset = hasBorder ? borderWidth + Math.round(size * 0.08) : 0;
   const imgSize = size - inset * 2;
-  const center = size / 2;
-  const innerRadius = imgSize / 2;
 
-  const renderBorder = () => {
-    if (!border) return null;
-
-    const fill =
-      border === 'primary' ? (
-        <LinearGradient
-          start={vec(0, 0)}
-          end={vec(0, size)}
-          colors={[
-            theme.colors.backgroundPrimary,
-            theme.colors.backgroundSecondary,
-          ]}
-        />
-      ) : null;
-
-    const color =
-      border === 'neutral' ? theme.colors.neutralSurface : undefined;
-
-    return (
-      <Canvas style={StyleSheet.absoluteFill}>
-        <Mask
-          mask={
-            <Group>
-              <Rect x={0} y={0} width={size} height={size} color="white" />
-              <Circle cx={center} cy={center} r={innerRadius} color="black" />
-            </Group>
+  const borderStyle =
+    border === 'primary'
+      ? {
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderColor: theme.colors.primaryOpacity40,
+        }
+      : border === 'neutral'
+        ? {
+            backgroundColor: theme.colors.neutralSurfaceOpacity20,
+            borderColor: theme.colors.neutralSurfaceOpacity40,
           }
-        >
-          <Circle cx={center} cy={center} r={size / 2} color={color}>
-            {fill}
-          </Circle>
-        </Mask>
-      </Canvas>
-    );
-  };
+        : null;
 
   return (
     <View
       {...containerProps}
       style={[
-        styles.avatarCanvas,
+        styles.avatar,
         { width: size, height: size, borderRadius: size / 2 },
+        hasBorder ? { borderWidth } : null,
+        borderStyle,
         containerProps?.style,
       ]}
     >
-      {renderBorder()}
-      <Image
-        {...imageProps}
-        source={source}
+      <View
         style={[
-          styles.avatarImage,
-          border
+          hasBorder
             ? {
                 width: imgSize,
                 height: imgSize,
-                top: inset,
-                left: inset,
+                borderRadius: imgSize / 2,
               }
-            : { width: size, height: size, borderRadius: size / 2 },
-          imageProps.style,
+            : styles.fill,
+          styles.imageFrame,
         ]}
-      />
+      >
+        <Image
+          {...imageProps}
+          source={source}
+          style={[styles.image, imageProps.style]}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  avatarCanvas: {
+  avatar: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fill: {
+    width: '100%',
+    height: '100%',
+  },
+  imageFrame: {
     overflow: 'hidden',
   },
-  avatarImage: {
-    position: 'absolute',
+  image: {
+    width: '100%',
+    height: '100%',
   },
 });

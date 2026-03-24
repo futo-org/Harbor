@@ -42,7 +42,7 @@ export default function Profile() {
   );
 
   const handleAuthorPress = useCallback(
-    (pk: types.IPublicKey) => {
+    (pk: types.PublicKey) => {
       router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
     },
     [router],

@@ -33,7 +33,9 @@ export default defineConfig({
       allow: [
         path.resolve(__dirname, '../../../'),
         path.resolve(__dirname, '../../../rs-core/pkg'),
-        path.dirname(require.resolve('@polycentric/rs-core-wasm-browser/package.json')),
+        path.dirname(
+          require.resolve('@polycentric/rs-core-wasm-browser/package.json'),
+        ),
       ],
     },
   },

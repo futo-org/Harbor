@@ -2,7 +2,9 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@polycentric/react-native": ["./src/index"]
+      "@polycentric/react-native": ["./src/index"],
+      "@polycentric/js-core": ["../js-core/dist/index.d.ts"],
+      "@polycentric/js-browser": ["../js-browser/dist/index.d.ts"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,

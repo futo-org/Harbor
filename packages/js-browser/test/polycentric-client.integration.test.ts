@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { KEY_TYPE, PolycentricClient, Event } from '@polycentric/js-core';
 import type { PolycentricClientConfig, KeyPair } from '@polycentric/js-core';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   BrowserWasmBridge,
   SqlStorageDriver,
   BrowserCryptoManager,
   _createOPFSSQLiteDatabase,
   OPFSSQLiteDatabase,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-browser/full';
 
 describe('PolycentricClient', () => {
   const TEST_DB_NAME = 'test-db';
@@ -30,7 +31,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new client', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -41,7 +42,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new process id if none exists', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -56,7 +57,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to retrieve the process id if one exists', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -68,7 +69,7 @@ describe('PolycentricClient', () => {
 
   it('should be able to create a new identity', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -89,7 +90,7 @@ describe('PolycentricClient', () => {
 
   it('should create a post and persist the event and logical clock', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -114,7 +115,7 @@ describe('PolycentricClient', () => {
 
   it('should create multiple posts and increment logical clock', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -141,7 +142,7 @@ describe('PolycentricClient', () => {
 
   it('should handle concurrent post creation', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };
@@ -171,7 +172,7 @@ describe('PolycentricClient', () => {
 
   it('should maintain event order with logical clocks', async () => {
     const clientConfig: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
       cryptoManager: new BrowserCryptoManager(),
     };

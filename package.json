@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "eslint": "^9.38.0",
+    "prettier": "^3.8.0",
     "turbo": "^2.6.1",
     "typescript-eslint": "^8.46.2"
   }

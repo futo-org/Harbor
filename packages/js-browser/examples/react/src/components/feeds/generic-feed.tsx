@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SignedEvent } from '@polycentric/js-core';
+import { SignedEvent, type FeedQuery } from '@polycentric/js-core';
 import { EventDisplay } from '../posts/event-display';
 import { Base64 } from 'js-base64';
-import type { FeedQuery } from '../../../../../packages/core/dist/queries';
 
 export const GenericFeed = ({ query }: { query: FeedQuery }) => {
   const [feed, setFeed] = useState<SignedEvent[]>([]);
@@ -12,7 +11,7 @@ export const GenericFeed = ({ query }: { query: FeedQuery }) => {
 
     let events = await query.read();
 
-    newFeed.push(...events.events.events);
+    newFeed.push(...events);
     setFeed(newFeed);
   }, [query, feed]);
 

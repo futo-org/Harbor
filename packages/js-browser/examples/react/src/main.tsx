@@ -1,7 +1,8 @@
-import { createContext, StrictMode } from 'react';
+import { createContext } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   IndexedDBStorageDriver,
   BrowserCryptoManager,
@@ -22,13 +23,13 @@ try {
   const cryptoManager = new BrowserCryptoManager();
   console.log('3. Crypto manager created');
 
-  const wasmManager = new BrowserWasmBridge();
+  const coreBridge = new BrowserWasmBridge(wasmUrl);
   console.log('4. WASM bridge created');
 
   const clientInstance = await PolycentricClient.create({
     storageDriver,
     cryptoManager,
-    wasmManager,
+    coreBridge,
     hydration: {
       strategy: HydrationStrategy.FULL_ASYNC,
       batchSize: 100,
@@ -59,11 +60,9 @@ try {
   }
 
   createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <ClientContext.Provider value={clientInstance}>
-        <App />
-      </ClientContext.Provider>
-    </StrictMode>,
+    <ClientContext.Provider value={clientInstance}>
+      <App />
+    </ClientContext.Provider>,
   );
 } catch (error) {
   alert('Unable to initialize client');

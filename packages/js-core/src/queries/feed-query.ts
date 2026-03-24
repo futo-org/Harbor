@@ -13,17 +13,20 @@ export class FeedQuery {
   private latestEvent?: Event;
 
   private readonly result: Set<string> = new Set();
+  public hasMore = true;
+  public errors: ServerError[] = [];
 
   constructor(
-    _client: PolycentricClient, // Kept here because we might need access to the client object at some point in the future
+    _client: PolycentricClient,
     private readonly feedCallback: (
       cursors: Map<string, Uint8Array>,
       latestEvent?: Event,
     ) => Promise<ResultEventsAndServerErrors>,
   ) {}
 
-  public async read(): Promise<ResultEventsAndServerErrors> {
+  public async read(): Promise<SignedEvent[]> {
     let result = await this.feedCallback(this.cursors, this.latestEvent);
+    this.errors = result.errors;
 
     let events = result.events.events.filter((signedEvent: SignedEvent) => {
       let event = Base64.fromUint8Array(signedEvent.event);
@@ -40,6 +43,8 @@ export class FeedQuery {
       this.latestEvent = Event.fromBinary(latestSignedEvent.event);
     }
 
-    return result;
+    this.hasMore = result.events.events.length > 0;
+
+    return events;
   }
 }

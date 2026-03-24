@@ -1,5 +1,9 @@
 // wasm bridge
-export { BrowserWasmBridge, __killWasmInstance } from './wasm-bridge';
+export {
+  BrowserWasmBridge,
+  __killWasmInstance,
+  type ModuleOrPath,
+} from './wasm-bridge';
 
 export type { PolycentricWasm } from '@polycentric/rs-core-wasm-browser';
 
