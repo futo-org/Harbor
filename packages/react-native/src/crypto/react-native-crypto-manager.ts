@@ -1,11 +1,11 @@
-import { type ICryptoManager, KEY_TYPE } from './crypto-manager';
+import { type ICryptoManager, KEY_TYPE } from '@polycentric/js-core';
 import { ED25519KeyManager } from './ed25519-key-manager';
 
 export class ReactNativeCryptoManager implements ICryptoManager {
   private ed25519Manager = new ED25519KeyManager();
 
   async generateKeyPair(
-    keyType: number
+    keyType: bigint
   ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.generateKeyPair();
@@ -13,7 +13,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
 
   async derivePublicKey(
     privateKey: Uint8Array,
-    keyType: number
+    keyType: bigint
   ): Promise<Uint8Array> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.getPublicKeyFromPrivate(privateKey);
@@ -22,7 +22,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
   async sign(
     privateKey: Uint8Array,
     message: Uint8Array,
-    keyType: number
+    keyType: bigint
   ): Promise<Uint8Array> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.sign(message, privateKey);
@@ -32,7 +32,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
     publicKey: Uint8Array,
     message: Uint8Array,
     signature: Uint8Array,
-    keyType: number
+    keyType: bigint
   ): Promise<boolean> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.verify(signature, message, publicKey);
@@ -42,7 +42,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
     return this.ed25519Manager.randomPrivateKey().slice(0, 16);
   }
 
-  getSupportedKeyTypes(): number[] {
+  getSupportedKeyTypes(): bigint[] {
     return [KEY_TYPE.ED25519];
   }
 
@@ -52,7 +52,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
       .join('');
   }
 
-  private _assertKeyType(keyType: number): void {
+  private _assertKeyType(keyType: bigint): void {
     if (keyType !== KEY_TYPE.ED25519) {
       throw new Error(`Unsupported key type: ${keyType}`);
     }

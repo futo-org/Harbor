@@ -17,12 +17,12 @@ export function fromBase64(base64: string): Uint8Array {
 export type PostData = {
   id: string;
   content: string;
-  authorPublicKey: types.IPublicKey;
+  authorPublicKey: types.PublicKey;
   timestamp: number;
-  parentAuthorPublicKey?: types.IPublicKey;
-  parentProcess?: types.IProcess;
+  parentAuthorPublicKey?: types.PublicKey;
+  parentProcess?: types.Process;
   parentLogicalClock?: number;
-  signedEvent: types.ISignedEvent;
+  signedEvent: types.SignedEvent;
 };
 
 /** Canonical event key: author:process:logicalClock */
@@ -36,7 +36,7 @@ export function eventKey(
 
 /** Parse postId (event key) into components for fetching. Returns null if invalid. */
 export function parsePostId(postId: string): {
-  authorPublicKey: types.IPublicKey;
+  authorPublicKey: types.PublicKey;
   process: Uint8Array;
   logicalClock: number;
 } | null {
@@ -48,7 +48,7 @@ export function parsePostId(postId: string): {
   try {
     return {
       authorPublicKey: types.PublicKey.create({
-        keyType: 1, // Ed25519
+        keyType: 1n, // Ed25519
         key: hexToBytes(authorHex),
       }),
       process: hexToBytes(processHex),
@@ -60,38 +60,37 @@ export function parsePostId(postId: string): {
 }
 
 export function decodePostEvent(
-  signedEvent: types.ISignedEvent,
+  signedEvent: types.SignedEvent,
 ): PostData | null {
   try {
     const eventBytes = signedEvent.event;
     if (!eventBytes) return null;
 
-    const event = types.Event.decode(eventBytes);
+    const event = types.Event.fromBinary(eventBytes);
     if (Number(event.contentType) !== types.ContentType.POST) return null;
 
     const authorKey = event.system?.key;
     const process = event.process?.process;
     if (!authorKey || !process || event.logicalClock == null) return null;
 
-    const post = types.Post.decode(event.content);
+    const post = types.Post.fromBinary(event.content);
 
     // Extract parent author from references (for replies)
     /** Reference.ReferenceType.Pointer from polycentric.proto (not exported by generated protocol types). */
-    const REFERENCE_TYPE_POINTER = 2;
-    let parentAuthorPublicKey: types.IPublicKey | undefined;
-    let parentProcess: types.IProcess | undefined;
+    const REFERENCE_TYPE_POINTER = 2n;
+    let parentAuthorPublicKey: types.PublicKey | undefined;
+    let parentProcess: types.Process | undefined;
     let parentLogicalClock: number | undefined;
     if (event.references && event.references.length > 0) {
       const ref = event.references[0];
       const isPointerRef =
         ref &&
-        (ref.referenceType === REFERENCE_TYPE_POINTER ||
-          Number(ref.referenceType) === REFERENCE_TYPE_POINTER) &&
+        ref.referenceType === REFERENCE_TYPE_POINTER &&
         ref.reference &&
         ref.reference.length > 0;
       if (isPointerRef) {
         try {
-          const parentPointer = types.Pointer.decode(ref.reference);
+          const parentPointer = types.Pointer.fromBinary(ref.reference);
           if (parentPointer.system?.key) {
             parentAuthorPublicKey = parentPointer.system;
           }
@@ -122,14 +121,14 @@ export function decodePostEvent(
 
 export function getPointer(
   client: PolycentricClient,
-  signedEvent: types.ISignedEvent,
-): types.IPointer {
-  const event = types.Event.decode(signedEvent.event ?? new Uint8Array());
+  signedEvent: types.SignedEvent,
+): types.Pointer {
+  const event = types.Event.fromBinary(signedEvent.event);
   return client.queryManager.eventPointer(event);
 }
 
 /** Post id (event key) from a pointer, for store lookups. */
-export function pointerToPostId(pointer: types.IPointer): string {
+export function pointerToPostId(pointer: types.Pointer): string {
   const key = pointer.system?.key;
   const process = pointer.process?.process;
   const clock = pointer.logicalClock;
@@ -140,7 +139,7 @@ export function pointerToPostId(pointer: types.IPointer): string {
 /**
  * Dicebear identicon URL for a public key.
  */
-export function identiconUrl(pubkey: types.IPublicKey, size = 80): string {
+export function identiconUrl(pubkey: types.PublicKey, size = 80): string {
   const seed = getIdentityId(pubkey);
   return `https://api.dicebear.com/7.x/identicon/png?seed=${seed}&size=${size}`;
 }
@@ -175,45 +174,45 @@ export function truncateName(name: string, maxLen = 16): string {
   return name.slice(0, maxLen).trimEnd() + '\u2026';
 }
 
-export function pubkeyStr(key: types.IPublicKey): string {
+export function pubkeyStr(key: types.PublicKey): string {
   return Array.from(key.key ?? new Uint8Array()).join(',');
 }
 
-export function publicKeyToString(key: types.IPublicKey): string {
+export function publicKeyToString(key: types.PublicKey): string {
   const keyType = key.keyType ?? 0;
   const keyBytes = key.key ?? new Uint8Array();
   return `${keyType}_${toBase64(keyBytes)}`;
 }
 
-export function stringToPublicKey(str: string): types.IPublicKey {
+export function stringToPublicKey(str: string): types.PublicKey {
   const idx = str.indexOf('_');
   const keyTypeStr = str.slice(0, idx);
   const keyBase64 = str.slice(idx + 1);
   return types.PublicKey.create({
-    keyType: Number(keyTypeStr),
+    keyType: BigInt(keyTypeStr),
     key: fromBase64(keyBase64),
   });
 }
 
-export function publicKeyToStringURLSafe(key: types.IPublicKey): string {
+export function publicKeyToStringURLSafe(key: types.PublicKey): string {
   return encodeURIComponent(publicKeyToString(key));
 }
 
-export function stringURLSafeToPublicKey(str: string): types.IPublicKey {
+export function stringURLSafeToPublicKey(str: string): types.PublicKey {
   return stringToPublicKey(decodeURIComponent(str));
 }
 
-export function getIdentityId(publicKey: types.IPublicKey): string {
+export function getIdentityId(publicKey: types.PublicKey): string {
   const bytes = publicKey.key ?? new Uint8Array();
   if (bytes.length === 0) return '...';
   return toBase64(bytes).slice(0, 10);
 }
 
-export function getIdentityIdShort(publicKey: types.IPublicKey): string {
+export function getIdentityIdShort(publicKey: types.PublicKey): string {
   return getIdentityId(publicKey).slice(0, 4);
 }
 
-export function pointerToURLString(pointer: types.IPointer): string {
+export function pointerToURLString(pointer: types.Pointer): string {
   const systemStr = publicKeyToString(
     pointer.system ?? types.PublicKey.create(),
   );
@@ -222,7 +221,7 @@ export function pointerToURLString(pointer: types.IPointer): string {
   return encodeURIComponent(`${systemStr}.${processStr}.${clockStr}`);
 }
 
-export function urlStringToPointer(str: string): types.IPointer {
+export function urlStringToPointer(str: string): types.Pointer {
   const decoded = decodeURIComponent(str);
   const parts = decoded.split('.');
   const systemStr = parts[0];
@@ -231,14 +230,14 @@ export function urlStringToPointer(str: string): types.IPointer {
   return types.Pointer.create({
     system: stringToPublicKey(systemStr),
     process: types.Process.create({ process: fromBase64(processStr) }),
-    logicalClock: Number(clockStr),
+    logicalClock: BigInt(clockStr),
   });
 }
 
-export function signedEventToHex(signedEvent: types.ISignedEvent): string {
-  return bytesToHex(types.SignedEvent.encode(signedEvent).finish());
+export function signedEventToHex(signedEvent: types.SignedEvent): string {
+  return bytesToHex(types.SignedEvent.toBinary(signedEvent));
 }
 
-export function hexToSignedEvent(hex: string): types.ISignedEvent {
-  return types.SignedEvent.decode(hexToBytes(hex));
+export function hexToSignedEvent(hex: string): types.SignedEvent {
+  return types.SignedEvent.fromBinary(hexToBytes(hex));
 }

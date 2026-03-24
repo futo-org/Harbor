@@ -1,10 +1,18 @@
-import { Alert, AlertButton } from 'react-native';
+import { Alert, AlertButton, Platform } from 'react-native';
 
 interface AlertOptions {
   title: string;
   message?: string;
   buttons?: AlertButton[];
   cancelable?: boolean;
+}
+
+function isWeb(): boolean {
+  return Platform.OS === 'web';
+}
+
+function formatAlertMessage(title: string, message?: string): string {
+  return [title, message].filter(Boolean).join('\n\n');
 }
 
 /**
@@ -28,6 +36,25 @@ export function showAlert(options: AlertOptions): Promise<number> {
       },
     }));
 
+    if (isWeb()) {
+      const msg = formatAlertMessage(options.title, options.message);
+      if (wrappedButtons.length <= 1) {
+        window.alert(msg);
+        wrappedButtons[0]?.onPress?.();
+        return;
+      }
+      if (wrappedButtons.length === 2) {
+        const ok = window.confirm(msg);
+        (ok ? wrappedButtons[1] : wrappedButtons[0]).onPress?.();
+        return;
+      }
+      window.alert(
+        `${msg}\n\n${wrappedButtons.map((b) => b.text).join(' | ')}`,
+      );
+      wrappedButtons[0].onPress?.();
+      return;
+    }
+
     Alert.alert(options.title, options.message, wrappedButtons, {
       cancelable: options.cancelable ?? true,
     });
@@ -46,6 +73,25 @@ export function confirm(options: {
   onCancel?: () => void;
 }): Promise<boolean> {
   return new Promise((resolve) => {
+    if (isWeb()) {
+      const msg = formatAlertMessage(options.title, options.message);
+      const ok = window.confirm(msg);
+      void (async () => {
+        try {
+          if (ok) {
+            await options.onConfirm?.();
+            resolve(true);
+          } else {
+            await options.onCancel?.();
+            resolve(false);
+          }
+        } catch {
+          resolve(false);
+        }
+      })();
+      return;
+    }
+
     Alert.alert(
       options.title,
       options.message,
@@ -102,6 +148,13 @@ export function showInfo(options: {
   onDismiss?: () => void;
 }): Promise<void> {
   return new Promise((resolve) => {
+    if (isWeb()) {
+      window.alert(formatAlertMessage(options.title, options.message));
+      options.onDismiss?.();
+      resolve();
+      return;
+    }
+
     Alert.alert(
       options.title,
       options.message,

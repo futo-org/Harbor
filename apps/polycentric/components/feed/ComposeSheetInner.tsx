@@ -26,7 +26,7 @@ interface ComposeSheetInnerProps {
   dismiss: () => Promise<void>;
   onPostCreated: (signedEvent: types.SignedEvent) => void;
   onAvatarPress?: () => void;
-  replyToEvent?: types.ISignedEvent | null;
+  replyToEvent?: types.SignedEvent | null;
 }
 
 export function ComposeSheetInner({
@@ -67,11 +67,11 @@ export function ComposeSheetInner({
     setError(null);
     setSubmitting(true);
     try {
-      let reference: types.IReference | undefined;
+      let reference: types.Reference | undefined;
       if (replyPointer) {
         reference = types.Reference.create({
-          referenceType: 2,
-          reference: types.Pointer.encode(replyPointer).finish(),
+          referenceType: 2n,
+          reference: types.Pointer.toBinary(replyPointer),
         });
       }
 
@@ -160,7 +160,13 @@ export function ComposeSheetInner({
     : "What's on your mind?";
 
   return (
-    <Box flex={1} style={{ paddingHorizontal: 15, paddingTop: 10 }}>
+    <Box
+      style={{
+        paddingHorizontal: 15,
+        paddingTop: 10,
+        paddingBottom: 16,
+      }}
+    >
       {isReply && (
         <Box
           padding="md"
@@ -201,7 +207,7 @@ export function ComposeSheetInner({
         </Box>
       )}
 
-      <Box flexDirection="row" gap="md" flex={1}>
+      <Box flexDirection="row" gap="md" alignItems="flex-start">
         <Pressable
           onPress={onAvatarPress}
           disabled={!onAvatarPress}
@@ -246,9 +252,10 @@ export function ComposeSheetInner({
             maxLength={2000}
             style={{
               paddingHorizontal: 0,
-              paddingTop: 4,
+              paddingTop: 8,
               fontSize: 15,
-              flex: 1,
+              minHeight: 180,
+              maxHeight: 280,
             }}
           />
         </Box>

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Canvas, Rect, RadialGradient, vec } from '@shopify/react-native-skia';
+import { View } from 'react-native';
 import { Box } from '@/components/layouts';
 import {
   Text,
@@ -33,15 +33,26 @@ function ProfileHeaderInner({
   return (
     <>
       <Box style={{ position: 'relative' }}>
-        <Canvas style={{ width: screenWidth, height: BANNER_HEIGHT }}>
-          <Rect x={0} y={0} width={screenWidth} height={BANNER_HEIGHT}>
-            <RadialGradient
-              c={vec(0, BANNER_HEIGHT * -0.2)}
-              r={screenWidth}
-              colors={bannerColors}
-            />
-          </Rect>
-        </Canvas>
+        <View
+          style={{
+            width: screenWidth,
+            height: BANNER_HEIGHT,
+            backgroundColor: bannerColors[1],
+            overflow: 'hidden',
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: bannerColors[0],
+              opacity: 0.5,
+            }}
+          />
+        </View>
         <Box
           style={{ position: 'absolute', top: 0, left: 0 }}
           marginHorizontal="lg"

@@ -6,12 +6,13 @@ import {
   SignedEvent,
 } from '@polycentric/js-core';
 import type { PolycentricClientConfig } from '@polycentric/js-core';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
   BrowserWasmBridge,
   SqlStorageDriver,
   BrowserCryptoManager,
   OPFSSQLiteDatabase,
-} from '@polycentric/js-browser';
+} from '@polycentric/js-browser/full';
 
 describe('PolycentricClient Claims and Vouches', () => {
   const TEST_DB_NAME_1 = 'test-db-claims-1';
@@ -30,13 +31,13 @@ describe('PolycentricClient Claims and Vouches', () => {
 
     // Create two different clients with different identities
     const clientConfig1: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME_1),
       cryptoManager: new BrowserCryptoManager(),
     };
 
     const clientConfig2: PolycentricClientConfig = {
-      wasmManager: new BrowserWasmBridge(),
+      coreBridge: new BrowserWasmBridge(wasmUrl),
       storageDriver: await SqlStorageDriver.create(TEST_DB_NAME_2),
       cryptoManager: new BrowserCryptoManager(),
     };

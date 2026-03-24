@@ -31,7 +31,7 @@ export default function Feed() {
   const { Sheet, present, dismiss } = useSheet();
 
   const [selectedFeed, setSelectedFeed] = useState<FeedType>('explore');
-  const [replyToEvent, setReplyToEvent] = useState<types.ISignedEvent | null>(
+  const [replyToEvent, setReplyToEvent] = useState<types.SignedEvent | null>(
     null,
   );
 
@@ -48,7 +48,7 @@ export default function Feed() {
     [router],
   );
 
-  const handleAuthorPress = (publicKey: types.IPublicKey) => {
+  const handleAuthorPress = (publicKey: types.PublicKey) => {
     router.push(Routes.profile(publicKeyToStringURLSafe(publicKey)));
   };
 
@@ -65,7 +65,7 @@ export default function Feed() {
   );
 
   const handleReply = useCallback(
-    (signedEvent: types.ISignedEvent) => {
+    (signedEvent: types.SignedEvent) => {
       setReplyToEvent(signedEvent);
       present();
     },
@@ -147,7 +147,7 @@ export default function Feed() {
         onPress={handleFabPress}
         icon={() => <Ionicons name="add-circle" size={22} color="white" />}
       />
-      <Sheet detents={[1]} scrollable>
+      <Sheet detents={[0.82]}>
         <ComposeSheetInner
           dismiss={dismiss}
           onPostCreated={handlePostCreated}

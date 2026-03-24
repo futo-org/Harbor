@@ -13,6 +13,8 @@ packages/react-native/android
 packages/react-native/ios
 packages/react-native/lib
 packages/rs-core
+packages/rs-core-wasm-browser
+packages/rs-core-wasm-node
 legacy
 services/polycentric-server
 services/verifiers-server

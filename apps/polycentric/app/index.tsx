@@ -1,6 +1,5 @@
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import { usePolycentricContext } from '@/lib/polycentric-hooks';
 
 export default function Index() {
@@ -13,8 +12,6 @@ export default function Index() {
       </View>
     );
   }
-
-  SplashScreen.hideAsync();
 
   // TODO: re-enable onboarding flow when ready
   // const hasIdentity = client.currentIdentity !== null;

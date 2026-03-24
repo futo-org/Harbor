@@ -13,7 +13,7 @@ const MAX_DISPLAY_LIMIT = 2000;
 export interface PostCardProps {
   content: string;
   authorName: string;
-  authorPublicKey: types.IPublicKey;
+  authorPublicKey: types.PublicKey;
   timestamp: number;
   replyingToName: string;
   hasParent: boolean;
