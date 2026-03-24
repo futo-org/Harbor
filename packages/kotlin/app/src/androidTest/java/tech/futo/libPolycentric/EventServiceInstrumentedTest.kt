@@ -23,11 +23,11 @@ class EventServiceInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client = PolycentricClient(
+        client = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-eventservice.db"),
             HTTPNetworkManager()
-        )
+        ))
         runBlocking { client.init() }
     }
 

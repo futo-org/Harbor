@@ -1,6 +1,9 @@
 package tech.futo.libPolycentric
 
 import PolycentricException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import tech.futo.libPolycentric.platform.ICryptoManager
 import tech.futo.libPolycentric.platform.IStorageDriver
 import tech.futo.libPolycentric.services.queries.QueryManager
@@ -22,20 +25,46 @@ enum class ClientState {
     ERROR,
 }
 
+enum class HydrationStrategy {
+    FULL,
+    ASYNC,
+}
+
+enum class HydrationState(val message: String){
+    NOT_STARTED("Not started"),
+    IN_PROGRESS("In progress"),
+    FAILED("Failed"),
+    COMPLETED("Completed")
+}
+
 enum class InitializationStep(val message: String) {
     STARTING("Starting initialization..."),
     INITIALIZING_FFI("Initializing FFI..."),
     LOADING_PROCESS_ID("Loading process ID..."),
     CREATING_PROCESS_ID("Creating process ID..."),
+    HYDRATING_EVENTS("Hydrating events..."),
     COMPLETE("Initialization complete."),
 }
 
+data class HydrationConfig(
+    val strategy: HydrationStrategy = HydrationStrategy.FULL,
+    val batchSize: Int = 100,
+)
+
+data class PolycentricClientConfig(
+    val cryptoManager: ICryptoManager,
+    val storageDriver: IStorageDriver,
+    val networkManager: INetworkManager,
+    val hydration: HydrationConfig = HydrationConfig(),
+)
 
 class PolycentricClient(
-    internal val crypto: ICryptoManager,
-    internal val storage: IStorageDriver,
-    internal val network: INetworkManager,
+    private val config: PolycentricClientConfig,
 ) {
+    internal val crypto: ICryptoManager = config.cryptoManager
+    internal val storage: IStorageDriver = config.storageDriver
+    internal val network: INetworkManager = config.networkManager
+    internal val hydrationConfig: HydrationConfig = config.hydration
     val ffiService = FFIService(this)
     val syncService = SyncService(this)
     val contentManager = ContentManager(this)
@@ -47,8 +76,6 @@ class PolycentricClient(
     internal val processIdRepository by lazy { storage.createProcessIdRepository() }
     internal val processStateRepository by lazy { storage.createProcessStateRepository() }
     internal val eventRepository by lazy { storage.createEventRepository() }
-    internal val eventAckRepository by lazy { storage.createEventAckRepository() }
-
 
     var state: ClientState = ClientState.UNINITIALIZED
         private set
@@ -62,6 +89,9 @@ class PolycentricClient(
     var process: Process? = null
         private set
 
+    var hydrationStatus: HydrationState = HydrationState.NOT_STARTED
+        private set
+
     suspend fun init() {
         try {
             setState(ClientState.INITIALIZING)
@@ -72,6 +102,9 @@ class PolycentricClient(
 
             setStep(InitializationStep.LOADING_PROCESS_ID)
             loadProcessId()
+
+            setStep(InitializationStep.HYDRATING_EVENTS)
+            hydrate()
 
             setStep(InitializationStep.COMPLETE)
             setState(ClientState.READY)
@@ -105,6 +138,70 @@ class PolycentricClient(
         val newProcess = Process(process = processId.toByteString())
         processIdRepository.setProcessId(newProcess)
         return newProcess
+    }
+
+    private suspend fun hydrate() {
+        setHydrationStatus(HydrationState.IN_PROGRESS)
+        try {
+            when (hydrationConfig.strategy) {
+                HydrationStrategy.FULL -> hydrateFull()
+                HydrationStrategy.ASYNC -> hydrateAsync()
+            }
+        } catch (e: Exception) {
+            setHydrationStatus(HydrationState.FAILED)
+            throw e
+        }
+    }
+
+    private suspend fun hydrateFull() {
+        val events = eventRepository.getAllEvents()
+
+        for (event in events) {
+            ffiService.ingestEvent(event.encode())
+        }
+
+        setHydrationStatus(HydrationState.COMPLETED)
+    }
+
+    private suspend fun hydrateAsync() {
+        val initialOffset = loadBatch(hydrationConfig.batchSize, null)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                loadBatchesStartingFrom(hydrationConfig.batchSize, initialOffset)
+            } catch (e: Exception) {
+                setHydrationStatus(HydrationState.FAILED)
+                events.emitError(e)
+            }
+        }
+    }
+
+    private suspend fun loadBatchesStartingFrom(batchSize: Int, offset: Int?) {
+        var currentOffset = offset
+
+        while (currentOffset != null) {
+            currentOffset = loadBatch(batchSize, currentOffset)
+            kotlinx.coroutines.yield()
+        }
+
+        setHydrationStatus(HydrationState.COMPLETED)
+    }
+
+    private suspend fun loadBatch(batchSize: Int, offset: Int?): Int? {
+        val result = eventRepository.getEventsBatch(batchSize, offset)
+
+        if (result.events.isEmpty()) return null
+
+        for (event in result.events) {
+            ffiService.ingestEvent(event.encode())
+        }
+
+        return result.offset
+    }
+
+    private fun setHydrationStatus(status: HydrationState) {
+        hydrationStatus = status
+        events.emitHydrationStatus(status)
     }
 
     suspend fun isInitialized(): Boolean {

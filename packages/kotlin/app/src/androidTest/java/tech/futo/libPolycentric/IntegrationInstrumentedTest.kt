@@ -23,11 +23,11 @@ class IntegrationInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client = PolycentricClient(
+        client = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration.db"),
             HTTPNetworkManager()
-        )
+        ))
         runBlocking { client.init() }
     }
 
@@ -54,18 +54,18 @@ class IntegrationInstrumentedTest {
     fun shouldRetrieveExistingProcessIdOnSecondInit() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
 
-        val client1 = PolycentricClient(
+        val client1 = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration-shared.db"),
             HTTPNetworkManager()
-        )
+        ))
         client1.init()
 
-        val client2 = PolycentricClient(
+        val client2 = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-integration-shared.db"),
             HTTPNetworkManager()
-        )
+        ))
         client2.init()
 
         assertEquals(client1.process, client2.process)

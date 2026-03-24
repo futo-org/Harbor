@@ -2,6 +2,7 @@ package tech.futo.libPolycentric.services
 
 import polycentric.Event
 import tech.futo.libPolycentric.ClientState
+import tech.futo.libPolycentric.HydrationState
 import tech.futo.libPolycentric.InitializationStep
 import tech.futo.libPolycentric.services.Identity
 
@@ -11,6 +12,7 @@ class EventService {
     private val stateChangedListeners = mutableListOf<(ClientState) -> Unit>()
     private val progressListeners = mutableListOf<(InitializationStep) -> Unit>()
     private val errorListeners = mutableListOf<(Exception) -> Unit>()
+    private val hydrationStatusListeners = mutableListOf<(HydrationState) -> Unit>()
 
     // Identity events
     fun emitIdentityChanged(identity: Identity?) = identityChangedListeners.forEach { it(identity) }
@@ -37,11 +39,17 @@ class EventService {
     fun onError(listener: (Exception) -> Unit) { errorListeners.add(listener) }
     fun offError(listener: (Exception) -> Unit) { errorListeners.remove(listener) }
 
+    // Hydration status events
+    fun emitHydrationStatus(status: HydrationState) = hydrationStatusListeners.forEach { it(status) }
+    fun onHydrationStatus(listener: (HydrationState) -> Unit) { hydrationStatusListeners.add(listener) }
+    fun offHydrationStatus(listener: (HydrationState) -> Unit) { hydrationStatusListeners.remove(listener) }
+
     fun removeAllListeners() {
         identityChangedListeners.clear()
         contentCreatedListeners.clear()
         stateChangedListeners.clear()
         progressListeners.clear()
         errorListeners.clear()
+        hydrationStatusListeners.clear()
     }
 }

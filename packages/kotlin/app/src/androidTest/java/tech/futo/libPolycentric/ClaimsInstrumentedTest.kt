@@ -25,16 +25,16 @@ class ClaimsInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client1 = PolycentricClient(
+        client1 = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context,"test-claims-1.db"),
             HTTPNetworkManager()
-        )
-        client2 = PolycentricClient(
+        ))
+        client2 = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-claims-2.db"),
             HTTPNetworkManager()
-        )
+        ))
         runBlocking {
             client1.init()
             client2.init()

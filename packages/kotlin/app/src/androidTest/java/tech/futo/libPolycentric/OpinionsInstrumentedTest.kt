@@ -24,11 +24,11 @@ class OpinionsInstrumentedTest {
     @Before
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        client = PolycentricClient(
+        client = PolycentricClient(PolycentricClientConfig(
             Ed25519CryptoManager(),
             SQLiteStorageDriver(context, "test-opinions.db"),
             HTTPNetworkManager()
-        )
+        ))
         runBlocking { client.init() }
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
