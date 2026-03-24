@@ -123,7 +123,10 @@ class ContentManager(private val client: PolycentricClient) {
 
         client.ffiService.ingestEvent(signedEvent.encode())
 
-        client.eventRepository.persistEvent(signedEvent)
+        if(!client.currentIdentityIsEphemeral) {
+            client.eventRepository.persistEvent(signedEvent)
+        }
+
         client.processStateRepository.persistCurrentLogicalClock(
             systemKeyType,
             systemKeyBytes,
