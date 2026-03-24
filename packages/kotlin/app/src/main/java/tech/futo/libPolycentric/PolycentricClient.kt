@@ -14,11 +14,25 @@ import tech.futo.libPolycentric.services.IdentityManager
 import tech.futo.libPolycentric.services.Identity
 import tech.futo.libPolycentric.services.KeyPair
 import okio.ByteString.Companion.toByteString
+import polycentric.ClaimFieldEntry
+import polycentric.Event
+import polycentric.EventCreationData
+import polycentric.EventKey
+import polycentric.FeedResult
+import polycentric.ImageManifest
+import polycentric.LWWElement
+import polycentric.Pointer
+import polycentric.PrivateKey
 import polycentric.Process
+import polycentric.PublicKey
+import polycentric.Reference
+import polycentric.SignedEvent
+import polycentric_ffi.ServerError
 import tech.futo.libPolycentric.platform.INetworkManager
 import tech.futo.libPolycentric.drivers.Ed25519CryptoManager
 import tech.futo.libPolycentric.services.IdentityOptions
 import tech.futo.libPolycentric.services.SyncService
+import tech.futo.libPolycentric.services.queries.FeedQuery
 
 enum class ClientState {
     UNINITIALIZED,
@@ -232,6 +246,164 @@ class PolycentricClient(
                 ?: throw PolycentricException("Process not initialized")
             return Identity(keyPair = keyPair, process = process)
         }
+
+    suspend fun sync(): List<ServerError> =
+        syncService.sync()
+
+    suspend fun createEventRaw(eventData: EventCreationData): SignedEvent =
+        contentManager.createEvent(eventData)
+
+    fun createIdentity(options: IdentityOptions): KeyPair =
+        identityManager.createIdentity(options)
+
+    fun importIdentity(privateKey: PrivateKey, setAsCurrent: Boolean = true): KeyPair =
+        identityManager.importIdentity(privateKey, setAsCurrent)
+
+    fun getAllIdentities(): List<KeyPair> =
+        identityManager.getAllIdentities()
+
+    fun removeIdentity(publicKey: PublicKey) =
+        identityManager.removeIdentity(publicKey)
+
+    fun switchIdentity(publicKey: PublicKey): KeyPair =
+        identityManager.switchIdentity(publicKey)
+
+    fun queryExploreFeed(perServerLimit: Long? = null, moderationFilters: String? = null): FeedQuery =
+        queryManager.queryExploreFeed(perServerLimit, moderationFilters)
+
+    fun querySearchFeed(
+        searchQuery: String,
+        searchType: String? = null,
+        perServerLimit: Long? = null,
+        moderationFilters: String? = null,
+    ): FeedQuery =
+        queryManager.querySearchFeed(searchQuery, searchType, perServerLimit, moderationFilters)
+
+    fun queryFollowingFeed(limit: Int): FeedQuery =
+        queryManager.queryFollowingFeed(limit)
+
+    fun queryAuthorFeed(profile: PublicKey, limit: Int): FeedQuery =
+        queryManager.queryAuthorFeed(profile, limit)
+
+    fun queryReferencesFeed(reference: Reference, moderationFilters: String? = null): FeedQuery =
+        queryManager.queryReferencesFeed(reference, moderationFilters)
+
+    fun queryLikesFeed(limit: Int): FeedQuery =
+        queryManager.queryLikesFeed(limit)
+
+    fun queryCommentsFeed(moderationFilters: String? = null): FeedQuery =
+        queryManager.queryCommentsFeed(moderationFilters)
+
+    suspend fun queryCurrentOpinion(targetPointer: Pointer): LWWElement? =
+        queryManager.queryCurrentOpinion(targetPointer)
+
+    suspend fun queryIsDeleted(targetPointer: Pointer): Boolean =
+        queryManager.queryIsDeleted(targetPointer)
+
+    suspend fun queryFeed(
+        system: PublicKey,
+        startTime: Long? = null,
+        endTime: Long? = null,
+        limit: Long? = null,
+        cursor: ByteArray? = null,
+    ): FeedResult =
+        queryManager.queryFeed(system, startTime, endTime, limit, cursor)
+
+    suspend fun queryUsername(system: PublicKey): String? =
+        queryManager.queryUsername(system)
+
+    suspend fun queryDescription(system: PublicKey): String? =
+        queryManager.queryDescription(system)
+
+    suspend fun queryAvatar(system: PublicKey): ImageManifest? =
+        queryManager.queryAvatar(system)
+
+    suspend fun queryBanner(system: PublicKey): ImageManifest? =
+        queryManager.queryBanner(system)
+
+    suspend fun queryFollows(system: PublicKey): List<PublicKey> =
+        queryManager.queryFollows(system)
+
+    suspend fun queryBlocks(system: PublicKey): List<PublicKey> =
+        queryManager.queryBlocks(system)
+
+    suspend fun queryServers(system: PublicKey): List<String> =
+        queryManager.queryServers(system)
+
+    suspend fun queryAuthorities(system: PublicKey): List<String> =
+        queryManager.queryAuthorities(system)
+
+    suspend fun queryTopics(system: PublicKey): List<String> =
+        queryManager.queryTopics(system)
+
+    suspend fun eventPointer(event: Event): Pointer =
+        queryManager.eventPointer(event)
+
+    suspend fun eventKey(event: Event): EventKey =
+        queryManager.eventKey(event)
+
+    suspend fun createClaim(claimType: Long, fields: List<ClaimFieldEntry>): SignedEvent =
+        contentManager.createClaim(claimType, fields)
+
+    suspend fun createVerifyClaim(targetPointer: Pointer): SignedEvent =
+        contentManager.createVerifyClaim(targetPointer)
+
+    suspend fun createPost(content: String, image: ImageManifest? = null, reference: Reference? = null): SignedEvent =
+        contentManager.createPost(content, image, reference)
+
+    suspend fun createLike(subjectPointer: Pointer): SignedEvent =
+        contentManager.createLike(subjectPointer)
+
+    suspend fun createDislike(subjectPointer: Pointer): SignedEvent =
+        contentManager.createDislike(subjectPointer)
+
+    suspend fun createNeutral(subjectPointer: Pointer): SignedEvent =
+        contentManager.createNeutral(subjectPointer)
+
+    suspend fun createUsername(username: String): SignedEvent =
+        contentManager.createUsername(username)
+
+    suspend fun createDescription(description: String): SignedEvent =
+        contentManager.createDescription(description)
+
+    suspend fun createAvatar(avatar: ImageManifest): SignedEvent =
+        contentManager.createAvatar(avatar)
+
+    suspend fun createBanner(banner: ImageManifest): SignedEvent =
+        contentManager.createBanner(banner)
+
+    suspend fun createFollow(system: PublicKey): SignedEvent =
+        contentManager.createFollow(system)
+
+    suspend fun createUnfollow(system: PublicKey): SignedEvent =
+        contentManager.createUnfollow(system)
+
+    suspend fun createBlock(system: PublicKey): SignedEvent =
+        contentManager.createBlock(system)
+
+    suspend fun createUnblock(system: PublicKey): SignedEvent =
+        contentManager.createUnblock(system)
+
+    suspend fun createAddServer(server: String): SignedEvent =
+        contentManager.createAddServer(server)
+
+    suspend fun createRemoveServer(server: String): SignedEvent =
+        contentManager.createRemoveServer(server)
+
+    suspend fun createAddAuthority(authority: String): SignedEvent =
+        contentManager.createAddAuthority(authority)
+
+    suspend fun createRemoveAuthority(authority: String): SignedEvent =
+        contentManager.createRemoveAuthority(authority)
+
+    suspend fun createJoinTopic(topic: String): SignedEvent =
+        contentManager.createJoinTopic(topic)
+
+    suspend fun createLeaveTopic(topic: String): SignedEvent =
+        contentManager.createLeaveTopic(topic)
+
+    suspend fun deletePost(postPointer: Pointer): SignedEvent =
+        contentManager.deletePost(postPointer)
 
     fun setCurrentKeyPair(keyPair: KeyPair, ephemeral: Boolean = false) {
         currentKeyPair = keyPair
