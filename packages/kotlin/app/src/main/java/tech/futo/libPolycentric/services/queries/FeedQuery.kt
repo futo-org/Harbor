@@ -1,4 +1,4 @@
-package tech.futo.libPolycentric.queries
+package tech.futo.libPolycentric.services.queries
 
 import PolycentricException
 import android.util.Base64

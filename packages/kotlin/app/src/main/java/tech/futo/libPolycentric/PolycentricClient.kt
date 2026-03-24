@@ -3,7 +3,7 @@ package tech.futo.libPolycentric
 import PolycentricException
 import tech.futo.libPolycentric.platform.ICryptoManager
 import tech.futo.libPolycentric.platform.IStorageDriver
-import tech.futo.libPolycentric.queries.QueryManager
+import tech.futo.libPolycentric.services.queries.QueryManager
 import tech.futo.libPolycentric.services.ContentManager
 import tech.futo.libPolycentric.services.EventService
 import tech.futo.libPolycentric.services.FFIService

@@ -1,4 +1,4 @@
-package tech.futo.libPolycentric.queries
+package tech.futo.libPolycentric.services.queries
 
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
