@@ -1,6 +1,10 @@
-use crate::error::Error as TopLevelError;
+///
+/// Too much of this file is duplicated but we keep running into the orphan rule
+/// This should be fixed.
+///
 
 #[derive(Debug, thiserror::Error)]
+#[cfg(target_arch = "wasm32")]
 pub enum PlatformError {
     #[error("Key has invalid type: expected {expected}, got {actual}")]
     KeyInvalidType { expected: u64, actual: u64 },
@@ -55,62 +59,5 @@ pub enum PlatformError {
 impl From<PlatformError> for wasm_bindgen::JsValue {
     fn from(error: PlatformError) -> Self {
         js_sys::Error::new(&error.to_string()).into()
-    }
-}
-
-pub type PlatformResult<T> = std::result::Result<T, PlatformError>;
-
-#[repr(i32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorCode {
-    Success = 0,
-
-    // Model/Core Errors (100-199)
-    KeyInvalidType = 101,
-    KeyIncorrectLength = 102,
-    ProcessInvalidLength = 103,
-    SignatureVerificationFailed = 104,
-    SignatureGenerationFailed = 105,
-    SerializationError = 106,
-    DeserializationError = 107,
-    CryptoError = 108,
-    InvalidEventCreationData = 109,
-    QueryError = 110,
-    InvalidInput = 111,
-    CallbackError = 112,
-    FFIError = 114,
-    ServerError = 113,
-    Unknown = 199,
-
-    // IO Errors (200-299)
-    IoError = 201,
-
-    // Binding Errors (300-399)
-    InvalidState = 301,
-}
-
-impl From<&TopLevelError> for ErrorCode {
-    fn from(error: &TopLevelError) -> Self {
-        match error {
-            TopLevelError::Io(_) => Self::IoError,
-            TopLevelError::Platform(platform_err) => match platform_err {
-                PlatformError::KeyInvalidType { .. } => Self::KeyInvalidType,
-                PlatformError::KeyIncorrectLength { .. } => Self::KeyIncorrectLength,
-                PlatformError::ProcessInvalidLength { .. } => Self::ProcessInvalidLength,
-                PlatformError::SignatureVerificationFailed => Self::SignatureVerificationFailed,
-                PlatformError::SignatureGenerationFailed(_) => Self::SignatureGenerationFailed,
-                PlatformError::SerializationError(_) => Self::SerializationError,
-                PlatformError::DeserializationError(_) => Self::DeserializationError,
-                PlatformError::CryptoError(_) => Self::CryptoError,
-                PlatformError::InvalidState(_) => Self::InvalidState,
-                PlatformError::InvalidEventCreationData(_) => Self::InvalidEventCreationData,
-                PlatformError::QueryError(_) => Self::QueryError,
-                PlatformError::InvalidInput(_) => Self::InvalidInput,
-                PlatformError::CallbackError(_) => Self::CallbackError,
-                PlatformError::FFIError(_) => Self::FFIError,
-                PlatformError::ServerError { .. } => Self::ServerError,
-                PlatformError::Unknown(_) => Self::Unknown,
-            },
-        }
     }
 }

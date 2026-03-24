@@ -1,5 +1,5 @@
-use crate::models::internal::{ProcessId, SystemKey};
-use crate::models::protos::{ContentType, SignedEvent};
+use polycentric_common::models::internal::{ProcessId, SystemKey};
+use polycentric_common::models::protos::{ContentType, SignedEvent};
 use std::collections::HashMap;
 
 /// Query for latest events by content type

@@ -1,8 +1,8 @@
-use crate::error::CoreError;
-use crate::models::internal::SystemKey;
-use crate::models::protos::{ContentType, SignedEvent};
 use crate::query::crdt::CrdtResolver;
 use crate::store::EventStore;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::internal::SystemKey;
+use polycentric_common::models::protos::{ContentType, SignedEvent};
 use prost::Message;
 
 /// System metadata query engine for handling system metadata queries
@@ -57,9 +57,9 @@ impl MetadataQueryEngine {
         &self,
         system: &SystemKey,
         event_store: &EventStore,
-    ) -> Result<Vec<crate::models::protos::PublicKey>, CoreError> {
+    ) -> Result<Vec<polycentric_common::models::protos::PublicKey>, CoreError> {
         self.query_lww_element_set(system, ContentType::Follow, event_store, |bytes| {
-            crate::models::protos::PublicKey::decode(bytes)
+            polycentric_common::models::protos::PublicKey::decode(bytes)
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
         })
     }
@@ -69,9 +69,9 @@ impl MetadataQueryEngine {
         &self,
         system: &SystemKey,
         event_store: &EventStore,
-    ) -> Result<Vec<crate::models::protos::PublicKey>, CoreError> {
+    ) -> Result<Vec<polycentric_common::models::protos::PublicKey>, CoreError> {
         self.query_lww_element_set(system, ContentType::Block, event_store, |bytes| {
-            crate::models::protos::PublicKey::decode(bytes)
+            polycentric_common::models::protos::PublicKey::decode(bytes)
                 .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
         })
     }
@@ -175,20 +175,25 @@ impl MetadataQueryEngine {
                 u64,
                 u64,
                 usize,
-                crate::models::protos::lww_element_set::Operation,
+                polycentric_common::models::protos::lww_element_set::Operation,
             ),
         > = std::collections::HashMap::new();
 
         for (idx, signed_event) in events.iter().enumerate() {
-            if let Ok(event) = crate::models::protos::Event::decode(signed_event.event.as_slice()) {
+            if let Ok(event) =
+                polycentric_common::models::protos::Event::decode(signed_event.event.as_slice())
+            {
                 if let Some(lww_element_set) = &event.lww_element_set {
                     let key = lww_element_set.value.clone();
                     let timestamp = lww_element_set.unix_milliseconds;
                     let logical_clock = event.logical_clock;
-                    let operation = crate::models::protos::lww_element_set::Operation::try_from(
-                        lww_element_set.operation,
-                    )
-                    .unwrap_or(crate::models::protos::lww_element_set::Operation::Add);
+                    let operation =
+                        polycentric_common::models::protos::lww_element_set::Operation::try_from(
+                            lww_element_set.operation,
+                        )
+                        .unwrap_or(
+                            polycentric_common::models::protos::lww_element_set::Operation::Add,
+                        );
                     match element_map.get(&key) {
                         Some((existing_timestamp, existing_logical_clock, _, _)) => {
                             if (timestamp, logical_clock)
@@ -207,7 +212,7 @@ impl MetadataQueryEngine {
 
         let mut winning_events = Vec::new();
         for (_, (_, _, idx, operation)) in element_map {
-            if operation == crate::models::protos::lww_element_set::Operation::Add {
+            if operation == polycentric_common::models::protos::lww_element_set::Operation::Add {
                 if let Some(event) = events.get(idx) {
                     winning_events.push((*event).clone());
                 }

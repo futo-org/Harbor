@@ -1,7 +1,7 @@
 use crate::error::{CoreError, Error, Result};
+use crate::models::Event;
 use crate::models::protos::SignedEvent;
 use crate::models::traits::Serializable;
-use crate::models::Event;
 use crate::platform::error::PlatformError;
 use prost::Message;
 

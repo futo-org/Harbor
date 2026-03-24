@@ -1,5 +1,5 @@
-use crate::models::internal::EventKey;
-use crate::models::protos::{Event, SignedEvent};
+use polycentric_common::models::internal::EventKey;
+use polycentric_common::models::protos::{Event, SignedEvent};
 use std::collections::{BTreeMap, HashSet};
 
 /// Index for event references
@@ -22,7 +22,7 @@ impl ReferenceIndex {
         &mut self,
         event_key: &EventKey,
         event: &Event,
-    ) -> Result<(), crate::error::CoreError> {
+    ) -> Result<(), polycentric_common::error::CoreError> {
         for reference in &event.references {
             if let Some(target_event_key) = reference.to_event_key() {
                 self.add_reference(event_key, &target_event_key);

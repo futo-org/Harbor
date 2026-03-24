@@ -1,0 +1,11 @@
+# Format the code using cargo fmt
+format:
+    @echo "Formatting code..."
+    @cargo fmt
+    @echo "Formatting complete."
+
+# Check that code is formatted correctly
+format-check:
+    @echo "Checking code formatting..."
+    @cargo fmt --check
+    @echo "Formatting check passed."

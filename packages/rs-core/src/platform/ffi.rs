@@ -16,8 +16,12 @@ use std::{
 };
 
 use crate::feeds::feed_helpers;
-use crate::models::protos::reference::ReferenceType;
 use crate::{
+    query::{EventRangeQuery, QueryEngine},
+    synchronization::sync_helpers::{fetch_event_request, prepare_sync_requests},
+};
+use polycentric_common::models::protos::reference::ReferenceType;
+use polycentric_common::{
     models::internal::{EventKey, ProcessId, SystemKey, TimelineKey},
     models::{
         protos::{
@@ -32,8 +36,6 @@ use crate::{
         LwwElement, Pointer, Process, PublicKey, Reference, Serializable, SignedEvent, VectorClock,
     },
     platform::PlatformError,
-    query::{EventRangeQuery, QueryEngine},
-    synchronization::sync_helpers::{fetch_event_request, prepare_sync_requests},
 };
 
 static ENGINE: RwLock<Option<QueryEngine>> = RwLock::new(None);
@@ -2385,9 +2387,7 @@ fn query_events_internal(
     let result = engine
         .query_events(query)
         .map_err(|e| PlatformError::QueryError(format!("Query events failed: {}", e)))?;
-    Ok(crate::models::event_array::serialize_signed_events(
-        &result.events,
-    ))
+    Ok(polycentric_common::models::event_array::serialize_signed_events(&result.events))
 }
 
 /// Helper method to query a system-specific CRDT without making any network requests
@@ -2404,10 +2404,12 @@ fn query_cached_crdt_for_system(
         PlatformError::DeserializationError(format!("Failed to parse system key: {}", e))
     })?;
 
-    let content_type_enum = crate::models::protos::ContentType::try_from(content_type as i32)
-        .map_err(|_| {
-            PlatformError::DeserializationError(format!("Invalid content type: {}", content_type))
-        })?;
+    let content_type_enum = polycentric_common::models::protos::ContentType::try_from(
+        content_type as i32,
+    )
+    .map_err(|_| {
+        PlatformError::DeserializationError(format!("Invalid content type: {}", content_type))
+    })?;
 
     engine
         .query_crdt_for_system(&system_key, content_type_enum)
