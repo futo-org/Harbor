@@ -38,6 +38,7 @@ class HTTPNetworkManager : INetworkManager {
     }
 
      override suspend fun fulfillRequests(requests: NetworkRequestResponses): NetworkRequestResponses {
+         // Run all requests in parallel
          val newPairs = coroutineScope {
              requests.pairs.map { pair -> async { fulfillRequest(pair) } }
          }.map {
