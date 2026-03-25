@@ -1,3 +1,4 @@
+use super::events_repository as EventsRepository;
 use crate::lib::proto::events_service_server::{
     EventsService, EventsServiceServer,
 };
@@ -7,8 +8,10 @@ use crate::lib::proto::{
 };
 use tonic::{Request, Response, Status};
 
-#[derive(Debug, Default)]
-pub struct EventsServiceImpl {}
+#[derive(Debug)]
+pub struct EventsServiceImpl {
+    db: sea_orm::DatabaseConnection,
+}
 
 /// Implementation of the EventsService
 #[tonic::async_trait]
@@ -18,7 +21,15 @@ impl EventsService for EventsServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
-        let _limit = request.into_inner().limit.unwrap_or(10).max(200);
+        let limit = request.into_inner().limit.unwrap_or(10).max(200) as u64;
+
+        EventsRepository::Query::list_events(&self.db, Some(limit))
+            .await
+            .map_err(|e| {
+                eprintln!("list_events error: {e}");
+                Status::internal("internal server error")
+            })?;
+
         let reply = ListEventsResponse { events: vec![] };
         Ok(Response::new(reply))
     }
@@ -32,7 +43,8 @@ impl EventsService for EventsServiceImpl {
     }
 }
 
-pub fn build_events_service() -> EventsServiceServer<EventsServiceImpl> {
-    let events = EventsServiceImpl::default();
-    EventsServiceServer::new(events)
+pub fn build_events_service(
+    db: sea_orm::DatabaseConnection,
+) -> EventsServiceServer<EventsServiceImpl> {
+    EventsServiceServer::new(EventsServiceImpl { db })
 }

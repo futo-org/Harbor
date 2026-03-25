@@ -4,6 +4,9 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
+# Workspace
+entity = { path = "./entity" }
+# 3rd Party
 axum = "0.8.8"
 log = "0.4"
 polycentric-common = { path = "../../packages/rs-common" }

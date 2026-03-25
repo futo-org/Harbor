@@ -1,3 +1,4 @@
+use crate::db::client::build_db_client;
 use crate::lib;
 use tonic::transport::Server;
 
@@ -14,10 +15,26 @@ fn build_reflection_service() -> Result<
     Ok(service)
 }
 
+/// Attempt to connect to the database, retrying with backoff.
+async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
+    let mut delay = std::time::Duration::from_secs(1);
+    loop {
+        match build_db_client().await {
+            Ok(db) => return db,
+            Err(e) => {
+                eprintln!("Failed to connect to database: {e}, retrying in {delay:?}");
+                tokio::time::sleep(delay).await;
+                delay = (delay * 2).min(std::time::Duration::from_secs(30));
+            }
+        }
+    }
+}
+
 /// Serve the gRPC
 pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
-    let events_service = lib::events::events_service::build_events_service();
+    let db = connect_db_with_retry().await;
+    let events_service = lib::events::events_service::build_events_service(db);
     let reflection_service = build_reflection_service()?;
 
     println!("GRPC server is listening on {addr}");
