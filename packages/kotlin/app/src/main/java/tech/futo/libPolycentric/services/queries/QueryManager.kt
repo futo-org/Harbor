@@ -21,7 +21,7 @@ import tech.futo.libPolycentric.PolycentricClient
 
 class QueryManager(private val client: PolycentricClient) {
 
-    fun queryExploreFeed(
+    suspend fun queryExploreFeed(
         perServerLimit: Long? = null,
         moderationFilters: String? = null,
     ): FeedQuery {
@@ -40,7 +40,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun querySearchFeed(
+    suspend fun querySearchFeed(
         searchQuery: String,
         searchType: String? = null,
         perServerLimit: Long? = null,
@@ -70,7 +70,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryFollowingFeed(limit: Int): FeedQuery {
+    suspend fun queryFollowingFeed(limit: Int): FeedQuery {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )
@@ -80,7 +80,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryAuthorFeed(profile: PublicKey, limit: Int): FeedQuery {
+    suspend fun queryAuthorFeed(profile: PublicKey, limit: Int): FeedQuery {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )
@@ -91,7 +91,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryReferencesFeed(
+    suspend fun queryReferencesFeed(
         reference: Reference,
         moderationFilters: String? = null,
     ): FeedQuery {
@@ -110,7 +110,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryLikesFeed(limit: Int): FeedQuery {
+    suspend fun queryLikesFeed(limit: Int): FeedQuery {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )
@@ -120,7 +120,7 @@ class QueryManager(private val client: PolycentricClient) {
         }
     }
 
-    fun queryCommentsFeed(moderationFilters: String? = null): FeedQuery {
+    suspend fun queryCommentsFeed(moderationFilters: String? = null): FeedQuery {
         val currentSystemBytes = PublicKey.ADAPTER.encode(
             client.currentIdentity.keyPair.publicKey
         )

@@ -42,7 +42,7 @@ class IdentityManager(private val client: PolycentricClient) {
         return KeyPair(keyType, privateKey, publicKey)
     }
 
-    fun createIdentity(options: IdentityOptions): KeyPair {
+    suspend fun createIdentity(options: IdentityOptions): KeyPair {
         val keyPair = constructKeyPair(options.keyType)
 
         if (!options.ephemeral) {
@@ -61,7 +61,7 @@ class IdentityManager(private val client: PolycentricClient) {
         return keyPair
     }
 
-    fun importIdentity(
+    suspend fun importIdentity(
         privateKey: PrivateKey,
         setAsCurrent: Boolean = true,
     ): KeyPair {
@@ -92,7 +92,7 @@ class IdentityManager(private val client: PolycentricClient) {
         return keyPair
     }
 
-    fun getAllIdentities(): List<KeyPair> {
+    suspend fun getAllIdentities(): List<KeyPair> {
         return client.keysRepository.getAllKeys().map { stored ->
             KeyPair(
                 keyType = stored.privateKey.key_type,
@@ -102,11 +102,11 @@ class IdentityManager(private val client: PolycentricClient) {
         }
     }
 
-    fun removeIdentity(publicKey: PublicKey) {
+    suspend fun removeIdentity(publicKey: PublicKey) {
         client.keysRepository.removeKeys(publicKey)
     }
 
-    fun switchIdentity(publicKey: PublicKey): KeyPair {
+    suspend fun switchIdentity(publicKey: PublicKey): KeyPair {
         val stored = client.keysRepository.retrieveKeysByPublicKey(publicKey)
             ?: throw PolycentricException("Identity with public key not found")
 

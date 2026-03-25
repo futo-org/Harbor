@@ -253,25 +253,25 @@ class PolycentricClient(
     suspend fun createEventRaw(eventData: EventCreationData): SignedEvent =
         contentManager.createEvent(eventData)
 
-    fun createIdentity(options: IdentityOptions): KeyPair =
+    suspend fun createIdentity(options: IdentityOptions): KeyPair =
         identityManager.createIdentity(options)
 
-    fun importIdentity(privateKey: PrivateKey, setAsCurrent: Boolean = true): KeyPair =
+    suspend fun importIdentity(privateKey: PrivateKey, setAsCurrent: Boolean = true): KeyPair =
         identityManager.importIdentity(privateKey, setAsCurrent)
 
-    fun getAllIdentities(): List<KeyPair> =
+    suspend fun getAllIdentities(): List<KeyPair> =
         identityManager.getAllIdentities()
 
-    fun removeIdentity(publicKey: PublicKey) =
+    suspend fun removeIdentity(publicKey: PublicKey) =
         identityManager.removeIdentity(publicKey)
 
-    fun switchIdentity(publicKey: PublicKey): KeyPair =
+    suspend fun switchIdentity(publicKey: PublicKey): KeyPair =
         identityManager.switchIdentity(publicKey)
 
-    fun queryExploreFeed(perServerLimit: Long? = null, moderationFilters: String? = null): FeedQuery =
+    suspend fun queryExploreFeed(perServerLimit: Long? = null, moderationFilters: String? = null): FeedQuery =
         queryManager.queryExploreFeed(perServerLimit, moderationFilters)
 
-    fun querySearchFeed(
+    suspend fun querySearchFeed(
         searchQuery: String,
         searchType: String? = null,
         perServerLimit: Long? = null,
@@ -279,19 +279,19 @@ class PolycentricClient(
     ): FeedQuery =
         queryManager.querySearchFeed(searchQuery, searchType, perServerLimit, moderationFilters)
 
-    fun queryFollowingFeed(limit: Int): FeedQuery =
+    suspend fun queryFollowingFeed(limit: Int): FeedQuery =
         queryManager.queryFollowingFeed(limit)
 
-    fun queryAuthorFeed(profile: PublicKey, limit: Int): FeedQuery =
+    suspend fun queryAuthorFeed(profile: PublicKey, limit: Int): FeedQuery =
         queryManager.queryAuthorFeed(profile, limit)
 
-    fun queryReferencesFeed(reference: Reference, moderationFilters: String? = null): FeedQuery =
+    suspend fun queryReferencesFeed(reference: Reference, moderationFilters: String? = null): FeedQuery =
         queryManager.queryReferencesFeed(reference, moderationFilters)
 
-    fun queryLikesFeed(limit: Int): FeedQuery =
+    suspend fun queryLikesFeed(limit: Int): FeedQuery =
         queryManager.queryLikesFeed(limit)
 
-    fun queryCommentsFeed(moderationFilters: String? = null): FeedQuery =
+    suspend fun queryCommentsFeed(moderationFilters: String? = null): FeedQuery =
         queryManager.queryCommentsFeed(moderationFilters)
 
     suspend fun queryCurrentOpinion(targetPointer: Pointer): LWWElement? =
@@ -405,7 +405,7 @@ class PolycentricClient(
     suspend fun deletePost(postPointer: Pointer): SignedEvent =
         contentManager.deletePost(postPointer)
 
-    fun setCurrentKeyPair(keyPair: KeyPair, ephemeral: Boolean = false) {
+    suspend fun setCurrentKeyPair(keyPair: KeyPair, ephemeral: Boolean = false) {
         currentKeyPair = keyPair
         currentIdentityIsEphemeral = ephemeral
         events.emitIdentityChanged(currentIdentity)
