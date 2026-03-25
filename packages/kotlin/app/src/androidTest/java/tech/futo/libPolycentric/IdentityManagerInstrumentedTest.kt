@@ -40,7 +40,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldBeAbleToCreateANewIdentity() {
+    fun shouldBeAbleToCreateANewIdentity() = runBlocking {
         val keyPair = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -54,7 +54,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createIdentityShouldSetAsCurrentByDefault() {
+    fun createIdentityShouldSetAsCurrentByDefault() = runBlocking {
         val keyPair = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -64,7 +64,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createIdentityWithSetAsCurrentFalseShouldNotChangeCurrent() {
+    fun createIdentityWithSetAsCurrentFalseShouldNotChangeCurrent() = runBlocking {
         val first = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -81,7 +81,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createEphemeralIdentityShouldNotPersistToStorage() {
+    fun createEphemeralIdentityShouldNotPersistToStorage() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(
                 keyType = Ed25519CryptoManager.KEY_TYPE_ED25519,
@@ -94,7 +94,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createEphemeralIdentityShouldMarkAsEphemeralOnClient() {
+    fun createEphemeralIdentityShouldMarkAsEphemeralOnClient() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(
                 keyType = Ed25519CryptoManager.KEY_TYPE_ED25519,
@@ -106,7 +106,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createNonEphemeralIdentityShouldPersistToStorage() {
+    fun createNonEphemeralIdentityShouldPersistToStorage() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -116,7 +116,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun createNonEphemeralIdentityShouldNotBeMarkedEphemeral() {
+    fun createNonEphemeralIdentityShouldNotBeMarkedEphemeral() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -125,7 +125,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldBeAbleToImportIdentity() {
+    fun shouldBeAbleToImportIdentity() = runBlocking {
         val created = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -140,7 +140,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun importIdentityShouldSetAsCurrentByDefault() {
+    fun importIdentityShouldSetAsCurrentByDefault() = runBlocking {
         val created = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -151,7 +151,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun importIdentityWithSetAsCurrentFalseShouldNotChangeCurrent() {
+    fun importIdentityWithSetAsCurrentFalseShouldNotChangeCurrent() = runBlocking {
         val first = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -165,7 +165,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun importIdentityShouldPersistToStorage() {
+    fun importIdentityShouldPersistToStorage() = runBlocking {
         val created = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -177,7 +177,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldGetAllIdentities() {
+    fun shouldGetAllIdentities() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -196,7 +196,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldRemoveIdentity() {
+    fun shouldRemoveIdentity() = runBlocking {
         val keyPair = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -208,7 +208,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldSwitchIdentity() {
+    fun shouldSwitchIdentity() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -225,17 +225,19 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test(expected = PolycentricException::class)
-    fun switchToNonExistentIdentityShouldThrow() {
+    fun switchToNonExistentIdentityShouldThrow() = runBlocking {
         val fakePublicKey = PublicKey(
             key_type = Ed25519CryptoManager.KEY_TYPE_ED25519,
             key = ByteArray(32) { 0xFF.toByte() }.toByteString(),
         )
 
         client.identityManager.switchIdentity(fakePublicKey)
+
+        Unit // Return type must be void or the test framework will complain
     }
 
     @Test
-    fun shouldTrackCurrentIdentityState() {
+    fun shouldTrackCurrentIdentityState() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -252,7 +254,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun shouldCreateMultipleIdentitiesAndSwitchBetweenThem() {
+    fun shouldCreateMultipleIdentitiesAndSwitchBetweenThem() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(
                 keyType = Ed25519CryptoManager.KEY_TYPE_ED25519,
@@ -277,7 +279,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun removedIdentityShouldNotAppearInGetAll() {
+    fun removedIdentityShouldNotAppearInGetAll() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -296,7 +298,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun ephemeralIdentitiesShouldNotAppearInGetAll() {
+    fun ephemeralIdentitiesShouldNotAppearInGetAll() = runBlocking {
         client.identityManager.createIdentity(
             IdentityOptions(
                 keyType = Ed25519CryptoManager.KEY_TYPE_ED25519,
@@ -313,7 +315,7 @@ class IdentityManagerInstrumentedTest {
     }
 
     @Test
-    fun importedIdentityShouldDeriveCorrectPublicKey() {
+    fun importedIdentityShouldDeriveCorrectPublicKey() = runBlocking {
         val created = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )

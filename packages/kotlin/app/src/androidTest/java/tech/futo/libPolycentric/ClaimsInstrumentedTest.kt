@@ -38,13 +38,13 @@ class ClaimsInstrumentedTest {
         runBlocking {
             client1.init()
             client2.init()
+            client1.identityManager.createIdentity(
+                IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
+            )
+            client2.identityManager.createIdentity(
+                IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
+            )
         }
-        client1.identityManager.createIdentity(
-            IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
-        )
-        client2.identityManager.createIdentity(
-            IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
-        )
     }
 
     @After

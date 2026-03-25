@@ -76,7 +76,7 @@ class IntegrationInstrumentedTest {
     }
 
     @Test
-    fun shouldBeAbleToCreateANewIdentity() {
+    fun shouldBeAbleToCreateANewIdentity() = runBlocking {
         val keyPair = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )

@@ -132,7 +132,7 @@ class IdentityManager(private val client: PolycentricClient) {
         return signature.toByteString()
     }
 
-    private fun setCurrentIdentity(keyPair: KeyPair, ephemeral: Boolean = false) {
+    private suspend fun setCurrentIdentity(keyPair: KeyPair, ephemeral: Boolean = false) {
         client.setCurrentKeyPair(keyPair, ephemeral)
     }
 }

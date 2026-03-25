@@ -29,10 +29,12 @@ class QueryManagerInstrumentedTest {
             SQLiteStorageDriver(context, "test-querymanager.db"),
             HTTPNetworkManager()
         ))
-        runBlocking { client.init() }
-        client.identityManager.createIdentity(
-            IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
-        )
+        runBlocking {
+            client.init()
+            client.identityManager.createIdentity(
+                IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
+            )
+        }
     }
 
     @After

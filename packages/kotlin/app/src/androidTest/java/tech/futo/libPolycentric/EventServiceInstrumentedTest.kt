@@ -54,7 +54,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldEmitIdentityChangedWhenCreatingIdentity() {
+    fun shouldEmitIdentityChangedWhenCreatingIdentity() = runBlocking {
         var identityChanged = false
         var receivedIdentity: Identity? = null
 
@@ -74,7 +74,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldEmitIdentityChangedWhenSwitchingIdentity() {
+    fun shouldEmitIdentityChangedWhenSwitchingIdentity() = runBlocking {
         val keyPair1 = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519, setAsCurrent = false)
         )
@@ -131,7 +131,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldTrackCurrentIdentityState() {
+    fun shouldTrackCurrentIdentityState() = runBlocking {
         val keyPair = client.identityManager.createIdentity(
             IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
         )
@@ -142,7 +142,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldEmitMultipleEventsInSequence() {
+    fun shouldEmitMultipleEventsInSequence() = runBlocking {
         val emitted = mutableListOf<String>()
 
         client.events.onStateChanged { emitted.add("stateChanged") }
@@ -162,7 +162,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldCallMultipleListenersForSameEvent() {
+    fun shouldCallMultipleListenersForSameEvent() = runBlocking {
         var listener1Called = false
         var listener2Called = false
 
@@ -178,7 +178,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldAllowRemovingListeners() {
+    fun shouldAllowRemovingListeners() = runBlocking {
         var listenerCalled = false
         val listener: (Identity?) -> Unit = { listenerCalled = true }
 
@@ -193,7 +193,7 @@ class EventServiceInstrumentedTest {
     }
 
     @Test
-    fun shouldAllowRemovingAllListeners() {
+    fun shouldAllowRemovingAllListeners() = runBlocking {
         var listenerCalled = false
         client.events.onIdentityChanged { listenerCalled = true }
 

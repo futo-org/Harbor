@@ -27,10 +27,12 @@ class LWWSetInstrumentedTest {
             SQLiteStorageDriver(context, "test-lwwset.db"),
             HTTPNetworkManager()
         ))
-        runBlocking { client.init() }
-        client.identityManager.createIdentity(
-            IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
-        )
+        runBlocking {
+            client.init()
+            client.identityManager.createIdentity(
+                IdentityOptions(keyType = Ed25519CryptoManager.KEY_TYPE_ED25519)
+            )
+        }
     }
 
     @After
