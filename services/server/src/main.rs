@@ -1,4 +1,6 @@
+mod db;
 mod grpc;
+mod lib;
 mod routes;
 
 use crate::grpc::server;
@@ -12,7 +14,8 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("HTTP server listening on http://0.0.0.0:3000");
     println!("API docs available at http://0.0.0.0:3000/docs");
-    let http = tokio::spawn(async { axum::serve(listener, routes).await.unwrap() });
+    let http =
+        tokio::spawn(async { axum::serve(listener, routes).await.unwrap() });
 
     tokio::try_join!(grpc, http).unwrap();
 }

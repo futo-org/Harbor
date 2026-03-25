@@ -5,9 +5,11 @@ edition = "2024"
 
 [dependencies]
 axum = "0.8.8"
+log = "0.4"
 polycentric-common = { path = "../../packages/rs-common" }
 prost = "0.14"
 prost-types = "0.14"
+sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio", "macros" ] }
 tokio = { version = "1.50.0", features = ["full"] }
 tonic = "*"
 tonic-prost = "*"

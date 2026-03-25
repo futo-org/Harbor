@@ -2,7 +2,7 @@ use axum::response::Html;
 use prost::Message;
 use prost_types::{FileDescriptorSet, SourceCodeInfo};
 
-use super::server::proto::FILE_DESCRIPTOR_SET;
+use crate::lib::proto::FILE_DESCRIPTOR_SET;
 
 /// Resolve a path in source_code_info to find the leading comment.
 /// Proto paths are documented in descriptor.proto's SourceCodeInfo.

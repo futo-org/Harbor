@@ -1,0 +1,64 @@
+syntax = "proto3";
+package polycentric.v1;
+
+import "polycentric/v1/identity.proto";
+
+message Event {
+  // Public key that signed the event
+  PublicKey signed_by = 1;
+  // Sequence number of the event in the event stream
+  uint64 logical_clock = 3;
+  // Signature of the previous event signed by the same key. Assists in creating immutable streams.
+  bytes previous_signature = 4;
+
+  // Main payload body of the event.
+  oneof content {
+    Post post = 20;
+    Delete delete = 21;
+    Follow follow = 22;
+    Block block = 23;
+  }
+
+  // Timestamp, in milliseconds, of when the event was created
+  uint64 created_at = 11;
+}
+
+message Post {
+  // Main text content of the post
+  string content = 1;
+  // optional ImageManifest image = 2;
+}
+
+// TODO: should this be a tombstone
+message Delete {}
+
+message Follow {
+  // Identity to follow
+  IdentityId identity = 1;
+}
+
+message Block {
+  // Identity to block
+  IdentityId identity = 1;
+}
+
+message ListEventsRequest {
+  // Max number of events to return
+  optional int32 limit = 1;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+message SyncEventsRequest {}
+
+message SyncEventsResponse {}
+
+// Events
+service EventsService {
+  // Returns a list of events for the request
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  // Synchronises events from a client to the server
+  rpc SyncEvents(SyncEventsRequest) returns (SyncEventsResponse);
+}

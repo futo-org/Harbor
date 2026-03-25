@@ -1,0 +1,31 @@
+syntax = "proto3";
+package polycentric.v1;
+
+import "polycentric/v1/events.proto";
+
+enum FeedAlgorithm {
+  FEED_ALGORITHM_UNSPECIFIED = 0;
+  FEED_ALGORITHM_LATEST = 1;
+  FEED_ALGORITHM_SUGGESTED = 2;
+}
+
+message GetFeedRequest {
+  FeedAlgorithm algorithm = 1;
+  optional int32 limit = 2;
+  optional string before_token = 3;
+  optional string after_token = 4;
+}
+
+message GetFeedResponse {
+  repeated Event events = 1;
+  string next_token = 2;
+  string previous_token = 3;
+}
+
+/**
+ * Curated feeds provided by servers
+ */
+service FeedsService {
+  // Returns a curated feed base on the rwquest inputs
+  rpc GetFeed(GetFeedRequest) returns (GetFeedResponse);
+}
