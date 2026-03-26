@@ -1,4 +1,10 @@
+pub mod blob_model;
+pub mod block_model;
+pub mod content_model;
+pub mod delete_model;
 pub mod event_model;
 pub mod follow_model;
+pub mod image_model;
 pub mod post_model;
+pub mod profile_update_model;
 pub mod reaction_model;

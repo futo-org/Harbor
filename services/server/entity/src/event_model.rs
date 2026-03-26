@@ -4,19 +4,37 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "events")]
 pub struct Model {
-    // ID used on the server for relations
+    // ID used on the server for relations only. This is not the Event Key or used on clients.
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i64,
-    #[sea_orm(unique_key = "event")]
-    pub public_key_type: i8,
-    #[sea_orm(unique_key = "event")]
-    pub public_key: Vec<u8>,
-    #[sea_orm(unique_key = "event")]
-    pub logical_clock: i8,
-    pub signature: Vec<u8>,
 
-    #[sea_orm(has_one)]
-    pub post: HasOne<super::post_model::Entity>,
+    ////
+    // Start: Event Key
+    ////
+    // ID of the stream the event belongs to
+    #[sea_orm(unique_key = "event_key")]
+    pub stream_id: String,
+    #[sea_orm(unique_key = "event_key")]
+    pub public_key_type: i8,
+    #[sea_orm(unique_key = "event_key")]
+    pub public_key: Vec<u8>,
+    #[sea_orm(unique_key = "event_key")]
+    pub sequence: i8,
+    ////
+    // End: Event Key
+    ////
+
+    // FK to the content table
+    pub content_id: i64,
+    #[sea_orm(belongs_to, from = "content_id", to = "id")]
+    pub content: HasOne<super::content_model::Entity>,
+
+    // Signatures
+    pub signature: Vec<u8>,
+    pub previous_signature: Vec<u8>,
+
+    // We need to store the raw event due to non-deterministic serialization
+    pub event_bytes: Vec<u8>,
 
     // Timestamp the client created the event
     pub created_at: TimeDateTime,

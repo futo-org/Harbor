@@ -8,6 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &[
                 "proto/polycentric/v1/identity.proto",
                 "proto/polycentric/v1/events.proto",
+                "proto/polycentric/v1/content.proto",
                 "proto/polycentric/v1/feeds.proto",
             ],
             &["proto"],

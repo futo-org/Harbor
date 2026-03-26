@@ -2,15 +2,27 @@ use sea_orm::entity::prelude::*;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "event_content_post")]
+#[sea_orm(table_name = "content_post")]
 pub struct Model {
-    // ID of the event
     #[sea_orm(primary_key, auto_increment = false)]
-    pub id: i64,
-    #[sea_orm(belongs_to, from = "id", to = "id")]
-    pub event: HasOne<super::event_model::Entity>,
-    // Content of the post
+    pub content_id: i64,
+    #[sea_orm(belongs_to, from = "content_id", to = "id")]
+    pub parent: HasOne<super::content_model::Entity>,
+
+    // Main text content of the post
     pub content: String,
+
+    // Optional reply context (EventKey fields stored inline)
+    // Root of the reply chain
+    pub reply_root_stream_id: Option<String>,
+    pub reply_root_public_key_type: Option<i8>,
+    pub reply_root_public_key: Option<Vec<u8>>,
+    pub reply_root_sequence: Option<i64>,
+    // Direct parent being replied to
+    pub reply_parent_stream_id: Option<String>,
+    pub reply_parent_public_key_type: Option<i8>,
+    pub reply_parent_public_key: Option<Vec<u8>>,
+    pub reply_parent_sequence: Option<i64>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
