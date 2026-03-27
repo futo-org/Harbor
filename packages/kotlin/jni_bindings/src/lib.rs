@@ -3,8 +3,8 @@ use jni::elements::ReleaseMode;
 use jni::objects::{JClass, JByteArray};
 
 use jni::sys::{jint, jlong};
-use rs_core::platform::ffi;
-use rs_core::platform::ffi::CBuffer;
+use polycentric_core::platform::ffi;
+use polycentric_core::platform::ffi::CBuffer;
 use std::ffi::c_int;
 
 fn c_pointer_to_byte_array(buf: &CBuffer) -> Option<&'static [u8]> {

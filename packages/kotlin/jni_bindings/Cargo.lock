@@ -407,7 +407,7 @@ version = "0.1.0"
 dependencies = [
  "jni",
  "libc",
- "rs-core",
+ "polycentric-core",
 ]
 
 [[package]]
@@ -492,6 +492,41 @@ checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
 dependencies = [
  "der",
  "spki",
+]
+
+[[package]]
+name = "polycentric-common"
+version = "0.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "hmac-sha256",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "thiserror",
+]
+
+[[package]]
+name = "polycentric-core"
+version = "0.0.0"
+dependencies = [
+ "base64",
+ "console_error_panic_hook",
+ "ed25519-dalek",
+ "getrandom 0.2.17",
+ "hmac-sha256",
+ "js-sys",
+ "libc",
+ "polycentric-common",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "rand",
+ "sha2",
+ "thiserror",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -656,28 +691,6 @@ name = "regex-syntax"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
-
-[[package]]
-name = "rs-core"
-version = "0.1.0"
-dependencies = [
- "base64",
- "console_error_panic_hook",
- "ed25519-dalek",
- "getrandom 0.2.17",
- "hmac-sha256",
- "js-sys",
- "libc",
- "prost",
- "prost-build",
- "prost-types",
- "rand",
- "sha2",
- "thiserror",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
 
 [[package]]
 name = "rustc_version"
