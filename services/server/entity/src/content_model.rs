@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i64,
 
     #[sea_orm(unique_key = "digest")]
-    pub digest_type: i8,
+    pub digest_type: i16,
 
     #[sea_orm(unique_key = "digest")]
     pub digest_bytes: Vec<u8>,
@@ -20,21 +20,21 @@ pub struct Model {
 
     // References to the individual content types
     #[sea_orm(has_one)]
-    pub post: HasOne<super::post_model::Entity>,
+    pub post: HasOne<super::content_post_model::Entity>,
     #[sea_orm(has_one)]
-    pub delete: HasOne<super::delete_model::Entity>,
+    pub delete: HasOne<super::content_delete_model::Entity>,
     #[sea_orm(has_one)]
-    pub follow: HasOne<super::follow_model::Entity>,
+    pub follow: HasOne<super::content_follow_model::Entity>,
     #[sea_orm(has_one)]
-    pub block: HasOne<super::block_model::Entity>,
+    pub block: HasOne<super::content_block_model::Entity>,
     #[sea_orm(has_one)]
-    pub reaction: HasOne<super::reaction_model::Entity>,
+    pub reaction: HasOne<super::content_reaction_model::Entity>,
     #[sea_orm(has_one)]
-    pub profile_update: HasOne<super::profile_update_model::Entity>,
+    pub profile_update: HasOne<super::content_profile_update_model::Entity>,
     #[sea_orm(has_one)]
-    pub image: HasOne<super::image_model::Entity>,
+    pub image: HasOne<super::content_image_model::Entity>,
     #[sea_orm(has_one)]
-    pub blob: HasOne<super::blob_model::Entity>,
+    pub blob: HasOne<super::content_blob_model::Entity>,
 
     // Timestamp the server received the content
     pub synced_at: TimeDateTime,

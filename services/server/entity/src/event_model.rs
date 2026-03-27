@@ -15,17 +15,17 @@ pub struct Model {
     #[sea_orm(unique_key = "event_key")]
     pub stream_id: String,
     #[sea_orm(unique_key = "event_key")]
-    pub public_key_type: i8,
+    pub public_key_type: i16,
     #[sea_orm(unique_key = "event_key")]
     pub public_key: Vec<u8>,
     #[sea_orm(unique_key = "event_key")]
-    pub sequence: i8,
+    pub sequence: i16,
     ////
     // End: Event Key
     ////
 
     // FK to the content table
-    pub content_id: i64,
+    pub content_id: Option<i64>,
     #[sea_orm(belongs_to, from = "content_id", to = "id")]
     pub content: HasOne<super::content_model::Entity>,
 

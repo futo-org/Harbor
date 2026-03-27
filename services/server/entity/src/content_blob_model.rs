@@ -12,7 +12,7 @@ pub struct Model {
     // The data of a 'blob' is stored on block storage, not here.
     // We simply reference them.
     #[sea_orm(unique_key = "digest")]
-    pub digest_type: i8,
+    pub digest_type: i16,
     #[sea_orm(unique_key = "digest")]
     pub digest_bytes: Vec<u8>,
 

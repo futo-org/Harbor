@@ -2,6 +2,7 @@ mod db;
 mod grpc;
 mod lib;
 mod routes;
+mod util;
 
 use crate::grpc::server;
 use crate::routes::build_routes;

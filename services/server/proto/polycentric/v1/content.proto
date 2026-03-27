@@ -28,7 +28,7 @@ message Content {
 
 message Post {
   // Main text content of the post
-  string content = 1;
+  string text = 1;
   optional PostReply reply = 2;
   // optional ImageManifest image = 2;
 }
@@ -84,6 +84,8 @@ message ProfileUpdate {
   optional Image banner = 3;
 }
 
+// If an uploaded Blob is uploaded to the servers Object Storage and not
+// then attached added to the Content repository, the server will delete from Object Storage.
 message Blob {
   // Digest/Checksum of the blob
   ContentDigest digest = 1;

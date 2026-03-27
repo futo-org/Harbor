@@ -5,5 +5,6 @@ members = [
     "services/server",
     "services/server/entity",
     "services/server/migration",
+    "services/server/tests",
 ]
 resolver = "2"

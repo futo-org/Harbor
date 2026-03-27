@@ -14,7 +14,7 @@ pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
         .max_lifetime(Duration::from_secs(8))
         .sqlx_logging(false)
         .sqlx_logging_level(log::LevelFilter::Info)
-        .set_schema_search_path("my_schema");
+        .set_schema_search_path("public");
 
     let db = Database::connect(opt).await?;
     Ok(db)

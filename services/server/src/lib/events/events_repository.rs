@@ -1,4 +1,5 @@
 use ::entity::event_model as EventModel;
+// use ::entity::content_model as ContentModel;
 use sea_orm::*;
 
 pub struct Query;
@@ -13,10 +14,21 @@ impl Query {
             limit = Some(200);
         }
 
-        let mut query = EventModel::Entity::find()
+        EventModel::Entity::find()
             .order_by_asc(EventModel::Column::Id)
-            .limit(limit.unwrap_or(200));
+            .limit(limit)
+            .all(db)
+            .await
+    }
+}
 
-        query.all(db).await
+pub struct Mutation;
+
+impl Mutation {
+    pub async fn add_event(
+        db: &DbConn,
+        active_model: EventModel::ActiveModel,
+    ) -> Result<EventModel::Model, DbErr> {
+        active_model.insert(db).await
     }
 }

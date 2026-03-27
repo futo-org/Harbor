@@ -10,7 +10,7 @@ pub struct Model {
     pub parent: HasOne<super::content_model::Entity>,
 
     // Main text content of the post
-    pub content: String,
+    pub text: String,
 
     // Optional reply context (EventKey fields stored inline)
     // Root of the reply chain

@@ -847,6 +847,7 @@ checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
+ "rand_core",
  "serde",
  "sha2",
  "subtle",
@@ -1480,6 +1481,22 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "integration-tests"
+version = "0.0.1"
+dependencies = [
+ "ed25519-dalek",
+ "entity",
+ "prost 0.14.3",
+ "rand",
+ "sea-orm",
+ "sha2",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
 ]
 
 [[package]]
@@ -2785,12 +2802,14 @@ name = "server"
 version = "0.0.1"
 dependencies = [
  "axum",
+ "ed25519-dalek",
  "entity",
  "log",
  "polycentric-common",
  "prost 0.14.3",
  "prost-types 0.14.3",
  "sea-orm",
+ "time",
  "tokio",
  "tonic",
  "tonic-prost",
