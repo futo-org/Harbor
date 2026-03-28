@@ -5,13 +5,20 @@ use crate::lib::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
 use crate::lib::proto::{
-    Content, Event, EventBundle, Post, PutEventsRequest, PutEventsResponse,
+    Content, Event, EventBundle, PutEventsRequest, PutEventsResponse,
     SerializedContent, SignedEvent,
 };
 use crate::lib::proto::{ListEventsRequest, ListEventsResponse};
 use crate::util;
-use ::entity::{content_model as ContentModel, event_model as EventModel};
+use ::entity::{
+    content_block_model as ContentBlockModel,
+    content_delete_model as ContentDeleteModel,
+    content_follow_model as ContentFollowModel, content_model as ContentModel,
+    content_post_model as ContentPostModel,
+    content_reaction_model as ContentReactionModel, event_model as EventModel,
+};
 use prost::Message;
+use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
 use tonic::{Request, Response, Status};
 
@@ -107,26 +114,48 @@ impl EventSyncService for EventSyncServiceImpl {
 
             let content_digest = event.content_digest;
 
-            // If SerializedContent was provided in the bundle, save it to the database
+            // If SerializedContent was provided in the bundle, verify checksum and save
             if let (Some(serialized_content), Some(digest)) =
                 (&event_bundle.serialized_content, &content_digest)
             {
-                let content_model = ContentModel::ActiveModel {
-                    id: NotSet,
-                    digest_type: Set(digest.r#type),
-                    digest_bytes: Set(digest.value.clone()),
-                    serialized_bytes: Set(serialized_content.content_bytes.clone()),
-                    synced_at: Set(now),
-                };
-                ContentRepository::Mutation::add_content(
+                // Verify the content digest matches the serialized bytes
+                util::digest::verify_content_digest(
+                    digest.r#type,
+                    &digest.value,
+                    &serialized_content.content_bytes,
+                )
+                .map_err(|e| Status::invalid_argument(e.to_string()))?;
+
+                // Save the content parent row
+                let content_row = ContentRepository::Mutation::add_content(
                     &self.db,
-                    content_model,
+                    ContentModel::ActiveModel {
+                        id: NotSet,
+                        digest_type: Set(digest.r#type),
+                        digest_bytes: Set(digest.value.clone()),
+                        serialized_bytes: Set(serialized_content
+                            .content_bytes
+                            .clone()),
+                        synced_at: Set(now),
+                    },
                 )
                 .await
                 .map_err(|e| {
                     eprintln!("sync_events content db error: {e}");
                     Status::internal("internal server error")
                 })?;
+
+                // Decode the content and save to the appropriate child table
+                let content = Content::decode(
+                    serialized_content.content_bytes.as_slice(),
+                )
+                .map_err(|e| {
+                    eprintln!("sync_events content decode error: {e}");
+                    Status::invalid_argument("invalid content_bytes")
+                })?;
+
+                let content_id = content_row.id;
+                save_content_child(&self.db, content_id, content).await?;
             }
 
             // Build the Model that we will save to the database
@@ -160,6 +189,166 @@ impl EventSyncService for EventSyncServiceImpl {
 
         Ok(Response::new(PutEventsResponse {}))
     }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// After saving the parent `content` row, we decode the serialized
+// bytes into the proto Content message and persist the type-specific
+// fields into the matching child table.
+//
+// Content.content_body is a oneof with these variants:
+//   Post           → content_post
+//   Delete         → content_delete
+//   Follow         → content_follow
+//   Block          → content_block
+//   Reaction       → content_reaction
+//   ProfileUpdate  → content_profile_update
+// ──────────────────────────────────────────────────────────────────
+async fn save_content_child(
+    db: &sea_orm::DatabaseConnection,
+    content_id: i64,
+    content: Content,
+) -> Result<(), Status> {
+    let map_db_err = |e: sea_orm::DbErr| {
+        eprintln!("save_content_child db error: {e}");
+        Status::internal("internal server error")
+    };
+
+    match content.content_body {
+        // ── Post ──────────────────────────────────────────────
+        // A text post with an optional reply chain.
+        Some(ContentBody::Post(post)) => {
+            let (reply_root, reply_parent) = match post.reply {
+                Some(reply) => (reply.root, reply.parent),
+                None => (None, None),
+            };
+
+            ContentPostModel::ActiveModel {
+                content_id: Set(content_id),
+                text: Set(post.text),
+                // Reply root EventKey (all None when not a reply)
+                reply_root_stream_id: Set(reply_root
+                    .as_ref()
+                    .map(|k| k.stream_id.clone())),
+                reply_root_public_key_type: Set(reply_root.as_ref().and_then(
+                    |k| k.signed_by.as_ref().map(|s| s.key_type as i16),
+                )),
+                reply_root_public_key: Set(reply_root
+                    .as_ref()
+                    .and_then(|k| k.signed_by.as_ref().map(|s| s.key.clone()))),
+                reply_root_sequence: Set(reply_root
+                    .as_ref()
+                    .map(|k| k.sequence as i64)),
+                // Reply parent EventKey (all None when not a reply)
+                reply_parent_stream_id: Set(reply_parent
+                    .as_ref()
+                    .map(|k| k.stream_id.clone())),
+                reply_parent_public_key_type: Set(reply_parent
+                    .as_ref()
+                    .and_then(|k| {
+                        k.signed_by.as_ref().map(|s| s.key_type as i16)
+                    })),
+                reply_parent_public_key: Set(reply_parent
+                    .as_ref()
+                    .and_then(|k| k.signed_by.as_ref().map(|s| s.key.clone()))),
+                reply_parent_sequence: Set(reply_parent
+                    .as_ref()
+                    .map(|k| k.sequence as i64)),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── Delete ────────────────────────────────────────────
+        // Marks a previous event for deletion by its EventKey.
+        Some(ContentBody::Delete(delete)) => {
+            let key = delete.event_key.ok_or_else(|| {
+                Status::invalid_argument("delete content missing event_key")
+            })?;
+            let signed_by = key.signed_by.ok_or_else(|| {
+                Status::invalid_argument("delete event_key missing signed_by")
+            })?;
+
+            ContentDeleteModel::ActiveModel {
+                content_id: Set(content_id),
+                event_key_stream_id: Set(key.stream_id),
+                event_key_public_key_type: Set(signed_by.key_type as i16),
+                event_key_public_key: Set(signed_by.key),
+                event_key_sequence: Set(key.sequence as i64),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── Follow ───────────────────────────────────────────
+        // Follow an identity by its IdentityId.
+        Some(ContentBody::Follow(follow)) => {
+            let identity = follow.identity.ok_or_else(|| {
+                Status::invalid_argument("follow content missing identity")
+            })?;
+
+            ContentFollowModel::ActiveModel {
+                content_id: Set(content_id),
+                identity_id: Set(identity.value),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── Block ────────────────────────────────────────────
+        // Block an identity by its IdentityId.
+        Some(ContentBody::Block(block)) => {
+            let identity = block.identity.ok_or_else(|| {
+                Status::invalid_argument("block content missing identity")
+            })?;
+
+            ContentBlockModel::ActiveModel {
+                content_id: Set(content_id),
+                identity_id: Set(identity.value),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── Reaction ─────────────────────────────────────────
+        // A reaction (like/dislike/emoji) to another event.
+        Some(ContentBody::Reaction(reaction)) => {
+            let key = reaction.event_key.ok_or_else(|| {
+                Status::invalid_argument("reaction content missing event_key")
+            })?;
+            let signed_by = key.signed_by.ok_or_else(|| {
+                Status::invalid_argument("reaction event_key missing signed_by")
+            })?;
+
+            ContentReactionModel::ActiveModel {
+                content_id: Set(content_id),
+                event_key_stream_id: Set(key.stream_id),
+                event_key_public_key_type: Set(signed_by.key_type as i16),
+                event_key_public_key: Set(signed_by.key),
+                event_key_sequence: Set(key.sequence as i64),
+                emoji: Set(reaction.emoji),
+                opinion: Set(reaction.opinion as i16),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── ProfileUpdate ────────────────────────────────────
+        // Update display name, avatar, or banner.
+        Some(ContentBody::ProfileUpdate(_profile)) => {
+            // TODO: save profile update with avatar/banner digests
+        }
+
+        // ── No content body ──────────────────────────────────
+        None => {}
+    }
+
+    Ok(())
 }
 
 pub fn build_events_service(

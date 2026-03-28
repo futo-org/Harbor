@@ -4,7 +4,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::{
     content, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, KeyType,
-    Post, PublicKey, SignedEvent,
+    Post, PublicKey, SerializedContent, SignedEvent,
 };
 use sha2::{Digest, Sha256};
 
@@ -39,12 +39,13 @@ pub fn make_post_bundle(
     let public_key = signing_key.verifying_key();
 
     let content = Content {
-        content: Some(content::Content::Post(Post {
+        content_body: Some(content::ContentBody::Post(Post {
             text: text.to_string(),
             reply: None,
         })),
     };
 
+    // Serialize the Content message — this is what the digest is computed over
     let content_bytes = prost::Message::encode_to_vec(&content);
     let content_digest = sha256(&content_bytes);
 
@@ -73,6 +74,6 @@ pub fn make_post_bundle(
             signature: signature.to_bytes().to_vec(),
             event_bytes,
         }),
-        content: Some(content),
+        serialized_content: Some(SerializedContent { content_bytes }),
     }
 }
