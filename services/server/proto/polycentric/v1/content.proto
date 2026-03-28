@@ -11,19 +11,25 @@ enum ContentDigestType {
 
 message ContentDigest {
   ContentDigestType type = 1;
+  // We hash the serialized bytes
   bytes value = 2;
 }
 
 // Content of the event
 message Content {
-  oneof content {
-    Post post = 1;
-    Delete delete = 2;
-    Follow follow = 3;
-    Block block = 4;
-    Reaction reaction = 5;
-    ProfileUpdate profile_update = 6;
+  oneof content_body {
+    Post post = 2;
+    Delete delete = 3;
+    Follow follow = 4;
+    Block block = 5;
+    Reaction reaction = 6;
+    ProfileUpdate profile_update = 7;
   }
+}
+
+// Serialized content. This is what we do the ContentDigest / Checksum on.
+message SerializedContent {
+  bytes content_bytes = 1;
 }
 
 message Post {

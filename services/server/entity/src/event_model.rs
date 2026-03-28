@@ -24,10 +24,9 @@ pub struct Model {
     // End: Event Key
     ////
 
-    // FK to the content table
-    pub content_id: Option<i64>,
-    #[sea_orm(belongs_to, from = "content_id", to = "id")]
-    pub content: HasOne<super::content_model::Entity>,
+    // Content digest (denormalized for joining to content table, optional)
+    pub content_digest_type: Option<i32>,
+    pub content_digest_bytes: Option<Vec<u8>>,
 
     // Signatures
     pub signature: Vec<u8>,

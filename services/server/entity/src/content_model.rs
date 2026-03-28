@@ -9,14 +9,13 @@ pub struct Model {
     pub id: i64,
 
     #[sea_orm(unique_key = "digest")]
-    pub digest_type: i16,
+    pub digest_type: i32,
 
     #[sea_orm(unique_key = "digest")]
     pub digest_bytes: Vec<u8>,
 
-    // Reference to any events that use the content
-    #[sea_orm(has_many)]
-    pub events: HasMany<super::event_model::Entity>,
+    // We store the raw serialized bytes of the Content and send this back to clients
+    pub serialized_bytes: Vec<u8>,
 
     // References to the individual content types
     #[sea_orm(has_one)]

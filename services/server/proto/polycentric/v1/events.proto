@@ -26,15 +26,17 @@ message SignedEvent {
   bytes event_bytes = 2;
 }
 
-// Bundle of the SignedEvent and Content messages
+// Bundle of the SignedEvent and SerializedContent messages
+// We use SerializedContent so that the checksum of the content
+// can be verified
 message EventBundle {
   SignedEvent signed_event = 1;
-  optional Content content = 2;
+  optional SerializedContent serialized_content = 2;
 }
 
 message ListEventsRequest {
   // Max number of events to return
-  optional int64 limit = 1;
+  optional int32 limit = 1;
 }
 
 message ListEventsResponse {

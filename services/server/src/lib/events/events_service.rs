@@ -1,14 +1,16 @@
 use super::events_repository as EventsRepository;
+use crate::lib::content::content_repository as ContentRepository;
+use crate::lib::proto::content::ContentBody;
 use crate::lib::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
 use crate::lib::proto::{
-    Content, Event, EventBundle, PutEventsRequest, PutEventsResponse,
-    SignedEvent,
+    Content, Event, EventBundle, Post, PutEventsRequest, PutEventsResponse,
+    SerializedContent, SignedEvent,
 };
 use crate::lib::proto::{ListEventsRequest, ListEventsResponse};
 use crate::util;
-use ::entity::event_model as EventModel;
+use ::entity::{content_model as ContentModel, event_model as EventModel};
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
 use tonic::{Request, Response, Status};
@@ -37,17 +39,25 @@ impl EventSyncService for EventSyncServiceImpl {
                 })?;
 
         // Turn the events into event bundles
-
         let mut event_bundles: Vec<EventBundle> = vec![];
-        for event in events {
+
+        for (event, content) in events {
+            // Reconstruct the SignedEvent with the serialized bytes and the signature
             let signed_event = SignedEvent {
                 event_bytes: event.event_bytes,
                 signature: event.signature,
             };
 
+            // Reconstruct SerializedContent with the serialized bytes if content exists.
+            // We do this because the checksum is constructed from already serialized bytes.
+            let serialized_content = content.map(|c| SerializedContent {
+                content_bytes: c.serialized_bytes,
+            });
+
+            // Form the bundle of the SignedEvent and Content
             let event_bundle = EventBundle {
                 signed_event: Some(signed_event),
-                content: None,
+                serialized_content,
             };
 
             event_bundles.push(event_bundle);
@@ -92,20 +102,46 @@ impl EventSyncService for EventSyncServiceImpl {
             )
             .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
-            let content_digest = event.content_digest.ok_or_else(|| {
-                Status::invalid_argument("event missing content_digest")
-            })?;
-
             let now = time::OffsetDateTime::now_utc();
             let now = time::PrimitiveDateTime::new(now.date(), now.time());
 
+            let content_digest = event.content_digest;
+
+            // If SerializedContent was provided in the bundle, save it to the database
+            if let (Some(serialized_content), Some(digest)) =
+                (&event_bundle.serialized_content, &content_digest)
+            {
+                let content_model = ContentModel::ActiveModel {
+                    id: NotSet,
+                    digest_type: Set(digest.r#type),
+                    digest_bytes: Set(digest.value.clone()),
+                    serialized_bytes: Set(serialized_content.content_bytes.clone()),
+                    synced_at: Set(now),
+                };
+                ContentRepository::Mutation::add_content(
+                    &self.db,
+                    content_model,
+                )
+                .await
+                .map_err(|e| {
+                    eprintln!("sync_events content db error: {e}");
+                    Status::internal("internal server error")
+                })?;
+            }
+
+            // Build the Model that we will save to the database
             let active_model = EventModel::ActiveModel {
                 id: NotSet,
                 stream_id: Set(key.stream_id),
                 public_key_type: Set(signed_by.key_type as i16),
                 public_key: Set(signed_by.key),
                 sequence: Set(key.sequence as i16),
-                content_id: NotSet,
+                content_digest_type: Set(content_digest
+                    .as_ref()
+                    .map(|d| d.r#type)),
+                content_digest_bytes: Set(content_digest
+                    .as_ref()
+                    .map(|d| d.value.clone())),
                 signature: Set(signed_event.signature),
                 previous_signature: Set(event.previous_signature),
                 event_bytes: Set(signed_event.event_bytes),
@@ -113,6 +149,7 @@ impl EventSyncService for EventSyncServiceImpl {
                 synced_at: Set(now),
             };
 
+            // Add the event to the database
             EventsRepository::Mutation::add_event(&self.db, active_model)
                 .await
                 .map_err(|e| {
