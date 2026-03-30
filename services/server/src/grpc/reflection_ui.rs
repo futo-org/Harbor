@@ -2,7 +2,7 @@ use axum::response::Html;
 use prost::Message;
 use prost_types::{FileDescriptorSet, SourceCodeInfo};
 
-use crate::lib::proto::FILE_DESCRIPTOR_SET;
+use crate::service::proto::FILE_DESCRIPTOR_SET;
 
 /// Resolve a path in source_code_info to find the leading comment.
 /// Proto paths are documented in descriptor.proto's SourceCodeInfo.
@@ -127,13 +127,13 @@ pub async fn reflection_ui() -> Html<String> {
                 escape_html(service_name)
             ));
 
-            if let Some(ref si_info) = source_info {
-                if let Some(comment) = find_comment(si_info, &[6, si as i32]) {
-                    html.push_str(&format!(
-                        r#"<p class="comment">{}</p>"#,
-                        escape_html(&comment)
-                    ));
-                }
+            if let Some(si_info) = source_info
+                && let Some(comment) = find_comment(si_info, &[6, si as i32])
+            {
+                html.push_str(&format!(
+                    r#"<p class="comment">{}</p>"#,
+                    escape_html(&comment)
+                ));
             }
 
             // Methods: path [6, service_index, 2, method_index]
@@ -156,15 +156,14 @@ pub async fn reflection_ui() -> Html<String> {
 
                 html.push_str(r#"<div class="method">"#);
 
-                if let Some(ref si_info) = source_info {
-                    if let Some(comment) =
+                if let Some(si_info) = source_info
+                    && let Some(comment) =
                         find_comment(si_info, &[6, si as i32, 2, mi as i32])
-                    {
-                        html.push_str(&format!(
-                            r#"<p class="comment">{}</p>"#,
-                            escape_html(&comment)
-                        ));
-                    }
+                {
+                    html.push_str(&format!(
+                        r#"<p class="comment">{}</p>"#,
+                        escape_html(&comment)
+                    ));
                 }
 
                 let client_streaming = method.client_streaming.unwrap_or(false);
@@ -211,13 +210,13 @@ pub async fn reflection_ui() -> Html<String> {
                 escape_html(msg_name)
             ));
 
-            if let Some(ref si_info) = source_info {
-                if let Some(comment) = find_comment(si_info, &[4, mi as i32]) {
-                    html.push_str(&format!(
-                        r#"<p class="comment">{}</p>"#,
-                        escape_html(&comment)
-                    ));
-                }
+            if let Some(si_info) = source_info
+                && let Some(comment) = find_comment(si_info, &[4, mi as i32])
+            {
+                html.push_str(&format!(
+                    r#"<p class="comment">{}</p>"#,
+                    escape_html(&comment)
+                ));
             }
 
             if !message.field.is_empty() {
@@ -278,13 +277,13 @@ pub async fn reflection_ui() -> Html<String> {
                 escape_html(enum_name)
             ));
 
-            if let Some(ref si_info) = source_info {
-                if let Some(comment) = find_comment(si_info, &[5, ei as i32]) {
-                    html.push_str(&format!(
-                        r#"<p class="comment">{}</p>"#,
-                        escape_html(&comment)
-                    ));
-                }
+            if let Some(si_info) = source_info
+                && let Some(comment) = find_comment(si_info, &[5, ei as i32])
+            {
+                html.push_str(&format!(
+                    r#"<p class="comment">{}</p>"#,
+                    escape_html(&comment)
+                ));
             }
 
             if !enum_type.value.is_empty() {
