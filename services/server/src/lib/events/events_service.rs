@@ -71,7 +71,11 @@ impl EventSyncService for EventSyncServiceImpl {
             event_bundles.push(event_bundle);
         }
 
-        let reply = ListEventsResponse { event_bundles, previous_token: String::new(), next_token: String::new() };
+        let reply = ListEventsResponse {
+            event_bundles,
+            previous_token: String::new(),
+            next_token: String::new(),
+        };
         Ok(Response::new(reply))
     }
 

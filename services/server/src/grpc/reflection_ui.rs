@@ -19,7 +19,10 @@ fn find_comment(source_info: &SourceCodeInfo, path: &[i32]) -> Option<String> {
     })
 }
 
-fn field_type_name(field: &prost_types::FieldDescriptorProto, package: &str) -> String {
+fn field_type_name(
+    field: &prost_types::FieldDescriptorProto,
+    package: &str,
+) -> String {
     if let Some(ref type_name) = field.type_name {
         // Strip leading dot and package prefix from fully-qualified names
         let stripped = type_name.strip_prefix('.').unwrap_or(type_name);
@@ -73,7 +76,8 @@ fn escape_html(s: &str) -> String {
 }
 
 pub async fn reflection_ui() -> Html<String> {
-    let fds = FileDescriptorSet::decode(FILE_DESCRIPTOR_SET).expect("failed to decode descriptor");
+    let fds = FileDescriptorSet::decode(FILE_DESCRIPTOR_SET)
+        .expect("failed to decode descriptor");
 
     let mut html = String::from(
         r#"<!DOCTYPE html>
@@ -118,11 +122,17 @@ pub async fn reflection_ui() -> Html<String> {
         for (si, service) in file.service.iter().enumerate() {
             let service_name = service.name.as_deref().unwrap_or("Unknown");
 
-            html.push_str(&format!(r#"<div class="service"><h2>{}</h2>"#, escape_html(service_name)));
+            html.push_str(&format!(
+                r#"<div class="service"><h2>{}</h2>"#,
+                escape_html(service_name)
+            ));
 
             if let Some(ref si_info) = source_info {
                 if let Some(comment) = find_comment(si_info, &[6, si as i32]) {
-                    html.push_str(&format!(r#"<p class="comment">{}</p>"#, escape_html(&comment)));
+                    html.push_str(&format!(
+                        r#"<p class="comment">{}</p>"#,
+                        escape_html(&comment)
+                    ));
                 }
             }
 
@@ -147,7 +157,9 @@ pub async fn reflection_ui() -> Html<String> {
                 html.push_str(r#"<div class="method">"#);
 
                 if let Some(ref si_info) = source_info {
-                    if let Some(comment) = find_comment(si_info, &[6, si as i32, 2, mi as i32]) {
+                    if let Some(comment) =
+                        find_comment(si_info, &[6, si as i32, 2, mi as i32])
+                    {
                         html.push_str(&format!(
                             r#"<p class="comment">{}</p>"#,
                             escape_html(&comment)
@@ -160,10 +172,14 @@ pub async fn reflection_ui() -> Html<String> {
 
                 let mut tags = String::new();
                 if client_streaming {
-                    tags.push_str(r#"<span class="tag">client streaming</span>"#);
+                    tags.push_str(
+                        r#"<span class="tag">client streaming</span>"#,
+                    );
                 }
                 if server_streaming {
-                    tags.push_str(r#"<span class="tag">server streaming</span>"#);
+                    tags.push_str(
+                        r#"<span class="tag">server streaming</span>"#,
+                    );
                 }
                 if !client_streaming && !server_streaming {
                     tags.push_str(r#"<span class="tag">unary</span>"#);
@@ -197,7 +213,10 @@ pub async fn reflection_ui() -> Html<String> {
 
             if let Some(ref si_info) = source_info {
                 if let Some(comment) = find_comment(si_info, &[4, mi as i32]) {
-                    html.push_str(&format!(r#"<p class="comment">{}</p>"#, escape_html(&comment)));
+                    html.push_str(&format!(
+                        r#"<p class="comment">{}</p>"#,
+                        escape_html(&comment)
+                    ));
                 }
             }
 
@@ -213,12 +232,15 @@ pub async fn reflection_ui() -> Html<String> {
                     let flabel = label_str(field);
 
                     let field_comment = source_info
-                        .and_then(|si| find_comment(si, &[4, mi as i32, 2, fi as i32]))
+                        .and_then(|si| {
+                            find_comment(si, &[4, mi as i32, 2, fi as i32])
+                        })
                         .or_else(|| {
                             // Also check trailing comments
                             source_info.and_then(|si| {
                                 si.location.iter().find_map(|loc| {
-                                    if loc.path == [4, mi as i32, 2, fi as i32] {
+                                    if loc.path == [4, mi as i32, 2, fi as i32]
+                                    {
                                         loc.trailing_comments
                                             .as_ref()
                                             .map(|c| c.trim().to_string())
@@ -258,7 +280,10 @@ pub async fn reflection_ui() -> Html<String> {
 
             if let Some(ref si_info) = source_info {
                 if let Some(comment) = find_comment(si_info, &[5, ei as i32]) {
-                    html.push_str(&format!(r#"<p class="comment">{}</p>"#, escape_html(&comment)));
+                    html.push_str(&format!(
+                        r#"<p class="comment">{}</p>"#,
+                        escape_html(&comment)
+                    ));
                 }
             }
 
@@ -270,7 +295,9 @@ pub async fn reflection_ui() -> Html<String> {
                     let vnum = value.number.unwrap_or(0);
 
                     let value_comment = source_info
-                        .and_then(|si| find_comment(si, &[5, ei as i32, 2, vi as i32]))
+                        .and_then(|si| {
+                            find_comment(si, &[5, ei as i32, 2, vi as i32])
+                        })
                         .unwrap_or_default();
 
                     html.push_str(&format!(

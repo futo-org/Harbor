@@ -9,7 +9,8 @@ impl Query {
     pub async fn list_events(
         db: &DbConn,
         mut limit: Option<u64>,
-    ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr> {
+    ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr>
+    {
         if limit > Some(200) {
             limit = Some(200);
         }
@@ -22,9 +23,15 @@ impl Query {
                     .from(EventModel::Column::ContentDigestType)
                     .to(ContentModel::Column::DigestType)
                     .on_condition(|event_tbl, content_tbl| {
-                        Expr::col((event_tbl, EventModel::Column::ContentDigestBytes))
-                            .equals((content_tbl, ContentModel::Column::DigestBytes))
-                            .into_condition()
+                        Expr::col((
+                            event_tbl,
+                            EventModel::Column::ContentDigestBytes,
+                        ))
+                        .equals((
+                            content_tbl,
+                            ContentModel::Column::DigestBytes,
+                        ))
+                        .into_condition()
                     })
                     .into(),
             )

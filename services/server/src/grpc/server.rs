@@ -22,7 +22,9 @@ async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
         match build_db_client().await {
             Ok(db) => return db,
             Err(e) => {
-                eprintln!("Failed to connect to database: {e}, retrying in {delay:?}");
+                eprintln!(
+                    "Failed to connect to database: {e}, retrying in {delay:?}"
+                );
                 tokio::time::sleep(delay).await;
                 delay = (delay * 2).min(std::time::Duration::from_secs(30));
             }
