@@ -1,0 +1,50 @@
+syntax = "proto3";
+package polycentric.v1;
+
+enum KeyType {
+  KEY_TYPE_UNSPECIFIED = 0;
+  KEY_TYPE_ED25519 = 1;
+}
+
+// PublicKeys signs all events on the polycentric network. There is usually one public key per account, per device.
+message PublicKey {
+  // Type of key used. Defaults to ED25519.
+  KeyType key_type = 1;
+  // Value of the key
+  bytes key = 2;
+}
+
+// ID is the (ed25519) signature
+message IdentityId {
+  // ed25519 signature from initial device
+  bytes value = 1;
+}
+
+// Permissions that can be assigned to a PublicKey
+enum IdentityPermission {
+  IDENTITY_PERMISSION_UNSPECIFIED = 0;
+  // PublicKey will have full control over the identity
+  IDENTITY_PERMISSION_ALL = 1;
+}
+
+// Identity
+message Identity {
+  // Unique ID of the Identity
+  IdentityId id = 1;
+  // Initial public key that forged the identity
+  PublicKey initial_public_key = 2;
+}
+
+// Identities are issued by other Public Keys that have the necessary permissions
+message IdentityIssue {
+  // Device that the identity will be issued to
+  PublicKey public_key = 1;
+  // Permissions that the identity will have
+  repeated IdentityPermission permissions = 2;
+}
+
+// Identities can be revoked by other Public Keys that have the necessary permissions
+message IdentityRevoke {
+  // PublicKey to be revoked
+  PublicKey public_key = 1;
+}

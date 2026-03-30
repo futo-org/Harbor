@@ -395,10 +395,6 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/rs-core-wasm-browser: {}
-
-  packages/rs-core-wasm-node: {}
-
   tools/tsconfig: {}
 
 packages:

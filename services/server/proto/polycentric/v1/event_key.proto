@@ -1,0 +1,16 @@
+syntax = "proto3";
+package polycentric.v1;
+
+import "polycentric/v1/identity.proto";
+
+// EventKey's are the unique identitifiers of Events
+message EventKey {
+  // ID of the stream the event is connected with
+  string stream_id = 1;
+
+  // Public key that signed the event
+  PublicKey signed_by = 2;
+
+  // Sequence number of the event in the event stream (our logical clock)
+  uint64 sequence = 3;
+}

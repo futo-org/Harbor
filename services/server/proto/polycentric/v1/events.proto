@@ -1,0 +1,60 @@
+syntax = "proto3";
+package polycentric.v1;
+
+import "polycentric/v1/content.proto";
+import "polycentric/v1/event_key.proto";
+
+// Event messages reference, but do not include, content
+message Event {
+  // Key for the event
+  EventKey key = 1;
+
+  // Signature of the previous event signed by the same key. Assists in creating immutable streams.
+  bytes previous_signature = 2;
+
+  // Digest of the content
+  ContentDigest content_digest = 3;
+
+  // Timestamp, in milliseconds, of when the event was created
+  uint64 created_at = 4;
+}
+
+message SignedEvent {
+  // Signature of events_bytes below (not the Event message)
+  bytes signature = 1;
+  // Serialized representation of the Event message that is signed against
+  bytes event_bytes = 2;
+}
+
+// Bundle of the SignedEvent and SerializedContent messages
+// We use SerializedContent so that the checksum of the content
+// can be verified
+message EventBundle {
+  SignedEvent signed_event = 1;
+  optional SerializedContent serialized_content = 2;
+}
+
+message ListEventsRequest {
+  // Max number of events to return
+  optional int32 limit = 1;
+}
+
+message ListEventsResponse {
+  repeated EventBundle event_bundles = 1;
+  string previous_token = 2;
+  string next_token = 3;
+}
+
+message PutEventsRequest {
+  repeated EventBundle event_bundles = 1;
+}
+
+message PutEventsResponse {}
+
+// Sync between clients and servers
+service EventSyncService {
+  // Returns a list of events (with content) from the server
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  // Add events (with content) from a client to the server
+  rpc PutEvents(PutEventsRequest) returns (PutEventsResponse);
+}

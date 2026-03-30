@@ -1,0 +1,120 @@
+syntax = "proto3";
+package polycentric.v1;
+
+import "polycentric/v1/event_key.proto";
+import "polycentric/v1/identity.proto";
+
+enum ContentDigestType {
+  CONTENT_DIGEST_TYPE_UNSPECIFIED = 0;
+  CONTENT_DIGEST_TYPE_SHA256 = 1;
+}
+
+message ContentDigest {
+  ContentDigestType type = 1;
+  // We hash the serialized bytes
+  bytes value = 2;
+}
+
+// Content of the event
+message Content {
+  oneof content_body {
+    Post post = 2;
+    Delete delete = 3;
+    Follow follow = 4;
+    Block block = 5;
+    Reaction reaction = 6;
+    ProfileUpdate profile_update = 7;
+  }
+}
+
+// Serialized content. This is what we do the ContentDigest / Checksum on.
+message SerializedContent {
+  bytes content_bytes = 1;
+}
+
+message Post {
+  // Main text content of the post
+  string text = 1;
+  optional PostReply reply = 2;
+  // optional ImageManifest image = 2;
+}
+
+message PostReply {
+  // Initial post in the reply chain.
+  EventKey root = 1;
+  // Post that is being replied to
+  EventKey parent = 2;
+}
+
+// When processed by a server it should check if the data is referenced by any events
+// If the Content is linked elswhere, the DELETE is ignored and the server should keep the data.
+// If the Content is not linked elsewhere then it can be deleted / purged by the server.
+// Essentially, a DELETE means; Ignore (or forget about) the contents of a previous event.
+message Delete {
+  // Event key to be deleted
+  EventKey event_key = 1;
+}
+
+message Follow {
+  // Identity to follow
+  IdentityId identity = 1;
+}
+
+message Block {
+  // Identity to block
+  IdentityId identity = 1;
+}
+
+enum Opinion {
+  OPINION_UNSPECIFIED = 0;
+  OPINION_LIKE = 1;
+  OPINION_DISLIKE = 2;
+  OPINION_NEUTRAL = 3;
+}
+
+message Reaction {
+  // Key of the event being reacted to
+  EventKey event_key = 1;
+  // Optional emoji
+  optional string emoji = 2;
+  // Opinion ratings
+  Opinion opinion = 3;
+}
+
+message ProfileUpdate {
+  // A friendly display name for the user
+  optional string name = 1;
+  // Reference to the Blob for the avatar
+  optional Image avatar = 2;
+  // Reference to the Blob of a banner
+  optional Image banner = 3;
+}
+
+// If an uploaded Blob is uploaded to the servers Object Storage and not
+// then attached added to the Content repository, the server will delete from Object Storage.
+message Blob {
+  // Digest/Checksum of the blob
+  ContentDigest digest = 1;
+  string mime_type = 2;
+  int64 size = 3;
+}
+
+message Image {
+  Blob blob = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+
+message SyncContentRequest {
+  // Digest that was created from the serialized content_bytes
+  ContentDigest digest = 1;
+  // Serialized Content message
+  bytes content_bytes = 2;
+}
+
+message SyncContentResponse {}
+
+service ContentService {
+  // Synchronises events from a client to the server
+  rpc SyncContent(SyncContentRequest) returns (SyncContentResponse);
+}
