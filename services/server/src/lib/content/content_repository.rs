@@ -8,8 +8,8 @@ impl Query {}
 pub struct Mutation;
 
 impl Mutation {
-    pub async fn add_content(
-        db: &DbConn,
+    pub async fn add_content<C: ConnectionTrait>(
+        db: &C,
         active_model: ContentModel::ActiveModel,
     ) -> Result<ContentModel::Model, DbErr> {
         active_model.insert(db).await

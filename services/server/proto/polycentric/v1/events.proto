@@ -41,6 +41,8 @@ message ListEventsRequest {
 
 message ListEventsResponse {
   repeated EventBundle event_bundles = 1;
+  string previous_token = 2;
+  string next_token = 3;
 }
 
 message PutEventsRequest {

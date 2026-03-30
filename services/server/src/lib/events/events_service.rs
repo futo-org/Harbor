@@ -20,6 +20,7 @@ use ::entity::{
 use prost::Message;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
@@ -70,7 +71,7 @@ impl EventSyncService for EventSyncServiceImpl {
             event_bundles.push(event_bundle);
         }
 
-        let reply = ListEventsResponse { event_bundles };
+        let reply = ListEventsResponse { event_bundles, previous_token: String::new(), next_token: String::new() };
         Ok(Response::new(reply))
     }
 
@@ -126,9 +127,23 @@ impl EventSyncService for EventSyncServiceImpl {
                 )
                 .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
-                // Save the content parent row
+                // Decode the content before starting the transaction
+                let content = Content::decode(
+                    serialized_content.content_bytes.as_slice(),
+                )
+                .map_err(|e| {
+                    eprintln!("sync_events content decode error: {e}");
+                    Status::invalid_argument("invalid content_bytes")
+                })?;
+
+                // Save content parent + child in a transaction
+                let txn = self.db.begin().await.map_err(|e| {
+                    eprintln!("sync_events txn begin error: {e}");
+                    Status::internal("internal server error")
+                })?;
+
                 let content_row = ContentRepository::Mutation::add_content(
-                    &self.db,
+                    &txn,
                     ContentModel::ActiveModel {
                         id: NotSet,
                         digest_type: Set(digest.r#type),
@@ -145,17 +160,12 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::internal("internal server error")
                 })?;
 
-                // Decode the content and save to the appropriate child table
-                let content = Content::decode(
-                    serialized_content.content_bytes.as_slice(),
-                )
-                .map_err(|e| {
-                    eprintln!("sync_events content decode error: {e}");
-                    Status::invalid_argument("invalid content_bytes")
-                })?;
+                save_content_child(&txn, content_row.id, content).await?;
 
-                let content_id = content_row.id;
-                save_content_child(&self.db, content_id, content).await?;
+                txn.commit().await.map_err(|e| {
+                    eprintln!("sync_events txn commit error: {e}");
+                    Status::internal("internal server error")
+                })?;
             }
 
             // Build the Model that we will save to the database
@@ -204,8 +214,8 @@ impl EventSyncService for EventSyncServiceImpl {
 //   Reaction       → content_reaction
 //   ProfileUpdate  → content_profile_update
 // ──────────────────────────────────────────────────────────────────
-async fn save_content_child(
-    db: &sea_orm::DatabaseConnection,
+async fn save_content_child<C: sea_orm::ConnectionTrait>(
+    db: &C,
     content_id: i64,
     content: Content,
 ) -> Result<(), Status> {
