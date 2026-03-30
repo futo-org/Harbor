@@ -1,5 +1,5 @@
 use crate::db::client::build_db_client;
-use crate::lib;
+use crate::service;
 use tonic::transport::Server;
 
 /// Builds reflection for gRPC docs. The file descriptors are created in ./build.rs.
@@ -10,7 +10,9 @@ fn build_reflection_service() -> Result<
     Box<dyn std::error::Error>,
 > {
     let service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(lib::proto::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(
+            service::proto::FILE_DESCRIPTOR_SET,
+        )
         .build_v1()?;
     Ok(service)
 }
@@ -22,7 +24,9 @@ async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
         match build_db_client().await {
             Ok(db) => return db,
             Err(e) => {
-                eprintln!("Failed to connect to database: {e}, retrying in {delay:?}");
+                eprintln!(
+                    "Failed to connect to database: {e}, retrying in {delay:?}"
+                );
                 tokio::time::sleep(delay).await;
                 delay = (delay * 2).min(std::time::Duration::from_secs(30));
             }
@@ -34,7 +38,8 @@ async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
 pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let db = connect_db_with_retry().await;
-    let events_service = lib::events::events_service::build_events_service(db);
+    let events_service =
+        service::events::events_service::build_events_service(db);
     let reflection_service = build_reflection_service()?;
 
     println!("GRPC server is listening on {addr}");
