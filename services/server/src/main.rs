@@ -1,7 +1,7 @@
 mod db;
 mod grpc;
-mod lib;
 mod routes;
+mod service;
 mod util;
 
 use crate::grpc::server;

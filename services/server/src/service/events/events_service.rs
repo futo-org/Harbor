@@ -1,14 +1,14 @@
 use super::events_repository as EventsRepository;
-use crate::lib::content::content_repository as ContentRepository;
-use crate::lib::proto::content::ContentBody;
-use crate::lib::proto::event_sync_service_server::{
+use crate::service::content::content_repository as ContentRepository;
+use crate::service::proto::content::ContentBody;
+use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
-use crate::lib::proto::{
+use crate::service::proto::{
     Content, Event, EventBundle, PutEventsRequest, PutEventsResponse,
     SerializedContent, SignedEvent,
 };
-use crate::lib::proto::{ListEventsRequest, ListEventsResponse};
+use crate::service::proto::{ListEventsRequest, ListEventsResponse};
 use crate::util;
 use ::entity::{
     content_block_model as ContentBlockModel,
@@ -71,7 +71,11 @@ impl EventSyncService for EventSyncServiceImpl {
             event_bundles.push(event_bundle);
         }
 
-        let reply = ListEventsResponse { event_bundles, previous_token: String::new(), next_token: String::new() };
+        let reply = ListEventsResponse {
+            event_bundles,
+            previous_token: String::new(),
+            next_token: String::new(),
+        };
         Ok(Response::new(reply))
     }
 

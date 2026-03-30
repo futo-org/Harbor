@@ -1,10 +1,6 @@
 use ::entity::content_model as ContentModel;
 use sea_orm::*;
 
-pub struct Query;
-
-impl Query {}
-
 pub struct Mutation;
 
 impl Mutation {

@@ -1,25 +1,24 @@
-use ed25519_dalek::Verifier;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum SignatureError {
-    InvalidPublicKeyLength,
-    InvalidPublicKey,
-    InvalidSignatureLength,
-    InvalidSignature,
+    PublicKeyLength,
+    PublicKey,
+    SignatureLength,
+    Signature,
 }
 
 impl fmt::Display for SignatureError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SignatureError::InvalidPublicKeyLength => {
+            SignatureError::PublicKeyLength => {
                 write!(f, "public key must be 32 bytes")
             }
-            SignatureError::InvalidPublicKey => write!(f, "invalid public key"),
-            SignatureError::InvalidSignatureLength => {
+            SignatureError::PublicKey => write!(f, "invalid public key"),
+            SignatureError::SignatureLength => {
                 write!(f, "signature must be 64 bytes")
             }
-            SignatureError::InvalidSignature => write!(f, "invalid signature"),
+            SignatureError::Signature => write!(f, "invalid signature"),
         }
     }
 }
@@ -32,20 +31,20 @@ pub fn verify_signature(
 ) -> Result<(), SignatureError> {
     let public_key_bytes: [u8; 32] = public_key_bytes
         .try_into()
-        .map_err(|_| SignatureError::InvalidPublicKeyLength)?;
+        .map_err(|_| SignatureError::PublicKeyLength)?;
 
     let public_key = ed25519_dalek::VerifyingKey::from_bytes(&public_key_bytes)
-        .map_err(|_| SignatureError::InvalidPublicKey)?;
+        .map_err(|_| SignatureError::PublicKey)?;
 
     let signature_bytes: [u8; 64] = signature_bytes
         .try_into()
-        .map_err(|_| SignatureError::InvalidSignatureLength)?;
+        .map_err(|_| SignatureError::SignatureLength)?;
 
     let signature = ed25519_dalek::Signature::from_bytes(&signature_bytes);
 
     public_key
         .verify_strict(message, &signature)
-        .map_err(|_| SignatureError::InvalidSignature)?;
+        .map_err(|_| SignatureError::Signature)?;
 
     Ok(())
 }
