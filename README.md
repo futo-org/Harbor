@@ -17,15 +17,13 @@
 
 You will need [just](https://github.com/casey/just), Docker, and pnpm.
 
-1. **Run the local server:** `just services/start`
-2. **Build rs-core for all platforms:** `just packages/rs-core/build-all`
-3. **Install dependencies:** `pnpm install`
-4. **Run the app:** `pnpm run:ios` or `pnpm run:android`
+1. **Build rs-core for all platforms:** `just packages/rs-core/build-all`
+2. **Install dependencies:** `pnpm install`
+3. **Run the app:** `pnpm:run web`, `pnpm run:ios`, or `pnpm run:android`
 
 ## Development
 
 - `pnpm dev` builds all SDKs in watch mode.
-- `just legacy/test-core` runs integration test on local server
 
 ## Project Structure
 
@@ -51,5 +49,6 @@ You will need [just](https://github.com/casey/just), Docker, and pnpm.
 
 | Service | Description |
 |---------|-------------|
-| `services/polycentric-server` | Reference server implementation for hosting Polycentric instances |
-| `services/verifiers-server` | Server for verifying claims and signatures in the protocol |
+| `services/server` | Polycentric server |
+| `legacy/services/polycentric-server` | Legacy server  |
+| `legacy/services/verifiers-server` | Legacy Server for verifying claims and signatures in the protocol |

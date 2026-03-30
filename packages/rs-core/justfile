@@ -63,6 +63,15 @@ open-docs:
 # Build, strip, and deploy FFI static lib for a given target
 _build-ffi target dest: _ensure-ffi
     #!/usr/bin/env bash
+    # Skip Apple targets on non-macOS
+    if [[ "{{target}}" == *apple* ]] && [[ "$(uname)" != "Darwin" ]]; then
+        echo "Skipping {{target}} (requires macOS)"
+        exit 0
+    fi
+    if ! rustup target list --installed | grep -q '^{{target}}$'; then
+        echo "Skipping {{target}} (not installed — run 'rustup target add {{target}}' to enable)"
+        exit 0
+    fi
     if ! cargo rustc --release --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
         echo "FAILED: {{target}}"
         exit 1
