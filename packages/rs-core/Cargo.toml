@@ -11,8 +11,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 thiserror = "2.0"
-prost = "0.13"
-prost-types = "0.13"
+prost = "0.14"
+prost-types = "0.14"
 rand = "0.8"
 polycentric-common = { path = "../rs-common" }
 getrandom = { version = "0.2", features = ["js"] }
@@ -35,7 +35,7 @@ base64 = "0.22.1"
 wasm-bindgen-test = "0.3.50"
 
 [build-dependencies]
-prost-build = "0.13"
+prost-build = "0.14"
 
 [features]
 default = ["wasm"]
