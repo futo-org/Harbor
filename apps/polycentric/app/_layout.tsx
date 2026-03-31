@@ -16,7 +16,7 @@ import {
 
 const MAX_CONTENT_WIDTH = 535;
 
-void SplashScreen.preventAutoHideAsync().catch(() => { });
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [providerInitialized, setProviderInitialized] = useState(false);
@@ -29,7 +29,7 @@ export default function RootLayout() {
     if (!providerInitialized) {
       return;
     }
-    void SplashScreen.hideAsync().catch(() => { });
+    void SplashScreen.hideAsync().catch(() => {});
   }, [providerInitialized]);
 
   return (

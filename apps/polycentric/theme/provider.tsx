@@ -1,15 +1,15 @@
-import { Fonts } from "@/assets";
-import * as ReactNavigation from "@react-navigation/native";
-import { useFonts } from "expo-font";
+import { Fonts } from '@/assets';
+import * as ReactNavigation from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import {
   createContext,
   useContext,
   useMemo,
   useState,
   type PropsWithChildren,
-} from "react";
-import { useColorScheme } from "react-native";
-import { themes, type Theme, type ThemeKey } from "./themes";
+} from 'react';
+import { useColorScheme } from 'react-native';
+import { themes, type Theme, type ThemeKey } from './themes';
 
 export type ThemeContextValue = {
   theme: Theme;
@@ -18,17 +18,17 @@ export type ThemeContextValue = {
 };
 
 export const Context = createContext<ThemeContextValue | undefined>(undefined);
-Context.displayName = "PolycentricThemeContext";
+Context.displayName = 'PolycentricThemeContext';
 
 export function ThemeProvider({ children }: PropsWithChildren) {
   const [fontsLoaded, fontError] = useFonts({
     Inter: Fonts.Inter,
-    "Inter-Italic": Fonts["Inter-Italic"],
+    'Inter-Italic': Fonts['Inter-Italic'],
   });
 
   const colorScheme = useColorScheme();
   const [activeThemeName, setActiveThemeName] = useState<ThemeKey>(() =>
-    colorScheme === "dark" ? "dark" : "light",
+    colorScheme === 'dark' ? 'dark' : 'light',
   );
 
   if (fontError) {
@@ -47,7 +47,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   );
 
   const navTheme: ReactNavigation.Theme = {
-    dark: theme.scheme === "dark",
+    dark: theme.scheme === 'dark',
     colors: {
       primary: theme.palette.primary_500,
       background: theme.palette.neutral_25,
@@ -71,7 +71,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 export function useTheme() {
   const ctx = useContext(Context);
   if (!ctx) {
-    throw new Error("useTheme must be used within ThemeProvider");
+    throw new Error('useTheme must be used within ThemeProvider');
   }
   return ctx;
 }

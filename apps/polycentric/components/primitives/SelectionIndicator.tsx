@@ -9,7 +9,10 @@ export function SelectionIndicator() {
 
   return (
     <View
-      style={[styles.indicator, { backgroundColor: legacyTheme.colors.primary }]}
+      style={[
+        styles.indicator,
+        { backgroundColor: legacyTheme.colors.primary },
+      ]}
     >
       <Ionicons
         name="checkmark-sharp"

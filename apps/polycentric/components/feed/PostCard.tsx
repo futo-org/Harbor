@@ -187,14 +187,20 @@ export function PostCard({
           count={dislikes}
           onPress={onDislike}
           color={
-            disliked ? legacyTheme.colors.destructive : legacyTheme.colors.neutralSurface
+            disliked
+              ? legacyTheme.colors.destructive
+              : legacyTheme.colors.neutralSurface
           }
         />
         <ActionButton
           icon={liked ? 'arrow-up' : 'arrow-up-outline'}
           count={likes}
           onPress={onLike}
-          color={liked ? legacyTheme.colors.primary : legacyTheme.colors.neutralSurface}
+          color={
+            liked
+              ? legacyTheme.colors.primary
+              : legacyTheme.colors.neutralSurface
+          }
         />
       </Box>
     </Pressable>

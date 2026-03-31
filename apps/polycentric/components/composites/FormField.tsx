@@ -22,7 +22,9 @@ export const FormField = forwardRef<RNTextInput, FormFieldProps>(
     return (
       <View style={containerStyle}>
         {label && (
-          <View style={{ marginBottom: legacyTheme.spacing[labelMarginBottom] }}>
+          <View
+            style={{ marginBottom: legacyTheme.spacing[labelMarginBottom] }}
+          >
             <Text variant="secondary" color={labelColor ?? 'neutralSurface'}>
               {label}
             </Text>

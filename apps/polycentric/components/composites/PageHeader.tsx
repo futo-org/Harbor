@@ -18,7 +18,10 @@ export function PageHeader({ title, onBack, onClose }: PageHeaderProps) {
     <View
       style={[
         styles.container,
-        { marginTop: legacyTheme.spacing.xl, marginBottom: legacyTheme.spacing.xl },
+        {
+          marginTop: legacyTheme.spacing.xl,
+          marginBottom: legacyTheme.spacing.xl,
+        },
       ]}
     >
       <View style={[styles.left, { marginTop: legacyTheme.spacing.xs }]}>

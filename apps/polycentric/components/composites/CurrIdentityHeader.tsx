@@ -63,7 +63,11 @@ export function CurrIdentityHeader() {
               {username}
             </Text>
             <PubkeyTag publicKey={pubkey} />
-            <Ionicons name="chevron-down" size={22} color={legacyTheme.colors.text} />
+            <Ionicons
+              name="chevron-down"
+              size={22}
+              color={legacyTheme.colors.text}
+            />
           </Box>
         </Pressable>
         <Pressable

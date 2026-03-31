@@ -29,12 +29,7 @@ import { Atoms, useTheme } from '@/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  ScrollView,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -49,12 +44,7 @@ function AppearanceSettingRow() {
   return (
     <ListItem onPress={onPress}>
       <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_md,
-          Atoms.pl_xs,
-        ]}
+        style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
       >
         <Ionicons
           name={theme.name === 'dark' ? 'moon' : 'sunny'}
@@ -189,10 +179,10 @@ function IdentitySettingsContent({
   const fullPubkey = publicKeyToString(publicKey);
   const processId = identity?.process?.process
     ? toBase64(
-      identity.process.process instanceof Uint8Array
-        ? identity.process.process
-        : new Uint8Array(identity.process.process),
-    )
+        identity.process.process instanceof Uint8Array
+          ? identity.process.process
+          : new Uint8Array(identity.process.process),
+      )
     : '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
@@ -322,7 +312,7 @@ function ServersSheetContent() {
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to add server:', err);
     } finally {
@@ -342,7 +332,7 @@ function ServersSheetContent() {
       await client.contentManager.createRemoveServer(server);
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to remove server:', err);
     } finally {

@@ -46,7 +46,9 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       paddingVertical: 12,
       paddingHorizontal: 12,
       fontSize: legacyTheme.typography.fontSize.md,
-      color: disabled ? legacyTheme.colors.neutralSurface : legacyTheme.colors.text,
+      color: disabled
+        ? legacyTheme.colors.neutralSurface
+        : legacyTheme.colors.text,
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({

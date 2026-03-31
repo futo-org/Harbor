@@ -1,12 +1,12 @@
 {
-    "[proto]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "never"
-        }
-    },
-    "[proto3]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "never"
-        }
+  "[proto]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "never"
     }
+  },
+  "[proto3]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "never"
+    }
+  }
 }

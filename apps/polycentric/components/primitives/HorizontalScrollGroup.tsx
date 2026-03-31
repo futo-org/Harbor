@@ -14,7 +14,10 @@ export function HorizontalScrollGroup({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.container, { gap: legacyTheme.spacing.sm }]}
+      contentContainerStyle={[
+        styles.container,
+        { gap: legacyTheme.spacing.sm },
+      ]}
     >
       {children}
     </ScrollView>

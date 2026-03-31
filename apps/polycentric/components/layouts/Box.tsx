@@ -99,7 +99,8 @@ export function Box({
     if (marginBottom) s.marginBottom = legacyTheme.spacing[marginBottom];
     if (marginLeft) s.marginLeft = legacyTheme.spacing[marginLeft];
     if (marginRight) s.marginRight = legacyTheme.spacing[marginRight];
-    if (marginHorizontal) s.marginHorizontal = legacyTheme.spacing[marginHorizontal];
+    if (marginHorizontal)
+      s.marginHorizontal = legacyTheme.spacing[marginHorizontal];
     if (marginVertical) s.marginVertical = legacyTheme.spacing[marginVertical];
     if (padding) s.padding = legacyTheme.spacing[padding];
     if (paddingTop) s.paddingTop = legacyTheme.spacing[paddingTop];
@@ -108,7 +109,8 @@ export function Box({
     if (paddingRight) s.paddingRight = legacyTheme.spacing[paddingRight];
     if (paddingHorizontal)
       s.paddingHorizontal = legacyTheme.spacing[paddingHorizontal];
-    if (paddingVertical) s.paddingVertical = legacyTheme.spacing[paddingVertical];
+    if (paddingVertical)
+      s.paddingVertical = legacyTheme.spacing[paddingVertical];
 
     if (height !== undefined) s.height = height;
     if (width !== undefined) s.width = width;
@@ -117,7 +119,8 @@ export function Box({
     if (maxHeight !== undefined) s.maxHeight = maxHeight;
     if (maxWidth !== undefined) s.maxWidth = maxWidth;
 
-    if (backgroundColor) s.backgroundColor = legacyTheme.colors[backgroundColor];
+    if (backgroundColor)
+      s.backgroundColor = legacyTheme.colors[backgroundColor];
     if (borderRadius) s.borderRadius = legacyTheme.borderRadius[borderRadius];
 
     return s;

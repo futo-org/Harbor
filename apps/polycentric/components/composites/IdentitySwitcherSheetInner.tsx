@@ -168,7 +168,9 @@ function IdentityListItemContent({
             : undefined,
         borderRadius: legacyTheme.borderRadius.md,
         borderWidth: DRAG_BORDER_WIDTH,
-        borderColor: isActive ? legacyTheme.colors.primaryOpacity60 : 'transparent',
+        borderColor: isActive
+          ? legacyTheme.colors.primaryOpacity60
+          : 'transparent',
         borderStyle: 'dashed',
       }}
     >
@@ -237,7 +239,11 @@ function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
         variant="ghost"
         compact
         icon={() => (
-          <Ionicons name="close-sharp" size={24} color={legacyTheme.colors.text} />
+          <Ionicons
+            name="close-sharp"
+            size={24}
+            color={legacyTheme.colors.text}
+          />
         )}
         onPress={() => onDeleteIdentity(publicKey)}
       />
