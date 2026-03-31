@@ -1,8 +1,8 @@
 import { Fonts } from '@/assets';
 import { GlobalHead } from '@/lib/GlobalHead';
 import { PolycentricProvider } from '@/lib/polycentric-hooks';
-import { ThemeProvider, useTheme } from '@/theme';
-import { spacing } from '@/theme/tokens';
+import { LegacyThemeProvider, useLegacyTheme } from '@/legacyTheme';
+import { spacing } from '@/legacyTheme/tokens';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -62,23 +62,23 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <GlobalHead />
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <ThemeProvider>
+        <LegacyThemeProvider>
           <PolycentricProvider onInitialized={onInitialized}>
             <TrueSheetProvider>
               <RootNavigatorShell />
             </TrueSheetProvider>
           </PolycentricProvider>
-        </ThemeProvider>
+        </LegacyThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
 function RootNavigatorShell() {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { width } = useWindowDimensions();
   const showSidebars = width >= SIDEBAR_BREAKPOINT;
-  const bg = theme.colors.backgroundPrimary;
+  const bg = legacyTheme.colors.backgroundPrimary;
 
   return (
     <View style={[styles.shell, { backgroundColor: bg }]}>

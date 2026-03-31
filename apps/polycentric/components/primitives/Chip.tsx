@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, Animated, View } from 'react-native';
 import { Text } from './Text';
 import {
-  useTheme,
+  useLegacyTheme,
   BorderRadiusToken,
   ColorToken,
   FontWeightToken,
-} from '@/theme';
+} from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 type ChipSize = 'sm' | 'md' | 'lg';
@@ -76,21 +76,21 @@ export function Chip({
   borderColor = 'neutralSurfaceOpacity40',
   textColor = 'text',
 }: ChipProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const sizeConfig = SIZE_CONFIG[size];
   const resolvedFontWeight = fontWeight || FONT_WEIGHT_MAP[size];
-  const resolvedTextColor = theme.colors[textColor];
+  const resolvedTextColor = legacyTheme.colors[textColor];
 
   const containerStyle = [
     styles.base,
     {
       paddingVertical: sizeConfig.paddingV,
       paddingHorizontal: sizeConfig.paddingH,
-      backgroundColor: theme.colors[backgroundColor],
-      borderColor: theme.colors[borderColor],
-      borderRadius: theme.borderRadius[sizeConfig.borderRadius],
+      backgroundColor: legacyTheme.colors[backgroundColor],
+      borderColor: legacyTheme.colors[borderColor],
+      borderRadius: legacyTheme.borderRadius[sizeConfig.borderRadius],
     },
   ];
 
@@ -103,7 +103,7 @@ export function Chip({
         color={textColor}
         fontWeight={resolvedFontWeight}
         style={{
-          fontSize: theme.typography.fontSize[sizeConfig.fontSize],
+          fontSize: legacyTheme.typography.fontSize[sizeConfig.fontSize],
         }}
       >
         {title}

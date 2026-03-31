@@ -26,12 +26,12 @@ import {
   toBase64,
 } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 import { TAB_BAR_HEIGHT, SOURCE_CODE_URL, REPORT_BUG_URL } from '@/constants';
 import { confirm } from '@/lib/dialogs/alert';
 
 export default function Settings() {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
   const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
@@ -44,7 +44,7 @@ export default function Settings() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            gap: theme.spacing.xl,
+            gap: legacyTheme.spacing.xl,
             paddingBottom: TAB_BAR_HEIGHT + 16,
           }}
         >
@@ -85,7 +85,7 @@ function IdentitySettingsContent({
 }: {
   publicKey: types.PublicKey;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
   const username = useUsername(publicKey);
@@ -230,7 +230,7 @@ function IdentitySettingsContent({
         <Box
           style={{
             height: 1,
-            backgroundColor: theme.colors.neutralSurfaceOpacity20,
+            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
           }}
         />
 
@@ -255,7 +255,7 @@ function ServersSheetContent() {
   const client = usePolycentric();
   const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const [servers, setServers] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -357,7 +357,7 @@ function ServersSheetContent() {
                     <Ionicons
                       name="remove-circle-outline"
                       size={22}
-                      color={theme.colors.destructive}
+                      color={legacyTheme.colors.destructive}
                     />
                   )}
                   onPress={() => handleRemoveServer(server)}
@@ -391,8 +391,8 @@ function ServersSheetContent() {
                   size={28}
                   color={
                     newServerUrl.trim()
-                      ? theme.colors.primary
-                      : theme.colors.neutralSurface
+                      ? legacyTheme.colors.primary
+                      : legacyTheme.colors.neutralSurface
                   }
                 />
               )}
@@ -412,7 +412,7 @@ function ListItemWrapper({
   children: React.ReactNode;
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   return (
     <ListItem onPress={onPress}>
@@ -426,7 +426,7 @@ function ListItemWrapper({
         <Ionicons
           name="chevron-forward"
           size={18}
-          color={theme.colors.neutralSurface}
+          color={legacyTheme.colors.neutralSurface}
         />
       </Box>
     </ListItem>

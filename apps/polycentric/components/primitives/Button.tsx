@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { Text } from './Text';
 import {
-  useTheme,
+  useLegacyTheme,
   FontWeightToken,
   BorderRadiusToken,
   ColorToken,
-  Theme,
-} from '@/theme';
+  LegacyTheme,
+} from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 type ButtonVariant =
@@ -67,14 +67,14 @@ export function Button({
   fullWidth = false,
   ...props
 }: ButtonProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const borderRadius = theme.borderRadius[sizeConfig.borderRadius];
+  const borderRadius = legacyTheme.borderRadius[sizeConfig.borderRadius];
   const isDisabled = variant === 'disabled';
-  const iconColor = theme.colors[textColorMap[variant]];
-  const variantStyle = getVariantStyle(theme, variant);
+  const iconColor = legacyTheme.colors[textColorMap[variant]];
+  const variantStyle = getVariantStyle(legacyTheme, variant);
 
   return (
     <Animated.View style={animatedStyle}>
@@ -144,13 +144,13 @@ const textColorMap: Record<ButtonVariant, ColorToken> = {
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+function getVariantStyle(legacyTheme: LegacyTheme, variant: ButtonVariant) {
   switch (variant) {
     case 'primary':
       return {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primaryDarker,
-        shadowColor: theme.colors.primaryDarkest,
+        backgroundColor: legacyTheme.colors.primary,
+        borderColor: legacyTheme.colors.primaryDarker,
+        shadowColor: legacyTheme.colors.primaryDarkest,
         shadowOpacity: 0.22,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 6 },
@@ -158,23 +158,23 @@ function getVariantStyle(theme: Theme, variant: ButtonVariant) {
       };
     case 'secondary':
       return {
-        backgroundColor: theme.colors.primaryOpacity20,
-        borderColor: theme.colors.primaryOpacity40,
+        backgroundColor: legacyTheme.colors.primaryOpacity20,
+        borderColor: legacyTheme.colors.primaryOpacity40,
       };
     case 'tertiary':
       return {
         backgroundColor: 'transparent',
-        borderColor: theme.colors.neutralSurfaceOpacity60,
+        borderColor: legacyTheme.colors.neutralSurfaceOpacity60,
       };
     case 'disabled':
       return {
-        backgroundColor: theme.colors.neutralSurfaceOpacity20,
-        borderColor: theme.colors.neutralSurfaceOpacity40,
+        backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
+        borderColor: legacyTheme.colors.neutralSurfaceOpacity40,
       };
     case 'destructive':
       return {
-        backgroundColor: theme.colors.destructiveOpacity15,
-        borderColor: theme.colors.destructiveOpacity80,
+        backgroundColor: legacyTheme.colors.destructiveOpacity15,
+        borderColor: legacyTheme.colors.destructiveOpacity80,
       };
   }
 }
