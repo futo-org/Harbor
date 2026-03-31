@@ -21,5 +21,3 @@ tonic = "*"
 tonic-prost = "*"
 tonic-reflection = "*"
 
-[build-dependencies]
-tonic-prost-build = "*"
