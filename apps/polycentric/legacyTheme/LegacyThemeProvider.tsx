@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { useColorScheme, ColorSchemeName } from 'react-native';
+import { ReactNode, createContext, useContext, useState } from 'react';
+import { ColorSchemeName, useColorScheme } from 'react-native';
 import { LegacyTheme, legacyDarkTheme, legacyLightTheme } from './legacyTheme';
 
 export const LEGACY_THEME_MODES = ['light', 'dark', 'system'] as const;
@@ -30,7 +30,7 @@ function getLegacyEffectiveMode(
 export function LegacyThemeProvider({ children }: { children: ReactNode }) {
   const legacySystemColorScheme: ColorSchemeName = useColorScheme();
   const [legacyThemeMode, setLegacyThemeMode] =
-    useState<LegacyThemeMode>('dark');
+    useState<LegacyThemeMode>('system');
 
   const effectiveMode = getLegacyEffectiveMode(
     legacyThemeMode,

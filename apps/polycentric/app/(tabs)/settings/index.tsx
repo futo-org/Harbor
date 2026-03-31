@@ -1,34 +1,73 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ScrollView, Linking, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import {
-  Screen,
-  PageHeader,
-  ListItemGroup,
-  ListItem,
-  IdentityBadge,
-  Text,
-  Box,
-  IconButton,
-  TextInput,
-  Button,
-  LinkButton,
   Avatar,
+  Box,
+  Button,
+  IconButton,
+  IdentityBadge,
+  LinkButton,
+  ListItem,
+  ListItemGroup,
+  PageHeader,
+  Screen,
+  Text,
+  TextInput,
 } from '@/components';
-import { useSheet } from '@/lib/sheet';
+import { REPORT_BUG_URL, SOURCE_CODE_URL, TAB_BAR_HEIGHT } from '@/constants';
+import { useLegacyTheme } from '@/legacyTheme';
+import { confirm } from '@/lib/dialogs/alert';
 import {
+  identiconUrl,
+  publicKeyToString,
+  toBase64,
   useCurrentIdentity,
   usePolycentric,
   usePolycentricContext,
   useUsername,
-  publicKeyToString,
-  identiconUrl,
-  toBase64,
 } from '@/lib/polycentric-hooks';
+import { useSheet } from '@/lib/sheet';
+import { Atoms, useTheme } from '@/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
-import { useLegacyTheme } from '@/legacyTheme';
-import { TAB_BAR_HEIGHT, SOURCE_CODE_URL, REPORT_BUG_URL } from '@/constants';
-import { confirm } from '@/lib/dialogs/alert';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  ScrollView,
+  View,
+} from 'react-native';
+
+function AppearanceSettingRow() {
+  const { theme, setActiveThemeName } = useTheme();
+  const { setLegacyThemeMode } = useLegacyTheme();
+
+  const onPress = () => {
+    const next = theme.name === 'dark' ? 'light' : 'dark';
+    setActiveThemeName(next);
+    setLegacyThemeMode(next);
+  };
+
+  return (
+    <ListItem onPress={onPress}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.gap_md,
+          Atoms.pl_xs,
+        ]}
+      >
+        <Ionicons
+          name={theme.name === 'dark' ? 'moon' : 'sunny'}
+          size={22}
+          style={theme.atoms.icon_accent}
+        />
+        <Text variant="body" style={theme.atoms.text}>
+          Theme
+        </Text>
+      </View>
+    </ListItem>
+  );
+}
 
 export default function Settings() {
   const { legacyTheme } = useLegacyTheme();
@@ -56,6 +95,10 @@ export default function Settings() {
               </IdentitySheet>
             </>
           </ListItemWrapper>
+
+          <ListItemGroup label="Appearance">
+            <AppearanceSettingRow />
+          </ListItemGroup>
 
           <ListItemGroup label="Servers">
             <ListItemWrapper onPress={() => presentServers()}>
@@ -146,10 +189,10 @@ function IdentitySettingsContent({
   const fullPubkey = publicKeyToString(publicKey);
   const processId = identity?.process?.process
     ? toBase64(
-        identity.process.process instanceof Uint8Array
-          ? identity.process.process
-          : new Uint8Array(identity.process.process),
-      )
+      identity.process.process instanceof Uint8Array
+        ? identity.process.process
+        : new Uint8Array(identity.process.process),
+    )
     : '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
@@ -279,7 +322,7 @@ function ServersSheetContent() {
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
+      client.sync().catch(() => { });
     } catch (err) {
       console.error('Failed to add server:', err);
     } finally {
@@ -299,7 +342,7 @@ function ServersSheetContent() {
       await client.contentManager.createRemoveServer(server);
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
+      client.sync().catch(() => { });
     } catch (err) {
       console.error('Failed to remove server:', err);
     } finally {
