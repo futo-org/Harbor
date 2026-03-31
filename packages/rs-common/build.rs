@@ -45,6 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out_dir_path = PathBuf::from(&out_dir);
     tonic_prost_build::configure()
+        .build_transport(false)
         .file_descriptor_set_path(
             out_dir_path.join("polycentric_v2.bin"),
         )
