@@ -8,6 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Proto directory not found at ../../protos".into());
     }
 
+    // ── v1 protos (prost_build) ──────────────────────────────────
     let proto_file_path = protos_dir.join("polycentric.proto");
     let ffi_proto_file_path = protos_dir.join("rs-core-ffi.proto");
 
@@ -34,8 +35,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // ── v2 protos (tonic_prost_build) ────────────────────────────
+    let v2_protos = [
+        "../../protos/polycentric/v2/identity.proto",
+        "../../protos/polycentric/v2/events.proto",
+        "../../protos/polycentric/v2/content.proto",
+        "../../protos/polycentric/v2/feeds.proto",
+    ];
+
+    let out_dir_path = PathBuf::from(&out_dir);
+    tonic_prost_build::configure()
+        .build_transport(false)
+        .file_descriptor_set_path(
+            out_dir_path.join("polycentric_v2.bin"),
+        )
+        .compile_protos(&v2_protos, &["../../protos"])?;
+
+    // ── rerun-if-changed ─────────────────────────────────────────
     println!("cargo:rerun-if-changed={}", proto_file_path.display());
-    println!("cargo:rerun-if-changed={}", ffi_proto_file_path.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        ffi_proto_file_path.display()
+    );
+    for proto in &v2_protos {
+        println!("cargo:rerun-if-changed={proto}");
+    }
 
     Ok(())
 }

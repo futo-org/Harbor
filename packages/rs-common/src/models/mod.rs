@@ -3,6 +3,14 @@ pub mod protos {
     include!(concat!(env!("OUT_DIR"), "/polycentric_ffi.rs"));
 }
 
+#[allow(dead_code, unused_attributes)]
+pub mod protos_v2 {
+    tonic::include_proto!("polycentric.v2");
+
+    pub const FILE_DESCRIPTOR_SET: &[u8] =
+        include_bytes!(concat!(env!("OUT_DIR"), "/polycentric_v2.bin"));
+}
+
 pub mod traits;
 
 pub mod digest;

@@ -1,5 +1,5 @@
 syntax = "proto3";
-package polycentric.v1;
+package polycentric.v2;
 
 enum KeyType {
   KEY_TYPE_UNSPECIFIED = 0;
