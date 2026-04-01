@@ -187,7 +187,7 @@ describe('PolycentricClient Opinions', () => {
       setAsCurrent: false,
     });
 
-    await client.switchIdentity(secondIdentity.publicKey);
+    await client.switchKeyPair(secondIdentity.publicKey);
 
     const likeEvent = await client.createLike(postPointer);
     expect(likeEvent).toBeDefined();
@@ -198,7 +198,7 @@ describe('PolycentricClient Opinions', () => {
     expect(currentOpinion?.value.length).toBe(1);
     expect(currentOpinion?.value[0]).toBe(Opinion.LIKE);
 
-    await client.switchIdentity(firstIdentityPublicKey);
+    await client.switchKeyPair(firstIdentityPublicKey);
 
     const firstIdentityOpinion = await client.queryCurrentOpinion(postPointer);
 

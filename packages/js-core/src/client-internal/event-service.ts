@@ -1,6 +1,6 @@
 import EventEmitter from 'eventemitter3';
 import type { Identity } from '../polycentric-client';
-import type { SignedEvent } from '../proto/polycentric';
+import type { SignedEvent } from '../proto/polycentric/v2/events';
 
 export enum ClientState {
   UNINITIALIZED = 'uninitialized',

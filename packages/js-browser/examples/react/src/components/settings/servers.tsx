@@ -9,9 +9,9 @@ export const ServerSelector = () => {
 
   const loadIdentities = useCallback(async () => {
     if (client === null) return;
-    setServers(
-      await client.queryServers(client.currentIdentity.keyPair.publicKey),
-    );
+    // setServers(
+    //   await client.queryServers(client.currentIdentity.keyPair.publicKey),
+    // );
   }, [client]);
 
   useEffect(() => {
@@ -21,12 +21,12 @@ export const ServerSelector = () => {
   if (client === null) return <div>Error: No client object provided</div>;
 
   const addServer = async (server: string) => {
-    await client.createAddServer(server);
+    // await client.createAddServer(server);
     loadIdentities();
   };
 
   const removeServer = async (server: string) => {
-    await client.createRemoveServer(server);
+    // await client.createRemoveServer(server);
     loadIdentities();
   };
 

@@ -25,7 +25,7 @@ export const IdentitySelector = () => {
 
   const loadIdentities = useCallback(async () => {
     if (client === null) return;
-    setIdentities(await client.getAllIdentities());
+    setIdentities(await client.getKeys());
   }, [client]);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export const IdentitySelector = () => {
   if (client === null) return <div>Error: No client object provided</div>;
 
   const otherIdentities = identities.filter(
-    (identity) => !keyPairsAreEqual(identity, client.currentIdentity.keyPair),
+    (identity) => !keyPairsAreEqual(identity, client.currentKeyPair!),
   );
 
   if (uiState === UIState.Login) {
@@ -90,10 +90,10 @@ export const IdentitySelector = () => {
     const handleSignup = async () => {
       if (usernameField.current === null) return;
 
-      const identity = await client.createIdentity({
+      const identity = await client.createKeyPair({
         keyType: KEY_TYPE.ED25519,
       });
-      await client.createUsername(usernameField.current.value);
+      //await client.createUsername(usernameField.current.value);
       await loadIdentities();
 
       if (submitButton.current !== null && passwordField.current !== null) {
@@ -125,9 +125,8 @@ export const IdentitySelector = () => {
 
   const currentUsername =
     /* client.queryUsername(client.currentIdentity.keyPair.publicKey) || */ '';
-  const currentIdentifier = Identifier(
-    client.currentIdentity.keyPair.publicKey,
-  );
+  const currentIdentifier =
+    client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
   const isEphemeral = client.currentIdentityIsEphemeral;
 
   return (
@@ -147,16 +146,16 @@ export const IdentitySelector = () => {
               const toRemove = client.currentIdentity.keyPair.publicKey;
 
               if (otherIdentities.length > 0) {
-                await client.switchIdentity(otherIdentities[0].publicKey);
+                await client.switchKeyPair(otherIdentities[0].publicKey);
               } else {
-                await client.createIdentity({
+                await client.createKeyPair({
                   keyType: KEY_TYPE.ED25519,
                   setAsCurrent: true,
                   ephemeral: true,
                 });
               }
 
-              await client.removeIdentity(toRemove);
+              await client.removeKeyPair(toRemove);
               await loadIdentities();
 
               setInputEnabled(true);

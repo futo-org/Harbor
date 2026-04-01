@@ -133,7 +133,7 @@ export function PolycentricProvider({
 
         if (cancelled) return;
 
-        if ((await c.getAllIdentities()).length === 0) {
+        if ((await c.getKeys()).length === 0) {
           await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
         }
 
@@ -168,7 +168,7 @@ export function PolycentricProvider({
 
         c.events.onIdentityChanged(async (identity) => {
           if (cancelled) return;
-          if (!identity && (await c.getAllIdentities()).length === 0) {
+          if (!identity && (await c.getKeys()).length === 0) {
             await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
             await c.sync().catch(() => {});
             setCurrentIdentity(c.currentIdentity);
@@ -194,7 +194,7 @@ export function PolycentricProvider({
   const switchIdentity = useCallback(
     async (publicKey: types.PublicKey) => {
       if (!client) return;
-      await client.switchIdentity(publicKey);
+      await client.switchKeyPair(publicKey);
       await client.sync().catch(() => {});
     },
     [client],

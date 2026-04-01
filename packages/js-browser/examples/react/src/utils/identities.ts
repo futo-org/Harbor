@@ -46,6 +46,6 @@ export const selectIdentity = async (
   client: PolycentricClient,
   identity: PublicKey,
 ) => {
-  await client.switchIdentity(identity);
+  await client.switchKeyPair(identity);
   localStorage.setItem(SELECTED_IDENTITY_ITEM, Identifier(identity));
 };

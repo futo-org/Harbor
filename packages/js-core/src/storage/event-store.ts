@@ -1,5 +1,5 @@
 import { IEventRepository } from '../platform-interfaces';
-import { SignedEvent } from '../proto/polycentric';
+import { SignedEvent } from '../proto/polycentric/v2/events';
 import { DatabaseError } from '../errors';
 
 /**
@@ -26,7 +26,7 @@ export class EventStore {
       throw new DatabaseError('SignedEvent must have a valid signature');
     }
 
-    if (!signedEvent.event || signedEvent.event.length === 0) {
+    if (!signedEvent.eventBytes || signedEvent.eventBytes.length === 0) {
       throw new DatabaseError('SignedEvent must have valid event data');
     }
 
@@ -75,5 +75,16 @@ export class EventStore {
     offset: number;
   }> {
     return this.repository.getEventsBatch(batchSize, offset);
+  }
+
+  /**
+   * Get the next sequence number for a given public key and stream.
+   *
+   * @param publicKey - The public key bytes of the signer
+   * @param streamId - The stream identifier
+   * @returns The next sequence number (max + 1, or 1n if no events)
+   */
+  async getNextSequence(publicKey: Uint8Array, streamId: string): Promise<bigint> {
+    return this.repository.getNextSequence(publicKey, streamId);
   }
 }

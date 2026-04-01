@@ -2,15 +2,14 @@ import { createContext } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
-import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
+import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm?url';
 import {
   IndexedDBStorageDriver,
   BrowserCryptoManager,
   BrowserWasmBridge,
 } from '@polycentric/js-browser';
-import { HydrationStrategy, PolycentricClient } from '@polycentric/js-core';
+import { PolycentricClient } from '@polycentric/js-core';
 import { currentSelectedIdentity } from './utils/identities.ts';
-import { HydrationStatus } from '@polycentric/js-core';
 
 export const ClientContext = createContext<PolycentricClient | null>(null);
 
@@ -30,33 +29,21 @@ try {
     storageDriver,
     cryptoManager,
     coreBridge,
-    hydration: {
-      strategy: HydrationStrategy.FULL_ASYNC,
-      batchSize: 100,
-    },
-  });
-
-  clientInstance.events.onHydrationStatus(async (status) => {
-    if (status === HydrationStatus.COMPLETED) {
-      console.log('Hydration complete, syncing...');
-      await clientInstance.sync();
-      console.log('Sync complete.');
-    }
   });
 
   console.log('5. PolycentricClient created successfully');
 
-  console.log('6. Loading identities...');
-  const identities = await clientInstance.getAllIdentities();
+  console.log('6. Loading keys...');
+  const keys = await clientInstance.getKeys();
 
-  console.log('7. Identities loaded', identities);
+  console.log('7. Keys loaded', keys);
 
   let keyPair;
-  if (identities.length > 0) {
-    keyPair = await clientInstance.switchIdentity(
-      currentSelectedIdentity(identities).publicKey,
+  if (keys.length > 0) {
+    keyPair = await clientInstance.switchKeyPair(
+      currentSelectedIdentity(keys).publicKey,
     );
-    console.log('8. Identity loaded', keyPair);
+    console.log('8. Keys loaded', keyPair);
   }
 
   createRoot(document.getElementById('root')!).render(

@@ -49,6 +49,9 @@ export class IndexedDBDatabase {
    */
   private initializeDB(db: IDBDatabase) {
     for (const store of this.layout.stores) {
+      if (db.objectStoreNames.contains(store.name)) {
+        continue;
+      }
       const createdStore = db.createObjectStore(store.name, store.options);
       for (const index of store.indexes) {
         createdStore.createIndex(index.name, index.keyPath, index.options);

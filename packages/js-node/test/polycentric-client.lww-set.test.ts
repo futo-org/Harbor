@@ -52,7 +52,7 @@ describe('PolycentricClient LWW Element Sets', () => {
         setAsCurrent: false,
       });
 
-      await client.switchIdentity(client.currentIdentity.keyPair.publicKey);
+      await client.switchKeyPair(client.currentIdentity.keyPair.publicKey);
 
       let follows = client.queryFollows(
         client.currentIdentity.keyPair.publicKey,
@@ -95,7 +95,7 @@ describe('PolycentricClient LWW Element Sets', () => {
         setAsCurrent: false,
       });
 
-      await client.switchIdentity(client.currentIdentity.keyPair.publicKey);
+      await client.switchKeyPair(client.currentIdentity.keyPair.publicKey);
 
       let blocks = client.queryBlocks(client.currentIdentity.keyPair.publicKey);
       expect(blocks).toEqual([]);
@@ -222,7 +222,7 @@ describe('PolycentricClient LWW Element Sets', () => {
         setAsCurrent: false,
       });
 
-      await client.switchIdentity(identity1.publicKey);
+      await client.switchKeyPair(identity1.publicKey);
 
       await client.createAddServer('https://identity1-server.com');
       await client.createJoinTopic('identity1-topic');
@@ -232,7 +232,7 @@ describe('PolycentricClient LWW Element Sets', () => {
       expect(servers).toEqual(['https://identity1-server.com']);
       expect(topics).toEqual(['identity1-topic']);
 
-      await client.switchIdentity(identity2.publicKey);
+      await client.switchKeyPair(identity2.publicKey);
 
       servers = client.queryServers(identity2.publicKey);
       topics = client.queryTopics(identity2.publicKey);
@@ -247,7 +247,7 @@ describe('PolycentricClient LWW Element Sets', () => {
       expect(servers).toEqual(['https://identity2-server.com']);
       expect(topics).toEqual(['identity2-topic']);
 
-      await client.switchIdentity(identity1.publicKey);
+      await client.switchKeyPair(identity1.publicKey);
 
       servers = client.queryServers(identity1.publicKey);
       topics = client.queryTopics(identity1.publicKey);

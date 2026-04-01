@@ -3,6 +3,11 @@ export const KEY_TYPE = {
   SHA256: BigInt(2),
 } as const;
 
+export const STREAM_ID = {
+  IDENTITY: 'identity',
+  FEED: 'feed',
+} as const;
+
 export enum HydrationStrategy {
   FULL = 'full',
   FULL_ASYNC = 'full-async',

@@ -92,7 +92,7 @@ export function IdentitySwitcherSheetInner({
         confirmText: 'Delete',
       });
       if (!ok) return;
-      await client.deleteIdentity(publicKey);
+      await client.deleteKeyPair(publicKey);
     },
     [client],
   );
@@ -200,12 +200,12 @@ function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
     // TODO: use truesheet events instead of a timeout
     dismiss();
     setTimeout(() => {
-      switchIdentity(item.publicKey);
+      switchKeyPair(item.publicKey);
     }, 215);
   };
 
   return (
-    <Pressable onPress={() => !isCurrent && handleSwitchIdentity()}>
+    <Pressable onPress={() => !isCurrent && handleswitchKeyPair()}>
       <IdentityListItemContent item={item} />
     </Pressable>
   );

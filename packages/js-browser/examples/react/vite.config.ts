@@ -21,8 +21,12 @@ export default defineConfig({
     },
   ],
   optimizeDeps: {
-    exclude: ['@sqlite.org/sqlite-wasm', '@polycentric/rs-core-wasm-browser'],
-    include: ['@polycentric/js-core', '@polycentric/js-browser'],
+    exclude: [
+      '@sqlite.org/sqlite-wasm',
+      '@polycentric/rs-core-wasm-browser',
+      '@polycentric/js-browser',
+      '@polycentric/js-core',
+    ],
   },
   server: {
     headers: {
@@ -42,10 +46,9 @@ export default defineConfig({
   assetsInclude: ['**/*.wasm'],
   resolve: {
     alias: {
-      '@lib-polycentric/rs-core': path.resolve(
-        __dirname,
-        '../../../rs-core/pkg',
-      ),
+      '@polycentric/js-browser': path.resolve(__dirname, '../../src/index.ts'),
+      '@polycentric/js-core': path.resolve(__dirname, '../../../js-core/src/index.ts'),
+      '@polycentric/rs-core-wasm-browser': path.resolve(__dirname, '../../../rs-core-wasm-browser'),
     },
   },
 });
