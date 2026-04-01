@@ -4,7 +4,7 @@ Polycentric Kotlin SDK for android applications
 
 ## To build:
 
-You will need java, android NDK, as well as all build tools required by the rs-core project.
+You will need java, android SDK, android NDK, as well as all build tools required by the rs-core project.
 
 The build process will expect to find an Android NDK installation at the directory indicated by $ANDROID_NDK_HOME.
 
