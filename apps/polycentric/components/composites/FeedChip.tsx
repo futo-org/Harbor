@@ -1,6 +1,6 @@
 import { Chip } from '@/components/primitives';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 export type FeedType = 'explore' | 'following' | 'topic' | 'posts' | 'likes';
 
@@ -26,11 +26,11 @@ export function FeedChip({
   onPress,
 }: FeedChipProps) {
   const icon = ICON_MAP[type];
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const iconColor = isSelected
-    ? theme.colors.primary
-    : theme.colors.neutralSurface;
+    ? legacyTheme.colors.primary
+    : legacyTheme.colors.neutralSurface;
 
   return (
     <Chip

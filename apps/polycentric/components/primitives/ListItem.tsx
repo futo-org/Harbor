@@ -1,6 +1,6 @@
 import { Pressable, Animated } from 'react-native';
 import { Box } from '@/components/layouts';
-import { SpacingToken } from '@/theme';
+import { SpacingToken } from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 interface ListItemProps {

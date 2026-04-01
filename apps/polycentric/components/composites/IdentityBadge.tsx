@@ -8,7 +8,7 @@ import {
 import { Box } from '@/components/layouts';
 import { useUsername, identiconUrl } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
-import { SpacingToken } from '@/theme/tokens';
+import { SpacingToken } from '@/legacyTheme/tokens';
 
 type BadgeSize = 'md' | 'lg';
 

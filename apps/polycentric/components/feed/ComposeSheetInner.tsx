@@ -20,7 +20,7 @@ import {
 } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { useSheetContext } from '@/lib/sheet';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 interface ComposeSheetInnerProps {
   dismiss: () => Promise<void>;
@@ -39,7 +39,7 @@ export function ComposeSheetInner({
   const { publicKey } = useCurrentIdentity();
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { isOpen, setHeader, setFooter } = useSheetContext();
 
   const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
@@ -109,7 +109,7 @@ export function ComposeSheetInner({
         paddingHorizontal="lg"
         style={{
           borderBottomWidth: 1,
-          borderBottomColor: theme.colors.neutralSurfaceOpacity20,
+          borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20,
         }}
       >
         <LinkButton
@@ -122,7 +122,7 @@ export function ComposeSheetInner({
           {title}
         </Text>
         {submitting ? (
-          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <ActivityIndicator size="small" color={legacyTheme.colors.primary} />
         ) : (
           <Button
             title="Post"
@@ -133,7 +133,7 @@ export function ComposeSheetInner({
         )}
       </Box>,
     );
-  }, [submitting, canPost, text, title, theme]);
+  }, [submitting, canPost, text, title, legacyTheme]);
 
   useEffect(() => {
     setFooter(
@@ -144,7 +144,7 @@ export function ComposeSheetInner({
         justifyContent="flex-end"
         style={{
           borderTopWidth: 1,
-          borderTopColor: theme.colors.neutralSurfaceOpacity20,
+          borderTopColor: legacyTheme.colors.neutralSurfaceOpacity20,
           paddingBottom: 24,
         }}
       >
@@ -153,7 +153,7 @@ export function ComposeSheetInner({
         </Text>
       </Box>,
     );
-  }, [text.length, theme]);
+  }, [text.length, legacyTheme]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -171,10 +171,10 @@ export function ComposeSheetInner({
         <Box
           padding="md"
           style={{
-            backgroundColor: theme.colors.neutralSurfaceOpacity10,
+            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity10,
             borderBottomWidth: 1,
-            borderBottomColor: theme.colors.neutralSurfaceOpacity20,
-            borderRadius: theme.borderRadius.md,
+            borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20,
+            borderRadius: legacyTheme.borderRadius.md,
             marginBottom: 10,
           }}
         >
@@ -197,7 +197,7 @@ export function ComposeSheetInner({
           padding="md"
           style={{
             borderBottomWidth: 1,
-            borderBottomColor: theme.colors.destructiveOpacity80,
+            borderBottomColor: legacyTheme.colors.destructiveOpacity80,
             marginBottom: 10,
           }}
         >

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 type GradientVariant = 'top' | 'surround';
 type MatrixOverlayVariant = 'neutral' | 'colored';
@@ -16,18 +16,18 @@ export type BackgroundProps =
     };
 
 export function Background({ gradient, matrixOverlay }: BackgroundProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const matrixColor =
     matrixOverlay === 'colored'
-      ? theme.colors.primaryOpacity10
-      : theme.colors.neutralSurfaceOpacity10;
+      ? legacyTheme.colors.primaryOpacity10
+      : legacyTheme.colors.neutralSurfaceOpacity10;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: theme.colors.backgroundPrimary },
+          { backgroundColor: legacyTheme.colors.backgroundPrimary },
         ]}
       />
       {gradient ? (
@@ -35,7 +35,7 @@ export function Background({ gradient, matrixOverlay }: BackgroundProps) {
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: theme.colors.backgroundSecondary,
+              backgroundColor: legacyTheme.colors.backgroundSecondary,
               opacity: gradient === 'surround' ? 0.18 : 0.12,
             },
           ]}
@@ -46,7 +46,7 @@ export function Background({ gradient, matrixOverlay }: BackgroundProps) {
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: theme.colors.primaryDarkestOpacity10,
+              backgroundColor: legacyTheme.colors.primaryDarkestOpacity10,
               opacity: 0.24,
             },
           ]}

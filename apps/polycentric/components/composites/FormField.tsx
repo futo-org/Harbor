@@ -2,7 +2,7 @@ import { ViewStyle, View } from 'react-native';
 import { forwardRef } from 'react';
 import { Text } from '@/components/primitives';
 import { TextInput, TextInputProps } from '@/components/primitives';
-import { useTheme, SpacingToken, ColorToken } from '@/theme';
+import { useLegacyTheme, SpacingToken, ColorToken } from '@/legacyTheme';
 import type { TextInput as RNTextInput } from 'react-native';
 
 interface FormFieldProps extends TextInputProps {
@@ -17,12 +17,14 @@ export const FormField = forwardRef<RNTextInput, FormFieldProps>(
     { label, labelColor, labelMarginBottom = 'sm', containerStyle, ...props },
     ref,
   ) => {
-    const { theme } = useTheme();
+    const { legacyTheme } = useLegacyTheme();
 
     return (
       <View style={containerStyle}>
         {label && (
-          <View style={{ marginBottom: theme.spacing[labelMarginBottom] }}>
+          <View
+            style={{ marginBottom: legacyTheme.spacing[labelMarginBottom] }}
+          >
             <Text variant="secondary" color={labelColor ?? 'neutralSurface'}>
               {label}
             </Text>

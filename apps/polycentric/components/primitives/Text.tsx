@@ -1,11 +1,11 @@
 import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 import {
-  useTheme,
+  useLegacyTheme,
   FontWeightToken,
   ColorToken,
   FontSizeToken,
   LineHeightToken,
-} from '@/theme';
+} from '@/legacyTheme';
 
 export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
@@ -28,7 +28,7 @@ export function Text({
   style,
   ...props
 }: TextProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const config = VARIANT_CONFIG[variant];
   const fontFamily =
@@ -39,25 +39,25 @@ export function Text({
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
       ? fontSize
-      : theme.typography.fontSize[fontSize]
-    : theme.typography.fontSize[config.size];
+      : legacyTheme.typography.fontSize[fontSize]
+    : legacyTheme.typography.fontSize[config.size];
 
   const resolvedLineHeight = lineHeight
     ? typeof lineHeight === 'number'
       ? lineHeight
-      : theme.typography.lineHeight[lineHeight]
-    : theme.typography.lineHeight[config.size];
+      : legacyTheme.typography.lineHeight[lineHeight]
+    : legacyTheme.typography.lineHeight[config.size];
 
   const resolvedFontWeight = fontWeight
-    ? theme.typography.fontWeight[fontWeight]
-    : theme.typography.fontWeight[config.defaultWeight];
+    ? legacyTheme.typography.fontWeight[fontWeight]
+    : legacyTheme.typography.fontWeight[config.defaultWeight];
 
   return (
     <RNText
       style={[
         {
           fontFamily,
-          color: color ? theme.colors[color] : theme.colors.text,
+          color: color ? legacyTheme.colors[color] : legacyTheme.colors.text,
           fontSize: resolvedFontSize,
           fontWeight: resolvedFontWeight,
           lineHeight: resolvedLineHeight,

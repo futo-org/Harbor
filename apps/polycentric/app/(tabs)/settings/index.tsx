@@ -1,37 +1,66 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ScrollView, Linking, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import {
-  Screen,
-  PageHeader,
-  ListItemGroup,
-  ListItem,
-  IdentityBadge,
-  Text,
-  Box,
-  IconButton,
-  TextInput,
-  Button,
-  LinkButton,
   Avatar,
+  Box,
+  Button,
+  IconButton,
+  IdentityBadge,
+  LinkButton,
+  ListItem,
+  ListItemGroup,
+  PageHeader,
+  Screen,
+  Text,
+  TextInput,
 } from '@/components';
-import { useSheet } from '@/lib/sheet';
+import { REPORT_BUG_URL, SOURCE_CODE_URL, TAB_BAR_HEIGHT } from '@/constants';
+import { useLegacyTheme } from '@/legacyTheme';
+import { confirm } from '@/lib/dialogs/alert';
 import {
+  identiconUrl,
+  publicKeyToString,
+  toBase64,
   useCurrentIdentity,
   usePolycentric,
   usePolycentricContext,
   useUsername,
-  publicKeyToString,
-  identiconUrl,
-  toBase64,
 } from '@/lib/polycentric-hooks';
+import { useSheet } from '@/lib/sheet';
+import { Atoms, useTheme } from '@/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
-import { useTheme } from '@/theme';
-import { TAB_BAR_HEIGHT, SOURCE_CODE_URL, REPORT_BUG_URL } from '@/constants';
-import { confirm } from '@/lib/dialogs/alert';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
+
+function AppearanceSettingRow() {
+  const { theme, setActiveThemeName } = useTheme();
+  const { setLegacyThemeMode } = useLegacyTheme();
+
+  const onPress = () => {
+    const next = theme.name === 'dark' ? 'light' : 'dark';
+    setActiveThemeName(next);
+    setLegacyThemeMode(next);
+  };
+
+  return (
+    <ListItem onPress={onPress}>
+      <View
+        style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
+      >
+        <Ionicons
+          name={theme.name === 'dark' ? 'moon' : 'sunny'}
+          size={22}
+          style={theme.atoms.icon_accent}
+        />
+        <Text variant="body" style={theme.atoms.text}>
+          Theme
+        </Text>
+      </View>
+    </ListItem>
+  );
+}
 
 export default function Settings() {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
   const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
@@ -44,7 +73,7 @@ export default function Settings() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            gap: theme.spacing.xl,
+            gap: legacyTheme.spacing.xl,
             paddingBottom: TAB_BAR_HEIGHT + 16,
           }}
         >
@@ -56,6 +85,10 @@ export default function Settings() {
               </IdentitySheet>
             </>
           </ListItemWrapper>
+
+          <ListItemGroup label="Appearance">
+            <AppearanceSettingRow />
+          </ListItemGroup>
 
           <ListItemGroup label="Servers">
             <ListItemWrapper onPress={() => presentServers()}>
@@ -85,7 +118,7 @@ function IdentitySettingsContent({
 }: {
   publicKey: types.PublicKey;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
   const username = useUsername(publicKey);
@@ -230,7 +263,7 @@ function IdentitySettingsContent({
         <Box
           style={{
             height: 1,
-            backgroundColor: theme.colors.neutralSurfaceOpacity20,
+            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
           }}
         />
 
@@ -255,7 +288,7 @@ function ServersSheetContent() {
   const client = usePolycentric();
   const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const [servers, setServers] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -357,7 +390,7 @@ function ServersSheetContent() {
                     <Ionicons
                       name="remove-circle-outline"
                       size={22}
-                      color={theme.colors.destructive}
+                      color={legacyTheme.colors.destructive}
                     />
                   )}
                   onPress={() => handleRemoveServer(server)}
@@ -391,8 +424,8 @@ function ServersSheetContent() {
                   size={28}
                   color={
                     newServerUrl.trim()
-                      ? theme.colors.primary
-                      : theme.colors.neutralSurface
+                      ? legacyTheme.colors.primary
+                      : legacyTheme.colors.neutralSurface
                   }
                 />
               )}
@@ -412,7 +445,7 @@ function ListItemWrapper({
   children: React.ReactNode;
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   return (
     <ListItem onPress={onPress}>
@@ -426,7 +459,7 @@ function ListItemWrapper({
         <Ionicons
           name="chevron-forward"
           size={18}
-          color={theme.colors.neutralSurface}
+          color={legacyTheme.colors.neutralSurface}
         />
       </Box>
     </ListItem>

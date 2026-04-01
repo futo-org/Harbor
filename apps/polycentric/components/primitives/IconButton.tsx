@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme, ColorToken, BorderRadiusToken } from '@/theme';
+import { useLegacyTheme, ColorToken, BorderRadiusToken } from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';
@@ -49,13 +49,13 @@ export function IconButton({
   compact = false,
   ...props
 }: IconButtonProps) {
-  const { theme, isDark } = useTheme();
+  const { legacyTheme, legacyIsDark } = useLegacyTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const resolvedIconColor = theme.colors[iconColor];
+  const resolvedIconColor = legacyTheme.colors[iconColor];
   const resolvedBorderRadius = borderRadius
-    ? theme.borderRadius[borderRadius]
+    ? legacyTheme.borderRadius[borderRadius]
     : sizeConfig.containerSize / 2;
 
   const iconElement = icon({
@@ -92,14 +92,14 @@ export function IconButton({
         ) : (
           <BlurView
             intensity={blurIntensity}
-            tint={isDark ? 'dark' : 'light'}
+            tint={legacyIsDark ? 'dark' : 'light'}
             style={[
               styles.container,
               {
                 width: sizeConfig.containerSize,
                 height: sizeConfig.containerSize,
                 borderRadius: resolvedBorderRadius,
-                backgroundColor: theme.colors.neutralSurfaceOpacity10,
+                backgroundColor: legacyTheme.colors.neutralSurfaceOpacity10,
               },
             ]}
           >

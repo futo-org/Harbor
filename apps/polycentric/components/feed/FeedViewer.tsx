@@ -5,7 +5,7 @@ import { Box } from '@/components/layouts';
 import { Text } from '@/components/primitives';
 import { PostCardItem } from './PostCardItem';
 import { types } from '@polycentric/react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 import { usePolycentricContext, eventKey } from '@/lib/polycentric-hooks';
 import type { PostState } from '@/lib/polycentric-hooks';
 
@@ -36,7 +36,7 @@ export function FeedViewer({
   bottomPadding,
   showTopic = true,
 }: FeedViewerProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { store } = usePolycentricContext();
   const getPost = useCallback(
     (postId: string): PostState | undefined => store.getState().posts[postId],
@@ -129,7 +129,7 @@ export function FeedViewer({
           <Box padding="lg" alignItems="center">
             <ActivityIndicator
               size="small"
-              color={theme.colors.neutralSurface}
+              color={legacyTheme.colors.neutralSurface}
             />
           </Box>
         ) : undefined

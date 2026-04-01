@@ -1,18 +1,25 @@
 import { View, StyleSheet } from 'react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 import { Ionicons } from '@expo/vector-icons';
 
 const SIZE = 20;
 
 export function SelectionIndicator() {
-  const { isDark, theme } = useTheme();
+  const { legacyIsDark, legacyTheme } = useLegacyTheme();
 
   return (
-    <View style={[styles.indicator, { backgroundColor: theme.colors.primary }]}>
+    <View
+      style={[
+        styles.indicator,
+        { backgroundColor: legacyTheme.colors.primary },
+      ]}
+    >
       <Ionicons
         name="checkmark-sharp"
         size={16}
-        color={isDark ? theme.colors.black : theme.colors.white}
+        color={
+          legacyIsDark ? legacyTheme.colors.black : legacyTheme.colors.white
+        }
       />
     </View>
   );
