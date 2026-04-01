@@ -1,6 +1,6 @@
 import { Pressable, PressableProps, StyleSheet, Animated } from 'react-native';
 import { Text } from './Text';
-import { useTheme, ColorToken, FontWeightToken } from '@/theme';
+import { useLegacyTheme, ColorToken, FontWeightToken } from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 type SmallButtonVariant = 'primary' | 'secondary' | 'destructive';
@@ -29,24 +29,24 @@ export function PillButton({
   icon,
   ...props
 }: SmallButtonProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = theme.colors[textColorMap[variant]];
+  const textColor = legacyTheme.colors[textColorMap[variant]];
 
   const variantStyle = (() => {
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: theme.colors.neutralSurfaceOpacity20,
+          backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
         };
       case 'secondary':
         return {
-          backgroundColor: theme.colors.primaryOpacity20,
+          backgroundColor: legacyTheme.colors.primaryOpacity20,
         };
       case 'destructive':
         return {
-          backgroundColor: theme.colors.destructiveOpacity20,
+          backgroundColor: legacyTheme.colors.destructiveOpacity20,
         };
     }
   })();

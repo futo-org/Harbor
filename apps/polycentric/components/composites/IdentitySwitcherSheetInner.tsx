@@ -41,7 +41,7 @@ import {
   type KeyPair,
   types,
 } from '@polycentric/react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 import { useFadeIn } from '@/lib/animation';
 import { confirm } from '@/lib/dialogs/alert';
 
@@ -149,7 +149,7 @@ function IdentityListItemContent({
   item: IdentityKeyPair;
   isActive?: boolean;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { isEditing } = useIdentitySwitcher();
   const { isCurrentIdentity } = useCurrentIdentity();
 
@@ -162,13 +162,15 @@ function IdentityListItemContent({
       marginHorizontal="lg"
       style={{
         backgroundColor: isActive
-          ? theme.colors.primaryOpacity20
+          ? legacyTheme.colors.primaryOpacity20
           : isCurrent
-            ? theme.colors.neutralSurfaceOpacity20
+            ? legacyTheme.colors.neutralSurfaceOpacity20
             : undefined,
-        borderRadius: theme.borderRadius.md,
+        borderRadius: legacyTheme.borderRadius.md,
         borderWidth: DRAG_BORDER_WIDTH,
-        borderColor: isActive ? theme.colors.primaryOpacity60 : 'transparent',
+        borderColor: isActive
+          ? legacyTheme.colors.primaryOpacity60
+          : 'transparent',
         borderStyle: 'dashed',
       }}
     >
@@ -227,7 +229,7 @@ function DraggableIdentityListItem({
 }
 
 function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
   const { onDeleteIdentity } = useIdentitySwitcher();
 
@@ -237,7 +239,11 @@ function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
         variant="ghost"
         compact
         icon={() => (
-          <Ionicons name="close-sharp" size={24} color={theme.colors.text} />
+          <Ionicons
+            name="close-sharp"
+            size={24}
+            color={legacyTheme.colors.text}
+          />
         )}
         onPress={() => onDeleteIdentity(publicKey)}
       />
@@ -285,7 +291,7 @@ export function Footer({
 }: {
   onCreateIdentity: () => Promise<void>;
 }) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const [isCreating, setIsCreating] = useState(false);
 
   const handlePress = async () => {
@@ -310,8 +316,8 @@ export function Footer({
         tint="dark"
         style={{
           width: '100%',
-          paddingTop: theme.spacing.lg,
-          paddingBottom: theme.spacing.xl,
+          paddingTop: legacyTheme.spacing.lg,
+          paddingBottom: legacyTheme.spacing.xl,
           backgroundColor: 'rgba(0,0,0,0.7)',
         }}
       >

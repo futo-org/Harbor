@@ -6,7 +6,7 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -35,7 +35,7 @@ export function Avatar({
   containerProps,
   ...imageProps
 }: AvatarProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const size = typeof sizeProp === 'number' ? sizeProp : SIZE_MAP[sizeProp];
   const hasBorder = border !== false;
@@ -45,13 +45,13 @@ export function Avatar({
   const borderStyle =
     border === 'primary'
       ? {
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderColor: theme.colors.primaryOpacity40,
+          backgroundColor: legacyTheme.colors.backgroundSecondary,
+          borderColor: legacyTheme.colors.primaryOpacity40,
         }
       : border === 'neutral'
         ? {
-            backgroundColor: theme.colors.neutralSurfaceOpacity20,
-            borderColor: theme.colors.neutralSurfaceOpacity40,
+            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
+            borderColor: legacyTheme.colors.neutralSurfaceOpacity40,
           }
         : null;
 

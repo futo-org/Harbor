@@ -6,7 +6,12 @@ import {
   ViewStyle,
   StyleProp,
 } from 'react-native';
-import { useTheme, SpacingToken, BorderRadiusToken, ColorToken } from '@/theme';
+import {
+  useLegacyTheme,
+  SpacingToken,
+  BorderRadiusToken,
+  ColorToken,
+} from '@/legacyTheme';
 
 interface BoxProps extends ViewProps {
   children?: ReactNode;
@@ -76,7 +81,7 @@ export function Box({
   style,
   ...props
 }: BoxProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const boxStyle = useMemo(() => {
     const s: ViewStyle = {};
@@ -88,22 +93,24 @@ export function Box({
     if (justifyContent) s.justifyContent = justifyContent;
     if (flexWrap) s.flexWrap = flexWrap;
 
-    if (gap) s.gap = theme.spacing[gap];
-    if (margin) s.margin = theme.spacing[margin];
-    if (marginTop) s.marginTop = theme.spacing[marginTop];
-    if (marginBottom) s.marginBottom = theme.spacing[marginBottom];
-    if (marginLeft) s.marginLeft = theme.spacing[marginLeft];
-    if (marginRight) s.marginRight = theme.spacing[marginRight];
-    if (marginHorizontal) s.marginHorizontal = theme.spacing[marginHorizontal];
-    if (marginVertical) s.marginVertical = theme.spacing[marginVertical];
-    if (padding) s.padding = theme.spacing[padding];
-    if (paddingTop) s.paddingTop = theme.spacing[paddingTop];
-    if (paddingBottom) s.paddingBottom = theme.spacing[paddingBottom];
-    if (paddingLeft) s.paddingLeft = theme.spacing[paddingLeft];
-    if (paddingRight) s.paddingRight = theme.spacing[paddingRight];
+    if (gap) s.gap = legacyTheme.spacing[gap];
+    if (margin) s.margin = legacyTheme.spacing[margin];
+    if (marginTop) s.marginTop = legacyTheme.spacing[marginTop];
+    if (marginBottom) s.marginBottom = legacyTheme.spacing[marginBottom];
+    if (marginLeft) s.marginLeft = legacyTheme.spacing[marginLeft];
+    if (marginRight) s.marginRight = legacyTheme.spacing[marginRight];
+    if (marginHorizontal)
+      s.marginHorizontal = legacyTheme.spacing[marginHorizontal];
+    if (marginVertical) s.marginVertical = legacyTheme.spacing[marginVertical];
+    if (padding) s.padding = legacyTheme.spacing[padding];
+    if (paddingTop) s.paddingTop = legacyTheme.spacing[paddingTop];
+    if (paddingBottom) s.paddingBottom = legacyTheme.spacing[paddingBottom];
+    if (paddingLeft) s.paddingLeft = legacyTheme.spacing[paddingLeft];
+    if (paddingRight) s.paddingRight = legacyTheme.spacing[paddingRight];
     if (paddingHorizontal)
-      s.paddingHorizontal = theme.spacing[paddingHorizontal];
-    if (paddingVertical) s.paddingVertical = theme.spacing[paddingVertical];
+      s.paddingHorizontal = legacyTheme.spacing[paddingHorizontal];
+    if (paddingVertical)
+      s.paddingVertical = legacyTheme.spacing[paddingVertical];
 
     if (height !== undefined) s.height = height;
     if (width !== undefined) s.width = width;
@@ -112,8 +119,9 @@ export function Box({
     if (maxHeight !== undefined) s.maxHeight = maxHeight;
     if (maxWidth !== undefined) s.maxWidth = maxWidth;
 
-    if (backgroundColor) s.backgroundColor = theme.colors[backgroundColor];
-    if (borderRadius) s.borderRadius = theme.borderRadius[borderRadius];
+    if (backgroundColor)
+      s.backgroundColor = legacyTheme.colors[backgroundColor];
+    if (borderRadius) s.borderRadius = legacyTheme.borderRadius[borderRadius];
 
     return s;
   }, [

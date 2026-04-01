@@ -10,11 +10,11 @@ import {
 } from '@/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Routes } from '@/constants';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 export default function Profile() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { publicKey: publicKeyParam } = useLocalSearchParams<{
     publicKey: string;
@@ -56,8 +56,8 @@ export default function Profile() {
           edit={edit}
           screenWidth={screenWidth}
           bannerColors={[
-            theme.colors.backgroundSecondary,
-            theme.colors.backgroundPrimary,
+            legacyTheme.colors.backgroundSecondary,
+            legacyTheme.colors.backgroundPrimary,
           ]}
           onBack={() => router.back()}
         />

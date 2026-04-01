@@ -12,11 +12,11 @@ import {
 } from '@/lib/polycentric-hooks';
 import { Routes } from '@/constants';
 import { useSheet } from '@/lib/sheet';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 export function CurrIdentityHeader() {
   const { identity: currentIdentity } = useCurrentIdentity();
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const router = useRouter();
   const { Sheet, present, dismiss } = useSheet();
 
@@ -63,7 +63,11 @@ export function CurrIdentityHeader() {
               {username}
             </Text>
             <PubkeyTag publicKey={pubkey} />
-            <Ionicons name="chevron-down" size={22} color={theme.colors.text} />
+            <Ionicons
+              name="chevron-down"
+              size={22}
+              color={legacyTheme.colors.text}
+            />
           </Box>
         </Pressable>
         <Pressable

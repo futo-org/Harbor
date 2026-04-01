@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
 import { TAB_BAR_HEIGHT } from '@/constants';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 function TabBarBackground() {
   return (
@@ -21,15 +21,15 @@ function TabBarBackground() {
 const ICON_SIZE = 20;
 
 export default function TabLayout() {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.neutralSurface,
+        tabBarActiveTintColor: legacyTheme.colors.primary,
+        tabBarInactiveTintColor: legacyTheme.colors.neutralSurface,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',

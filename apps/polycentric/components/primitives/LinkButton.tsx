@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Text, TextVariant } from './Text';
-import { useTheme, ColorToken, FontWeightToken } from '@/theme';
+import { useLegacyTheme, ColorToken, FontWeightToken } from '@/legacyTheme';
 import { usePressAnimation } from '@/lib/animation';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
@@ -34,10 +34,10 @@ export function LinkButton({
   italic,
   ...props
 }: LinkButtonProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = theme.colors[color];
+  const textColor = legacyTheme.colors[color];
 
   return (
     <Animated.View style={animatedStyle}>

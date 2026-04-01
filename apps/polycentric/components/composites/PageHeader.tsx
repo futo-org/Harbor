@@ -2,7 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { Text } from '@/components/primitives';
 import { BackButton } from './BackButton';
 import { CloseButton } from './CloseButton';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 interface PageHeaderProps {
   title?: string;
@@ -12,16 +12,19 @@ interface PageHeaderProps {
 
 // TODO: use swiftUI of buttons
 export function PageHeader({ title, onBack, onClose }: PageHeaderProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   return (
     <View
       style={[
         styles.container,
-        { marginTop: theme.spacing.xl, marginBottom: theme.spacing.xl },
+        {
+          marginTop: legacyTheme.spacing.xl,
+          marginBottom: legacyTheme.spacing.xl,
+        },
       ]}
     >
-      <View style={[styles.left, { marginTop: theme.spacing.xs }]}>
+      <View style={[styles.left, { marginTop: legacyTheme.spacing.xs }]}>
         {onBack && <BackButton onPress={onBack} />}
       </View>
       <View style={styles.center}>
@@ -31,7 +34,7 @@ export function PageHeader({ title, onBack, onClose }: PageHeaderProps) {
           </Text>
         )}
       </View>
-      <View style={[styles.right, { marginTop: theme.spacing.xs }]}>
+      <View style={[styles.right, { marginTop: legacyTheme.spacing.xs }]}>
         {onClose && <CloseButton onPress={onClose} />}
       </View>
     </View>

@@ -5,7 +5,7 @@ import { Box } from '@/components/layouts';
 import { Avatar, Text, PubkeyTag } from '@/components/primitives';
 import { types } from '@polycentric/react-native';
 import { timeAgo, identiconUrl, truncateName } from '@/lib/polycentric-hooks';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -52,7 +52,7 @@ export function PostCard({
   onDislike,
   hideReplyingTo = false,
 }: PostCardProps) {
-  const { theme } = useTheme();
+  const { legacyTheme } = useLegacyTheme();
 
   const avatarUrl = identiconUrl(authorPublicKey);
   const time = timeAgo(timestamp);
@@ -76,7 +76,7 @@ export function PostCard({
     <Pressable
       style={[
         styles.container,
-        { borderBottomColor: theme.colors.neutralSurfaceOpacity20 },
+        { borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20 },
       ]}
       onPress={onPress}
     >
@@ -180,21 +180,27 @@ export function PostCard({
           icon="chatbubble-outline"
           count={comments}
           onPress={onReply}
-          color={theme.colors.neutralSurface}
+          color={legacyTheme.colors.neutralSurface}
         />
         <ActionButton
           icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
           count={dislikes}
           onPress={onDislike}
           color={
-            disliked ? theme.colors.destructive : theme.colors.neutralSurface
+            disliked
+              ? legacyTheme.colors.destructive
+              : legacyTheme.colors.neutralSurface
           }
         />
         <ActionButton
           icon={liked ? 'arrow-up' : 'arrow-up-outline'}
           count={likes}
           onPress={onLike}
-          color={liked ? theme.colors.primary : theme.colors.neutralSurface}
+          color={
+            liked
+              ? legacyTheme.colors.primary
+              : legacyTheme.colors.neutralSurface
+          }
         />
       </Box>
     </Pressable>

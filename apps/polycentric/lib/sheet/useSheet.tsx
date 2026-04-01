@@ -11,7 +11,7 @@ import {
   useImperativeHandle,
 } from 'react';
 import { Platform } from 'react-native';
-import { useTheme } from '@/theme';
+import { useLegacyTheme } from '@/legacyTheme';
 
 interface SheetContextType {
   isOpen: boolean;
@@ -46,7 +46,7 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
     { children, detents = [0.5], dismissible = true, scrollable = false },
     ref,
   ) => {
-    const { theme, isDark } = useTheme();
+    const { legacyTheme } = useLegacyTheme();
     const sheetRef = useRef<TrueSheet>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -76,7 +76,7 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
         blurOptions: { intensity: 80, interaction: true },
         backgroundColor: 'transparent',
       },
-      android: { backgroundColor: theme.colors.backgroundPrimary },
+      android: { backgroundColor: legacyTheme.colors.backgroundPrimary },
     });
 
     return (

@@ -6,7 +6,7 @@ import {
   Platform,
 } from 'react-native';
 import { forwardRef, useState } from 'react';
-import { useTheme, ColorToken } from '@/theme';
+import { useLegacyTheme, ColorToken } from '@/legacyTheme';
 import { BlurView } from 'expo-blur';
 
 export interface TextInputProps extends Omit<
@@ -37,7 +37,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     },
     ref,
   ) => {
-    const { theme, isDark } = useTheme();
+    const { legacyTheme, legacyIsDark } = useLegacyTheme();
 
     const [isFocused, setIsFocused] = useState(false);
     const isPlain = variant === 'plain';
@@ -45,8 +45,10 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const baseStyle: TextStyle = {
       paddingVertical: 12,
       paddingHorizontal: 12,
-      fontSize: theme.typography.fontSize.md,
-      color: disabled ? theme.colors.neutralSurface : theme.colors.text,
+      fontSize: legacyTheme.typography.fontSize.md,
+      color: disabled
+        ? legacyTheme.colors.neutralSurface
+        : legacyTheme.colors.text,
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({
@@ -60,7 +62,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const multilineStyle: TextStyle = multiline
       ? {
           ...(numberOfLines && {
-            minHeight: numberOfLines * theme.typography.lineHeight.md,
+            minHeight: numberOfLines * legacyTheme.typography.lineHeight.md,
           }),
           textAlignVertical: 'top',
         }
@@ -77,10 +79,10 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         style={[baseStyle, multilineStyle, style]}
         placeholderTextColor={
           placeholderTextColor
-            ? theme.colors[placeholderTextColor]
-            : theme.colors.neutralSurfaceOpacity80
+            ? legacyTheme.colors[placeholderTextColor]
+            : legacyTheme.colors.neutralSurfaceOpacity80
         }
-        selectionColor={theme.colors.primary}
+        selectionColor={legacyTheme.colors.primary}
         onFocus={(e) => {
           setIsFocused(true);
           onFocus?.(e);
@@ -100,16 +102,16 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     return (
       <BlurView
         intensity={40}
-        tint={isDark ? 'dark' : 'light'}
+        tint={legacyIsDark ? 'dark' : 'light'}
         style={[
           styles.blurContainer,
           {
-            borderRadius: theme.borderRadius.md,
+            borderRadius: legacyTheme.borderRadius.md,
             borderColor: error
-              ? theme.colors.destructiveOpacity80
+              ? legacyTheme.colors.destructiveOpacity80
               : isFocused
-                ? theme.colors.neutralSurfaceOpacity80
-                : theme.colors.neutralSurfaceOpacity40,
+                ? legacyTheme.colors.neutralSurfaceOpacity80
+                : legacyTheme.colors.neutralSurfaceOpacity40,
           },
         ]}
       >

@@ -1,6 +1,6 @@
 import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
 import { Text } from '@/components/primitives';
-import { useTheme, ColorToken } from '@/theme';
+import { useLegacyTheme, ColorToken } from '@/legacyTheme';
 import { BlurView } from 'expo-blur';
 import Toast, { ToastConfigParams } from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,18 +24,18 @@ interface ToastProps {
 }
 
 function ToastContent({ text1, text2, type, onPress }: ToastProps) {
-  const { theme, isDark } = useTheme();
-  const borderColor = theme.colors[typeBorderColors[type]];
+  const { legacyTheme, legacyIsDark } = useLegacyTheme();
+  const borderColor = legacyTheme.colors[typeBorderColors[type]];
 
   return (
     <Pressable onPress={onPress} style={styles.pressable}>
       <BlurView
         intensity={80}
-        tint={isDark ? 'dark' : 'light'}
+        tint={legacyIsDark ? 'dark' : 'light'}
         style={[
           styles.container,
           {
-            borderRadius: theme.borderRadius.md,
+            borderRadius: legacyTheme.borderRadius.md,
             borderColor,
           },
         ]}
