@@ -154,7 +154,7 @@ rs-sdk-ios-tart-prune:
       artifacts: false
   before_script: []
   script:
-    - tart prune --older-than 2
+    - tart prune --entries vms --older-than 2
 
 rs-sdk-build-android-arm64:
   extends: .rs-sdk-build-android
