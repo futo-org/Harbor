@@ -37,6 +37,7 @@ You will need [just](https://github.com/casey/just), Docker, and pnpm.
 | `packages/js-browser` | Browser SDK using SQLite WASM for local storage |
 | `packages/js-node` | Node.js SDK using sqlite3 for local storage |
 | `packages/react-native` | React Native SDK for mobile applications |
+| `packages/kotlin` | Kotlin SDK for android applications |
 | `packages/rs-core` | Rust core library - the underlying protocol implementation |
 | `packages/rs-core-wasm-browser` | Rust core compiled to WebAssembly for browser environments |
 | `packages/rs-core-wasm-node` | Rust core compiled to WebAssembly for Node.js environments |
