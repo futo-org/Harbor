@@ -2,7 +2,7 @@
 
 include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
 
-pub use server_polycentric as protocol;
+pub use legacy_polycentric as protocol;
 
 pub mod model;
 pub mod test_utils;
