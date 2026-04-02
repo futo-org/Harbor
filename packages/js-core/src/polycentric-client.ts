@@ -1,5 +1,4 @@
 import {
-  ClaimManager,
   ClientState,
   ContentManager,
   EventService,
@@ -59,7 +58,6 @@ export class PolycentricClient {
   public readonly events = new EventService();
 
   public readonly keyPairManager = new KeyPairManager(this);
-  public readonly claimManager = new ClaimManager();
   public readonly contentManager = new ContentManager(this);
 
   public readonly httpClient = new HTTPClient();
