@@ -24,6 +24,33 @@ export const BorderRadius = {
 
 export type BorderRadiusToken = keyof typeof BorderRadius;
 
+/** Type scale (used by `Text` and inputs; import `typography` from `@/common/theme`). */
+export const typography = {
+  fontSize: {
+    xs: 12,
+    sm: 14,
+    md: 17,
+    lg: 20,
+    xl: 24,
+  } as const,
+  fontWeight: {
+    regular: '400',
+    semibold: '600',
+    bold: '700',
+  } as const,
+  lineHeight: {
+    xs: 16,
+    sm: 20,
+    md: 24,
+    lg: 28,
+    xl: 32,
+  } as const,
+};
+
+export type FontSizeToken = keyof typeof typography.fontSize;
+export type FontWeightToken = keyof typeof typography.fontWeight;
+export type LineHeightToken = keyof typeof typography.lineHeight;
+
 export const Breakpoints = {
   sm: 640,
   md: 768,

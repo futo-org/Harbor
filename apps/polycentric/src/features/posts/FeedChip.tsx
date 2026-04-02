@@ -1,6 +1,6 @@
 import { Chip } from '@/src/common/components/primitives';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { useTheme } from '@/src/common/theme';
 
 export type FeedType = 'explore' | 'following' | 'topic' | 'posts' | 'likes';
 
@@ -26,11 +26,14 @@ export function FeedChip({
   onPress,
 }: FeedChipProps) {
   const icon = ICON_MAP[type];
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
+
+  const selectedTextToken =
+    theme.scheme === 'dark' ? 'primary_500' : 'primary_600';
 
   const iconColor = isSelected
-    ? legacyTheme.colors.primary
-    : legacyTheme.colors.neutralSurface;
+    ? theme.palette[selectedTextToken]
+    : theme.palette.neutral_800;
 
   return (
     <Chip
@@ -39,11 +42,13 @@ export function FeedChip({
       leftIcon={() => <FontAwesome6 name={icon} size={14} color={iconColor} />}
       onPress={onPress}
       backgroundColor={
-        isSelected ? 'primaryOpacity20' : 'neutralSurfaceOpacity20'
+        isSelected ? theme.palette.primary_100 : theme.palette.neutral_100
       }
       fontWeight={'regular'}
-      borderColor={isSelected ? 'primaryOpacity40' : 'neutralSurfaceOpacity20'}
-      textColor={isSelected ? 'primary' : 'text'}
+      borderColor={
+        isSelected ? theme.palette.primary_300 : theme.palette.neutral_200
+      }
+      textColor={isSelected ? selectedTextToken : 'neutral_800'}
     />
   );
 }

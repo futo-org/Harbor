@@ -1,6 +1,11 @@
 import { Pressable, PressableProps, StyleSheet, Animated } from 'react-native';
 import { Text } from './Text';
-import { useLegacyTheme, ColorToken, FontWeightToken } from '@/src/common/legacyTheme';
+import {
+  useTheme,
+  withHexOpacity,
+  type PaletteColorToken,
+  type FontWeightToken,
+} from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
 
 type SmallButtonVariant = 'primary' | 'secondary' | 'destructive';
@@ -14,10 +19,10 @@ interface SmallButtonProps extends Omit<PressableProps, 'style'> {
   icon?: IconRenderFn;
 }
 
-const textColorMap: Record<SmallButtonVariant, ColorToken> = {
+const textColorMap: Record<SmallButtonVariant, PaletteColorToken> = {
   primary: 'white',
-  secondary: 'primary',
-  destructive: 'destructive',
+  secondary: 'primary_600',
+  destructive: 'negative_500',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
@@ -29,24 +34,24 @@ export function PillButton({
   icon,
   ...props
 }: SmallButtonProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = legacyTheme.colors[textColorMap[variant]];
+  const textColor = theme.palette[textColorMap[variant]];
 
   const variantStyle = (() => {
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
+          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
         };
       case 'secondary':
         return {
-          backgroundColor: legacyTheme.colors.primaryOpacity20,
+          backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
         };
       case 'destructive':
         return {
-          backgroundColor: legacyTheme.colors.destructiveOpacity20,
+          backgroundColor: withHexOpacity(theme.palette.negative_500, '20'),
         };
     }
   })();

@@ -3,8 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Box } from '@/src/common/components/layouts';
 import { Avatar, Text, PubkeyTag } from '@/src/common/components/primitives';
 import { types } from '@polycentric/react-native';
-import { timeAgo, identiconUrl, truncateName } from '@/src/common/lib/polycentric-hooks';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import {
+  timeAgo,
+  identiconUrl,
+  truncateName,
+} from '@/src/common/lib/polycentric-hooks';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 
 export interface PostCardProps {
   displayContent: string;
@@ -56,7 +60,7 @@ export function PostCard({
   onDislike,
   hideReplyingTo = false,
 }: PostCardProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
 
   const avatarUrl = identiconUrl(authorPublicKey);
   const time = timeAgo(timestamp);
@@ -65,11 +69,11 @@ export function PostCard({
     <Pressable
       style={[
         styles.container,
-        { borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20 },
+        { borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20') },
       ]}
       onPress={onPress}
     >
-      <Box flexDirection="row" gap="md">
+      <Box style={[Atoms.flex_row, Atoms.gap_md]}>
         <Pressable
           onPress={onAuthorPress}
           disabled={!onAuthorPress}
@@ -81,18 +85,22 @@ export function PostCard({
           />
         </Pressable>
 
-        <Box flex={1}>
+        <Box style={Atoms.flex_1}>
           {/* Header: name + pubkey | timestamp */}
           <Box
-            flexDirection="row"
-            justifyContent="space-between"
-            style={{ alignItems: 'baseline', marginTop: -1 }}
+            style={[
+              Atoms.flex_row,
+              Atoms.justify_between,
+              { alignItems: 'baseline', marginTop: -1 },
+            ]}
           >
             <Box
-              flex={1}
-              flexDirection="row"
-              gap="xs"
-              style={{ alignItems: 'baseline' }}
+              style={[
+                Atoms.flex_1,
+                Atoms.flex_row,
+                Atoms.gap_xs,
+                { alignItems: 'baseline' },
+              ]}
             >
               <Pressable onPress={onAuthorPress} disabled={!onAuthorPress}>
                 <Text
@@ -113,7 +121,7 @@ export function PostCard({
             {time ? (
               <Text
                 variant="small"
-                color="neutralSurface"
+                color="neutral_500"
                 style={{ lineHeight: 18, marginLeft: 8 }}
               >
                 {time}
@@ -130,11 +138,13 @@ export function PostCard({
             >
               <Text
                 variant="small"
-                color="neutralSurfaceOpacity80"
-                style={{ lineHeight: 16 }}
+                style={{
+                  lineHeight: 16,
+                  color: withHexOpacity(theme.palette.neutral_500, '80'),
+                }}
               >
                 Replying to{' '}
-                <Text variant="small" color="neutralSurface">
+                <Text variant="small" color="neutral_500">
                   {truncateName(replyingToName, 16)}
                 </Text>
               </Text>
@@ -151,7 +161,7 @@ export function PostCard({
               onPress={onToggleContentExpanded}
               style={{ marginTop: 2 }}
             >
-              <Text variant="small" color="primary">
+              <Text variant="small" color="primary_500">
                 {contentExpanded ? 'Show less' : 'Show more'}
               </Text>
             </TouchableOpacity>
@@ -161,35 +171,31 @@ export function PostCard({
 
       {/* Actions */}
       <Box
-        flexDirection="row"
-        justifyContent="space-around"
-        style={{ marginTop: 8, paddingLeft: 52 }}
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_around,
+          { marginTop: 8, paddingLeft: 52 },
+        ]}
       >
         <ActionButton
           icon="chatbubble-outline"
           count={comments}
           onPress={onReply}
-          color={legacyTheme.colors.neutralSurface}
+          color={theme.palette.neutral_500}
         />
         <ActionButton
           icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
           count={dislikes}
           onPress={onDislike}
           color={
-            disliked
-              ? legacyTheme.colors.destructive
-              : legacyTheme.colors.neutralSurface
+            disliked ? theme.palette.negative_500 : theme.palette.neutral_500
           }
         />
         <ActionButton
           icon={liked ? 'arrow-up' : 'arrow-up-outline'}
           count={likes}
           onPress={onLike}
-          color={
-            liked
-              ? legacyTheme.colors.primary
-              : legacyTheme.colors.neutralSurface
-          }
+          color={liked ? theme.palette.primary_500 : theme.palette.neutral_500}
         />
       </Box>
     </Pressable>
@@ -216,7 +222,7 @@ function ActionButton({
       <Ionicons name={icon} size={16} color={color} />
       <Text
         variant="small"
-        color="neutralSurface"
+        color="neutral_500"
         style={{ lineHeight: 16, minWidth: 28 }}
       >
         {count ? String(count) : ' '}

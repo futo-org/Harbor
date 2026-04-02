@@ -166,14 +166,15 @@ export function PolycentricProvider({
           console.warn('Initial Polycentric sync failed:', syncError);
         });
 
-        c.events.onIdentityChanged(async (identity) => {
+        c.events.onIdentityChanged(async (identity: Identity | null) => {
           if (cancelled) return;
-          if (!identity && (await c.getAllIdentities()).length === 0) {
+          const stored = await c.getAllIdentities();
+          if (stored.length === 0) {
             await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
             await c.sync().catch(() => {});
             setCurrentIdentity(c.currentIdentity);
           } else {
-            setCurrentIdentity(identity);
+            setCurrentIdentity(identity ?? c.currentIdentity);
           }
           await s.getState().refreshIdentities();
         });

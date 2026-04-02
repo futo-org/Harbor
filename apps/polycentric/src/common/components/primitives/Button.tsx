@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { Text } from './Text';
 import {
-  useLegacyTheme,
-  FontWeightToken,
-  BorderRadiusToken,
-  ColorToken,
-  LegacyTheme,
-} from '@/src/common/legacyTheme';
+  useTheme,
+  withHexOpacity,
+  BorderRadius,
+  type FontWeightToken,
+  type BorderRadiusToken,
+  type PaletteColorToken,
+  type Theme,
+} from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
 
 type ButtonVariant =
@@ -67,14 +69,19 @@ export function Button({
   fullWidth = false,
   ...props
 }: ButtonProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const borderRadius = legacyTheme.borderRadius[sizeConfig.borderRadius];
+  const borderRadius = BorderRadius[sizeConfig.borderRadius];
   const isDisabled = variant === 'disabled';
-  const iconColor = legacyTheme.colors[textColorMap[variant]];
-  const variantStyle = getVariantStyle(legacyTheme, variant);
+  const iconColor =
+    variant === 'disabled'
+      ? withHexOpacity(theme.palette.neutral_500, '80')
+      : theme.palette[
+          textColorMap[variant as Exclude<ButtonVariant, 'disabled'>]
+        ];
+  const variantStyle = getVariantStyle(theme, variant);
 
   return (
     <Animated.View style={animatedStyle}>
@@ -104,7 +111,14 @@ export function Button({
             })}
           <Text
             fontWeight={FONT_WEIGHT}
-            color={textColorMap[variant]}
+            color={
+              variant === 'disabled' ? 'neutral_1000' : textColorMap[variant]
+            }
+            style={
+              variant === 'disabled'
+                ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
+                : undefined
+            }
             numberOfLines={1}
           >
             {title}
@@ -134,23 +148,25 @@ const styles = StyleSheet.create({
   },
 });
 
-const textColorMap: Record<ButtonVariant, ColorToken> = {
+const textColorMap: Record<
+  Exclude<ButtonVariant, 'disabled'>,
+  PaletteColorToken
+> = {
   primary: 'white',
-  secondary: 'primary',
-  tertiary: 'text',
-  disabled: 'neutralSurfaceOpacity80',
-  destructive: 'destructive',
+  secondary: 'primary_600',
+  tertiary: 'neutral_1000',
+  destructive: 'negative_500',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-function getVariantStyle(legacyTheme: LegacyTheme, variant: ButtonVariant) {
+function getVariantStyle(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
     case 'primary':
       return {
-        backgroundColor: legacyTheme.colors.primary,
-        borderColor: legacyTheme.colors.primaryDarker,
-        shadowColor: legacyTheme.colors.primaryDarkest,
+        backgroundColor: theme.palette.primary_500,
+        borderColor: theme.palette.primary_600,
+        shadowColor: theme.palette.primary_900,
         shadowOpacity: 0.22,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 6 },
@@ -158,23 +174,23 @@ function getVariantStyle(legacyTheme: LegacyTheme, variant: ButtonVariant) {
       };
     case 'secondary':
       return {
-        backgroundColor: legacyTheme.colors.primaryOpacity20,
-        borderColor: legacyTheme.colors.primaryOpacity40,
+        backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
+        borderColor: withHexOpacity(theme.palette.primary_500, '40'),
       };
     case 'tertiary':
       return {
         backgroundColor: 'transparent',
-        borderColor: legacyTheme.colors.neutralSurfaceOpacity60,
+        borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
       };
     case 'disabled':
       return {
-        backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
-        borderColor: legacyTheme.colors.neutralSurfaceOpacity40,
+        backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
+        borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
       };
     case 'destructive':
       return {
-        backgroundColor: legacyTheme.colors.destructiveOpacity15,
-        borderColor: legacyTheme.colors.destructiveOpacity80,
+        backgroundColor: withHexOpacity(theme.palette.negative_500, '15'),
+        borderColor: withHexOpacity(theme.palette.negative_500, '80'),
       };
   }
 }

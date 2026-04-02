@@ -1,6 +1,12 @@
 import { Pressable, Animated } from 'react-native';
 import { Box } from '@/src/common/components/layouts';
-import { SpacingToken } from '@/src/common/legacyTheme';
+import {
+  Atoms,
+  Spacing,
+  useTheme,
+  withHexOpacity,
+  type SpacingToken,
+} from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
 
 interface ListItemProps {
@@ -19,14 +25,19 @@ export function ListItem({
   onPress,
   ...props
 }: ListItemProps) {
+  const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const content = (
     <Box
-      paddingVertical={marginVertical}
-      paddingHorizontal={marginHorizontal}
-      backgroundColor="neutralSurfaceOpacity20"
-      borderRadius="md"
+      style={[
+        Atoms.rounded_md,
+        {
+          paddingVertical: Spacing[marginVertical],
+          paddingHorizontal: Spacing[marginHorizontal],
+          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+        },
+      ]}
       {...props}
     >
       {children}

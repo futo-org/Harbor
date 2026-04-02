@@ -14,7 +14,7 @@ export function PubkeyTag({ publicKey, style }: PubkeyTagProps) {
   return (
     <Text
       variant="secondary"
-      color="neutralSurface"
+      color="neutral_500"
       style={[{ fontFamily: 'monospace' }, style]}
     >
       {label}

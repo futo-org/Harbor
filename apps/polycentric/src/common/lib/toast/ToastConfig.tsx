@@ -1,6 +1,6 @@
 import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
 import { Text } from '@/src/common/components/primitives';
-import { useLegacyTheme, ColorToken } from '@/src/common/legacyTheme';
+import { useTheme, withHexOpacity, BorderRadius } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 import Toast, { ToastConfigParams } from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,13 +8,6 @@ import { useEffect, useState } from 'react';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
-
-const typeBorderColors: Record<ToastType, ColorToken> = {
-  success: 'successOpacity80',
-  error: 'destructiveOpacity80',
-  info: 'infoOpacity80',
-  warning: 'warningOpacity80',
-};
 
 interface ToastProps {
   text1?: string;
@@ -24,18 +17,30 @@ interface ToastProps {
 }
 
 function ToastContent({ text1, text2, type, onPress }: ToastProps) {
-  const { legacyTheme, legacyIsDark } = useLegacyTheme();
-  const borderColor = legacyTheme.colors[typeBorderColors[type]];
+  const { theme } = useTheme();
+  const isDark = theme.scheme === 'dark';
+  const borderColor = (() => {
+    switch (type) {
+      case 'success':
+        return withHexOpacity(theme.palette.positive_500, '80');
+      case 'error':
+        return withHexOpacity(theme.palette.negative_500, '80');
+      case 'info':
+        return withHexOpacity(theme.palette.primary_500, '80');
+      case 'warning':
+        return withHexOpacity(theme.palette.warning_500, '80');
+    }
+  })();
 
   return (
     <Pressable onPress={onPress} style={styles.pressable}>
       <BlurView
         intensity={80}
-        tint={legacyIsDark ? 'dark' : 'light'}
+        tint={isDark ? 'dark' : 'light'}
         style={[
           styles.container,
           {
-            borderRadius: legacyTheme.borderRadius.md,
+            borderRadius: BorderRadius.md,
             borderColor,
           },
         ]}
@@ -47,7 +52,7 @@ function ToastContent({ text1, text2, type, onPress }: ToastProps) {
             </Text>
           )}
           {text2 && (
-            <Text variant="secondary" color="neutralSurface">
+            <Text variant="secondary" color="neutral_500">
               {text2}
             </Text>
           )}

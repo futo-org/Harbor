@@ -1,4 +1,5 @@
 import { Screen, Box, Text, Button } from '@/src/common/components';
+import { Atoms } from '@/src/common/theme';
 import { useRouter } from 'expo-router';
 import { Routes } from '@/src/common/constants/routes';
 
@@ -7,18 +8,20 @@ function PlaceholderLogo() {
     <Box
       width={100}
       height={100}
-      borderRadius="lg"
-      alignItems="center"
-      justifyContent="center"
-      marginBottom="lg"
-      style={{
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        borderStyle: 'dashed',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      }}
+      style={[
+        Atoms.rounded_lg,
+        Atoms.items_center,
+        Atoms.justify_center,
+        Atoms.mb_lg,
+        {
+          borderWidth: 2,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          borderStyle: 'dashed',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        },
+      ]}
     >
-      <Text variant="small" color="neutralSurface">
+      <Text variant="small" color="neutral_500">
         LOGO
       </Text>
     </Box>
@@ -31,23 +34,25 @@ export default function OnboardingWelcomeScreen() {
   return (
     <Screen background={{ gradient: 'surround' }}>
       <Box
-        flexDirection="column"
-        justifyContent="space-between"
-        marginHorizontal="lg"
-        height="100%"
+        style={[
+          Atoms.flex_col,
+          Atoms.justify_between,
+          Atoms.mx_lg,
+          Atoms.h_full,
+        ]}
       >
-        <Box flex={1} justifyContent="center" alignItems="center">
+        <Box style={[Atoms.flex_1, Atoms.justify_center, Atoms.items_center]}>
           <PlaceholderLogo />
-          <Box alignItems="center">
-            <Text variant="title" color="text">
+          <Box style={Atoms.items_center}>
+            <Text variant="title" color="neutral_1000">
               Polycentric
             </Text>
-            <Text variant="body" color="neutralSurface">
+            <Text variant="body" color="neutral_500">
               Law without governance
             </Text>
           </Box>
         </Box>
-        <Box gap="md">
+        <Box style={Atoms.gap_md}>
           <Button
             title="Create new identity"
             variant="primary"

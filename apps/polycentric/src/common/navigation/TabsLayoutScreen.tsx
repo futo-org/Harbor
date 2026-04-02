@@ -3,16 +3,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { useTheme, withHexOpacity } from '@/src/common/theme';
 
 function TabBarBackground() {
+  const { theme } = useTheme();
+  const isDark = theme.scheme === 'dark';
+
   return (
     <BlurView
-      intensity={20}
-      tint="systemThickMaterialDark"
+      intensity={isDark ? 24 : 32}
+      tint={isDark ? 'dark' : 'light'}
       style={[
         StyleSheet.absoluteFill,
-        { backgroundColor: 'rgba(2, 4, 8, 0.82)' },
+        {
+          backgroundColor: withHexOpacity(
+            theme.palette.background_primary,
+            'CC',
+          ),
+        },
       ]}
     />
   );
@@ -21,15 +29,15 @@ function TabBarBackground() {
 const ICON_SIZE = 20;
 
 export default function TabsLayoutScreen() {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: legacyTheme.colors.primary,
-        tabBarInactiveTintColor: legacyTheme.colors.neutralSurface,
+        tabBarActiveTintColor: theme.palette.primary_500,
+        tabBarInactiveTintColor: theme.palette.neutral_500,
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
           position: 'absolute',

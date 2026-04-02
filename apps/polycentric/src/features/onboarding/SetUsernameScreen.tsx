@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Screen, Box, Text, Button, TextInput, PageHeader } from '@/src/common/components';
+import {
+  Screen,
+  Box,
+  Text,
+  Button,
+  TextInput,
+  PageHeader,
+} from '@/src/common/components';
+import { Atoms } from '@/src/common/theme';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 import { validateUsername } from '@/src/common/util/validation';
 
@@ -30,11 +38,11 @@ export default function SetUsernameScreen() {
       background={{ gradient: 'surround', matrixOverlay: 'colored' }}
       keyboardAvoiding
     >
-      <Box flexDirection="column" marginHorizontal="lg" height="100%">
+      <Box style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
         <PageHeader onClose={close} />
-        <Box flex={1} gap="lg">
+        <Box style={[Atoms.flex_1, Atoms.gap_lg]}>
           <Text variant="title">Set a username</Text>
-          <Box gap="xs">
+          <Box style={Atoms.gap_xs}>
             <TextInput
               placeholder="Enter username"
               value={data.username}
@@ -43,7 +51,7 @@ export default function SetUsernameScreen() {
               autoFocus
             />
             {error && (
-              <Text variant="secondary" color="destructive">
+              <Text variant="secondary" color="negative_500">
                 {error}
               </Text>
             )}

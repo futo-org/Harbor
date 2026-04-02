@@ -1,17 +1,18 @@
 import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 import {
-  useLegacyTheme,
-  FontWeightToken,
-  ColorToken,
-  FontSizeToken,
-  LineHeightToken,
-} from '@/src/common/legacyTheme';
+  useTheme,
+  typography,
+  type FontWeightToken,
+  type PaletteColorToken,
+  type FontSizeToken,
+  type LineHeightToken,
+} from '@/src/common/theme';
 
 export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
-  color?: ColorToken;
+  color?: PaletteColorToken;
   fontWeight?: FontWeightToken;
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
@@ -28,7 +29,7 @@ export function Text({
   style,
   ...props
 }: TextProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
 
   const config = VARIANT_CONFIG[variant];
   const fontFamily =
@@ -39,25 +40,25 @@ export function Text({
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
       ? fontSize
-      : legacyTheme.typography.fontSize[fontSize]
-    : legacyTheme.typography.fontSize[config.size];
+      : typography.fontSize[fontSize]
+    : typography.fontSize[config.size];
 
   const resolvedLineHeight = lineHeight
     ? typeof lineHeight === 'number'
       ? lineHeight
-      : legacyTheme.typography.lineHeight[lineHeight]
-    : legacyTheme.typography.lineHeight[config.size];
+      : typography.lineHeight[lineHeight]
+    : typography.lineHeight[config.size];
 
   const resolvedFontWeight = fontWeight
-    ? legacyTheme.typography.fontWeight[fontWeight]
-    : legacyTheme.typography.fontWeight[config.defaultWeight];
+    ? typography.fontWeight[fontWeight]
+    : typography.fontWeight[config.defaultWeight];
 
   return (
     <RNText
       style={[
         {
           fontFamily,
-          color: color ? legacyTheme.colors[color] : legacyTheme.colors.text,
+          color: color ? theme.palette[color] : theme.palette.neutral_1000,
           fontSize: resolvedFontSize,
           fontWeight: resolvedFontWeight,
           lineHeight: resolvedLineHeight,

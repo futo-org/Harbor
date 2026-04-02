@@ -1,6 +1,7 @@
-import { StyleSheet, View } from 'react-native';
 import { Button } from '@/src/common/components/primitives';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
+import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { Platform, StyleSheet, View } from 'react-native';
 
 type IconRenderFn = (props: {
   size: number;
@@ -15,6 +16,24 @@ interface FabProps {
 }
 
 export function Fab({ onPress, icon, title = '' }: FabProps) {
+  const { theme } = useTheme();
+  const isLight = theme.scheme === 'light';
+  const shadow =
+    Platform.OS === 'web'
+      ? {
+          boxShadow: `0 6px 16px ${withHexOpacity(
+            theme.palette.primary_900,
+            isLight ? '28' : '40',
+          )}`,
+        }
+      : {
+          shadowColor: theme.palette.primary_900,
+          shadowOpacity: isLight ? 0.16 : 0.26,
+          shadowRadius: isLight ? 14 : 10,
+          shadowOffset: { width: 0, height: isLight ? 3 : 4 },
+          elevation: isLight ? 4 : 6,
+        };
+
   return (
     <View style={styles.container}>
       <Button
@@ -23,12 +42,17 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
         variant="primary"
         size="md"
         icon={icon}
-        style={{
-          boxShadow: '-1px -2px 12px rgba(0, 0, 0, 0.5)',
-          zIndex: 1000,
-          paddingVertical: 9,
-          paddingHorizontal: 14,
-        }}
+        style={[
+          {
+            zIndex: 1000,
+            paddingVertical: 9,
+            paddingHorizontal: 14,
+          },
+          shadow,
+          isLight && {
+            borderWidth: 0,
+          },
+        ]}
       />
     </View>
   );

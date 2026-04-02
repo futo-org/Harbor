@@ -13,6 +13,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Routes } from '@/src/common/constants';
 import { useSheet } from '@/src/common/lib/sheet';
+import { Atoms } from '@/src/common/theme';
 
 export default function FeedPostScreen() {
   const router = useRouter();
@@ -62,9 +63,9 @@ export default function FeedPostScreen() {
   if (!postId) {
     return (
       <Screen>
-        <Box marginHorizontal="lg" marginTop="lg">
+        <Box style={[Atoms.mx_lg, Atoms.mt_lg]}>
           <BackButton onPress={() => router.back()} />
-          <Box marginTop="lg">
+          <Box style={Atoms.mt_lg}>
             <Text>Invalid post reference</Text>
           </Box>
         </Box>
@@ -74,10 +75,10 @@ export default function FeedPostScreen() {
 
   return (
     <Screen>
-      <Box marginHorizontal="lg" marginTop="lg">
+      <Box style={[Atoms.mx_lg, Atoms.mt_lg]}>
         <BackButton onPress={() => router.back()} />
       </Box>
-      <Box flex={1} marginTop="md">
+      <Box style={[Atoms.flex_1, Atoms.mt_md]}>
         <ConversationView
           postId={postId}
           onPostPress={handlePostPress}

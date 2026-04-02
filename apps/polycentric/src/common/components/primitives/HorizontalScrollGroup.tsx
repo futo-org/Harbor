@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet } from 'react-native';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { Atoms } from '@/src/common/theme';
 
 interface HorizontalScrollGroupProps {
   children: React.ReactNode;
@@ -8,16 +8,11 @@ interface HorizontalScrollGroupProps {
 export function HorizontalScrollGroup({
   children,
 }: HorizontalScrollGroupProps) {
-  const { legacyTheme } = useLegacyTheme();
-
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[
-        styles.container,
-        { gap: legacyTheme.spacing.sm },
-      ]}
+      contentContainerStyle={[styles.container, Atoms.gap_sm]}
     >
       {children}
     </ScrollView>

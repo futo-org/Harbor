@@ -22,6 +22,7 @@ import {
 import { types } from '@polycentric/react-native';
 import { Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { useSheet } from '@/src/common/lib/sheet';
+import { Atoms } from '@/src/common/theme';
 
 export default function FeedTabScreen() {
   const router = useRouter();
@@ -80,9 +81,9 @@ export default function FeedTabScreen() {
 
   return (
     <Screen>
-      <Box marginHorizontal="lg" marginTop="lg">
+      <Box style={[Atoms.mx_lg, Atoms.mt_lg]}>
         <CurrIdentityHeader />
-        <Box marginTop="lg">
+        <Box style={Atoms.mt_lg}>
           <HorizontalScrollGroup>
             <FeedChip
               type="explore"
@@ -99,7 +100,7 @@ export default function FeedTabScreen() {
           </HorizontalScrollGroup>
         </Box>
       </Box>
-      <Box flex={1} marginTop="md">
+      <Box style={[Atoms.flex_1, Atoms.mt_md]}>
         <Box
           style={[
             styles.feedLayer,

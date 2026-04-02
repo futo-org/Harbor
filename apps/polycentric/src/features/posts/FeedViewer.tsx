@@ -5,8 +5,11 @@ import { Box } from '@/src/common/components/layouts';
 import { Text } from '@/src/common/components/primitives';
 import { PostCardItem } from './PostCardItem';
 import { types } from '@polycentric/react-native';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
-import { usePolycentricContext, eventKey } from '@/src/common/lib/polycentric-hooks';
+import { Atoms, useTheme } from '@/src/common/theme';
+import {
+  usePolycentricContext,
+  eventKey,
+} from '@/src/common/lib/polycentric-hooks';
 import type { PostState } from '@/src/common/lib/polycentric-hooks';
 
 interface FeedViewerProps {
@@ -36,7 +39,7 @@ export function FeedViewer({
   bottomPadding,
   showTopic = true,
 }: FeedViewerProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { store } = usePolycentricContext();
   const getPost = useCallback(
     (postId: string): PostState | undefined => store.getState().posts[postId],
@@ -106,8 +109,15 @@ export function FeedViewer({
 
   if (error) {
     return (
-      <Box flex={1} alignItems="center" justifyContent="center" padding="lg">
-        <Text color="neutralSurface">Failed to load feed</Text>
+      <Box
+        style={[
+          Atoms.flex_1,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.p_lg,
+        ]}
+      >
+        <Text color="neutral_500">Failed to load feed</Text>
       </Box>
     );
   }
@@ -126,23 +136,22 @@ export function FeedViewer({
       }
       ListFooterComponent={
         hasMore && items.length > 0 ? (
-          <Box padding="lg" alignItems="center">
-            <ActivityIndicator
-              size="small"
-              color={legacyTheme.colors.neutralSurface}
-            />
+          <Box style={[Atoms.items_center, Atoms.p_lg]}>
+            <ActivityIndicator size="small" color={theme.palette.neutral_500} />
           </Box>
         ) : undefined
       }
       ListEmptyComponent={
         !isLoading ? (
           <Box
-            flex={1}
-            alignItems="center"
-            justifyContent="center"
-            padding="lg"
+            style={[
+              Atoms.flex_1,
+              Atoms.items_center,
+              Atoms.justify_center,
+              Atoms.p_lg,
+            ]}
           >
-            <Text color="neutralSurface">No posts yet</Text>
+            <Text color="neutral_500">No posts yet</Text>
           </Box>
         ) : null
       }

@@ -7,7 +7,13 @@ import {
   ViewStyle,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useLegacyTheme, ColorToken, BorderRadiusToken } from '@/src/common/legacyTheme';
+import {
+  useTheme,
+  withHexOpacity,
+  BorderRadius,
+  type PaletteColorToken,
+  type BorderRadiusToken,
+} from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';
@@ -20,7 +26,7 @@ interface IconButtonProps {
   onPress: () => void;
   size?: IconButtonSize;
   variant?: IconButtonVariant;
-  iconColor?: ColorToken;
+  iconColor?: PaletteColorToken;
   blurIntensity?: number;
   borderRadius?: BorderRadiusToken;
   style?: StyleProp<ViewStyle>;
@@ -42,20 +48,21 @@ export function IconButton({
   onPress,
   size = 'md',
   variant = 'filled',
-  iconColor = 'text',
+  iconColor = 'neutral_1000',
   blurIntensity = 80,
   borderRadius,
   style,
   compact = false,
   ...props
 }: IconButtonProps) {
-  const { legacyTheme, legacyIsDark } = useLegacyTheme();
+  const { theme } = useTheme();
+  const isDark = theme.scheme === 'dark';
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const resolvedIconColor = legacyTheme.colors[iconColor];
+  const resolvedIconColor = theme.palette[iconColor];
   const resolvedBorderRadius = borderRadius
-    ? legacyTheme.borderRadius[borderRadius]
+    ? BorderRadius[borderRadius]
     : sizeConfig.containerSize / 2;
 
   const iconElement = icon({
@@ -92,14 +99,17 @@ export function IconButton({
         ) : (
           <BlurView
             intensity={blurIntensity}
-            tint={legacyIsDark ? 'dark' : 'light'}
+            tint={isDark ? 'dark' : 'light'}
             style={[
               styles.container,
               {
                 width: sizeConfig.containerSize,
                 height: sizeConfig.containerSize,
                 borderRadius: resolvedBorderRadius,
-                backgroundColor: legacyTheme.colors.neutralSurfaceOpacity10,
+                backgroundColor: withHexOpacity(
+                  theme.palette.neutral_500,
+                  '10',
+                ),
               },
             ]}
           >

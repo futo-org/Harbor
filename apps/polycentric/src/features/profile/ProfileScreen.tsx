@@ -11,11 +11,11 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Routes } from '@/src/common/constants';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { Atoms, useTheme } from '@/src/common/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { publicKey: publicKeyParam } = useLocalSearchParams<{
     publicKey: string;
@@ -51,18 +51,18 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <Box flex={1}>
+      <Box style={Atoms.flex_1}>
         <ProfileHeader
           data={data}
           edit={edit}
           screenWidth={screenWidth}
           bannerColors={[
-            legacyTheme.colors.backgroundSecondary,
-            legacyTheme.colors.backgroundPrimary,
+            theme.palette.background_secondary,
+            theme.palette.background_primary,
           ]}
           onBack={() => router.back()}
         />
-        <Box flex={1} style={profileStyles.feedArea}>
+        <Box style={[Atoms.flex_1, profileStyles.feedArea]}>
           <Box
             style={[
               profileStyles.feedLayer,

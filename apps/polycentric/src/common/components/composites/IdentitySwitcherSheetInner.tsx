@@ -1,49 +1,49 @@
-import {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  createContext,
-  useContext,
-} from 'react';
-import {
-  Pressable,
-  FlatList,
-  ListRenderItemInfo,
-  Animated,
-} from 'react-native';
-import Reanimated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
-import DraggableFlatList, {
-  RenderItemParams,
-  ScaleDecorator,
-} from 'react-native-draggable-flatlist';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import {
-  Text,
-  LinkButton,
-  IconButton,
-  Button,
-  SelectionIndicator,
-} from '@/src/common/components/primitives';
-import { Box } from '@/src/common/components/layouts';
 import { IdentityBadge } from '@/src/common/components/composites/IdentityBadge';
-import { useSheetContext } from '@/src/common/lib/sheet';
+import { Box } from '@/src/common/components/layouts';
 import {
-  usePolycentric,
+  Button,
+  IconButton,
+  LinkButton,
+  SelectionIndicator,
+  Text,
+} from '@/src/common/components/primitives';
+import { useFadeIn } from '@/src/common/lib/animation';
+import { confirm } from '@/src/common/lib/dialogs/alert';
+import {
+  DEFAULT_SERVER,
+  pubkeyStr,
   useCurrentIdentity,
   useIdentities,
-  pubkeyStr,
-  DEFAULT_SERVER,
+  usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { useSheetContext } from '@/src/common/lib/sheet';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { Ionicons } from '@expo/vector-icons';
 import {
   createIdentityWithDefaultServer,
   type KeyPair,
   types,
 } from '@polycentric/react-native';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
-import { useFadeIn } from '@/src/common/lib/animation';
-import { confirm } from '@/src/common/lib/dialogs/alert';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  Animated,
+  FlatList,
+  ListRenderItemInfo,
+  Platform,
+  Pressable,
+} from 'react-native';
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
+import Reanimated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 type IdentityKeyPair = KeyPair;
 
@@ -75,7 +75,7 @@ export function IdentitySwitcherSheetInner({
   dismiss,
 }: IdentitySwitcherSheetInnerProps) {
   const client = usePolycentric();
-  const { isOpen, setHeader, setFooter } = useSheetContext();
+  const { isOpen, setFooter } = useSheetContext();
   const identities = useIdentities();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -114,7 +114,6 @@ export function IdentitySwitcherSheetInner({
   }, [isOpen]);
 
   useEffect(() => {
-    setHeader(<Header isEditing={isEditing} setIsEditing={setIsEditing} />);
     setFooter(
       isEditing ? <Footer onCreateIdentity={handleCreateIdentity} /> : null,
     );
@@ -122,20 +121,30 @@ export function IdentitySwitcherSheetInner({
 
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
-      {isEditing ? (
-        <DraggableFlatList
-          data={identities}
-          keyExtractor={(item) => pubkeyStr(item.publicKey)}
-          renderItem={(props) => <DraggableIdentityListItem {...props} />}
-          onDragEnd={() => {}}
-        />
-      ) : (
-        <FlatList
-          data={identities}
-          keyExtractor={(item) => pubkeyStr(item.publicKey)}
-          renderItem={(props) => <StaticIdentityListItem {...props} />}
-        />
-      )}
+      <Box style={Atoms.flex_1}>
+        <Header isEditing={isEditing} setIsEditing={setIsEditing} />
+        {isEditing ? (
+          <DraggableFlatList
+            data={identities}
+            keyExtractor={(item) => pubkeyStr(item.publicKey)}
+            renderItem={(props) => <DraggableIdentityListItem {...props} />}
+            onDragEnd={() => {}}
+            containerStyle={Atoms.flex_1}
+            style={Atoms.flex_1}
+            nestedScrollEnabled
+            removeClippedSubviews={Platform.OS !== 'android'}
+          />
+        ) : (
+          <FlatList
+            data={identities}
+            keyExtractor={(item) => pubkeyStr(item.publicKey)}
+            renderItem={(props) => <StaticIdentityListItem {...props} />}
+            style={Atoms.flex_1}
+            nestedScrollEnabled
+            removeClippedSubviews={Platform.OS !== 'android'}
+          />
+        )}
+      </Box>
     </IdentitySwitcherContext.Provider>
   );
 }
@@ -149,7 +158,7 @@ function IdentityListItemContent({
   item: IdentityKeyPair;
   isActive?: boolean;
 }) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { isEditing } = useIdentitySwitcher();
   const { isCurrentIdentity } = useCurrentIdentity();
 
@@ -157,31 +166,33 @@ function IdentityListItemContent({
 
   return (
     <Box
-      padding="md"
-      marginVertical="xs"
-      marginHorizontal="lg"
-      style={{
-        backgroundColor: isActive
-          ? legacyTheme.colors.primaryOpacity20
-          : isCurrent
-            ? legacyTheme.colors.neutralSurfaceOpacity20
-            : undefined,
-        borderRadius: legacyTheme.borderRadius.md,
-        borderWidth: DRAG_BORDER_WIDTH,
-        borderColor: isActive
-          ? legacyTheme.colors.primaryOpacity60
-          : 'transparent',
-        borderStyle: 'dashed',
-      }}
+      style={[
+        Atoms.p_md,
+        Atoms.my_xs,
+        Atoms.mx_lg,
+        Atoms.rounded_md,
+        {
+          backgroundColor: isActive
+            ? theme.palette.primary_50
+            : isCurrent
+              ? theme.palette.neutral_50
+              : undefined,
+          borderWidth: DRAG_BORDER_WIDTH,
+          borderColor: isActive ? theme.palette.primary_400 : 'transparent',
+          borderStyle: 'dashed',
+        },
+      ]}
     >
       <Box
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-        gap="md"
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_center,
+          Atoms.gap_md,
+        ]}
       >
         <IdentityBadge publicKey={item.publicKey} />
-        <Box flexDirection="row" alignItems="center" gap="md">
+        <Box style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md]}>
           {isCurrent && <SelectionIndicator />}
           {isEditing && <DeleteButton publicKey={item.publicKey} />}
         </Box>
@@ -229,7 +240,7 @@ function DraggableIdentityListItem({
 }
 
 function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
   const { onDeleteIdentity } = useIdentitySwitcher();
 
@@ -242,7 +253,7 @@ function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
           <Ionicons
             name="close-sharp"
             size={24}
-            color={legacyTheme.colors.text}
+            color={theme.palette.neutral_1000}
           />
         )}
         onPress={() => onDeleteIdentity(publicKey)}
@@ -258,15 +269,20 @@ function Header({
   isEditing: boolean;
   setIsEditing: (v: boolean) => void;
 }) {
+  const { theme } = useTheme();
+
   return (
-    <>
+    <Box style={Atoms.flex_shrink_0}>
       <Box
-        marginTop="xl"
-        marginBottom="lg"
-        marginHorizontal="lg"
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_center,
+          Atoms.mt_xl,
+          Atoms.mb_lg,
+          Atoms.mx_lg,
+          { backgroundColor: theme.palette.background_primary },
+        ]}
       >
         <Text fontSize={18} fontWeight="semibold">
           {isEditing ? 'Editing identities' : 'Your identities'}
@@ -277,12 +293,14 @@ function Header({
         />
       </Box>
       <Box
-        height={1.5}
-        backgroundColor={
-          isEditing ? 'warningOpacity20' : 'neutralSurfaceOpacity20'
-        }
+        height={1}
+        style={{
+          backgroundColor: isEditing
+            ? theme.palette.warning_100
+            : theme.palette.neutral_100,
+        }}
       />
-    </>
+    </Box>
   );
 }
 
@@ -291,7 +309,7 @@ export function Footer({
 }: {
   onCreateIdentity: () => Promise<void>;
 }) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const [isCreating, setIsCreating] = useState(false);
 
   const handlePress = async () => {
@@ -311,29 +329,34 @@ export function Footer({
       entering={SlideInDown.duration(200)}
       exiting={SlideOutDown.duration(200)}
     >
-      <BlurView
-        intensity={80}
-        tint="dark"
-        style={{
-          width: '100%',
-          paddingTop: legacyTheme.spacing.lg,
-          paddingBottom: legacyTheme.spacing.xl,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-        }}
+      <Box
+        style={[
+          Atoms.w_full,
+          Atoms.px_lg,
+          Atoms.pt_lg,
+          Atoms.pb_xl,
+          {
+            backgroundColor: theme.palette.background_primary,
+            borderTopWidth: 1,
+            borderTopColor: theme.palette.neutral_200,
+          },
+        ]}
       >
-        <Box paddingHorizontal="lg">
-          <Button
-            variant="tertiary"
-            title={isCreating ? 'Creating...' : 'Create new identity'}
-            fullWidth
-            disabled={isCreating}
-            icon={() => (
-              <Ionicons name="person-add-outline" size={20} color="white" />
-            )}
-            onPress={handlePress}
-          />
-        </Box>
-      </BlurView>
+        <Button
+          variant="tertiary"
+          title={isCreating ? 'Creating...' : 'Create new identity'}
+          fullWidth
+          disabled={isCreating}
+          icon={() => (
+            <Ionicons
+              name="person-add-outline"
+              size={20}
+              color={theme.palette.neutral_1000}
+            />
+          )}
+          onPress={handlePress}
+        />
+      </Box>
     </Reanimated.View>
   );
 }

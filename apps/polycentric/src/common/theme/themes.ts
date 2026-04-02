@@ -51,6 +51,7 @@ export function createTheme({
   palette: Palette;
 }): Theme {
   const shadowColor = palette.black;
+
   return {
     scheme,
     name,

@@ -7,7 +7,11 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Text, TextVariant } from './Text';
-import { useLegacyTheme, ColorToken, FontWeightToken } from '@/src/common/legacyTheme';
+import {
+  useTheme,
+  type PaletteColorToken,
+  type FontWeightToken,
+} from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
@@ -15,7 +19,7 @@ type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 interface LinkButtonProps extends Omit<PressableProps, 'style'> {
   onPress: () => void;
   title: string;
-  color?: ColorToken;
+  color?: PaletteColorToken;
   icon?: IconRenderFn;
   style?: StyleProp<ViewStyle>;
   variant?: TextVariant;
@@ -26,7 +30,7 @@ interface LinkButtonProps extends Omit<PressableProps, 'style'> {
 export function LinkButton({
   onPress,
   title,
-  color = 'primary',
+  color = 'primary_500',
   icon,
   style,
   variant = 'body',
@@ -34,10 +38,10 @@ export function LinkButton({
   italic,
   ...props
 }: LinkButtonProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = legacyTheme.colors[color];
+  const textColor = theme.palette[color];
 
   return (
     <Animated.View style={animatedStyle}>

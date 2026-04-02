@@ -10,6 +10,7 @@ import {
 } from '@/src/common/components/primitives';
 import { BackButton } from '@/src/common/components/composites';
 import { FeedChip } from '@/src/features/posts/FeedChip';
+import { Atoms } from '@/src/common/theme';
 import { truncateName } from '@/src/common/lib/polycentric-hooks';
 import type { ProfileScreenData } from '@/src/common/lib/polycentric-hooks';
 import type { ProfileEditState } from '@/src/common/lib/polycentric-hooks';
@@ -55,24 +56,26 @@ function ProfileHeaderInner({
           />
         </View>
         <Box
-          style={{ position: 'absolute', top: 0, left: 0 }}
-          marginHorizontal="lg"
-          marginTop="md"
+          style={[
+            { position: 'absolute', top: 0, left: 0 },
+            Atoms.mx_lg,
+            Atoms.mt_md,
+          ]}
         >
           <BackButton onPress={onBack} />
         </Box>
       </Box>
 
-      <Box marginHorizontal="lg" style={{ marginTop: -40 }}>
+      <Box style={[Atoms.mx_lg, { marginTop: -40 }]}>
         <Avatar
           source={data.avatarUrl ? { uri: data.avatarUrl } : undefined}
           size="xl"
         />
       </Box>
 
-      <Box marginHorizontal="lg" marginTop="md" gap="xs">
+      <Box style={[Atoms.mx_lg, Atoms.mt_md, Atoms.gap_xs]}>
         {edit.editing ? (
-          <Box gap="sm">
+          <Box style={Atoms.gap_sm}>
             <TextInput
               value={edit.nameDraft}
               onChangeText={edit.setNameDraft}
@@ -85,7 +88,7 @@ function ProfileHeaderInner({
               placeholder="Bio"
               numberOfLines={3}
             />
-            <Box flexDirection="row" gap="sm">
+            <Box style={[Atoms.flex_row, Atoms.gap_sm]}>
               <Button
                 title={edit.saving ? 'Saving...' : 'Save'}
                 onPress={edit.handleSave}
@@ -105,18 +108,18 @@ function ProfileHeaderInner({
             <Text variant="title" fontWeight="bold">
               {truncateName(data.username, 32)}
             </Text>
-            <Text variant="secondary" color="neutralSurface">
+            <Text variant="secondary" color="neutral_500">
               {data.short}
             </Text>
             {data.profile.description ? (
-              <Box marginTop="sm">
-                <Text variant="body" color="text">
+              <Box style={Atoms.mt_sm}>
+                <Text variant="body" color="neutral_1000">
                   {data.profile.description}
                 </Text>
               </Box>
             ) : null}
             {data.isSelf && (
-              <Box marginTop="md">
+              <Box style={Atoms.mt_md}>
                 <Button
                   title="Edit"
                   onPress={() => edit.setEditing(true)}
@@ -130,7 +133,7 @@ function ProfileHeaderInner({
       </Box>
 
       {!data.isSelf && (
-        <Box marginHorizontal="lg" marginTop="md">
+        <Box style={[Atoms.mx_lg, Atoms.mt_md]}>
           <Button
             title={data.followStatus.isFollowing ? 'Following' : 'Follow'}
             variant={data.followStatus.isFollowing ? 'secondary' : 'primary'}
@@ -140,7 +143,7 @@ function ProfileHeaderInner({
         </Box>
       )}
 
-      <Box marginHorizontal="lg" marginTop="lg" marginBottom="md">
+      <Box style={[Atoms.mx_lg, Atoms.mt_lg, Atoms.mb_md]}>
         <HorizontalScrollGroup>
           <FeedChip
             type="posts"

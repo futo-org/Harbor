@@ -1,22 +1,22 @@
-import { Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Text, Avatar, PubkeyTag } from '@/src/common/components/primitives';
-import { Box } from '@/src/common/components/layouts';
 import { IdentitySwitcherSheetInner } from '@/src/common/components/composites/IdentitySwitcherSheetInner';
+import { Box } from '@/src/common/components/layouts';
+import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
+import { Routes } from '@/src/common/constants';
 import {
+  identiconUrl,
+  publicKeyToStringURLSafe,
   useCurrentIdentity,
   useUsername,
-  publicKeyToStringURLSafe,
-  identiconUrl,
 } from '@/src/common/lib/polycentric-hooks';
-import { Routes } from '@/src/common/constants';
 import { useSheet } from '@/src/common/lib/sheet';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Pressable } from 'react-native';
 
 export function CurrIdentityHeader() {
   const { identity: currentIdentity } = useCurrentIdentity();
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   const { Sheet, present, dismiss } = useSheet();
 
@@ -35,10 +35,12 @@ export function CurrIdentityHeader() {
   return (
     <>
       <Box
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-        gap="md"
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_center,
+          Atoms.gap_md,
+        ]}
       >
         <Pressable
           onPress={() => {
@@ -48,15 +50,16 @@ export function CurrIdentityHeader() {
           style={{ flexShrink: 1 }}
         >
           <Box
-            flexDirection="row"
-            alignItems="baseline"
-            gap="sm"
-            style={{ flex: 1 }}
+            style={[
+              Atoms.flex_row,
+              Atoms.gap_sm,
+              { flex: 1, alignItems: 'baseline' },
+            ]}
           >
             <Text
               variant="title"
               fontWeight="bold"
-              color="text"
+              color="neutral_1000"
               numberOfLines={1}
               style={{ flexShrink: 1 }}
             >
@@ -66,7 +69,7 @@ export function CurrIdentityHeader() {
             <Ionicons
               name="chevron-down"
               size={22}
-              color={legacyTheme.colors.text}
+              color={theme.palette.neutral_1000}
             />
           </Box>
         </Pressable>

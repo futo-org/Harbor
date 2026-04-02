@@ -1,7 +1,11 @@
-import { LegacyThemeProvider } from '@/src/common/legacyTheme';
 import { GlobalHead } from '@/src/common/lib/GlobalHead';
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, ThemeProvider, useBreakpoint, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  ThemeProvider,
+  useBreakpoint,
+  useTheme,
+} from '@/src/common/theme';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { Stack } from 'expo-router';
@@ -16,7 +20,7 @@ import {
 
 const MAX_CONTENT_WIDTH = 535;
 
-void SplashScreen.preventAutoHideAsync().catch(() => { });
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [providerInitialized, setProviderInitialized] = useState(false);
@@ -29,22 +33,20 @@ export default function RootLayout() {
     if (!providerInitialized) {
       return;
     }
-    void SplashScreen.hideAsync().catch(() => { });
+    void SplashScreen.hideAsync().catch(() => {});
   }, [providerInitialized]);
 
   return (
     <GestureHandlerRootView style={Atoms.flex_1}>
       <GlobalHead />
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <LegacyThemeProvider>
-          <ThemeProvider>
-            <PolycentricProvider onInitialized={onInitialized}>
-              <TrueSheetProvider>
-                <RootNavigatorShell />
-              </TrueSheetProvider>
-            </PolycentricProvider>
-          </ThemeProvider>
-        </LegacyThemeProvider>
+        <ThemeProvider>
+          <PolycentricProvider onInitialized={onInitialized}>
+            <TrueSheetProvider>
+              <RootNavigatorShell />
+            </TrueSheetProvider>
+          </PolycentricProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

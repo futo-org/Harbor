@@ -1,7 +1,11 @@
+/**
+ * Core palette steps (`neutral_*`, `primary_*`, …) are solid `#RRGGBB` only.
+ * Translucent colors are composed at call sites with `withHexOpacity(...)`.
+ */
+
 export type Palette = {
   white: string;
   black: string;
-  like: string;
 
   neutral_0: string;
   neutral_25: string;
@@ -75,28 +79,20 @@ export type Palette = {
   warning_950: string;
   warning_975: string;
 
-  info_25: string;
-  info_50: string;
-  info_100: string;
-  info_200: string;
-  info_300: string;
-  info_400: string;
-  info_500: string;
-  info_600: string;
-  info_700: string;
-  info_800: string;
-  info_900: string;
-  info_950: string;
-  info_975: string;
-
   background_primary: string;
   background_secondary: string;
 };
 
+export type PaletteColorToken = keyof Palette;
+
+/** e.g. `#1EA3E5` + `80` = `#1EA3E580` */
+export function withHexOpacity(color: string, opacityHex: string): string {
+  return color + opacityHex;
+}
+
 export const lightPalette = {
   white: '#FFFFFF',
   black: '#000000',
-  like: '#1EA3E5',
 
   neutral_0: '#FFFFFF',
   neutral_25: '#F2F5F9',
@@ -119,11 +115,11 @@ export const lightPalette = {
   primary_100: '#C5E9FA',
   primary_200: '#9DD8F4',
   primary_300: '#6BC4EF',
-  primary_400: '#4BB5EA',
+  primary_400: '#55BBEC',
   primary_500: '#1EA3E5',
-  primary_600: '#0854AA',
-  primary_700: '#0A4C96',
-  primary_800: '#073D7A',
+  primary_600: '#1883BC',
+  primary_700: '#126394',
+  primary_800: '#0C436C',
   primary_900: '#062343',
   primary_950: '#051A35',
   primary_975: '#041229',
@@ -170,20 +166,6 @@ export const lightPalette = {
   warning_950: '#664100',
   warning_975: '#4D3100',
 
-  info_25: '#EDF8FE',
-  info_50: '#DCF3FC',
-  info_100: '#C5E9FA',
-  info_200: '#9DD8F4',
-  info_300: '#6BC4EF',
-  info_400: '#4BB5EA',
-  info_500: '#1EA3E5',
-  info_600: '#0854AA',
-  info_700: '#0A4C96',
-  info_800: '#073D7A',
-  info_900: '#062343',
-  info_950: '#051A35',
-  info_975: '#041229',
-
   background_primary: '#F2F5F9',
   background_secondary: '#ADD1F9',
 } as const satisfies Palette;
@@ -191,7 +173,6 @@ export const lightPalette = {
 export const darkPalette = {
   white: '#FFFFFF',
   black: '#000000',
-  like: '#1EA3E5',
 
   neutral_0: '#05080E',
   neutral_25: '#0C1220',
@@ -200,7 +181,7 @@ export const darkPalette = {
   neutral_200: '#252F42',
   neutral_300: '#3D4A5F',
   neutral_400: '#7C869D',
-  neutral_500: '#8E96A8',
+  neutral_500: '#7C869D',
   neutral_600: '#A5ACBB',
   neutral_700: '#B8BECA',
   neutral_800: '#D0D4DD',
@@ -214,21 +195,21 @@ export const darkPalette = {
   primary_100: '#153445',
   primary_200: '#1C4A62',
   primary_300: '#1E6A8C',
-  primary_400: '#1E8BC4',
+  primary_400: '#1E86B8',
   primary_500: '#1EA3E5',
-  primary_600: '#3BB0E8',
-  primary_700: '#5CBEEC',
-  primary_800: '#85CEF0',
-  primary_900: '#B0E0F6',
-  primary_950: '#D2EDFA',
-  primary_975: '#E8F6FC',
+  primary_600: '#1883BC',
+  primary_700: '#126394',
+  primary_800: '#0C436C',
+  primary_900: '#062343',
+  primary_950: '#051A35',
+  primary_975: '#041229',
 
   positive_25: '#0A1F0A',
   positive_50: '#0F2E0F',
   positive_100: '#154515',
   positive_200: '#1A5C1A',
   positive_300: '#1F731F',
-  positive_400: '#248A24',
+  positive_400: '#107A10',
   positive_500: '#008000',
   positive_600: '#2FA82F',
   positive_700: '#4FBF4F',
@@ -264,20 +245,6 @@ export const darkPalette = {
   warning_900: '#FFEDCC',
   warning_950: '#FFF5E0',
   warning_975: '#FFFAEF',
-
-  info_25: '#0A1A24',
-  info_50: '#0F2533',
-  info_100: '#153445',
-  info_200: '#1C4A62',
-  info_300: '#1E6A8C',
-  info_400: '#1E8BC4',
-  info_500: '#1EA3E5',
-  info_600: '#3BB0E8',
-  info_700: '#5CBEEC',
-  info_800: '#85CEF0',
-  info_900: '#B0E0F6',
-  info_950: '#D2EDFA',
-  info_975: '#E8F6FC',
 
   background_primary: '#05080E',
   background_secondary: '#062343',

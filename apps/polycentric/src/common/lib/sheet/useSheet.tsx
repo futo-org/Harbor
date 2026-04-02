@@ -10,8 +10,8 @@ import {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { Platform } from 'react-native';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { Platform, View, StyleSheet } from 'react-native';
+import { useTheme } from '@/src/common/theme';
 
 interface SheetContextType {
   isOpen: boolean;
@@ -46,7 +46,7 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
     { children, detents = [0.5], dismissible = true, scrollable = false },
     ref,
   ) => {
-    const { legacyTheme } = useLegacyTheme();
+    const { theme } = useTheme();
     const sheetRef = useRef<TrueSheet>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -70,13 +70,20 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
       },
     }));
 
+    const iosBlur =
+      theme.scheme === 'dark'
+        ? ('system-thick-material-dark' as const)
+        : ('system-thick-material-light' as const);
+
     const platformProps = Platform.select({
       ios: {
-        backgroundBlur: 'system-thick-material-dark' as const,
+        backgroundBlur: iosBlur,
         blurOptions: { intensity: 80, interaction: true },
         backgroundColor: 'transparent',
       },
-      android: { backgroundColor: legacyTheme.colors.backgroundPrimary },
+      default: {
+        backgroundColor: theme.palette.background_primary,
+      },
     });
 
     return (
@@ -96,13 +103,26 @@ const SheetInner = forwardRef<SheetHandle, SheetProps>(
         {...platformProps}
       >
         <SheetContext.Provider value={{ isOpen, setFooter, setHeader }}>
-          {children}
+          <View
+            style={[
+              styles.sheetBody,
+              { backgroundColor: theme.palette.background_primary },
+            ]}
+          >
+            {children}
+          </View>
         </SheetContext.Provider>
       </TrueSheet>
     );
   },
 );
 SheetInner.displayName = 'SheetInner';
+
+const styles = StyleSheet.create({
+  sheetBody: {
+    flex: 1,
+  },
+});
 
 interface UseSheetReturn {
   Sheet: React.FC<SheetProps>;

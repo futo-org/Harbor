@@ -12,8 +12,11 @@ import {
   Text,
   TextInput,
 } from '@/src/common/components';
-import { REPORT_BUG_URL, SOURCE_CODE_URL, TAB_BAR_HEIGHT } from '@/src/common/constants';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import {
+  REPORT_BUG_URL,
+  SOURCE_CODE_URL,
+  TAB_BAR_HEIGHT,
+} from '@/src/common/constants';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
   identiconUrl,
@@ -25,36 +28,24 @@ import {
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { useSheet } from '@/src/common/lib/sheet';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  ScrollView,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
-  const { setLegacyThemeMode } = useLegacyTheme();
 
   const onPress = () => {
     const next = theme.name === 'dark' ? 'light' : 'dark';
     setActiveThemeName(next);
-    setLegacyThemeMode(next);
   };
 
   return (
     <ListItem onPress={onPress}>
       <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_md,
-          Atoms.pl_xs,
-        ]}
+        style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
       >
         <Ionicons
           name={theme.name === 'dark' ? 'moon' : 'sunny'}
@@ -70,7 +61,6 @@ function AppearanceSettingRow() {
 }
 
 export default function SettingsTabScreen() {
-  const { legacyTheme } = useLegacyTheme();
   const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
   const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
@@ -78,14 +68,14 @@ export default function SettingsTabScreen() {
 
   return (
     <Screen background={{ gradient: 'top' }}>
-      <Box paddingHorizontal="lg" flex={1}>
+      <Box style={[Atoms.px_lg, Atoms.flex_1]}>
         <PageHeader title="Settings" />
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            gap: legacyTheme.spacing.xl,
-            paddingBottom: TAB_BAR_HEIGHT + 16,
-          }}
+          contentContainerStyle={[
+            Atoms.gap_xl,
+            { paddingBottom: TAB_BAR_HEIGHT + 16 },
+          ]}
         >
           <ListItemWrapper onPress={() => presentIdentity()}>
             <>
@@ -128,7 +118,7 @@ function IdentitySettingsContent({
 }: {
   publicKey: types.PublicKey;
 }) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
   const username = useUsername(publicKey);
@@ -189,32 +179,32 @@ function IdentitySettingsContent({
   const fullPubkey = publicKeyToString(publicKey);
   const processId = identity?.process?.process
     ? toBase64(
-      identity.process.process instanceof Uint8Array
-        ? identity.process.process
-        : new Uint8Array(identity.process.process),
-    )
+        identity.process.process instanceof Uint8Array
+          ? identity.process.process
+          : new Uint8Array(identity.process.process),
+      )
     : '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
 
   return (
-    <Box padding="lg" gap="xl">
+    <Box style={[Atoms.p_lg, Atoms.gap_xl]}>
       {/* Hero: avatar + name */}
-      <Box alignItems="center" gap="md" style={{ paddingTop: 8 }}>
+      <Box style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
         <Avatar
           source={avatarUrl ? { uri: avatarUrl } : undefined}
           size="massive"
         />
 
         {editing ? (
-          <Box gap="sm" style={{ width: '100%' }}>
+          <Box style={[Atoms.gap_sm, { width: '100%' }]}>
             <TextInput
               value={nameDraft}
               onChangeText={setNameDraft}
               placeholder="Display name"
               autoFocus
             />
-            <Box flexDirection="row" gap="sm" justifyContent="center">
+            <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_center]}>
               <Button
                 title={saving ? 'Saving...' : 'Save'}
                 onPress={handleSave}
@@ -230,7 +220,7 @@ function IdentitySettingsContent({
             </Box>
           </Box>
         ) : (
-          <Box alignItems="center" gap="xs">
+          <Box style={[Atoms.items_center, Atoms.gap_xs]}>
             <Text
               variant="title"
               fontWeight="bold"
@@ -245,20 +235,24 @@ function IdentitySettingsContent({
           </Box>
         )}
 
-        <Text variant="subtitle" color="neutralSurface">
+        <Text variant="subtitle" color="neutral_500">
           {eventCount} {eventCount === 1 ? 'event' : 'events'}
         </Text>
       </Box>
 
       {/* Details */}
       <Box
-        gap="md"
-        padding="md"
-        backgroundColor="neutralSurfaceOpacity20"
-        borderRadius="md"
+        style={[
+          Atoms.gap_md,
+          Atoms.p_md,
+          Atoms.rounded_md,
+          {
+            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+          },
+        ]}
       >
-        <Box gap="xs">
-          <Text variant="small" color="neutralSurface">
+        <Box style={Atoms.gap_xs}>
+          <Text variant="small" color="neutral_500">
             PUBLIC KEY
           </Text>
           <Text
@@ -273,12 +267,12 @@ function IdentitySettingsContent({
         <Box
           style={{
             height: 1,
-            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
+            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
           }}
         />
 
-        <Box gap="xs">
-          <Text variant="small" color="neutralSurface">
+        <Box style={Atoms.gap_xs}>
+          <Text variant="small" color="neutral_500">
             PROCESS ID
           </Text>
           <Text
@@ -298,7 +292,7 @@ function ServersSheetContent() {
   const client = usePolycentric();
   const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
 
   const [servers, setServers] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -322,7 +316,7 @@ function ServersSheetContent() {
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to add server:', err);
     } finally {
@@ -342,7 +336,7 @@ function ServersSheetContent() {
       await client.contentManager.createRemoveServer(server);
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to remove server:', err);
     } finally {
@@ -351,12 +345,8 @@ function ServersSheetContent() {
   };
 
   return (
-    <Box padding="lg" gap="lg">
-      <Box
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-      >
+    <Box style={[Atoms.p_lg, Atoms.gap_lg]}>
+      <Box style={[Atoms.flex_row, Atoms.justify_between, Atoms.items_center]}>
         <Text variant="subtitle" fontWeight="semibold">
           Servers
         </Text>
@@ -370,20 +360,27 @@ function ServersSheetContent() {
       </Box>
 
       {servers.length === 0 ? (
-        <Text variant="secondary" color="neutralSurface">
+        <Text variant="secondary" color="neutral_500">
           No servers configured
         </Text>
       ) : (
-        <Box gap="sm">
+        <Box style={Atoms.gap_sm}>
           {servers.map((server) => (
             <Box
               key={server}
-              flexDirection="row"
-              justifyContent="space-between"
-              alignItems="center"
-              padding="md"
-              backgroundColor="neutralSurfaceOpacity20"
-              borderRadius="md"
+              style={[
+                Atoms.flex_row,
+                Atoms.justify_between,
+                Atoms.items_center,
+                Atoms.p_md,
+                Atoms.rounded_md,
+                {
+                  backgroundColor: withHexOpacity(
+                    theme.palette.neutral_500,
+                    '20',
+                  ),
+                },
+              ]}
             >
               <Text
                 variant="secondary"
@@ -400,7 +397,7 @@ function ServersSheetContent() {
                     <Ionicons
                       name="remove-circle-outline"
                       size={22}
-                      color={legacyTheme.colors.destructive}
+                      color={theme.palette.negative_500}
                     />
                   )}
                   onPress={() => handleRemoveServer(server)}
@@ -412,8 +409,8 @@ function ServersSheetContent() {
       )}
 
       {isEditing && (
-        <Box flexDirection="row" gap="sm" alignItems="center">
-          <Box flex={1}>
+        <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.items_center]}>
+          <Box style={Atoms.flex_1}>
             <TextInput
               placeholder="https://server.example.com"
               value={newServerUrl}
@@ -434,8 +431,8 @@ function ServersSheetContent() {
                   size={28}
                   color={
                     newServerUrl.trim()
-                      ? legacyTheme.colors.primary
-                      : legacyTheme.colors.neutralSurface
+                      ? theme.palette.primary_500
+                      : theme.palette.neutral_500
                   }
                 />
               )}
@@ -455,21 +452,23 @@ function ListItemWrapper({
   children: React.ReactNode;
   onPress: () => void;
 }) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
 
   return (
     <ListItem onPress={onPress}>
       <Box
-        flexDirection="row"
-        alignItems="center"
-        justifyContent="space-between"
-        paddingLeft="xs"
+        style={[
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
       >
         {children}
         <Ionicons
           name="chevron-forward"
           size={18}
-          color={legacyTheme.colors.neutralSurface}
+          color={theme.palette.neutral_500}
         />
       </Box>
     </ListItem>
@@ -479,12 +478,7 @@ function ListItemWrapper({
 function SourceCodeItem() {
   return (
     <Box
-      paddingTop="3xl"
-      paddingHorizontal="md"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-      }}
+      style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
     >
       <LinkButton
         title="Source code"

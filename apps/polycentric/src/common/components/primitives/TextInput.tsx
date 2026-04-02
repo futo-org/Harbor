@@ -6,7 +6,13 @@ import {
   Platform,
 } from 'react-native';
 import { forwardRef, useState } from 'react';
-import { useLegacyTheme, ColorToken } from '@/src/common/legacyTheme';
+import {
+  useTheme,
+  withHexOpacity,
+  typography,
+  BorderRadius,
+  type PaletteColorToken,
+} from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 
 export interface TextInputProps extends Omit<
@@ -14,7 +20,7 @@ export interface TextInputProps extends Omit<
   'placeholderTextColor'
 > {
   variant?: 'default' | 'plain';
-  placeholderTextColor?: ColorToken;
+  placeholderTextColor?: PaletteColorToken;
   disabled?: boolean;
   error?: boolean;
 }
@@ -37,7 +43,8 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     },
     ref,
   ) => {
-    const { legacyTheme, legacyIsDark } = useLegacyTheme();
+    const { theme } = useTheme();
+    const isDark = theme.scheme === 'dark';
 
     const [isFocused, setIsFocused] = useState(false);
     const isPlain = variant === 'plain';
@@ -45,10 +52,8 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const baseStyle: TextStyle = {
       paddingVertical: 12,
       paddingHorizontal: 12,
-      fontSize: legacyTheme.typography.fontSize.md,
-      color: disabled
-        ? legacyTheme.colors.neutralSurface
-        : legacyTheme.colors.text,
+      fontSize: typography.fontSize.md,
+      color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_1000,
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({
@@ -62,7 +67,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const multilineStyle: TextStyle = multiline
       ? {
           ...(numberOfLines && {
-            minHeight: numberOfLines * legacyTheme.typography.lineHeight.md,
+            minHeight: numberOfLines * typography.lineHeight.md,
           }),
           textAlignVertical: 'top',
         }
@@ -79,10 +84,10 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         style={[baseStyle, multilineStyle, style]}
         placeholderTextColor={
           placeholderTextColor
-            ? legacyTheme.colors[placeholderTextColor]
-            : legacyTheme.colors.neutralSurfaceOpacity80
+            ? theme.palette[placeholderTextColor]
+            : theme.palette.neutral_500
         }
-        selectionColor={legacyTheme.colors.primary}
+        selectionColor={theme.palette.primary_500}
         onFocus={(e) => {
           setIsFocused(true);
           onFocus?.(e);
@@ -102,16 +107,16 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     return (
       <BlurView
         intensity={40}
-        tint={legacyIsDark ? 'dark' : 'light'}
+        tint={isDark ? 'dark' : 'light'}
         style={[
           styles.blurContainer,
           {
-            borderRadius: legacyTheme.borderRadius.md,
+            borderRadius: BorderRadius.md,
             borderColor: error
-              ? legacyTheme.colors.destructiveOpacity80
+              ? withHexOpacity(theme.palette.negative_500, '80')
               : isFocused
-                ? legacyTheme.colors.neutralSurfaceOpacity80
-                : legacyTheme.colors.neutralSurfaceOpacity40,
+                ? theme.palette.neutral_500
+                : withHexOpacity(theme.palette.neutral_500, '40'),
           },
         ]}
       >

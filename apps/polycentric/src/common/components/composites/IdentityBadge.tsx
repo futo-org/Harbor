@@ -8,7 +8,7 @@ import {
 import { Box } from '@/src/common/components/layouts';
 import { useUsername, identiconUrl } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
-import { SpacingToken } from '@/src/common/legacyTheme/tokens';
+import { Atoms, type SpacingToken } from '@/src/common/theme';
 
 type BadgeSize = 'md' | 'lg';
 
@@ -29,14 +29,10 @@ export function IdentityBadge({
   const avatarUrl = identiconUrl(publicKey);
 
   const sizeConfig = CONFIG[size];
+  const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
 
   return (
-    <Box
-      flexDirection="row"
-      alignItems="center"
-      gap={sizeConfig.gap}
-      style={{ flex: 1 }}
-    >
+    <Box style={[Atoms.flex_row, Atoms.items_center, rowGap, { flex: 1 }]}>
       {showAvatar && (
         <Avatar
           source={avatarUrl ? { uri: avatarUrl } : undefined}
@@ -44,10 +40,11 @@ export function IdentityBadge({
         />
       )}
       <Box
-        flexDirection="row"
-        alignItems="baseline"
-        gap="sm"
-        style={{ flex: 1 }}
+        style={[
+          Atoms.flex_row,
+          Atoms.gap_sm,
+          { flex: 1, alignItems: 'baseline' },
+        ]}
       >
         <Text
           variant={sizeConfig.textVariant}

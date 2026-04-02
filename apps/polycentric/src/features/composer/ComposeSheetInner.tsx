@@ -20,7 +20,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { useSheetContext } from '@/src/common/lib/sheet';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 
 interface ComposeSheetInnerProps {
   dismiss: () => Promise<void>;
@@ -39,7 +39,7 @@ export function ComposeSheetInner({
   const { publicKey } = useCurrentIdentity();
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
   const { isOpen, setHeader, setFooter } = useSheetContext();
 
   const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
@@ -102,27 +102,30 @@ export function ComposeSheetInner({
   useEffect(() => {
     setHeader(
       <Box
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-        paddingVertical="md"
-        paddingHorizontal="lg"
-        style={{
-          borderBottomWidth: 1,
-          borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20,
-        }}
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_center,
+          Atoms.py_md,
+          Atoms.px_lg,
+          {
+            backgroundColor: theme.palette.background_primary,
+            borderBottomWidth: 1,
+            borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
+          },
+        ]}
       >
         <LinkButton
           title="Cancel"
           onPress={handleClose}
           disabled={submitting}
-          color={submitting ? 'neutralSurface' : 'primary'}
+          color={submitting ? 'neutral_500' : 'primary_500'}
         />
         <Text variant="body" fontWeight="semibold">
           {title}
         </Text>
         {submitting ? (
-          <ActivityIndicator size="small" color={legacyTheme.colors.primary} />
+          <ActivityIndicator size="small" color={theme.palette.primary_500} />
         ) : (
           <Button
             title="Post"
@@ -133,27 +136,30 @@ export function ComposeSheetInner({
         )}
       </Box>,
     );
-  }, [submitting, canPost, text, title, legacyTheme]);
+  }, [submitting, canPost, text, title, theme]);
 
   useEffect(() => {
     setFooter(
       <Box
-        paddingVertical="md"
-        paddingHorizontal="lg"
-        flexDirection="row"
-        justifyContent="flex-end"
-        style={{
-          borderTopWidth: 1,
-          borderTopColor: legacyTheme.colors.neutralSurfaceOpacity20,
-          paddingBottom: 24,
-        }}
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_end,
+          Atoms.py_md,
+          Atoms.px_lg,
+          {
+            backgroundColor: theme.palette.background_primary,
+            borderTopWidth: 1,
+            borderTopColor: withHexOpacity(theme.palette.neutral_500, '20'),
+            paddingBottom: 24,
+          },
+        ]}
       >
-        <Text variant="small" color="neutralSurface">
+        <Text variant="small" color="neutral_500">
           {text.length}/2000
         </Text>
       </Box>,
     );
-  }, [text.length, legacyTheme]);
+  }, [text.length, theme]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -161,29 +167,38 @@ export function ComposeSheetInner({
 
   return (
     <Box
-      style={{
-        paddingHorizontal: 15,
-        paddingTop: 10,
-        paddingBottom: 16,
-      }}
+      style={[
+        Atoms.flex_1,
+        {
+          backgroundColor: theme.palette.background_primary,
+          paddingHorizontal: 15,
+          paddingTop: 10,
+          paddingBottom: 16,
+        },
+      ]}
     >
       {isReply && (
         <Box
-          padding="md"
-          style={{
-            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity10,
-            borderBottomWidth: 1,
-            borderBottomColor: legacyTheme.colors.neutralSurfaceOpacity20,
-            borderRadius: legacyTheme.borderRadius.md,
-            marginBottom: 10,
-          }}
+          style={[
+            Atoms.p_md,
+            Atoms.rounded_md,
+            {
+              backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
+              borderBottomWidth: 1,
+              borderBottomColor: withHexOpacity(
+                theme.palette.neutral_500,
+                '20',
+              ),
+              marginBottom: 10,
+            },
+          ]}
         >
-          <Text variant="small" color="neutralSurface">
+          <Text variant="small" color="neutral_500">
             Replying to {truncateName(replyAuthorName, 20)}
           </Text>
           <Text
             variant="secondary"
-            color="neutralSurface"
+            color="neutral_500"
             numberOfLines={2}
             style={{ marginTop: 2 }}
           >
@@ -194,20 +209,25 @@ export function ComposeSheetInner({
 
       {error && (
         <Box
-          padding="md"
-          style={{
-            borderBottomWidth: 1,
-            borderBottomColor: legacyTheme.colors.destructiveOpacity80,
-            marginBottom: 10,
-          }}
+          style={[
+            Atoms.p_md,
+            {
+              borderBottomWidth: 1,
+              borderBottomColor: withHexOpacity(
+                theme.palette.negative_500,
+                '80',
+              ),
+              marginBottom: 10,
+            },
+          ]}
         >
-          <Text variant="secondary" color="destructive">
+          <Text variant="secondary" color="negative_500">
             {error}
           </Text>
         </Box>
       )}
 
-      <Box flexDirection="row" gap="md" alignItems="flex-start">
+      <Box style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
         <Pressable
           onPress={onAvatarPress}
           disabled={!onAvatarPress}
@@ -218,11 +238,13 @@ export function ComposeSheetInner({
             size="sm"
           />
         </Pressable>
-        <Box flex={1}>
+        <Box style={Atoms.flex_1}>
           <Box
-            flexDirection="row"
-            gap="xs"
-            style={{ alignItems: 'baseline', marginTop: -1 }}
+            style={[
+              Atoms.flex_row,
+              Atoms.gap_xs,
+              { alignItems: 'baseline', marginTop: -1 },
+            ]}
           >
             <Pressable onPress={onAvatarPress} disabled={!onAvatarPress}>
               <Text

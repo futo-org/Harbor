@@ -6,7 +6,7 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import { useLegacyTheme } from '@/src/common/legacyTheme';
+import { useTheme, withHexOpacity } from '@/src/common/theme';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -22,7 +22,7 @@ const SIZE_MAP: Record<AvatarSizePreset, number> = {
 interface AvatarProps extends Omit<ImageProps, 'source'> {
   source?: ImageSourcePropType;
   size?: AvatarSizePreset | number;
-  border?: false | 'neutral' | 'primary';
+  border?: boolean;
   borderWidth?: number;
   containerProps?: ViewProps;
 }
@@ -30,75 +30,48 @@ interface AvatarProps extends Omit<ImageProps, 'source'> {
 export function Avatar({
   source,
   size: sizeProp = 'md',
-  border = 'primary',
-  borderWidth = 2,
+  border = true,
+  borderWidth = 1,
   containerProps,
+  resizeMode = 'cover',
   ...imageProps
 }: AvatarProps) {
-  const { legacyTheme } = useLegacyTheme();
+  const { theme } = useTheme();
+  const { style: imageStyle, ...restImageProps } = imageProps;
 
   const size = typeof sizeProp === 'number' ? sizeProp : SIZE_MAP[sizeProp];
-  const hasBorder = border !== false;
-  const inset = hasBorder ? borderWidth + Math.round(size * 0.08) : 0;
-  const imgSize = size - inset * 2;
-
-  const borderStyle =
-    border === 'primary'
-      ? {
-          backgroundColor: legacyTheme.colors.backgroundSecondary,
-          borderColor: legacyTheme.colors.primaryOpacity40,
-        }
-      : border === 'neutral'
-        ? {
-            backgroundColor: legacyTheme.colors.neutralSurfaceOpacity20,
-            borderColor: legacyTheme.colors.neutralSurfaceOpacity40,
-          }
-        : null;
+  const hasBorder = border;
 
   return (
     <View
       {...containerProps}
       style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2 },
-        hasBorder ? { borderWidth } : null,
-        borderStyle,
+        styles.clip,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: theme.palette.background_primary,
+        },
+        hasBorder && {
+          borderWidth,
+          borderColor: withHexOpacity(theme.palette.neutral_500, '80'),
+        },
         containerProps?.style,
       ]}
     >
-      <View
-        style={[
-          hasBorder
-            ? {
-                width: imgSize,
-                height: imgSize,
-                borderRadius: imgSize / 2,
-              }
-            : styles.fill,
-          styles.imageFrame,
-        ]}
-      >
-        <Image
-          {...imageProps}
-          source={source}
-          style={[styles.image, imageProps.style]}
-        />
-      </View>
+      <Image
+        {...restImageProps}
+        source={source}
+        resizeMode={resizeMode}
+        style={[styles.image, imageStyle]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  avatar: {
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fill: {
-    width: '100%',
-    height: '100%',
-  },
-  imageFrame: {
+  clip: {
     overflow: 'hidden',
   },
   image: {

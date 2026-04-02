@@ -1,4 +1,11 @@
-import { Screen, Box, Button, PageHeader, Avatar } from '@/src/common/components';
+import {
+  Screen,
+  Box,
+  Button,
+  PageHeader,
+  Avatar,
+} from '@/src/common/components';
+import { Atoms } from '@/src/common/theme';
 import { useRouter } from 'expo-router';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
@@ -38,15 +45,15 @@ export default function SetAvatarScreen() {
 
   return (
     <Screen background={{ gradient: 'surround' }}>
-      <Box flexDirection="column" marginHorizontal="lg" height="100%">
+      <Box style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
         <PageHeader onBack={() => router.back()} onClose={close} />
-        <Box flex={1} alignItems="center" marginTop="2xl">
+        <Box style={[Atoms.flex_1, Atoms.items_center, Atoms.mt_2xl]}>
           <Avatar
             size="massive"
             source={data.avatarUri ? { uri: data.avatarUri } : undefined}
           />
         </Box>
-        <Box gap="md" marginBottom="md">
+        <Box style={[Atoms.gap_md, Atoms.mb_md]}>
           <Button
             title="Take Photo"
             variant="secondary"

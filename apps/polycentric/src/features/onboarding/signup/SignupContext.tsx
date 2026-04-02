@@ -2,7 +2,10 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'expo-router';
 import { createIdentityWithDefaultServer } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
-import { DEFAULT_SERVER, usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import {
+  DEFAULT_SERVER,
+  usePolycentricContext,
+} from '@/src/common/lib/polycentric-hooks';
 
 type ModerationLevel = 1 | 2 | 3;
 
