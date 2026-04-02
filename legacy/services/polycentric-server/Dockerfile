@@ -1,8 +1,9 @@
 FROM rust:1.83
 
 WORKDIR /app
-COPY . .
+COPY legacy/protos legacy/protos
+COPY legacy/services/polycentric-server legacy/services/polycentric-server
+WORKDIR /app/legacy/services/polycentric-server
+RUN cargo build --release
 
-RUN cargo build --release --manifest-path services/polycentric-server/Cargo.toml
-
-CMD ["./services/polycentric-server/target/release/server"]
+CMD ["./target/release/server"]

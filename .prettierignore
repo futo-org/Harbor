@@ -1,3 +1,4 @@
+LICENSE
 coverage
 public
 dist
@@ -16,5 +17,3 @@ packages/rs-core
 packages/rs-core-wasm-browser
 packages/rs-core-wasm-node
 legacy
-services/polycentric-server
-services/verifiers-server

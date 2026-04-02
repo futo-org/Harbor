@@ -2,7 +2,7 @@
 
 Shared client library used by:
 
-- `services/verifiers-server` (backend that verifies platform claims)
+- `legacy/services/verifiers-server` (backend that verifies platform claims)
 - `legacy/packages/polycentric-web` and `legacy/packages/polycentric-react` (the legacy Polycentric web client and its React component layer)
 
 ## Tests
