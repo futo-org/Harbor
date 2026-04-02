@@ -1,3 +1,0 @@
-export class SyncService {
-  constructor() {}
-}

@@ -6,7 +6,6 @@ import {
   HydrationStatus,
   KeyPairManager,
   InitializationStep,
-  SyncService,
 } from './client-internal';
 import { KEY_TYPE, STREAM_ID } from './constants';
 import { HTTPClient } from './http';
@@ -58,7 +57,6 @@ export interface PolycentricClientConfig {
  */
 export class PolycentricClient {
   public readonly events = new EventService();
-  public readonly synchronization = new SyncService();
 
   public readonly keyPairManager = new KeyPairManager(this);
   public readonly claimManager = new ClaimManager();
