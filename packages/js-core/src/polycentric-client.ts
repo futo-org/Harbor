@@ -24,6 +24,7 @@ import {
   EventBundle,
   EventKey,
   Identity as V2Identity,
+  IdentityClaim,
   IdentityId,
   IdentityIssue,
   IdentityPermission,
@@ -41,9 +42,20 @@ import { StorageHandle } from './storage/storage-handle';
 export interface IdentityEvent {
   sequence: bigint;
   createdAt: bigint;
-  type: 'identity' | 'issue' | 'revoke' | 'unknown';
+  type: 'identity' | 'issue' | 'revoke' | 'claim' | 'unknown';
   signatureValid: boolean;
   detail: string;
+}
+
+/**
+ * An issued key and its handshake status.
+ */
+export interface AuthorizedKey {
+  keyType: number;
+  key: Uint8Array;
+  permissions: IdentityPermission[];
+  /** Whether the recipient has published a matching IdentityClaim */
+  claimed: boolean;
 }
 
 /**
@@ -53,7 +65,7 @@ export interface IdentityState {
   /** The self-signed identity, or null if none created */
   identity: V2Identity | null;
   /** Public keys that have been issued permissions (and not revoked) */
-  authorizedKeys: Array<{ keyType: number; key: Uint8Array; permissions: IdentityPermission[] }>;
+  authorizedKeys: AuthorizedKey[];
   /** Full ordered log of identity events for auditability */
   eventLog: IdentityEvent[];
 }
@@ -361,6 +373,7 @@ export class PolycentricClient {
               keyType: issue.publicKey.keyType,
               key: issue.publicKey.key,
               permissions: [...issue.permissions],
+              claimed: false,
             });
           }
           const keyHex = issue.publicKey?.key
@@ -393,6 +406,45 @@ export class PolycentricClient {
           break;
         }
 
+        case 'identityClaim': {
+          const claim = content.contentBody.identityClaim;
+          const claimedIdBytes = claim.identity?.value;
+          const claimedIdHex = claimedIdBytes
+            ? this.toHex(claimedIdBytes, 12)
+            : '?';
+
+          // If this is the current key claiming an identity, resolve
+          // the issuer's identity by scanning all local events for the
+          // matching Identity event.
+          if (claimedIdBytes && !state.identity) {
+            const resolved = await this.resolveIdentityById(claimedIdBytes);
+            if (resolved) {
+              state.identity = resolved.identity;
+              state.authorizedKeys = resolved.authorizedKeys;
+              // Merge the issuer's event log
+              state.eventLog.push(...resolved.eventLog);
+            }
+          }
+
+          // Mark this key as claimed in the resolved state
+          const claimingKey = event.key?.signedBy?.key;
+          if (claimingKey) {
+            const ak = state.authorizedKeys.find(
+              (k) => this.bytesEqual(k.key, claimingKey),
+            );
+            if (ak) {
+              ak.claimed = true;
+            }
+          }
+
+          state.eventLog.push({
+            sequence, createdAt, signatureValid,
+            type: 'claim',
+            detail: `Claimed identity ${claimedIdHex}...`,
+          });
+          break;
+        }
+
         default:
           state.eventLog.push({
             sequence, createdAt, signatureValid,
@@ -400,6 +452,65 @@ export class PolycentricClient {
             detail: `Unknown content type: ${content.contentBody.oneofKind ?? 'none'}`,
           });
           break;
+      }
+    }
+
+    // Second pass: check if any issued (unclaimed) keys have published
+    // IdentityClaim events on their own identity streams
+    if (state.identity?.id?.value) {
+      const identityIdBytes = state.identity.id.value;
+
+      for (const ak of state.authorizedKeys) {
+        if (ak.claimed) continue;
+
+        const theirEvents = await this.storage.events.getEventsByStream(
+          ak.key,
+          STREAM_ID.IDENTITY,
+        );
+
+        for (const theirSignedEvent of theirEvents) {
+          try {
+            const theirEvent = V2Event.fromBinary(theirSignedEvent.eventBytes);
+            if (!theirEvent.contentDigest?.value) continue;
+
+            const theirContentBytes = await this.storage.content.getContent(
+              theirEvent.contentDigest.value,
+            );
+            if (!theirContentBytes) continue;
+
+            const theirContent = Content.fromBinary(theirContentBytes);
+            if (
+              theirContent.contentBody.oneofKind === 'identityClaim' &&
+              theirContent.contentBody.identityClaim.identity?.value &&
+              this.bytesEqual(
+                theirContent.contentBody.identityClaim.identity.value,
+                identityIdBytes,
+              )
+            ) {
+              ak.claimed = true;
+
+              // Verify the claim event signature
+              let claimSigValid = false;
+              if (this.core) {
+                try {
+                  this.core.verify_signed_event(SignedEvent.toBinary(theirSignedEvent));
+                  claimSigValid = true;
+                } catch { /* invalid */ }
+              }
+
+              state.eventLog.push({
+                sequence: theirEvent.key?.sequence ?? 0n,
+                createdAt: theirEvent.createdAt,
+                signatureValid: claimSigValid,
+                type: 'claim',
+                detail: `Key ${this.toHex(ak.key)} claimed this identity`,
+              });
+              break;
+            }
+          } catch {
+            // skip malformed
+          }
+        }
       }
     }
 
@@ -418,6 +529,124 @@ export class PolycentricClient {
     return Array.from(bytes.slice(0, len))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
+  }
+
+  /**
+   * Scans all local events to find an Identity event matching the given IdentityId,
+   * then replays that key's identity stream to build the identity state.
+   * This is used when a claimer needs to resolve the issuer's identity.
+   */
+  private async resolveIdentityById(
+    identityId: Uint8Array,
+  ): Promise<{ identity: V2Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } | null> {
+    // Scan all events to find the Identity event with this ID
+    const allEvents = await this.storage.events.getAllEvents();
+
+    for (const signedEvent of allEvents) {
+      try {
+        const event = V2Event.fromBinary(signedEvent.eventBytes);
+        if (event.key?.streamId !== STREAM_ID.IDENTITY) continue;
+        if (!event.contentDigest?.value) continue;
+
+        const contentBytes = await this.storage.content.getContent(
+          event.contentDigest.value,
+        );
+        if (!contentBytes) continue;
+
+        const content = Content.fromBinary(contentBytes);
+        if (content.contentBody.oneofKind !== 'identity') continue;
+
+        const identity = content.contentBody.identity;
+        if (!identity.id?.value || !this.bytesEqual(identity.id.value, identityId)) continue;
+
+        // Found the issuer. Replay their full identity stream.
+        const issuerKey = event.key?.signedBy?.key;
+        if (!issuerKey) continue;
+
+        const issuerEvents = await this.storage.events.getEventsByStream(
+          issuerKey,
+          STREAM_ID.IDENTITY,
+        );
+
+        const result: { identity: V2Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } = {
+          identity,
+          authorizedKeys: [],
+          eventLog: [],
+        };
+
+        for (const issuerSignedEvent of issuerEvents) {
+          const issuerEvent = V2Event.fromBinary(issuerSignedEvent.eventBytes);
+          const seq = issuerEvent.key?.sequence ?? 0n;
+          const created = issuerEvent.createdAt;
+
+          let sigValid = false;
+          if (this.core) {
+            try {
+              this.core.verify_signed_event(SignedEvent.toBinary(issuerSignedEvent));
+              sigValid = true;
+            } catch { /* invalid */ }
+          }
+
+          if (!issuerEvent.contentDigest?.value) continue;
+          const cb = await this.storage.content.getContent(issuerEvent.contentDigest.value);
+          if (!cb) continue;
+          const c = Content.fromBinary(cb);
+
+          switch (c.contentBody.oneofKind) {
+            case 'identity': {
+              const idHex = c.contentBody.identity.id?.value
+                ? this.toHex(c.contentBody.identity.id.value, 12)
+                : '?';
+              result.eventLog.push({
+                sequence: seq, createdAt: created, signatureValid: sigValid,
+                type: 'identity', detail: `[issuer] Created identity ${idHex}...`,
+              });
+              break;
+            }
+            case 'identityIssue': {
+              const issue = c.contentBody.identityIssue;
+              if (issue.publicKey) {
+                result.authorizedKeys = result.authorizedKeys.filter(
+                  (k) => !this.bytesEqual(k.key, issue.publicKey!.key),
+                );
+                result.authorizedKeys.push({
+                  keyType: issue.publicKey.keyType,
+                  key: issue.publicKey.key,
+                  permissions: [...issue.permissions],
+                  claimed: false,
+                });
+              }
+              const keyHex = issue.publicKey?.key ? this.toHex(issue.publicKey.key) : '?';
+              result.eventLog.push({
+                sequence: seq, createdAt: created, signatureValid: sigValid,
+                type: 'issue', detail: `[issuer] Issued key ${keyHex}...`,
+              });
+              break;
+            }
+            case 'identityRevoke': {
+              const revoke = c.contentBody.identityRevoke;
+              if (revoke.publicKey) {
+                result.authorizedKeys = result.authorizedKeys.filter(
+                  (k) => !this.bytesEqual(k.key, revoke.publicKey!.key),
+                );
+              }
+              const keyHex = revoke.publicKey?.key ? this.toHex(revoke.publicKey.key) : '?';
+              result.eventLog.push({
+                sequence: seq, createdAt: created, signatureValid: sigValid,
+                type: 'revoke', detail: `[issuer] Revoked key ${keyHex}...`,
+              });
+              break;
+            }
+          }
+        }
+
+        return result;
+      } catch {
+        // skip malformed
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -543,6 +772,56 @@ export class PolycentricClient {
   }
 
   /**
+   * Claims an identity that was issued to the current key via IdentityIssue.
+   * Completes the two-sided handshake: IdentityIssue (by issuer) + IdentityClaim (by this key).
+   *
+   * @param identityId - The IdentityId value of the identity to claim
+   * @returns The signed event
+   */
+  async claimIdentity(identityId: Uint8Array): Promise<SignedEvent> {
+    if (!this.currentKeyPair) {
+      throw new Error('No active key pair');
+    }
+
+    const publicKeyBytes = this.currentKeyPair.publicKey.key;
+
+    const claim = IdentityClaim.create({
+      identity: IdentityId.create({ value: identityId }),
+    });
+
+    const content = Content.create({
+      contentBody: { oneofKind: 'identityClaim', identityClaim: claim },
+    });
+    const contentBytes = Content.toBinary(content);
+    const contentHash = sha256(contentBytes);
+
+    const sequence = await this.storage.events.getNextSequence(
+      publicKeyBytes,
+      STREAM_ID.IDENTITY,
+    );
+
+    const event = V2Event.create({
+      key: EventKey.create({
+        streamId: STREAM_ID.IDENTITY,
+        signedBy: {
+          keyType: Number(this.currentKeyPair.keyType),
+          key: publicKeyBytes,
+        },
+        sequence,
+      }),
+      previousSignature: new Uint8Array(0),
+      contentDigest: ContentDigest.create({
+        type: ContentDigestType.SHA256,
+        value: contentHash,
+      }),
+      createdAt: BigInt(Date.now()),
+    });
+
+    await this.storage.content.putContent(contentHash, contentBytes);
+    return this.createEvent(V2Event.toBinary(event));
+  }
+
+  /**
    * Push local events for the active key to all configured servers,
    * including content alongside each event.
    */
@@ -627,12 +906,9 @@ export class PolycentricClient {
       for (const bundle of response.eventBundles) {
         if (!bundle.signedEvent) continue;
 
-        try {
-          await this.storage.events.persistEvent(bundle.signedEvent);
-          newCount++;
-
-          // Store content if included in the bundle
-          if (bundle.serializedContent?.contentBytes) {
+        // Always store content if included (even if event is a duplicate)
+        if (bundle.serializedContent?.contentBytes) {
+          try {
             const event = V2Event.fromBinary(bundle.signedEvent.eventBytes);
             if (event.contentDigest?.value) {
               await this.storage.content.putContent(
@@ -640,7 +916,14 @@ export class PolycentricClient {
                 bundle.serializedContent.contentBytes,
               );
             }
+          } catch {
+            // content decode failed, skip
           }
+        }
+
+        try {
+          await this.storage.events.persistEvent(bundle.signedEvent);
+          newCount++;
         } catch {
           // duplicate event, skip
         }

@@ -27,6 +27,7 @@ message Content {
     Identity identity = 8;
     IdentityIssue identity_issue = 9;
     IdentityRevoke identity_revoke = 10;
+    IdentityClaim identity_claim = 11;
   }
 }
 

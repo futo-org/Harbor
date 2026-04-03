@@ -14,6 +14,7 @@ use ::entity::{
     content_block_model as ContentBlockModel,
     content_delete_model as ContentDeleteModel,
     content_follow_model as ContentFollowModel,
+    content_identity_claim_model as ContentIdentityClaimModel,
     content_identity_issue_model as ContentIdentityIssueModel,
     content_identity_model as ContentIdentityModel,
     content_identity_revoke_model as ContentIdentityRevokeModel,
@@ -151,7 +152,8 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::internal("internal server error")
                 })?;
 
-                let content_row = ContentRepository::Mutation::add_content(
+                // Try to insert content; skip if it already exists
+                let content_result = ContentRepository::Mutation::add_content(
                     &txn,
                     ContentModel::ActiveModel {
                         id: NotSet,
@@ -163,13 +165,29 @@ impl EventSyncService for EventSyncServiceImpl {
                         synced_at: Set(now),
                     },
                 )
-                .await
-                .map_err(|e| {
-                    eprintln!("sync_events content db error: {e}");
-                    Status::internal("internal server error")
-                })?;
+                .await;
 
-                save_content_child(&txn, content_row.id, content).await?;
+                match content_result {
+                    Ok(content_row) => {
+                        save_content_child(
+                            &txn,
+                            content_row.id,
+                            content,
+                        )
+                        .await?;
+                    }
+                    Err(ref e)
+                        if Self::is_unique_violation(e) =>
+                    {
+                        // Content already exists, skip
+                    }
+                    Err(e) => {
+                        eprintln!("sync_events content db error: {e}");
+                        return Err(Status::internal(
+                            "internal server error",
+                        ));
+                    }
+                }
 
                 txn.commit().await.map_err(|e| {
                     eprintln!("sync_events txn commit error: {e}");
@@ -221,8 +239,11 @@ impl EventSyncService for EventSyncServiceImpl {
 
 impl EventSyncServiceImpl {
     fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
-        if let sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(arc_err)) = err
-        {
+        let runtime_err = match err {
+            sea_orm::DbErr::Query(e) | sea_orm::DbErr::Exec(e) => Some(e),
+            _ => None,
+        };
+        if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err {
             if let Some(db_err) = arc_err.as_database_error() {
                 return db_err.is_unique_violation();
             }
@@ -447,6 +468,24 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                 content_id: Set(content_id),
                 revoked_public_key_type: Set(key.key_type as i16),
                 revoked_public_key: Set(key.key),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── IdentityClaim ────────────────────────────────────
+        // Recipient accepts an issued identity (completes the handshake).
+        Some(ContentBody::IdentityClaim(claim)) => {
+            let id = claim.identity.ok_or_else(|| {
+                Status::invalid_argument(
+                    "identity_claim missing identity",
+                )
+            })?;
+
+            ContentIdentityClaimModel::ActiveModel {
+                content_id: Set(content_id),
+                claimed_identity_id: Set(id.value),
             }
             .insert(db)
             .await

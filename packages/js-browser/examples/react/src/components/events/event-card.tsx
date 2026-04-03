@@ -91,6 +91,13 @@ const ContentDisplay = ({ content }: { content?: v2.Content }) => {
         : '?';
       return <div style={{ color: '#f85149' }}>[identity revoked: {keyHex}...]</div>;
     }
+    case 'identityClaim': {
+      const id = content.contentBody.identityClaim.identity?.value;
+      const idHex = id
+        ? Array.from(id.slice(0, 12)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        : '?';
+      return <div style={{ color: '#58a6ff' }}>[identity claimed: {idHex}...]</div>;
+    }
     default:
       return <div style={{ color: '#484f58' }}>[unknown]</div>;
   }

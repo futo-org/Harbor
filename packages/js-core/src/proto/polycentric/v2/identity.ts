@@ -94,6 +94,21 @@ export interface IdentityRevoke {
     publicKey?: PublicKey;
 }
 /**
+ * Published by a key that has been issued permissions via IdentityIssue.
+ * Completes the two-sided handshake: IdentityIssue (by issuer) + IdentityClaim (by recipient).
+ * The CRDT replay considers a key fully authorized only when both events exist.
+ *
+ * @generated from protobuf message polycentric.v2.IdentityClaim
+ */
+export interface IdentityClaim {
+    /**
+     * The identity being claimed (matches the IdentityId from the Identity event)
+     *
+     * @generated from protobuf field: polycentric.v2.IdentityId identity = 1
+     */
+    identity?: IdentityId;
+}
+/**
  * @generated from protobuf enum polycentric.v2.KeyType
  */
 export enum KeyType {
@@ -386,3 +401,49 @@ class IdentityRevoke$Type extends MessageType<IdentityRevoke> {
  * @generated MessageType for protobuf message polycentric.v2.IdentityRevoke
  */
 export const IdentityRevoke = new IdentityRevoke$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IdentityClaim$Type extends MessageType<IdentityClaim> {
+    constructor() {
+        super("polycentric.v2.IdentityClaim", [
+            { no: 1, name: "identity", kind: "message", T: () => IdentityId }
+        ]);
+    }
+    create(value?: PartialMessage<IdentityClaim>): IdentityClaim {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<IdentityClaim>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IdentityClaim): IdentityClaim {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.IdentityId identity */ 1:
+                    message.identity = IdentityId.internalBinaryRead(reader, reader.uint32(), options, message.identity);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: IdentityClaim, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.IdentityId identity = 1; */
+        if (message.identity)
+            IdentityId.internalBinaryWrite(message.identity, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.IdentityClaim
+ */
+export const IdentityClaim = new IdentityClaim$Type();

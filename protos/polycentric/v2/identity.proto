@@ -48,3 +48,11 @@ message IdentityRevoke {
   // PublicKey to be revoked
   PublicKey public_key = 1;
 }
+
+// Published by a key that has been issued permissions via IdentityIssue.
+// Completes the two-sided handshake: IdentityIssue (by issuer) + IdentityClaim (by recipient).
+// The CRDT replay considers a key fully authorized only when both events exist.
+message IdentityClaim {
+  // The identity being claimed (matches the IdentityId from the Identity event)
+  IdentityId identity = 1;
+}

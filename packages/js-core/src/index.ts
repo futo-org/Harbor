@@ -18,6 +18,7 @@ export type {
   KeyPair,
   IdentityState,
   IdentityEvent,
+  AuthorizedKey,
 } from './polycentric-client';
 
 
