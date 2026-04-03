@@ -127,7 +127,6 @@ export const IdentitySelector = () => {
     /* client.queryUsername(client.currentIdentity.keyPair.publicKey) || */ '';
   const currentIdentifier =
     client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
-  const isEphemeral = client.currentIdentityIsEphemeral;
 
   return (
     <div>
@@ -135,68 +134,64 @@ export const IdentitySelector = () => {
         <button onClick={() => setUIState(UIState.Signup)}>Sign up</button>
         <button onClick={() => setUIState(UIState.Login)}>Log in</button>
       </div>
-      {!isEphemeral ? (
-        <div>
-          <div>{currentUsername}</div>
-          <div>{currentIdentifier}</div>
-          <button
-            onClick={async () => {
-              setInputEnabled(false);
 
-              const toRemove = client.currentIdentity.keyPair.publicKey;
+      <div>
+        <div>{currentUsername}</div>
+        <div>{currentIdentifier}</div>
+        <button
+          onClick={async () => {
+            setInputEnabled(false);
 
-              if (otherIdentities.length > 0) {
-                await client.switchKeyPair(otherIdentities[0].publicKey);
-              } else {
-                await client.createKeyPair({
-                  keyType: KEY_TYPE.ED25519,
-                  setAsCurrent: true,
-                  ephemeral: true,
-                });
-              }
+            const toRemove = client.currentIdentity.keyPair.publicKey;
 
-              await client.removeKeyPair(toRemove);
-              await loadIdentities();
+            if (otherIdentities.length > 0) {
+              await client.switchKeyPair(otherIdentities[0].publicKey);
+            } else {
+              await client.createKeyPair({
+                keyType: KEY_TYPE.ED25519,
+                setAsCurrent: true,
+                ephemeral: true,
+              });
+            }
 
-              setInputEnabled(true);
-            }}
-            disabled={!inputEnabled}
-          >
-            Remove
-          </button>
-          <button
-            onClick={async () => {
-              if (exportLink.current === null) return;
-              const link = exportLink.current;
-              const filename = `${currentUsername}_${currentIdentifier}.pca`;
+            await client.removeKeyPair(toRemove);
+            await loadIdentities();
 
-              const keyBlob = new Blob([
-                Base64.fromUint8Array(
-                  PrivateKey.toBinary(
-                    client.currentIdentity.keyPair.privateKey,
-                  ),
-                ),
-              ]);
-              const url = URL.createObjectURL(keyBlob);
+            setInputEnabled(true);
+          }}
+          disabled={!inputEnabled}
+        >
+          Remove
+        </button>
+        <button
+          onClick={async () => {
+            if (exportLink.current === null) return;
+            const link = exportLink.current;
+            const filename = `${currentUsername}_${currentIdentifier}.pca`;
 
-              link.href = url;
-              link.download = filename;
+            const keyBlob = new Blob([
+              Base64.fromUint8Array(
+                PrivateKey.toBinary(client.currentIdentity.keyPair.privateKey),
+              ),
+            ]);
+            const url = URL.createObjectURL(keyBlob);
 
-              link.click();
+            link.href = url;
+            link.download = filename;
 
-              link.href = '';
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Export
-          </button>
-          <a hidden ref={exportLink}>
-            Hidden anchor that is needed to make downloads work
-          </a>
-        </div>
-      ) : (
-        <div>Sign up or log in to add an account</div>
-      )}
+            link.click();
+
+            link.href = '';
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Export
+        </button>
+        <a hidden ref={exportLink}>
+          Hidden anchor that is needed to make downloads work
+        </a>
+      </div>
+
       <div>
         {otherIdentities.map((identity) => (
           <div key={Identifier(identity.publicKey)}>

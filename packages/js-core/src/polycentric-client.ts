@@ -71,7 +71,7 @@ export class PolycentricClient {
   public readonly coreBridge: ICoreBridge;
 
   public currentKeyPair: KeyPair | null = null;
-  public identityIsEphemeral: boolean = true;
+
   public readonly cryptoManager: ICryptoManager;
 
   public storageHandle: StorageHandle | undefined;
@@ -137,6 +137,9 @@ export class PolycentricClient {
     }
   }
 
+  /**
+   * Looks at existing keys and will pick the first one
+   */
   private async restoreKeyPair(): Promise<boolean> {
     const identities = await this.getKeys();
     const identity = identities[0];
@@ -145,7 +148,7 @@ export class PolycentricClient {
       return false;
     }
 
-    this.setCurrentKeyPair(identity, false);
+    this.setCurrentKeyPair(identity);
     return true;
   }
 
@@ -278,9 +281,8 @@ export class PolycentricClient {
     await this.storage.events.persistEvent(signedEvent);
   }
 
-  public setCurrentKeyPair(keyPair: KeyPair, ephemeral: boolean = false) {
+  public setCurrentKeyPair(keyPair: KeyPair) {
     this.currentKeyPair = keyPair;
-    this.identityIsEphemeral = ephemeral;
   }
 
   private setState(state: ClientState) {
@@ -303,10 +305,6 @@ export class PolycentricClient {
     this.error = error;
     this.events.emitStateChanged(this.state);
     this.events.emitError(error);
-  }
-
-  get currentIdentityIsEphemeral(): boolean {
-    return this.identityIsEphemeral;
   }
 
   get currentSystem(): PublicKey {

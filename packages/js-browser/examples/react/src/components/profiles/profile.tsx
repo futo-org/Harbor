@@ -21,8 +21,6 @@ export const Profile = ({ profile }: { profile: PublicKey }) => {
     loadUsername();
 
     const loadIsFollowing = async () => {
-      if (client?.currentIdentityIsEphemeral) return;
-
       const followedProfiles = await client?.queryFollows(
         client.currentIdentity.keyPair.publicKey,
       );
@@ -42,8 +40,6 @@ export const Profile = ({ profile }: { profile: PublicKey }) => {
     loadIsFollowing();
 
     const loadIsBlocked = async () => {
-      if (client?.currentIdentityIsEphemeral) return;
-
       const blockedProfiles = await client?.queryBlocks(
         client.currentIdentity.keyPair.publicKey,
       );

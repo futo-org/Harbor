@@ -45,7 +45,7 @@ export class KeyPairManager {
 
     // If setAsCurrent is not explicity set to false. That is, setAsCurrent should default to true
     if (!(options.setAsCurrent === false)) {
-      this.setCurrentIdentity(identity, options.ephemeral);
+      this.setCurrentKeyPair(identity);
     }
 
     return identity;
@@ -71,7 +71,7 @@ export class KeyPairManager {
     });
 
     if (setAsCurrent) {
-      this.setCurrentIdentity({ keyType, privateKey, publicKey });
+      this.setCurrentKeyPair({ keyType, privateKey, publicKey });
     }
 
     return {
@@ -102,7 +102,7 @@ export class KeyPairManager {
       throw new Error(`Identity with public key not found`);
     }
 
-    this.setCurrentIdentity({
+    this.setCurrentKeyPair({
       keyType: keys.privateKey.keyType,
       privateKey: keys.privateKey,
       publicKey: keys.publicKey,
@@ -111,8 +111,8 @@ export class KeyPairManager {
     return this.client.currentKeyPair!;
   }
 
-  private setCurrentIdentity(keys: KeyPair, ephemeral?: boolean): void {
-    this.client.setCurrentKeyPair(keys, ephemeral);
+  private setCurrentKeyPair(keys: KeyPair): void {
+    this.client.setCurrentKeyPair(keys);
 
     // if (this.client.process) {
     //   const identity: Identity = {
