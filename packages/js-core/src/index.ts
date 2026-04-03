@@ -16,7 +16,6 @@ export { PolycentricClient } from './polycentric-client';
 export type {
   PolycentricClientConfig,
   KeyPair,
-  Identity,
 } from './polycentric-client';
 
 

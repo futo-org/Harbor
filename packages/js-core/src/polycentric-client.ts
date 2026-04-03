@@ -14,7 +14,8 @@ import type {
   IPolycentricCore,
   IStorageDriver,
 } from './platform-interfaces';
-import { PrivateKey, PublicKey } from './proto/polycentric';
+import { PublicKey } from './proto/polycentric';
+import type { PrivateKey } from './proto/polycentric';
 import {
   Content,
   ContentDigest,
@@ -31,16 +32,6 @@ export interface KeyPair {
   keyType: bigint;
   privateKey: PrivateKey;
   publicKey: PublicKey;
-}
-
-export interface Identity {
-  keyPair: KeyPair;
-}
-
-export interface IdentityOptions {
-  keyType?: bigint;
-  setAsCurrent?: boolean;
-  ephemeral?: boolean;
 }
 
 /**
@@ -155,24 +146,13 @@ export class PolycentricClient {
   }
 
   /**
-   * Creates a new KeyPair for the current process.
+   * Creates a new KeyPair.
    */
-  async createKeyPair(options: IdentityOptions = {}): Promise<KeyPair> {
+  async createKeyPair(options: { keyType?: bigint; setAsCurrent?: boolean } = {}): Promise<KeyPair> {
     return this.keyPairManager.createKeyPair({
       keyType: options.keyType ?? KEY_TYPE.ED25519,
       setAsCurrent: options.setAsCurrent,
-      ephemeral: options.ephemeral,
     });
-  }
-
-  /**
-   * Imports and stores an existing identity using its private key.
-   */
-  async importIdentity(
-    privateKey: PrivateKey,
-    setAsCurrent: boolean = true,
-  ): Promise<KeyPair> {
-    return this.keyPairManager.importIdentity(privateKey, setAsCurrent);
   }
 
   /**
@@ -183,38 +163,23 @@ export class PolycentricClient {
   }
 
   /**
-   * Removes an identity from storage.
+   * Rotates the current key pair: generates a new one and removes the old one.
+   *
+   * @returns The new key pair
    */
-  async removeKeyPair(publicKey: PublicKey) {
-    await this.keyPairManager.removeIdentity(publicKey);
-  }
+  async rotateKeyPair(): Promise<KeyPair> {
+    const oldPublicKey = this.currentKeyPair?.publicKey;
 
-  async deleteKeyPair(publicKey?: PublicKey): Promise<void> {
-    const isCurrent =
-      !publicKey ||
-      (this.currentKeyPair &&
-        this.currentKeyPair.publicKey.key?.toString() ===
-          publicKey.key?.toString());
+    const newKeyPair = await this.createKeyPair({
+      keyType: KEY_TYPE.ED25519,
+      setAsCurrent: true,
+    });
 
-    if (isCurrent) {
-      const currentPublicKey = this.currentKeyPair?.publicKey;
-
-      if (currentPublicKey) await this.removeKeyPair(currentPublicKey);
-
-      const remaining = await this.getKeys();
-      if (remaining.length > 0) {
-        await this.switchKeyPair(remaining[0]!.publicKey);
-        return;
-      }
-
-      await this.createKeyPair({
-        keyType: KEY_TYPE.ED25519,
-        setAsCurrent: true,
-        ephemeral: true,
-      });
-    } else {
-      await this.removeKeyPair(publicKey!);
+    if (oldPublicKey) {
+      await this.keyPairManager.removeKeyPair(oldPublicKey);
     }
+
+    return newKeyPair;
   }
 
   /**
