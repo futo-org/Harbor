@@ -21,12 +21,15 @@ import {
   ContentDigest,
   ContentDigestType,
   Event as V2Event,
+  EventBundle,
   EventKey,
   Identity as V2Identity,
   IdentityId,
   IdentityIssue,
   IdentityPermission,
   ListEventsResponse,
+  PutEventsRequest,
+  SerializedContent,
   SignedEvent,
 } from './proto/v2';
 import { sha256 } from '@noble/hashes/sha2';
@@ -540,22 +543,55 @@ export class PolycentricClient {
   }
 
   /**
-   * Push local events for the active key to all configured servers.
+   * Push local events for the active key to all configured servers,
+   * including content alongside each event.
    */
   async push(): Promise<void> {
     if (!this.core) throw new Error('Core not initialized');
     if (!this.currentKeyPair) throw new Error('No active key pair');
 
     const localEvents = await this.storage.events.getAllEvents();
-    const localEventBytes = localEvents.map((e) => SignedEvent.toBinary(e));
+    const publicKey = this.currentKeyPair.publicKey.key;
+
+    // Build event bundles with content for events matching the active key
+    const bundles: EventBundle[] = [];
+    for (const signedEvent of localEvents) {
+      const event = V2Event.fromBinary(signedEvent.eventBytes);
+
+      // Only push events signed by the active key
+      const signedBy = event.key?.signedBy;
+      if (!signedBy || !this.bytesEqual(signedBy.key, publicKey)) continue;
+
+      // Look up content by digest
+      let serializedContent: SerializedContent | undefined;
+      if (event.contentDigest?.value) {
+        const contentBytes = await this.storage.content.getContent(
+          event.contentDigest.value,
+        );
+        if (contentBytes) {
+          serializedContent = SerializedContent.create({
+            contentBytes,
+          });
+        }
+      }
+
+      bundles.push(
+        EventBundle.create({
+          signedEvent,
+          serializedContent,
+        }),
+      );
+    }
+
+    if (bundles.length === 0) return;
+
+    const requestBytes = PutEventsRequest.toBinary(
+      PutEventsRequest.create({ eventBundles: bundles }),
+    );
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core!.push_events(
-          server,
-          this.currentKeyPair!.publicKey.key,
-          localEventBytes,
-        ),
+        this.core!.put_events(server, requestBytes),
       ),
     );
 
@@ -589,13 +625,24 @@ export class PolycentricClient {
       const response = ListEventsResponse.fromBinary(result.value);
 
       for (const bundle of response.eventBundles) {
-        if (bundle.signedEvent) {
-          try {
-            await this.storage.events.persistEvent(bundle.signedEvent);
-            newCount++;
-          } catch {
-            // duplicate, skip
+        if (!bundle.signedEvent) continue;
+
+        try {
+          await this.storage.events.persistEvent(bundle.signedEvent);
+          newCount++;
+
+          // Store content if included in the bundle
+          if (bundle.serializedContent?.contentBytes) {
+            const event = V2Event.fromBinary(bundle.signedEvent.eventBytes);
+            if (event.contentDigest?.value) {
+              await this.storage.content.putContent(
+                event.contentDigest.value,
+                bundle.serializedContent.contentBytes,
+              );
+            }
           }
+        } catch {
+          // duplicate event, skip
         }
       }
     }

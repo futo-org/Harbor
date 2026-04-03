@@ -11,10 +11,13 @@ export interface IPolycentricCore {
     signEvent: SignEventCallback,
     persistEvent: PersistEventCallback,
   ): Promise<Uint8Array>;
-  push_events(
+  list_events(
     serverUrl: string,
-    publicKey: Uint8Array,
-    localEvents: Uint8Array[],
+    limit?: number | null,
+  ): Promise<Uint8Array>;
+  put_events(
+    serverUrl: string,
+    eventBundlesBytes: Uint8Array,
   ): Promise<void>;
   pull_events(
     serverUrl: string,
