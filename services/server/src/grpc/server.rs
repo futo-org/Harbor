@@ -1,6 +1,8 @@
 use crate::db::client::build_db_client;
 use crate::service;
+use http::header::HeaderName;
 use tonic::transport::Server;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 /// Builds reflection for gRPC docs. The file descriptors are created in ./build.rs.
 fn build_reflection_service() -> Result<
@@ -44,7 +46,23 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("GRPC server is listening on {addr}");
 
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::any())
+        .allow_headers([
+            HeaderName::from_static("content-type"),
+            HeaderName::from_static("x-grpc-web"),
+            HeaderName::from_static("grpc-timeout"),
+        ])
+        .expose_headers([
+            HeaderName::from_static("grpc-status"),
+            HeaderName::from_static("grpc-message"),
+        ])
+        .allow_methods([http::Method::POST, http::Method::OPTIONS]);
+
     Server::builder()
+        .accept_http1(true)
+        .layer(cors)
+        .layer(tonic_web::GrpcWebLayer::new())
         .add_service(reflection_service)
         .add_service(events_service)
         .serve(addr)

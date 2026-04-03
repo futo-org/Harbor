@@ -192,16 +192,37 @@ impl EventSyncService for EventSyncServiceImpl {
                 synced_at: Set(now),
             };
 
-            // Add the event to the database
-            EventsRepository::Mutation::add_event(&self.db, active_model)
-                .await
-                .map_err(|e| {
-                    eprintln!("sync_events db error: {e}");
-                    Status::internal("internal server error")
-                })?;
+            // Add the event to the database, skipping duplicates
+            match EventsRepository::Mutation::add_event(
+                &self.db,
+                active_model,
+            )
+            .await
+            {
+                Ok(_) => {}
+                Err(ref e) if Self::is_unique_violation(e) => {
+                    // Duplicate event, skip
+                }
+                Err(e) => {
+                    eprintln!("sync_events db error: {e:?}");
+                    return Err(Status::internal("internal server error"));
+                }
+            }
         }
 
         Ok(Response::new(PutEventsResponse {}))
+    }
+}
+
+impl EventSyncServiceImpl {
+    fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
+        if let sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(arc_err)) = err
+        {
+            if let Some(db_err) = arc_err.as_database_error() {
+                return db_err.is_unique_violation();
+            }
+        }
+        false
     }
 }
 

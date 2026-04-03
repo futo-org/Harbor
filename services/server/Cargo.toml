@@ -20,4 +20,7 @@ tokio = { version = "1.50.0", features = ["full"] }
 tonic = "*"
 tonic-prost = "*"
 tonic-reflection = "*"
+tonic-web = "*"
+tower-http = { version = "*", features = ["cors"] }
+http = "*"
 

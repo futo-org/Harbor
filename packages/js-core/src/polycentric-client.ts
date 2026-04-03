@@ -21,6 +21,7 @@ import {
   ContentDigestType,
   Event as V2Event,
   EventKey,
+  ListEventsResponse,
   SignedEvent,
 } from './proto/v2';
 import { sha256 } from '@noble/hashes/sha2';
@@ -71,6 +72,7 @@ export class PolycentricClient {
   public readonly coreBridge: ICoreBridge;
 
   public currentKeyPair: KeyPair | null = null;
+  public servers: string[] = ['http://localhost:50051'];
 
   public readonly cryptoManager: ICryptoManager;
 
@@ -279,6 +281,80 @@ export class PolycentricClient {
 
   public async ingestEvent(signedEvent: SignedEvent): Promise<void> {
     await this.storage.events.persistEvent(signedEvent);
+  }
+
+  /**
+   * Push local events for the active key to all configured servers.
+   */
+  async push(): Promise<void> {
+    if (!this.core) throw new Error('Core not initialized');
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+
+    const localEvents = await this.storage.events.getAllEvents();
+    const localEventBytes = localEvents.map((e) => SignedEvent.toBinary(e));
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core!.push_events(
+          server,
+          this.currentKeyPair!.publicKey.key,
+          localEventBytes,
+        ),
+      ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('Push failed for a server:', result.reason);
+      }
+    }
+  }
+
+  /**
+   * Pull verified events from all configured servers and persist new ones locally.
+   *
+   * @returns The number of new events persisted
+   */
+  async pull(): Promise<number> {
+    if (!this.core) throw new Error('Core not initialized');
+
+    let newCount = 0;
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) => this.core!.pull_events(server)),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('Pull failed for a server:', result.reason);
+        continue;
+      }
+
+      const response = ListEventsResponse.fromBinary(result.value);
+
+      for (const bundle of response.eventBundles) {
+        if (bundle.signedEvent) {
+          try {
+            await this.storage.events.persistEvent(bundle.signedEvent);
+            newCount++;
+          } catch {
+            // duplicate, skip
+          }
+        }
+      }
+    }
+
+    return newCount;
+  }
+
+  /**
+   * Push local events then pull remote events from all configured servers.
+   *
+   * @returns The number of new events pulled
+   */
+  async sync(): Promise<number> {
+    await this.push();
+    return this.pull();
   }
 
   public setCurrentKeyPair(keyPair: KeyPair) {
