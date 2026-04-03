@@ -87,13 +87,15 @@ export const RemoteEventList = () => {
 
   return (
     <div>
-      <h2>Remote Events ({events.length})</h2>
-      <button
-        onClick={fetchRemote}
-        disabled={loading || client.servers.length === 0}
-      >
-        {loading ? 'Loading...' : 'Refresh'}
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
+        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Remote Events ({events.length})</h2>
+        <button
+          onClick={fetchRemote}
+          disabled={loading || client.servers.length === 0}
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
+      </div>
       {client.servers.length === 0 && (
         <div style={{ color: '#888', fontSize: '0.85em' }}>
           Add a server to fetch remote events

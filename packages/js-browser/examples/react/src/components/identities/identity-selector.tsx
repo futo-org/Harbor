@@ -14,17 +14,15 @@ enum UIState {
 export const IdentitySelector = () => {
   const client = useContext(ClientContext);
 
-  const [inputEnabled, setInputEnabled] = useState<boolean>(true);
-  const [uiState, setUIState] = useState<UIState>(UIState.Select);
+  const [inputEnabled, setInputEnabled] = useState(true);
+  const [uiState, setUIState] = useState(UIState.Select);
   const [identities, setIdentities] = useState<KeyPair[]>([]);
 
-  const submitButton = useRef<HTMLButtonElement | null>(null);
-  const usernameField = useRef<HTMLInputElement | null>(null);
   const passwordField = useRef<HTMLInputElement | null>(null);
   const exportLink = useRef<HTMLAnchorElement | null>(null);
 
   const loadIdentities = useCallback(async () => {
-    if (client === null) return;
+    if (!client) return;
     setIdentities(await client.getKeys());
   }, [client]);
 
@@ -32,7 +30,7 @@ export const IdentitySelector = () => {
     loadIdentities();
   }, [loadIdentities]);
 
-  if (client === null) return <div>Error: No client object provided</div>;
+  if (!client) return null;
 
   const otherIdentities = identities.filter(
     (identity) => !keyPairsAreEqual(identity, client.currentKeyPair!),
@@ -41,9 +39,7 @@ export const IdentitySelector = () => {
   if (uiState === UIState.Login) {
     const handleLogin = async () => {
       if (!passwordField.current) return;
-
       setInputEnabled(false);
-
       try {
         const key = PrivateKey.fromBinary(
           Base64.toUint8Array(passwordField.current.value),
@@ -54,109 +50,79 @@ export const IdentitySelector = () => {
       } catch {
         alert('Bad identity string');
       }
-
       setInputEnabled(true);
     };
 
     return (
-      <div>
-        <button onClick={() => setUIState(UIState.Select)}>Back</button>
-        <div>Please select your backup file</div>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input
-            type="file"
-            onChange={async (e) => {
-              const element = e.target as HTMLInputElement;
-              if (
-                !element.files ||
-                element.files.length < 1 ||
-                !passwordField.current
-              )
-                return;
-
-              passwordField.current.value = await element.files[0].text();
-            }}
-          ></input>
-          <input type="password" ref={passwordField}></input>
-          <button type="submit" disabled={!inputEnabled} onClick={handleLogin}>
-            Log in
+      <div className="card">
+        <h3>Import Identity</h3>
+        <input
+          type="file"
+          onChange={async (e) => {
+            const el = e.target as HTMLInputElement;
+            if (!el.files?.length || !passwordField.current) return;
+            passwordField.current.value = await el.files[0].text();
+          }}
+          style={{ marginBottom: 8 }}
+        />
+        <input type="password" ref={passwordField} placeholder="Paste key or use file" />
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button onClick={handleLogin} disabled={!inputEnabled}>
+            Import
           </button>
-        </form>
+          <button onClick={() => setUIState(UIState.Select)}>Cancel</button>
+        </div>
       </div>
     );
   }
 
   if (uiState === UIState.Signup) {
     const handleSignup = async () => {
-      if (usernameField.current === null) return;
-
-      const identity = await client.createKeyPair({
-        keyType: KEY_TYPE.ED25519,
-      });
-      //await client.createUsername(usernameField.current.value);
+      setInputEnabled(false);
+      await client.createKeyPair({ keyType: KEY_TYPE.ED25519 });
       await loadIdentities();
-
-      if (submitButton.current !== null && passwordField.current !== null) {
-        passwordField.current.value = Base64.fromUint8Array(
-          PrivateKey.toBinary(identity.privateKey),
-        );
-        submitButton.current.click();
-      }
-
       setUIState(UIState.Select);
-
       setInputEnabled(true);
     };
 
     return (
-      <div>
-        <div>What's your username?</div>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input ref={usernameField}></input>
-          <input type="password" hidden ref={passwordField}></input>
-          <button ref={submitButton} hidden></button>
-        </form>
+      <div className="card">
+        <h3>Create Identity</h3>
         <button onClick={handleSignup} disabled={!inputEnabled}>
-          Create account
+          Generate new key pair
+        </button>
+        <button onClick={() => setUIState(UIState.Select)} style={{ marginLeft: 8 }}>
+          Cancel
         </button>
       </div>
     );
   }
 
-  const currentUsername =
-    /* client.queryUsername(client.currentIdentity.keyPair.publicKey) || */ '';
   const currentIdentifier =
     client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
 
   return (
-    <div>
-      <div>
-        <button onClick={() => setUIState(UIState.Signup)}>Sign up</button>
-        <button onClick={() => setUIState(UIState.Login)}>Log in</button>
+    <div className="card">
+      <h3>Identity</h3>
+
+      <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#58a6ff', wordBreak: 'break-all', marginBottom: 10 }}>
+        {currentIdentifier}
       </div>
 
-      <div>
-        <div>{currentUsername}</div>
-        <div>{currentIdentifier}</div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={() => setUIState(UIState.Signup)}>New</button>
+        <button onClick={() => setUIState(UIState.Login)}>Import</button>
         <button
           onClick={async () => {
             setInputEnabled(false);
-
-            const toRemove = client.currentIdentity.keyPair.publicKey;
-
+            const toRemove = client.currentKeyPair!.publicKey;
             if (otherIdentities.length > 0) {
               await client.switchKeyPair(otherIdentities[0].publicKey);
             } else {
-              await client.createKeyPair({
-                keyType: KEY_TYPE.ED25519,
-                setAsCurrent: true,
-                ephemeral: true,
-              });
+              await client.createKeyPair({ keyType: KEY_TYPE.ED25519, setAsCurrent: true });
             }
-
             await client.removeKeyPair(toRemove);
             await loadIdentities();
-
             setInputEnabled(true);
           }}
           disabled={!inputEnabled}
@@ -164,52 +130,55 @@ export const IdentitySelector = () => {
           Remove
         </button>
         <button
-          onClick={async () => {
-            if (exportLink.current === null) return;
+          onClick={() => {
+            if (!exportLink.current) return;
             const link = exportLink.current;
-            const filename = `${currentUsername}_${currentIdentifier}.pca`;
-
             const keyBlob = new Blob([
               Base64.fromUint8Array(
-                PrivateKey.toBinary(client.currentIdentity.keyPair.privateKey),
+                PrivateKey.toBinary(client.currentKeyPair!.privateKey),
               ),
             ]);
             const url = URL.createObjectURL(keyBlob);
-
             link.href = url;
-            link.download = filename;
-
+            link.download = `${currentIdentifier}.pca`;
             link.click();
-
             link.href = '';
             URL.revokeObjectURL(url);
           }}
         >
           Export
         </button>
-        <a hidden ref={exportLink}>
-          Hidden anchor that is needed to make downloads work
-        </a>
+        <a hidden ref={exportLink} />
       </div>
 
-      <div>
-        {otherIdentities.map((identity) => (
-          <div key={Identifier(identity.publicKey)}>
-            <div>{/*client.queryUsername(identity.publicKey) || ""*/}</div>
-            <div>{Identifier(identity.publicKey)}</div>
-            <button
-              onClick={async () => {
-                setInputEnabled(false);
-                await selectIdentity(client, identity.publicKey);
-                setInputEnabled(true);
-              }}
-              disabled={!inputEnabled}
-            >
-              Switch to
-            </button>
+      {otherIdentities.length > 0 && (
+        <div style={{ marginTop: 12, borderTop: '1px solid #21262d', paddingTop: 8 }}>
+          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+            Other identities
           </div>
-        ))}
-      </div>
+          {otherIdentities.map((identity) => (
+            <div
+              key={Identifier(identity.publicKey)}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}
+            >
+              <span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: '#8b949e' }}>
+                {Identifier(identity.publicKey)}
+              </span>
+              <button
+                onClick={async () => {
+                  setInputEnabled(false);
+                  await selectIdentity(client, identity.publicKey);
+                  setInputEnabled(true);
+                }}
+                disabled={!inputEnabled}
+                style={{ padding: '2px 10px', fontSize: '0.78rem' }}
+              >
+                Switch
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

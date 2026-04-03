@@ -70,49 +70,45 @@ export const SyncPanel = () => {
   };
 
   return (
-    <div style={{ border: '1px solid #666', padding: '12px', margin: '8px 0' }}>
+    <div className="card">
       <h3>Servers</h3>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+      {client.servers.map((server) => (
+        <div
+          key={server}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '4px 0',
+            fontSize: '0.85rem',
+            fontFamily: 'monospace',
+            color: '#8b949e',
+          }}
+        >
+          {server}
+          <button
+            onClick={() => removeServer(server)}
+            style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+          >
+            remove
+          </button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <input
           type="text"
           value={newServer}
           onChange={(e) => setNewServer(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addServer()}
-          style={{ flex: 1, padding: '4px' }}
           placeholder="http://localhost:50051"
+          style={{ flex: 1 }}
         />
         <button onClick={addServer}>Add</button>
       </div>
 
-      {client.servers.length === 0 && (
-        <div style={{ color: '#888', fontSize: '0.85em', marginBottom: '8px' }}>
-          No servers configured
-        </div>
-      )}
-
-      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 8px 0' }}>
-        {client.servers.map((server) => (
-          <li
-            key={server}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '4px 0',
-              fontSize: '0.9em',
-              fontFamily: 'monospace',
-            }}
-          >
-            {server}
-            <button onClick={() => removeServer(server)} style={{ marginLeft: '8px' }}>
-              ×
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
         <button onClick={push} disabled={syncing || client.servers.length === 0}>
           Push
         </button>
@@ -125,7 +121,7 @@ export const SyncPanel = () => {
       </div>
 
       {status && (
-        <div style={{ marginTop: '8px', fontSize: '0.85em', color: '#888' }}>
+        <div style={{ marginTop: 8, fontSize: '0.8rem', color: '#8b949e' }}>
           {status}
         </div>
       )}

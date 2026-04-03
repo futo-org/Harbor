@@ -70,8 +70,10 @@ export const EventList = () => {
 
   return (
     <div>
-      <h2>Local Events ({events.length})</h2>
-      <button onClick={loadEvents}>Refresh</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
+        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Local Events ({events.length})</h2>
+        <button onClick={loadEvents}>Refresh</button>
+      </div>
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {events.map((e, i) => (
           <EventCard key={i} e={e} />

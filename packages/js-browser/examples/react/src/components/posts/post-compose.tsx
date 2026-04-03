@@ -5,20 +5,25 @@ export const PostCompose = () => {
   const client = useContext(ClientContext);
   const postField = useRef<HTMLTextAreaElement | null>(null);
 
-  if (client === null) return <div>Error: No client object provided</div>;
+  if (client === null) return null;
 
   const post = async () => {
-    if (!postField.current) return;
+    if (!postField.current || !postField.current.value.trim()) return;
 
     await client.createPost(postField.current.value);
-
     postField.current.value = '';
   };
 
   return (
-    <div>
-      <textarea ref={postField}></textarea>
-      <button onClick={post}>Create Post</button>
+    <div className="card">
+      <textarea
+        ref={postField}
+        placeholder="What's on your mind?"
+        rows={3}
+      />
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={post}>Post</button>
+      </div>
     </div>
   );
 };
