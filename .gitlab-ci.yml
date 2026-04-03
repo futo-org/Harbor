@@ -2,12 +2,14 @@ include:
   - local: .gitlab/ci/build_rs_core.yml
   - local: .gitlab/ci/build_js_sdks.yml
   - local: .gitlab/ci/build_server.yml
+  - local: .gitlab/ci/deploy_pages.yml
 
 stages:
   - setup
   - check
   - build
   - publish
+  - deploy
 
 default:
   tags:
