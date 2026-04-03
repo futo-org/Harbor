@@ -4,7 +4,7 @@
     "slug": "polycentric",
     "version": "0.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/AppIcon.png",
+    "icon": "./src/common/assets/images/AppIcon.png",
     "scheme": "polycentric",
     "web": {
       "output": "static"
@@ -16,7 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/AppIcon.png",
+        "foregroundImage": "./src/common/assets/images/AppIcon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -27,7 +27,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/AppIcon.png",
+          "image": "./src/common/assets/images/AppIcon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#F2F5F9"
