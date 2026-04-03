@@ -24,6 +24,9 @@ message Content {
     Block block = 5;
     Reaction reaction = 6;
     ProfileUpdate profile_update = 7;
+    Identity identity = 8;
+    IdentityIssue identity_issue = 9;
+    IdentityRevoke identity_revoke = 10;
   }
 }
 

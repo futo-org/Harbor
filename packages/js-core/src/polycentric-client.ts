@@ -22,11 +22,38 @@ import {
   ContentDigestType,
   Event as V2Event,
   EventKey,
+  Identity as V2Identity,
+  IdentityId,
+  IdentityIssue,
+  IdentityPermission,
   ListEventsResponse,
   SignedEvent,
 } from './proto/v2';
 import { sha256 } from '@noble/hashes/sha2';
 import { StorageHandle } from './storage/storage-handle';
+
+/**
+ * A single step in the identity event replay log.
+ */
+export interface IdentityEvent {
+  sequence: bigint;
+  createdAt: bigint;
+  type: 'identity' | 'issue' | 'revoke' | 'unknown';
+  signatureValid: boolean;
+  detail: string;
+}
+
+/**
+ * Resolved identity state from replaying all events on the identity stream.
+ */
+export interface IdentityState {
+  /** The self-signed identity, or null if none created */
+  identity: V2Identity | null;
+  /** Public keys that have been issued permissions (and not revoked) */
+  authorizedKeys: Array<{ keyType: number; key: Uint8Array; permissions: IdentityPermission[] }>;
+  /** Full ordered log of identity events for auditability */
+  eventLog: IdentityEvent[];
+}
 
 export interface KeyPair {
   keyType: bigint;
@@ -246,6 +273,270 @@ export class PolycentricClient {
 
   public async ingestEvent(signedEvent: SignedEvent): Promise<void> {
     await this.storage.events.persistEvent(signedEvent);
+  }
+
+  /**
+   * Resolves the current identity state for the active key pair by replaying
+   * all events on the 'identity' stream in sequence order.
+   *
+   * - `Identity` events establish the identity
+   * - `IdentityIssue` events add authorized keys
+   * - `IdentityRevoke` events remove authorized keys
+   *
+   * @returns The resolved identity state
+   */
+  async getCurrentIdentity(): Promise<IdentityState> {
+    const state: IdentityState = { identity: null, authorizedKeys: [], eventLog: [] };
+
+    if (!this.currentKeyPair) return state;
+
+    const events = await this.storage.events.getEventsByStream(
+      this.currentKeyPair.publicKey.key,
+      STREAM_ID.IDENTITY,
+    );
+
+    for (const signedEvent of events) {
+      const event = V2Event.fromBinary(signedEvent.eventBytes);
+      const sequence = event.key?.sequence ?? 0n;
+      const createdAt = event.createdAt;
+
+      // Verify signature
+      let signatureValid = false;
+      if (this.core) {
+        try {
+          this.core.verify_signed_event(SignedEvent.toBinary(signedEvent));
+          signatureValid = true;
+        } catch {
+          // invalid
+        }
+      }
+
+      if (!event.contentDigest?.value) {
+        state.eventLog.push({
+          sequence, createdAt, signatureValid,
+          type: 'unknown',
+          detail: 'Missing content digest',
+        });
+        continue;
+      }
+
+      const contentBytes = await this.storage.content.getContent(
+        event.contentDigest.value,
+      );
+      if (!contentBytes) {
+        state.eventLog.push({
+          sequence, createdAt, signatureValid,
+          type: 'unknown',
+          detail: 'Content not found locally',
+        });
+        continue;
+      }
+
+      const content = Content.fromBinary(contentBytes);
+
+      switch (content.contentBody.oneofKind) {
+        case 'identity': {
+          state.identity = content.contentBody.identity;
+          const idHex = content.contentBody.identity.id?.value
+            ? this.toHex(content.contentBody.identity.id.value, 12)
+            : '?';
+          state.eventLog.push({
+            sequence, createdAt, signatureValid,
+            type: 'identity',
+            detail: `Created identity ${idHex}...`,
+          });
+          break;
+        }
+
+        case 'identityIssue': {
+          const issue = content.contentBody.identityIssue;
+          if (issue.publicKey) {
+            state.authorizedKeys = state.authorizedKeys.filter(
+              (k) => !this.bytesEqual(k.key, issue.publicKey!.key),
+            );
+            state.authorizedKeys.push({
+              keyType: issue.publicKey.keyType,
+              key: issue.publicKey.key,
+              permissions: [...issue.permissions],
+            });
+          }
+          const keyHex = issue.publicKey?.key
+            ? this.toHex(issue.publicKey.key)
+            : '?';
+          const perms = issue.permissions.join(', ');
+          state.eventLog.push({
+            sequence, createdAt, signatureValid,
+            type: 'issue',
+            detail: `Issued key ${keyHex}... with permissions [${perms}]`,
+          });
+          break;
+        }
+
+        case 'identityRevoke': {
+          const revoke = content.contentBody.identityRevoke;
+          if (revoke.publicKey) {
+            state.authorizedKeys = state.authorizedKeys.filter(
+              (k) => !this.bytesEqual(k.key, revoke.publicKey!.key),
+            );
+          }
+          const keyHex = revoke.publicKey?.key
+            ? this.toHex(revoke.publicKey.key)
+            : '?';
+          state.eventLog.push({
+            sequence, createdAt, signatureValid,
+            type: 'revoke',
+            detail: `Revoked key ${keyHex}...`,
+          });
+          break;
+        }
+
+        default:
+          state.eventLog.push({
+            sequence, createdAt, signatureValid,
+            type: 'unknown',
+            detail: `Unknown content type: ${content.contentBody.oneofKind ?? 'none'}`,
+          });
+          break;
+      }
+    }
+
+    return state;
+  }
+
+  private bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  private toHex(bytes: Uint8Array, len = 8): string {
+    return Array.from(bytes.slice(0, len))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  /**
+   * Creates a new v2 Identity by self-signing the current public key.
+   *
+   * The IdentityId is the ed25519 signature of the public key bytes,
+   * signed by the private key. This is published as an event on the
+   * 'identity' stream.
+   *
+   * @returns The created Identity proto and the signed event
+   */
+  async createIdentity(): Promise<{ identity: V2Identity; signedEvent: SignedEvent }> {
+    if (!this.currentKeyPair) {
+      throw new Error('No active key pair');
+    }
+
+    const publicKeyBytes = this.currentKeyPair.publicKey.key;
+
+    // Self-sign: sign the public key bytes to produce the IdentityId
+    const idSignature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      publicKeyBytes,
+      this.currentKeyPair.keyType,
+    );
+
+    const identity = V2Identity.create({
+      id: IdentityId.create({ value: idSignature }),
+      initialPublicKey: {
+        keyType: Number(this.currentKeyPair.keyType),
+        key: publicKeyBytes,
+      },
+    });
+
+    const content = Content.create({
+      contentBody: { oneofKind: 'identity', identity },
+    });
+    const contentBytes = Content.toBinary(content);
+    const contentHash = sha256(contentBytes);
+
+    const sequence = await this.storage.events.getNextSequence(
+      publicKeyBytes,
+      STREAM_ID.IDENTITY,
+    );
+
+    const event = V2Event.create({
+      key: EventKey.create({
+        streamId: STREAM_ID.IDENTITY,
+        signedBy: {
+          keyType: Number(this.currentKeyPair.keyType),
+          key: publicKeyBytes,
+        },
+        sequence,
+      }),
+      previousSignature: new Uint8Array(0),
+      contentDigest: ContentDigest.create({
+        type: ContentDigestType.SHA256,
+        value: contentHash,
+      }),
+      createdAt: BigInt(Date.now()),
+    });
+
+    await this.storage.content.putContent(contentHash, contentBytes);
+    const signedEvent = await this.createEvent(V2Event.toBinary(event));
+
+    return { identity, signedEvent };
+  }
+
+  /**
+   * Issues an identity grant to another public key, giving it permissions
+   * under the current identity.
+   *
+   * @param targetPublicKey - The public key bytes to grant permissions to
+   * @param targetKeyType - The key type of the target key
+   * @param permissions - The permissions to grant (defaults to ALL)
+   * @returns The signed event
+   */
+  async issueIdentity(
+    targetPublicKey: Uint8Array,
+    targetKeyType: number = 1,
+    permissions: IdentityPermission[] = [IdentityPermission.ALL],
+  ): Promise<SignedEvent> {
+    if (!this.currentKeyPair) {
+      throw new Error('No active key pair');
+    }
+
+    const publicKeyBytes = this.currentKeyPair.publicKey.key;
+
+    const issue = IdentityIssue.create({
+      publicKey: { keyType: targetKeyType, key: targetPublicKey },
+      permissions,
+    });
+
+    const content = Content.create({
+      contentBody: { oneofKind: 'identityIssue', identityIssue: issue },
+    });
+    const contentBytes = Content.toBinary(content);
+    const contentHash = sha256(contentBytes);
+
+    const sequence = await this.storage.events.getNextSequence(
+      publicKeyBytes,
+      STREAM_ID.IDENTITY,
+    );
+
+    const event = V2Event.create({
+      key: EventKey.create({
+        streamId: STREAM_ID.IDENTITY,
+        signedBy: {
+          keyType: Number(this.currentKeyPair.keyType),
+          key: publicKeyBytes,
+        },
+        sequence,
+      }),
+      previousSignature: new Uint8Array(0),
+      contentDigest: ContentDigest.create({
+        type: ContentDigestType.SHA256,
+        value: contentHash,
+      }),
+      createdAt: BigInt(Date.now()),
+    });
+
+    await this.storage.content.putContent(contentHash, contentBytes);
+    return this.createEvent(V2Event.toBinary(event));
   }
 
   /**

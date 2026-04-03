@@ -24,4 +24,21 @@ export interface IEventRepository {
    * @param streamId - The stream identifier
    */
   getNextSequence(publicKey: Uint8Array, streamId: string): Promise<bigint>;
+
+  /**
+   * Get the event with the highest sequence number for a given public key and stream.
+   * Returns null if no events exist for the key+stream.
+   *
+   * @param publicKey - The public key bytes of the signer
+   * @param streamId - The stream identifier
+   */
+  getLatestEvent(publicKey: Uint8Array, streamId: string): Promise<SignedEvent | null>;
+
+  /**
+   * Get all events for a given public key and stream, ordered by sequence ascending.
+   *
+   * @param publicKey - The public key bytes of the signer
+   * @param streamId - The stream identifier
+   */
+  getEventsByStream(publicKey: Uint8Array, streamId: string): Promise<SignedEvent[]>;
 }

@@ -87,4 +87,22 @@ export class EventStore {
   async getNextSequence(publicKey: Uint8Array, streamId: string): Promise<bigint> {
     return this.repository.getNextSequence(publicKey, streamId);
   }
+
+  /**
+   * Get the event with the highest sequence number for a given public key and stream.
+   *
+   * @param publicKey - The public key bytes of the signer
+   * @param streamId - The stream identifier
+   * @returns The latest SignedEvent, or null if none exist
+   */
+  async getLatestEvent(publicKey: Uint8Array, streamId: string): Promise<SignedEvent | null> {
+    return this.repository.getLatestEvent(publicKey, streamId);
+  }
+
+  /**
+   * Get all events for a given public key and stream, ordered by sequence ascending.
+   */
+  async getEventsByStream(publicKey: Uint8Array, streamId: string): Promise<SignedEvent[]> {
+    return this.repository.getEventsByStream(publicKey, streamId);
+  }
 }

@@ -70,6 +70,27 @@ const ContentDisplay = ({ content }: { content?: v2.Content }) => {
       return <div>{content.contentBody.reaction.emoji ?? '[reaction]'}</div>;
     case 'profileUpdate':
       return <div style={{ color: '#d2a8ff' }}>[profile: {content.contentBody.profileUpdate.name ?? ''}]</div>;
+    case 'identity': {
+      const id = content.contentBody.identity.id?.value;
+      const idHex = id
+        ? Array.from(id.slice(0, 12)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        : '?';
+      return <div style={{ color: '#f0883e' }}>[identity created: {idHex}...]</div>;
+    }
+    case 'identityIssue': {
+      const key = content.contentBody.identityIssue.publicKey?.key;
+      const keyHex = key
+        ? Array.from(key.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        : '?';
+      return <div style={{ color: '#f0883e' }}>[identity issued to: {keyHex}...]</div>;
+    }
+    case 'identityRevoke': {
+      const key = content.contentBody.identityRevoke.publicKey?.key;
+      const keyHex = key
+        ? Array.from(key.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        : '?';
+      return <div style={{ color: '#f85149' }}>[identity revoked: {keyHex}...]</div>;
+    }
     default:
       return <div style={{ color: '#484f58' }}>[unknown]</div>;
   }

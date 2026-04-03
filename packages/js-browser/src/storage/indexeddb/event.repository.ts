@@ -174,6 +174,80 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
+  async getEventsByStream(
+    publicKey: Uint8Array,
+    streamId: string,
+  ): Promise<v2.SignedEvent[]> {
+    try {
+      const pubKeyHex = bytesToHex(publicKey);
+
+      const transaction = this.database.createTransaction(
+        IndexedDBEventRepository.STORE_NAME,
+        'readonly',
+      );
+      const store = transaction.objectStore(
+        IndexedDBEventRepository.STORE_NAME,
+      );
+
+      const range = IDBKeyRange.bound(
+        [pubKeyHex, streamId, 0],
+        [pubKeyHex, streamId, Number.MAX_SAFE_INTEGER],
+      );
+
+      const results =
+        await IndexedDBDatabase.requestAsPromise<PersistedEvent[]>(
+          store.getAll(range),
+        );
+
+      return results.map((row) => this.toSignedEvent(row));
+    } catch (error) {
+      throw new DatabaseError('Failed to get events by stream: ', error);
+    }
+  }
+
+  async getLatestEvent(
+    publicKey: Uint8Array,
+    streamId: string,
+  ): Promise<v2.SignedEvent | null> {
+    try {
+      const pubKeyHex = bytesToHex(publicKey);
+
+      const transaction = this.database.createTransaction(
+        IndexedDBEventRepository.STORE_NAME,
+        'readonly',
+      );
+      const store = transaction.objectStore(
+        IndexedDBEventRepository.STORE_NAME,
+      );
+
+      const range = IDBKeyRange.bound(
+        [pubKeyHex, streamId, 0],
+        [pubKeyHex, streamId, Number.MAX_SAFE_INTEGER],
+      );
+
+      return new Promise((resolve, reject) => {
+        const request = store.openCursor(range, 'prev');
+
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) {
+            resolve(this.toSignedEvent(cursor.value as PersistedEvent));
+          } else {
+            resolve(null);
+          }
+        };
+
+        request.onerror = () => {
+          reject(
+            new DatabaseError('Failed to get latest event', request.error),
+          );
+        };
+      });
+    } catch (error) {
+      throw new DatabaseError('Failed to get latest event: ', error);
+    }
+  }
+
   async getEventsBatch(
     batchSize: number,
     offset?: number,

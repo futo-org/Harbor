@@ -13,9 +13,14 @@ use crate::util;
 use ::entity::{
     content_block_model as ContentBlockModel,
     content_delete_model as ContentDeleteModel,
-    content_follow_model as ContentFollowModel, content_model as ContentModel,
+    content_follow_model as ContentFollowModel,
+    content_identity_issue_model as ContentIdentityIssueModel,
+    content_identity_model as ContentIdentityModel,
+    content_identity_revoke_model as ContentIdentityRevokeModel,
+    content_model as ContentModel,
     content_post_model as ContentPostModel,
-    content_reaction_model as ContentReactionModel, event_model as EventModel,
+    content_reaction_model as ContentReactionModel,
+    event_model as EventModel,
 };
 use prost::Message;
 use sea_orm::ActiveModelTrait;
@@ -377,6 +382,75 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         // Update display name, avatar, or banner.
         Some(ContentBody::ProfileUpdate(_profile)) => {
             // TODO: save profile update with avatar/banner digests
+        }
+
+        // ── Identity ────────────────────────────────────────
+        // Self-signed identity creation.
+        Some(ContentBody::Identity(identity)) => {
+            let id = identity.id.ok_or_else(|| {
+                Status::invalid_argument("identity missing id")
+            })?;
+            let initial_key = identity.initial_public_key.ok_or_else(|| {
+                Status::invalid_argument(
+                    "identity missing initial_public_key",
+                )
+            })?;
+
+            ContentIdentityModel::ActiveModel {
+                content_id: Set(content_id),
+                identity_id: Set(id.value),
+                initial_public_key_type: Set(initial_key.key_type as i16),
+                initial_public_key: Set(initial_key.key),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── IdentityIssue ───────────────────────────────────
+        // Grant permissions to another public key.
+        Some(ContentBody::IdentityIssue(issue)) => {
+            let key = issue.public_key.ok_or_else(|| {
+                Status::invalid_argument(
+                    "identity_issue missing public_key",
+                )
+            })?;
+
+            let permissions = issue
+                .permissions
+                .iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+
+            ContentIdentityIssueModel::ActiveModel {
+                content_id: Set(content_id),
+                issued_public_key_type: Set(key.key_type as i16),
+                issued_public_key: Set(key.key),
+                permissions: Set(permissions),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
+        }
+
+        // ── IdentityRevoke ──────────────────────────────────
+        // Revoke a public key's permissions.
+        Some(ContentBody::IdentityRevoke(revoke)) => {
+            let key = revoke.public_key.ok_or_else(|| {
+                Status::invalid_argument(
+                    "identity_revoke missing public_key",
+                )
+            })?;
+
+            ContentIdentityRevokeModel::ActiveModel {
+                content_id: Set(content_id),
+                revoked_public_key_type: Set(key.key_type as i16),
+                revoked_public_key: Set(key.key),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
         }
 
         // ── No content body ──────────────────────────────────
