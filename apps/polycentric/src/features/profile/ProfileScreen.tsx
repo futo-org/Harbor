@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Screen, Box } from '@/src/common/components/layouts';
 import { FeedViewer } from '@/src/features/posts';
 import { ProfileHeader } from './ProfileHeader';
@@ -11,10 +11,10 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Routes } from '@/src/common/constants';
+import { webSafeRouterBack } from '@/src/common/navigation/webSafeRouterBack';
 import { Atoms, useTheme } from '@/src/common/theme';
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { publicKey: publicKeyParam } = useLocalSearchParams<{
@@ -35,19 +35,17 @@ export default function ProfileScreen() {
   });
   const edit = useProfileEdit(data.username, data.profile);
 
-  const handlePostPress = useCallback(
-    (postId: string) => {
-      router.replace(Routes.post(postId));
-    },
-    [router],
-  );
+  const handlePostPress = useCallback((postId: string) => {
+    router.replace(Routes.post(postId));
+  }, []);
 
-  const handleAuthorPress = useCallback(
-    (pk: types.PublicKey) => {
-      router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
-    },
-    [router],
-  );
+  const handleAuthorPress = useCallback((pk: types.PublicKey) => {
+    router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
+  }, []);
+
+  const handleBack = useCallback(() => {
+    webSafeRouterBack();
+  }, []);
 
   return (
     <Screen>
@@ -60,7 +58,7 @@ export default function ProfileScreen() {
             theme.palette.background_secondary,
             theme.palette.background_primary,
           ]}
-          onBack={() => router.back()}
+          onBack={handleBack}
         />
         <Box style={[Atoms.flex_1, profileStyles.feedArea]}>
           <Box

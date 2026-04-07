@@ -1,36 +1,35 @@
-import { useState, useEffect } from 'react';
-import { Pressable, ActivityIndicator } from 'react-native';
 import { Box } from '@/src/common/components/layouts';
 import {
   Avatar,
+  Button,
+  PubkeyTag,
   Text,
   TextInput,
-  LinkButton,
-  PubkeyTag,
-  Button,
 } from '@/src/common/components/primitives';
 import {
-  usePolycentric,
-  useCurrentIdentity,
-  useUsername,
-  identiconUrl,
-  truncateName,
   decodePostEvent,
   getPointer,
+  identiconUrl,
+  truncateName,
+  useCurrentIdentity,
+  usePolycentric,
+  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
-import { useSheetContext } from '@/src/common/lib/sheet';
+import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+import { types } from '@polycentric/react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
-  dismiss: () => Promise<void>;
-  onPostCreated: (signedEvent: types.SignedEvent) => void;
+  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
 
 export function ComposeSheetInner({
-  dismiss,
   onPostCreated,
   onAvatarPress,
   replyToEvent,
@@ -40,14 +39,20 @@ export function ComposeSheetInner({
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
-  const { isOpen, setHeader, setFooter } = useSheetContext();
+  const { isOpen, dismissSheet } = useSheetContext();
 
   const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
-  const replyPointer = replyToEvent ? getPointer(client, replyToEvent) : null;
+
+  const replyToEventRef = useRef(replyToEvent);
+  replyToEventRef.current = replyToEvent;
+  const onPostCreatedRef = useRef(onPostCreated);
+  onPostCreatedRef.current = onPostCreated;
   const replyAuthorPubkey =
     replyDecoded?.authorPublicKey ?? types.PublicKey.create();
   const replyAuthorName = useUsername(replyAuthorPubkey);
   const replyContent = replyDecoded?.content ?? '';
+  const replyContentPreview =
+    replyContent.length > 30 ? `${replyContent.slice(0, 30)}…` : replyContent;
 
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -57,21 +62,23 @@ export function ComposeSheetInner({
   const title = isReply ? 'Reply' : 'New Post';
   const canPost = text.trim().length > 0 && !submitting;
 
-  const handleClose = () => {
-    if (!submitting) dismiss();
-  };
+  const handleClose = useCallback(() => {
+    if (!submitting) void dismissSheet();
+  }, [submitting, dismissSheet]);
 
-  const handlePost = async () => {
+  const handlePost = useCallback(async () => {
     if (!text.trim() || submitting) return;
 
     setError(null);
     setSubmitting(true);
     try {
       let reference: types.Reference | undefined;
-      if (replyPointer) {
+      const reply = replyToEventRef.current;
+      if (reply) {
+        const pointer = getPointer(client, reply);
         reference = types.Reference.create({
           referenceType: 2n,
-          reference: types.Pointer.toBinary(replyPointer),
+          reference: types.Pointer.toBinary(pointer),
         });
       }
 
@@ -82,15 +89,14 @@ export function ComposeSheetInner({
       );
       await client.sync();
       setText('');
-      onPostCreated(signedEvent);
-      dismiss();
+      await onPostCreatedRef.current(signedEvent);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [text, submitting, client]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -99,189 +105,172 @@ export function ComposeSheetInner({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    setHeader(
-      <Box
-        style={[
-          Atoms.flex_row,
-          Atoms.justify_between,
-          Atoms.items_center,
-          Atoms.py_md,
-          Atoms.px_lg,
-          {
-            backgroundColor: theme.palette.background_primary,
-            borderBottomWidth: 1,
-            borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          },
-        ]}
-      >
-        <LinkButton
-          title="Cancel"
-          onPress={handleClose}
-          disabled={submitting}
-          color={submitting ? 'neutral_500' : 'primary_500'}
-        />
-        <Text variant="body" fontWeight="semibold">
-          {title}
-        </Text>
-        {submitting ? (
-          <ActivityIndicator size="small" color={theme.palette.primary_500} />
-        ) : (
-          <Button
-            title="Post"
-            onPress={handlePost}
-            variant={canPost ? 'primary' : 'disabled'}
-            size="sm"
-          />
-        )}
-      </Box>,
-    );
-  }, [submitting, canPost, text, title, theme]);
-
-  useEffect(() => {
-    setFooter(
-      <Box
-        style={[
-          Atoms.flex_row,
-          Atoms.justify_end,
-          Atoms.py_md,
-          Atoms.px_lg,
-          {
-            backgroundColor: theme.palette.background_primary,
-            borderTopWidth: 1,
-            borderTopColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            paddingBottom: 24,
-          },
-        ]}
-      >
-        <Text variant="small" color="neutral_500">
-          {text.length}/2000
-        </Text>
-      </Box>,
-    );
-  }, [text.length, theme]);
-
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
     : "What's on your mind?";
 
   return (
-    <Box
-      style={[
-        Atoms.flex_1,
-        {
-          backgroundColor: theme.palette.background_primary,
-          paddingHorizontal: 15,
-          paddingTop: 10,
-          paddingBottom: 16,
-        },
-      ]}
-    >
-      {isReply && (
-        <Box
-          style={[
-            Atoms.p_md,
-            Atoms.rounded_md,
-            {
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-              borderBottomWidth: 1,
-              borderBottomColor: withHexOpacity(
-                theme.palette.neutral_500,
-                '20',
-              ),
-              marginBottom: 10,
-            },
-          ]}
-        >
-          <Text variant="small" color="neutral_500">
-            Replying to {truncateName(replyAuthorName, 20)}
-          </Text>
-          <Text
-            variant="secondary"
-            color="neutral_500"
-            numberOfLines={2}
-            style={{ marginTop: 2 }}
-          >
-            {replyContent}
-          </Text>
-        </Box>
-      )}
-
-      {error && (
-        <Box
-          style={[
-            Atoms.p_md,
-            {
-              borderBottomWidth: 1,
-              borderBottomColor: withHexOpacity(
-                theme.palette.negative_500,
-                '80',
-              ),
-              marginBottom: 10,
-            },
-          ]}
-        >
-          <Text variant="secondary" color="negative_500">
-            {error}
-          </Text>
-        </Box>
-      )}
-
-      <Box style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
-        <Pressable
-          onPress={onAvatarPress}
-          disabled={!onAvatarPress}
-          style={{ marginTop: 3 }}
-        >
-          <Avatar
-            source={avatarUrl ? { uri: avatarUrl } : undefined}
-            size="sm"
-          />
-        </Pressable>
-        <Box style={Atoms.flex_1}>
+    <Box style={[Atoms.flex_1, theme.atoms.bg]}>
+      <SheetHeaderBlock
+        title={title}
+        onClose={handleClose}
+        closeDisabled={submitting}
+        trailing={
+          isWeb ? (
+            <View style={{ minWidth: 80, minHeight: 36 }} />
+          ) : (
+            <Box
+              style={{
+                minWidth: 80,
+                minHeight: 36,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              {submitting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.palette.primary_500}
+                  accessibilityLabel="Posting"
+                />
+              ) : (
+                <Button
+                  title="Post"
+                  onPress={handlePost}
+                  variant={canPost ? 'primary' : 'disabled'}
+                  size="sm"
+                />
+              )}
+            </Box>
+          )
+        }
+      />
+      <Box
+        style={[
+          Atoms.flex_1,
+          {
+            paddingHorizontal: 15,
+            paddingTop: 10,
+            minHeight: 0,
+          },
+        ]}
+      >
+        {isReply && (
           <Box
             style={[
-              Atoms.flex_row,
-              Atoms.gap_xs,
-              { alignItems: 'baseline', marginTop: -1 },
+              Atoms.p_md,
+              Atoms.rounded_md,
+              {
+                minHeight: 64,
+                backgroundColor: withHexOpacity(
+                  theme.palette.neutral_500,
+                  '10',
+                ),
+                borderBottomWidth: 1,
+                borderBottomColor: withHexOpacity(
+                  theme.palette.neutral_500,
+                  '20',
+                ),
+                marginBottom: 10,
+              },
             ]}
           >
-            <Pressable onPress={onAvatarPress} disabled={!onAvatarPress}>
-              <Text
-                variant="secondary"
-                fontWeight="bold"
-                style={{ lineHeight: 18 }}
-              >
-                {truncateName(username, 16)}
-              </Text>
-            </Pressable>
-            {publicKey && (
-              <PubkeyTag
-                publicKey={publicKey}
-                style={{ transform: [{ translateY: 1 }] }}
-              />
-            )}
+            <Text variant="small" style={theme.atoms.text_neutral_high}>
+              Replying to {truncateName(replyAuthorName, 20)}
+            </Text>
+            <Text
+              variant="secondary"
+              numberOfLines={2}
+              style={[theme.atoms.text_neutral_high, { marginTop: 2 }]}
+            >
+              {replyContentPreview}
+            </Text>
           </Box>
-          <TextInput
-            variant="plain"
-            placeholder={placeholder}
-            multiline
-            scrollEnabled
-            autoFocus
-            value={text}
-            onChangeText={setText}
-            disabled={submitting}
-            maxLength={2000}
-            style={{
-              paddingHorizontal: 0,
-              paddingTop: 8,
-              fontSize: 15,
-              minHeight: 180,
-              maxHeight: 280,
-            }}
-          />
+        )}
+
+        {error && (
+          <Box
+            style={[
+              Atoms.p_md,
+              {
+                borderBottomWidth: 1,
+                borderBottomColor: withHexOpacity(
+                  theme.palette.negative_500,
+                  '80',
+                ),
+                marginBottom: 10,
+              },
+            ]}
+          >
+            <Text variant="secondary" color="negative_500">
+              {error}
+            </Text>
+          </Box>
+        )}
+
+        <Box style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
+          <Pressable
+            onPress={onAvatarPress}
+            disabled={!onAvatarPress}
+            style={{ marginTop: 3 }}
+          >
+            <Avatar
+              source={avatarUrl ? { uri: avatarUrl } : undefined}
+              size="sm"
+            />
+          </Pressable>
+          <Box style={Atoms.flex_1}>
+            <Box
+              style={[
+                Atoms.flex_row,
+                Atoms.gap_xs,
+                { alignItems: 'baseline', marginTop: -1 },
+              ]}
+            >
+              <Pressable onPress={onAvatarPress} disabled={!onAvatarPress}>
+                <Text
+                  variant="secondary"
+                  fontWeight="bold"
+                  style={{ lineHeight: 18 }}
+                >
+                  {truncateName(username, 16)}
+                </Text>
+              </Pressable>
+              {publicKey && (
+                <PubkeyTag
+                  publicKey={publicKey}
+                  style={{ transform: [{ translateY: 1 }] }}
+                />
+              )}
+            </Box>
+            <TextInput
+              variant="plain"
+              placeholder={placeholder}
+              multiline
+              scrollEnabled
+              autoFocus
+              value={text}
+              onChangeText={setText}
+              disabled={submitting}
+              maxLength={2000}
+              style={{
+                paddingHorizontal: 0,
+                paddingTop: 8,
+                fontSize: 15,
+                minHeight: 180,
+                maxHeight: 280,
+              }}
+            />
+          </Box>
         </Box>
       </Box>
+      <ComposeSheetFooterBar
+        variant={isWeb ? 'web' : 'native'}
+        charCount={text.length}
+        submitting={submitting}
+        canPost={canPost}
+        onPost={handlePost}
+      />
     </Box>
   );
 }

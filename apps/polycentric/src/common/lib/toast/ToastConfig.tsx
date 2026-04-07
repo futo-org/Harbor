@@ -1,11 +1,15 @@
 import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
 import { Text } from '@/src/common/components/primitives';
 import { useTheme, withHexOpacity, BorderRadius } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { BlurView } from 'expo-blur';
 import Toast, { ToastConfigParams } from 'react-native-toast-message';
+import type { EdgeInsets } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
+
+const WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -97,8 +101,7 @@ export const toastConfig = {
   ),
 };
 
-export function Toasts() {
-  const insets = useSafeAreaInsets();
+function ToastsBody({ insets }: { insets: EdgeInsets }) {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
@@ -123,6 +126,18 @@ export function Toasts() {
   return (
     <Toast config={toastConfig} position="bottom" bottomOffset={bottomOffset} />
   );
+}
+
+function NativeToasts() {
+  const insets = useSafeAreaInsets();
+  return <ToastsBody insets={insets} />;
+}
+
+export function Toasts() {
+  if (isWeb) {
+    return <ToastsBody insets={WEB_INSETS} />;
+  }
+  return <NativeToasts />;
 }
 
 const styles = StyleSheet.create({

@@ -1,14 +1,13 @@
 import { Screen, Box, Text, Button, PageHeader } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 
 export default function SetModerationScreen() {
-  const router = useRouter();
   const { close, finish } = useSignup();
 
   return (
-    <Screen background={{ gradient: 'surround' }}>
+    <Screen>
       <Box style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
         <PageHeader onBack={() => router.back()} onClose={close} />
         <Box style={[Atoms.flex_1, Atoms.gap_sm]}>
