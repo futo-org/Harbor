@@ -1,16 +1,25 @@
+# You can override the included template(s) by including variable overrides
+# SAST customization: https://docs.gitlab.com/user/application_security/sast/#available-cicd-variables
+# Secret Detection customization: https://docs.gitlab.com/user/application_security/secret_detection/pipeline/configure/
+# Dependency Scanning customization: https://docs.gitlab.com/user/application_security/dependency_scanning/#customizing-analyzer-behavior
+# Container Scanning customization: https://docs.gitlab.com/user/application_security/container_scanning/#customizing-analyzer-behavior
+# Note that environment variables can be set in several places
+# See https://docs.gitlab.com/ci/variables/#cicd-variable-precedence
 include:
-  - local: .gitlab/ci/build_rs_core.yml
-  - local: .gitlab/ci/build_js_sdks.yml
-  - local: .gitlab/ci/build_server.yml
-  - local: .gitlab/ci/deploy_pages.yml
-
+- local: ".gitlab/ci/build_rs_core.yml"
+- local: ".gitlab/ci/build_js_sdks.yml"
+- local: ".gitlab/ci/build_server.yml"
+- local: ".gitlab/ci/deploy_pages.yml"
+- template: Security/SAST.gitlab-ci.yml
 stages:
-  - setup
-  - check
-  - build
-  - publish
-  - deploy
-
+- setup
+- check
+- build
+- publish
+- deploy
+- test
 default:
   tags:
-    - dind
+  - dind
+sast:
+  stage: test
