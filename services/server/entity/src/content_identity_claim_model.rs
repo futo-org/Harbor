@@ -7,8 +7,8 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub content_id: i64,
 
-    // The identity being claimed (IdentityId.value)
-    pub claimed_identity_id: Vec<u8>,
+    // Serialized Identity message bytes
+    pub identity_id: Vec<u8>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

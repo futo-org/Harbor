@@ -24,7 +24,7 @@ message Content {
     Block block = 5;
     Reaction reaction = 6;
     ProfileUpdate profile_update = 7;
-    Identity identity = 8;
+    IdentityCreate identity_create = 8;
     IdentityIssue identity_issue = 9;
     IdentityRevoke identity_revoke = 10;
     IdentityClaim identity_claim = 11;
@@ -60,13 +60,13 @@ message Delete {
 }
 
 message Follow {
-  // Identity to follow
-  IdentityId identity = 1;
+  // Serialized Identity message bytes
+  bytes identity = 1;
 }
 
 message Block {
-  // Identity to block
-  IdentityId identity = 1;
+  // Serialized Identity message bytes
+  bytes identity = 1;
 }
 
 enum Opinion {

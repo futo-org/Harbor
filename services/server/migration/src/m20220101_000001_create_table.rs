@@ -1,7 +1,7 @@
 use ::entity::{
     content_blob_model, content_block_model, content_delete_model,
     content_follow_model, content_identity_claim_model,
-    content_identity_issue_model, content_identity_model,
+    content_identity_issue_model, content_identity_create_model,
     content_identity_revoke_model,
     content_image_model, content_model, content_post_model,
     content_profile_update_model, content_reaction_model, event_model,
@@ -51,7 +51,7 @@ impl MigrationTrait for Migration {
         .await?;
         create_entity(manager, &schema, content_image_model::Entity).await?;
         create_entity(manager, &schema, content_blob_model::Entity).await?;
-        create_entity(manager, &schema, content_identity_model::Entity)
+        create_entity(manager, &schema, content_identity_create_model::Entity)
             .await?;
         create_entity(
             manager,
@@ -100,7 +100,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(
                 Table::drop()
-                    .table(content_identity_model::Entity)
+                    .table(content_identity_create_model::Entity)
                     .to_owned(),
             )
             .await?;

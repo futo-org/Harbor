@@ -2,7 +2,7 @@ use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, Event,
-    IdentityId, ListEventsRequest, PublicKey, PutEventsRequest, SignedEvent,
+    ListEventsRequest, PublicKey, PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -168,7 +168,7 @@ impl PolycentricWasm {
     /// # Arguments
     /// * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
     /// * `limit` - Maximum number of events to fetch
-    /// * `identity_id` - Optional identity ID bytes to filter by
+    /// * `identity` - Optional serialized Identity message bytes to filter by
     /// * `stream_id` - Optional stream ID to filter by
     /// * `signed_by` - Optional public key bytes to filter by
     /// * `signed_by_key_type` - Key type for signed_by (required if signed_by is set)
@@ -180,7 +180,7 @@ impl PolycentricWasm {
         &self,
         server_url: &str,
         limit: Option<i32>,
-        identity_id: Option<Vec<u8>>,
+        identity: Option<Vec<u8>>,
         stream_id: Option<String>,
         signed_by: Option<Vec<u8>>,
         signed_by_key_type: Option<i32>,
@@ -190,8 +190,7 @@ impl PolycentricWasm {
         let response = client
             .list_events(ListEventsRequest {
                 limit,
-                identity_id: identity_id
-                    .map(|v| IdentityId { value: v }),
+                identity,
                 stream_id,
                 signed_by: signed_by.map(|key| PublicKey {
                     key_type: signed_by_key_type.unwrap_or(1),

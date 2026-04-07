@@ -11,6 +11,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { PublicKey } from "./identity";
 import { SerializedContent } from "./content";
 import { ContentDigest } from "./content";
 import { EventKey } from "./event_key";
@@ -89,6 +90,24 @@ export interface ListEventsRequest {
      * @generated from protobuf field: optional int32 limit = 1
      */
     limit?: number;
+    /**
+     * Stream ID to return events for
+     *
+     * @generated from protobuf field: optional string stream_id = 2
+     */
+    streamId?: string;
+    /**
+     * Serialized Identity message bytes
+     *
+     * @generated from protobuf field: optional bytes identity = 3
+     */
+    identity?: Uint8Array;
+    /**
+     * Filter events to those signed by this public key
+     *
+     * @generated from protobuf field: optional polycentric.v2.PublicKey signed_by = 4
+     */
+    signedBy?: PublicKey;
 }
 /**
  * @generated from protobuf message polycentric.v2.ListEventsResponse
@@ -302,7 +321,10 @@ export const EventBundle = new EventBundle$Type();
 class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
     constructor() {
         super("polycentric.v2.ListEventsRequest", [
-            { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
+            { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "stream_id", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "identity", kind: "scalar", opt: true, T: 12 /*ScalarType.BYTES*/ },
+            { no: 4, name: "signed_by", kind: "message", T: () => PublicKey }
         ]);
     }
     create(value?: PartialMessage<ListEventsRequest>): ListEventsRequest {
@@ -319,6 +341,15 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
                 case /* optional int32 limit */ 1:
                     message.limit = reader.int32();
                     break;
+                case /* optional string stream_id */ 2:
+                    message.streamId = reader.string();
+                    break;
+                case /* optional bytes identity */ 3:
+                    message.identity = reader.bytes();
+                    break;
+                case /* optional polycentric.v2.PublicKey signed_by */ 4:
+                    message.signedBy = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.signedBy);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -334,6 +365,15 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
         /* optional int32 limit = 1; */
         if (message.limit !== undefined)
             writer.tag(1, WireType.Varint).int32(message.limit);
+        /* optional string stream_id = 2; */
+        if (message.streamId !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.streamId);
+        /* optional bytes identity = 3; */
+        if (message.identity !== undefined)
+            writer.tag(3, WireType.LengthDelimited).bytes(message.identity);
+        /* optional polycentric.v2.PublicKey signed_by = 4; */
+        if (message.signedBy)
+            PublicKey.internalBinaryWrite(message.signedBy, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

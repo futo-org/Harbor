@@ -3,7 +3,8 @@ pub mod proto;
 use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::{
-    content, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, KeyType,
+    content, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, Identity,
+    IdentityClaim, IdentityCreate, IdentityIssue, IdentityPermission, IdentityRevoke, KeyType,
     Post, PublicKey, SerializedContent, SignedEvent,
 };
 use sha2::{Digest, Sha256};
@@ -29,23 +30,19 @@ pub fn generate_signing_key() -> SigningKey {
     SigningKey::generate(&mut rng)
 }
 
-/// Build a signed event bundle with a Post content, using a real ed25519 signature.
-pub fn make_post_bundle(
+/// 2025-01-15T12:00:00Z in milliseconds
+pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
+
+/// Build a signed EventBundle from arbitrary Content.
+fn make_bundle(
     stream_id: &str,
     sequence: u64,
     signing_key: &SigningKey,
-    text: &str,
+    content: Content,
+    created_at: u64,
 ) -> EventBundle {
     let public_key = signing_key.verifying_key();
 
-    let content = Content {
-        content_body: Some(content::ContentBody::Post(Post {
-            text: text.to_string(),
-            reply: None,
-        })),
-    };
-
-    // Serialize the Content message — this is what the digest is computed over
     let content_bytes = prost::Message::encode_to_vec(&content);
     let content_digest = sha256(&content_bytes);
 
@@ -63,7 +60,7 @@ pub fn make_post_bundle(
             r#type: ContentDigestType::Sha256.into(),
             value: content_digest,
         }),
-        created_at: 1000,
+        created_at,
     };
 
     let event_bytes = prost::Message::encode_to_vec(&event);
@@ -76,4 +73,128 @@ pub fn make_post_bundle(
         }),
         serialized_content: Some(SerializedContent { content_bytes }),
     }
+}
+
+/// Build a signed event bundle with a Post content on a feed stream.
+pub fn make_post_bundle(
+    sequence: u64,
+    signing_key: &SigningKey,
+    text: &str,
+    created_at: u64,
+) -> EventBundle {
+    make_bundle(
+        "feed",
+        sequence,
+        signing_key,
+        Content {
+            content_body: Some(content::ContentBody::Post(Post {
+                text: text.to_string(),
+                reply: None,
+            })),
+        },
+        created_at,
+    )
+}
+
+/// Serialize an Identity proto to bytes (used as identity_id everywhere).
+pub fn make_identity_bytes(signing_key: &SigningKey, sequence: u64) -> Vec<u8> {
+    let identity = Identity {
+        public_key: Some(PublicKey {
+            key_type: KeyType::Ed25519.into(),
+            key: signing_key.verifying_key().as_bytes().to_vec(),
+        }),
+        sequence,
+    };
+    prost::Message::encode_to_vec(&identity)
+}
+
+/// Build an IdentityCreate bundle (signed by the identity's creator key).
+pub fn make_identity_create_bundle(
+    sequence: u64,
+    signing_key: &SigningKey,
+    identity_bytes: &[u8],
+    created_at: u64,
+) -> EventBundle {
+    make_bundle(
+        "identity",
+        sequence,
+        signing_key,
+        Content {
+            content_body: Some(content::ContentBody::IdentityCreate(IdentityCreate {
+                identity: identity_bytes.to_vec(),
+            })),
+        },
+        created_at,
+    )
+}
+
+/// Build an IdentityIssue bundle (signed by an authorized key, issues to `target_key`).
+pub fn make_identity_issue_bundle(
+    sequence: u64,
+    signing_key: &SigningKey,
+    identity_bytes: &[u8],
+    target_key: &SigningKey,
+    created_at: u64,
+) -> EventBundle {
+    make_bundle(
+        "identity",
+        sequence,
+        signing_key,
+        Content {
+            content_body: Some(content::ContentBody::IdentityIssue(IdentityIssue {
+                identity: identity_bytes.to_vec(),
+                public_key: Some(PublicKey {
+                    key_type: KeyType::Ed25519.into(),
+                    key: target_key.verifying_key().as_bytes().to_vec(),
+                }),
+                permissions: vec![IdentityPermission::All.into()],
+            })),
+        },
+        created_at,
+    )
+}
+
+/// Build an IdentityClaim bundle (signed by the key claiming membership).
+pub fn make_identity_claim_bundle(
+    sequence: u64,
+    signing_key: &SigningKey,
+    identity_bytes: &[u8],
+    created_at: u64,
+) -> EventBundle {
+    make_bundle(
+        "identity",
+        sequence,
+        signing_key,
+        Content {
+            content_body: Some(content::ContentBody::IdentityClaim(IdentityClaim {
+                identity: identity_bytes.to_vec(),
+            })),
+        },
+        created_at,
+    )
+}
+
+/// Build an IdentityRevoke bundle (signed by an authorized key, revokes `target_key`).
+pub fn make_identity_revoke_bundle(
+    sequence: u64,
+    signing_key: &SigningKey,
+    identity_bytes: &[u8],
+    target_key: &SigningKey,
+    created_at: u64,
+) -> EventBundle {
+    make_bundle(
+        "identity",
+        sequence,
+        signing_key,
+        Content {
+            content_body: Some(content::ContentBody::IdentityRevoke(IdentityRevoke {
+                identity: identity_bytes.to_vec(),
+                public_key: Some(PublicKey {
+                    key_type: KeyType::Ed25519.into(),
+                    key: target_key.verifying_key().as_bytes().to_vec(),
+                }),
+            })),
+        },
+        created_at,
+    )
 }

@@ -23,11 +23,12 @@ import {
   Event as V2Event,
   EventBundle,
   EventKey,
-  Identity as V2Identity,
+  Identity,
   IdentityClaim,
-  IdentityId,
+  IdentityCreate,
   IdentityIssue,
   IdentityPermission,
+  IdentityRevoke,
   ListEventsResponse,
   PutEventsRequest,
   SerializedContent,
@@ -63,7 +64,7 @@ export interface AuthorizedKey {
  */
 export interface IdentityState {
   /** The self-signed identity, or null if none created */
-  identity: V2Identity | null;
+  identity: Identity | null;
   /** Public keys that have been issued permissions (and not revoked) */
   authorizedKeys: AuthorizedKey[];
   /** Full ordered log of identity events for auditability */
@@ -350,11 +351,12 @@ export class PolycentricClient {
       const content = Content.fromBinary(contentBytes);
 
       switch (content.contentBody.oneofKind) {
-        case 'identity': {
-          state.identity = content.contentBody.identity;
-          const idHex = content.contentBody.identity.id?.value
-            ? this.toHex(content.contentBody.identity.id.value, 12)
-            : '?';
+        case 'identityCreate': {
+          const identityBytes = content.contentBody.identityCreate.identity;
+          state.identity = identityBytes.length > 0
+            ? Identity.fromBinary(identityBytes)
+            : null;
+          const idHex = this.toHex(identityBytes, 12);
           state.eventLog.push({
             sequence, createdAt, signatureValid,
             type: 'identity',
@@ -408,7 +410,7 @@ export class PolycentricClient {
 
         case 'identityClaim': {
           const claim = content.contentBody.identityClaim;
-          const claimedIdBytes = claim.identity?.value;
+          const claimedIdBytes = claim.identity;
           const claimedIdHex = claimedIdBytes
             ? this.toHex(claimedIdBytes, 12)
             : '?';
@@ -457,8 +459,8 @@ export class PolycentricClient {
 
     // Second pass: check if any issued (unclaimed) keys have published
     // IdentityClaim events on their own identity streams
-    if (state.identity?.id?.value) {
-      const identityIdBytes = state.identity.id.value;
+    if (state.identity) {
+      const identityIdBytes = Identity.toBinary(state.identity);
 
       for (const ak of state.authorizedKeys) {
         if (ak.claimed) continue;
@@ -481,9 +483,9 @@ export class PolycentricClient {
             const theirContent = Content.fromBinary(theirContentBytes);
             if (
               theirContent.contentBody.oneofKind === 'identityClaim' &&
-              theirContent.contentBody.identityClaim.identity?.value &&
+              theirContent.contentBody.identityClaim.identity.length > 0 &&
               this.bytesEqual(
-                theirContent.contentBody.identityClaim.identity.value,
+                theirContent.contentBody.identityClaim.identity,
                 identityIdBytes,
               )
             ) {
@@ -538,7 +540,7 @@ export class PolycentricClient {
    */
   private async resolveIdentityById(
     identityId: Uint8Array,
-  ): Promise<{ identity: V2Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } | null> {
+  ): Promise<{ identity: Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } | null> {
     // Scan all events to find the Identity event with this ID
     const allEvents = await this.storage.events.getAllEvents();
 
@@ -554,10 +556,10 @@ export class PolycentricClient {
         if (!contentBytes) continue;
 
         const content = Content.fromBinary(contentBytes);
-        if (content.contentBody.oneofKind !== 'identity') continue;
+        if (content.contentBody.oneofKind !== 'identityCreate') continue;
 
-        const identity = content.contentBody.identity;
-        if (!identity.id?.value || !this.bytesEqual(identity.id.value, identityId)) continue;
+        const idBytes = content.contentBody.identityCreate.identity;
+        if (!idBytes.length || !this.bytesEqual(idBytes, identityId)) continue;
 
         // Found the issuer. Replay their full identity stream.
         const issuerKey = event.key?.signedBy?.key;
@@ -568,8 +570,8 @@ export class PolycentricClient {
           STREAM_ID.IDENTITY,
         );
 
-        const result: { identity: V2Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } = {
-          identity,
+        const result: { identity: Identity; authorizedKeys: AuthorizedKey[]; eventLog: IdentityEvent[] } = {
+          identity: Identity.fromBinary(idBytes),
           authorizedKeys: [],
           eventLog: [],
         };
@@ -593,9 +595,10 @@ export class PolycentricClient {
           const c = Content.fromBinary(cb);
 
           switch (c.contentBody.oneofKind) {
-            case 'identity': {
-              const idHex = c.contentBody.identity.id?.value
-                ? this.toHex(c.contentBody.identity.id.value, 12)
+            case 'identityCreate': {
+              const idBytes = c.contentBody.identityCreate.identity;
+              const idHex = idBytes.length > 0
+                ? this.toHex(idBytes, 12)
                 : '?';
               result.eventLog.push({
                 sequence: seq, createdAt: created, signatureValid: sigValid,
@@ -652,44 +655,43 @@ export class PolycentricClient {
   /**
    * Creates a new v2 Identity by self-signing the current public key.
    *
-   * The IdentityId is the ed25519 signature of the public key bytes,
-   * signed by the private key. This is published as an event on the
-   * 'identity' stream.
+   * Creates a deterministic identity from the current key pair.
+   * The Identity is { public_key, sequence } of the creation event.
+   * The serialized Identity bytes are the identity identifier everywhere.
    *
-   * @returns The created Identity proto and the signed event
+   * @returns The serialized identity bytes and the signed event
    */
-  async createIdentity(): Promise<{ identity: V2Identity; signedEvent: SignedEvent }> {
+  async createIdentity(): Promise<{ identityBytes: Uint8Array; signedEvent: SignedEvent }> {
     if (!this.currentKeyPair) {
       throw new Error('No active key pair');
     }
 
     const publicKeyBytes = this.currentKeyPair.publicKey.key;
 
-    // Self-sign: sign the public key bytes to produce the IdentityId
-    const idSignature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      publicKeyBytes,
-      this.currentKeyPair.keyType,
-    );
-
-    const identity = V2Identity.create({
-      id: IdentityId.create({ value: idSignature }),
-      initialPublicKey: {
-        keyType: Number(this.currentKeyPair.keyType),
-        key: publicKeyBytes,
-      },
-    });
-
-    const content = Content.create({
-      contentBody: { oneofKind: 'identity', identity },
-    });
-    const contentBytes = Content.toBinary(content);
-    const contentHash = sha256(contentBytes);
-
     const sequence = await this.storage.events.getNextSequence(
       publicKeyBytes,
       STREAM_ID.IDENTITY,
     );
+
+    // Build the deterministic Identity and serialize it
+    const identity = Identity.create({
+      publicKey: {
+        keyType: Number(this.currentKeyPair.keyType),
+        key: publicKeyBytes,
+      },
+      sequence,
+    });
+    const identityBytes = Identity.toBinary(identity);
+
+    const identityCreate = IdentityCreate.create({
+      identity: identityBytes,
+    });
+
+    const content = Content.create({
+      contentBody: { oneofKind: 'identityCreate', identityCreate },
+    });
+    const contentBytes = Content.toBinary(content);
+    const contentHash = sha256(contentBytes);
 
     const event = V2Event.create({
       key: EventKey.create({
@@ -711,7 +713,7 @@ export class PolycentricClient {
     await this.storage.content.putContent(contentHash, contentBytes);
     const signedEvent = await this.createEvent(V2Event.toBinary(event));
 
-    return { identity, signedEvent };
+    return { identityBytes, signedEvent };
   }
 
   /**
@@ -724,6 +726,7 @@ export class PolycentricClient {
    * @returns The signed event
    */
   async issueIdentity(
+    identityBytes: Uint8Array,
     targetPublicKey: Uint8Array,
     targetKeyType: number = 1,
     permissions: IdentityPermission[] = [IdentityPermission.ALL],
@@ -735,6 +738,7 @@ export class PolycentricClient {
     const publicKeyBytes = this.currentKeyPair.publicKey.key;
 
     const issue = IdentityIssue.create({
+      identity: identityBytes,
       publicKey: { keyType: targetKeyType, key: targetPublicKey },
       permissions,
     });
@@ -775,10 +779,10 @@ export class PolycentricClient {
    * Claims an identity that was issued to the current key via IdentityIssue.
    * Completes the two-sided handshake: IdentityIssue (by issuer) + IdentityClaim (by this key).
    *
-   * @param identityId - The IdentityId value of the identity to claim
+   * @param identityBytes - Serialized Identity message bytes
    * @returns The signed event
    */
-  async claimIdentity(identityId: Uint8Array): Promise<SignedEvent> {
+  async claimIdentity(identityBytes: Uint8Array): Promise<SignedEvent> {
     if (!this.currentKeyPair) {
       throw new Error('No active key pair');
     }
@@ -786,11 +790,67 @@ export class PolycentricClient {
     const publicKeyBytes = this.currentKeyPair.publicKey.key;
 
     const claim = IdentityClaim.create({
-      identity: IdentityId.create({ value: identityId }),
+      identity: identityBytes,
     });
 
     const content = Content.create({
       contentBody: { oneofKind: 'identityClaim', identityClaim: claim },
+    });
+    const contentBytes = Content.toBinary(content);
+    const contentHash = sha256(contentBytes);
+
+    const sequence = await this.storage.events.getNextSequence(
+      publicKeyBytes,
+      STREAM_ID.IDENTITY,
+    );
+
+    const event = V2Event.create({
+      key: EventKey.create({
+        streamId: STREAM_ID.IDENTITY,
+        signedBy: {
+          keyType: Number(this.currentKeyPair.keyType),
+          key: publicKeyBytes,
+        },
+        sequence,
+      }),
+      previousSignature: new Uint8Array(0),
+      contentDigest: ContentDigest.create({
+        type: ContentDigestType.SHA256,
+        value: contentHash,
+      }),
+      createdAt: BigInt(Date.now()),
+    });
+
+    await this.storage.content.putContent(contentHash, contentBytes);
+    return this.createEvent(V2Event.toBinary(event));
+  }
+
+  /**
+   * Revokes a public key's permissions under a specific identity.
+   *
+   * @param identityBytes - Serialized Identity message bytes
+   * @param targetPublicKey - The public key bytes to revoke
+   * @param targetKeyType - The key type of the target key
+   * @returns The signed event
+   */
+  async revokeIdentity(
+    identityBytes: Uint8Array,
+    targetPublicKey: Uint8Array,
+    targetKeyType: number = 1,
+  ): Promise<SignedEvent> {
+    if (!this.currentKeyPair) {
+      throw new Error('No active key pair');
+    }
+
+    const publicKeyBytes = this.currentKeyPair.publicKey.key;
+
+    const revoke = IdentityRevoke.create({
+      identity: identityBytes,
+      publicKey: { keyType: targetKeyType, key: targetPublicKey },
+    });
+
+    const content = Content.create({
+      contentBody: { oneofKind: 'identityRevoke', identityRevoke: revoke },
     });
     const contentBytes = Content.toBinary(content);
     const contentHash = sha256(contentBytes);

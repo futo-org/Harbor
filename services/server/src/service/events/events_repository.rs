@@ -12,7 +12,7 @@ impl Query {
         mut limit: Option<u64>,
         stream_id: Option<String>,
         identity_id: Option<Vec<u8>>,
-        signed_by: Option<(i16, Vec<u8>)>,
+        signed_by: Option<crate::service::proto::PublicKey>,
     ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr>
     {
         if limit > Some(200) {
@@ -44,9 +44,9 @@ impl Query {
             query = query.filter(EventModel::Column::StreamId.eq(stream_id));
         }
 
-        if let Some(id_bytes) = identity_id {
+        if let Some(id) = identity_id {
             let authorized_keys =
-                IdentityRepository::Query::authorized_keys(db, &id_bytes)
+                IdentityRepository::Query::authorized_keys(db, &id)
                     .await?;
 
             if authorized_keys.is_empty() {
@@ -54,23 +54,27 @@ impl Query {
             }
 
             let mut key_condition = Condition::any();
-            for (key_type, key_bytes) in &authorized_keys {
-                key_condition = key_condition.add(
-                    Condition::all()
-                        .add(EventModel::Column::PublicKeyType.eq(*key_type))
-                        .add(
-                            EventModel::Column::PublicKey.eq(key_bytes.clone()),
-                        ),
-                );
+            for ak in &authorized_keys {
+                let mut cond = Condition::all()
+                    .add(EventModel::Column::PublicKeyType.eq(ak.key.key_type as i16))
+                    .add(EventModel::Column::PublicKey.eq(ak.key.key.clone()));
+
+                // If this key was revoked, only include events created before
+                // the revocation time.
+                if let Some(revoked_at) = ak.revoked_at {
+                    cond = cond.add(EventModel::Column::CreatedAt.lt(revoked_at));
+                }
+
+                key_condition = key_condition.add(cond);
             }
             query = query.filter(key_condition);
         }
 
-        if let Some((key_type, key_bytes)) = signed_by {
+        if let Some(pk) = signed_by {
             query = query.filter(
                 Condition::all()
-                    .add(EventModel::Column::PublicKeyType.eq(key_type))
-                    .add(EventModel::Column::PublicKey.eq(key_bytes)),
+                    .add(EventModel::Column::PublicKeyType.eq(pk.key_type as i16))
+                    .add(EventModel::Column::PublicKey.eq(pk.key)),
             );
         }
 

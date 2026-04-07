@@ -33,8 +33,8 @@ export const EventCard = ({ e }: { e: DecodedEvent }) => (
       <div>
         <span style={{ color: '#484f58' }}>key</span>{' '}
         {e.event.key?.signedBy?.key
-          ? Array.from(e.event.key.signedBy.key.slice(0, 6))
-              .map((b) => b.toString(16).padStart(2, '0'))
+          ? [...e.event.key.signedBy.key.slice(0, 6)]
+              .map((b: number) => b.toString(16).padStart(2, '0'))
               .join('')
           : '-'}
       </div>
@@ -70,31 +70,31 @@ const ContentDisplay = ({ content }: { content?: v2.Content }) => {
       return <div>{content.contentBody.reaction.emoji ?? '[reaction]'}</div>;
     case 'profileUpdate':
       return <div style={{ color: '#d2a8ff' }}>[profile: {content.contentBody.profileUpdate.name ?? ''}]</div>;
-    case 'identity': {
-      const id = content.contentBody.identity.id?.value;
-      const idHex = id
-        ? Array.from(id.slice(0, 12)).map((b) => b.toString(16).padStart(2, '0')).join('')
+    case 'identityCreate': {
+      const idBytes = content.contentBody.identityCreate.identity;
+      const idHex = idBytes.length > 0
+        ? [...idBytes.slice(0, 12)].map((b: number) => b.toString(16).padStart(2, '0')).join('')
         : '?';
       return <div style={{ color: '#f0883e' }}>[identity created: {idHex}...]</div>;
     }
     case 'identityIssue': {
       const key = content.contentBody.identityIssue.publicKey?.key;
       const keyHex = key
-        ? Array.from(key.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        ? [...key.slice(0, 8)].map((b: number) => b.toString(16).padStart(2, '0')).join('')
         : '?';
       return <div style={{ color: '#f0883e' }}>[identity issued to: {keyHex}...]</div>;
     }
     case 'identityRevoke': {
       const key = content.contentBody.identityRevoke.publicKey?.key;
       const keyHex = key
-        ? Array.from(key.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('')
+        ? [...key.slice(0, 8)].map((b: number) => b.toString(16).padStart(2, '0')).join('')
         : '?';
       return <div style={{ color: '#f85149' }}>[identity revoked: {keyHex}...]</div>;
     }
     case 'identityClaim': {
-      const id = content.contentBody.identityClaim.identity?.value;
-      const idHex = id
-        ? Array.from(id.slice(0, 12)).map((b) => b.toString(16).padStart(2, '0')).join('')
+      const idBytes = content.contentBody.identityClaim.identity;
+      const idHex = idBytes.length > 0
+        ? [...idBytes.slice(0, 12)].map((b: number) => b.toString(16).padStart(2, '0')).join('')
         : '?';
       return <div style={{ color: '#58a6ff' }}>[identity claimed: {idHex}...]</div>;
     }

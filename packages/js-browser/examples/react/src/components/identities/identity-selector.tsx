@@ -2,6 +2,7 @@ import {
   KEY_TYPE,
   type KeyPair,
   type IdentityState,
+  v2,
 } from '@polycentric/js-core';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { keyPairsAreEqual } from '../../utils/misc';
@@ -48,8 +49,8 @@ export const IdentitySelector = () => {
   const currentIdentifier =
     client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
 
-  const identityIdHex = identityState.identity?.id?.value
-    ? toHex(identityState.identity.id.value)
+  const identityIdHex = identityState.identity
+    ? toHex(v2.Identity.toBinary(identityState.identity))
     : null;
 
   const mono = {
@@ -123,7 +124,35 @@ export const IdentitySelector = () => {
                   {ak.claimed ? 'claimed' : 'pending'}
                 </span>
               </div>
-              <div style={{ ...mono, color: '#8b949e' }}>{toHex(ak.key)}</div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 6,
+                }}
+              >
+                <div style={{ ...mono, color: '#8b949e' }}>{toHex(ak.key)}</div>
+                <button
+                  onClick={async () => {
+                    setInputEnabled(false);
+                    setStatus('Revoking key...');
+                    try {
+                      const identityBytes = v2.Identity.toBinary(identityState.identity!);
+                      await client.revokeIdentity(identityBytes, ak.key);
+                      await loadIdentities();
+                      setStatus('Key revoked');
+                    } catch (error) {
+                      setStatus(`Revoke failed: ${error}`);
+                    }
+                    setInputEnabled(true);
+                  }}
+                  disabled={!inputEnabled}
+                  style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                >
+                  Revoke
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -262,7 +291,8 @@ export const IdentitySelector = () => {
                 const keyBytes = new Uint8Array(
                   issueKeyHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
                 );
-                await client.issueIdentity(keyBytes);
+                const identityBytes = v2.Identity.toBinary(identityState.identity!);
+                await client.issueIdentity(identityBytes, keyBytes);
                 await loadIdentities();
                 setIssueKeyHex('');
                 setStatus('Identity issued');

@@ -11,12 +11,11 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-import { IdentityId } from "./identity";
 import { EventKey } from "./event_key";
 import { IdentityClaim } from "./identity";
 import { IdentityRevoke } from "./identity";
 import { IdentityIssue } from "./identity";
-import { Identity } from "./identity";
+import { IdentityCreate } from "./identity";
 /**
  * @generated from protobuf message polycentric.v2.ContentDigest
  */
@@ -78,11 +77,11 @@ export interface Content {
          */
         profileUpdate: ProfileUpdate;
     } | {
-        oneofKind: "identity";
+        oneofKind: "identityCreate";
         /**
-         * @generated from protobuf field: polycentric.v2.Identity identity = 8
+         * @generated from protobuf field: polycentric.v2.IdentityCreate identity_create = 8
          */
-        identity: Identity;
+        identityCreate: IdentityCreate;
     } | {
         oneofKind: "identityIssue";
         /**
@@ -169,22 +168,22 @@ export interface Delete {
  */
 export interface Follow {
     /**
-     * Identity to follow
+     * Serialized Identity message bytes
      *
-     * @generated from protobuf field: polycentric.v2.IdentityId identity = 1
+     * @generated from protobuf field: bytes identity = 1
      */
-    identity?: IdentityId;
+    identity: Uint8Array;
 }
 /**
  * @generated from protobuf message polycentric.v2.Block
  */
 export interface Block {
     /**
-     * Identity to block
+     * Serialized Identity message bytes
      *
-     * @generated from protobuf field: polycentric.v2.IdentityId identity = 1
+     * @generated from protobuf field: bytes identity = 1
      */
-    identity?: IdentityId;
+    identity: Uint8Array;
 }
 /**
  * @generated from protobuf message polycentric.v2.Reaction
@@ -392,7 +391,7 @@ class Content$Type extends MessageType<Content> {
             { no: 5, name: "block", kind: "message", oneof: "contentBody", T: () => Block },
             { no: 6, name: "reaction", kind: "message", oneof: "contentBody", T: () => Reaction },
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
-            { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
+            { no: 8, name: "identity_create", kind: "message", oneof: "contentBody", T: () => IdentityCreate },
             { no: 9, name: "identity_issue", kind: "message", oneof: "contentBody", T: () => IdentityIssue },
             { no: 10, name: "identity_revoke", kind: "message", oneof: "contentBody", T: () => IdentityRevoke },
             { no: 11, name: "identity_claim", kind: "message", oneof: "contentBody", T: () => IdentityClaim }
@@ -446,10 +445,10 @@ class Content$Type extends MessageType<Content> {
                         profileUpdate: ProfileUpdate.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).profileUpdate)
                     };
                     break;
-                case /* polycentric.v2.Identity identity */ 8:
+                case /* polycentric.v2.IdentityCreate identity_create */ 8:
                     message.contentBody = {
-                        oneofKind: "identity",
-                        identity: Identity.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identity)
+                        oneofKind: "identityCreate",
+                        identityCreate: IdentityCreate.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identityCreate)
                     };
                     break;
                 case /* polycentric.v2.IdentityIssue identity_issue */ 9:
@@ -500,9 +499,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.ProfileUpdate profile_update = 7; */
         if (message.contentBody.oneofKind === "profileUpdate")
             ProfileUpdate.internalBinaryWrite(message.contentBody.profileUpdate, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.Identity identity = 8; */
-        if (message.contentBody.oneofKind === "identity")
-            Identity.internalBinaryWrite(message.contentBody.identity, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.IdentityCreate identity_create = 8; */
+        if (message.contentBody.oneofKind === "identityCreate")
+            IdentityCreate.internalBinaryWrite(message.contentBody.identityCreate, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         /* polycentric.v2.IdentityIssue identity_issue = 9; */
         if (message.contentBody.oneofKind === "identityIssue")
             IdentityIssue.internalBinaryWrite(message.contentBody.identityIssue, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
@@ -726,11 +725,12 @@ export const Delete = new Delete$Type();
 class Follow$Type extends MessageType<Follow> {
     constructor() {
         super("polycentric.v2.Follow", [
-            { no: 1, name: "identity", kind: "message", T: () => IdentityId }
+            { no: 1, name: "identity", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
         ]);
     }
     create(value?: PartialMessage<Follow>): Follow {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = new Uint8Array(0);
         if (value !== undefined)
             reflectionMergePartial<Follow>(this, message, value);
         return message;
@@ -740,8 +740,8 @@ class Follow$Type extends MessageType<Follow> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* polycentric.v2.IdentityId identity */ 1:
-                    message.identity = IdentityId.internalBinaryRead(reader, reader.uint32(), options, message.identity);
+                case /* bytes identity */ 1:
+                    message.identity = reader.bytes();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -755,9 +755,9 @@ class Follow$Type extends MessageType<Follow> {
         return message;
     }
     internalBinaryWrite(message: Follow, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.IdentityId identity = 1; */
-        if (message.identity)
-            IdentityId.internalBinaryWrite(message.identity, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* bytes identity = 1; */
+        if (message.identity.length)
+            writer.tag(1, WireType.LengthDelimited).bytes(message.identity);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -772,11 +772,12 @@ export const Follow = new Follow$Type();
 class Block$Type extends MessageType<Block> {
     constructor() {
         super("polycentric.v2.Block", [
-            { no: 1, name: "identity", kind: "message", T: () => IdentityId }
+            { no: 1, name: "identity", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
         ]);
     }
     create(value?: PartialMessage<Block>): Block {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = new Uint8Array(0);
         if (value !== undefined)
             reflectionMergePartial<Block>(this, message, value);
         return message;
@@ -786,8 +787,8 @@ class Block$Type extends MessageType<Block> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* polycentric.v2.IdentityId identity */ 1:
-                    message.identity = IdentityId.internalBinaryRead(reader, reader.uint32(), options, message.identity);
+                case /* bytes identity */ 1:
+                    message.identity = reader.bytes();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -801,9 +802,9 @@ class Block$Type extends MessageType<Block> {
         return message;
     }
     internalBinaryWrite(message: Block, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.IdentityId identity = 1; */
-        if (message.identity)
-            IdentityId.internalBinaryWrite(message.identity, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* bytes identity = 1; */
+        if (message.identity.length)
+            writer.tag(1, WireType.LengthDelimited).bytes(message.identity);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

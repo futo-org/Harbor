@@ -87,10 +87,8 @@ export const RemoteEventList = () => {
           allDecoded.push({
             event,
             content,
-            signaturePrefix: Array.from(
-              bundle.signedEvent.signature.slice(0, 8),
-            )
-              .map((b) => b.toString(16).padStart(2, '0'))
+            signaturePrefix: [...bundle.signedEvent.signature.slice(0, 8)]
+              .map((b: number) => b.toString(16).padStart(2, '0'))
               .join(''),
             signatureValid,
             source: server,
@@ -130,7 +128,7 @@ export const RemoteEventList = () => {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
-              Identity ID (hex)
+              Identity (hex)
             </div>
             <input
               type="text"

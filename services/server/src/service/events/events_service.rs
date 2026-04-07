@@ -16,7 +16,7 @@ use ::entity::{
     content_follow_model as ContentFollowModel,
     content_identity_claim_model as ContentIdentityClaimModel,
     content_identity_issue_model as ContentIdentityIssueModel,
-    content_identity_model as ContentIdentityModel,
+    content_identity_create_model as ContentIdentityModel,
     content_identity_revoke_model as ContentIdentityRevokeModel,
     content_model as ContentModel,
     content_post_model as ContentPostModel,
@@ -43,15 +43,13 @@ impl EventSyncService for EventSyncServiceImpl {
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
         let inner_req = request.into_inner();
-        let limit = inner_req.limit.unwrap_or(10).min(200) as u64;
+        let limit = inner_req.limit.unwrap_or(200).min(200) as u64;
         let stream_id = inner_req.stream_id;
-        let identity_id = inner_req.identity_id.map(|id| id.value);
-        let signed_by = inner_req
-            .signed_by
-            .map(|pk| (pk.key_type as i16, pk.key));
+        let identity = inner_req.identity;
+        let signed_by = inner_req.signed_by;
 
         let events =
-            EventsRepository::Query::list_events(&self.db, Some(limit), stream_id, identity_id, signed_by)
+            EventsRepository::Query::list_events(&self.db, Some(limit), stream_id, identity, signed_by)
                 .await
                 .map_err(|e| {
                     eprintln!("list_events error: {e}");
@@ -127,7 +125,16 @@ impl EventSyncService for EventSyncServiceImpl {
             .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
             let now = time::OffsetDateTime::now_utc();
-            let now = time::PrimitiveDateTime::new(now.date(), now.time());
+            let synced_at = time::PrimitiveDateTime::new(now.date(), now.time());
+
+            let created_at_offset = time::OffsetDateTime::from_unix_timestamp(
+                (event.created_at / 1000) as i64,
+            )
+            .unwrap_or(now);
+            let created_at = time::PrimitiveDateTime::new(
+                created_at_offset.date(),
+                created_at_offset.time(),
+            );
 
             let content_digest = event.content_digest;
 
@@ -168,7 +175,7 @@ impl EventSyncService for EventSyncServiceImpl {
                         serialized_bytes: Set(serialized_content
                             .content_bytes
                             .clone()),
-                        synced_at: Set(now),
+                        synced_at: Set(synced_at),
                     },
                 )
                 .await;
@@ -217,8 +224,8 @@ impl EventSyncService for EventSyncServiceImpl {
                 signature: Set(signed_event.signature),
                 previous_signature: Set(event.previous_signature),
                 event_bytes: Set(signed_event.event_bytes),
-                created_at: Set(now),
-                synced_at: Set(now),
+                created_at: Set(created_at),
+                synced_at: Set(synced_at),
             };
 
             // Add the event to the database, skipping duplicates
@@ -350,15 +357,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── Follow ───────────────────────────────────────────
-        // Follow an identity by its IdentityId.
         Some(ContentBody::Follow(follow)) => {
-            let identity = follow.identity.ok_or_else(|| {
-                Status::invalid_argument("follow content missing identity")
-            })?;
-
             ContentFollowModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(identity.value),
+                identity_id: Set(follow.identity),
             }
             .insert(db)
             .await
@@ -366,15 +368,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── Block ────────────────────────────────────────────
-        // Block an identity by its IdentityId.
         Some(ContentBody::Block(block)) => {
-            let identity = block.identity.ok_or_else(|| {
-                Status::invalid_argument("block content missing identity")
-            })?;
-
             ContentBlockModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(identity.value),
+                identity_id: Set(block.identity),
             }
             .insert(db)
             .await
@@ -411,23 +408,11 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             // TODO: save profile update with avatar/banner digests
         }
 
-        // ── Identity ────────────────────────────────────────
-        // Self-signed identity creation.
-        Some(ContentBody::Identity(identity)) => {
-            let id = identity.id.ok_or_else(|| {
-                Status::invalid_argument("identity missing id")
-            })?;
-            let initial_key = identity.initial_public_key.ok_or_else(|| {
-                Status::invalid_argument(
-                    "identity missing initial_public_key",
-                )
-            })?;
-
+        // ── IdentityCreate ───────────────────────────────────
+        Some(ContentBody::IdentityCreate(create)) => {
             ContentIdentityModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(id.value),
-                initial_public_key_type: Set(initial_key.key_type as i16),
-                initial_public_key: Set(initial_key.key),
+                identity_id: Set(create.identity),
             }
             .insert(db)
             .await
@@ -435,7 +420,6 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── IdentityIssue ───────────────────────────────────
-        // Grant permissions to another public key.
         Some(ContentBody::IdentityIssue(issue)) => {
             let key = issue.public_key.ok_or_else(|| {
                 Status::invalid_argument(
@@ -452,6 +436,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentIdentityIssueModel::ActiveModel {
                 content_id: Set(content_id),
+                identity_id: Set(issue.identity),
                 issued_public_key_type: Set(key.key_type as i16),
                 issued_public_key: Set(key.key),
                 permissions: Set(permissions),
@@ -462,7 +447,6 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── IdentityRevoke ──────────────────────────────────
-        // Revoke a public key's permissions.
         Some(ContentBody::IdentityRevoke(revoke)) => {
             let key = revoke.public_key.ok_or_else(|| {
                 Status::invalid_argument(
@@ -472,6 +456,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentIdentityRevokeModel::ActiveModel {
                 content_id: Set(content_id),
+                identity_id: Set(revoke.identity),
                 revoked_public_key_type: Set(key.key_type as i16),
                 revoked_public_key: Set(key.key),
             }
@@ -481,17 +466,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── IdentityClaim ────────────────────────────────────
-        // Recipient accepts an issued identity (completes the handshake).
         Some(ContentBody::IdentityClaim(claim)) => {
-            let id = claim.identity.ok_or_else(|| {
-                Status::invalid_argument(
-                    "identity_claim missing identity",
-                )
-            })?;
-
             ContentIdentityClaimModel::ActiveModel {
                 content_id: Set(content_id),
-                claimed_identity_id: Set(id.value),
+                identity_id: Set(claim.identity),
             }
             .insert(db)
             .await

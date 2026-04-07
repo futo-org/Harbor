@@ -7,6 +7,9 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub content_id: i64,
 
+    // Serialized Identity message bytes
+    pub identity_id: Vec<u8>,
+
     // The public key being issued permissions
     pub issued_public_key_type: i16,
     pub issued_public_key: Vec<u8>,
