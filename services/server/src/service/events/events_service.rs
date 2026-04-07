@@ -15,13 +15,11 @@ use ::entity::{
     content_delete_model as ContentDeleteModel,
     content_follow_model as ContentFollowModel,
     content_identity_claim_model as ContentIdentityClaimModel,
-    content_identity_issue_model as ContentIdentityIssueModel,
     content_identity_create_model as ContentIdentityModel,
+    content_identity_issue_model as ContentIdentityIssueModel,
     content_identity_revoke_model as ContentIdentityRevokeModel,
-    content_model as ContentModel,
-    content_post_model as ContentPostModel,
-    content_reaction_model as ContentReactionModel,
-    event_model as EventModel,
+    content_model as ContentModel, content_post_model as ContentPostModel,
+    content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
 use prost::Message;
 use sea_orm::ActiveModelTrait;
@@ -48,13 +46,18 @@ impl EventSyncService for EventSyncServiceImpl {
         let identity = inner_req.identity;
         let signed_by = inner_req.signed_by;
 
-        let events =
-            EventsRepository::Query::list_events(&self.db, Some(limit), stream_id, identity, signed_by)
-                .await
-                .map_err(|e| {
-                    eprintln!("list_events error: {e}");
-                    Status::internal("internal server error")
-                })?;
+        let events = EventsRepository::Query::list_events(
+            &self.db,
+            Some(limit),
+            stream_id,
+            identity,
+            signed_by,
+        )
+        .await
+        .map_err(|e| {
+            eprintln!("list_events error: {e}");
+            Status::internal("internal server error")
+        })?;
 
         // Turn the events into event bundles
         let mut event_bundles: Vec<EventBundle> = vec![];
@@ -125,7 +128,8 @@ impl EventSyncService for EventSyncServiceImpl {
             .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
             let now = time::OffsetDateTime::now_utc();
-            let synced_at = time::PrimitiveDateTime::new(now.date(), now.time());
+            let synced_at =
+                time::PrimitiveDateTime::new(now.date(), now.time());
 
             let created_at_offset = time::OffsetDateTime::from_unix_timestamp(
                 (event.created_at / 1000) as i64,
@@ -182,23 +186,15 @@ impl EventSyncService for EventSyncServiceImpl {
 
                 match content_result {
                     Ok(content_row) => {
-                        save_content_child(
-                            &txn,
-                            content_row.id,
-                            content,
-                        )
-                        .await?;
+                        save_content_child(&txn, content_row.id, content)
+                            .await?;
                     }
-                    Err(ref e)
-                        if Self::is_unique_violation(e) =>
-                    {
+                    Err(ref e) if Self::is_unique_violation(e) => {
                         // Content already exists, skip
                     }
                     Err(e) => {
                         eprintln!("sync_events content db error: {e}");
-                        return Err(Status::internal(
-                            "internal server error",
-                        ));
+                        return Err(Status::internal("internal server error"));
                     }
                 }
 
@@ -229,11 +225,8 @@ impl EventSyncService for EventSyncServiceImpl {
             };
 
             // Add the event to the database, skipping duplicates
-            match EventsRepository::Mutation::add_event(
-                &self.db,
-                active_model,
-            )
-            .await
+            match EventsRepository::Mutation::add_event(&self.db, active_model)
+                .await
             {
                 Ok(_) => {}
                 Err(ref e) if Self::is_unique_violation(e) => {
@@ -256,10 +249,10 @@ impl EventSyncServiceImpl {
             sea_orm::DbErr::Query(e) | sea_orm::DbErr::Exec(e) => Some(e),
             _ => None,
         };
-        if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err {
-            if let Some(db_err) = arc_err.as_database_error() {
-                return db_err.is_unique_violation();
-            }
+        if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err
+            && let Some(db_err) = arc_err.as_database_error()
+        {
+            return db_err.is_unique_violation();
         }
         false
     }
@@ -422,9 +415,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         // ── IdentityIssue ───────────────────────────────────
         Some(ContentBody::IdentityIssue(issue)) => {
             let key = issue.public_key.ok_or_else(|| {
-                Status::invalid_argument(
-                    "identity_issue missing public_key",
-                )
+                Status::invalid_argument("identity_issue missing public_key")
             })?;
 
             let permissions = issue
@@ -449,9 +440,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         // ── IdentityRevoke ──────────────────────────────────
         Some(ContentBody::IdentityRevoke(revoke)) => {
             let key = revoke.public_key.ok_or_else(|| {
-                Status::invalid_argument(
-                    "identity_revoke missing public_key",
-                )
+                Status::invalid_argument("identity_revoke missing public_key")
             })?;
 
             ContentIdentityRevokeModel::ActiveModel {

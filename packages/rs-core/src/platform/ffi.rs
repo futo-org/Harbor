@@ -68,17 +68,13 @@ pub extern "C" fn verify_signed_event_v2(signed_event_bytes: CBuffer) -> CBuffer
 
 /// Decode the Event from a v2 SignedEvent's event_bytes field.
 #[no_mangle]
-pub extern "C" fn decode_event_from_signed_event_v2(
-    signed_event_bytes: CBuffer,
-) -> CBuffer {
+pub extern "C" fn decode_event_from_signed_event_v2(signed_event_bytes: CBuffer) -> CBuffer {
     let input = signed_event_bytes.as_slice();
     match SignedEvent::decode(input) {
-        Ok(signed_event) => {
-            match Event::decode(signed_event.event_bytes.as_slice()) {
-                Ok(event) => CBuffer::from_vec(Message::encode_to_vec(&event)),
-                Err(e) => CBuffer::error(&format!("Failed to decode event: {e}")),
-            }
-        }
+        Ok(signed_event) => match Event::decode(signed_event.event_bytes.as_slice()) {
+            Ok(event) => CBuffer::from_vec(Message::encode_to_vec(&event)),
+            Err(e) => CBuffer::error(&format!("Failed to decode event: {e}")),
+        },
         Err(e) => CBuffer::error(&format!("Failed to decode signed event: {e}")),
     }
 }

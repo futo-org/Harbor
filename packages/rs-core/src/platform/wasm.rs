@@ -1,8 +1,8 @@
 use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
-    event_sync_service_client::EventSyncServiceClient, Event,
-    ListEventsRequest, PublicKey, PutEventsRequest, SignedEvent,
+    event_sync_service_client::EventSyncServiceClient, Event, ListEventsRequest, PublicKey,
+    PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -92,72 +92,43 @@ impl PolycentricWasm {
     ) -> std::result::Result<Uint8Array, JsValue> {
         // Validate event_bytes is a valid Event
         Event::decode(event_bytes).map_err(|e| {
-            PlatformError::DeserializationError(format!(
-                "Invalid event bytes: {}",
-                e
-            ))
+            PlatformError::DeserializationError(format!("Invalid event bytes: {}", e))
         })?;
 
         let sign_promise = sign_event
-            .call1(
-                &JsValue::NULL,
-                &Uint8Array::from(event_bytes),
-            )
-            .map_err(|e| {
-                PlatformError::CallbackError(format!(
-                    "Failed to sign event: {:?}",
-                    e
-                ))
-            })?;
+            .call1(&JsValue::NULL, &Uint8Array::from(event_bytes))
+            .map_err(|e| PlatformError::CallbackError(format!("Failed to sign event: {:?}", e)))?;
 
-        let signed_event_js =
-            JsFuture::from(js_sys::Promise::from(sign_promise))
-                .await
-                .map_err(|e| {
-                    PlatformError::CallbackError(format!(
-                        "Failed to await signed event: {:?}",
-                        e
-                    ))
-                })?;
+        let signed_event_js = JsFuture::from(js_sys::Promise::from(sign_promise))
+            .await
+            .map_err(|e| {
+                PlatformError::CallbackError(format!("Failed to await signed event: {:?}", e))
+            })?;
 
         let signed_event_bytes = signed_event_js
             .dyn_into::<Uint8Array>()
             .map_err(|_| {
                 PlatformError::CallbackError(
-                    "Expected Uint8Array from sign_event callback"
-                        .to_string(),
+                    "Expected Uint8Array from sign_event callback".to_string(),
                 )
             })?
             .to_vec();
 
         // Verify the signature
-        SignedEvent::from_bytes(&signed_event_bytes).map_err(|e| {
-            PlatformError::CryptoError(format!(
-                "Event signature invalid: {:?}",
-                e
-            ))
-        })?;
+        SignedEvent::from_bytes(&signed_event_bytes)
+            .map_err(|e| PlatformError::CryptoError(format!("Event signature invalid: {:?}", e)))?;
 
         // Persist
         let persist_promise = persist_event
-            .call1(
-                &JsValue::NULL,
-                &Uint8Array::from(&signed_event_bytes[..]),
-            )
+            .call1(&JsValue::NULL, &Uint8Array::from(&signed_event_bytes[..]))
             .map_err(|e| {
-                PlatformError::CallbackError(format!(
-                    "Failed to persist event: {:?}",
-                    e
-                ))
+                PlatformError::CallbackError(format!("Failed to persist event: {:?}", e))
             })?;
 
         JsFuture::from(js_sys::Promise::from(persist_promise))
             .await
             .map_err(|e| {
-                PlatformError::CallbackError(format!(
-                    "Failed to await persist event: {:?}",
-                    e
-                ))
+                PlatformError::CallbackError(format!("Failed to await persist event: {:?}", e))
             })?;
 
         Ok(Uint8Array::from(&signed_event_bytes[..]))
@@ -198,9 +169,7 @@ impl PolycentricWasm {
                 }),
             })
             .await
-            .map_err(|e| {
-                JsValue::from_str(&format!("gRPC list_events failed: {}", e))
-            })?;
+            .map_err(|e| JsValue::from_str(&format!("gRPC list_events failed: {}", e)))?;
 
         let bytes = response.into_inner().encode_to_vec();
         Ok(Uint8Array::from(&bytes[..]))
@@ -218,28 +187,21 @@ impl PolycentricWasm {
         event_bundles_bytes: &[u8],
     ) -> std::result::Result<(), JsValue> {
         let request = PutEventsRequest::decode(event_bundles_bytes)
-            .map_err(|e| {
-                JsValue::from_str(&format!(
-                    "Failed to decode PutEventsRequest: {}",
-                    e
-                ))
-            })?;
+            .map_err(|e| JsValue::from_str(&format!("Failed to decode PutEventsRequest: {}", e)))?;
 
         let mut client = Self::create_client(server_url);
 
-        client.put_events(request).await.map_err(|e| {
-            JsValue::from_str(&format!("gRPC put_events failed: {}", e))
-        })?;
+        client
+            .put_events(request)
+            .await
+            .map_err(|e| JsValue::from_str(&format!("gRPC put_events failed: {}", e)))?;
 
         Ok(())
     }
-
 }
 
 impl PolycentricWasm {
-    fn create_client(
-        server_url: &str,
-    ) -> EventSyncServiceClient<GrpcWebClient> {
+    fn create_client(server_url: &str) -> EventSyncServiceClient<GrpcWebClient> {
         let web_client = GrpcWebClient::new(server_url.to_string());
         EventSyncServiceClient::new(web_client)
     }

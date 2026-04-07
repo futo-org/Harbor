@@ -30,8 +30,9 @@ impl Query {
         identity_id: &[u8],
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
         // Decode to extract the initial public key
-        let identity = Identity::decode(identity_id)
-            .map_err(|e| DbErr::Custom(format!("Invalid Identity bytes: {e}")))?;
+        let identity = Identity::decode(identity_id).map_err(|e| {
+            DbErr::Custom(format!("Invalid Identity bytes: {e}"))
+        })?;
         let initial_pk = identity.public_key.ok_or_else(|| {
             DbErr::Custom("Identity missing public_key".into())
         })?;
@@ -76,9 +77,7 @@ impl Query {
                 Alias::new("issuer_key"),
             )
             .from_as(Alias::new("content_identity_create"), ci.clone())
-            .and_where(
-                Expr::col((ci.clone(), id_col.clone())).eq(identity_id),
-            )
+            .and_where(Expr::col((ci.clone(), id_col.clone())).eq(identity_id))
             // claim on this identity (matched by identity_id bytes)
             .join_as(
                 JoinType::LeftJoin,
@@ -103,11 +102,17 @@ impl Query {
                 Condition::all()
                     .add(
                         Expr::col((cc.clone(), Alias::new("digest_type")))
-                            .equals((ce.clone(), Alias::new("content_digest_type"))),
+                            .equals((
+                                ce.clone(),
+                                Alias::new("content_digest_type"),
+                            )),
                     )
                     .add(
                         Expr::col((cc.clone(), Alias::new("digest_bytes")))
-                            .equals((ce.clone(), Alias::new("content_digest_bytes"))),
+                            .equals((
+                                ce.clone(),
+                                Alias::new("content_digest_bytes"),
+                            )),
                     ),
             )
             // issue for this identity where issued key matches the claimer key
@@ -121,12 +126,18 @@ impl Query {
                             .equals((ci.clone(), id_col.clone())),
                     )
                     .add(
-                        Expr::col((iss.clone(), Alias::new("issued_public_key_type")))
-                            .equals((ce.clone(), Alias::new("public_key_type"))),
+                        Expr::col((
+                            iss.clone(),
+                            Alias::new("issued_public_key_type"),
+                        ))
+                        .equals((ce.clone(), Alias::new("public_key_type"))),
                     )
                     .add(
-                        Expr::col((iss.clone(), Alias::new("issued_public_key")))
-                            .equals((ce.clone(), Alias::new("public_key"))),
+                        Expr::col((
+                            iss.clone(),
+                            Alias::new("issued_public_key"),
+                        ))
+                        .equals((ce.clone(), Alias::new("public_key"))),
                     ),
             )
             // issue → content
@@ -145,17 +156,22 @@ impl Query {
                 Condition::all()
                     .add(
                         Expr::col((ic.clone(), Alias::new("digest_type")))
-                            .equals((ie.clone(), Alias::new("content_digest_type"))),
+                            .equals((
+                                ie.clone(),
+                                Alias::new("content_digest_type"),
+                            )),
                     )
                     .add(
                         Expr::col((ic.clone(), Alias::new("digest_bytes")))
-                            .equals((ie.clone(), Alias::new("content_digest_bytes"))),
+                            .equals((
+                                ie.clone(),
+                                Alias::new("content_digest_bytes"),
+                            )),
                     ),
             );
 
         let stmt = db.get_database_backend().build(&query);
-        let rows =
-            IdentityKeyRow::find_by_statement(stmt).all(db).await?;
+        let rows = IdentityKeyRow::find_by_statement(stmt).all(db).await?;
 
         // Resolve: initial key is always authorized, delegated keys are
         // authorized when their issuer is in the authorized set.
@@ -208,7 +224,10 @@ impl Query {
         let mut rev_query = SeaQuery::select();
         rev_query
             .expr_as(
-                Expr::col((revoke.clone(), Alias::new("revoked_public_key_type"))),
+                Expr::col((
+                    revoke.clone(),
+                    Alias::new("revoked_public_key_type"),
+                )),
                 Alias::new("revoked_key_type"),
             )
             .expr_as(
@@ -239,12 +258,24 @@ impl Query {
                 revoke_event.clone(),
                 Condition::all()
                     .add(
-                        Expr::col((revoke_content.clone(), Alias::new("digest_type")))
-                            .equals((revoke_event.clone(), Alias::new("content_digest_type"))),
+                        Expr::col((
+                            revoke_content.clone(),
+                            Alias::new("digest_type"),
+                        ))
+                        .equals((
+                            revoke_event.clone(),
+                            Alias::new("content_digest_type"),
+                        )),
                     )
                     .add(
-                        Expr::col((revoke_content.clone(), Alias::new("digest_bytes")))
-                            .equals((revoke_event.clone(), Alias::new("content_digest_bytes"))),
+                        Expr::col((
+                            revoke_content.clone(),
+                            Alias::new("digest_bytes"),
+                        ))
+                        .equals((
+                            revoke_event.clone(),
+                            Alias::new("content_digest_bytes"),
+                        )),
                     ),
             );
 

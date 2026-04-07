@@ -46,8 +46,7 @@ impl Query {
 
         if let Some(id) = identity_id {
             let authorized_keys =
-                IdentityRepository::Query::authorized_keys(db, &id)
-                    .await?;
+                IdentityRepository::Query::authorized_keys(db, &id).await?;
 
             if authorized_keys.is_empty() {
                 return Ok(vec![]);
@@ -56,13 +55,17 @@ impl Query {
             let mut key_condition = Condition::any();
             for ak in &authorized_keys {
                 let mut cond = Condition::all()
-                    .add(EventModel::Column::PublicKeyType.eq(ak.key.key_type as i16))
+                    .add(
+                        EventModel::Column::PublicKeyType
+                            .eq(ak.key.key_type as i16),
+                    )
                     .add(EventModel::Column::PublicKey.eq(ak.key.key.clone()));
 
                 // If this key was revoked, only include events created before
                 // the revocation time.
                 if let Some(revoked_at) = ak.revoked_at {
-                    cond = cond.add(EventModel::Column::CreatedAt.lt(revoked_at));
+                    cond =
+                        cond.add(EventModel::Column::CreatedAt.lt(revoked_at));
                 }
 
                 key_condition = key_condition.add(cond);
@@ -73,7 +76,10 @@ impl Query {
         if let Some(pk) = signed_by {
             query = query.filter(
                 Condition::all()
-                    .add(EventModel::Column::PublicKeyType.eq(pk.key_type as i16))
+                    .add(
+                        EventModel::Column::PublicKeyType
+                            .eq(pk.key_type as i16),
+                    )
                     .add(EventModel::Column::PublicKey.eq(pk.key)),
             );
         }
