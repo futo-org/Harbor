@@ -7,4 +7,5 @@ members = [
     "services/server/migration",
     "services/server/tests",
 ]
+exclude = ["legacy/"]
 resolver = "2"

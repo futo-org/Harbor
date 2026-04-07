@@ -144,6 +144,18 @@ rs-sdk-build-ios-sim-arm64:
     paths:
       - buildRsCoreIOSSimArm64/binary/*.a
 
+rs-sdk-ios-tart-prune:
+  stage: build
+  extends: .rs-sdk-ios-build
+  needs:
+    - job: rs-sdk-build-ios-device
+      artifacts: false
+    - job: rs-sdk-build-ios-sim-arm64
+      artifacts: false
+  before_script: []
+  script:
+    - tart prune --entries vms --older-than 2
+
 rs-sdk-build-android-arm64:
   extends: .rs-sdk-build-android
   script:

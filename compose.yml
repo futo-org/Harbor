@@ -33,10 +33,10 @@ services:
       retries: 30
       start_period: 15s
 
-  polycentric-server:
+  legacy-server:
     build:
       context: .
-      dockerfile: services/polycentric-server/Dockerfile
+      dockerfile: legacy/services/polycentric-server/Dockerfile
     ports:
       - '127.0.0.1:${POLYCENTRIC_PORT:-8787}:8787'
     environment:
@@ -52,15 +52,15 @@ services:
       opensearch:
         condition: service_healthy
 
-  polycentric-verifiers:
-    build: ./services/verifiers-server
-    working_dir: /app/services/verifiers-server
+  legacy-verifiers:
+    build: ./legacy/services/verifiers-server
+    working_dir: /app/legacy/services/verifiers-server
     volumes:
-      - ../:/app
+      - .:/app
     ports:
       - '127.0.0.1:${VERIFIERS_PORT:-3002}:3002'
     environment:
-      - SERVER_URL=http://polycentric-server:8787
+      - SERVER_URL=http://legacy-server:8787
     command: sh -c "npm install && npx nodemon src/app.ts"
     depends_on:
       postgres:

@@ -1,27 +1,9 @@
 _default:
     @just --list
 
-# Start services without building
-up:
-    docker compose up
-
-# Build and start services
-start:
-    docker compose up --build
-
-# Build images
-build:
-    docker compose build
-
-# Stop services
-down:
-    docker compose down
-
-# Stop services and delete verifiers state
 clean:
-    docker compose down
     rm -rf verifiers-server/state
 
 # Run server tests inside container
 test:
-    docker compose exec polycentric-server cargo test --manifest-path services/polycentric-server/Cargo.toml
+    docker compose -f ../../compose.yml exec legacy-server cargo test

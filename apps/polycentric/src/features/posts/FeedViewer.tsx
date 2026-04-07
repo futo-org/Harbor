@@ -1,0 +1,160 @@
+import { useCallback } from 'react';
+import { RefreshControl, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { Box } from '@/src/common/components/layouts';
+import { Text } from '@/src/common/components/primitives';
+import { PostCardItem } from './PostCardItem';
+import { types } from '@polycentric/react-native';
+import { Atoms, useTheme } from '@/src/common/theme';
+import {
+  usePolycentricContext,
+  eventKey,
+} from '@/src/common/lib/polycentric-hooks';
+import type { PostState } from '@/src/common/lib/polycentric-hooks';
+
+interface FeedViewerProps {
+  items: string[];
+  isLoading: boolean;
+  error: Error | null;
+  onRefresh: () => void;
+  onPostPress: (postId: string) => void;
+  onAuthorPress?: (publicKey: types.PublicKey) => void;
+  onReply?: (signedEvent: types.SignedEvent) => void;
+  onEndReached?: () => void;
+  hasMore?: boolean;
+  bottomPadding?: number;
+  showTopic?: boolean;
+}
+
+export function FeedViewer({
+  items,
+  isLoading,
+  error,
+  onRefresh,
+  onPostPress,
+  onAuthorPress,
+  onReply,
+  onEndReached,
+  hasMore,
+  bottomPadding,
+  showTopic = true,
+}: FeedViewerProps) {
+  const { theme } = useTheme();
+  const { store } = usePolycentricContext();
+  const getPost = useCallback(
+    (postId: string): PostState | undefined => store.getState().posts[postId],
+    [store],
+  );
+
+  const handleReplyingToPress = useCallback(
+    (postId: string) => {
+      const post = getPost(postId);
+      if (!post) return;
+      const { decoded } = post;
+      if (
+        !decoded.parentAuthorPublicKey?.key ||
+        !decoded.parentProcess?.process ||
+        decoded.parentLogicalClock == null
+      )
+        return;
+
+      const parentId = eventKey(
+        decoded.parentAuthorPublicKey.key,
+        decoded.parentProcess.process,
+        decoded.parentLogicalClock,
+      );
+      onPostPress(parentId);
+    },
+    [getPost, onPostPress],
+  );
+
+  const renderItem = useCallback(
+    ({ item: postId }: { item: string }) => {
+      const post = getPost(postId);
+      if (!post) return null;
+
+      return (
+        <PostCardItem
+          postId={postId}
+          onPress={() => onPostPress(postId)}
+          onAuthorPress={
+            onAuthorPress
+              ? () => onAuthorPress(post.decoded.authorPublicKey)
+              : undefined
+          }
+          onReply={
+            onReply
+              ? () => onReply(post.signedEvent)
+              : () => onPostPress(postId)
+          }
+          onReplyingToPress={() => handleReplyingToPress(postId)}
+          showTopic={showTopic}
+        />
+      );
+    },
+    [
+      getPost,
+      onPostPress,
+      onAuthorPress,
+      onReply,
+      handleReplyingToPress,
+      showTopic,
+    ],
+  );
+
+  const keyExtractor = useCallback(
+    (item: string, index: number) => `${item}:${index}`,
+    [],
+  );
+
+  if (error) {
+    return (
+      <Box
+        style={[
+          Atoms.flex_1,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.p_lg,
+        ]}
+      >
+        <Text color="neutral_500">Failed to load feed</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <FlashList
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: bottomPadding }}
+      onEndReached={hasMore ? onEndReached : undefined}
+      onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
+      }
+      ListFooterComponent={
+        hasMore && items.length > 0 ? (
+          <Box style={[Atoms.items_center, Atoms.p_lg]}>
+            <ActivityIndicator size="small" color={theme.palette.neutral_500} />
+          </Box>
+        ) : undefined
+      }
+      ListEmptyComponent={
+        !isLoading ? (
+          <Box
+            style={[
+              Atoms.flex_1,
+              Atoms.items_center,
+              Atoms.justify_center,
+              Atoms.p_lg,
+            ]}
+          >
+            <Text color="neutral_500">No posts yet</Text>
+          </Box>
+        ) : null
+      }
+    />
+  );
+}

@@ -41,4 +41,3 @@ dist
 # Generated files
 docker-compose.live*
 .env
-state
