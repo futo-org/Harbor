@@ -36,6 +36,12 @@ extern "C" {
     CBuffer query_events(CBuffer system_bytes, CBuffer process_bytes, unsigned long start_clock, unsigned long end_clock);
     CBuffer get_pointer(CBuffer event_bytes);
     CBuffer get_reference(CBuffer pointer_bytes);
+
+    // v2 functions
+    CBuffer verify_signed_event_v2(CBuffer signed_event_bytes);
+    CBuffer decode_event_from_signed_event_v2(CBuffer signed_event_bytes);
+    CBuffer validate_event_v2(CBuffer event_bytes);
+
     void free_bytes(CBuffer buf);
 }
 
@@ -92,6 +98,11 @@ public:
     jsi::Object queryEvents(jsi::Runtime& rt, jsi::Object system, jsi::Object process, double startClock, double endClock);
     jsi::Object getPointer(jsi::Runtime& rt, jsi::Object eventBytes);
     jsi::Object getReference(jsi::Runtime& rt, jsi::Object pointerBytes);
+
+    // v2 methods
+    jsi::Object verifySignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes);
+    jsi::Object decodeEventFromSignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes);
+    jsi::Object validateEventV2(jsi::Runtime& rt, jsi::Object eventBytes);
 };
 
 }

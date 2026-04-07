@@ -190,8 +190,8 @@ importers:
         specifier: workspace:*
         version: link:../js-core
       '@polycentric/rs-core-wasm-browser':
-        specifier: '*'
-        version: 0.0.3
+        specifier: workspace:*
+        version: link:../rs-core-wasm-browser
       '@sqlite.org/sqlite-wasm':
         specifier: 3.49.1-build4
         version: 3.49.1-build4
@@ -230,14 +230,14 @@ importers:
   packages/js-browser/examples/react:
     dependencies:
       '@polycentric/js-browser':
-        specifier: '*'
-        version: 0.0.2(@polycentric/rs-core-wasm-browser@0.0.3)
+        specifier: workspace:*
+        version: link:../..
       '@polycentric/js-core':
-        specifier: '*'
-        version: 0.0.2
+        specifier: workspace:*
+        version: link:../../../js-core
       '@polycentric/rs-core-wasm-browser':
-        specifier: '*'
-        version: 0.0.3
+        specifier: workspace:*
+        version: link:../../../rs-core-wasm-browser
       js-base64:
         specifier: ^3.7.7
         version: 3.7.8
@@ -395,8 +395,8 @@ importers:
         specifier: workspace:*
         version: link:../js-core
       '@polycentric/rs-core-wasm-browser':
-        specifier: '*'
-        version: 0.0.3
+        specifier: workspace:*
+        version: link:../rs-core-wasm-browser
       fast-text-encoding:
         specifier: ^1.0.6
         version: 1.0.6
@@ -1850,17 +1850,6 @@ packages:
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
-
-  '@polycentric/js-browser@0.0.2':
-    resolution: {integrity: sha1-+Y4ZPPZ++D0dr7nEmi8NbFQ9f90=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/js-browser/-/@polycentric/js-browser-0.0.2.tgz}
-    peerDependencies:
-      '@polycentric/rs-core-wasm-browser': '*'
-
-  '@polycentric/js-core@0.0.2':
-    resolution: {integrity: sha1-/mXPCyUOuHTrcuVW4yWKqe++Jus=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/js-core/-/@polycentric/js-core-0.0.2.tgz}
-
-  '@polycentric/rs-core-wasm-browser@0.0.3':
-    resolution: {integrity: sha1-g0cUvUsjw6TW00ThvYPCUfGXx9A=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-browser/-/@polycentric/rs-core-wasm-browser-0.0.3.tgz}
 
   '@polycentric/rs-core-wasm-node@0.0.3':
     resolution: {integrity: sha1-NNS+y/DQyrE5cmwOV1Fu42MwgBk=, tarball: https://gitlab.futo.org/api/v4/projects/42/packages/npm/@polycentric/rs-core-wasm-node/-/@polycentric/rs-core-wasm-node-0.0.3.tgz}
@@ -9334,28 +9323,6 @@ snapshots:
   '@pkgr/core@0.2.9': {}
 
   '@polka/url@1.0.0-next.29': {}
-
-  '@polycentric/js-browser@0.0.2(@polycentric/rs-core-wasm-browser@0.0.3)':
-    dependencies:
-      '@noble/curves': 1.9.7
-      '@noble/hashes': 1.8.0
-      '@polycentric/js-core': link:packages/js-core
-      '@polycentric/rs-core-wasm-browser': 0.0.3
-      '@sqlite.org/sqlite-wasm': 3.49.1-build4
-      js-base64: 3.7.8
-
-  '@polycentric/js-core@0.0.2':
-    dependencies:
-      '@noble/curves': 1.9.7
-      '@noble/hashes': 1.8.0
-      '@polycentric/rs-core-wasm-browser': 0.0.3
-      '@protobuf-ts/runtime': 2.11.1
-      '@sqlite.org/sqlite-wasm': 3.49.1-build4
-      base64url: 3.0.1
-      eventemitter3: 5.0.4
-      js-base64: 3.7.8
-
-  '@polycentric/rs-core-wasm-browser@0.0.3': {}
 
   '@polycentric/rs-core-wasm-node@0.0.3': {}
 

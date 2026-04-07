@@ -92,7 +92,8 @@ export function IdentitySwitcherSheetInner({
         confirmText: 'Delete',
       });
       if (!ok) return;
-      await client.deleteKeyPair(publicKey);
+      // TODO: deleteKeyPair not yet implemented in v2
+      console.warn('Delete identity not yet implemented in v2');
     },
     [client],
   );
@@ -213,12 +214,12 @@ function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
     // TODO: use truesheet events instead of a timeout
     dismiss();
     setTimeout(() => {
-      switchKeyPair(item.publicKey);
+      switchIdentity(item.publicKey);
     }, 215);
   };
 
   return (
-    <Pressable onPress={() => !isCurrent && handleswitchKeyPair()}>
+    <Pressable onPress={() => !isCurrent && handleSwitchIdentity()}>
       <IdentityListItemContent item={item} />
     </Pressable>
   );

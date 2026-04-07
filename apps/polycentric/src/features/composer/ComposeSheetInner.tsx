@@ -75,14 +75,11 @@ export function ComposeSheetInner({
         });
       }
 
-      const signedEvent = await client.contentManager.createPost(
-        text.trim(),
-        undefined,
-        reference,
-      );
+      // TODO: reply references not yet supported in v2 createPost
+      const signedEvent = await client.createPost(text.trim());
       await client.sync();
       setText('');
-      onPostCreated(signedEvent);
+      onPostCreated(signedEvent as unknown as types.SignedEvent);
       dismiss();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -15,12 +15,11 @@ import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 
 export function CurrIdentityHeader() {
-  const { identity: currentIdentity } = useCurrentIdentity();
+  const { identity: currentIdentity, publicKey: pubkey } = useCurrentIdentity();
   const { theme } = useTheme();
   const router = useRouter();
   const { Sheet, present, dismiss } = useSheet();
 
-  const pubkey = currentIdentity?.keyPair.publicKey;
   const username = useUsername(
     pubkey ?? { keyType: 0n, key: new Uint8Array() },
   );
