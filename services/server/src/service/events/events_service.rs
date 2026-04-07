@@ -42,10 +42,16 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
-        let limit = request.into_inner().limit.unwrap_or(10).min(200) as u64;
+        let inner_req = request.into_inner();
+        let limit = inner_req.limit.unwrap_or(10).min(200) as u64;
+        let stream_id = inner_req.stream_id;
+        let identity_id = inner_req.identity_id.map(|id| id.value);
+        let signed_by = inner_req
+            .signed_by
+            .map(|pk| (pk.key_type as i16, pk.key));
 
         let events =
-            EventsRepository::Query::list_events(&self.db, Some(limit))
+            EventsRepository::Query::list_events(&self.db, Some(limit), stream_id, identity_id, signed_by)
                 .await
                 .map_err(|e| {
                     eprintln!("list_events error: {e}");

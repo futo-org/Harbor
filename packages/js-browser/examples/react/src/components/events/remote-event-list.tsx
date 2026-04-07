@@ -4,10 +4,22 @@ import { v2 } from '@polycentric/js-core';
 import type { DecodedEvent } from './event-card';
 import { EventCard } from './event-card';
 
+const fromHex = (hex: string): Uint8Array => {
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+  return new Uint8Array(
+    clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
+  );
+};
+
+const mono = { fontFamily: 'monospace', fontSize: '0.78rem' };
+
 export const RemoteEventList = () => {
   const client = useContext(ClientContext);
   const [events, setEvents] = useState<DecodedEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [identityHex, setIdentityHex] = useState('');
+  const [streamId, setStreamId] = useState('');
+  const [signedByHex, setSignedByHex] = useState('');
 
   const fetchRemote = async () => {
     if (!client?.core || client.servers.length === 0) return;
@@ -15,9 +27,23 @@ export const RemoteEventList = () => {
     setLoading(true);
     const allDecoded: DecodedEvent[] = [];
 
+    const identityId = identityHex.trim()
+      ? fromHex(identityHex.trim())
+      : undefined;
+    const sid = streamId.trim() || undefined;
+    const signedBy = signedByHex.trim()
+      ? fromHex(signedByHex.trim())
+      : undefined;
+
     const results = await Promise.allSettled(
       client.servers.map(async (server) => {
-        const responseBytes = await client.core!.list_events(server);
+        const responseBytes = await client.core!.list_events(
+          server,
+          null,
+          identityId,
+          sid,
+          signedBy,
+        );
         const response = v2.ListEventsResponse.fromBinary(responseBytes);
         return { server, bundles: response.eventBundles };
       }),
@@ -96,6 +122,57 @@ export const RemoteEventList = () => {
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 6 }}>
+          Filter
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+              Identity ID (hex)
+            </div>
+            <input
+              type="text"
+              value={identityHex}
+              onChange={(e) => setIdentityHex(e.target.value)}
+              placeholder="optional"
+              style={{ width: '100%', ...mono }}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+              Signed By (hex)
+            </div>
+            <input
+              type="text"
+              value={signedByHex}
+              onChange={(e) => setSignedByHex(e.target.value)}
+              placeholder="optional"
+              style={{ width: '100%', ...mono }}
+            />
+          </div>
+          <div style={{ flex: 0.5, minWidth: 120 }}>
+            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+              Stream ID
+            </div>
+            <input
+              type="text"
+              value={streamId}
+              onChange={(e) => setStreamId(e.target.value)}
+              placeholder="optional"
+              style={{ width: '100%', ...mono }}
+            />
+          </div>
+          <button
+            onClick={fetchRemote}
+            disabled={loading || client.servers.length === 0}
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+
       {client.servers.length === 0 && (
         <div style={{ color: '#888', fontSize: '0.85em' }}>
           Add a server to fetch remote events

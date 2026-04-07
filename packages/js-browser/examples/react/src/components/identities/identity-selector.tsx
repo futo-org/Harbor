@@ -1,18 +1,28 @@
-import { KEY_TYPE, type KeyPair, type IdentityState } from '@polycentric/js-core';
+import {
+  KEY_TYPE,
+  type KeyPair,
+  type IdentityState,
+} from '@polycentric/js-core';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { keyPairsAreEqual } from '../../utils/misc';
 import { Identifier } from '../../utils/identities';
 import { ClientContext } from '../../main';
 
 const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 
 export const IdentitySelector = () => {
   const client = useContext(ClientContext);
 
   const [inputEnabled, setInputEnabled] = useState(true);
   const [identities, setIdentities] = useState<KeyPair[]>([]);
-  const [identityState, setIdentityState] = useState<IdentityState>({ identity: null, authorizedKeys: [], eventLog: [] });
+  const [identityState, setIdentityState] = useState<IdentityState>({
+    identity: null,
+    authorizedKeys: [],
+    eventLog: [],
+  });
   const [claimIdHex, setClaimIdHex] = useState('');
   const [issueKeyHex, setIssueKeyHex] = useState('');
   const [status, setStatus] = useState('');
@@ -30,7 +40,9 @@ export const IdentitySelector = () => {
   if (!client) return null;
 
   const otherIdentities = identities.filter(
-    (identity) => client.currentKeyPair && !keyPairsAreEqual(identity, client.currentKeyPair),
+    (identity) =>
+      client.currentKeyPair &&
+      !keyPairsAreEqual(identity, client.currentKeyPair),
   );
 
   const currentIdentifier =
@@ -40,7 +52,11 @@ export const IdentitySelector = () => {
     ? toHex(identityState.identity.id.value)
     : null;
 
-  const mono = { fontFamily: 'monospace', fontSize: '0.78rem', wordBreak: 'break-all' as const };
+  const mono = {
+    fontFamily: 'monospace',
+    fontSize: '0.78rem',
+    wordBreak: 'break-all' as const,
+  };
 
   return (
     <div className="card">
@@ -58,7 +74,9 @@ export const IdentitySelector = () => {
       {/* ── Identity ─────────────────────────────────── */}
       {identityIdHex ? (
         <div style={{ marginBottom: 10 }}>
-          <span className="badge badge-valid" style={{ marginRight: 6 }}>identity</span>
+          <span className="badge badge-valid" style={{ marginRight: 6 }}>
+            identity
+          </span>
           <div style={{ ...mono, color: '#d2a8ff', marginTop: 4 }}>
             {identityIdHex}
           </div>
@@ -72,22 +90,40 @@ export const IdentitySelector = () => {
       {/* ── Authorized keys ──────────────────────────── */}
       {identityState.authorizedKeys?.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Authorized keys
           </div>
           {identityState.authorizedKeys.map((ak, i) => (
-            <div key={i} style={{ marginBottom: 6, padding: '6px 8px', background: '#0d1117', borderRadius: 4, border: '1px solid #21262d' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <div
+              key={i}
+              style={{
+                marginBottom: 6,
+                padding: '6px 8px',
+                background: '#0d1117',
+                borderRadius: 4,
+                border: '1px solid #21262d',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 2,
+                }}
+              >
                 <span style={{ color: '#3fb950', fontSize: '0.72rem' }}>
                   permissions: {ak.permissions.join(', ')}
                 </span>
-                <span className={`badge ${ak.claimed ? 'badge-valid' : 'badge-invalid'}`}>
+                <span
+                  className={`badge ${ak.claimed ? 'badge-valid' : 'badge-invalid'}`}
+                >
                   {ak.claimed ? 'claimed' : 'pending'}
                 </span>
               </div>
-              <div style={{ ...mono, color: '#8b949e' }}>
-                {toHex(ak.key)}
-              </div>
+              <div style={{ ...mono, color: '#8b949e' }}>{toHex(ak.key)}</div>
             </div>
           ))}
         </div>
@@ -96,7 +132,9 @@ export const IdentitySelector = () => {
       {/* ── Event log ────────────────────────────────── */}
       {identityState.eventLog?.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 6 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 6 }}
+          >
             Identity event log
           </div>
           <div style={{ borderLeft: '2px solid #30363d', paddingLeft: 12 }}>
@@ -112,24 +150,43 @@ export const IdentitySelector = () => {
 
               return (
                 <div key={i} style={{ marginBottom: 8, fontSize: '0.78rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      backgroundColor: entry.signatureValid ? '#3fb950' : '#f85149',
-                      display: 'inline-block', flexShrink: 0,
-                    }} />
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: entry.signatureValid
+                          ? '#3fb950'
+                          : '#f85149',
+                        display: 'inline-block',
+                        flexShrink: 0,
+                      }}
+                    />
                     <span style={{ color, fontWeight: 600 }}>
                       #{entry.sequence.toString()} {entry.type.toUpperCase()}
                     </span>
-                    <span className={`badge ${entry.signatureValid ? 'badge-valid' : 'badge-invalid'}`}>
+                    <span
+                      className={`badge ${entry.signatureValid ? 'badge-valid' : 'badge-invalid'}`}
+                    >
                       {entry.signatureValid ? 'sig ok' : 'sig fail'}
                     </span>
                   </div>
                   <div style={{ ...mono, color: '#8b949e', marginLeft: 14 }}>
                     {entry.detail}
                   </div>
-                  <div style={{ color: '#484f58', fontSize: '0.72rem', marginLeft: 14 }}>
-                    {entry.createdAt ? new Date(Number(entry.createdAt)).toLocaleString() : ''}
+                  <div
+                    style={{
+                      color: '#484f58',
+                      fontSize: '0.72rem',
+                      marginLeft: 14,
+                    }}
+                  >
+                    {entry.createdAt
+                      ? new Date(Number(entry.createdAt)).toLocaleString()
+                      : ''}
                   </div>
                 </div>
               );
@@ -268,14 +325,27 @@ export const IdentitySelector = () => {
 
       {/* ── Other key pairs ──────────────────────────── */}
       {otherIdentities.length > 0 && (
-        <div style={{ marginTop: 12, borderTop: '1px solid #21262d', paddingTop: 8 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+        <div
+          style={{
+            marginTop: 12,
+            borderTop: '1px solid #21262d',
+            paddingTop: 8,
+          }}
+        >
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Other key pairs
           </div>
           {otherIdentities.map((kp) => (
             <div
               key={Identifier(kp.publicKey)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '4px 0',
+              }}
             >
               <span style={{ ...mono, color: '#8b949e' }}>
                 {Identifier(kp.publicKey)}

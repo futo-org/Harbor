@@ -14,13 +14,13 @@ export interface IPolycentricCore {
   list_events(
     serverUrl: string,
     limit?: number | null,
+    identityId?: Uint8Array | null,
+    streamId?: string | null,
+    signedBy?: Uint8Array | null,
+    signedByKeyType?: number | null,
   ): Promise<Uint8Array>;
   put_events(
     serverUrl: string,
     eventBundlesBytes: Uint8Array,
   ): Promise<void>;
-  pull_events(
-    serverUrl: string,
-    limit?: number | null,
-  ): Promise<Uint8Array>;
 }

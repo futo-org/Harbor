@@ -892,7 +892,7 @@ export class PolycentricClient {
     let newCount = 0;
 
     const results = await Promise.allSettled(
-      this.servers.map((server) => this.core!.pull_events(server)),
+      this.servers.map((server) => this.core!.list_events(server)),
     );
 
     for (const result of results) {
