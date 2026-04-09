@@ -1,36 +1,20 @@
 trivy:
   stage: test
-  image: docker:stable
-  services:
-    - name: docker:dind
-      entrypoint: ["env", "-u", "DOCKER_HOST"]
-      command: ["dockerd-entrypoint.sh"]
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
   variables:
-    DOCKER_HOST: tcp://docker:2375/
-    DOCKER_DRIVER: overlay2
-    # See https://github.com/docker-library/docker/pull/166
-    DOCKER_TLS_CERTDIR: ""
-    IMAGE: trivy-ci-test:$CI_COMMIT_SHA
     TRIVY_NO_PROGRESS: "true"
     TRIVY_CACHE_DIR: ".trivycache/"
-  before_script:
-    - export TRIVY_VERSION=$(wget -qO - "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-    - echo $TRIVY_VERSION
-    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
   allow_failure: true
   script:
-    # Build image
-    - docker build -t $IMAGE .
-    # Build report
-    - ./trivy image --exit-code 0 --format template --template "@/contrib/gitlab.tpl" -o gl-container-scanning-report.json $IMAGE
-    # Print report
-    - ./trivy image --exit-code 0 --severity HIGH $IMAGE
-    # Fail on severe vulnerabilities
-    - ./trivy image --exit-code 1 --severity CRITICAL $IMAGE
+    # Build report for GitLab UI
+    - trivy fs --scanners vuln --format template --template "@/contrib/gitlab.tpl" -o gl-dependency-scanning-report.json .
+    # Print report to job log
+    - trivy fs --scanners vuln --exit-code 0 --severity HIGH,CRITICAL .
   cache:
     paths:
       - .trivycache/
-  # Enables https://docs.gitlab.com/ee/user/application_security/container_scanning/ (Container Scanning report is available on GitLab Ultimate)
   artifacts:
     reports:
-      container_scanning: gl-container-scanning-report.json
+      dependency_scanning: gl-dependency-scanning-report.json
