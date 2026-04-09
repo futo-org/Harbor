@@ -13,8 +13,6 @@ stages:
 default:
   tags:
   - dind
-sast:
-  stage: test
 trivy_dependency_scan:
   stage: test
   image:
