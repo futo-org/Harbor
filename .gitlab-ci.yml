@@ -3,6 +3,7 @@ include:
 - local: ".gitlab/ci/build_js_sdks.yml"
 - local: ".gitlab/ci/build_server.yml"
 - local: ".gitlab/ci/deploy_pages.yml"
+- local: ".gitlab/ci/scan_dependencies.yml"
 stages:
 - setup
 - check
@@ -13,10 +14,3 @@ stages:
 default:
   tags:
   - dind
-trivy_dependency_scan:
-  stage: test
-  image:
-    name: aquasec/trivy:0.62.1
-    entrypoint: [""]
-  script:
-    - trivy fs --scanners vuln --exit-code 1 --severity HIGH,CRITICAL .

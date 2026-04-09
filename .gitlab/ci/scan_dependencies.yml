@@ -1,0 +1,7 @@
+trivy_dependency_scan:
+  stage: test
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
+  script:
+    - trivy fs --scanners vuln --exit-code 1 --severity HIGH,CRITICAL .
