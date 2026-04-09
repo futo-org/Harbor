@@ -235,6 +235,14 @@ export class PolycentricClient {
       throw new Error('No keypair set');
     }
 
+    const authorized = await this.isKeyAuthorizedForIdentity(
+      identityKey,
+      this.currentKeyPair.publicKey.key,
+    );
+    if (!authorized) {
+      throw new Error('Current key is not authorized for this identity');
+    }
+
     const content = Content.create({
       contentBody: { oneofKind: 'post', post: { text, reply: undefined } },
     });
@@ -268,8 +276,79 @@ export class PolycentricClient {
     return this.createEvent(V2Event.toBinary(event));
   }
 
+  /**
+   * Ingest a signed event, verifying that the signer is authorized for the
+   * identity claimed in the EventKey before persisting.
+   */
   public async ingestEvent(signedEvent: SignedEvent): Promise<void> {
+    const event = V2Event.fromBinary(signedEvent.eventBytes);
+    const identityKey = event.key?.identity;
+    const signerKey = event.key?.signedBy?.key;
+
+    if (identityKey && signerKey) {
+      const authorized = await this.isKeyAuthorizedForIdentity(identityKey, signerKey, event.createdAt);
+      if (!authorized) {
+        throw new Error(
+          `Signer ${this.toHex(signerKey)} is not authorized for identity ${identityKey.slice(0, 16)}...`,
+        );
+      }
+    }
+
     await this.storage.events.persistEvent(signedEvent);
+  }
+
+  /**
+   * Check whether a public key was authorized (as rotation or signing key)
+   * for a given identity at a specific time. Returns true if the identity is
+   * not found locally (caller may not have pulled the identity yet).
+   */
+  private async isKeyAuthorizedForIdentity(
+    identityKey: string,
+    signerKey: Uint8Array,
+    atTime?: bigint,
+  ): Promise<boolean> {
+    const allEvents = await this.storage.events.getAllEvents();
+
+    // Build timeline of identity versions sorted by createdAt
+    const versions: { createdAt: bigint; rotationKeys: PublicKey[]; signingKeys: PublicKey[] }[] = [];
+
+    for (const se of allEvents) {
+      const ev = V2Event.fromBinary(se.eventBytes);
+      if (ev.key?.collection !== COLLECTION.IDENTITY) continue;
+      if (ev.key.identity !== identityKey) continue;
+      if (!ev.contentDigest?.value) continue;
+
+      const cb = await this.storage.content.getContent(ev.contentDigest.value);
+      if (!cb) continue;
+
+      const c = Content.fromBinary(cb);
+      if (c.contentBody.oneofKind === 'identity') {
+        versions.push({
+          createdAt: ev.createdAt,
+          rotationKeys: [...c.contentBody.identity.rotationKeys],
+          signingKeys: [...c.contentBody.identity.signingKeys],
+        });
+      }
+    }
+
+    if (versions.length === 0) return true; // identity not found locally
+
+    versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+
+    // Find the identity version active at the given time (or latest if no time)
+    let active = versions[versions.length - 1];
+    if (atTime !== undefined) {
+      active = versions[0]; // fallback to first
+      for (const v of versions) {
+        if (v.createdAt <= atTime) active = v;
+        else break;
+      }
+    }
+
+    return (
+      active.rotationKeys.some((k) => this.bytesEqual(k.key, signerKey)) ||
+      active.signingKeys.some((k) => this.bytesEqual(k.key, signerKey))
+    );
   }
 
   /**

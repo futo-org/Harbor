@@ -4,6 +4,11 @@ import { v2 } from '@polycentric/js-core';
 import type { DecodedEvent } from './event-card';
 import { EventCard } from './event-card';
 
+const toHex = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
 const fromHex = (hex: string): Uint8Array => {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   return new Uint8Array(
@@ -47,53 +52,116 @@ export const RemoteEventList = () => {
       }),
     );
 
+    // Collect all bundles first, then resolve identity authorization
+    const allBundles: { server: string; bundle: v2.EventBundle }[] = [];
+
     for (const result of results) {
       if (result.status === 'rejected') {
         console.error('Failed to fetch from server:', result.reason);
         continue;
       }
-
       const { server, bundles } = result.value;
-
       for (const bundle of bundles) {
-        if (!bundle.signedEvent) continue;
+        if (bundle.signedEvent) allBundles.push({ server, bundle });
+      }
+    }
 
-        try {
-          const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    // Decode all bundles
+    interface IdentityVersion { createdAt: bigint; keys: Set<string> }
+    const timelines = new Map<string, IdentityVersion[]>();
+    const referencedIdentities = new Set<string>();
 
-          let signatureValid = false;
-          try {
-            client.core!.verify_signed_event(
-              v2.SignedEvent.toBinary(bundle.signedEvent),
-            );
-            signatureValid = true;
-          } catch {
-            // verification failed
-          }
+    const parsedBundles: { server: string; event: v2.Event; content?: v2.Content; signedEvent: v2.SignedEvent }[] = [];
 
-          let content: v2.Content | undefined;
-          if (bundle.serializedContent?.contentBytes) {
-            try {
-              content = v2.Content.fromBinary(
-                bundle.serializedContent.contentBytes,
-              );
-            } catch {
-              // content decode failed
-            }
-          }
-
-          allDecoded.push({
-            event,
-            content,
-            signaturePrefix: [...bundle.signedEvent.signature.slice(0, 8)]
-              .map((b: number) => b.toString(16).padStart(2, '0'))
-              .join(''),
-            signatureValid,
-            source: server,
-          });
-        } catch {
-          // skip malformed
+    for (const { server, bundle } of allBundles) {
+      try {
+        const event = v2.Event.fromBinary(bundle.signedEvent!.eventBytes);
+        let content: v2.Content | undefined;
+        if (bundle.serializedContent?.contentBytes) {
+          try { content = v2.Content.fromBinary(bundle.serializedContent.contentBytes); } catch (_) { /* skip */ }
         }
+        parsedBundles.push({ server, event, content, signedEvent: bundle.signedEvent! });
+
+        if (event.key?.identity) referencedIdentities.add(event.key.identity);
+
+        // Collect identity versions from results
+        if (event.key?.collection === 1 && content?.contentBody.oneofKind === 'identity') {
+          const id = content.contentBody.identity;
+          const keys = new Set<string>();
+          for (const k of id.rotationKeys) keys.add(toHex(k.key));
+          for (const k of id.signingKeys) keys.add(toHex(k.key));
+          const idKey = event.key.identity;
+          if (!timelines.has(idKey)) timelines.set(idKey, []);
+          timelines.get(idKey)!.push({ createdAt: event.createdAt, keys });
+        }
+      } catch (_) { /* skip */ }
+    }
+
+    // Fetch identity docs we don't have yet
+    for (const idKey of referencedIdentities) {
+      if (timelines.has(idKey)) continue;
+      for (const server of client.servers) {
+        try {
+          const idBytes = await client.core!.list_events(server, null, 1, idKey);
+          const idResponse = v2.ListEventsResponse.fromBinary(idBytes);
+          for (const idBundle of idResponse.eventBundles) {
+            if (!idBundle.serializedContent?.contentBytes || !idBundle.signedEvent) continue;
+            const ev = v2.Event.fromBinary(idBundle.signedEvent.eventBytes);
+            const c = v2.Content.fromBinary(idBundle.serializedContent.contentBytes);
+            if (c.contentBody.oneofKind !== 'identity') continue;
+            const id = c.contentBody.identity;
+            const keys = new Set<string>();
+            for (const k of id.rotationKeys) keys.add(toHex(k.key));
+            for (const k of id.signingKeys) keys.add(toHex(k.key));
+            if (!timelines.has(idKey)) timelines.set(idKey, []);
+            timelines.get(idKey)!.push({ createdAt: ev.createdAt, keys });
+          }
+          if (timelines.has(idKey)) break;
+        } catch (_) { /* try next server */ }
+      }
+    }
+
+    // Sort timelines by createdAt ascending
+    for (const versions of timelines.values()) {
+      versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+    }
+
+    // Build decoded events with time-aware authorization
+    for (const { server, event, content, signedEvent } of parsedBundles) {
+      try {
+        let signatureValid = false;
+        try {
+          client.core!.verify_signed_event(v2.SignedEvent.toBinary(signedEvent));
+          signatureValid = true;
+        } catch (_) { /* failed */ }
+
+        let identityAuthorized: boolean | undefined;
+        const idKey = event.key?.identity;
+        const signerKey = event.key?.signedBy?.key;
+        if (idKey && signerKey) {
+          const versions = timelines.get(idKey);
+          if (versions && versions.length > 0) {
+            let active: IdentityVersion | null = null;
+            for (const v of versions) {
+              if (v.createdAt <= event.createdAt) active = v;
+              else break;
+            }
+            if (active) identityAuthorized = active.keys.has(toHex(signerKey));
+          }
+        }
+
+        allDecoded.push({
+          event,
+          content,
+          signaturePrefix: [...signedEvent.signature.slice(0, 8)]
+            .map((b: number) => b.toString(16).padStart(2, '0'))
+            .join(''),
+          signatureValid,
+          identityAuthorized,
+          source: server,
+        });
+      } catch (_) {
+        // skip malformed
       }
     }
 

@@ -5,6 +5,8 @@ export interface DecodedEvent {
   content?: v2.Content;
   signaturePrefix: string;
   signatureValid: boolean;
+  /** Whether the signer is authorized for the claimed identity */
+  identityAuthorized?: boolean;
   source?: string;
 }
 
@@ -20,14 +22,19 @@ const COLLECTION_NAMES: Record<number, string> = {
 };
 
 export const EventCard = ({ e }: { e: DecodedEvent }) => (
-  <li className="card" style={{ borderLeft: `3px solid ${e.signatureValid ? '#3fb950' : '#f85149'}` }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+  <li className="card" style={{ borderLeft: `3px solid ${e.signatureValid && e.identityAuthorized !== false ? '#3fb950' : '#f85149'}` }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 6 }}>
       <span style={{ color: '#8b949e', fontSize: '0.8rem' }}>
         {e.source ?? 'unknown'}
       </span>
-      <span className={`badge ${e.signatureValid ? 'badge-valid' : 'badge-invalid'}`}>
-        {e.signatureValid ? 'verified' : 'invalid sig'}
-      </span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <span className={`badge ${e.signatureValid ? 'badge-valid' : 'badge-invalid'}`}>
+          {e.signatureValid ? 'sig ok' : 'sig fail'}
+        </span>
+        <span className={`badge ${e.identityAuthorized === false ? 'badge-invalid' : e.identityAuthorized === true ? 'badge-valid' : ''}`}>
+          {e.identityAuthorized === false ? 'unauthorized' : e.identityAuthorized === true ? 'authorized' : 'unknown'}
+        </span>
+      </div>
     </div>
 
     <ContentDisplay content={e.content} identityKey={e.event.key?.identity} />

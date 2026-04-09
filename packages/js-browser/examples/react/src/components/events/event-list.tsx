@@ -4,6 +4,66 @@ import { v2 } from '@polycentric/js-core';
 import type { DecodedEvent } from './event-card';
 import { EventCard } from './event-card';
 
+const toHex = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+/** A snapshot of an identity's authorized keys at a point in time. */
+interface IdentityVersion {
+  createdAt: bigint;
+  keys: Set<string>;
+}
+
+/** Build a timeline of identity versions from events, sorted by createdAt ascending. */
+function buildIdentityTimeline(
+  events: { event: v2.Event; content?: v2.Content }[],
+): Map<string, IdentityVersion[]> {
+  const timelines = new Map<string, IdentityVersion[]>();
+
+  for (const { event, content } of events) {
+    if (event.key?.collection !== 1) continue;
+    if (!content || content.contentBody.oneofKind !== 'identity') continue;
+
+    const id = content.contentBody.identity;
+    const keys = new Set<string>();
+    for (const k of id.rotationKeys) keys.add(toHex(k.key));
+    for (const k of id.signingKeys) keys.add(toHex(k.key));
+
+    const idKey = event.key.identity;
+    if (!timelines.has(idKey)) timelines.set(idKey, []);
+    timelines.get(idKey)!.push({ createdAt: event.createdAt, keys });
+  }
+
+  // Sort each timeline by createdAt ascending
+  for (const versions of timelines.values()) {
+    versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+  }
+
+  return timelines;
+}
+
+/** Check if a signer was authorized at a given time. */
+function isAuthorizedAt(
+  timelines: Map<string, IdentityVersion[]>,
+  identityKey: string,
+  signerHex: string,
+  eventTime: bigint,
+): boolean | undefined {
+  const versions = timelines.get(identityKey);
+  if (!versions || versions.length === 0) return undefined;
+
+  // Find the latest identity version at or before the event time
+  let active: IdentityVersion | null = null;
+  for (const v of versions) {
+    if (v.createdAt <= eventTime) active = v;
+    else break;
+  }
+
+  if (!active) return undefined;
+  return active.keys.has(signerHex);
+}
+
 export const EventList = () => {
   const client = useContext(ClientContext);
   const [events, setEvents] = useState<DecodedEvent[]>([]);
@@ -12,44 +72,51 @@ export const EventList = () => {
     if (!client?.core) return;
 
     const allEvents = await client.storage.events.getAllEvents();
-    const decoded: DecodedEvent[] = [];
 
+    // First pass: decode all events and content
+    const parsed: { signedEvent: v2.SignedEvent; event: v2.Event; content?: v2.Content }[] = [];
     for (const signedEvent of allEvents) {
       try {
         const event = v2.Event.fromBinary(signedEvent.eventBytes);
-
-        let signatureValid = false;
-        try {
-          client.core.verify_signed_event(
-            v2.SignedEvent.toBinary(signedEvent),
-          );
-          signatureValid = true;
-        } catch {
-          // verification failed
-        }
-
         let content: v2.Content | undefined;
         if (event.contentDigest?.value) {
-          const contentBytes = await client.storage.content.getContent(
-            event.contentDigest.value,
-          );
-          if (contentBytes) {
-            content = v2.Content.fromBinary(contentBytes);
-          }
+          const cb = await client.storage.content.getContent(event.contentDigest.value);
+          if (cb) content = v2.Content.fromBinary(cb);
         }
+        parsed.push({ signedEvent, event, content });
+      } catch { /* skip */ }
+    }
 
-        decoded.push({
-          event,
-          content,
-          signaturePrefix: Array.from(signedEvent.signature.slice(0, 8))
-            .map((b) => b.toString(16).padStart(2, '0'))
-            .join(''),
-          signatureValid,
-          source: 'local',
-        });
-      } catch {
-        // skip malformed events
+    // Build identity timeline
+    const timelines = buildIdentityTimeline(parsed);
+
+    const decoded: DecodedEvent[] = [];
+    for (const { signedEvent, event, content } of parsed) {
+      let signatureValid = false;
+      try {
+        client.core.verify_signed_event(v2.SignedEvent.toBinary(signedEvent));
+        signatureValid = true;
+      } catch { /* failed */ }
+
+      let identityAuthorized: boolean | undefined;
+      const idKey = event.key?.identity;
+      const signerKey = event.key?.signedBy?.key;
+      if (idKey && signerKey) {
+        identityAuthorized = isAuthorizedAt(
+          timelines, idKey, toHex(signerKey), event.createdAt,
+        );
       }
+
+      decoded.push({
+        event,
+        content,
+        signaturePrefix: Array.from(signedEvent.signature.slice(0, 8))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join(''),
+        signatureValid,
+        identityAuthorized,
+        source: 'local',
+      });
     }
 
     setEvents(decoded);
