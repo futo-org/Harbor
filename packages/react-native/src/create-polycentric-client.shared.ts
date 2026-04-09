@@ -16,6 +16,10 @@ export async function createIdentityWithDefaultServer(
   server: string
 ) {
   await client.createKeyPair({ keyType: KEY_TYPE.ED25519, setAsCurrent: true });
-  await client.createIdentity();
+
+  // Publish initial identity with the current key as the sole rotation key
+  const currentKey = client.currentKeyPair!.publicKey;
+  await client.publishIdentity(null, [currentKey], []);
+
   client.servers.push(server);
 }

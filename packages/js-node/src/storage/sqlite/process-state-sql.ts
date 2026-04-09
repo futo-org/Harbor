@@ -1,4 +1,3 @@
-import type { IProcessStateRepository } from '@polycentric/js-core';
 import { DatabaseError } from '@polycentric/js-core';
 import { NodeSQLiteDatabase } from './sqlite-database';
 
@@ -6,7 +5,7 @@ import { NodeSQLiteDatabase } from './sqlite-database';
  * ProcessStateRepository provides SQL-based storage for the logical clock
  * of a given process.
  */
-export class SQLProcessStateRepository implements IProcessStateRepository {
+export class SQLProcessStateRepository {
   private readonly database: NodeSQLiteDatabase;
 
   /**

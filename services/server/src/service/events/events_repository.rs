@@ -1,4 +1,3 @@
-use crate::service::identity::identity_repository as IdentityRepository;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use sea_orm::sea_query::{Expr, IntoCondition};
@@ -10,8 +9,8 @@ impl Query {
     pub async fn list_events(
         db: &DbConn,
         mut limit: Option<u64>,
-        stream_id: Option<String>,
-        identity_id: Option<Vec<u8>>,
+        collection: Option<i32>,
+        identity: Option<String>,
         signed_by: Option<crate::service::proto::PublicKey>,
     ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr>
     {
@@ -40,37 +39,12 @@ impl Query {
                     .into(),
             );
 
-        if stream_id.is_some() {
-            query = query.filter(EventModel::Column::StreamId.eq(stream_id));
+        if let Some(c) = collection {
+            query = query.filter(EventModel::Column::Collection.eq(c as i16));
         }
 
-        if let Some(id) = identity_id {
-            let authorized_keys =
-                IdentityRepository::Query::authorized_keys(db, &id).await?;
-
-            if authorized_keys.is_empty() {
-                return Ok(vec![]);
-            }
-
-            let mut key_condition = Condition::any();
-            for ak in &authorized_keys {
-                let mut cond = Condition::all()
-                    .add(
-                        EventModel::Column::PublicKeyType
-                            .eq(ak.key.key_type as i16),
-                    )
-                    .add(EventModel::Column::PublicKey.eq(ak.key.key.clone()));
-
-                // If this key was revoked, only include events created before
-                // the revocation time.
-                if let Some(revoked_at) = ak.revoked_at {
-                    cond =
-                        cond.add(EventModel::Column::CreatedAt.lt(revoked_at));
-                }
-
-                key_condition = key_condition.add(cond);
-            }
-            query = query.filter(key_condition);
+        if let Some(id) = identity {
+            query = query.filter(EventModel::Column::Identity.eq(id));
         }
 
         if let Some(pk) = signed_by {

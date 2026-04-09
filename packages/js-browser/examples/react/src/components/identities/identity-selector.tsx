@@ -2,7 +2,6 @@ import {
   KEY_TYPE,
   type KeyPair,
   type IdentityState,
-  v2,
 } from '@polycentric/js-core';
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { keyPairsAreEqual } from '../../utils/misc';
@@ -20,12 +19,10 @@ export const IdentitySelector = () => {
   const [inputEnabled, setInputEnabled] = useState(true);
   const [identities, setIdentities] = useState<KeyPair[]>([]);
   const [identityState, setIdentityState] = useState<IdentityState>({
-    identity: null,
-    authorizedKeys: [],
-    eventLog: [],
+    identityKey: null,
+    rotationKeys: [],
+    signingKeys: [],
   });
-  const [claimIdHex, setClaimIdHex] = useState('');
-  const [issueKeyHex, setIssueKeyHex] = useState('');
   const [status, setStatus] = useState('');
 
   const loadIdentities = useCallback(async () => {
@@ -49,10 +46,6 @@ export const IdentitySelector = () => {
   const currentIdentifier =
     client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
 
-  const identityIdHex = identityState.identity
-    ? toHex(v2.Identity.toBinary(identityState.identity))
-    : null;
-
   const mono = {
     fontFamily: 'monospace',
     fontSize: '0.78rem',
@@ -73,13 +66,13 @@ export const IdentitySelector = () => {
       )}
 
       {/* ── Identity ─────────────────────────────────── */}
-      {identityIdHex ? (
+      {identityState.identityKey ? (
         <div style={{ marginBottom: 10 }}>
           <span className="badge badge-valid" style={{ marginRight: 6 }}>
             identity
           </span>
           <div style={{ ...mono, color: '#d2a8ff', marginTop: 4 }}>
-            {identityIdHex}
+            {identityState.identityKey}
           </div>
         </div>
       ) : (
@@ -88,139 +81,31 @@ export const IdentitySelector = () => {
         </div>
       )}
 
-      {/* ── Authorized keys ──────────────────────────── */}
-      {identityState.authorizedKeys?.length > 0 && (
+      {/* ── Rotation keys ────────────────────────────── */}
+      {identityState.rotationKeys.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div
-            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
-          >
-            Authorized keys
+          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+            Rotation keys
           </div>
-          {identityState.authorizedKeys.map((ak, i) => (
-            <div
-              key={i}
-              style={{
-                marginBottom: 6,
-                padding: '6px 8px',
-                background: '#0d1117',
-                borderRadius: 4,
-                border: '1px solid #21262d',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  marginBottom: 2,
-                }}
-              >
-                <span style={{ color: '#3fb950', fontSize: '0.72rem' }}>
-                  permissions: {ak.permissions.join(', ')}
-                </span>
-                <span
-                  className={`badge ${ak.claimed ? 'badge-valid' : 'badge-invalid'}`}
-                >
-                  {ak.claimed ? 'claimed' : 'pending'}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 6,
-                }}
-              >
-                <div style={{ ...mono, color: '#8b949e' }}>{toHex(ak.key)}</div>
-                <button
-                  onClick={async () => {
-                    setInputEnabled(false);
-                    setStatus('Revoking key...');
-                    try {
-                      const identityBytes = v2.Identity.toBinary(identityState.identity!);
-                      await client.revokeIdentity(identityBytes, ak.key);
-                      await loadIdentities();
-                      setStatus('Key revoked');
-                    } catch (error) {
-                      setStatus(`Revoke failed: ${error}`);
-                    }
-                    setInputEnabled(true);
-                  }}
-                  disabled={!inputEnabled}
-                  style={{ padding: '2px 8px', fontSize: '0.72rem' }}
-                >
-                  Revoke
-                </button>
-              </div>
+          {identityState.rotationKeys.map((pk, i) => (
+            <div key={i} style={{ ...mono, color: '#f0883e', marginBottom: 2 }}>
+              {toHex(pk.key)}
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Event log ────────────────────────────────── */}
-      {identityState.eventLog?.length > 0 && (
+      {/* ── Signing keys ─────────────────────────────── */}
+      {identityState.signingKeys.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div
-            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 6 }}
-          >
-            Identity event log
+          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+            Signing keys
           </div>
-          <div style={{ borderLeft: '2px solid #30363d', paddingLeft: 12 }}>
-            {identityState.eventLog.map((entry, i) => {
-              const typeColors: Record<string, string> = {
-                identity: '#f0883e',
-                issue: '#3fb950',
-                revoke: '#f85149',
-                claim: '#58a6ff',
-                unknown: '#484f58',
-              };
-              const color = typeColors[entry.type] ?? '#484f58';
-
-              return (
-                <div key={i} style={{ marginBottom: 8, fontSize: '0.78rem' }}>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: entry.signatureValid
-                          ? '#3fb950'
-                          : '#f85149',
-                        display: 'inline-block',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ color, fontWeight: 600 }}>
-                      #{entry.sequence.toString()} {entry.type.toUpperCase()}
-                    </span>
-                    <span
-                      className={`badge ${entry.signatureValid ? 'badge-valid' : 'badge-invalid'}`}
-                    >
-                      {entry.signatureValid ? 'sig ok' : 'sig fail'}
-                    </span>
-                  </div>
-                  <div style={{ ...mono, color: '#8b949e', marginLeft: 14 }}>
-                    {entry.detail}
-                  </div>
-                  <div
-                    style={{
-                      color: '#484f58',
-                      fontSize: '0.72rem',
-                      marginLeft: 14,
-                    }}
-                  >
-                    {entry.createdAt
-                      ? new Date(Number(entry.createdAt)).toLocaleString()
-                      : ''}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {identityState.signingKeys.map((pk, i) => (
+            <div key={i} style={{ ...mono, color: '#3fb950', marginBottom: 2 }}>
+              {toHex(pk.key)}
+            </div>
+          ))}
         </div>
       )}
 
@@ -255,7 +140,8 @@ export const IdentitySelector = () => {
             setInputEnabled(false);
             setStatus('Creating identity...');
             try {
-              await client.createIdentity();
+              const currentKey = client.currentKeyPair!.publicKey;
+              await client.publishIdentity(null, [currentKey], []);
               await loadIdentities();
               setStatus('Identity created');
             } catch (error) {
@@ -267,83 +153,6 @@ export const IdentitySelector = () => {
         >
           Create Identity
         </button>
-      </div>
-
-      {/* ── Issue Identity ───────────────────────────── */}
-      <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
-          Issue identity to another key
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input
-            type="text"
-            value={issueKeyHex}
-            onChange={(e) => setIssueKeyHex(e.target.value)}
-            placeholder="Target public key (hex)"
-            style={{ flex: 1, ...mono }}
-          />
-          <button
-            onClick={async () => {
-              if (!issueKeyHex.trim()) return;
-              setInputEnabled(false);
-              setStatus('Issuing identity...');
-              try {
-                const keyBytes = new Uint8Array(
-                  issueKeyHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-                );
-                const identityBytes = v2.Identity.toBinary(identityState.identity!);
-                await client.issueIdentity(identityBytes, keyBytes);
-                await loadIdentities();
-                setIssueKeyHex('');
-                setStatus('Identity issued');
-              } catch (error) {
-                setStatus(`Issue failed: ${error}`);
-              }
-              setInputEnabled(true);
-            }}
-            disabled={!inputEnabled || !issueKeyHex.trim() || !identityIdHex}
-          >
-            Issue
-          </button>
-        </div>
-      </div>
-
-      {/* ── Claim Identity ───────────────────────────── */}
-      <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
-          Claim an identity issued to this key
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input
-            type="text"
-            value={claimIdHex}
-            onChange={(e) => setClaimIdHex(e.target.value)}
-            placeholder="Identity ID (hex) to claim"
-            style={{ flex: 1, ...mono }}
-          />
-          <button
-            onClick={async () => {
-              if (!claimIdHex.trim()) return;
-              setInputEnabled(false);
-              setStatus('Claiming identity...');
-              try {
-                const idBytes = new Uint8Array(
-                  claimIdHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-                );
-                await client.claimIdentity(idBytes);
-                await loadIdentities();
-                setClaimIdHex('');
-                setStatus('Identity claimed');
-              } catch (error) {
-                setStatus(`Claim failed: ${error}`);
-              }
-              setInputEnabled(true);
-            }}
-            disabled={!inputEnabled || !claimIdHex.trim()}
-          >
-            Claim
-          </button>
-        </div>
       </div>
 
       {/* ── Status ───────────────────────────────────── */}

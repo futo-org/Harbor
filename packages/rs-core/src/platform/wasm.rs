@@ -139,8 +139,8 @@ impl PolycentricWasm {
     /// # Arguments
     /// * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
     /// * `limit` - Maximum number of events to fetch
-    /// * `identity` - Optional serialized Identity message bytes to filter by
-    /// * `stream_id` - Optional stream ID to filter by
+    /// * `collection` - Optional collection ID to filter by
+    /// * `identity` - Optional identity key string to filter by
     /// * `signed_by` - Optional public key bytes to filter by
     /// * `signed_by_key_type` - Key type for signed_by (required if signed_by is set)
     ///
@@ -151,8 +151,8 @@ impl PolycentricWasm {
         &self,
         server_url: &str,
         limit: Option<i32>,
-        identity: Option<Vec<u8>>,
-        stream_id: Option<String>,
+        collection: Option<i32>,
+        identity: Option<String>,
         signed_by: Option<Vec<u8>>,
         signed_by_key_type: Option<i32>,
     ) -> std::result::Result<Uint8Array, JsValue> {
@@ -161,8 +161,8 @@ impl PolycentricWasm {
         let response = client
             .list_events(ListEventsRequest {
                 limit,
+                collection,
                 identity,
-                stream_id,
                 signed_by: signed_by.map(|key| PublicKey {
                     key_type: signed_by_key_type.unwrap_or(1),
                     key,

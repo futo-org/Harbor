@@ -7,9 +7,7 @@ import { SQLProcessStateRepository } from './process-state-sql';
 import { SQLKeysRepository } from './keys-sql';
 import { SQLEventAckRepository } from './event-ack-sql';
 import { SQLProcessIdRepository } from './process-id-sql';
-import type { IStorageDriver } from '@polycentric/js-core';
-
-export class SqlStorageDriver implements IStorageDriver {
+export class SqlStorageDriver {
   private readonly database: NodeSQLiteDatabase;
 
   //Private constructor, use the create method instead so that we can create the database asynchronously

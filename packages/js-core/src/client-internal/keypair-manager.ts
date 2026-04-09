@@ -1,20 +1,20 @@
-import type { PolycentricClient, KeyPair } from '../polycentric-client';
+import type { PolycentricClient, KeyPair, PrivateKey } from '../polycentric-client';
 import { KEY_TYPE } from '../constants';
-import { PrivateKey, PublicKey } from '../proto/polycentric';
+import { PublicKey, KeyType } from '../proto/v2';
 
 export class KeyPairManager {
   constructor(private readonly client: PolycentricClient) {}
 
-  private async generateKeyPair(keyType: bigint): Promise<KeyPair> {
+  private async generateKeyPair(keyType: KeyType): Promise<KeyPair> {
     const { privateKey: privateKeyRaw, publicKey: publicKeyRaw } =
       await this.client.crypto.generateKeyPair(keyType);
 
-    const privateKey = PrivateKey.create({
-      keyType: keyType,
+    const privateKey: PrivateKey = {
+      keyType,
       key: privateKeyRaw,
-    });
+    };
     const publicKey = PublicKey.create({
-      keyType: keyType,
+      keyType,
       key: publicKeyRaw,
     });
 
@@ -25,7 +25,7 @@ export class KeyPairManager {
    * Creates a new key pair, stores it, and optionally sets it as current.
    */
   async createKeyPair(options: {
-    keyType?: bigint;
+    keyType?: KeyType;
     setAsCurrent?: boolean;
   }): Promise<KeyPair> {
     const keyPair = await this.generateKeyPair(

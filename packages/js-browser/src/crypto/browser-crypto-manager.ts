@@ -18,7 +18,7 @@ export class BrowserCryptoManager implements ICryptoManager {
    * @throws {Error} If the key type is not supported
    */
   async generateKeyPair(
-    keyType: bigint,
+    keyType: number,
   ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     switch (keyType) {
       case KEY_TYPE.ED25519:
@@ -38,7 +38,7 @@ export class BrowserCryptoManager implements ICryptoManager {
    */
   async derivePublicKey(
     privateKey: Uint8Array,
-    keyType: bigint,
+    keyType: number,
   ): Promise<Uint8Array> {
     switch (keyType) {
       case KEY_TYPE.ED25519:
@@ -60,7 +60,7 @@ export class BrowserCryptoManager implements ICryptoManager {
   async sign(
     privateKey: Uint8Array,
     message: Uint8Array,
-    keyType: bigint,
+    keyType: number,
   ): Promise<Uint8Array> {
     switch (keyType) {
       case KEY_TYPE.ED25519:
@@ -84,7 +84,7 @@ export class BrowserCryptoManager implements ICryptoManager {
     publicKey: Uint8Array,
     message: Uint8Array,
     signature: Uint8Array,
-    keyType: bigint,
+    keyType: number,
   ): Promise<boolean> {
     switch (keyType) {
       case KEY_TYPE.ED25519:
@@ -112,7 +112,7 @@ export class BrowserCryptoManager implements ICryptoManager {
    *
    * @returns Array of supported key type constants
    */
-  getSupportedKeyTypes(): bigint[] {
+  getSupportedKeyTypes(): number[] {
     return [KEY_TYPE.ED25519];
   }
 

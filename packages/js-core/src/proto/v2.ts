@@ -1,3 +1,4 @@
+export * from './polycentric/v2/keypair';
 export * from './polycentric/v2/identity';
 export * from './polycentric/v2/event_key';
 export * from './polycentric/v2/content';

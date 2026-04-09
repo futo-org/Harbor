@@ -132,14 +132,14 @@ export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
     if (content.contentBody.oneofKind !== 'post') return null;
 
     const authorKey = key.signedBy.key;
-    const streamId = new TextEncoder().encode(key.streamId);
-    const id = eventKey(authorKey, streamId, Number(key.sequence));
+    const identityBytes = new TextEncoder().encode(key.identity);
+    const id = eventKey(authorKey, identityBytes, Number(key.sequence));
 
     return {
       id,
       content: content.contentBody.post.text,
       authorPublicKey: types.PublicKey.create({
-        keyType: BigInt(key.signedBy.keyType),
+        keyType: key.signedBy.keyType,
         key: authorKey,
       }),
       timestamp: Number(event.createdAt),
@@ -165,7 +165,7 @@ export function getPointer(
     if (v2Event.key?.signedBy) {
       return types.Pointer.create({
         system: types.PublicKey.create({
-          keyType: BigInt(v2Event.key.signedBy.keyType),
+          keyType: v2Event.key.signedBy.keyType,
           key: v2Event.key.signedBy.key,
         }),
       });
@@ -243,7 +243,7 @@ export function stringToPublicKey(str: string): types.PublicKey {
   const keyTypeStr = str.slice(0, idx);
   const keyBase64 = str.slice(idx + 1);
   return types.PublicKey.create({
-    keyType: BigInt(keyTypeStr),
+    keyType: Number(keyTypeStr),
     key: fromBase64(keyBase64),
   });
 }

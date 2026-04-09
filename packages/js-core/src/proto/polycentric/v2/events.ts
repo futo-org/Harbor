@@ -11,10 +11,23 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-import { PublicKey } from "./identity";
+import { PublicKey } from "./keypair";
 import { SerializedContent } from "./content";
 import { ContentDigest } from "./content";
 import { EventKey } from "./event_key";
+/**
+ * Contains the sequences that the current KeyPair is aware of.
+ * Vector clocks should be compacted, so only add an entry if it has changed
+ * since a prior event.
+ *
+ * @generated from protobuf message polycentric.v2.VectorClock
+ */
+export interface VectorClock {
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.EventKey sequence = 1
+     */
+    sequence: EventKey[];
+}
 /**
  * Event messages reference, but do not include, content
  *
@@ -28,21 +41,28 @@ export interface Event {
      */
     key?: EventKey;
     /**
-     * Signature of the previous event signed by the same key. Assists in creating immutable streams.
+     * Vector clock to keep the same collection on shared identities in sync
      *
-     * @generated from protobuf field: bytes previous_signature = 2
+     * @generated from protobuf field: polycentric.v2.VectorClock vector_clock = 2
+     */
+    vectorClock?: VectorClock;
+    /**
+     * Signature of the previous event signed by the same key. Assists in creating
+     * immutable collections.
+     *
+     * @generated from protobuf field: bytes previous_signature = 3
      */
     previousSignature: Uint8Array;
     /**
      * Digest of the content
      *
-     * @generated from protobuf field: polycentric.v2.ContentDigest content_digest = 3
+     * @generated from protobuf field: polycentric.v2.ContentDigest content_digest = 4
      */
     contentDigest?: ContentDigest;
     /**
      * Timestamp, in milliseconds, of when the event was created
      *
-     * @generated from protobuf field: uint64 created_at = 4
+     * @generated from protobuf field: uint64 created_at = 5
      */
     createdAt: bigint;
 }
@@ -91,17 +111,17 @@ export interface ListEventsRequest {
      */
     limit?: number;
     /**
-     * Stream ID to return events for
+     * Collection to filter events by
      *
-     * @generated from protobuf field: optional string stream_id = 2
+     * @generated from protobuf field: optional int32 collection = 2
      */
-    streamId?: string;
+    collection?: number;
     /**
-     * Serialized Identity message bytes
+     * Identity key to filter events by
      *
-     * @generated from protobuf field: optional bytes identity = 3
+     * @generated from protobuf field: optional string identity = 3
      */
-    identity?: Uint8Array;
+    identity?: string;
     /**
      * Filter events to those signed by this public key
      *
@@ -141,13 +161,61 @@ export interface PutEventsRequest {
 export interface PutEventsResponse {
 }
 // @generated message type with reflection information, may provide speed optimized methods
+class VectorClock$Type extends MessageType<VectorClock> {
+    constructor() {
+        super("polycentric.v2.VectorClock", [
+            { no: 1, name: "sequence", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventKey }
+        ]);
+    }
+    create(value?: PartialMessage<VectorClock>): VectorClock {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.sequence = [];
+        if (value !== undefined)
+            reflectionMergePartial<VectorClock>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: VectorClock): VectorClock {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.EventKey sequence */ 1:
+                    message.sequence.push(EventKey.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: VectorClock, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.EventKey sequence = 1; */
+        for (let i = 0; i < message.sequence.length; i++)
+            EventKey.internalBinaryWrite(message.sequence[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.VectorClock
+ */
+export const VectorClock = new VectorClock$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class Event$Type extends MessageType<Event> {
     constructor() {
         super("polycentric.v2.Event", [
             { no: 1, name: "key", kind: "message", T: () => EventKey },
-            { no: 2, name: "previous_signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "content_digest", kind: "message", T: () => ContentDigest },
-            { no: 4, name: "created_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+            { no: 2, name: "vector_clock", kind: "message", T: () => VectorClock },
+            { no: 3, name: "previous_signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 4, name: "content_digest", kind: "message", T: () => ContentDigest },
+            { no: 5, name: "created_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
     create(value?: PartialMessage<Event>): Event {
@@ -166,13 +234,16 @@ class Event$Type extends MessageType<Event> {
                 case /* polycentric.v2.EventKey key */ 1:
                     message.key = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.key);
                     break;
-                case /* bytes previous_signature */ 2:
+                case /* polycentric.v2.VectorClock vector_clock */ 2:
+                    message.vectorClock = VectorClock.internalBinaryRead(reader, reader.uint32(), options, message.vectorClock);
+                    break;
+                case /* bytes previous_signature */ 3:
                     message.previousSignature = reader.bytes();
                     break;
-                case /* polycentric.v2.ContentDigest content_digest */ 3:
+                case /* polycentric.v2.ContentDigest content_digest */ 4:
                     message.contentDigest = ContentDigest.internalBinaryRead(reader, reader.uint32(), options, message.contentDigest);
                     break;
-                case /* uint64 created_at */ 4:
+                case /* uint64 created_at */ 5:
                     message.createdAt = reader.uint64().toBigInt();
                     break;
                 default:
@@ -190,15 +261,18 @@ class Event$Type extends MessageType<Event> {
         /* polycentric.v2.EventKey key = 1; */
         if (message.key)
             EventKey.internalBinaryWrite(message.key, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* bytes previous_signature = 2; */
+        /* polycentric.v2.VectorClock vector_clock = 2; */
+        if (message.vectorClock)
+            VectorClock.internalBinaryWrite(message.vectorClock, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* bytes previous_signature = 3; */
         if (message.previousSignature.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.previousSignature);
-        /* polycentric.v2.ContentDigest content_digest = 3; */
+            writer.tag(3, WireType.LengthDelimited).bytes(message.previousSignature);
+        /* polycentric.v2.ContentDigest content_digest = 4; */
         if (message.contentDigest)
-            ContentDigest.internalBinaryWrite(message.contentDigest, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
-        /* uint64 created_at = 4; */
+            ContentDigest.internalBinaryWrite(message.contentDigest, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* uint64 created_at = 5; */
         if (message.createdAt !== 0n)
-            writer.tag(4, WireType.Varint).uint64(message.createdAt);
+            writer.tag(5, WireType.Varint).uint64(message.createdAt);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -322,8 +396,8 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
     constructor() {
         super("polycentric.v2.ListEventsRequest", [
             { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "stream_id", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "identity", kind: "scalar", opt: true, T: 12 /*ScalarType.BYTES*/ },
+            { no: 2, name: "collection", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "signed_by", kind: "message", T: () => PublicKey }
         ]);
     }
@@ -341,11 +415,11 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
                 case /* optional int32 limit */ 1:
                     message.limit = reader.int32();
                     break;
-                case /* optional string stream_id */ 2:
-                    message.streamId = reader.string();
+                case /* optional int32 collection */ 2:
+                    message.collection = reader.int32();
                     break;
-                case /* optional bytes identity */ 3:
-                    message.identity = reader.bytes();
+                case /* optional string identity */ 3:
+                    message.identity = reader.string();
                     break;
                 case /* optional polycentric.v2.PublicKey signed_by */ 4:
                     message.signedBy = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.signedBy);
@@ -365,12 +439,12 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
         /* optional int32 limit = 1; */
         if (message.limit !== undefined)
             writer.tag(1, WireType.Varint).int32(message.limit);
-        /* optional string stream_id = 2; */
-        if (message.streamId !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.streamId);
-        /* optional bytes identity = 3; */
+        /* optional int32 collection = 2; */
+        if (message.collection !== undefined)
+            writer.tag(2, WireType.Varint).int32(message.collection);
+        /* optional string identity = 3; */
         if (message.identity !== undefined)
-            writer.tag(3, WireType.LengthDelimited).bytes(message.identity);
+            writer.tag(3, WireType.LengthDelimited).string(message.identity);
         /* optional polycentric.v2.PublicKey signed_by = 4; */
         if (message.signedBy)
             PublicKey.internalBinaryWrite(message.signedBy, writer.tag(4, WireType.LengthDelimited).fork(), options).join();

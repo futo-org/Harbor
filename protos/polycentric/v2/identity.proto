@@ -1,64 +1,15 @@
 syntax = "proto3";
 package polycentric.v2;
 
-enum KeyType {
-  KEY_TYPE_UNSPECIFIED = 0;
-  KEY_TYPE_ED25519 = 1;
-}
 
-// PublicKeys signs all events on the polycentric network. There is usually one public key per account, per device.
-message PublicKey {
-  // Type of key used. Defaults to ED25519.
-  KeyType key_type = 1;
-  // Value of the key
-  bytes key = 2;
-}
+import "polycentric/v2/keypair.proto";
 
-// Deterministic identity. Contains the public key that created it and the
-// sequence number of the creation event. Serialize this message to get the
-// identity bytes used everywhere else. Human-readable form: hex of those bytes.
 message Identity {
-  // The public key that created this identity
-  PublicKey public_key = 1;
-  // The sequence number of the Identity creation event
-  uint64 sequence = 2;
+  // Priority ordered list of the rotation keys (public keys that control the identity and
+  // can issue new keys)
+  repeated PublicKey rotation_keys = 1;
+
+  // List of keys that are allowed to sign events (but not change the identity content).
+  repeated PublicKey signing_keys = 2;
 }
 
-// Permissions that can be assigned to a PublicKey
-enum IdentityPermission {
-  IDENTITY_PERMISSION_UNSPECIFIED = 0;
-  // PublicKey will have full control over the identity
-  IDENTITY_PERMISSION_ALL = 1;
-}
-
-// Identity creation event.
-message IdentityCreate {
-  // Serialized Identity message bytes
-  bytes identity = 1;
-}
-
-// Grant permissions to another public key under a specific identity.
-message IdentityIssue {
-  // Serialized Identity message bytes
-  bytes identity = 1;
-  // Device that the identity will be issued to
-  PublicKey public_key = 2;
-  // Permissions that the identity will have
-  repeated IdentityPermission permissions = 3;
-}
-
-// Revoke a public key's permissions under a specific identity.
-message IdentityRevoke {
-  // Serialized Identity message bytes
-  bytes identity = 1;
-  // PublicKey to be revoked
-  PublicKey public_key = 2;
-}
-
-// Published by a key that has been issued permissions via IdentityIssue.
-// Completes the two-sided handshake: IdentityIssue (by issuer) + IdentityClaim (by recipient).
-// The CRDT replay considers a key fully authorized only when both events exist.
-message IdentityClaim {
-  // Serialized Identity message bytes
-  bytes identity = 1;
-}

@@ -17,8 +17,8 @@ export const RemoteEventList = () => {
   const client = useContext(ClientContext);
   const [events, setEvents] = useState<DecodedEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [collectionStr, setCollectionStr] = useState('');
   const [identityHex, setIdentityHex] = useState('');
-  const [streamId, setStreamId] = useState('');
   const [signedByHex, setSignedByHex] = useState('');
 
   const fetchRemote = async () => {
@@ -27,10 +27,8 @@ export const RemoteEventList = () => {
     setLoading(true);
     const allDecoded: DecodedEvent[] = [];
 
-    const identityId = identityHex.trim()
-      ? fromHex(identityHex.trim())
-      : undefined;
-    const sid = streamId.trim() || undefined;
+    const collection = collectionStr.trim() ? Number(collectionStr.trim()) : undefined;
+    const identity = identityHex.trim() || undefined;
     const signedBy = signedByHex.trim()
       ? fromHex(signedByHex.trim())
       : undefined;
@@ -40,8 +38,8 @@ export const RemoteEventList = () => {
         const responseBytes = await client.core!.list_events(
           server,
           null,
-          identityId,
-          sid,
+          collection,
+          identity,
           signedBy,
         );
         const response = v2.ListEventsResponse.fromBinary(responseBytes);
@@ -126,9 +124,21 @@ export const RemoteEventList = () => {
           Filter
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
+          <div style={{ flex: 0.5, minWidth: 120 }}>
+            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+              Collection (1=identity, 2=feed, 3=interactions)
+            </div>
+            <input
+              type="text"
+              value={collectionStr}
+              onChange={(e) => setCollectionStr(e.target.value)}
+              placeholder="optional"
+              style={{ width: '100%', ...mono }}
+            />
+          </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
-              Identity (hex)
+              Identity (hex hash)
             </div>
             <input
               type="text"
@@ -146,18 +156,6 @@ export const RemoteEventList = () => {
               type="text"
               value={signedByHex}
               onChange={(e) => setSignedByHex(e.target.value)}
-              placeholder="optional"
-              style={{ width: '100%', ...mono }}
-            />
-          </div>
-          <div style={{ flex: 0.5, minWidth: 120 }}>
-            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
-              Stream ID
-            </div>
-            <input
-              type="text"
-              value={streamId}
-              onChange={(e) => setStreamId(e.target.value)}
               placeholder="optional"
               style={{ width: '100%', ...mono }}
             />

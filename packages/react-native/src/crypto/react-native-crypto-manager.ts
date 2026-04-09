@@ -5,7 +5,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
   private ed25519Manager = new ED25519KeyManager();
 
   async generateKeyPair(
-    keyType: bigint
+    keyType: number
   ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.generateKeyPair();
@@ -13,7 +13,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
 
   async derivePublicKey(
     privateKey: Uint8Array,
-    keyType: bigint
+    keyType: number
   ): Promise<Uint8Array> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.getPublicKeyFromPrivate(privateKey);
@@ -22,7 +22,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
   async sign(
     privateKey: Uint8Array,
     message: Uint8Array,
-    keyType: bigint
+    keyType: number
   ): Promise<Uint8Array> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.sign(message, privateKey);
@@ -32,7 +32,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
     publicKey: Uint8Array,
     message: Uint8Array,
     signature: Uint8Array,
-    keyType: bigint
+    keyType: number
   ): Promise<boolean> {
     this._assertKeyType(keyType);
     return this.ed25519Manager.verify(signature, message, publicKey);
@@ -42,7 +42,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
     return this.ed25519Manager.randomPrivateKey().slice(0, 16);
   }
 
-  getSupportedKeyTypes(): bigint[] {
+  getSupportedKeyTypes(): number[] {
     return [KEY_TYPE.ED25519];
   }
 
@@ -52,7 +52,7 @@ export class ReactNativeCryptoManager implements ICryptoManager {
       .join('');
   }
 
-  private _assertKeyType(keyType: bigint): void {
+  private _assertKeyType(keyType: number): void {
     if (keyType !== KEY_TYPE.ED25519) {
       throw new Error(`Unsupported key type: ${keyType}`);
     }

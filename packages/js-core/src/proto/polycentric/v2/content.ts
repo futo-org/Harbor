@@ -12,10 +12,7 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventKey } from "./event_key";
-import { IdentityClaim } from "./identity";
-import { IdentityRevoke } from "./identity";
-import { IdentityIssue } from "./identity";
-import { IdentityCreate } from "./identity";
+import { Identity } from "./identity";
 /**
  * @generated from protobuf message polycentric.v2.ContentDigest
  */
@@ -77,29 +74,11 @@ export interface Content {
          */
         profileUpdate: ProfileUpdate;
     } | {
-        oneofKind: "identityCreate";
+        oneofKind: "identity";
         /**
-         * @generated from protobuf field: polycentric.v2.IdentityCreate identity_create = 8
+         * @generated from protobuf field: polycentric.v2.Identity identity = 8
          */
-        identityCreate: IdentityCreate;
-    } | {
-        oneofKind: "identityIssue";
-        /**
-         * @generated from protobuf field: polycentric.v2.IdentityIssue identity_issue = 9
-         */
-        identityIssue: IdentityIssue;
-    } | {
-        oneofKind: "identityRevoke";
-        /**
-         * @generated from protobuf field: polycentric.v2.IdentityRevoke identity_revoke = 10
-         */
-        identityRevoke: IdentityRevoke;
-    } | {
-        oneofKind: "identityClaim";
-        /**
-         * @generated from protobuf field: polycentric.v2.IdentityClaim identity_claim = 11
-         */
-        identityClaim: IdentityClaim;
+        identity: Identity;
     } | {
         oneofKind: undefined;
     };
@@ -391,10 +370,7 @@ class Content$Type extends MessageType<Content> {
             { no: 5, name: "block", kind: "message", oneof: "contentBody", T: () => Block },
             { no: 6, name: "reaction", kind: "message", oneof: "contentBody", T: () => Reaction },
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
-            { no: 8, name: "identity_create", kind: "message", oneof: "contentBody", T: () => IdentityCreate },
-            { no: 9, name: "identity_issue", kind: "message", oneof: "contentBody", T: () => IdentityIssue },
-            { no: 10, name: "identity_revoke", kind: "message", oneof: "contentBody", T: () => IdentityRevoke },
-            { no: 11, name: "identity_claim", kind: "message", oneof: "contentBody", T: () => IdentityClaim }
+            { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -445,28 +421,10 @@ class Content$Type extends MessageType<Content> {
                         profileUpdate: ProfileUpdate.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).profileUpdate)
                     };
                     break;
-                case /* polycentric.v2.IdentityCreate identity_create */ 8:
+                case /* polycentric.v2.Identity identity */ 8:
                     message.contentBody = {
-                        oneofKind: "identityCreate",
-                        identityCreate: IdentityCreate.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identityCreate)
-                    };
-                    break;
-                case /* polycentric.v2.IdentityIssue identity_issue */ 9:
-                    message.contentBody = {
-                        oneofKind: "identityIssue",
-                        identityIssue: IdentityIssue.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identityIssue)
-                    };
-                    break;
-                case /* polycentric.v2.IdentityRevoke identity_revoke */ 10:
-                    message.contentBody = {
-                        oneofKind: "identityRevoke",
-                        identityRevoke: IdentityRevoke.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identityRevoke)
-                    };
-                    break;
-                case /* polycentric.v2.IdentityClaim identity_claim */ 11:
-                    message.contentBody = {
-                        oneofKind: "identityClaim",
-                        identityClaim: IdentityClaim.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identityClaim)
+                        oneofKind: "identity",
+                        identity: Identity.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identity)
                     };
                     break;
                 default:
@@ -499,18 +457,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.ProfileUpdate profile_update = 7; */
         if (message.contentBody.oneofKind === "profileUpdate")
             ProfileUpdate.internalBinaryWrite(message.contentBody.profileUpdate, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.IdentityCreate identity_create = 8; */
-        if (message.contentBody.oneofKind === "identityCreate")
-            IdentityCreate.internalBinaryWrite(message.contentBody.identityCreate, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.IdentityIssue identity_issue = 9; */
-        if (message.contentBody.oneofKind === "identityIssue")
-            IdentityIssue.internalBinaryWrite(message.contentBody.identityIssue, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.IdentityRevoke identity_revoke = 10; */
-        if (message.contentBody.oneofKind === "identityRevoke")
-            IdentityRevoke.internalBinaryWrite(message.contentBody.identityRevoke, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.IdentityClaim identity_claim = 11; */
-        if (message.contentBody.oneofKind === "identityClaim")
-            IdentityClaim.internalBinaryWrite(message.contentBody.identityClaim, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.Identity identity = 8; */
+        if (message.contentBody.oneofKind === "identity")
+            Identity.internalBinaryWrite(message.contentBody.identity, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -7,9 +7,10 @@ use super::protos_v2::SignedEvent;
 /// A unique identifier for an event within the system
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EventKey {
+    pub collection: i32,
+    pub identity: String,
     pub system_key_type: i32,
     pub system_key: Vec<u8>,
-    pub stream_id: String,
     pub sequence: u64,
 }
 
@@ -25,9 +26,10 @@ impl EventKey {
             .ok_or_else(|| CoreError::InvalidEvent("Missing signed_by".to_string()))?;
 
         Ok(EventKey {
+            collection: key.collection,
+            identity: key.identity.clone(),
             system_key_type: signed_by.key_type,
             system_key: signed_by.key.clone(),
-            stream_id: key.stream_id.clone(),
             sequence: key.sequence,
         })
     }
@@ -78,16 +80,18 @@ impl SystemKey {
     }
 }
 
-/// Process identifier (maps to stream_id in v2)
+/// Process identifier (collection + identity from EventKey)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProcessId {
-    pub stream_id: String,
+    pub collection: i32,
+    pub identity: String,
 }
 
 impl ProcessId {
     pub fn from_event_key(key: &ProtoEventKey) -> Self {
         ProcessId {
-            stream_id: key.stream_id.clone(),
+            collection: key.collection,
+            identity: key.identity.clone(),
         }
     }
 }

@@ -1,11 +1,13 @@
 export const KEY_TYPE = {
-  ED25519: BigInt(1),
-  SHA256: BigInt(2),
+  ED25519: 1,
+  SHA256: 2,
 } as const;
 
-export const STREAM_ID = {
-  IDENTITY: 'identity',
-  FEED: 'feed',
+/** Collection IDs matching the EventKey.collection proto field */
+export const COLLECTION = {
+  IDENTITY: 1,
+  FEED: 2,
+  INTERACTIONS: 3,
 } as const;
 
 export enum HydrationStrategy {

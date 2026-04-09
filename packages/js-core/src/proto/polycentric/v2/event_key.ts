@@ -10,7 +10,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-import { PublicKey } from "./identity";
+import { PublicKey } from "./keypair";
 /**
  * EventKey's are the unique identitifiers of Events
  *
@@ -18,21 +18,31 @@ import { PublicKey } from "./identity";
  */
 export interface EventKey {
     /**
-     * ID of the stream the event is connected with
+     * Collection of the stream the event is connected with
+     * Reserved collections are:
+     * 1 -> Polycentric Identity
+     * 2 -> Polycentric feed
+     * 3 -> Polycentric interactions
      *
-     * @generated from protobuf field: string stream_id = 1
+     * @generated from protobuf field: int32 collection = 1
      */
-    streamId: string;
+    collection: number;
+    /**
+     * Identity Key (sha256 hash of the initial Identity content)
+     *
+     * @generated from protobuf field: string identity = 2
+     */
+    identity: string;
     /**
      * Public key that signed the event
      *
-     * @generated from protobuf field: polycentric.v2.PublicKey signed_by = 2
+     * @generated from protobuf field: polycentric.v2.PublicKey signed_by = 3
      */
     signedBy?: PublicKey;
     /**
-     * Sequence number of the event in the event stream (our logical clock)
+     * Sequence number of the event in the collection (our logical clock)
      *
-     * @generated from protobuf field: uint64 sequence = 3
+     * @generated from protobuf field: uint64 sequence = 4
      */
     sequence: bigint;
 }
@@ -40,14 +50,16 @@ export interface EventKey {
 class EventKey$Type extends MessageType<EventKey> {
     constructor() {
         super("polycentric.v2.EventKey", [
-            { no: 1, name: "stream_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "signed_by", kind: "message", T: () => PublicKey },
-            { no: 3, name: "sequence", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+            { no: 1, name: "collection", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "signed_by", kind: "message", T: () => PublicKey },
+            { no: 4, name: "sequence", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
     create(value?: PartialMessage<EventKey>): EventKey {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.streamId = "";
+        message.collection = 0;
+        message.identity = "";
         message.sequence = 0n;
         if (value !== undefined)
             reflectionMergePartial<EventKey>(this, message, value);
@@ -58,13 +70,16 @@ class EventKey$Type extends MessageType<EventKey> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string stream_id */ 1:
-                    message.streamId = reader.string();
+                case /* int32 collection */ 1:
+                    message.collection = reader.int32();
                     break;
-                case /* polycentric.v2.PublicKey signed_by */ 2:
+                case /* string identity */ 2:
+                    message.identity = reader.string();
+                    break;
+                case /* polycentric.v2.PublicKey signed_by */ 3:
                     message.signedBy = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.signedBy);
                     break;
-                case /* uint64 sequence */ 3:
+                case /* uint64 sequence */ 4:
                     message.sequence = reader.uint64().toBigInt();
                     break;
                 default:
@@ -79,15 +94,18 @@ class EventKey$Type extends MessageType<EventKey> {
         return message;
     }
     internalBinaryWrite(message: EventKey, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string stream_id = 1; */
-        if (message.streamId !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.streamId);
-        /* polycentric.v2.PublicKey signed_by = 2; */
+        /* int32 collection = 1; */
+        if (message.collection !== 0)
+            writer.tag(1, WireType.Varint).int32(message.collection);
+        /* string identity = 2; */
+        if (message.identity !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.identity);
+        /* polycentric.v2.PublicKey signed_by = 3; */
         if (message.signedBy)
-            PublicKey.internalBinaryWrite(message.signedBy, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        /* uint64 sequence = 3; */
+            PublicKey.internalBinaryWrite(message.signedBy, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* uint64 sequence = 4; */
         if (message.sequence !== 0n)
-            writer.tag(3, WireType.Varint).uint64(message.sequence);
+            writer.tag(4, WireType.Varint).uint64(message.sequence);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

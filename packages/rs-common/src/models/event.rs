@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use super::protos_v2::{Event, EventKey, ContentDigest};
+use super::protos_v2::{Event, EventKey, ContentDigest, VectorClock};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
 use prost::Message;
@@ -9,12 +9,14 @@ impl Event {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         key: EventKey,
+        vector_clock: Option<VectorClock>,
         previous_signature: Vec<u8>,
         content_digest: Option<ContentDigest>,
         created_at: u64,
     ) -> Self {
         Self {
             key: Some(key),
+            vector_clock,
             previous_signature,
             content_digest,
             created_at,

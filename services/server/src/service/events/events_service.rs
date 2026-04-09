@@ -14,10 +14,7 @@ use ::entity::{
     content_block_model as ContentBlockModel,
     content_delete_model as ContentDeleteModel,
     content_follow_model as ContentFollowModel,
-    content_identity_claim_model as ContentIdentityClaimModel,
-    content_identity_create_model as ContentIdentityModel,
-    content_identity_issue_model as ContentIdentityIssueModel,
-    content_identity_revoke_model as ContentIdentityRevokeModel,
+    content_identity_model as ContentIdentityModel,
     content_model as ContentModel, content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
@@ -42,14 +39,14 @@ impl EventSyncService for EventSyncServiceImpl {
     ) -> Result<Response<ListEventsResponse>, Status> {
         let inner_req = request.into_inner();
         let limit = inner_req.limit.unwrap_or(200).min(200) as u64;
-        let stream_id = inner_req.stream_id;
+        let collection = inner_req.collection;
         let identity = inner_req.identity;
         let signed_by = inner_req.signed_by;
 
         let events = EventsRepository::Query::list_events(
             &self.db,
             Some(limit),
-            stream_id,
+            collection,
             identity,
             signed_by,
         )
@@ -186,8 +183,13 @@ impl EventSyncService for EventSyncServiceImpl {
 
                 match content_result {
                     Ok(content_row) => {
-                        save_content_child(&txn, content_row.id, content)
-                            .await?;
+                        save_content_child(
+                            &txn,
+                            content_row.id,
+                            content,
+                            &key.identity,
+                        )
+                        .await?;
                     }
                     Err(ref e) if Self::is_unique_violation(e) => {
                         // Content already exists, skip
@@ -207,7 +209,8 @@ impl EventSyncService for EventSyncServiceImpl {
             // Build the Model that we will save to the database
             let active_model = EventModel::ActiveModel {
                 id: NotSet,
-                stream_id: Set(key.stream_id),
+                collection: Set(key.collection as i16),
+                identity: Set(key.identity),
                 public_key_type: Set(signed_by.key_type as i16),
                 public_key: Set(signed_by.key),
                 sequence: Set(key.sequence as i16),
@@ -270,11 +273,13 @@ impl EventSyncServiceImpl {
 //   Block          → content_block
 //   Reaction       → content_reaction
 //   ProfileUpdate  → content_profile_update
+//   Identity       → content_identity
 // ──────────────────────────────────────────────────────────────────
 async fn save_content_child<C: sea_orm::ConnectionTrait>(
     db: &C,
     content_id: i64,
     content: Content,
+    event_identity: &str,
 ) -> Result<(), Status> {
     let map_db_err = |e: sea_orm::DbErr| {
         eprintln!("save_content_child db error: {e}");
@@ -294,9 +299,12 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                 content_id: Set(content_id),
                 text: Set(post.text),
                 // Reply root EventKey (all None when not a reply)
-                reply_root_stream_id: Set(reply_root
+                reply_root_collection: Set(reply_root
                     .as_ref()
-                    .map(|k| k.stream_id.clone())),
+                    .map(|k| k.collection as i16)),
+                reply_root_identity: Set(reply_root
+                    .as_ref()
+                    .map(|k| k.identity.clone())),
                 reply_root_public_key_type: Set(reply_root.as_ref().and_then(
                     |k| k.signed_by.as_ref().map(|s| s.key_type as i16),
                 )),
@@ -307,9 +315,12 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                     .as_ref()
                     .map(|k| k.sequence as i64)),
                 // Reply parent EventKey (all None when not a reply)
-                reply_parent_stream_id: Set(reply_parent
+                reply_parent_collection: Set(reply_parent
                     .as_ref()
-                    .map(|k| k.stream_id.clone())),
+                    .map(|k| k.collection as i16)),
+                reply_parent_identity: Set(reply_parent
+                    .as_ref()
+                    .map(|k| k.identity.clone())),
                 reply_parent_public_key_type: Set(reply_parent
                     .as_ref()
                     .and_then(|k| {
@@ -339,7 +350,8 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentDeleteModel::ActiveModel {
                 content_id: Set(content_id),
-                event_key_stream_id: Set(key.stream_id),
+                event_key_collection: Set(key.collection as i16),
+                event_key_identity: Set(key.identity),
                 event_key_public_key_type: Set(signed_by.key_type as i16),
                 event_key_public_key: Set(signed_by.key),
                 event_key_sequence: Set(key.sequence as i64),
@@ -383,7 +395,8 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentReactionModel::ActiveModel {
                 content_id: Set(content_id),
-                event_key_stream_id: Set(key.stream_id),
+                event_key_collection: Set(key.collection as i16),
+                event_key_identity: Set(key.identity),
                 event_key_public_key_type: Set(signed_by.key_type as i16),
                 event_key_public_key: Set(signed_by.key),
                 event_key_sequence: Set(key.sequence as i64),
@@ -401,64 +414,15 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             // TODO: save profile update with avatar/banner digests
         }
 
-        // ── IdentityCreate ───────────────────────────────────
-        Some(ContentBody::IdentityCreate(create)) => {
+        // ── Identity ─────────────────────────────────────────
+        // Stores the current identity document (rotation_keys + signing_keys).
+        Some(ContentBody::Identity(identity)) => {
+            let identity_bytes = prost::Message::encode_to_vec(&identity);
+
             ContentIdentityModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(create.identity),
-            }
-            .insert(db)
-            .await
-            .map_err(map_db_err)?;
-        }
-
-        // ── IdentityIssue ───────────────────────────────────
-        Some(ContentBody::IdentityIssue(issue)) => {
-            let key = issue.public_key.ok_or_else(|| {
-                Status::invalid_argument("identity_issue missing public_key")
-            })?;
-
-            let permissions = issue
-                .permissions
-                .iter()
-                .map(|p| p.to_string())
-                .collect::<Vec<_>>()
-                .join(",");
-
-            ContentIdentityIssueModel::ActiveModel {
-                content_id: Set(content_id),
-                identity_id: Set(issue.identity),
-                issued_public_key_type: Set(key.key_type as i16),
-                issued_public_key: Set(key.key),
-                permissions: Set(permissions),
-            }
-            .insert(db)
-            .await
-            .map_err(map_db_err)?;
-        }
-
-        // ── IdentityRevoke ──────────────────────────────────
-        Some(ContentBody::IdentityRevoke(revoke)) => {
-            let key = revoke.public_key.ok_or_else(|| {
-                Status::invalid_argument("identity_revoke missing public_key")
-            })?;
-
-            ContentIdentityRevokeModel::ActiveModel {
-                content_id: Set(content_id),
-                identity_id: Set(revoke.identity),
-                revoked_public_key_type: Set(key.key_type as i16),
-                revoked_public_key: Set(key.key),
-            }
-            .insert(db)
-            .await
-            .map_err(map_db_err)?;
-        }
-
-        // ── IdentityClaim ────────────────────────────────────
-        Some(ContentBody::IdentityClaim(claim)) => {
-            ContentIdentityClaimModel::ActiveModel {
-                content_id: Set(content_id),
-                identity_id: Set(claim.identity),
+                identity: Set(event_identity.to_string()),
+                identity_bytes: Set(identity_bytes),
             }
             .insert(db)
             .await

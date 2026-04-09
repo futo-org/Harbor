@@ -7,8 +7,8 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
-function eventCompoundKey(publicKey: string, streamId: string, sequence: number): string {
-  return `${publicKey}:${streamId}:${sequence}`;
+function eventCompoundKey(publicKey: string, identity: string, sequence: number): string {
+  return `${publicKey}:${identity}:${sequence}`;
 }
 
 /**
@@ -23,14 +23,14 @@ export class EventRepository implements IEventRepository {
     if (!event.key?.signedBy?.key) throw new Error('Event missing key');
     return {
       publicKey: bytesToHex(event.key.signedBy.key),
-      streamId: event.key.streamId,
+      identity: event.key.identity,
       sequence: Number(event.key.sequence),
     };
   }
 
   async persistEvent(signedEvent: v2.SignedEvent): Promise<void> {
-    const { publicKey, streamId, sequence } = this.extractKey(signedEvent);
-    this.events.set(eventCompoundKey(publicKey, streamId, sequence), signedEvent);
+    const { publicKey, identity, sequence } = this.extractKey(signedEvent);
+    this.events.set(eventCompoundKey(publicKey, identity, sequence), signedEvent);
   }
 
   async persistEvents(signedEvents: v2.SignedEvent[]): Promise<void> {
@@ -50,8 +50,8 @@ export class EventRepository implements IEventRepository {
     return { events: slice, offset: offset + slice.length };
   }
 
-  async getNextSequence(publicKey: Uint8Array, streamId: string): Promise<bigint> {
-    const prefix = `${bytesToHex(publicKey)}:${streamId}:`;
+  async getNextSequence(publicKey: Uint8Array, identity: string): Promise<bigint> {
+    const prefix = `${bytesToHex(publicKey)}:${identity}:`;
     let max = 0n;
     for (const key of this.events.keys()) {
       if (key.startsWith(prefix)) {
@@ -64,9 +64,9 @@ export class EventRepository implements IEventRepository {
 
   async getLatestEvent(
     publicKey: Uint8Array,
-    streamId: string,
+    identity: string,
   ): Promise<v2.SignedEvent | null> {
-    const prefix = `${bytesToHex(publicKey)}:${streamId}:`;
+    const prefix = `${bytesToHex(publicKey)}:${identity}:`;
     let latest: v2.SignedEvent | null = null;
     let maxSeq = -1;
     for (const [key, event] of this.events) {
@@ -81,11 +81,11 @@ export class EventRepository implements IEventRepository {
     return latest;
   }
 
-  async getEventsByStream(
+  async getEventsByIdentity(
     publicKey: Uint8Array,
-    streamId: string,
+    identity: string,
   ): Promise<v2.SignedEvent[]> {
-    const prefix = `${bytesToHex(publicKey)}:${streamId}:`;
+    const prefix = `${bytesToHex(publicKey)}:${identity}:`;
     const result: { seq: number; event: v2.SignedEvent }[] = [];
     for (const [key, event] of this.events) {
       if (key.startsWith(prefix)) {

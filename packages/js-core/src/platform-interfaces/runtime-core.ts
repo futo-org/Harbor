@@ -14,8 +14,8 @@ export interface IPolycentricCore {
   list_events(
     serverUrl: string,
     limit?: number | null,
-    identity?: Uint8Array | null,
-    streamId?: string | null,
+    collection?: number | null,
+    identity?: string | null,
     signedBy?: Uint8Array | null,
     signedByKeyType?: number | null,
   ): Promise<Uint8Array>;

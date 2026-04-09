@@ -1,18 +1,18 @@
-import type { IEventRepository } from '@polycentric/js-core';
 import {
   SignedEvent,
   DatabaseError,
   Event,
   ContentType,
   Pointer,
-  Delete,
+  v1,
 } from '@polycentric/js-core';
+const { Delete } = v1;
 import { NodeSQLiteDatabase } from './sqlite-database';
 
 /**
  * EventRepository provides SQL-based storage for polycentric signed events.
  */
-export class SQLEventRepository implements IEventRepository {
+export class SQLEventRepository {
   private readonly database: NodeSQLiteDatabase;
 
   /**

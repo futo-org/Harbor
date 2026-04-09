@@ -113,16 +113,16 @@ class NativePolycentricCore implements IPolycentricCore {
   async list_events(
     serverUrl: string,
     limit?: number | null,
-    identity?: Uint8Array | null,
-    streamId?: string | null,
+    collection?: number | null,
+    identity?: string | null,
     signedBy?: Uint8Array | null,
     signedByKeyType?: number | null,
   ): Promise<Uint8Array> {
     const request = ListEventsRequest.toBinary(
       ListEventsRequest.create({
         limit: limit ?? undefined,
+        collection: collection ?? undefined,
         identity: identity ?? undefined,
-        streamId: streamId ?? undefined,
         signedBy:
           signedBy != null
             ? { keyType: signedByKeyType ?? 1, key: signedBy }

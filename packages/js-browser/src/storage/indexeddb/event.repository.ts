@@ -10,8 +10,10 @@ import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 interface PersistedEvent {
   /** Hex-encoded public key of the signer */
   publicKey: string;
-  /** Stream identifier (e.g. 'feed', 'identity') */
-  streamId: string;
+  /** Collection ID (1=Identity, 2=Feed, 3=Interactions) */
+  collection: number;
+  /** Identity key */
+  identity: string;
   /** Sequence number within the stream */
   sequence: number;
   /** The raw SignedEvent proto fields */
@@ -28,7 +30,7 @@ function bytesToHex(bytes: Uint8Array): string {
 /**
  * IndexedDBEventRepository provides IndexedDB-based storage for polycentric signed events.
  *
- * Events are stored with a compound key of (publicKey, streamId, sequence)
+ * Events are stored with a compound key of (publicKey, collection, identity, sequence)
  * so they are naturally partitioned and ordered per stream.
  */
 export class IndexedDBEventRepository implements IEventRepository {
@@ -43,7 +45,7 @@ export class IndexedDBEventRepository implements IEventRepository {
     layout.stores.push({
       name: IndexedDBEventRepository.STORE_NAME,
       options: {
-        keyPath: ['publicKey', 'streamId', 'sequence'],
+        keyPath: ['publicKey', 'collection', 'identity', 'sequence'],
       },
       indexes: [],
     });
@@ -67,7 +69,8 @@ export class IndexedDBEventRepository implements IEventRepository {
 
     return {
       publicKey: bytesToHex(event.key.signedBy.key),
-      streamId: event.key.streamId,
+      collection: event.key.collection,
+      identity: event.key.identity,
       sequence: Number(event.key.sequence),
       signature: signedEvent.signature,
       eventBytes: signedEvent.eventBytes,
@@ -129,7 +132,7 @@ export class IndexedDBEventRepository implements IEventRepository {
 
   async getNextSequence(
     publicKey: Uint8Array,
-    streamId: string,
+    identity: string,
   ): Promise<bigint> {
     try {
       const pubKeyHex = bytesToHex(publicKey);
@@ -142,41 +145,28 @@ export class IndexedDBEventRepository implements IEventRepository {
         IndexedDBEventRepository.STORE_NAME,
       );
 
-      // Use a key range to find all events for this (publicKey, streamId).
-      // Compound keys are compared lexicographically, so we can bound on the
-      // first two components and open a reverse cursor to find the max sequence.
-      const range = IDBKeyRange.bound(
-        [pubKeyHex, streamId, 0],
-        [pubKeyHex, streamId, Number.MAX_SAFE_INTEGER],
-      );
+      const results =
+        await IndexedDBDatabase.requestAsPromise<PersistedEvent[]>(
+          store.getAll(),
+        );
 
-      return new Promise((resolve, reject) => {
-        const request = store.openCursor(range, 'prev');
+      let maxSeq = 0n;
+      for (const row of results) {
+        if (row.publicKey === pubKeyHex && row.identity === identity) {
+          const seq = BigInt(row.sequence);
+          if (seq > maxSeq) maxSeq = seq;
+        }
+      }
 
-        request.onsuccess = () => {
-          const cursor = request.result;
-          if (cursor) {
-            const persisted = cursor.value as PersistedEvent;
-            resolve(BigInt(persisted.sequence) + 1n);
-          } else {
-            resolve(1n);
-          }
-        };
-
-        request.onerror = () => {
-          reject(
-            new DatabaseError('Failed to get next sequence', request.error),
-          );
-        };
-      });
+      return maxSeq + 1n;
     } catch (error) {
       throw new DatabaseError('Failed to get next sequence: ', error);
     }
   }
 
-  async getEventsByStream(
+  async getEventsByIdentity(
     publicKey: Uint8Array,
-    streamId: string,
+    identity: string,
   ): Promise<v2.SignedEvent[]> {
     try {
       const pubKeyHex = bytesToHex(publicKey);
@@ -189,63 +179,26 @@ export class IndexedDBEventRepository implements IEventRepository {
         IndexedDBEventRepository.STORE_NAME,
       );
 
-      const range = IDBKeyRange.bound(
-        [pubKeyHex, streamId, 0],
-        [pubKeyHex, streamId, Number.MAX_SAFE_INTEGER],
-      );
-
       const results =
         await IndexedDBDatabase.requestAsPromise<PersistedEvent[]>(
-          store.getAll(range),
+          store.getAll(),
         );
 
-      return results.map((row) => this.toSignedEvent(row));
+      return results
+        .filter((row) => row.publicKey === pubKeyHex && row.identity === identity)
+        .sort((a, b) => a.sequence - b.sequence)
+        .map((row) => this.toSignedEvent(row));
     } catch (error) {
-      throw new DatabaseError('Failed to get events by stream: ', error);
+      throw new DatabaseError('Failed to get events by identity: ', error);
     }
   }
 
   async getLatestEvent(
     publicKey: Uint8Array,
-    streamId: string,
+    identity: string,
   ): Promise<v2.SignedEvent | null> {
-    try {
-      const pubKeyHex = bytesToHex(publicKey);
-
-      const transaction = this.database.createTransaction(
-        IndexedDBEventRepository.STORE_NAME,
-        'readonly',
-      );
-      const store = transaction.objectStore(
-        IndexedDBEventRepository.STORE_NAME,
-      );
-
-      const range = IDBKeyRange.bound(
-        [pubKeyHex, streamId, 0],
-        [pubKeyHex, streamId, Number.MAX_SAFE_INTEGER],
-      );
-
-      return new Promise((resolve, reject) => {
-        const request = store.openCursor(range, 'prev');
-
-        request.onsuccess = () => {
-          const cursor = request.result;
-          if (cursor) {
-            resolve(this.toSignedEvent(cursor.value as PersistedEvent));
-          } else {
-            resolve(null);
-          }
-        };
-
-        request.onerror = () => {
-          reject(
-            new DatabaseError('Failed to get latest event', request.error),
-          );
-        };
-      });
-    } catch (error) {
-      throw new DatabaseError('Failed to get latest event: ', error);
-    }
+    const events = await this.getEventsByIdentity(publicKey, identity);
+    return events.length > 0 ? events[events.length - 1] : null;
   }
 
   async getEventsBatch(
@@ -255,41 +208,9 @@ export class IndexedDBEventRepository implements IEventRepository {
     events: v2.SignedEvent[];
     offset: number;
   }> {
-    const transaction = this.database.createTransaction(
-      IndexedDBEventRepository.STORE_NAME,
-      'readonly',
-    );
-    const store = transaction.objectStore(IndexedDBEventRepository.STORE_NAME);
-
-    const events: v2.SignedEvent[] = [];
-    let count = 0;
-
-    return new Promise((resolve, reject) => {
-      const request = store.openCursor(null, 'prev');
-
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (!cursor || events.length >= batchSize) {
-          resolve({ events, offset: count });
-          return;
-        }
-
-        // Skip past offset
-        if (offset !== undefined && count < offset) {
-          count++;
-          cursor.continue();
-          return;
-        }
-
-        const persisted = cursor.value as PersistedEvent;
-        events.push(this.toSignedEvent(persisted));
-        count++;
-        cursor.continue();
-      };
-
-      request.onerror = () => {
-        reject(new DatabaseError('Failed to get events batch', request.error));
-      };
-    });
+    const all = await this.getAllEvents();
+    const start = offset ?? 0;
+    const events = all.slice(start, start + batchSize);
+    return { events, offset: start + events.length };
   }
 }

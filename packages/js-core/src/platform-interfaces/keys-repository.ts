@@ -1,4 +1,5 @@
-import { PrivateKey, PublicKey } from '../proto/polycentric';
+import type { PrivateKey } from '../polycentric-client';
+import { PublicKey } from '../proto/v2';
 
 /**
  * KeysRepository interface for storing and retrieving cryptographic keys in a database

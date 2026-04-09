@@ -1,5 +1,5 @@
-import type { IKeysRepository } from '@polycentric/js-core';
-import { PrivateKey, PublicKey, DatabaseError } from '@polycentric/js-core';
+import type { IKeysRepository, PrivateKey } from '@polycentric/js-core';
+import { v2, DatabaseError } from '@polycentric/js-core';
 import { NodeSQLiteDatabase } from './sqlite-database';
 
 /**
@@ -8,24 +8,13 @@ import { NodeSQLiteDatabase } from './sqlite-database';
 export class SQLKeysRepository implements IKeysRepository {
   private readonly database: NodeSQLiteDatabase;
 
-  /**
-   * Create a new SQLKeysRepository instance
-   *
-   * @param database - Database instance
-   */
   constructor(database: NodeSQLiteDatabase) {
     this.database = database;
   }
 
-  /**
-   * Store a key pair in the database.
-   *
-   * @param keys - A key pair to store
-   * @throws {DatabaseError} If the keys are invalid or storing fails
-   */
   async storeKeys(keys: {
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   }): Promise<void> {
     try {
       await this.database.executeNonQuery(
@@ -43,15 +32,9 @@ export class SQLKeysRepository implements IKeysRepository {
     }
   }
 
-  /**
-   * Retrieve a key pair by public key.
-   *
-   * @param publicKey - The public key to look up
-   * @returns Promise that resolves to the key pair, or null if not found
-   */
-  async retrieveKeysByPublicKey(publicKey: PublicKey): Promise<{
+  async retrieveKeysByPublicKey(publicKey: v2.PublicKey): Promise<{
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   } | null> {
     try {
       const results = await this.database.executeQuery<{
@@ -68,22 +51,17 @@ export class SQLKeysRepository implements IKeysRepository {
       }
 
       const row = results[0];
+      const kt = Number(row.key_type);
       return {
-        privateKey: PrivateKey.create({
-          keyType: BigInt(row.key_type),
-          key: Uint8Array.from(row.private_key),
-        }),
-        publicKey: PublicKey.create({
-          keyType: BigInt(row.key_type),
-          key: Uint8Array.from(row.public_key),
-        }),
+        privateKey: { keyType: kt, key: Uint8Array.from(row.private_key) },
+        publicKey: v2.PublicKey.create({ keyType: kt, key: Uint8Array.from(row.public_key) }),
       };
     } catch (error) {
       throw new DatabaseError('Failed to retrieve keys by public key: ', error);
     }
   }
 
-  getAllKeys(): Promise<{ privateKey: PrivateKey; publicKey: PublicKey }[]> {
+  getAllKeys(): Promise<{ privateKey: PrivateKey; publicKey: v2.PublicKey }[]> {
     throw new Error('Not yet implemented');
   }
 
@@ -92,19 +70,6 @@ export class SQLKeysRepository implements IKeysRepository {
   }
 }
 
-/**
- * Create a new SQLKeysRepository with an initialized database.
- *
- * This method creates a standalone keys repository. It allows for
- * simpler isolation for testing purposes.
- *
- * This method should not be used in practice.
- * In practice create a BrowserStorage instance.
- *
- * @param database - Database instance for storing keys
- * @returns Promise that resolves to an initialized SQLKeysRepository
- * @throws {Error} If database initialization fails
- */
 export async function _createSQLKeysRepository(
   database: NodeSQLiteDatabase,
 ): Promise<SQLKeysRepository> {

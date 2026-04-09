@@ -16,29 +16,29 @@ export interface IEventRepository {
   }>;
 
   /**
-   * Get the next sequence number for a given public key and stream.
-   * Returns max(sequence) + 1 across all stored events matching the key and stream,
+   * Get the next sequence number for a given public key and identity.
+   * Returns max(sequence) + 1 across all stored events matching the key and identity,
    * or 1n if no events exist.
    *
    * @param publicKey - The public key bytes of the signer
-   * @param streamId - The stream identifier
+   * @param identity - The identity key (hex hash)
    */
-  getNextSequence(publicKey: Uint8Array, streamId: string): Promise<bigint>;
+  getNextSequence(publicKey: Uint8Array, identity: string): Promise<bigint>;
 
   /**
-   * Get the event with the highest sequence number for a given public key and stream.
-   * Returns null if no events exist for the key+stream.
+   * Get the event with the highest sequence number for a given public key and identity.
+   * Returns null if no events exist for the key+identity.
    *
    * @param publicKey - The public key bytes of the signer
-   * @param streamId - The stream identifier
+   * @param identity - The identity key (hex hash)
    */
-  getLatestEvent(publicKey: Uint8Array, streamId: string): Promise<SignedEvent | null>;
+  getLatestEvent(publicKey: Uint8Array, identity: string): Promise<SignedEvent | null>;
 
   /**
-   * Get all events for a given public key and stream, ordered by sequence ascending.
+   * Get all events for a given public key and identity, ordered by sequence ascending.
    *
    * @param publicKey - The public key bytes of the signer
-   * @param streamId - The stream identifier
+   * @param identity - The identity key (hex hash)
    */
-  getEventsByStream(publicKey: Uint8Array, streamId: string): Promise<SignedEvent[]>;
+  getEventsByIdentity(publicKey: Uint8Array, identity: string): Promise<SignedEvent[]>;
 }

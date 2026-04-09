@@ -37,6 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ── v2 protos (tonic_prost_build) ────────────────────────────
     let v2_protos = [
+        "../../protos/polycentric/v2/keypair.proto",
+        "../../protos/polycentric/v2/event_key.proto",
         "../../protos/polycentric/v2/identity.proto",
         "../../protos/polycentric/v2/events.proto",
         "../../protos/polycentric/v2/content.proto",
