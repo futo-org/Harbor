@@ -85,6 +85,8 @@ export class PolycentricClient {
   public readonly coreBridge: ICoreBridge;
 
   public currentKeyPair: KeyPair | null = null;
+  /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
+  public activeIdentityKey: string | null = null;
   public servers: string[] = ['http://localhost:50051'];
 
   public readonly cryptoManager: ICryptoManager;
@@ -279,18 +281,16 @@ export class PolycentricClient {
   async getCurrentIdentity(): Promise<IdentityState> {
     const state: IdentityState = { identityKey: null, rotationKeys: [], signingKeys: [] };
 
-    if (!this.currentKeyPair) return state;
+    if (!this.activeIdentityKey) return state;
 
     const allEvents = await this.storage.events.getAllEvents();
-    const publicKey = this.currentKeyPair.publicKey.key;
 
-    // Find identity events signed by the current key
+    // Find the latest identity event matching the active identity key
     for (const signedEvent of allEvents) {
       const event = V2Event.fromBinary(signedEvent.eventBytes);
 
-      // Only look at events signed by the current key in the identity collection
       if (event.key?.collection !== COLLECTION.IDENTITY) continue;
-      if (!event.key.signedBy?.key || !this.bytesEqual(event.key.signedBy.key, publicKey)) continue;
+      if (event.key.identity !== this.activeIdentityKey) continue;
       if (!event.contentDigest?.value) continue;
 
       const contentBytes = await this.storage.content.getContent(
@@ -372,7 +372,152 @@ export class PolycentricClient {
     await this.storage.content.putContent(contentHash, contentBytes);
     const signedEvent = await this.createEvent(V2Event.toBinary(event));
 
+    this.setActiveIdentityKey(identityKey);
+
     return { identityKey, signedEvent };
+  }
+
+  /**
+   * Adds a signing key to the current identity and publishes the updated document.
+   *
+   * @param identityKey - The identity key to update
+   * @param publicKey - The public key to add as a signing key
+   * @returns The signed event
+   */
+  async addSigningKey(
+    identityKey: string,
+    publicKey: PublicKey,
+  ): Promise<SignedEvent> {
+    const state = await this.getCurrentIdentity();
+    if (state.identityKey !== identityKey) {
+      throw new Error('Identity key mismatch');
+    }
+
+    const signingKeys = [...state.signingKeys, publicKey];
+    const { signedEvent } = await this.publishIdentity(
+      identityKey,
+      state.rotationKeys,
+      signingKeys,
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Removes a signing key from the current identity and publishes the updated document.
+   *
+   * @param identityKey - The identity key to update
+   * @param publicKey - The public key to remove from signing keys
+   * @returns The signed event
+   */
+  async removeSigningKey(
+    identityKey: string,
+    publicKey: PublicKey,
+  ): Promise<SignedEvent> {
+    const state = await this.getCurrentIdentity();
+    if (state.identityKey !== identityKey) {
+      throw new Error('Identity key mismatch');
+    }
+
+    const signingKeys = state.signingKeys.filter(
+      (k) => !this.bytesEqual(k.key, publicKey.key),
+    );
+    const { signedEvent } = await this.publishIdentity(
+      identityKey,
+      state.rotationKeys,
+      signingKeys,
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Claims an identity by pulling its latest Identity document from the server
+   * and storing it locally. Verifies the current key is listed in the identity's
+   * rotation_keys or signing_keys.
+   *
+   * @param identityKey - The identity key to claim
+   * @returns The resolved identity state
+   */
+  async claimIdentity(identityKey: string): Promise<IdentityState> {
+    if (!this.core) throw new Error('Core not initialized');
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+
+    const publicKey = this.currentKeyPair.publicKey.key;
+
+    // Pull identity events from all servers
+    for (const server of this.servers) {
+      try {
+        const responseBytes = await this.core.list_events(
+          server,
+          null,
+          COLLECTION.IDENTITY,
+          identityKey,
+        );
+        const response = ListEventsResponse.fromBinary(responseBytes);
+
+        for (const bundle of response.eventBundles) {
+          if (!bundle.signedEvent) continue;
+
+          // Store content
+          if (bundle.serializedContent?.contentBytes) {
+            const event = V2Event.fromBinary(bundle.signedEvent.eventBytes);
+            if (event.contentDigest?.value) {
+              await this.storage.content.putContent(
+                event.contentDigest.value,
+                bundle.serializedContent.contentBytes,
+              );
+            }
+          }
+
+          // Store event
+          try {
+            await this.storage.events.persistEvent(bundle.signedEvent);
+          } catch {
+            // duplicate, skip
+          }
+        }
+      } catch {
+        // server unreachable, try next
+      }
+    }
+
+    // Find the identity document among pulled events and verify authorization
+    const allEvents = await this.storage.events.getAllEvents();
+    let foundState: IdentityState | null = null;
+
+    for (const se of allEvents) {
+      const ev = V2Event.fromBinary(se.eventBytes);
+      if (ev.key?.collection !== COLLECTION.IDENTITY) continue;
+      if (ev.key.identity !== identityKey) continue;
+      if (!ev.contentDigest?.value) continue;
+
+      const cb = await this.storage.content.getContent(ev.contentDigest.value);
+      if (!cb) continue;
+
+      const c = Content.fromBinary(cb);
+      if (c.contentBody.oneofKind === 'identity') {
+        foundState = {
+          identityKey,
+          rotationKeys: [...c.contentBody.identity.rotationKeys],
+          signingKeys: [...c.contentBody.identity.signingKeys],
+        };
+      }
+    }
+
+    if (!foundState) {
+      throw new Error(`Identity ${identityKey} not found on any server`);
+    }
+
+    const isAuthorized =
+      foundState.rotationKeys.some((k) => this.bytesEqual(k.key, publicKey)) ||
+      foundState.signingKeys.some((k) => this.bytesEqual(k.key, publicKey));
+
+    if (!isAuthorized) {
+      throw new Error('Current key is not authorized for this identity');
+    }
+
+    this.setActiveIdentityKey(identityKey);
+
+    return foundState;
   }
 
   /**
@@ -499,6 +644,45 @@ export class PolycentricClient {
 
   public setCurrentKeyPair(keyPair: KeyPair) {
     this.currentKeyPair = keyPair;
+    // Restore saved identity key for this key pair
+    this.activeIdentityKey = this.loadActiveIdentityKey();
+  }
+
+  /**
+   * Explicitly set the active identity key and persist it.
+   */
+  public setActiveIdentityKey(identityKey: string | null) {
+    this.activeIdentityKey = identityKey;
+    this.saveActiveIdentityKey(identityKey);
+  }
+
+  private identityStorageKey(): string | null {
+    if (!this.currentKeyPair) return null;
+    return `polycentric:activeIdentity:${this.toHex(this.currentKeyPair.publicKey.key, 32)}`;
+  }
+
+  private saveActiveIdentityKey(identityKey: string | null) {
+    const key = this.identityStorageKey();
+    if (!key) return;
+    try {
+      if (identityKey) {
+        localStorage.setItem(key, identityKey);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // localStorage unavailable (SSR, etc.)
+    }
+  }
+
+  private loadActiveIdentityKey(): string | null {
+    const key = this.identityStorageKey();
+    if (!key) return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
   }
 
   private setState(state: ClientState) {
