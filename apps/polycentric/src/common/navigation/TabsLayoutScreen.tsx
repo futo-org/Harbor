@@ -1,26 +1,18 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { StyleSheet } from 'react-native';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
 function TabBarBackground() {
   const { theme } = useTheme();
-  const isDark = theme.scheme === 'dark';
 
   return (
-    <BlurView
-      intensity={isDark ? 24 : 32}
-      tint={isDark ? 'dark' : 'light'}
+    <View
+      pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
-        {
-          backgroundColor: withHexOpacity(
-            theme.palette.background_primary,
-            'CC',
-          ),
-        },
+        { backgroundColor: theme.palette.background_secondary },
       ]}
     />
   );

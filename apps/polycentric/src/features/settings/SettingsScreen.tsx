@@ -27,7 +27,11 @@ import {
   usePolycentricContext,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { useSheet } from '@/src/common/lib/sheet';
+import {
+  SheetHeaderBlock,
+  useSheet,
+  useSheetContext,
+} from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
@@ -67,7 +71,7 @@ export default function SettingsTabScreen() {
   const publicKey = currentIdentity?.identity?.keyPair.publicKey;
 
   return (
-    <Screen background={{ gradient: 'top' }}>
+    <Screen>
       <Box style={[Atoms.px_lg, Atoms.flex_1]}>
         <PageHeader title="Settings" />
         <ScrollView
@@ -80,9 +84,6 @@ export default function SettingsTabScreen() {
           <ListItemWrapper onPress={() => presentIdentity()}>
             <>
               {publicKey && <IdentityBadge publicKey={publicKey} size="lg" />}
-              <IdentitySheet detents={[1]} dismissible scrollable>
-                {publicKey && <IdentitySettingsContent publicKey={publicKey} />}
-              </IdentitySheet>
             </>
           </ListItemWrapper>
 
@@ -96,10 +97,6 @@ export default function SettingsTabScreen() {
             </ListItemWrapper>
           </ListItemGroup>
 
-          <ServersSheet detents={[0.5, 1]} dismissible scrollable>
-            <ServersSheetContent />
-          </ServersSheet>
-
           <ListItemGroup>
             <ListItemWrapper onPress={() => Linking.openURL(REPORT_BUG_URL)}>
               <Text variant="body">Report a bug</Text>
@@ -109,16 +106,25 @@ export default function SettingsTabScreen() {
           <SourceCodeItem />
         </ScrollView>
       </Box>
+      {publicKey ? (
+        <IdentitySheet detents={[1]} dismissible scrollable>
+          <IdentitySettingsContent publicKey={publicKey} />
+        </IdentitySheet>
+      ) : null}
+      <ServersSheet detents={[0.5, 1]} dismissible scrollable>
+        <ServersSheetContent />
+      </ServersSheet>
     </Screen>
   );
 }
 
-function IdentitySettingsContent({
+export function IdentitySettingsContent({
   publicKey,
 }: {
   publicKey: types.PublicKey;
 }) {
   const { theme } = useTheme();
+  const { dismissSheet } = useSheetContext();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
   const username = useUsername(publicKey);
@@ -188,100 +194,103 @@ function IdentitySettingsContent({
   const avatarUrl = identiconUrl(publicKey, 160);
 
   return (
-    <Box style={[Atoms.p_lg, Atoms.gap_xl]}>
-      {/* Hero: avatar + name */}
-      <Box style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
-        <Avatar
-          source={avatarUrl ? { uri: avatarUrl } : undefined}
-          size="massive"
-        />
+    <Box style={Atoms.flex_1}>
+      <SheetHeaderBlock title="Identity" onClose={() => void dismissSheet()} />
+      <Box style={[Atoms.p_lg, Atoms.gap_xl]}>
+        {/* Hero: avatar + name */}
+        <Box style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
+          <Avatar
+            source={avatarUrl ? { uri: avatarUrl } : undefined}
+            size="massive"
+          />
 
-        {editing ? (
-          <Box style={[Atoms.gap_sm, { width: '100%' }]}>
-            <TextInput
-              value={nameDraft}
-              onChangeText={setNameDraft}
-              placeholder="Display name"
-              autoFocus
-            />
-            <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_center]}>
-              <Button
-                title={saving ? 'Saving...' : 'Save'}
-                onPress={handleSave}
-                variant="primary"
-                size="sm"
+          {editing ? (
+            <Box style={[Atoms.gap_sm, { width: '100%' }]}>
+              <TextInput
+                value={nameDraft}
+                onChangeText={setNameDraft}
+                placeholder="Display name"
+                autoFocus
               />
-              <Button
-                title="Cancel"
-                onPress={handleCancel}
-                variant="tertiary"
-                size="sm"
-              />
+              <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_center]}>
+                <Button
+                  title={saving ? 'Saving...' : 'Save'}
+                  onPress={handleSave}
+                  variant="primary"
+                  size="sm"
+                />
+                <Button
+                  title="Cancel"
+                  onPress={handleCancel}
+                  variant="tertiary"
+                  size="sm"
+                />
+              </Box>
             </Box>
-          </Box>
-        ) : (
-          <Box style={[Atoms.items_center, Atoms.gap_xs]}>
-            <Text
-              variant="title"
-              fontWeight="bold"
-              numberOfLines={nameExpanded ? undefined : 2}
-              ellipsizeMode="tail"
-              style={{ textAlign: 'center' }}
-              onPress={() => setNameExpanded((v) => !v)}
-            >
-              {displayName || 'Anonymous'}
-            </Text>
-            <LinkButton title="Edit name" onPress={() => setEditing(true)} />
-          </Box>
-        )}
+          ) : (
+            <Box style={[Atoms.items_center, Atoms.gap_xs]}>
+              <Text
+                variant="title"
+                fontWeight="bold"
+                numberOfLines={nameExpanded ? undefined : 2}
+                ellipsizeMode="tail"
+                style={{ textAlign: 'center' }}
+                onPress={() => setNameExpanded((v) => !v)}
+              >
+                {displayName || 'Anonymous'}
+              </Text>
+              <LinkButton title="Edit name" onPress={() => setEditing(true)} />
+            </Box>
+          )}
 
-        <Text variant="subtitle" color="neutral_500">
-          {eventCount} {eventCount === 1 ? 'event' : 'events'}
-        </Text>
-      </Box>
-
-      {/* Details */}
-      <Box
-        style={[
-          Atoms.gap_md,
-          Atoms.p_md,
-          Atoms.rounded_md,
-          {
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          },
-        ]}
-      >
-        <Box style={Atoms.gap_xs}>
-          <Text variant="small" color="neutral_500">
-            PUBLIC KEY
-          </Text>
-          <Text
-            variant="secondary"
-            style={{ fontFamily: 'monospace' }}
-            selectable
-          >
-            {fullPubkey}
+          <Text variant="subtitle" color="neutral_500">
+            {eventCount} {eventCount === 1 ? 'event' : 'events'}
           </Text>
         </Box>
 
+        {/* Details */}
         <Box
-          style={{
-            height: 1,
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          }}
-        />
+          style={[
+            Atoms.gap_md,
+            Atoms.p_md,
+            Atoms.rounded_md,
+            {
+              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+            },
+          ]}
+        >
+          <Box style={Atoms.gap_xs}>
+            <Text variant="small" color="neutral_500">
+              PUBLIC KEY
+            </Text>
+            <Text
+              variant="secondary"
+              style={{ fontFamily: 'monospace' }}
+              selectable
+            >
+              {fullPubkey}
+            </Text>
+          </Box>
 
-        <Box style={Atoms.gap_xs}>
-          <Text variant="small" color="neutral_500">
-            PROCESS ID
-          </Text>
-          <Text
-            variant="secondary"
-            style={{ fontFamily: 'monospace' }}
-            selectable
-          >
-            {processId}
-          </Text>
+          <Box
+            style={{
+              height: 1,
+              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+            }}
+          />
+
+          <Box style={Atoms.gap_xs}>
+            <Text variant="small" color="neutral_500">
+              PROCESS ID
+            </Text>
+            <Text
+              variant="secondary"
+              style={{ fontFamily: 'monospace' }}
+              selectable
+            >
+              {processId}
+            </Text>
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -293,6 +302,7 @@ function ServersSheetContent() {
   const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
   const { theme } = useTheme();
+  const { dismissSheet } = useSheetContext();
 
   const [servers, setServers] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -345,102 +355,106 @@ function ServersSheetContent() {
   };
 
   return (
-    <Box style={[Atoms.p_lg, Atoms.gap_lg]}>
-      <Box style={[Atoms.flex_row, Atoms.justify_between, Atoms.items_center]}>
-        <Text variant="subtitle" fontWeight="semibold">
-          Servers
-        </Text>
-        <LinkButton
-          title={isEditing ? 'Done' : 'Edit'}
-          onPress={() => {
-            setIsEditing(!isEditing);
-            setNewServerUrl('');
-          }}
-        />
-      </Box>
-
-      {servers.length === 0 ? (
-        <Text variant="secondary" color="neutral_500">
-          No servers configured
-        </Text>
-      ) : (
-        <Box style={Atoms.gap_sm}>
-          {servers.map((server) => (
-            <Box
-              key={server}
-              style={[
-                Atoms.flex_row,
-                Atoms.justify_between,
-                Atoms.items_center,
-                Atoms.p_md,
-                Atoms.rounded_md,
-                {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '20',
-                  ),
-                },
-              ]}
-            >
-              <Text
-                variant="secondary"
-                style={{ fontFamily: 'monospace', flex: 1 }}
-                numberOfLines={1}
-              >
-                {server}
-              </Text>
-              {isEditing && (
-                <IconButton
-                  variant="ghost"
-                  compact
-                  icon={() => (
-                    <Ionicons
-                      name="remove-circle-outline"
-                      size={22}
-                      color={theme.palette.negative_500}
-                    />
-                  )}
-                  onPress={() => handleRemoveServer(server)}
-                />
-              )}
-            </Box>
-          ))}
-        </Box>
-      )}
-
-      {isEditing && (
-        <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.items_center]}>
-          <Box style={Atoms.flex_1}>
-            <TextInput
-              placeholder="https://server.example.com"
-              value={newServerUrl}
-              onChangeText={setNewServerUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
+    <Box style={Atoms.flex_1}>
+      <SheetHeaderBlock
+        title="Servers"
+        onClose={() => void dismissSheet()}
+        trailing={
+          <Box style={{ minWidth: 72, alignItems: 'flex-end' }}>
+            <LinkButton
+              title={isEditing ? 'Done' : 'Edit'}
+              onPress={() => {
+                setIsEditing((v) => !v);
+                setNewServerUrl('');
+              }}
             />
           </Box>
-          {isBusy ? (
-            <ActivityIndicator />
-          ) : (
-            <IconButton
-              variant="ghost"
-              icon={() => (
-                <Ionicons
-                  name="add-circle-outline"
-                  size={28}
-                  color={
-                    newServerUrl.trim()
-                      ? theme.palette.primary_500
-                      : theme.palette.neutral_500
-                  }
-                />
-              )}
-              onPress={handleAddServer}
-            />
-          )}
-        </Box>
-      )}
+        }
+      />
+      <Box style={[Atoms.p_lg, Atoms.gap_lg]}>
+        {servers.length === 0 ? (
+          <Text variant="secondary" color="neutral_500">
+            No servers configured
+          </Text>
+        ) : (
+          <Box style={Atoms.gap_sm}>
+            {servers.map((server) => (
+              <Box
+                key={server}
+                style={[
+                  Atoms.flex_row,
+                  Atoms.justify_between,
+                  Atoms.items_center,
+                  Atoms.p_md,
+                  Atoms.rounded_md,
+                  {
+                    backgroundColor: withHexOpacity(
+                      theme.palette.neutral_500,
+                      '20',
+                    ),
+                  },
+                ]}
+              >
+                <Text
+                  variant="secondary"
+                  style={{ fontFamily: 'monospace', flex: 1 }}
+                  numberOfLines={1}
+                >
+                  {server}
+                </Text>
+                {isEditing && (
+                  <IconButton
+                    variant="ghost"
+                    compact
+                    icon={() => (
+                      <Ionicons
+                        name="remove-circle-outline"
+                        size={22}
+                        color={theme.palette.negative_500}
+                      />
+                    )}
+                    onPress={() => handleRemoveServer(server)}
+                  />
+                )}
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {isEditing && (
+          <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.items_center]}>
+            <Box style={Atoms.flex_1}>
+              <TextInput
+                placeholder="https://server.example.com"
+                value={newServerUrl}
+                onChangeText={setNewServerUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+            </Box>
+            {isBusy ? (
+              <ActivityIndicator accessibilityLabel="Adding server" />
+            ) : (
+              <IconButton
+                variant="ghost"
+                icon={() => (
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={28}
+                    color={
+                      newServerUrl.trim()
+                        ? theme.palette.primary_500
+                        : theme.palette.neutral_500
+                    }
+                  />
+                )}
+                onPress={handleAddServer}
+              />
+            )}
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

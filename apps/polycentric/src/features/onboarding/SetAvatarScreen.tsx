@@ -6,14 +6,13 @@ import {
   Avatar,
 } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SetAvatarScreen() {
-  const router = useRouter();
   const { data, setAvatarUri, goToNextStep, close } = useSignup();
 
   const { pickPhoto } = useImagePicker({
@@ -44,7 +43,7 @@ export default function SetAvatarScreen() {
   };
 
   return (
-    <Screen background={{ gradient: 'surround' }}>
+    <Screen>
       <Box style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
         <PageHeader onBack={() => router.back()} onClose={close} />
         <Box style={[Atoms.flex_1, Atoms.items_center, Atoms.mt_2xl]}>
