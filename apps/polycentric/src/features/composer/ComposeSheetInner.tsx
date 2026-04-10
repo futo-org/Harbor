@@ -15,21 +15,27 @@ import {
   usePolycentric,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
+import {
+  DismissReason,
+  SheetHeaderBlock,
+  type DismissSheet,
+} from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { types } from '@polycentric/react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
+  dismissSheet: DismissSheet;
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
 
 export function ComposeSheetInner({
+  dismissSheet,
   onPostCreated,
   onAvatarPress,
   replyToEvent,
@@ -39,7 +45,6 @@ export function ComposeSheetInner({
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
-  const { isOpen, dismissSheet } = useSheetContext();
 
   const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
 
@@ -63,7 +68,7 @@ export function ComposeSheetInner({
   const canPost = text.trim().length > 0 && !submitting;
 
   const handleClose = useCallback(() => {
-    if (!submitting) void dismissSheet();
+    if (!submitting) void dismissSheet(DismissReason.UserDismissed);
   }, [submitting, dismissSheet]);
 
   const handlePost = useCallback(async () => {
@@ -89,6 +94,7 @@ export function ComposeSheetInner({
       );
       await client.sync();
       setText('');
+      await dismissSheet(DismissReason.PostSubmitted);
       await onPostCreatedRef.current(signedEvent);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -96,14 +102,7 @@ export function ComposeSheetInner({
     } finally {
       setSubmitting(false);
     }
-  }, [text, submitting, client]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setText('');
-      setError(null);
-    }
-  }, [isOpen]);
+  }, [text, submitting, client, dismissSheet]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`

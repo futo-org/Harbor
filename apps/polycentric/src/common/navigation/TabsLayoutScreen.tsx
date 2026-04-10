@@ -53,6 +53,8 @@ export default function TabsLayoutScreen() {
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="claims" options={{ href: null }} />
       <Tabs.Screen name="activity" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="post" options={{ href: null }} />
       <Tabs.Screen
         name="settings"
         options={{

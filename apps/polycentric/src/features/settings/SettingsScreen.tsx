@@ -14,6 +14,7 @@ import {
 } from '@/src/common/components';
 import {
   REPORT_BUG_URL,
+  Routes,
   SOURCE_CODE_URL,
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
@@ -27,14 +28,11 @@ import {
   usePolycentricContext,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  SheetHeaderBlock,
-  useSheet,
-  useSheetContext,
-} from '@/src/common/lib/sheet';
+import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
 
@@ -65,8 +63,6 @@ function AppearanceSettingRow() {
 }
 
 export default function SettingsTabScreen() {
-  const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
-  const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
   const publicKey = currentIdentity?.identity?.keyPair.publicKey;
 
@@ -81,7 +77,9 @@ export default function SettingsTabScreen() {
             { paddingBottom: TAB_BAR_HEIGHT + 16 },
           ]}
         >
-          <ListItemWrapper onPress={() => presentIdentity()}>
+          <ListItemWrapper
+            onPress={() => router.push(Routes.tabs.settings.identity)}
+          >
             <>
               {publicKey && <IdentityBadge publicKey={publicKey} size="lg" />}
             </>
@@ -92,7 +90,11 @@ export default function SettingsTabScreen() {
           </ListItemGroup>
 
           <ListItemGroup label="Servers">
-            <ListItemWrapper onPress={() => presentServers()}>
+            <ListItemWrapper
+              onPress={() =>
+                router.push(Routes.tabs.settings.servers)
+              }
+            >
               <Text variant="body">Polycentric servers</Text>
             </ListItemWrapper>
           </ListItemGroup>
@@ -106,25 +108,18 @@ export default function SettingsTabScreen() {
           <SourceCodeItem />
         </ScrollView>
       </Box>
-      {publicKey ? (
-        <IdentitySheet detents={[1]} dismissible scrollable>
-          <IdentitySettingsContent publicKey={publicKey} />
-        </IdentitySheet>
-      ) : null}
-      <ServersSheet detents={[0.5, 1]} dismissible scrollable>
-        <ServersSheetContent />
-      </ServersSheet>
     </Screen>
   );
 }
 
 export function IdentitySettingsContent({
   publicKey,
+  dismissSheet,
 }: {
   publicKey: types.PublicKey;
+  dismissSheet: DismissSheet;
 }) {
   const { theme } = useTheme();
-  const { dismissSheet } = useSheetContext();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
   const username = useUsername(publicKey);
@@ -185,10 +180,10 @@ export function IdentitySettingsContent({
   const fullPubkey = publicKeyToString(publicKey);
   const processId = identity?.process?.process
     ? toBase64(
-        identity.process.process instanceof Uint8Array
-          ? identity.process.process
-          : new Uint8Array(identity.process.process),
-      )
+      identity.process.process instanceof Uint8Array
+        ? identity.process.process
+        : new Uint8Array(identity.process.process),
+    )
     : '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
@@ -297,12 +292,15 @@ export function IdentitySettingsContent({
   );
 }
 
-function ServersSheetContent() {
+export function ServersSheetContent({
+  dismissSheet,
+}: {
+  dismissSheet: DismissSheet;
+}) {
   const client = usePolycentric();
   const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
   const { theme } = useTheme();
-  const { dismissSheet } = useSheetContext();
 
   const [servers, setServers] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -326,7 +324,7 @@ function ServersSheetContent() {
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
+      client.sync().catch(() => { });
     } catch (err) {
       console.error('Failed to add server:', err);
     } finally {
@@ -346,7 +344,7 @@ function ServersSheetContent() {
       await client.contentManager.createRemoveServer(server);
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
+      client.sync().catch(() => { });
     } catch (err) {
       console.error('Failed to remove server:', err);
     } finally {

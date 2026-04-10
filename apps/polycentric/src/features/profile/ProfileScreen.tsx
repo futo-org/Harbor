@@ -5,13 +5,13 @@ import { Screen, Box } from '@/src/common/components/layouts';
 import { FeedViewer } from '@/src/features/posts';
 import { ProfileHeader } from './ProfileHeader';
 import {
+  decodePostEvent,
   useProfileScreenData,
   useProfileEdit,
   publicKeyToStringURLSafe,
 } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Routes } from '@/src/common/constants';
-import { webSafeRouterBack } from '@/src/common/navigation/webSafeRouterBack';
 import { Atoms, useTheme } from '@/src/common/theme';
 
 export default function ProfileScreen() {
@@ -36,15 +36,23 @@ export default function ProfileScreen() {
   const edit = useProfileEdit(data.username, data.profile);
 
   const handlePostPress = useCallback((postId: string) => {
-    router.replace(Routes.post(postId));
+    router.replace(Routes.tabs.post(postId));
   }, []);
 
   const handleAuthorPress = useCallback((pk: types.PublicKey) => {
-    router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
+    router.replace(Routes.tabs.profile(publicKeyToStringURLSafe(pk)));
+  }, []);
+
+  const handleReply = useCallback((signedEvent: types.SignedEvent) => {
+    const decoded = decodePostEvent(signedEvent);
+    if (!decoded?.id) return;
+    router.push(
+      Routes.tabs.post.reply(decoded.id, decoded.id) as import('expo-router').Href,
+    );
   }, []);
 
   const handleBack = useCallback(() => {
-    webSafeRouterBack();
+    router.back();
   }, []);
 
   return (
@@ -74,6 +82,7 @@ export default function ProfileScreen() {
               onRefresh={data.authorFeed.refresh}
               onPostPress={handlePostPress}
               onAuthorPress={handleAuthorPress}
+              onReply={handleReply}
               onEndReached={data.authorFeed.loadMore}
               hasMore={data.authorFeed.hasMore}
               bottomPadding={40}
@@ -93,6 +102,7 @@ export default function ProfileScreen() {
                 onRefresh={data.likesFeed.refresh}
                 onPostPress={handlePostPress}
                 onAuthorPress={handleAuthorPress}
+                onReply={handleReply}
                 onEndReached={data.likesFeed.loadMore}
                 hasMore={data.likesFeed.hasMore}
                 bottomPadding={40}

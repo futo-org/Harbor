@@ -3,8 +3,8 @@ export {
   type SheetHeaderBlockProps,
 } from './SheetHeaderBlock';
 export {
-  SheetContext,
-  useSheet,
-  useSheetContext,
-  type SheetContextType,
-} from './useSheet';
+  DismissReason,
+  SheetMenu,
+  type DismissSheet,
+  type SheetMenuProps,
+} from './SheetMenu';

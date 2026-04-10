@@ -1,64 +1,77 @@
-import { useCallback, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Screen, Box } from '@/src/common/components/layouts';
-import { Text, BackButton } from '@/src/common/components';
-import { ComposeSheetInner } from '@/src/features/composer/ComposeSheetInner';
-import { ConversationView } from '@/src/features/posts/ConversationView';
-import { types } from '@polycentric/react-native';
+import { BackButton, Text } from '@/src/common/components';
+import { Box, Screen } from '@/src/common/components/layouts';
+import { Routes } from '@/src/common/constants';
 import {
   decodePostEvent,
   publicKeyToStringURLSafe,
   useCurrentIdentity,
   usePolycentricContext,
+  useStore,
 } from '@/src/common/lib/polycentric-hooks';
-import { Routes } from '@/src/common/constants';
-import { webSafeRouterBack } from '@/src/common/navigation/webSafeRouterBack';
-import { useSheet } from '@/src/common/lib/sheet';
+import { SheetMenu } from '@/src/common/lib/sheet';
 import { Atoms } from '@/src/common/theme';
+import { ComposeSheetInner } from '@/src/features/composer/ComposeSheetInner';
+import { ConversationView } from '@/src/features/posts/ConversationView';
+import { types } from '@polycentric/react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 
 export default function FeedPostScreen() {
+  const { postId, replyTo } = useLocalSearchParams<{
+    postId: string;
+    replyTo?: string;
+  }>();
+
   const { store } = usePolycentricContext();
   const { publicKey: myPublicKey } = useCurrentIdentity();
-  const { postId } = useLocalSearchParams<{ postId: string }>();
-  const { Sheet, present } = useSheet();
+  const composeOpen = !!replyTo;
 
-  const [replyToEvent, setReplyToEvent] = useState<types.SignedEvent | null>(
-    null,
+  const replyToEvent = useStore(
+    store,
+    (s) => (replyTo ? (s.posts[replyTo]?.signedEvent ?? null) : null),
   );
 
-  const handlePostPress = useCallback((postId: string) => {
-    // Using replace(): push() is a better user experience but needs careful management.
-    router.replace(Routes.post(postId));
+  const handlePostPress = useCallback((nextPostId: string) => {
+    router.replace(Routes.tabs.post(nextPostId));
   }, []);
 
   const handleAuthorPress = useCallback((publicKey: types.PublicKey) => {
-    router.replace(Routes.profile(publicKeyToStringURLSafe(publicKey)));
+    router.replace(Routes.tabs.profile(publicKeyToStringURLSafe(publicKey)));
   }, []);
 
   const handleReply = useCallback(
-    (se: types.SignedEvent) => {
-      const decoded = decodePostEvent(se);
-      if (!decoded?.id) return;
-      setReplyToEvent(se);
-      void present();
+    (signedEvent: types.SignedEvent) => {
+      const decoded = decodePostEvent(signedEvent);
+      if (!decoded?.id || !postId) return;
+      router.setParams({ replyTo: decoded.id });
     },
-    [present],
+    [postId],
   );
 
-  const handleBack = useCallback(() => {
-    webSafeRouterBack();
+  const handleComposeClose = useCallback(() => {
+    router.setParams({ replyTo: '' });
   }, []);
 
   const handlePostCreated = useCallback(
-    (se: types.SignedEvent) => {
-      const decoded = decodePostEvent(se);
+    async (signedEvent: types.SignedEvent) => {
+      const decoded = decodePostEvent(signedEvent);
       if (decoded) {
-        store.getState().ingestPost(decoded.id, se, decoded);
-        router.replace(Routes.post(decoded.id));
+        store.getState().ingestPost(decoded.id, signedEvent, decoded);
+        router.replace(Routes.tabs.post(decoded.id));
       }
     },
     [store],
   );
+
+  const handleAvatarPress = useCallback(() => {
+    if (myPublicKey) {
+      router.push(Routes.tabs.profile(publicKeyToStringURLSafe(myPublicKey)));
+    }
+  }, [myPublicKey]);
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
 
   if (!postId) {
     return (
@@ -86,15 +99,23 @@ export default function FeedPostScreen() {
           onReply={handleReply}
         />
       </Box>
-      <Sheet detents={[0.82]} scrollable>
-        <ComposeSheetInner
-          onPostCreated={handlePostCreated}
-          onAvatarPress={() => {
-            if (myPublicKey) handleAuthorPress(myPublicKey);
-          }}
-          replyToEvent={replyToEvent}
-        />
-      </Sheet>
+      {composeOpen && (
+        <SheetMenu
+          open
+          onClose={handleComposeClose}
+          detents={[0.82]}
+          scrollable
+        >
+          {(dismissSheet) => (
+            <ComposeSheetInner
+              dismissSheet={dismissSheet}
+              onPostCreated={handlePostCreated}
+              onAvatarPress={handleAvatarPress}
+              replyToEvent={replyToEvent}
+            />
+          )}
+        </SheetMenu>
+      )}
     </Screen>
   );
 }

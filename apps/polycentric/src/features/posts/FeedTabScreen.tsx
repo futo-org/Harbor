@@ -9,29 +9,19 @@ import {
   FeedViewer,
   type FeedType,
 } from '@/src/features/posts';
-import { ComposeSheetInner } from '@/src/features/composer/ComposeSheetInner';
 import {
   useExploreFeed,
   useFollowingFeed,
-  useCurrentIdentity,
-  usePolycentricContext,
   decodePostEvent,
   publicKeyToStringURLSafe,
 } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
-import { Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
-import { useSheet } from '@/src/common/lib/sheet';
+import { openCompose, Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 
 export default function FeedTabScreen() {
   const showComposeFab = true;
-  const { store } = usePolycentricContext();
-  const { publicKey: myPublicKey } = useCurrentIdentity();
-  const { Sheet, present, dismiss } = useSheet();
 
-  const [replyToEvent, setReplyToEvent] = useState<types.SignedEvent | null>(
-    null,
-  );
   const [selectedFeed, setSelectedFeed] = useState<FeedType>('explore');
 
   const exploreFeed = useExploreFeed({
@@ -45,44 +35,21 @@ export default function FeedTabScreen() {
     selectedFeed === 'following' ? followingFeed : exploreFeed;
 
   const handlePostPress = useCallback((postId: string) => {
-    router.push(Routes.post(postId));
+    router.push(Routes.tabs.post(postId));
   }, []);
 
   const handleAuthorPress = useCallback((publicKey: types.PublicKey) => {
-    router.push(Routes.profile(publicKeyToStringURLSafe(publicKey)));
+    router.push(Routes.tabs.profile(publicKeyToStringURLSafe(publicKey)));
   }, []);
 
-  const dismissSheet = useCallback(async () => {
-    await dismiss();
-    setReplyToEvent(null);
-  }, [dismiss]);
-
-  const handlePostCreated = useCallback(
-    async (signedEvent: types.SignedEvent) => {
-      currentFeed.refresh();
-      const decoded = decodePostEvent(signedEvent);
-      if (decoded) {
-        store.getState().ingestPost(decoded.id, signedEvent, decoded);
-        router.push(Routes.post(decoded.id));
-      }
-      await dismissSheet();
-    },
-    [currentFeed, store, dismissSheet],
-  );
-
-  const handleReply = useCallback(
-    (signedEvent: types.SignedEvent) => {
-      const decoded = decodePostEvent(signedEvent);
-      if (!decoded?.id) return;
-      setReplyToEvent(signedEvent);
-      void present();
-    },
-    [present],
-  );
+  const handleReply = useCallback((signedEvent: types.SignedEvent) => {
+    const decoded = decodePostEvent(signedEvent);
+    if (!decoded?.id) return;
+    openCompose(decoded.id);
+  }, []);
 
   const handleFabPress = () => {
-    setReplyToEvent(null);
-    void present();
+    openCompose();
   };
 
   const bottomPadding = TAB_BAR_HEIGHT * 2.5;
@@ -131,15 +98,6 @@ export default function FeedTabScreen() {
           icon={() => <Ionicons name="add-circle" size={22} color="white" />}
         />
       ) : null}
-      <Sheet detents={[0.82]} scrollable>
-        <ComposeSheetInner
-          onPostCreated={handlePostCreated}
-          onAvatarPress={() => {
-            if (myPublicKey) handleAuthorPress(myPublicKey);
-          }}
-          replyToEvent={replyToEvent}
-        />
-      </Sheet>
     </Screen>
   );
 }

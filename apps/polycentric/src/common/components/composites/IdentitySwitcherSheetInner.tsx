@@ -15,7 +15,7 @@ import {
   useIdentities,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
+import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -27,7 +27,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -66,9 +65,12 @@ function useIdentitySwitcher() {
   return context;
 }
 
-export function IdentitySwitcherSheetInner() {
+export function IdentitySwitcherSheetInner({
+  dismissSheet,
+}: {
+  dismissSheet: DismissSheet;
+}) {
   const client = usePolycentric();
-  const { isOpen, dismissSheet } = useSheetContext();
   const identities = useIdentities();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -99,12 +101,6 @@ export function IdentitySwitcherSheetInner() {
     }),
     [isEditing, dismissSheet, handleDeleteIdentity],
   );
-
-  useEffect(() => {
-    if (!isOpen) {
-      setIsEditing(false);
-    }
-  }, [isOpen]);
 
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
