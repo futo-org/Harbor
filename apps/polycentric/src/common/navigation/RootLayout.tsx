@@ -1,11 +1,5 @@
-import { WEB_MAX_CONTENT_WIDTH } from '@/src/common/constants';
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
-import {
-  Atoms,
-  ThemeProvider,
-  useBreakpoint,
-  useTheme,
-} from '@/src/common/theme';
+import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
@@ -32,7 +26,7 @@ function WebRootLayout() {
     <View style={Atoms.flex_1}>
       <ThemeProvider>
         <PolycentricProvider>
-          <RootNavigatorShell />
+          <RootStack />
         </PolycentricProvider>
       </ThemeProvider>
     </View>
@@ -56,41 +50,12 @@ function NativeRootLayout() {
         <ThemeProvider>
           <PolycentricProvider onInitialized={onInitialized}>
             <TrueSheetProvider>
-              <RootNavigatorShell />
+              <RootStack />
             </TrueSheetProvider>
           </PolycentricProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
-  );
-}
-
-function RootNavigatorShell() {
-  const { isLarge } = useBreakpoint();
-
-  if (!isLarge) {
-    return <RootStack />;
-  }
-
-  return <WideLayoutShell />;
-}
-
-function WideLayoutShell() {
-  const { theme } = useTheme();
-
-  return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.min_w_0,
-          Atoms.w_full,
-          { maxWidth: WEB_MAX_CONTENT_WIDTH, alignSelf: 'center' },
-        ]}
-      >
-        <RootStack />
-      </View>
-    </View>
   );
 }
 

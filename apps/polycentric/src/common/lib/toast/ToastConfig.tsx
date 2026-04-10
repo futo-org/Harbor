@@ -1,13 +1,15 @@
-import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from '@/src/common/components/primitives';
-import { useTheme, withHexOpacity, BorderRadius } from '@/src/common/theme';
+import {
+  Atoms,
+  BorderRadius,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { BlurView } from 'expo-blur';
 import Toast, { ToastConfigParams } from 'react-native-toast-message';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useState } from 'react';
-import { TAB_BAR_HEIGHT } from '@/src/common/constants';
 
 const WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -22,7 +24,6 @@ interface ToastProps {
 
 function ToastContent({ text1, text2, type, onPress }: ToastProps) {
   const { theme } = useTheme();
-  const isDark = theme.scheme === 'dark';
   const borderColor = (() => {
     switch (type) {
       case 'success':
@@ -37,32 +38,33 @@ function ToastContent({ text1, text2, type, onPress }: ToastProps) {
   })();
 
   return (
-    <Pressable onPress={onPress} style={styles.pressable}>
-      <BlurView
-        intensity={80}
-        tint={isDark ? 'dark' : 'light'}
-        style={[
-          styles.container,
-          {
-            borderRadius: BorderRadius.md,
-            borderColor,
-          },
-        ]}
-      >
-        <View style={styles.content}>
-          {text1 && (
-            <Text variant="body" fontWeight="semibold">
-              {text1}
-            </Text>
-          )}
-          {text2 && (
-            <Text variant="secondary" color="neutral_500">
-              {text2}
-            </Text>
-          )}
+    <View pointerEvents="box-none" style={[styles.inset, Atoms.px_lg]}>
+      <Pressable onPress={onPress} style={styles.pressable}>
+        <View
+          style={[
+            styles.container,
+            {
+              borderRadius: BorderRadius.md,
+              borderColor,
+              backgroundColor: theme.palette.neutral_0,
+            },
+          ]}
+        >
+          <View style={styles.content}>
+            {text1 && (
+              <Text variant="body" fontWeight="semibold">
+                {text1}
+              </Text>
+            )}
+            {text2 && (
+              <Text variant="secondary" color="neutral_500">
+                {text2}
+              </Text>
+            )}
+          </View>
         </View>
-      </BlurView>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
@@ -102,29 +104,15 @@ export const toastConfig = {
 };
 
 function ToastsBody({ insets }: { insets: EdgeInsets }) {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-    });
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  // Only add tab bar offset when keyboard is hidden (library handles keyboard positioning)
-  const bottomOffset = keyboardVisible
-    ? 0
-    : TAB_BAR_HEIGHT + insets.bottom + 16;
+  const topOffset = (insets.top ?? 0) + 12;
 
   return (
-    <Toast config={toastConfig} position="bottom" bottomOffset={bottomOffset} />
+    <Toast
+      config={toastConfig}
+      position="top"
+      topOffset={topOffset}
+      swipeable={!isWeb}
+    />
   );
 }
 
@@ -141,8 +129,13 @@ export function Toasts() {
 }
 
 const styles = StyleSheet.create({
+  inset: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
   pressable: {
-    width: '90%',
+    width: '100%',
+    alignSelf: 'stretch',
   },
   container: {
     overflow: 'hidden',

@@ -1,5 +1,7 @@
 import { Redirect } from 'expo-router';
+import type { Href } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 
 export default function IndexScreen() {
@@ -19,5 +21,5 @@ export default function IndexScreen() {
   //   return <Redirect href="/(onboarding)" />;
   // }
 
-  return <Redirect href="/(tabs)/feed" />;
+  return <Redirect href={Routes.tabs.feed.index as Href} />;
 }

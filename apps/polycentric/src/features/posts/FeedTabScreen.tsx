@@ -18,9 +18,12 @@ import {
 import { types } from '@polycentric/react-native';
 import { openCompose, Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+import { WideShellMode, useWideShellMode } from '@/src/features/wideshell';
 
 export default function FeedTabScreen() {
-  const showComposeFab = true;
+  const wideShellMode = useWideShellMode();
+  const showComposeFab = !isWeb && wideShellMode !== WideShellMode.Full;
 
   const [selectedFeed, setSelectedFeed] = useState<FeedType>('explore');
 
@@ -52,7 +55,8 @@ export default function FeedTabScreen() {
     openCompose();
   };
 
-  const bottomPadding = TAB_BAR_HEIGHT * 2.5;
+  const tabBarHidden = wideShellMode !== WideShellMode.Narrow;
+  const bottomPadding = tabBarHidden ? 32 : TAB_BAR_HEIGHT * 2.5;
 
   return (
     <Screen>
