@@ -70,7 +70,7 @@ export const DEFAULT_SERVER =
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
-  onInitialized: () => void;
+  onInitialized?: () => void;
 }
 
 function DefaultLoadingComponent() {
@@ -118,7 +118,7 @@ export function PolycentricProvider({
 
   useEffect(() => {
     if (!isLoading) {
-      onInitialized();
+      onInitialized?.();
     }
   }, [isLoading, onInitialized]);
 

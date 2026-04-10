@@ -5,7 +5,6 @@ import {
   IconButton,
   LinkButton,
   SelectionIndicator,
-  Text,
 } from '@/src/common/components/primitives';
 import { useFadeIn } from '@/src/common/lib/animation';
 import { confirm } from '@/src/common/lib/dialogs/alert';
@@ -16,7 +15,7 @@ import {
   useIdentities,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { useSheetContext } from '@/src/common/lib/sheet';
+import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -67,15 +66,9 @@ function useIdentitySwitcher() {
   return context;
 }
 
-interface IdentitySwitcherSheetInnerProps {
-  dismiss: () => Promise<void>;
-}
-
-export function IdentitySwitcherSheetInner({
-  dismiss,
-}: IdentitySwitcherSheetInnerProps) {
+export function IdentitySwitcherSheetInner() {
   const client = usePolycentric();
-  const { isOpen, setFooter } = useSheetContext();
+  const { isOpen, dismissSheet } = useSheetContext();
   const identities = useIdentities();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -101,10 +94,10 @@ export function IdentitySwitcherSheetInner({
     () => ({
       isEditing,
       setIsEditing,
-      dismiss,
+      dismiss: dismissSheet,
       onDeleteIdentity: handleDeleteIdentity,
     }),
-    [isEditing, dismiss, handleDeleteIdentity],
+    [isEditing, dismissSheet, handleDeleteIdentity],
   );
 
   useEffect(() => {
@@ -113,37 +106,45 @@ export function IdentitySwitcherSheetInner({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    setFooter(
-      isEditing ? <Footer onCreateIdentity={handleCreateIdentity} /> : null,
-    );
-  }, [isEditing, handleCreateIdentity]);
-
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
       <Box style={Atoms.flex_1}>
-        <Header isEditing={isEditing} setIsEditing={setIsEditing} />
-        {isEditing ? (
-          <DraggableFlatList
-            data={identities}
-            keyExtractor={(item) => pubkeyStr(item.publicKey)}
-            renderItem={(props) => <DraggableIdentityListItem {...props} />}
-            onDragEnd={() => {}}
-            containerStyle={Atoms.flex_1}
-            style={Atoms.flex_1}
-            nestedScrollEnabled
-            removeClippedSubviews={Platform.OS !== 'android'}
-          />
-        ) : (
-          <FlatList
-            data={identities}
-            keyExtractor={(item) => pubkeyStr(item.publicKey)}
-            renderItem={(props) => <StaticIdentityListItem {...props} />}
-            style={Atoms.flex_1}
-            nestedScrollEnabled
-            removeClippedSubviews={Platform.OS !== 'android'}
-          />
-        )}
+        <SheetHeaderBlock
+          title={isEditing ? 'Editing identities' : 'Your identities'}
+          onClose={() => void dismissSheet()}
+          trailing={
+            <Box style={{ minWidth: 72, alignItems: 'flex-end' }}>
+              <LinkButton
+                title={isEditing ? 'Done' : 'Edit'}
+                onPress={() => setIsEditing(!isEditing)}
+              />
+            </Box>
+          }
+        />
+        <Box style={Atoms.flex_1}>
+          {isEditing ? (
+            <DraggableFlatList
+              data={identities}
+              keyExtractor={(item) => pubkeyStr(item.publicKey)}
+              renderItem={(props) => <DraggableIdentityListItem {...props} />}
+              onDragEnd={() => {}}
+              containerStyle={Atoms.flex_1}
+              style={Atoms.flex_1}
+              nestedScrollEnabled
+              removeClippedSubviews={Platform.OS !== 'android'}
+            />
+          ) : (
+            <FlatList
+              data={identities}
+              keyExtractor={(item) => pubkeyStr(item.publicKey)}
+              renderItem={(props) => <StaticIdentityListItem {...props} />}
+              style={Atoms.flex_1}
+              nestedScrollEnabled
+              removeClippedSubviews={Platform.OS !== 'android'}
+            />
+          )}
+        </Box>
+        {isEditing ? <Footer onCreateIdentity={handleCreateIdentity} /> : null}
       </Box>
     </IdentitySwitcherContext.Provider>
   );
@@ -259,48 +260,6 @@ function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
         onPress={() => onDeleteIdentity(publicKey)}
       />
     </Animated.View>
-  );
-}
-
-function Header({
-  isEditing,
-  setIsEditing,
-}: {
-  isEditing: boolean;
-  setIsEditing: (v: boolean) => void;
-}) {
-  const { theme } = useTheme();
-
-  return (
-    <Box style={Atoms.flex_shrink_0}>
-      <Box
-        style={[
-          Atoms.flex_row,
-          Atoms.justify_between,
-          Atoms.items_center,
-          Atoms.mt_xl,
-          Atoms.mb_lg,
-          Atoms.mx_lg,
-          { backgroundColor: theme.palette.background_primary },
-        ]}
-      >
-        <Text fontSize={18} fontWeight="semibold">
-          {isEditing ? 'Editing identities' : 'Your identities'}
-        </Text>
-        <LinkButton
-          title={isEditing ? 'Done' : 'Edit'}
-          onPress={() => setIsEditing(!isEditing)}
-        />
-      </Box>
-      <Box
-        height={1}
-        style={{
-          backgroundColor: isEditing
-            ? theme.palette.warning_100
-            : theme.palette.neutral_100,
-        }}
-      />
-    </Box>
   );
 }
 

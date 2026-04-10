@@ -6,8 +6,6 @@ import { PostCardItem } from './PostCardItem';
 import {
   usePostPage,
   useNavigateToParentPost,
-  usePolycentricContext,
-  useStore,
 } from '@/src/common/lib/polycentric-hooks';
 
 interface ConversationViewProps {
@@ -33,23 +31,14 @@ function PostRow({
   onReply?: (signedEvent: types.SignedEvent) => void;
   onReplyingToPress: (postId: string) => void;
 }) {
-  const { store } = usePolycentricContext();
-  const post = useStore(store, (s) => s.posts[postId]);
-  if (!post) return null;
   return (
     <View style={styles.replyContainer}>
       <PostCardItem
         postId={postId}
-        onPress={isFocus ? undefined : () => onPostPress(postId)}
-        onAuthorPress={
-          onAuthorPress
-            ? () => onAuthorPress(post.decoded.authorPublicKey)
-            : undefined
-        }
-        onReply={() =>
-          onReply ? onReply(post.signedEvent) : onPostPress(postId)
-        }
-        onReplyingToPress={() => onReplyingToPress(postId)}
+        onPostPress={isFocus ? undefined : onPostPress}
+        onAuthorPress={onAuthorPress}
+        onReply={onReply}
+        onReplyingToPress={onReplyingToPress}
         hideReplyingTo={false}
       />
     </View>

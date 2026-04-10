@@ -34,10 +34,7 @@ export default function SetUsernameScreen() {
   };
 
   return (
-    <Screen
-      background={{ gradient: 'surround', matrixOverlay: 'colored' }}
-      keyboardAvoiding
-    >
+    <Screen keyboardAvoiding>
       <Box style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
         <PageHeader onClose={close} />
         <Box style={[Atoms.flex_1, Atoms.gap_lg]}>

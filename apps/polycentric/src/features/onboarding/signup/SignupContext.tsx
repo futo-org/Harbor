@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { useRouter, usePathname } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { createIdentityWithDefaultServer } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
 import {
@@ -49,7 +49,6 @@ const defaultData: SignupData = {
 const SignupContext = createContext<SignupContextValue | null>(null);
 
 export function SignupProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
   const { client } = usePolycentricContext();
   const [data, setData] = useState<SignupData>(defaultData);

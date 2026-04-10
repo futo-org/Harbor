@@ -1,4 +1,4 @@
-import { GlobalHead } from '@/src/common/lib/GlobalHead';
+import { WEB_MAX_CONTENT_WIDTH } from '@/src/common/constants';
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
 import {
   Atoms,
@@ -6,6 +6,7 @@ import {
   useBreakpoint,
   useTheme,
 } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { Stack } from 'expo-router';
@@ -18,27 +19,39 @@ import {
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 
-const MAX_CONTENT_WIDTH = 535;
-
-void SplashScreen.preventAutoHideAsync().catch(() => {});
+if (!isWeb) {
+  void SplashScreen.preventAutoHideAsync().catch(() => {});
+}
 
 export default function RootLayout() {
-  const [providerInitialized, setProviderInitialized] = useState(false);
+  return isWeb ? <WebRootLayout /> : <NativeRootLayout />;
+}
 
-  const onInitialized = useCallback(() => {
-    setProviderInitialized(true);
-  }, []);
+function WebRootLayout() {
+  return (
+    <View style={Atoms.flex_1}>
+      <ThemeProvider>
+        <PolycentricProvider>
+          <RootNavigatorShell />
+        </PolycentricProvider>
+      </ThemeProvider>
+    </View>
+  );
+}
+
+function NativeRootLayout() {
+  const [ready, setReady] = useState(false);
+  const onInitialized = useCallback(() => setReady(true), []);
 
   useEffect(() => {
-    if (!providerInitialized) {
+    if (!ready) {
       return;
     }
     void SplashScreen.hideAsync().catch(() => {});
-  }, [providerInitialized]);
+  }, [ready]);
 
   return (
     <GestureHandlerRootView style={Atoms.flex_1}>
-      <GlobalHead />
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <ThemeProvider>
           <PolycentricProvider onInitialized={onInitialized}>
@@ -56,24 +69,10 @@ function RootNavigatorShell() {
   const { isLarge } = useBreakpoint();
 
   if (!isLarge) {
-    return <NarrowLayoutShell />;
+    return <RootStack />;
   }
 
   return <WideLayoutShell />;
-}
-
-function NarrowLayoutShell() {
-  const { theme } = useTheme();
-
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        fullScreenGestureEnabled: true,
-        contentStyle: theme.atoms.bg,
-      }}
-    />
-  );
 }
 
 function WideLayoutShell() {
@@ -86,17 +85,26 @@ function WideLayoutShell() {
           Atoms.flex_1,
           Atoms.min_w_0,
           Atoms.w_full,
-          { maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' },
+          { maxWidth: WEB_MAX_CONTENT_WIDTH, alignSelf: 'center' },
         ]}
       >
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            fullScreenGestureEnabled: true,
-            contentStyle: theme.atoms.bg,
-          }}
-        />
+        <RootStack />
       </View>
     </View>
+  );
+}
+
+function RootStack() {
+  const { theme } = useTheme();
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        fullScreenGestureEnabled: !isWeb,
+        contentStyle: [theme.atoms.bg, Atoms.flex_1],
+        ...(isWeb ? { animation: 'none' as const } : {}),
+      }}
+    />
   );
 }

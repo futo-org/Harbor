@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { types } from '@polycentric/react-native';
 import {
   usePolycentricContext,
@@ -14,17 +14,17 @@ const MAX_DISPLAY_LIMIT = 2000;
 
 interface PostCardItemProps {
   postId: string;
-  onPress?: () => void;
-  onAuthorPress?: () => void;
-  onReply?: () => void;
-  onReplyingToPress?: () => void;
+  onPostPress?: (postId: string) => void;
+  onAuthorPress?: (publicKey: types.PublicKey) => void;
+  onReply?: (signedEvent: types.SignedEvent) => void;
+  onReplyingToPress?: (postId: string) => void;
   hideReplyingTo?: boolean;
   showTopic?: boolean;
 }
 
-export function PostCardItem({
+export const PostCardItem = memo(function PostCardItem({
   postId,
-  onPress,
+  onPostPress,
   onAuthorPress,
   onReply,
   onReplyingToPress,
@@ -37,6 +37,26 @@ export function PostCardItem({
   useEffect(() => {
     store.getState().ensurePostMetadataLoaded(postId);
   }, [store, postId]);
+
+  const handlePress = useCallback(() => {
+    onPostPress?.(postId);
+  }, [onPostPress, postId]);
+
+  const authorPublicKey = post?.decoded.authorPublicKey;
+  const signedEvent = post?.signedEvent;
+
+  const handleAuthorPress = useCallback(() => {
+    if (authorPublicKey && onAuthorPress) onAuthorPress(authorPublicKey);
+  }, [onAuthorPress, authorPublicKey]);
+
+  const handleReply = useCallback(() => {
+    if (signedEvent && onReply) onReply(signedEvent);
+    else onPostPress?.(postId);
+  }, [onReply, signedEvent, onPostPress, postId]);
+
+  const handleReplyingToPress = useCallback(() => {
+    onReplyingToPress?.(postId);
+  }, [onReplyingToPress, postId]);
 
   const handleLike = useCallback(() => {
     store.getState().likePost(postId);
@@ -104,14 +124,14 @@ export function PostCardItem({
       comments={post.stats.comments}
       liked={liked}
       disliked={disliked}
-      onPress={onPress}
-      onAuthorPress={onAuthorPress}
-      onReply={onReply}
-      onReplyingToPress={onReplyingToPress}
+      onPress={handlePress}
+      onAuthorPress={onAuthorPress ? handleAuthorPress : undefined}
+      onReply={handleReply}
+      onReplyingToPress={handleReplyingToPress}
       onLike={handleLike}
       onDislike={handleDislike}
       hideReplyingTo={hideReplyingTo}
       showTopic={showTopic}
     />
   );
-}
+});

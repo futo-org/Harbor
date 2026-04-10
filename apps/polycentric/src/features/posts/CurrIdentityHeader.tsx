@@ -11,14 +11,13 @@ import {
 import { useSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable } from 'react-native';
 
 export function CurrIdentityHeader() {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
-  const router = useRouter();
-  const { Sheet, present, dismiss } = useSheet();
+  const { Sheet, present } = useSheet();
 
   const pubkey = currentIdentity?.keyPair.publicKey;
   const username = useUsername(
@@ -82,8 +81,8 @@ export function CurrIdentityHeader() {
         </Pressable>
       </Box>
       {/* Sheet must always be mounted to preserve state while open */}
-      <Sheet detents={[0.5, 1]}>
-        <IdentitySwitcherSheetInner dismiss={dismiss} />
+      <Sheet detents={[0.5, 1]} scrollable>
+        <IdentitySwitcherSheetInner />
       </Sheet>
     </>
   );

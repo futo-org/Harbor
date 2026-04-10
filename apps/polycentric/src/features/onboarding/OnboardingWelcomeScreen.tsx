@@ -1,6 +1,6 @@
 import { Screen, Box, Text, Button } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { Routes } from '@/src/common/constants/routes';
 
 function PlaceholderLogo() {
@@ -29,10 +29,8 @@ function PlaceholderLogo() {
 }
 
 export default function OnboardingWelcomeScreen() {
-  const router = useRouter();
-
   return (
-    <Screen background={{ gradient: 'surround' }}>
+    <Screen>
       <Box
         style={[
           Atoms.flex_col,
