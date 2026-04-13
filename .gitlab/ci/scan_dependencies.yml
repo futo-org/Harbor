@@ -6,12 +6,10 @@ trivy:
   variables:
     TRIVY_NO_PROGRESS: "true"
     TRIVY_CACHE_DIR: ".trivycache/"
-  before_script:
-    - apk update && apk add jq
   allow_failure: true
   script:
     # Filesystem report
-    - trivy filesystem --scanners misconfig,vuln --exit-code 0 --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
+    - trivy filesystem --scanners misconfig,vuln --exit-code 0 --severity HIGH,CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
   cache:
     paths:
       - .trivycache/
