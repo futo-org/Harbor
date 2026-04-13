@@ -45,7 +45,9 @@ export class IdentityManager {
       if (event.key.identity !== this.client.activeIdentityKey) continue;
       if (!event.contentDigest) continue;
 
-      const content = await this.client.storage.content.get(event.contentDigest);
+      const content = await this.client.storage.content.get(
+        event.contentDigest,
+      );
       if (!content) continue;
 
       if (content.contentBody.oneofKind === 'identity') {
@@ -189,9 +191,7 @@ export class IdentityManager {
             if (event.contentDigest) {
               await this.client.storage.content.save(
                 event.contentDigest,
-                Proto.Content.fromBinary(
-                  bundle.serializedContent.contentBytes,
-                ),
+                Proto.Content.fromBinary(bundle.serializedContent.contentBytes),
               );
             }
           }

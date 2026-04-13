@@ -47,8 +47,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@polycentric/js-browser': path.resolve(__dirname, '../../src/index.ts'),
-      '@polycentric/js-core': path.resolve(__dirname, '../../../js-core/src/index.ts'),
-      '@polycentric/rs-core-wasm-browser': path.resolve(__dirname, '../../../rs-core-wasm-browser'),
+      '@polycentric/js-core': path.resolve(
+        __dirname,
+        '../../../js-core/src/index.ts',
+      ),
+      '@polycentric/rs-core-wasm-browser': path.resolve(
+        __dirname,
+        '../../../rs-core-wasm-browser',
+      ),
     },
   },
 });

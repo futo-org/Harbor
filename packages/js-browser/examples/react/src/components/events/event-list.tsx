@@ -86,7 +86,9 @@ export const EventList = () => {
         const event = v2.Event.fromBinary(signedEvent.eventBytes);
         let content: v2.Content | undefined;
         if (event.contentDigest?.value) {
-          content = await client.storage.content.get(event.contentDigest);
+          content =
+            (await client.storage.content.get(event.contentDigest)) ??
+            undefined;
         }
         parsed.push({ signedEvent, event, content });
       } catch (err) {

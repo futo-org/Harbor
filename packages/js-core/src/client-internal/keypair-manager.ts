@@ -1,4 +1,8 @@
-import type { PolycentricClient, KeyPair, PrivateKey } from '../polycentric-client';
+import type {
+  PolycentricClient,
+  KeyPair,
+  PrivateKey,
+} from '../polycentric-client';
 import { KEY_TYPE } from '../constants';
 import { PublicKey, KeyType } from '../proto/v2';
 

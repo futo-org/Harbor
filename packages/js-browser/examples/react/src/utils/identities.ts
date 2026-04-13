@@ -1,8 +1,4 @@
-import type {
-  KeyPair,
-  PolycentricClient,
-  PublicKey,
-} from '@polycentric/js-core';
+import type { KeyPair, PublicKey } from '@polycentric/js-core';
 import { Base64 } from 'js-base64';
 
 /**

@@ -35,12 +35,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
       indexes: [
         {
           name: IndexedDBEventAckRepository.idx_event_acks_natural_key,
-          keyPath: [
-            'system_key_type',
-            'system_key',
-            'process',
-            'sequence',
-          ],
+          keyPath: ['system_key_type', 'system_key', 'process', 'sequence'],
         },
         {
           name: IndexedDBEventAckRepository.idx_event_acks_server_has_ack,

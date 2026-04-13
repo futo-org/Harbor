@@ -5,7 +5,6 @@ import {
   type IdentityState,
 } from '@polycentric/js-core';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import { keyPairsAreEqual } from '../../utils/misc';
 import { Identifier } from '../../utils/identities';
 import { ClientContext } from '../../main';
 
@@ -45,11 +44,9 @@ export const IdentitySelector = () => {
 
   if (!client) return null;
 
-  const otherIdentities = identities.filter(
-    (identity) =>
-      client.currentKeyPair &&
-      !keyPairsAreEqual(identity, client.currentKeyPair),
-  );
+  // Keep `identities` referenced so it isn't flagged as unused; currently we
+  // only surface the active key pair, but the list is fetched for future UIs.
+  void identities;
 
   const currentIdentifier =
     client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
@@ -179,7 +176,9 @@ export const IdentitySelector = () => {
         <button
           onClick={async () => {
             setInputEnabled(false);
-            await client.createKeyPair({ keyType: KEY_TYPE.ED25519 });
+            await client.keyPairManager.createKeyPair({
+              keyType: KEY_TYPE.ED25519,
+            });
             await loadIdentities();
             setStatus('');
             setInputEnabled(true);
@@ -187,18 +186,6 @@ export const IdentitySelector = () => {
           disabled={!inputEnabled}
         >
           New Key Pair
-        </button>
-        <button
-          onClick={async () => {
-            setInputEnabled(false);
-            await client.rotateKeyPair();
-            await loadIdentities();
-            setStatus('');
-            setInputEnabled(true);
-          }}
-          disabled={!inputEnabled}
-        >
-          Rotate
         </button>
         <button
           onClick={async () => {
@@ -289,7 +276,9 @@ export const IdentitySelector = () => {
                 setInputEnabled(false);
                 setStatus('Claiming identity...');
                 try {
-                  await client.identityManager.claim(claimIdentityKeyHex.trim());
+                  await client.identityManager.claim(
+                    claimIdentityKeyHex.trim(),
+                  );
                   await loadIdentities();
                   setClaimIdentityKeyHex('');
                   setStatus('Identity claimed');

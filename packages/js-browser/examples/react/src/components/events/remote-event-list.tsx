@@ -11,9 +11,7 @@ const toHex = (bytes: Uint8Array) =>
 
 const fromHex = (hex: string): Uint8Array => {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
-  return new Uint8Array(
-    clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-  );
+  return new Uint8Array(clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
 };
 
 const mono = { fontFamily: 'monospace', fontSize: '0.78rem' };
@@ -32,7 +30,9 @@ export const RemoteEventList = () => {
     setLoading(true);
     const allDecoded: DecodedEvent[] = [];
 
-    const collection = collectionStr.trim() ? Number(collectionStr.trim()) : undefined;
+    const collection = collectionStr.trim()
+      ? Number(collectionStr.trim())
+      : undefined;
     const identity = identityHex.trim() || undefined;
     const signedBy = signedByHex.trim()
       ? fromHex(signedByHex.trim())
@@ -43,8 +43,8 @@ export const RemoteEventList = () => {
         const responseBytes = await client.core!.list_events(
           server,
           null,
-          collection,
           identity,
+          collection,
           signedBy,
         );
         const response = v2.ListEventsResponse.fromBinary(responseBytes);
@@ -67,25 +67,47 @@ export const RemoteEventList = () => {
     }
 
     // Decode all bundles
-    interface IdentityVersion { createdAt: bigint; keys: Set<string> }
+    interface IdentityVersion {
+      createdAt: bigint;
+      keys: Set<string>;
+    }
     const timelines = new Map<string, IdentityVersion[]>();
     const referencedIdentities = new Set<string>();
 
-    const parsedBundles: { server: string; event: v2.Event; content?: v2.Content; signedEvent: v2.SignedEvent }[] = [];
+    const parsedBundles: {
+      server: string;
+      event: v2.Event;
+      content?: v2.Content;
+      signedEvent: v2.SignedEvent;
+    }[] = [];
 
     for (const { server, bundle } of allBundles) {
       try {
         const event = v2.Event.fromBinary(bundle.signedEvent!.eventBytes);
         let content: v2.Content | undefined;
         if (bundle.serializedContent?.contentBytes) {
-          try { content = v2.Content.fromBinary(bundle.serializedContent.contentBytes); } catch (_) { /* skip */ }
+          try {
+            content = v2.Content.fromBinary(
+              bundle.serializedContent.contentBytes,
+            );
+          } catch (_) {
+            /* skip */
+          }
         }
-        parsedBundles.push({ server, event, content, signedEvent: bundle.signedEvent! });
+        parsedBundles.push({
+          server,
+          event,
+          content,
+          signedEvent: bundle.signedEvent!,
+        });
 
         if (event.key?.identity) referencedIdentities.add(event.key.identity);
 
         // Collect identity versions from results
-        if (event.key?.collection === 1 && content?.contentBody.oneofKind === 'identity') {
+        if (
+          event.key?.collection === 1 &&
+          content?.contentBody.oneofKind === 'identity'
+        ) {
           const id = content.contentBody.identity;
           const keys = new Set<string>();
           for (const k of id.rotationKeys) keys.add(toHex(k.key));
@@ -94,21 +116,37 @@ export const RemoteEventList = () => {
           if (!timelines.has(idKey)) timelines.set(idKey, []);
           timelines.get(idKey)!.push({ createdAt: event.createdAt, keys });
         }
-      } catch (_) { /* skip */ }
+      } catch (_) {
+        /* skip */
+      }
     }
 
     // Fetch identity docs we don't have yet (skip if no filters — all events already fetched)
-    const hasFilters = collection !== undefined || identity !== undefined || signedBy !== undefined;
+    const hasFilters =
+      collection !== undefined ||
+      identity !== undefined ||
+      signedBy !== undefined;
     for (const idKey of referencedIdentities) {
       if (timelines.has(idKey) || !hasFilters) continue;
       for (const server of client.servers) {
         try {
-          const idBytes = await client.core!.list_events(server, null, 1, idKey);
+          const idBytes = await client.core!.list_events(
+            server,
+            null,
+            idKey,
+            1,
+          );
           const idResponse = v2.ListEventsResponse.fromBinary(idBytes);
           for (const idBundle of idResponse.eventBundles) {
-            if (!idBundle.serializedContent?.contentBytes || !idBundle.signedEvent) continue;
+            if (
+              !idBundle.serializedContent?.contentBytes ||
+              !idBundle.signedEvent
+            )
+              continue;
             const ev = v2.Event.fromBinary(idBundle.signedEvent.eventBytes);
-            const c = v2.Content.fromBinary(idBundle.serializedContent.contentBytes);
+            const c = v2.Content.fromBinary(
+              idBundle.serializedContent.contentBytes,
+            );
             if (c.contentBody.oneofKind !== 'identity') continue;
             const id = c.contentBody.identity;
             const keys = new Set<string>();
@@ -118,13 +156,17 @@ export const RemoteEventList = () => {
             timelines.get(idKey)!.push({ createdAt: ev.createdAt, keys });
           }
           if (timelines.has(idKey)) break;
-        } catch (_) { /* try next server */ }
+        } catch (_) {
+          /* try next server */
+        }
       }
     }
 
     // Sort timelines by createdAt ascending
     for (const versions of timelines.values()) {
-      versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+      versions.sort((a, b) =>
+        a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+      );
     }
 
     // Build decoded events with time-aware authorization
@@ -132,9 +174,13 @@ export const RemoteEventList = () => {
       try {
         let signatureValid = false;
         try {
-          client.core!.verify_signed_event(v2.SignedEvent.toBinary(signedEvent));
+          client.core!.verify_signed_event(
+            v2.SignedEvent.toBinary(signedEvent),
+          );
           signatureValid = true;
-        } catch (_) { /* failed */ }
+        } catch (_) {
+          /* failed */
+        }
 
         let identityAuthorized: boolean | undefined;
         const idKey = event.key?.identity;
@@ -178,8 +224,17 @@ export const RemoteEventList = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
-        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Remote Events ({events.length})</h2>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          margin: '24px 0 12px',
+        }}
+      >
+        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
+          Remote Events ({events.length})
+        </h2>
         <button
           onClick={fetchRemote}
           disabled={loading || client.servers.length === 0}
@@ -192,9 +247,18 @@ export const RemoteEventList = () => {
         <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 6 }}>
           Filter
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            alignItems: 'end',
+          }}
+        >
           <div style={{ flex: 0.5, minWidth: 120 }}>
-            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+            <div
+              style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}
+            >
               Collection (1=identity, 2=feed, 3=interactions)
             </div>
             <input
@@ -206,7 +270,9 @@ export const RemoteEventList = () => {
             />
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+            <div
+              style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}
+            >
               Identity (hex hash)
             </div>
             <input
@@ -218,7 +284,9 @@ export const RemoteEventList = () => {
             />
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}>
+            <div
+              style={{ fontSize: '0.72rem', color: '#484f58', marginBottom: 2 }}
+            >
               Signed By (hex)
             </div>
             <input

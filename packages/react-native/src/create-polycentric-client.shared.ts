@@ -1,7 +1,4 @@
-import {
-  KEY_TYPE,
-  type PolycentricClient,
-} from '@polycentric/js-core';
+import { KEY_TYPE, type PolycentricClient } from '@polycentric/js-core';
 
 export interface CreatePolycentricClientConfig {
   databaseName?: string;

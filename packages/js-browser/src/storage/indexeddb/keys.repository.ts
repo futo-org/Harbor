@@ -89,7 +89,10 @@ export class IndexedDBKeysRepository implements IKeysRepository {
       const kt = Number(result.key_type);
       return {
         privateKey: { keyType: kt, key: new Uint8Array(result.private_key) },
-        publicKey: v2.PublicKey.create({ keyType: kt, key: new Uint8Array(result.public_key) }),
+        publicKey: v2.PublicKey.create({
+          keyType: kt,
+          key: new Uint8Array(result.public_key),
+        }),
       };
     } catch (error) {
       throw new DatabaseError('Failed to retrieve keys by public key: ', error);
@@ -134,7 +137,10 @@ export class IndexedDBKeysRepository implements IKeysRepository {
         const kt = Number(result.key_type);
         return {
           privateKey: { keyType: kt, key: new Uint8Array(result.private_key) },
-          publicKey: v2.PublicKey.create({ keyType: kt, key: new Uint8Array(result.public_key) }),
+          publicKey: v2.PublicKey.create({
+            keyType: kt,
+            key: new Uint8Array(result.public_key),
+          }),
         };
       });
     } catch (error) {

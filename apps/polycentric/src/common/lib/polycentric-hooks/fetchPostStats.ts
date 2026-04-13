@@ -19,5 +19,10 @@ export async function fetchPostStats(
   _client: PolycentricClient,
   _pointer: types.Pointer,
 ): Promise<PostStats> {
-  return { likes: 0, dislikes: 0, comments: 0, myOpinion: types.Opinion.NEUTRAL };
+  return {
+    likes: 0,
+    dislikes: 0,
+    comments: 0,
+    myOpinion: types.Opinion.NEUTRAL,
+  };
 }

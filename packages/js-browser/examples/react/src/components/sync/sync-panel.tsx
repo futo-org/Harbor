@@ -109,13 +109,22 @@ export const SyncPanel = () => {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button onClick={push} disabled={syncing || client.servers.length === 0}>
+        <button
+          onClick={push}
+          disabled={syncing || client.servers.length === 0}
+        >
           Push
         </button>
-        <button onClick={pull} disabled={syncing || client.servers.length === 0}>
+        <button
+          onClick={pull}
+          disabled={syncing || client.servers.length === 0}
+        >
           Pull
         </button>
-        <button onClick={sync} disabled={syncing || client.servers.length === 0}>
+        <button
+          onClick={sync}
+          disabled={syncing || client.servers.length === 0}
+        >
           Sync
         </button>
       </div>

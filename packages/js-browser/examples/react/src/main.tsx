@@ -9,7 +9,6 @@ import {
   BrowserWasmBridge,
 } from '@polycentric/js-browser';
 import { PolycentricClient } from '@polycentric/js-core';
-import { currentSelectedIdentity } from './utils/identities.ts';
 
 export const ClientContext = createContext<PolycentricClient | null>(null);
 

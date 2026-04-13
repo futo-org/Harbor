@@ -128,7 +128,9 @@ export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
     if (!key?.signedBy?.key) return null;
 
     if (!bundle.serializedContent?.contentBytes) return null;
-    const content = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
+    const content = v2.Content.fromBinary(
+      bundle.serializedContent.contentBytes,
+    );
     if (content.contentBody.oneofKind !== 'post') return null;
 
     const authorKey = key.signedBy.key;
@@ -170,7 +172,9 @@ export function getPointer(
         }),
       });
     }
-  } catch { /* not v2 format */ }
+  } catch {
+    /* not v2 format */
+  }
 
   // Fall back to v1
   const event = types.Event.fromBinary(signedEvent.event);

@@ -42,7 +42,10 @@ export class KeysRepository implements IKeysRepository {
 
     return {
       privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
-      publicKey: v2.PublicKey.create({ keyType: kt, key: new Uint8Array(row.public_key) }),
+      publicKey: v2.PublicKey.create({
+        keyType: kt,
+        key: new Uint8Array(row.public_key),
+      }),
     };
   }
 
@@ -68,7 +71,10 @@ export class KeysRepository implements IKeysRepository {
       const kt = Number(row.key_type);
       return {
         privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
-        publicKey: v2.PublicKey.create({ keyType: kt, key: new Uint8Array(row.public_key) }),
+        publicKey: v2.PublicKey.create({
+          keyType: kt,
+          key: new Uint8Array(row.public_key),
+        }),
       };
     });
   }

@@ -250,8 +250,12 @@ const EMPTY_FEED: FeedHookResult = {
 };
 
 /** Call the gRPC-web ListEvents endpoint directly via fetch. */
-async function grpcListEvents(serverUrl: string): Promise<v2.ListEventsResponse> {
-  const request = v2.ListEventsRequest.toBinary(v2.ListEventsRequest.create({}));
+async function grpcListEvents(
+  serverUrl: string,
+): Promise<v2.ListEventsResponse> {
+  const request = v2.ListEventsRequest.toBinary(
+    v2.ListEventsRequest.create({}),
+  );
 
   // gRPC-web frame: 1-byte flag (0 = data) + 4-byte big-endian length + body
   const frame = new Uint8Array(5 + request.length);
@@ -303,7 +307,9 @@ export function useExploreFeed(options?: {
           for (const bundle of response.eventBundles) {
             const decoded = decodeV2PostBundle(bundle);
             if (!decoded) continue;
-            store.getState().ingestPost(decoded.id, decoded.signedEvent, decoded);
+            store
+              .getState()
+              .ingestPost(decoded.id, decoded.signedEvent, decoded);
             ids.push(decoded.id);
           }
         } catch (e) {
