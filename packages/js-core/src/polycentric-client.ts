@@ -126,7 +126,7 @@ export class PolycentricClient {
       // SDK should always make a new keypair if we can't find any
       if (!restoredIdentity) {
         this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
-        await this.createKeyPair({
+        await this.keyPairManager.createKeyPair({
           keyType: KEY_TYPE.ED25519,
           setAsCurrent: true,
         });
@@ -144,7 +144,7 @@ export class PolycentricClient {
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {
-    const identities = await this.getKeys();
+    const identities = await this.keyPairManager.getKeys();
     const identity = identities[0];
 
     if (!identity) {
@@ -153,52 +153,6 @@ export class PolycentricClient {
 
     this.setCurrentKeyPair(identity);
     return true;
-  }
-
-  /**
-   * Creates a new KeyPair.
-   */
-  async createKeyPair(
-    options: { keyType?: Proto.KeyType; setAsCurrent?: boolean } = {},
-  ): Promise<KeyPair> {
-    return this.keyPairManager.createKeyPair({
-      keyType: options.keyType ?? KEY_TYPE.ED25519,
-      setAsCurrent: options.setAsCurrent,
-    });
-  }
-
-  /**
-   * Gets all stored identities.
-   */
-  async getKeys(): Promise<KeyPair[]> {
-    return this.keyPairManager.getKeys();
-  }
-
-  /**
-   * Rotates the current key pair: generates a new one and removes the old one.
-   *
-   * @returns The new key pair
-   */
-  async rotateKeyPair(): Promise<KeyPair> {
-    const oldPublicKey = this.currentKeyPair?.publicKey;
-
-    const newKeyPair = await this.createKeyPair({
-      keyType: KEY_TYPE.ED25519,
-      setAsCurrent: true,
-    });
-
-    if (oldPublicKey) {
-      await this.keyPairManager.removeKeyPair(oldPublicKey);
-    }
-
-    return newKeyPair;
-  }
-
-  /**
-   * Switches to a new key pair.
-   */
-  async switchKeyPair(publicKey: Proto.PublicKey): Promise<KeyPair> {
-    return this.keyPairManager.switchKeyPair(publicKey);
   }
 
   /**
