@@ -1,18 +1,19 @@
+import { usePressAnimation } from '@/src/common/lib/animation';
+import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
+  Atoms,
+  useTheme,
+  type FontWeightToken,
+  type PaletteColorToken,
+} from '@/src/common/theme';
+import {
+  Animated,
   Pressable,
   PressableProps,
-  StyleSheet,
-  Animated,
   StyleProp,
   ViewStyle,
 } from 'react-native';
 import { Text, TextVariant } from './Text';
-import {
-  useTheme,
-  type PaletteColorToken,
-  type FontWeightToken,
-} from '@/src/common/theme';
-import { usePressAnimation } from '@/src/common/lib/animation';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
@@ -25,6 +26,7 @@ interface LinkButtonProps extends Omit<PressableProps, 'style'> {
   variant?: TextVariant;
   fontWeight?: FontWeightToken;
   italic?: boolean;
+  underlineOnHover?: boolean;
 }
 
 export function LinkButton({
@@ -36,10 +38,13 @@ export function LinkButton({
   variant = 'body',
   fontWeight = 'semibold',
   italic,
+  underlineOnHover = false,
+  disabled,
   ...props
 }: LinkButtonProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const textColor = theme.palette[color];
 
@@ -49,7 +54,16 @@ export function LinkButton({
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        style={[styles.base, style]}
+        onHoverIn={onHoverIn}
+        onHoverOut={onHoverOut}
+        disabled={disabled}
+        style={[
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.gap_xs,
+          style,
+        ]}
         hitSlop={8}
         {...props}
       >
@@ -59,6 +73,11 @@ export function LinkButton({
           fontWeight={fontWeight}
           color={color}
           italic={italic}
+          style={
+            hovered && underlineOnHover && !disabled
+              ? { textDecorationLine: 'underline' }
+              : undefined
+          }
         >
           {title}
         </Text>
@@ -66,12 +85,3 @@ export function LinkButton({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-});

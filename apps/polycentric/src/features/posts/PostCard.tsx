@@ -1,14 +1,21 @@
-import { Pressable, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Box } from '@/src/common/components/layouts';
-import { Avatar, Text, PubkeyTag } from '@/src/common/components/primitives';
-import { types } from '@polycentric/react-native';
+import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
 import {
-  timeAgo,
   identiconUrl,
+  timeAgo,
   truncateName,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useWebHover } from '@/src/common/lib/useWebHover';
+import {
+  Atoms,
+  type Theme,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { types } from '@polycentric/react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 export interface PostCardProps {
   displayContent: string;
@@ -61,6 +68,12 @@ export function PostCard({
   hideReplyingTo = false,
 }: PostCardProps) {
   const { theme } = useTheme();
+  const { hovered: replyingToHovered, onHoverIn, onHoverOut } = useWebHover();
+  const {
+    hovered: expandHovered,
+    onHoverIn: onExpandHoverIn,
+    onHoverOut: onExpandHoverOut,
+  } = useWebHover();
 
   const avatarUrl = identiconUrl(authorPublicKey);
   const time = timeAgo(timestamp);
@@ -68,25 +81,27 @@ export function PostCard({
   return (
     <Pressable
       style={[
-        styles.container,
-        { borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20') },
+        Atoms.w_full,
+        Atoms.px_lg,
+        Atoms.pt_sm,
+        { paddingBottom: 6 },
+        {
+          borderBottomWidth: 1,
+          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
+        },
       ]}
       onPress={onPress}
     >
       <Box style={[Atoms.flex_row, Atoms.gap_md]}>
-        <Pressable
+        <Avatar
+          source={avatarUrl ? { uri: avatarUrl } : undefined}
+          size="sm"
           onPress={onAuthorPress}
           disabled={!onAuthorPress}
-          style={{ marginTop: 3 }}
-        >
-          <Avatar
-            source={avatarUrl ? { uri: avatarUrl } : undefined}
-            size="sm"
-          />
-        </Pressable>
+          containerProps={{ style: { marginTop: 3 } }}
+        />
 
         <Box style={Atoms.flex_1}>
-          {/* Header: name + pubkey | timestamp */}
           <Box
             style={[
               Atoms.flex_row,
@@ -102,7 +117,12 @@ export function PostCard({
                 { alignItems: 'baseline' },
               ]}
             >
-              <Pressable onPress={onAuthorPress} disabled={!onAuthorPress}>
+              {onAuthorPress ? (
+                <PostCardAuthorName
+                  name={authorName}
+                  onPress={onAuthorPress}
+                />
+              ) : (
                 <Text
                   variant="secondary"
                   fontWeight="bold"
@@ -110,7 +130,7 @@ export function PostCard({
                 >
                   {truncateName(authorName, 16)}
                 </Text>
-              </Pressable>
+              )}
 
               <PubkeyTag
                 publicKey={authorPublicKey}
@@ -129,47 +149,65 @@ export function PostCard({
             ) : null}
           </Box>
 
-          {/* Replying to */}
           {!hideReplyingTo && hasParent && (
-            <TouchableOpacity
+            <Pressable
               onPress={onReplyingToPress}
               disabled={!onReplyingToPress}
-              style={{ marginTop: 6 }}
+              onHoverIn={onReplyingToPress ? onHoverIn : undefined}
+              onHoverOut={onReplyingToPress ? onHoverOut : undefined}
+              style={{ alignSelf: 'flex-start', marginTop: 2 }}
             >
               <Text
                 variant="small"
-                style={{
-                  lineHeight: 16,
-                  color: withHexOpacity(theme.palette.neutral_500, '80'),
-                }}
+                style={[
+                  theme.atoms.text_neutral_medium,
+                  { lineHeight: 16 },
+                  onReplyingToPress &&
+                    replyingToHovered && { textDecorationLine: 'underline' },
+                ]}
               >
                 Replying to{' '}
-                <Text variant="small" color="neutral_500">
+                <Text
+                  variant="small"
+                  style={[
+                    theme.atoms.text_neutral_high,
+                    onReplyingToPress &&
+                      replyingToHovered && { textDecorationLine: 'underline' },
+                  ]}
+                >
                   {truncateName(replyingToName, 16)}
                 </Text>
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
 
-          {/* Content */}
           <Text variant="secondary" style={{ marginTop: 4, lineHeight: 20 }}>
             {displayContent}
             {isTruncatedPreview ? '...' : ''}
           </Text>
           {showContentExpandToggle && (
-            <TouchableOpacity
+            <Pressable
               onPress={onToggleContentExpanded}
-              style={{ marginTop: 2 }}
+              onHoverIn={onExpandHoverIn}
+              onHoverOut={onExpandHoverOut}
+              style={{ marginTop: 2, alignSelf: 'flex-start' }}
             >
-              <Text variant="small" color="primary_500">
+              <Text
+                variant="small"
+                color="primary_500"
+                style={
+                  expandHovered
+                    ? { textDecorationLine: 'underline' }
+                    : undefined
+                }
+              >
                 {contentExpanded ? 'Show less' : 'Show more'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </Box>
       </Box>
 
-      {/* Actions */}
       <Box
         style={[
           Atoms.flex_row,
@@ -202,6 +240,41 @@ export function PostCard({
   );
 }
 
+function PostCardAuthorName({
+  name,
+  onPress,
+}: {
+  name: string;
+  onPress: () => void;
+}) {
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
+
+  return (
+    <Pressable onPress={onPress} onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+      <Text
+        variant="secondary"
+        fontWeight="bold"
+        style={[
+          { lineHeight: 18 },
+          hovered && { textDecorationLine: 'underline' },
+        ]}
+      >
+        {truncateName(name, 16)}
+      </Text>
+    </Pressable>
+  );
+}
+
+function actionIconHoverColor(iconColor: string, theme: Theme): string {
+  if (iconColor === theme.palette.primary_500) {
+    return theme.palette.primary_600;
+  }
+  if (iconColor === theme.palette.negative_500) {
+    return theme.palette.negative_600;
+  }
+  return theme.palette.neutral_700;
+}
+
 function ActionButton({
   icon,
   count,
@@ -213,36 +286,46 @@ function ActionButton({
   onPress?: () => void;
   color: string;
 }) {
+  const { theme } = useTheme();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
+  const resolvedIconColor = hovered
+    ? actionIconHoverColor(color, theme)
+    : color;
+
+  const iconSurface: StyleProp<ViewStyle> = [
+    Atoms.p_xs,
+    Atoms.rounded_md,
+    {
+      backgroundColor: hovered
+        ? withHexOpacity(theme.palette.neutral_500, '14')
+        : 'transparent',
+    },
+  ];
+
   return (
-    <TouchableOpacity
-      style={styles.actionButton}
+    <Pressable
+      style={[
+        Atoms.flex_row,
+        Atoms.items_center,
+        { gap: 3, minHeight: 20 },
+      ]}
       onPress={onPress}
-      activeOpacity={0.6}
+      disabled={!onPress}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
     >
-      <Ionicons name={icon} size={16} color={color} />
-      <Text
-        variant="small"
-        color="neutral_500"
-        style={{ lineHeight: 16, minWidth: 28 }}
-      >
-        {count ? String(count) : ' '}
-      </Text>
-    </TouchableOpacity>
+      <View style={iconSurface}>
+        <Ionicons name={icon} size={16} color={resolvedIconColor} />
+      </View>
+      {count !== undefined ? (
+        <Text
+          variant="small"
+          color="neutral_500"
+          style={{ minWidth: 28, lineHeight: 16 }}
+        >
+          {count ? String(count) : ' '}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    paddingHorizontal: 15,
-    paddingTop: 8,
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    minHeight: 20,
-  },
-});

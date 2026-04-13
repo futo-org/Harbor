@@ -44,6 +44,9 @@ export function FeedChip({
       backgroundColor={
         isSelected ? theme.palette.primary_100 : theme.palette.neutral_100
       }
+      hoverBackgroundColor={
+        isSelected ? theme.palette.primary_200 : theme.palette.neutral_200
+      }
       fontWeight={'regular'}
       borderColor={
         isSelected ? theme.palette.primary_300 : theme.palette.neutral_200

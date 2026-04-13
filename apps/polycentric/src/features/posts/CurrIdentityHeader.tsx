@@ -7,26 +7,32 @@ import {
   useCurrentIdentity,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { useWebHover } from '@/src/common/lib/useWebHover';
+import { Atoms, BorderRadius, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export function CurrIdentityHeader() {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const pubkey = currentIdentity?.keyPair.publicKey;
   const username = useUsername(
     pubkey ?? { keyType: 0n, key: new Uint8Array() },
   );
 
-  // this should never happen, root layout handles auth state
   if (!currentIdentity || !pubkey) {
     return null;
   }
 
   const avatarUrl = identiconUrl(pubkey);
+
+  const identityRowHoverOverlay =
+    theme.scheme === 'light'
+      ? withHexOpacity(theme.palette.neutral_500, '14')
+      : withHexOpacity(theme.palette.black, '28');
 
   return (
     <Box
@@ -39,8 +45,19 @@ export function CurrIdentityHeader() {
     >
       <Pressable
         onPress={() => router.push(Routes.tabs.feed.identity)}
+        onHoverIn={onHoverIn}
+        onHoverOut={onHoverOut}
         hitSlop={10}
-        style={{ flexShrink: 1 }}
+        style={[
+          Atoms.px_sm,
+          Atoms.py_sm,
+          {
+            flexShrink: 1,
+            borderRadius: BorderRadius.sm,
+            overflow: 'hidden',
+            position: 'relative',
+          },
+        ]}
       >
         <Box
           style={[
@@ -65,6 +82,18 @@ export function CurrIdentityHeader() {
             color={theme.palette.neutral_1000}
           />
         </Box>
+        {hovered ? (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                borderRadius: BorderRadius.sm,
+                backgroundColor: identityRowHoverOverlay,
+              },
+            ]}
+          />
+        ) : null}
       </Pressable>
       <Pressable
         onPress={() => {

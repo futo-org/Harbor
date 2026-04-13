@@ -16,7 +16,8 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { useWebHover } from '@/src/common/lib/useWebHover';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
   createIdentityWithDefaultServer,
@@ -113,6 +114,7 @@ export function IdentitySwitcherSheetInner({
               <LinkButton
                 title={isEditing ? 'Done' : 'Edit'}
                 onPress={() => setIsEditing(!isEditing)}
+                underlineOnHover
               />
             </Box>
           }
@@ -151,15 +153,29 @@ const DRAG_BORDER_WIDTH = 1.5;
 function IdentityListItemContent({
   item,
   isActive = false,
+  hovered = false,
 }: {
   item: IdentityKeyPair;
   isActive?: boolean;
+  hovered?: boolean;
 }) {
   const { theme } = useTheme();
   const { isEditing } = useIdentitySwitcher();
   const { isCurrentIdentity } = useCurrentIdentity();
 
   const isCurrent = isCurrentIdentity(item.publicKey);
+
+  const hoverSurface =
+    hovered && !isActive
+      ? withHexOpacity(
+          theme.palette.neutral_500,
+          theme.scheme === 'dark' ? '18' : '10',
+        )
+      : null;
+
+  const backgroundColor = isActive
+    ? theme.palette.primary_50
+    : hoverSurface ?? (isCurrent ? theme.palette.neutral_50 : undefined);
 
   return (
     <Box
@@ -169,11 +185,7 @@ function IdentityListItemContent({
         Atoms.mx_lg,
         Atoms.rounded_md,
         {
-          backgroundColor: isActive
-            ? theme.palette.primary_50
-            : isCurrent
-              ? theme.palette.neutral_50
-              : undefined,
+          backgroundColor,
           borderWidth: DRAG_BORDER_WIDTH,
           borderColor: isActive ? theme.palette.primary_400 : 'transparent',
           borderStyle: 'dashed',
@@ -201,6 +213,7 @@ function IdentityListItemContent({
 function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
   const { isCurrentIdentity, switchIdentity } = useCurrentIdentity();
   const { dismiss } = useIdentitySwitcher();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const isCurrent = isCurrentIdentity(item.publicKey);
 
@@ -215,8 +228,12 @@ function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
   };
 
   return (
-    <Pressable onPress={() => !isCurrent && handleSwitchIdentity()}>
-      <IdentityListItemContent item={item} />
+    <Pressable
+      onPress={() => !isCurrent && handleSwitchIdentity()}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+    >
+      <IdentityListItemContent item={item} hovered={hovered} />
     </Pressable>
   );
 }

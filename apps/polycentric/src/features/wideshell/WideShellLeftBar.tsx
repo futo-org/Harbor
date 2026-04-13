@@ -6,7 +6,8 @@ import {
   stringURLSafeToPublicKey,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { useWebHover } from '@/src/common/lib/useWebHover';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { lightPalette } from '@/src/common/theme/palette';
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
@@ -14,7 +15,7 @@ import { Link, usePathname } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { useMemo } from 'react';
 import type { PressableProps, StyleProp, ViewStyle } from 'react-native';
-import { Image, Platform, Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { WideShellMode, useWideShellMode } from './useWideShellMode';
 
@@ -140,16 +141,26 @@ function NavRailPressable({
   style: styleProp,
   ...rest
 }: NavRailPressableProps) {
-  const webPointer =
-    Platform.OS === 'web'
-      ? ({ cursor: 'pointer', transition: 'none' } as ViewStyle)
-      : null;
+  const { theme } = useTheme();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
+
+  const hoverSurface = {
+    cursor: 'pointer' as const,
+    transition: 'none',
+    backgroundColor: hovered
+      ? theme.scheme === 'dark'
+        ? withHexOpacity(theme.palette.white, '0C')
+        : withHexOpacity(theme.palette.neutral_900, '12')
+      : 'transparent',
+  } as ViewStyle;
 
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={accessibilityLabel}
-      style={[Atoms.rounded_md, webPointer, styleProp]}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+      style={[Atoms.rounded_md, hoverSurface, styleProp]}
       {...rest}
     >
       {children}

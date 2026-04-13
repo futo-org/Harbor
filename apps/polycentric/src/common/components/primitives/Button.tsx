@@ -1,24 +1,25 @@
+import { usePressAnimation } from '@/src/common/lib/animation';
+import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
-  Pressable,
-  PressableProps,
-  StyleSheet,
-  Animated,
-  ViewStyle,
-  StyleProp,
-  View,
-  Platform,
-} from 'react-native';
-import { Text } from './Text';
-import {
+  BorderRadius,
   useTheme,
   withHexOpacity,
-  BorderRadius,
-  type FontWeightToken,
   type BorderRadiusToken,
+  type FontWeightToken,
   type PaletteColorToken,
   type Theme,
 } from '@/src/common/theme';
-import { usePressAnimation } from '@/src/common/lib/animation';
+import {
+  Animated,
+  Platform,
+  Pressable,
+  PressableProps,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from 'react-native';
+import { Text } from './Text';
 
 type ButtonVariant =
   | 'primary'
@@ -43,6 +44,7 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
   style?: StyleProp<ViewStyle>;
   icon?: IconRenderFn;
   fullWidth?: boolean;
+  disabled?: boolean;
 }
 
 const SIZE_CONFIG: Record<
@@ -67,14 +69,16 @@ export function Button({
   style,
   icon,
   fullWidth = false,
+  disabled,
   ...props
 }: ButtonProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const sizeConfig = SIZE_CONFIG[size];
   const borderRadius = BorderRadius[sizeConfig.borderRadius];
-  const isDisabled = variant === 'disabled';
+  const isDisabled = variant === 'disabled' || !!disabled;
   const iconColor =
     variant === 'disabled'
       ? withHexOpacity(theme.palette.neutral_500, '80')
@@ -82,6 +86,10 @@ export function Button({
           textColorMap[variant as Exclude<ButtonVariant, 'disabled'>]
         ];
   const variantStyle = getVariantStyle(theme, variant);
+  const hoverStyle =
+    !isDisabled && hovered
+      ? getHoverVariantStyle(theme, variant)
+      : undefined;
 
   return (
     <Animated.View style={animatedStyle}>
@@ -89,6 +97,9 @@ export function Button({
         onPress={isDisabled ? undefined : onPress}
         onPressIn={isDisabled ? undefined : onPressIn}
         onPressOut={isDisabled ? undefined : onPressOut}
+        onHoverIn={isDisabled ? undefined : onHoverIn}
+        onHoverOut={isDisabled ? undefined : onHoverOut}
+        disabled={isDisabled}
         hitSlop={8}
         style={[
           styles.base,
@@ -99,6 +110,7 @@ export function Button({
             borderRadius,
           },
           variantStyle,
+          hoverStyle,
           style,
         ]}
         {...props}
@@ -192,5 +204,32 @@ function getVariantStyle(theme: Theme, variant: ButtonVariant) {
         backgroundColor: withHexOpacity(theme.palette.negative_500, '15'),
         borderColor: withHexOpacity(theme.palette.negative_500, '80'),
       };
+  }
+}
+
+function getHoverVariantStyle(theme: Theme, variant: ButtonVariant): ViewStyle {
+  switch (variant) {
+    case 'primary':
+      return {
+        backgroundColor: theme.palette.primary_600,
+        borderColor: theme.palette.primary_700,
+      };
+    case 'secondary':
+      return {
+        backgroundColor: withHexOpacity(theme.palette.primary_500, '32'),
+        borderColor: withHexOpacity(theme.palette.primary_500, '55'),
+      };
+    case 'tertiary':
+      return {
+        backgroundColor: withHexOpacity(theme.palette.neutral_500, '14'),
+        borderColor: withHexOpacity(theme.palette.neutral_500, '78'),
+      };
+    case 'destructive':
+      return {
+        backgroundColor: withHexOpacity(theme.palette.negative_500, '26'),
+        borderColor: withHexOpacity(theme.palette.negative_500, 'A0'),
+      };
+    case 'disabled':
+      return {};
   }
 }

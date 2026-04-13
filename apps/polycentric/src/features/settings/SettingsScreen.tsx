@@ -234,7 +234,7 @@ export function IdentitySettingsContent({
               >
                 {displayName || 'Anonymous'}
               </Text>
-              <LinkButton title="Edit name" onPress={() => setEditing(true)} />
+              <LinkButton title="Edit name" onPress={() => setEditing(true)} underlineOnHover />
             </Box>
           )}
 
@@ -361,6 +361,7 @@ export function ServersSheetContent({
           <Box style={{ minWidth: 72, alignItems: 'flex-end' }}>
             <LinkButton
               title={isEditing ? 'Done' : 'Edit'}
+              underlineOnHover
               onPress={() => {
                 setIsEditing((v) => !v);
                 setNewServerUrl('');
@@ -495,6 +496,7 @@ function SourceCodeItem() {
       <LinkButton
         title="Source code"
         onPress={() => Linking.openURL(SOURCE_CODE_URL)}
+        underlineOnHover
       />
     </Box>
   );
