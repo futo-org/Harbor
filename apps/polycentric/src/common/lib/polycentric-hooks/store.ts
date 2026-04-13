@@ -88,17 +88,14 @@ function toggleOpinion(
       },
     };
   });
-  client.contentManager
-    .setOpinion(state.pointer, next)
-    .then(() => client.sync().catch(() => {}))
-    .catch(() => {});
+  // TODO: setOpinion requires v2 content manager APIs
 }
 
 export function createPolycentricStore(client: PolycentricClient) {
   return createStore<PolycentricStore>()((set, get) => ({
     identities: [],
     async refreshIdentities() {
-      set({ identities: await client.getAllIdentities() });
+      set({ identities: await client.getKeys() });
     },
 
     feeds: {},
@@ -181,19 +178,12 @@ export function createPolycentricStore(client: PolycentricClient) {
       set((s) => ({ usernames: { ...s.usernames, [key]: name } }));
     },
 
-    ensureUsernameLoaded(key, pubkey) {
+    // TODO: Username querying requires queryManager which is not yet in v2
+    ensureUsernameLoaded(key, _pubkey) {
       if (get().fetchedUsernames[key]) return;
       set((s) => ({
         fetchedUsernames: { ...s.fetchedUsernames, [key]: true },
       }));
-      client.queryManager
-        .queryUsername(pubkey)
-        .then((name) => {
-          if (name) {
-            set((s) => ({ usernames: { ...s.usernames, [key]: name } }));
-          }
-        })
-        .catch(() => {});
     },
 
     posts: {},
@@ -261,19 +251,9 @@ export function createPolycentricStore(client: PolycentricClient) {
       try {
         await ensurePostLoaded(client, get, postId);
         if (options?.getIsAborted?.()) return;
-        const pointer = resolvePointer(get, postId);
-        if (!pointer) return;
-        const events = await client.queryManager.queryReplies(pointer);
-        if (options?.getIsAborted?.()) return;
-        const ids: string[] = [];
-        for (const ev of events) {
-          const id = ingestEvent(get, ev);
-          if (id) ids.push(id);
-        }
-        get().setFeed(feedKey, ids, false);
-        const { ensurePostMetadataLoaded } = get();
-        ids.forEach((id) => ensurePostMetadataLoaded(id));
-        ensurePostMetadataLoaded(postId);
+        // TODO: queryReplies requires queryManager which is not yet in v2
+        get().setFeed(feedKey, [], false);
+        get().ensurePostMetadataLoaded(postId);
       } finally {
         set((s) => ({
           postPageLoading: { ...s.postPageLoading, [postId]: false },
@@ -292,28 +272,8 @@ async function ensurePostLoaded(
   const parsed = parsePostId(postId);
   if (!parsed) return;
   try {
-    const process = types.Process.create({ process: parsed.process });
-    const events = client.queryManager.queryEvents(
-      parsed.authorPublicKey,
-      process,
-      parsed.logicalClock,
-      parsed.logicalClock,
-    );
-    let signedEvent: types.SignedEvent | null | undefined = events[0];
-    if (!signedEvent) {
-      try {
-        signedEvent = await client.queryManager.fetchEvent(
-          parsed.authorPublicKey,
-          process,
-          parsed.logicalClock,
-        );
-      } catch {
-        // fetchEvent failed
-      }
-      if (signedEvent) {
-        await client.ingestEvent(signedEvent);
-      }
-    }
+    // TODO: queryEvents/fetchEvent require queryManager which is not yet in v2
+    const signedEvent: types.SignedEvent | null | undefined = null;
     if (signedEvent) {
       const decoded = decodePostEvent(signedEvent);
       if (decoded?.id === postId) {

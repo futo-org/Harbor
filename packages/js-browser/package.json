@@ -11,7 +11,8 @@
       "browser": "./src/runtime.ts",
       "react-native": "./src/runtime.ts",
       "source": "./src/runtime.ts",
-      "import": "./dist/index.es.js"
+      "import": "./dist/index.es.js",
+      "default": "./dist/index.es.js"
     },
     "./full": {
       "types": "./dist/index.d.ts",
@@ -31,14 +32,13 @@
   },
   "dependencies": {
     "@polycentric/js-core": "workspace:*",
-    "@polycentric/rs-core-wasm-browser": "*",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.8.0",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",
     "js-base64": "^3.7.8"
   },
   "peerDependencies": {
-    "@polycentric/rs-core-wasm-browser": "*"
+    "@polycentric/rs-core-wasm-browser": "workspace:*"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",

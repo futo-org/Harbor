@@ -255,21 +255,6 @@ export class DatabaseError extends WrapperError {
 }
 
 /**
- * Error thrown when an identity manager operation fails.
- *
- * This error is thrown when identity manager operations such as listing
- * identities, loading identities, or creating identities fail.
- * It wraps the underlying error for better debugging.
- */
-export class IdentityManagerError extends WrapperError {
-  constructor(message: string, originalError?: unknown) {
-    super(message, originalError);
-    Object.setPrototypeOf(this, IdentityManagerError.prototype);
-    this.name = 'IdentityManagerError';
-  }
-}
-
-/**
  * Error thrown when query operations fail.
  *
  * This error is thrown when query engine operations fail, such as

@@ -1,9 +1,8 @@
 import type { IStorageDriver } from '@polycentric/js-core';
 import { Database } from './database';
 import { EventRepository } from './event.repository';
+import { ContentRepository } from './content.repository';
 import { KeysRepository } from './keys.repository';
-import { ProcessStateRepository } from './process-state.repository';
-import { ProcessIdRepository } from './process-id.repository';
 import { EventAckRepository } from './event-ack.repository';
 
 export class ReactNativeStorageDriver implements IStorageDriver {
@@ -16,11 +15,11 @@ export class ReactNativeStorageDriver implements IStorageDriver {
   }
 
   createEventRepository() {
-    return new EventRepository(this.database);
+    return new EventRepository();
   }
 
-  createProcessStateRepository() {
-    return new ProcessStateRepository(this.database);
+  createContentRepository() {
+    return new ContentRepository();
   }
 
   createKeysRepository() {
@@ -29,9 +28,5 @@ export class ReactNativeStorageDriver implements IStorageDriver {
 
   createEventAckRepository() {
     return new EventAckRepository(this.database);
-  }
-
-  createProcessIdRepository() {
-    return new ProcessIdRepository(this.database);
   }
 }

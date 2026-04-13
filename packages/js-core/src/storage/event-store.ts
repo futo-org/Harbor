@@ -1,5 +1,5 @@
 import { IEventRepository } from '../platform-interfaces';
-import { SignedEvent } from '../proto/polycentric';
+import * as Proto from '../proto/v2';
 import { DatabaseError } from '../errors';
 
 /**
@@ -12,68 +12,62 @@ import { DatabaseError } from '../errors';
 export class EventStore {
   constructor(private repository: IEventRepository) {}
 
-  /**
-   * Persist a single event
-   *
-   * @param signedEvent - A signed event to persist
-   * @throws {DatabaseError} If the event is invalid or persisting fails
-   */
-  async persistEvent(signedEvent: SignedEvent): Promise<void> {
-    // TODO: add more sophisticated event validation
-    // TODO: will need to return a bool so rs-core doesn't ingest a malfmored event
-
-    if (!signedEvent.signature || signedEvent.signature.length === 0) {
-      throw new DatabaseError('SignedEvent must have a valid signature');
-    }
-
-    if (!signedEvent.event || signedEvent.event.length === 0) {
-      throw new DatabaseError('SignedEvent must have valid event data');
-    }
-
-    await this.repository.persistEvent(signedEvent);
-  }
-
-  /**
-   * Persist multiple signed events in a single database transaction.
-   *
-   * @param signedEvents - An array of signed events to persist
-   * @throws {DatabaseError} If any event is invalid or the transaction fails
-   */
-  async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
-    // TODO: add more sophisticated event validation
-
-    for (const signedEvent of signedEvents) {
-      if (!signedEvent) {
-        throw new DatabaseError('SignedEvent cannot be null or undefined');
+  async save(
+    signedEvents: Proto.SignedEvent | Proto.SignedEvent[],
+  ): Promise<void> {
+    // If multiple events then loop back
+    if (Array.isArray(signedEvents)) {
+      for (const signedEvent of signedEvents) {
+        await this.save(signedEvent);
       }
+    } else {
+      const signedEvent = signedEvents;
+
+      if (!signedEvent.signature || signedEvent.signature.length === 0) {
+        throw new DatabaseError('SignedEvent must have a valid signature');
+      }
+
+      if (!signedEvent.eventBytes || signedEvent.eventBytes.length === 0) {
+        throw new DatabaseError('SignedEvent must have valid event data');
+      }
+
+      await this.repository.save(signedEvent);
     }
-
-    await this.repository.persistEvents(signedEvents);
   }
 
-  /**
-   * Get all events from the repository
-   *
-   * @returns An array of signed events
-   */
-  async getAllEvents(): Promise<SignedEvent[]> {
-    return this.repository.getAllEvents();
+  async getAll(): Promise<Proto.SignedEvent[]> {
+    return this.repository.getAll();
   }
 
-  /**
-   * Get events in batches, ordered by id
-   *
-   * @param batchSize The number of events to retrieve
-   * @param offset The offset from which to start retrieving events
-   * @returns An object containing an array of signed events and the new offset
-   */
-  async getEventsBatch(
+  async getBatch(
     batchSize: number,
     offset?: number,
   ): Promise<{
-    events: SignedEvent[];
+    events: Proto.SignedEvent[];
     offset: number;
   }> {
-    return this.repository.getEventsBatch(batchSize, offset);
+    return this.repository.getBatch(batchSize, offset);
+  }
+
+  async getNextSequence(
+    publicKey: Proto.PublicKey,
+    collection: number,
+    identity: string,
+  ): Promise<bigint> {
+    return this.repository.getNextSequence(publicKey, collection, identity);
+  }
+
+  async getLatestEvent(
+    publicKey: Proto.PublicKey,
+    identity: string,
+  ): Promise<Proto.SignedEvent | null> {
+    return this.repository.getLatestEvent(publicKey, identity);
+  }
+
+  async getEventsByIdentity(
+    publicKey: Proto.PublicKey,
+    identity: string,
+  ): Promise<Proto.SignedEvent[]> {
+    return this.repository.getEventsByIdentity(publicKey, identity);
   }
 }

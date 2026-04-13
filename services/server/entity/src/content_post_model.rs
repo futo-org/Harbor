@@ -14,12 +14,14 @@ pub struct Model {
 
     // Optional reply context (EventKey fields stored inline)
     // Root of the reply chain
-    pub reply_root_stream_id: Option<String>,
+    pub reply_root_collection: Option<i16>,
+    pub reply_root_identity: Option<String>,
     pub reply_root_public_key_type: Option<i16>,
     pub reply_root_public_key: Option<Vec<u8>>,
     pub reply_root_sequence: Option<i64>,
     // Direct parent being replied to
-    pub reply_parent_stream_id: Option<String>,
+    pub reply_parent_collection: Option<i16>,
+    pub reply_parent_identity: Option<String>,
     pub reply_parent_public_key_type: Option<i16>,
     pub reply_parent_public_key: Option<Vec<u8>>,
     pub reply_parent_sequence: Option<i64>,

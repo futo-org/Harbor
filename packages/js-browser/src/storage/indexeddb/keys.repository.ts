@@ -1,9 +1,9 @@
-import type { IKeysRepository } from '@polycentric/js-core';
-import { PrivateKey, PublicKey, DatabaseError } from '@polycentric/js-core';
+import type { IKeysRepository, PrivateKey } from '@polycentric/js-core';
+import { v2, DatabaseError } from '@polycentric/js-core';
 import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
 interface PersistedKey {
-  key_type: bigint;
+  key_type: number;
   private_key: Uint8Array;
   public_key: Uint8Array;
 }
@@ -29,18 +29,13 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     });
   }
 
-  /**
-   * Create a new IndexedDBKeysRepository instance
-   *
-   * @param database - Database instance
-   */
   constructor(database: IndexedDBDatabase) {
     this.database = database;
   }
 
   async storeKeys(keys: {
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   }): Promise<void> {
     const keyType = keys.privateKey.keyType;
     const privateKey = keys.privateKey.key;
@@ -72,9 +67,9 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     }
   }
 
-  async retrieveKeysByPublicKey(publicKey: PublicKey): Promise<{
+  async retrieveKeysByPublicKey(publicKey: v2.PublicKey): Promise<{
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   } | null> {
     try {
       const transaction = this.database.createTransaction(
@@ -91,14 +86,12 @@ export class IndexedDBKeysRepository implements IKeysRepository {
         return null;
       }
 
+      const kt = Number(result.key_type);
       return {
-        privateKey: PrivateKey.create({
-          keyType: result.key_type,
-          key: result.private_key,
-        }),
-        publicKey: PublicKey.create({
-          keyType: result.key_type,
-          key: result.public_key,
+        privateKey: { keyType: kt, key: new Uint8Array(result.private_key) },
+        publicKey: v2.PublicKey.create({
+          keyType: kt,
+          key: new Uint8Array(result.public_key),
         }),
       };
     } catch (error) {
@@ -106,7 +99,7 @@ export class IndexedDBKeysRepository implements IKeysRepository {
     }
   }
 
-  async removeKeys(publicKey: PublicKey): Promise<void> {
+  async removeKeys(publicKey: v2.PublicKey): Promise<void> {
     try {
       const transaction = this.database.createTransaction(
         IndexedDBKeysRepository.STORE_NAME,
@@ -126,7 +119,7 @@ export class IndexedDBKeysRepository implements IKeysRepository {
   async getAllKeys(): Promise<
     {
       privateKey: PrivateKey;
-      publicKey: PublicKey;
+      publicKey: v2.PublicKey;
     }[]
   > {
     try {
@@ -140,16 +133,16 @@ export class IndexedDBKeysRepository implements IKeysRepository {
         store.getAll(),
       );
 
-      return results.map((result) => ({
-        privateKey: PrivateKey.create({
-          keyType: result.key_type,
-          key: result.private_key,
-        }),
-        publicKey: PublicKey.create({
-          keyType: result.key_type,
-          key: result.public_key,
-        }),
-      }));
+      return results.map((result) => {
+        const kt = Number(result.key_type);
+        return {
+          privateKey: { keyType: kt, key: new Uint8Array(result.private_key) },
+          publicKey: v2.PublicKey.create({
+            keyType: kt,
+            key: new Uint8Array(result.public_key),
+          }),
+        };
+      });
     } catch (error) {
       throw new DatabaseError('Failed to retrieve all key pairs: ', error);
     }

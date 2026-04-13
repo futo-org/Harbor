@@ -1,0 +1,16 @@
+syntax = "proto3";
+package polycentric.v2;
+
+
+enum KeyType {
+  KEY_TYPE_UNSPECIFIED = 0;
+  KEY_TYPE_ED25519 = 1;
+}
+
+// PublicKeys signs all events on the polycentric network. There is usually one public key per account, per device.
+message PublicKey {
+  // Type of key used. Defaults to ED25519.
+  KeyType key_type = 1;
+  // Value of the key
+  bytes key = 2;
+}

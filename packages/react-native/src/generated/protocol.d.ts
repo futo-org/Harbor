@@ -836,6 +836,14 @@ export namespace polycentric {
     public static getTypeUrl(typeUrlPrefix?: string): string;
   }
 
+  namespace Digest {
+    /** DigestType enum. */
+    enum DigestType {
+      Unknown = 0,
+      SHA256 = 1,
+    }
+  }
+
   /** Properties of a Pointer. */
   interface IPointer {
     /** Pointer system */
@@ -1334,6 +1342,16 @@ export namespace polycentric {
      * @returns The default type url
      */
     public static getTypeUrl(typeUrlPrefix?: string): string;
+  }
+
+  namespace Reference {
+    /** ReferenceType enum. */
+    enum ReferenceType {
+      Unknown = 0,
+      System = 1,
+      Pointer = 2,
+      Bytes = 3,
+    }
   }
 
   /** Properties of a ProcessSecret. */

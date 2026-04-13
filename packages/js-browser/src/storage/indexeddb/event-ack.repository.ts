@@ -6,7 +6,7 @@ interface PersistedEventAck {
   system_key_type: number;
   system_key: Uint8Array;
   process: Uint8Array;
-  logical_clock: number;
+  sequence: number;
   servers: string;
 }
 
@@ -35,12 +35,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
       indexes: [
         {
           name: IndexedDBEventAckRepository.idx_event_acks_natural_key,
-          keyPath: [
-            'system_key_type',
-            'system_key',
-            'process',
-            'logical_clock',
-          ],
+          keyPath: ['system_key_type', 'system_key', 'process', 'sequence'],
         },
         {
           name: IndexedDBEventAckRepository.idx_event_acks_server_has_ack,
@@ -48,7 +43,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
             'system_key_type',
             'system_key',
             'process',
-            'logical_clock',
+            'sequence',
             'servers',
           ],
         },
@@ -69,10 +64,10 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
     serverUrl: string,
   ): Promise<void> {
-    if (!(systemKeyType >= 0 && process.length === 16 && logicalClock >= 0)) {
+    if (!(systemKeyType >= 0 && process.length === 16 && sequence >= 0)) {
       throw new DatabaseError('Invalid event acknowledgment');
     }
 
@@ -81,7 +76,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
         system_key_type: Number(systemKeyType),
         system_key: systemKey,
         process: process,
-        logical_clock: Number(logicalClock),
+        sequence: Number(sequence),
         servers: serverUrl,
       };
 
@@ -104,7 +99,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
   ): Promise<string[]> {
     try {
       const transaction = this.database.createTransaction(
@@ -124,7 +119,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
             Number(systemKeyType),
             systemKey as IDBValidKey,
             process as IDBValidKey,
-            Number(logicalClock),
+            Number(sequence),
           ]),
       );
       return results.map((row) => row.servers);
@@ -140,7 +135,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
     serverUrl: string,
   ): Promise<boolean> {
     try {
@@ -159,7 +154,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
             Number(systemKeyType),
             systemKey as IDBValidKey,
             process as IDBValidKey,
-            Number(logicalClock),
+            Number(sequence),
             serverUrl,
           ]),
       );
@@ -174,7 +169,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
   ): Promise<void> {
     try {
       const transaction = this.database.createTransaction(
@@ -192,7 +187,7 @@ export class IndexedDBEventAckRepository implements IEventAckRepository {
             Number(systemKeyType),
             systemKey as IDBValidKey,
             process as IDBValidKey,
-            Number(logicalClock),
+            Number(sequence),
           ]),
       );
 
