@@ -1,17 +1,19 @@
-use std::collections::HashMap;
-
+use super::protos_v2::{ContentDigest, Event, EventKey, VectorClock};
 use crate::error::{Error, Result};
-use super::protos_v2::{Event, EventKey, ContentDigest, VectorClock};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
 use prost::Message;
 
 impl Event {
-    /// Creates a new event with the given parameters
+    /// Creates a new event with the given parameters.
+    ///
+    /// `vector_clocks` is a repeated field in the proto and is treated as a
+    /// sparse array indexed by collection ID — element `i` is the
+    /// `VectorClock` for collection `i`.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         key: EventKey,
-        vector_clocks: HashMap<i32, VectorClock>,
+        vector_clocks: Vec<VectorClock>,
         previous_signature: Vec<u8>,
         content_digest: Option<ContentDigest>,
         created_at: u64,
@@ -24,7 +26,6 @@ impl Event {
             created_at,
         }
     }
-
 
     /// Validates that the event has all required fields
     pub fn validate(&self) -> Result<()> {

@@ -63,7 +63,10 @@ export function CurrIdentityHeader() {
             >
               {username}
             </Text>
-            <PubkeyTag publicKey={pubkey} />
+            <PubkeyTag
+              publicKey={pubkey}
+              identity={currentIdentity.identityKey ?? undefined}
+            />
             <Ionicons
               name="chevron-down"
               size={22}

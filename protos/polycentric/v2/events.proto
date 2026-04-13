@@ -16,8 +16,7 @@ message Event {
   EventKey key = 1;
 
   // Vector clock to keep the same collection on shared identities in sync
-  // (collection, vector clock)
-  map<int32, VectorClock> vector_clocks = 2;
+  repeated VectorClock vector_clocks = 2;
 
   // Signature of the previous event signed by the same key. Assists in creating
   // immutable collections.

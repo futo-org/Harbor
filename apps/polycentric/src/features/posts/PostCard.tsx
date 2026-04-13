@@ -18,6 +18,8 @@ export interface PostCardProps {
   onToggleContentExpanded: () => void;
   authorName: string;
   authorPublicKey: types.PublicKey;
+  /** v2 identity id the author signed under; preferred over pubkey for display. */
+  authorIdentity?: string;
   timestamp: number;
   replyingToName: string;
   hasParent: boolean;
@@ -44,6 +46,7 @@ export function PostCard({
   onToggleContentExpanded,
   authorName,
   authorPublicKey,
+  authorIdentity,
   timestamp,
   replyingToName,
   hasParent,
@@ -114,6 +117,7 @@ export function PostCard({
 
               <PubkeyTag
                 publicKey={authorPublicKey}
+                identity={authorIdentity}
                 style={{ transform: [{ translateY: 1 }] }}
               />
             </Box>

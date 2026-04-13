@@ -6,7 +6,7 @@ import {
 } from '@polycentric/js-browser';
 import polycentricWasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
-  createIdentityWithDefaultServer,
+  createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
 } from './create-polycentric-client.shared';
@@ -23,5 +23,5 @@ export async function createPolycentricClient(
   });
 }
 
-export { createIdentityWithDefaultServer };
+export { createIdentity };
 export type { CreatePolycentricClientConfig };

@@ -35,7 +35,7 @@ export function ComposeSheetInner({
   replyToEvent,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
-  const { publicKey } = useCurrentIdentity();
+  const { publicKey, identity: currentIdentity } = useCurrentIdentity();
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
@@ -68,6 +68,11 @@ export function ComposeSheetInner({
 
   const handlePost = useCallback(async () => {
     if (!text.trim() || submitting) return;
+
+    (client.core as any).build_vector_clock(
+      client.currentKeyPair?.publicKey,
+      [],
+    );
 
     setError(null);
     setSubmitting(true);
@@ -250,6 +255,7 @@ export function ComposeSheetInner({
               {publicKey && (
                 <PubkeyTag
                   publicKey={publicKey}
+                  identity={currentIdentity?.identityKey ?? undefined}
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               )}

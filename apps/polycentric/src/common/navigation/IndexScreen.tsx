@@ -3,7 +3,8 @@ import { View, ActivityIndicator } from 'react-native';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 
 export default function IndexScreen() {
-  const { client, isLoading, isReady } = usePolycentricContext();
+  const { client, currentIdentity, isLoading, isReady } =
+    usePolycentricContext();
 
   if (isLoading || !isReady || !client) {
     return (
@@ -13,11 +14,13 @@ export default function IndexScreen() {
     );
   }
 
-  // TODO: re-enable onboarding flow when ready
-  // const hasIdentity = client.currentIdentity !== null;
-  // if (!hasIdentity) {
-  //   return <Redirect href="/(onboarding)" />;
-  // }
+  // Gate on the resolved identity, not just the localStorage hint
+  // (`activeIdentityKey`). If the hint points at an identity we don't have
+  // content for, `currentIdentity` is null and we still send the user to
+  // onboarding — self-heals stale state from earlier builds.
+  if (!currentIdentity) {
+    return <Redirect href="/(onboarding)" />;
+  }
 
   return <Redirect href="/(tabs)/feed" />;
 }
