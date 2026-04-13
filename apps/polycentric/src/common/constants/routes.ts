@@ -21,13 +21,10 @@ export const Routes = {
     search: '/search',
     claims: '/claims',
     profile: (publicKey: string) => `/profile/${publicKey}` as const,
-    post: Object.assign(
-      (postId: string) => `/post/${postId}` as const,
-      {
-        reply: (postId: string, replyTo: string) =>
-          `/post/${postId}?replyTo=${encodeURIComponent(replyTo)}` as const,
-      },
-    ),
+    post: Object.assign((postId: string) => `/post/${postId}` as const, {
+      reply: (postId: string, replyTo: string) =>
+        `/post/${postId}?replyTo=${encodeURIComponent(replyTo)}` as const,
+    }),
     settings: {
       index: '/settings',
       identity: '/settings/identity',

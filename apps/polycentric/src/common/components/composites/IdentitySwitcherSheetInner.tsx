@@ -175,7 +175,7 @@ function IdentityListItemContent({
 
   const backgroundColor = isActive
     ? theme.palette.primary_50
-    : hoverSurface ?? (isCurrent ? theme.palette.neutral_50 : undefined);
+    : (hoverSurface ?? (isCurrent ? theme.palette.neutral_50 : undefined));
 
   return (
     <Box

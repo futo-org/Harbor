@@ -47,7 +47,10 @@ export default function ProfileScreen() {
     const decoded = decodePostEvent(signedEvent);
     if (!decoded?.id) return;
     router.push(
-      Routes.tabs.post.reply(decoded.id, decoded.id) as import('expo-router').Href,
+      Routes.tabs.post.reply(
+        decoded.id,
+        decoded.id,
+      ) as import('expo-router').Href,
     );
   }, []);
 

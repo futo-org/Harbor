@@ -26,9 +26,8 @@ export default function FeedPostScreen() {
   const { publicKey: myPublicKey } = useCurrentIdentity();
   const composeOpen = !!replyTo;
 
-  const replyToEvent = useStore(
-    store,
-    (s) => (replyTo ? (s.posts[replyTo]?.signedEvent ?? null) : null),
+  const replyToEvent = useStore(store, (s) =>
+    replyTo ? (s.posts[replyTo]?.signedEvent ?? null) : null,
   );
 
   const handlePostPress = useCallback((nextPostId: string) => {

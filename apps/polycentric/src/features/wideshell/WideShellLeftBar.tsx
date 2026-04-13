@@ -217,10 +217,7 @@ export function WideShellLeftBar() {
     theme.scheme === 'dark'
       ? lightPalette.primary_400
       : theme.palette.primary_500;
-  const composeActive = isLeftNavPathActive(
-    pathname,
-    Routes.tabs.feed.compose,
-  );
+  const composeActive = isLeftNavPathActive(pathname, Routes.tabs.feed.compose);
   const composeTint = composeActive ? activeRailPrimary : inactiveRailTint;
 
   const navRows: Partial<Record<string, LeftNavRow>> = {
@@ -300,10 +297,7 @@ export function WideShellLeftBar() {
                   showLabels ? (
                     <Text
                       variant="body"
-                      style={[
-                        theme.atoms.text,
-                        { color: tint, flexShrink: 1 },
-                      ]}
+                      style={[theme.atoms.text, { color: tint, flexShrink: 1 }]}
                       numberOfLines={1}
                     >
                       {row.label}

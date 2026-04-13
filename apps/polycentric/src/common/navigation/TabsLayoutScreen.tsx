@@ -2,7 +2,11 @@ import { TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { ToastProvider } from '@/src/common/lib/toast';
 import type { Theme } from '@/src/common/theme';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { WideShell, WideShellMode, useWideShellMode } from '@/src/features/wideshell';
+import {
+  WideShell,
+  WideShellMode,
+  useWideShellMode,
+} from '@/src/features/wideshell';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
@@ -68,9 +72,7 @@ function TabsNavigator({ hideTabBar }: TabsNavigatorProps) {
   const { theme } = useTheme();
 
   return (
-    <Tabs
-      screenOptions={getBottomTabBarScreenOptions({ theme, hideTabBar })}
-    >
+    <Tabs screenOptions={getBottomTabBarScreenOptions({ theme, hideTabBar })}>
       <Tabs.Screen
         name="feed"
         options={{

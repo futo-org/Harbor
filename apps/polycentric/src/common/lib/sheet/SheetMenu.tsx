@@ -153,4 +153,8 @@ const styles = StyleSheet.create({
 });
 
 export const SheetMenu: FC<SheetMenuProps> = (props) =>
-  isWeb ? <SheetMenuInnerWeb {...props} /> : <SheetMenuInnerNative {...props} />;
+  isWeb ? (
+    <SheetMenuInnerWeb {...props} />
+  ) : (
+    <SheetMenuInnerNative {...props} />
+  );

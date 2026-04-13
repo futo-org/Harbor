@@ -87,9 +87,7 @@ export function Button({
         ];
   const variantStyle = getVariantStyle(theme, variant);
   const hoverStyle =
-    !isDisabled && hovered
-      ? getHoverVariantStyle(theme, variant)
-      : undefined;
+    !isDisabled && hovered ? getHoverVariantStyle(theme, variant) : undefined;
 
   return (
     <Animated.View style={animatedStyle}>

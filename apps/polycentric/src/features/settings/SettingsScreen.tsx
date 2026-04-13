@@ -91,9 +91,7 @@ export default function SettingsTabScreen() {
 
           <ListItemGroup label="Servers">
             <ListItemWrapper
-              onPress={() =>
-                router.push(Routes.tabs.settings.servers)
-              }
+              onPress={() => router.push(Routes.tabs.settings.servers)}
             >
               <Text variant="body">Polycentric servers</Text>
             </ListItemWrapper>
@@ -180,10 +178,10 @@ export function IdentitySettingsContent({
   const fullPubkey = publicKeyToString(publicKey);
   const processId = identity?.process?.process
     ? toBase64(
-      identity.process.process instanceof Uint8Array
-        ? identity.process.process
-        : new Uint8Array(identity.process.process),
-    )
+        identity.process.process instanceof Uint8Array
+          ? identity.process.process
+          : new Uint8Array(identity.process.process),
+      )
     : '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
@@ -234,7 +232,11 @@ export function IdentitySettingsContent({
               >
                 {displayName || 'Anonymous'}
               </Text>
-              <LinkButton title="Edit name" onPress={() => setEditing(true)} underlineOnHover />
+              <LinkButton
+                title="Edit name"
+                onPress={() => setEditing(true)}
+                underlineOnHover
+              />
             </Box>
           )}
 
@@ -324,7 +326,7 @@ export function ServersSheetContent({
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to add server:', err);
     } finally {
@@ -344,7 +346,7 @@ export function ServersSheetContent({
       await client.contentManager.createRemoveServer(server);
       refreshServers();
       store.getState().clearFeed('explore');
-      client.sync().catch(() => { });
+      client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to remove server:', err);
     } finally {

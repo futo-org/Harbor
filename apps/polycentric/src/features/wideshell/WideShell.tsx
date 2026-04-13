@@ -36,10 +36,10 @@ export function WideShell({ children }: WideShellProps) {
       borderRightColor: railEdgeColor,
       ...(showWideShellChrome
         ? {
-          width: WEB_MAX_CONTENT_WIDTH,
-          flexGrow: 0,
-          flexShrink: 0,
-        }
+            width: WEB_MAX_CONTENT_WIDTH,
+            flexGrow: 0,
+            flexShrink: 0,
+          }
         : {}),
     },
   ];
@@ -54,9 +54,7 @@ export function WideShell({ children }: WideShellProps) {
   );
 
   return (
-    <View
-      style={[Atoms.flex_1, theme.atoms.bg, Atoms.flex_row, Atoms.min_w_0]}
-    >
+    <View style={[Atoms.flex_1, theme.atoms.bg, Atoms.flex_row, Atoms.min_w_0]}>
       {showWideShellChrome ? (
         <>
           {wideShellMode === WideShellMode.CollapseLeftBar ? (

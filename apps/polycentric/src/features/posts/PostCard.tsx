@@ -118,10 +118,7 @@ export function PostCard({
               ]}
             >
               {onAuthorPress ? (
-                <PostCardAuthorName
-                  name={authorName}
-                  onPress={onAuthorPress}
-                />
+                <PostCardAuthorName name={authorName} onPress={onAuthorPress} />
               ) : (
                 <Text
                   variant="secondary"
@@ -304,11 +301,7 @@ function ActionButton({
 
   return (
     <Pressable
-      style={[
-        Atoms.flex_row,
-        Atoms.items_center,
-        { gap: 3, minHeight: 20 },
-      ]}
+      style={[Atoms.flex_row, Atoms.items_center, { gap: 3, minHeight: 20 }]}
       onPress={onPress}
       disabled={!onPress}
       onHoverIn={onHoverIn}

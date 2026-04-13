@@ -16,7 +16,8 @@ export enum WideShellMode {
 
 export function wideShellModeFromWidth(width: number): WideShellMode {
   if (width < WideShellBreakpoints.narrowMax) return WideShellMode.Narrow;
-  if (width < WideShellBreakpoints.omitRightBarMax) return WideShellMode.OmitRightBar;
+  if (width < WideShellBreakpoints.omitRightBarMax)
+    return WideShellMode.OmitRightBar;
   if (width < Breakpoints.xl) return WideShellMode.CollapseLeftBar;
   return WideShellMode.Full;
 }

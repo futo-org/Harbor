@@ -8,7 +8,12 @@ import {
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, BorderRadius, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  Atoms,
+  BorderRadius,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';

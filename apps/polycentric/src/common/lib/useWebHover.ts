@@ -36,19 +36,17 @@ export function useWebHover(): {
     if (!canPointerHover) setHovered(false);
   }, [canPointerHover]);
 
-  const onHoverIn = useCallback<NonNullable<PressableProps['onHoverIn']>>(
-    () => {
-      setHovered(true);
-    },
-    [],
-  );
+  const onHoverIn = useCallback<
+    NonNullable<PressableProps['onHoverIn']>
+  >(() => {
+    setHovered(true);
+  }, []);
 
-  const onHoverOut = useCallback<NonNullable<PressableProps['onHoverOut']>>(
-    () => {
-      setHovered(false);
-    },
-    [],
-  );
+  const onHoverOut = useCallback<
+    NonNullable<PressableProps['onHoverOut']>
+  >(() => {
+    setHovered(false);
+  }, []);
 
   if (!canPointerHover) {
     return { hovered: false, onHoverIn: undefined, onHoverOut: undefined };
