@@ -1,6 +1,5 @@
-use crate::event::store::{EventStore, EventStoreError, OnAddHook};
 use crate::platform::error::PlatformError;
-use js_sys::{Promise, Uint8Array};
+use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, Event, ListEventsRequest, PublicKey,
     PutEventsRequest, SignedEvent,
@@ -32,16 +31,14 @@ pub fn wasm_init_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub struct PolycentricWasm {
-}
+pub struct PolycentricWasm {}
 
 #[wasm_bindgen]
 impl PolycentricWasm {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
-
 
     /// Decode and verify a signed event from bytes.
     ///
@@ -137,10 +134,8 @@ impl PolycentricWasm {
         SignedEvent::from_bytes(&signed_event_bytes)
             .map_err(|e| PlatformError::CryptoError(format!("Event signature invalid: {:?}", e)))?;
 
-
         Ok(Uint8Array::from(&signed_event_bytes[..]))
     }
-
 
     /// Fetch events from a server via gRPC-web.
     ///

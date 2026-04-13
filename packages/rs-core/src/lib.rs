@@ -1,2 +1,2 @@
-pub mod platform;
 pub mod event;
+pub mod platform;
