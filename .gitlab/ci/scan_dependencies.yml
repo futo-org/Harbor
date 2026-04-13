@@ -8,7 +8,10 @@ trivy:
     TRIVY_CACHE_DIR: ".trivycache/"
   allow_failure: true
   script:
-    - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
+    # Gitlab code quality report output
+    - trivy filesystem --scanners misconfig,vuln --exit-code 0 --severity CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
+    # Console output
+    - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity HIGH,CRITICAL .
   cache:
     paths:
       - .trivycache/
