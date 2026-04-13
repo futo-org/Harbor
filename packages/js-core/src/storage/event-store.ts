@@ -1,5 +1,5 @@
 import { IEventRepository } from '../platform-interfaces';
-import { SignedEvent } from '../proto/polycentric/v2/events';
+import * as Proto from '../proto/v2';
 import { DatabaseError } from '../errors';
 
 /**
@@ -12,51 +12,62 @@ import { DatabaseError } from '../errors';
 export class EventStore {
   constructor(private repository: IEventRepository) {}
 
-  async persistEvent(signedEvent: SignedEvent): Promise<void> {
-    if (!signedEvent.signature || signedEvent.signature.length === 0) {
-      throw new DatabaseError('SignedEvent must have a valid signature');
-    }
-
-    if (!signedEvent.eventBytes || signedEvent.eventBytes.length === 0) {
-      throw new DatabaseError('SignedEvent must have valid event data');
-    }
-
-    await this.repository.persistEvent(signedEvent);
-  }
-
-  async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
-    for (const signedEvent of signedEvents) {
-      if (!signedEvent) {
-        throw new DatabaseError('SignedEvent cannot be null or undefined');
+  async save(
+    signedEvents: Proto.SignedEvent | Proto.SignedEvent[],
+  ): Promise<void> {
+    // If multiple events then loop back
+    if (Array.isArray(signedEvents)) {
+      for (const signedEvent of signedEvents) {
+        await this.save(signedEvent);
       }
+    } else {
+      const signedEvent = signedEvents;
+
+      if (!signedEvent.signature || signedEvent.signature.length === 0) {
+        throw new DatabaseError('SignedEvent must have a valid signature');
+      }
+
+      if (!signedEvent.eventBytes || signedEvent.eventBytes.length === 0) {
+        throw new DatabaseError('SignedEvent must have valid event data');
+      }
+
+      await this.repository.save(signedEvent);
     }
-
-    await this.repository.persistEvents(signedEvents);
   }
 
-  async getAllEvents(): Promise<SignedEvent[]> {
-    return this.repository.getAllEvents();
+  async getAll(): Promise<Proto.SignedEvent[]> {
+    return this.repository.getAll();
   }
 
-  async getEventsBatch(
+  async getBatch(
     batchSize: number,
     offset?: number,
   ): Promise<{
-    events: SignedEvent[];
+    events: Proto.SignedEvent[];
     offset: number;
   }> {
-    return this.repository.getEventsBatch(batchSize, offset);
+    return this.repository.getBatch(batchSize, offset);
   }
 
-  async getNextSequence(publicKey: Uint8Array, identity: string): Promise<bigint> {
-    return this.repository.getNextSequence(publicKey, identity);
+  async getNextSequence(
+    publicKey: Proto.PublicKey,
+    collection: number,
+    identity: string,
+  ): Promise<bigint> {
+    return this.repository.getNextSequence(publicKey, collection, identity);
   }
 
-  async getLatestEvent(publicKey: Uint8Array, identity: string): Promise<SignedEvent | null> {
+  async getLatestEvent(
+    publicKey: Proto.PublicKey,
+    identity: string,
+  ): Promise<Proto.SignedEvent | null> {
     return this.repository.getLatestEvent(publicKey, identity);
   }
 
-  async getEventsByIdentity(publicKey: Uint8Array, identity: string): Promise<SignedEvent[]> {
+  async getEventsByIdentity(
+    publicKey: Proto.PublicKey,
+    identity: string,
+  ): Promise<Proto.SignedEvent[]> {
     return this.repository.getEventsByIdentity(publicKey, identity);
   }
 }

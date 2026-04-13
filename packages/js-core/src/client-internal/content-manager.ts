@@ -1,50 +1,34 @@
-import type { PolycentricClient } from '../polycentric-client';
-import { SignedEvent } from '../proto/polycentric/v2/events';
+import { sha256 } from '@noble/hashes/sha2';
+import * as Proto from '../proto/v2';
+import { PolycentricClient } from '../polycentric-client';
 
 export class ContentManager {
   constructor(private readonly client: PolycentricClient) {}
 
   /**
-   * Signs, verifies, and persists a v2 Event.
-   *
-   * @param eventBytes - Serialized v2 Event protobuf bytes
-   * @returns The resulting signed event.
+   * Helper function to build content
    */
-  async createEvent(eventBytes: Uint8Array): Promise<SignedEvent> {
-    if (!this.client.core) {
-      throw new Error('Core is not initialized');
-    }
-
-    const signedEventBytes = await this.client.core.sign_and_persist_event(
-      eventBytes,
-      this.signEventCallback.bind(this),
-      this.persistEventCallback.bind(this),
-    );
-    const signedEvent = SignedEvent.fromBinary(signedEventBytes);
-    this.client.events.emitContentCreated(signedEvent);
-    return signedEvent;
+  build(contentBody: Proto.Content['contentBody']): Proto.Content {
+    return Proto.Content.create({ contentBody });
   }
 
-  private async signEventCallback(eventBytes: Uint8Array): Promise<Uint8Array> {
-    if (!this.client.currentKeyPair) {
-      throw new Error('No keypair');
-    }
-    const signature = await this.client.crypto.sign(
-      this.client.currentKeyPair.privateKey.key,
-      eventBytes,
-      this.client.currentKeyPair.keyType,
-    );
-    const signedEvent = SignedEvent.create({
-      signature,
-      eventBytes,
+  /**
+   * Builds ContentDigest from a provided Content
+   */
+  buildDigest(content: Proto.Content) {
+    const contentBytes = Proto.Content.toBinary(content);
+
+    return Proto.ContentDigest.create({
+      type: Proto.ContentDigestType.SHA256,
+      value: sha256(contentBytes),
     });
-    return SignedEvent.toBinary(signedEvent);
   }
 
-  private async persistEventCallback(
-    signedEventBytes: Uint8Array,
-  ): Promise<void> {
-    const signedEvent = SignedEvent.fromBinary(signedEventBytes);
-    await this.client.storage.events.persistEvent(signedEvent);
+  /**
+   * Saves the content to the local client store
+   */
+  async save(content: Proto.Content): Promise<void> {
+    const digest = this.buildDigest(content);
+    await this.client.storage.content.save(digest, content);
   }
 }

@@ -1,5 +1,6 @@
+use crate::event::store::{EventStore, EventStoreError, OnAddHook};
 use crate::platform::error::PlatformError;
-use js_sys::Uint8Array;
+use js_sys::{Promise, Uint8Array};
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, Event, ListEventsRequest, PublicKey,
     PutEventsRequest, SignedEvent,
@@ -8,7 +9,17 @@ use polycentric_common::models::traits::Serializable;
 use prost::Message;
 use tonic_web_wasm_client::Client as GrpcWebClient;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(typescript_type = "(eventBytes: Uint8Array) => Promise<Uint8Array>")]
+    pub type SignEventCallback;
+
+    #[wasm_bindgen(typescript_type = "(signedEventBytes: Uint8Array) => Promise<void>")]
+    pub type CommitEventCallback;
+}
 
 #[cfg(target_arch = "wasm32")]
 use web_sys::console;
@@ -21,14 +32,16 @@ pub fn wasm_init_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub struct PolycentricWasm {}
+pub struct PolycentricWasm {
+}
 
 #[wasm_bindgen]
 impl PolycentricWasm {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self {}
+        Self { }
     }
+
 
     /// Decode and verify a signed event from bytes.
     ///
@@ -74,28 +87,27 @@ impl PolycentricWasm {
         Ok(Uint8Array::from(&bytes[..]))
     }
 
-    /// Sign event bytes via a JS callback and persist via another callback.
+    /// Sign event bytes via a JS callback
     ///
     /// # Arguments
     /// * `event_bytes` - Serialized Event protobuf bytes to sign
     /// * `sign_event` - JS callback: (Uint8Array) => Promise<Uint8Array> that returns SignedEvent bytes
-    /// * `persist_event` - JS callback: (Uint8Array) => Promise<void> to persist the signed event
     ///
     /// # Returns
     /// * `Result<Uint8Array, JsValue>` - The signed event bytes
     #[wasm_bindgen]
-    pub async fn sign_and_persist_event(
+    pub async fn sign_event(
         &self,
         event_bytes: &[u8],
-        sign_event: &js_sys::Function,
-        persist_event: &js_sys::Function,
+        callback: &SignEventCallback,
     ) -> std::result::Result<Uint8Array, JsValue> {
         // Validate event_bytes is a valid Event
         Event::decode(event_bytes).map_err(|e| {
             PlatformError::DeserializationError(format!("Invalid event bytes: {}", e))
         })?;
 
-        let sign_promise = sign_event
+        let func: &js_sys::Function = callback.unchecked_ref();
+        let sign_promise = func
             .call1(&JsValue::NULL, &Uint8Array::from(event_bytes))
             .map_err(|e| PlatformError::CallbackError(format!("Failed to sign event: {:?}", e)))?;
 
@@ -105,7 +117,7 @@ impl PolycentricWasm {
                 PlatformError::CallbackError(format!("Failed to await signed event: {:?}", e))
             })?;
 
-        let signed_event_bytes = signed_event_js
+        let signature = signed_event_js
             .dyn_into::<Uint8Array>()
             .map_err(|_| {
                 PlatformError::CallbackError(
@@ -114,33 +126,29 @@ impl PolycentricWasm {
             })?
             .to_vec();
 
+        let signed_event = SignedEvent {
+            signature,
+            event_bytes: event_bytes.to_vec(),
+        };
+
+        let signed_event_bytes = signed_event.to_bytes().unwrap();
+
         // Verify the signature
         SignedEvent::from_bytes(&signed_event_bytes)
             .map_err(|e| PlatformError::CryptoError(format!("Event signature invalid: {:?}", e)))?;
 
-        // Persist
-        let persist_promise = persist_event
-            .call1(&JsValue::NULL, &Uint8Array::from(&signed_event_bytes[..]))
-            .map_err(|e| {
-                PlatformError::CallbackError(format!("Failed to persist event: {:?}", e))
-            })?;
-
-        JsFuture::from(js_sys::Promise::from(persist_promise))
-            .await
-            .map_err(|e| {
-                PlatformError::CallbackError(format!("Failed to await persist event: {:?}", e))
-            })?;
 
         Ok(Uint8Array::from(&signed_event_bytes[..]))
     }
+
 
     /// Fetch events from a server via gRPC-web.
     ///
     /// # Arguments
     /// * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
     /// * `limit` - Maximum number of events to fetch
-    /// * `collection` - Optional collection ID to filter by
-    /// * `identity` - Optional identity key string to filter by
+    /// * `identity` - Optional serialized Identity message bytes to filter by
+    /// * `stream_id` - Optional stream ID to filter by
     /// * `signed_by` - Optional public key bytes to filter by
     /// * `signed_by_key_type` - Key type for signed_by (required if signed_by is set)
     ///
@@ -151,8 +159,8 @@ impl PolycentricWasm {
         &self,
         server_url: &str,
         limit: Option<i32>,
-        collection: Option<i32>,
         identity: Option<String>,
+        collection: Option<i32>,
         signed_by: Option<Vec<u8>>,
         signed_by_key_type: Option<i32>,
     ) -> std::result::Result<Uint8Array, JsValue> {
@@ -161,8 +169,8 @@ impl PolycentricWasm {
         let response = client
             .list_events(ListEventsRequest {
                 limit,
-                collection,
                 identity,
+                collection,
                 signed_by: signed_by.map(|key| PublicKey {
                     key_type: signed_by_key_type.unwrap_or(1),
                     key,

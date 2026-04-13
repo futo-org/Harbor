@@ -1,4 +1,5 @@
-import type { IContentRepository } from '@polycentric/js-core';
+import { IContentRepository, v2 as Proto } from '@polycentric/js-core';
+
 import { DatabaseError } from '@polycentric/js-core';
 import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
 
@@ -25,7 +26,13 @@ export class IndexedDBContentRepository implements IContentRepository {
       .join('');
   }
 
-  async putContent(digest: Uint8Array, contentBytes: Uint8Array): Promise<void> {
+  async save(
+    digest: Proto.ContentDigest,
+    content: Proto.Content,
+  ): Promise<void> {
+    const digestBytes = Proto.ContentDigest.toBinary(digest);
+    const contentBytes = Proto.Content.toBinary(content);
+
     try {
       const transaction = this.database.createTransaction(
         IndexedDBContentRepository.STORE_NAME,
@@ -36,7 +43,7 @@ export class IndexedDBContentRepository implements IContentRepository {
       );
 
       await IndexedDBDatabase.requestAsPromise(
-        store.put({ digestHex: this.digestToHex(digest), contentBytes }),
+        store.put({ digestHex: this.digestToHex(digestBytes), contentBytes }),
       );
       transaction.commit();
     } catch (error) {
@@ -44,7 +51,9 @@ export class IndexedDBContentRepository implements IContentRepository {
     }
   }
 
-  async getContent(digest: Uint8Array): Promise<Uint8Array | null> {
+  async get(digest: Proto.ContentDigest): Promise<Proto.Content | null> {
+    const digestBytes = Proto.ContentDigest.toBinary(digest);
+
     try {
       const transaction = this.database.createTransaction(
         IndexedDBContentRepository.STORE_NAME,
@@ -54,12 +63,15 @@ export class IndexedDBContentRepository implements IContentRepository {
         IndexedDBContentRepository.STORE_NAME,
       );
 
-      const result = await IndexedDBDatabase.requestAsPromise<{
-        digestHex: string;
-        contentBytes: Uint8Array;
-      } | undefined>(store.get(this.digestToHex(digest)));
+      const result = await IndexedDBDatabase.requestAsPromise<
+        | {
+            digestHex: string;
+            contentBytes: Uint8Array;
+          }
+        | undefined
+      >(store.get(this.digestToHex(digestBytes)));
 
-      return result?.contentBytes ?? null;
+      return result ? Proto.Content.fromBinary(result.contentBytes) : null;
     } catch (error) {
       throw new DatabaseError('Failed to get content: ', error);
     }

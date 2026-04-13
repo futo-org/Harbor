@@ -9,6 +9,7 @@ export default [
           test: /\.tsx?$/,
           use: {
             loader: 'ts-loader',
+            options: { projectReferences: true },
           },
           exclude: /node_modules/,
         },
@@ -37,6 +38,7 @@ export default [
           test: /\.tsx?$/,
           use: {
             loader: 'ts-loader',
+            options: { projectReferences: true },
           },
           exclude: /node_modules/,
         },

@@ -6,10 +6,8 @@ import "polycentric/v2/event_key.proto";
 import "polycentric/v2/keypair.proto";
 
 // Contains the sequences that the current KeyPair is aware of. 
-// Vector clocks should be compacted, so only add an entry if it has changed 
-// since a prior event.
 message VectorClock {
-  repeated EventKey sequence = 1;
+  repeated uint64 sequence = 1;
 }
 
 // Event messages reference, but do not include, content
@@ -18,7 +16,8 @@ message Event {
   EventKey key = 1;
 
   // Vector clock to keep the same collection on shared identities in sync
-  VectorClock vector_clock = 2;
+  // (collection, vector clock)
+  map<int32, VectorClock> vector_clocks = 2;
 
   // Signature of the previous event signed by the same key. Assists in creating
   // immutable collections.

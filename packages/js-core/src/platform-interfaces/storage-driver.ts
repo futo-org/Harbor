@@ -1,5 +1,5 @@
-import type { IEventRepository } from './event-repository';
-import type { IContentRepository } from './content-repository';
+import type { IEventRepository } from './event.repository';
+import type { IContentRepository } from './content.repository';
 import type { IKeysRepository } from './keys-repository';
 import type { IEventAckRepository } from './event-ack-repository';
 import type { IProcessIdRepository } from './process-id-repository';

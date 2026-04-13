@@ -30,7 +30,7 @@ export class SQLEventRepository {
    * @param signedEvent - A signed event to persist
    * @throws {DatabaseError} If the event is invalid or persisting fails
    */
-  async persistEvent(signedEvent: SignedEvent): Promise<void> {
+  async save(signedEvent: SignedEvent): Promise<void> {
     try {
       const event = Event.fromBinary(signedEvent.event);
 
@@ -109,25 +109,15 @@ export class SQLEventRepository {
   }
 
   /**
-   * Persist multiple events in a single database transaction.
-   *
-   * @param signedEvents - An array of signed events to persist
-   * @throws {DatabaseError} If any event is invalid or the transaction fails
-   */
-  async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
-    throw new Error('Not implemented, cannot persist events: ' + signedEvents);
-  }
-
-  /**
    * Get all events from the repository
    *
    * @returns An array of signed events
    */
-  async getAllEvents(): Promise<SignedEvent[]> {
+  async getAll(): Promise<SignedEvent[]> {
     throw new Error('Not implemented, cannot get all events.');
   }
 
-  getEventsBatch(): Promise<{ events: SignedEvent[]; offset: number }> {
+  getBatch(): Promise<{ events: SignedEvent[]; offset: number }> {
     throw new Error('Not implemented, can not get event batch');
   }
 }

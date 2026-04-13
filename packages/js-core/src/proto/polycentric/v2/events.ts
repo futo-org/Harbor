@@ -4,10 +4,10 @@
 import { ServiceType } from "@protobuf-ts/runtime-rpc";
 import type { BinaryWriteOptions } from "@protobuf-ts/runtime";
 import type { IBinaryWriter } from "@protobuf-ts/runtime";
-import { WireType } from "@protobuf-ts/runtime";
 import type { BinaryReadOptions } from "@protobuf-ts/runtime";
 import type { IBinaryReader } from "@protobuf-ts/runtime";
 import { UnknownFieldHandler } from "@protobuf-ts/runtime";
+import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
@@ -17,16 +17,14 @@ import { ContentDigest } from "./content";
 import { EventKey } from "./event_key";
 /**
  * Contains the sequences that the current KeyPair is aware of.
- * Vector clocks should be compacted, so only add an entry if it has changed
- * since a prior event.
  *
  * @generated from protobuf message polycentric.v2.VectorClock
  */
 export interface VectorClock {
     /**
-     * @generated from protobuf field: repeated polycentric.v2.EventKey sequence = 1
+     * @generated from protobuf field: repeated uint64 sequence = 1
      */
-    sequence: EventKey[];
+    sequence: bigint[];
 }
 /**
  * Event messages reference, but do not include, content
@@ -42,10 +40,13 @@ export interface Event {
     key?: EventKey;
     /**
      * Vector clock to keep the same collection on shared identities in sync
+     * (collection, vector clock)
      *
-     * @generated from protobuf field: polycentric.v2.VectorClock vector_clock = 2
+     * @generated from protobuf field: map<int32, polycentric.v2.VectorClock> vector_clocks = 2
      */
-    vectorClock?: VectorClock;
+    vectorClocks: {
+        [key: number]: VectorClock;
+    };
     /**
      * Signature of the previous event signed by the same key. Assists in creating
      * immutable collections.
@@ -164,7 +165,7 @@ export interface PutEventsResponse {
 class VectorClock$Type extends MessageType<VectorClock> {
     constructor() {
         super("polycentric.v2.VectorClock", [
-            { no: 1, name: "sequence", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventKey }
+            { no: 1, name: "sequence", kind: "scalar", repeat: 1 /*RepeatType.PACKED*/, T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
         ]);
     }
     create(value?: PartialMessage<VectorClock>): VectorClock {
@@ -179,8 +180,12 @@ class VectorClock$Type extends MessageType<VectorClock> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated polycentric.v2.EventKey sequence */ 1:
-                    message.sequence.push(EventKey.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated uint64 sequence */ 1:
+                    if (wireType === WireType.LengthDelimited)
+                        for (let e = reader.int32() + reader.pos; reader.pos < e;)
+                            message.sequence.push(reader.uint64().toBigInt());
+                    else
+                        message.sequence.push(reader.uint64().toBigInt());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -194,9 +199,13 @@ class VectorClock$Type extends MessageType<VectorClock> {
         return message;
     }
     internalBinaryWrite(message: VectorClock, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated polycentric.v2.EventKey sequence = 1; */
-        for (let i = 0; i < message.sequence.length; i++)
-            EventKey.internalBinaryWrite(message.sequence[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated uint64 sequence = 1; */
+        if (message.sequence.length) {
+            writer.tag(1, WireType.LengthDelimited).fork();
+            for (let i = 0; i < message.sequence.length; i++)
+                writer.uint64(message.sequence[i]);
+            writer.join();
+        }
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -212,7 +221,7 @@ class Event$Type extends MessageType<Event> {
     constructor() {
         super("polycentric.v2.Event", [
             { no: 1, name: "key", kind: "message", T: () => EventKey },
-            { no: 2, name: "vector_clock", kind: "message", T: () => VectorClock },
+            { no: 2, name: "vector_clocks", kind: "map", K: 5 /*ScalarType.INT32*/, V: { kind: "message", T: () => VectorClock } },
             { no: 3, name: "previous_signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
             { no: 4, name: "content_digest", kind: "message", T: () => ContentDigest },
             { no: 5, name: "created_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
@@ -220,6 +229,7 @@ class Event$Type extends MessageType<Event> {
     }
     create(value?: PartialMessage<Event>): Event {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.vectorClocks = {};
         message.previousSignature = new Uint8Array(0);
         message.createdAt = 0n;
         if (value !== undefined)
@@ -234,8 +244,8 @@ class Event$Type extends MessageType<Event> {
                 case /* polycentric.v2.EventKey key */ 1:
                     message.key = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.key);
                     break;
-                case /* polycentric.v2.VectorClock vector_clock */ 2:
-                    message.vectorClock = VectorClock.internalBinaryRead(reader, reader.uint32(), options, message.vectorClock);
+                case /* map<int32, polycentric.v2.VectorClock> vector_clocks */ 2:
+                    this.binaryReadMap2(message.vectorClocks, reader, options);
                     break;
                 case /* bytes previous_signature */ 3:
                     message.previousSignature = reader.bytes();
@@ -257,13 +267,33 @@ class Event$Type extends MessageType<Event> {
         }
         return message;
     }
+    private binaryReadMap2(map: Event["vectorClocks"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof Event["vectorClocks"] | undefined, val: Event["vectorClocks"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.int32();
+                    break;
+                case 2:
+                    val = VectorClock.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for polycentric.v2.Event.vector_clocks");
+            }
+        }
+        map[key ?? 0] = val ?? VectorClock.create();
+    }
     internalBinaryWrite(message: Event, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* polycentric.v2.EventKey key = 1; */
         if (message.key)
             EventKey.internalBinaryWrite(message.key, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.VectorClock vector_clock = 2; */
-        if (message.vectorClock)
-            VectorClock.internalBinaryWrite(message.vectorClock, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* map<int32, polycentric.v2.VectorClock> vector_clocks = 2; */
+        for (let k of globalThis.Object.keys(message.vectorClocks)) {
+            writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.Varint).int32(parseInt(k));
+            writer.tag(2, WireType.LengthDelimited).fork();
+            VectorClock.internalBinaryWrite(message.vectorClocks[k as any], writer, options);
+            writer.join().join();
+        }
         /* bytes previous_signature = 3; */
         if (message.previousSignature.length)
             writer.tag(3, WireType.LengthDelimited).bytes(message.previousSignature);

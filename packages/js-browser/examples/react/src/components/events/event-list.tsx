@@ -37,7 +37,9 @@ function buildIdentityTimeline(
 
   // Sort each timeline by createdAt ascending
   for (const versions of timelines.values()) {
-    versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+    versions.sort((a, b) =>
+      a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+    );
   }
 
   return timelines;
@@ -71,20 +73,26 @@ export const EventList = () => {
   const loadEvents = async () => {
     if (!client?.core) return;
 
-    const allEvents = await client.storage.events.getAllEvents();
+    const allEvents = await client.storage.events.getAll();
 
     // First pass: decode all events and content
-    const parsed: { signedEvent: v2.SignedEvent; event: v2.Event; content?: v2.Content }[] = [];
+    const parsed: {
+      signedEvent: v2.SignedEvent;
+      event: v2.Event;
+      content?: v2.Content;
+    }[] = [];
     for (const signedEvent of allEvents) {
       try {
         const event = v2.Event.fromBinary(signedEvent.eventBytes);
         let content: v2.Content | undefined;
         if (event.contentDigest?.value) {
-          const cb = await client.storage.content.getContent(event.contentDigest.value);
-          if (cb) content = v2.Content.fromBinary(cb);
+          content = await client.storage.content.get(event.contentDigest);
         }
         parsed.push({ signedEvent, event, content });
-      } catch { /* skip */ }
+      } catch (err) {
+        console.error(err);
+        /* skip */
+      }
     }
 
     // Build identity timeline
@@ -96,14 +104,19 @@ export const EventList = () => {
       try {
         client.core.verify_signed_event(v2.SignedEvent.toBinary(signedEvent));
         signatureValid = true;
-      } catch { /* failed */ }
+      } catch {
+        /* failed */
+      }
 
       let identityAuthorized: boolean | undefined;
       const idKey = event.key?.identity;
       const signerKey = event.key?.signedBy?.key;
       if (idKey && signerKey) {
         identityAuthorized = isAuthorizedAt(
-          timelines, idKey, toHex(signerKey), event.createdAt,
+          timelines,
+          idKey,
+          toHex(signerKey),
+          event.createdAt,
         );
       }
 
@@ -137,8 +150,17 @@ export const EventList = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px' }}>
-        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Local Events ({events.length})</h2>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          margin: '24px 0 12px',
+        }}
+      >
+        <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
+          Local Events ({events.length})
+        </h2>
         <button onClick={loadEvents}>Refresh</button>
       </div>
       <ul style={{ listStyle: 'none', padding: 0 }}>

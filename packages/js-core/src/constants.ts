@@ -10,6 +10,9 @@ export const COLLECTION = {
   INTERACTIONS: 3,
 } as const;
 
+/** A known COLLECTION value. Callers may also pass any number. */
+export type Collection = (typeof COLLECTION)[keyof typeof COLLECTION];
+
 export enum HydrationStrategy {
   FULL = 'full',
   FULL_ASYNC = 'full-async',

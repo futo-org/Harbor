@@ -6,7 +6,7 @@ import {
   KeyPairManager,
   InitializationStep,
 } from './client-internal';
-import { KEY_TYPE, COLLECTION } from './constants';
+import { KEY_TYPE, COLLECTION, type Collection } from './constants';
 import { HTTPClient } from './http';
 import type {
   ICoreBridge,
@@ -14,27 +14,13 @@ import type {
   IPolycentricCore,
   IStorageDriver,
 } from './platform-interfaces';
-import {
-  Content,
-  ContentDigest,
-  ContentDigestType,
-  Event as V2Event,
-  EventBundle,
-  EventKey,
-  Identity,
-  KeyType,
-  PublicKey,
-  ListEventsResponse,
-  PutEventsRequest,
-  SerializedContent,
-  SignedEvent,
-} from './proto/v2';
+import * as Proto from './proto/v2';
 import { sha256 } from '@noble/hashes/sha2';
 import { StorageHandle } from './storage/storage-handle';
 
 /** Private key — same shape as PublicKey, holds the secret key bytes. */
 export interface PrivateKey {
-  keyType: KeyType;
+  keyType: Proto.KeyType;
   key: Uint8Array;
 }
 
@@ -45,15 +31,15 @@ export interface IdentityState {
   /** The identity key (hex-encoded sha256 of the initial Identity content) */
   identityKey: string | null;
   /** Rotation keys that control the identity */
-  rotationKeys: PublicKey[];
+  rotationKeys: Proto.PublicKey[];
   /** Signing keys authorized to sign events */
-  signingKeys: PublicKey[];
+  signingKeys: Proto.PublicKey[];
 }
 
 export interface KeyPair {
-  keyType: KeyType;
+  keyType: Proto.KeyType;
   privateKey: PrivateKey;
-  publicKey: PublicKey;
+  publicKey: Proto.PublicKey;
 }
 
 /**
@@ -172,7 +158,9 @@ export class PolycentricClient {
   /**
    * Creates a new KeyPair.
    */
-  async createKeyPair(options: { keyType?: KeyType; setAsCurrent?: boolean } = {}): Promise<KeyPair> {
+  async createKeyPair(
+    options: { keyType?: Proto.KeyType; setAsCurrent?: boolean } = {},
+  ): Promise<KeyPair> {
     return this.keyPairManager.createKeyPair({
       keyType: options.keyType ?? KEY_TYPE.ED25519,
       setAsCurrent: options.setAsCurrent,
@@ -209,84 +197,106 @@ export class PolycentricClient {
   /**
    * Switches to a new key pair.
    */
-  async switchKeyPair(publicKey: PublicKey): Promise<KeyPair> {
+  async switchKeyPair(publicKey: Proto.PublicKey): Promise<KeyPair> {
     return this.keyPairManager.switchKeyPair(publicKey);
   }
 
   /**
-   * Signs, verifies, and persists a v2 Event.
-   *
-   * @param eventBytes - Serialized v2 Event protobuf bytes
-   * @returns The resulting signed event.
+   * Helper function build an Event from a Content.
+   * Uses the current keypair and current identity.
    */
-  async createEvent(eventBytes: Uint8Array): Promise<SignedEvent> {
-    return this.contentManager.createEvent(eventBytes);
-  }
-
-  /**
-   * Creates a post event with the given text content.
-   *
-   * @param identityKey - The identity key (hex sha256 of initial Identity)
-   * @param text - The text content of the post
-   * @returns The resulting signed event
-   */
-  async createPost(identityKey: string, text: string): Promise<SignedEvent> {
+  async buildEvent(
+    content: Proto.Content,
+    collection: Collection | number = COLLECTION.FEED,
+  ): Promise<Proto.Event> {
     if (!this.currentKeyPair) {
       throw new Error('No keypair set');
     }
 
-    const authorized = await this.isKeyAuthorizedForIdentity(
-      identityKey,
-      this.currentKeyPair.publicKey.key,
-    );
-    if (!authorized) {
-      throw new Error('Current key is not authorized for this identity');
+    if (!this.activeIdentityKey) {
+      throw new Error('No active identity');
     }
 
-    const content = Content.create({
-      contentBody: { oneofKind: 'post', post: { text, reply: undefined } },
-    });
-    const contentBytes = Content.toBinary(content);
-    const contentHash = sha256(contentBytes);
-
     const sequence = await this.storage.events.getNextSequence(
-      this.currentKeyPair.publicKey.key,
-      identityKey,
+      this.currentKeyPair.publicKey,
+      collection,
+      this.activeIdentityKey,
     );
+    console.log('next seq', sequence.toString());
 
-    const event = V2Event.create({
-      key: EventKey.create({
-        collection: COLLECTION.FEED,
-        identity: identityKey,
-        signedBy: {
-          keyType: this.currentKeyPair.keyType,
-          key: this.currentKeyPair.publicKey.key,
-        },
+    const vectorClocks = {
+      [COLLECTION.IDENTITY]: Proto.VectorClock.create({
+        sequence: [BigInt(1)],
+      }),
+      [COLLECTION.FEED]: Proto.VectorClock.create(),
+    };
+
+    const event = Proto.Event.create({
+      key: Proto.EventKey.create({
+        collection,
+        identity: this.activeIdentityKey,
+        signedBy: this.currentKeyPair.publicKey,
         sequence,
       }),
+      vectorClocks,
       previousSignature: new Uint8Array(0),
-      contentDigest: ContentDigest.create({
-        type: ContentDigestType.SHA256,
-        value: contentHash,
-      }),
+      contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
     });
 
-    await this.storage.content.putContent(contentHash, contentBytes);
-    return this.createEvent(V2Event.toBinary(event));
+    return event;
+  }
+
+  /**
+   * Sign an event with the current key pair.
+   */
+  async signEvent(event: Proto.Event): Promise<Proto.SignedEvent> {
+    const eventBytes = Proto.Event.toBinary(event);
+
+    if (!this.core) {
+      throw new Error('Can not sign event as core is not initialized');
+    }
+
+    const signedEventBytes = await this.core.sign_event(
+      eventBytes,
+      async (eventBytes) => {
+        if (!this.currentKeyPair) {
+          throw new Error('No keypair');
+        }
+        return await this.crypto.sign(
+          this.currentKeyPair.privateKey.key,
+          eventBytes,
+          this.currentKeyPair.keyType,
+        );
+      },
+    );
+
+    return Proto.SignedEvent.fromBinary(signedEventBytes);
+  }
+
+  /**
+   * Sign and persist a v2 Event.
+   */
+  async commitEvent(signedEvent: Proto.SignedEvent): Promise<void> {
+    await this.storage.events.save(signedEvent);
+    this.events.emitContentCreated(signedEvent);
   }
 
   /**
    * Ingest a signed event, verifying that the signer is authorized for the
    * identity claimed in the EventKey before persisting.
    */
-  public async ingestEvent(signedEvent: SignedEvent): Promise<void> {
-    const event = V2Event.fromBinary(signedEvent.eventBytes);
+  public async ingestEvent(signedEvent: Proto.SignedEvent): Promise<void> {
+    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
     const identityKey = event.key?.identity;
     const signerKey = event.key?.signedBy?.key;
 
     if (identityKey && signerKey) {
-      const authorized = await this.isKeyAuthorizedForIdentity(identityKey, signerKey, event.createdAt);
+      const authorized = await this.isKeyAuthorizedForIdentity(
+        identityKey,
+        signerKey,
+        event.createdAt,
+      );
       if (!authorized) {
         throw new Error(
           `Signer ${this.toHex(signerKey)} is not authorized for identity ${identityKey.slice(0, 16)}...`,
@@ -294,7 +304,7 @@ export class PolycentricClient {
       }
     }
 
-    await this.storage.events.persistEvent(signedEvent);
+    await this.storage.events.save(signedEvent);
   }
 
   /**
@@ -307,21 +317,25 @@ export class PolycentricClient {
     signerKey: Uint8Array,
     atTime?: bigint,
   ): Promise<boolean> {
-    const allEvents = await this.storage.events.getAllEvents();
+    const allEvents = await this.storage.events.getAll();
 
     // Build timeline of identity versions sorted by createdAt
-    const versions: { createdAt: bigint; rotationKeys: PublicKey[]; signingKeys: PublicKey[] }[] = [];
+    const versions: {
+      createdAt: bigint;
+      rotationKeys: Proto.PublicKey[];
+      signingKeys: Proto.PublicKey[];
+    }[] = [];
 
     for (const se of allEvents) {
-      const ev = V2Event.fromBinary(se.eventBytes);
+      const ev = Proto.Event.fromBinary(se.eventBytes);
       if (ev.key?.collection !== COLLECTION.IDENTITY) continue;
       if (ev.key.identity !== identityKey) continue;
       if (!ev.contentDigest?.value) continue;
 
-      const cb = await this.storage.content.getContent(ev.contentDigest.value);
+      const cb = await this.storage.content.get(ev.contentDigest.value);
       if (!cb) continue;
 
-      const c = Content.fromBinary(cb);
+      const c = Proto.Content.fromBinary(cb);
       if (c.contentBody.oneofKind === 'identity') {
         versions.push({
           createdAt: ev.createdAt,
@@ -333,7 +347,9 @@ export class PolycentricClient {
 
     if (versions.length === 0) return true; // identity not found locally
 
-    versions.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+    versions.sort((a, b) =>
+      a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+    );
 
     // Find the identity version active at the given time (or latest if no time)
     let active = versions[versions.length - 1];
@@ -358,26 +374,27 @@ export class PolycentricClient {
    * @returns The resolved identity state with rotation_keys and signing_keys
    */
   async getCurrentIdentity(): Promise<IdentityState> {
-    const state: IdentityState = { identityKey: null, rotationKeys: [], signingKeys: [] };
+    const state: IdentityState = {
+      identityKey: null,
+      rotationKeys: [],
+      signingKeys: [],
+    };
 
     if (!this.activeIdentityKey) return state;
 
-    const allEvents = await this.storage.events.getAllEvents();
+    // TODO: Fix this so it doesn't need to go over all events
+    const allEvents = await this.storage.events.getAll();
 
     // Find the latest identity event matching the active identity key
     for (const signedEvent of allEvents) {
-      const event = V2Event.fromBinary(signedEvent.eventBytes);
+      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
 
       if (event.key?.collection !== COLLECTION.IDENTITY) continue;
       if (event.key.identity !== this.activeIdentityKey) continue;
       if (!event.contentDigest?.value) continue;
 
-      const contentBytes = await this.storage.content.getContent(
-        event.contentDigest.value,
-      );
-      if (!contentBytes) continue;
-
-      const content = Content.fromBinary(contentBytes);
+      const content = await this.storage.content.get(event.contentDigest);
+      if (!content) continue;
 
       if (content.contentBody.oneofKind === 'identity') {
         const identity = content.contentBody.identity;
@@ -403,53 +420,50 @@ export class PolycentricClient {
    */
   async publishIdentity(
     identityKey: string | null,
-    rotationKeys: PublicKey[],
-    signingKeys: PublicKey[],
-  ): Promise<{ identityKey: string; signedEvent: SignedEvent }> {
+    rotationKeys: Proto.PublicKey[],
+    signingKeys: Proto.PublicKey[],
+  ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
     if (!this.currentKeyPair) {
       throw new Error('No active key pair');
     }
 
-    const publicKeyBytes = this.currentKeyPair.publicKey.key;
-
-    const identity = Identity.create({ rotationKeys, signingKeys });
-    const content = Content.create({
+    const identity = Proto.Identity.create({ rotationKeys, signingKeys });
+    const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },
     });
-    const contentBytes = Content.toBinary(content);
+    const contentBytes = Proto.Content.toBinary(content);
     const contentHash = sha256(contentBytes);
 
     // If no identity key provided, compute from initial Identity content
     if (!identityKey) {
-      const identityBytes = Identity.toBinary(identity);
+      const identityBytes = Proto.Identity.toBinary(identity);
       identityKey = this.toHex(sha256(identityBytes), 32);
     }
 
     const sequence = await this.storage.events.getNextSequence(
-      publicKeyBytes,
+      this.currentKeyPair.publicKey,
+      COLLECTION.IDENTITY,
       identityKey,
     );
 
-    const event = V2Event.create({
-      key: EventKey.create({
+    const event = Proto.Event.create({
+      key: Proto.EventKey.create({
         collection: COLLECTION.IDENTITY,
         identity: identityKey,
-        signedBy: {
-          keyType: this.currentKeyPair.keyType,
-          key: publicKeyBytes,
-        },
+        signedBy: this.currentKeyPair.publicKey,
         sequence,
       }),
       previousSignature: new Uint8Array(0),
-      contentDigest: ContentDigest.create({
-        type: ContentDigestType.SHA256,
+      contentDigest: Proto.ContentDigest.create({
+        type: Proto.ContentDigestType.SHA256,
         value: contentHash,
       }),
       createdAt: BigInt(Date.now()),
     });
 
-    await this.storage.content.putContent(contentHash, contentBytes);
-    const signedEvent = await this.createEvent(V2Event.toBinary(event));
+    await this.storage.content.save(contentHash, contentBytes);
+    const signedEvent = await this.signEvent(event);
+    await this.commitEvent(signedEvent);
 
     this.setActiveIdentityKey(identityKey);
 
@@ -465,8 +479,8 @@ export class PolycentricClient {
    */
   async addSigningKey(
     identityKey: string,
-    publicKey: PublicKey,
-  ): Promise<SignedEvent> {
+    publicKey: Proto.PublicKey,
+  ): Promise<Proto.SignedEvent> {
     const state = await this.getCurrentIdentity();
     if (state.identityKey !== identityKey) {
       throw new Error('Identity key mismatch');
@@ -490,8 +504,8 @@ export class PolycentricClient {
    */
   async removeSigningKey(
     identityKey: string,
-    publicKey: PublicKey,
-  ): Promise<SignedEvent> {
+    publicKey: Proto.PublicKey,
+  ): Promise<Proto.SignedEvent> {
     const state = await this.getCurrentIdentity();
     if (state.identityKey !== identityKey) {
       throw new Error('Identity key mismatch');
@@ -528,19 +542,19 @@ export class PolycentricClient {
         const responseBytes = await this.core.list_events(
           server,
           null,
-          COLLECTION.IDENTITY,
           identityKey,
+          COLLECTION.IDENTITY,
         );
-        const response = ListEventsResponse.fromBinary(responseBytes);
+        const response = Proto.ListEventsResponse.fromBinary(responseBytes);
 
         for (const bundle of response.eventBundles) {
           if (!bundle.signedEvent) continue;
 
           // Store content
           if (bundle.serializedContent?.contentBytes) {
-            const event = V2Event.fromBinary(bundle.signedEvent.eventBytes);
+            const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
             if (event.contentDigest?.value) {
-              await this.storage.content.putContent(
+              await this.storage.content.save(
                 event.contentDigest.value,
                 bundle.serializedContent.contentBytes,
               );
@@ -549,7 +563,7 @@ export class PolycentricClient {
 
           // Store event
           try {
-            await this.storage.events.persistEvent(bundle.signedEvent);
+            await this.storage.events.save(bundle.signedEvent);
           } catch {
             // duplicate, skip
           }
@@ -560,19 +574,19 @@ export class PolycentricClient {
     }
 
     // Find the identity document among pulled events and verify authorization
-    const allEvents = await this.storage.events.getAllEvents();
+    const allEvents = await this.storage.events.getAll();
     let foundState: IdentityState | null = null;
 
     for (const se of allEvents) {
-      const ev = V2Event.fromBinary(se.eventBytes);
+      const ev = Proto.Event.fromBinary(se.eventBytes);
       if (ev.key?.collection !== COLLECTION.IDENTITY) continue;
       if (ev.key.identity !== identityKey) continue;
       if (!ev.contentDigest?.value) continue;
 
-      const cb = await this.storage.content.getContent(ev.contentDigest.value);
+      const cb = await this.storage.content.get(ev.contentDigest.value);
       if (!cb) continue;
 
-      const c = Content.fromBinary(cb);
+      const c = Proto.Content.fromBinary(cb);
       if (c.contentBody.oneofKind === 'identity') {
         foundState = {
           identityKey,
@@ -607,33 +621,33 @@ export class PolycentricClient {
     if (!this.core) throw new Error('Core not initialized');
     if (!this.currentKeyPair) throw new Error('No active key pair');
 
-    const localEvents = await this.storage.events.getAllEvents();
+    const localEvents = await this.storage.events.getAll();
     const publicKey = this.currentKeyPair.publicKey.key;
 
     // Build event bundles with content for events matching the active key
-    const bundles: EventBundle[] = [];
+    const bundles: Proto.EventBundle[] = [];
     for (const signedEvent of localEvents) {
-      const event = V2Event.fromBinary(signedEvent.eventBytes);
+      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
 
       // Only push events signed by the active key
       const signedBy = event.key?.signedBy;
       if (!signedBy || !this.bytesEqual(signedBy.key, publicKey)) continue;
 
       // Look up content by digest
-      let serializedContent: SerializedContent | undefined;
+      let serializedContent: Proto.SerializedContent | undefined;
       if (event.contentDigest?.value) {
-        const contentBytes = await this.storage.content.getContent(
-          event.contentDigest.value,
-        );
+        const content = await this.storage.content.get(event.contentDigest);
+
+        const contentBytes = content ? Proto.Content.toBinary(content) : null;
         if (contentBytes) {
-          serializedContent = SerializedContent.create({
+          serializedContent = Proto.SerializedContent.create({
             contentBytes,
           });
         }
       }
 
       bundles.push(
-        EventBundle.create({
+        Proto.EventBundle.create({
           signedEvent,
           serializedContent,
         }),
@@ -642,14 +656,12 @@ export class PolycentricClient {
 
     if (bundles.length === 0) return;
 
-    const requestBytes = PutEventsRequest.toBinary(
-      PutEventsRequest.create({ eventBundles: bundles }),
+    const requestBytes = Proto.PutEventsRequest.toBinary(
+      Proto.PutEventsRequest.create({ eventBundles: bundles }),
     );
 
     const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core!.put_events(server, requestBytes),
-      ),
+      this.servers.map((server) => this.core!.put_events(server, requestBytes)),
     );
 
     for (const result of results) {
@@ -660,7 +672,7 @@ export class PolycentricClient {
   }
 
   /**
-   * Pull verified events from all configured servers and persist new ones locally.
+   * Pull signed events from all configured servers and persist new ones locally.
    *
    * @returns The number of new events persisted
    */
@@ -679,7 +691,7 @@ export class PolycentricClient {
         continue;
       }
 
-      const response = ListEventsResponse.fromBinary(result.value);
+      const response = Proto.ListEventsResponse.fromBinary(result.value);
 
       for (const bundle of response.eventBundles) {
         if (!bundle.signedEvent) continue;
@@ -687,12 +699,12 @@ export class PolycentricClient {
         // Always store content if included (even if event is a duplicate)
         if (bundle.serializedContent?.contentBytes) {
           try {
-            const event = V2Event.fromBinary(bundle.signedEvent.eventBytes);
+            const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
             if (event.contentDigest?.value) {
-              await this.storage.content.putContent(
-                event.contentDigest.value,
+              const content = Proto.Content.fromBinary(
                 bundle.serializedContent.contentBytes,
               );
+              await this.storage.content.save(event.contentDigest, content);
             }
           } catch {
             // content decode failed, skip
@@ -700,7 +712,9 @@ export class PolycentricClient {
         }
 
         try {
-          await this.storage.events.persistEvent(bundle.signedEvent);
+          // Currently we are storing all events (and above content).
+          // We probably dont want to be do this and only storing what we OWN or FOLLOW
+          await this.storage.events.save(bundle.signedEvent);
           newCount++;
         } catch {
           // duplicate event, skip
@@ -800,7 +814,7 @@ export class PolycentricClient {
       .join('');
   }
 
-  get currentSystem(): PublicKey {
+  get currentSystem(): Proto.PublicKey {
     return this.currentKeyPair!.publicKey;
   }
 

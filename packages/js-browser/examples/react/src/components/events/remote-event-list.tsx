@@ -97,9 +97,10 @@ export const RemoteEventList = () => {
       } catch (_) { /* skip */ }
     }
 
-    // Fetch identity docs we don't have yet
+    // Fetch identity docs we don't have yet (skip if no filters — all events already fetched)
+    const hasFilters = collection !== undefined || identity !== undefined || signedBy !== undefined;
     for (const idKey of referencedIdentities) {
-      if (timelines.has(idKey)) continue;
+      if (timelines.has(idKey) || !hasFilters) continue;
       for (const server of client.servers) {
         try {
           const idBytes = await client.core!.list_events(server, null, 1, idKey);

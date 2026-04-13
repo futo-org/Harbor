@@ -13,11 +13,11 @@ export class ContentRepository implements IContentRepository {
       .join('');
   }
 
-  async putContent(digest: Uint8Array, contentBytes: Uint8Array): Promise<void> {
+  async save(digest: Uint8Array, contentBytes: Uint8Array): Promise<void> {
     this.store.set(this.digestKey(digest), contentBytes);
   }
 
-  async getContent(digest: Uint8Array): Promise<Uint8Array | null> {
+  async get(digest: Uint8Array): Promise<Uint8Array | null> {
     return this.store.get(this.digestKey(digest)) ?? null;
   }
 }

@@ -1,10 +1,10 @@
 import { EventStore } from './event-store';
-import { ContentStore } from './content-store';
+import { ContentStore } from './content.store';
 import { KeysStore } from './keys-store';
 import { EventAckStore } from './event-ack-store';
 import { ProcessIdStore } from './process-id-store';
-import type { IEventRepository } from '../platform-interfaces/event-repository';
-import type { IContentRepository } from '../platform-interfaces/content-repository';
+import type { IEventRepository } from '../platform-interfaces/event.repository';
+import type { IContentRepository } from '../platform-interfaces/content.repository';
 import type { IKeysRepository } from '../platform-interfaces/keys-repository';
 import type { IEventAckRepository } from '../platform-interfaces/event-ack-repository';
 import type { IProcessIdRepository } from '../platform-interfaces/process-id-repository';
@@ -29,8 +29,8 @@ export interface Repositories {
  * Usage:
  * ```typescript
  * // Access business logic stores
- * await storage.events.persistEvent(signedEvent);
- * await storage.content.putContent(digest, bytes);
+ * await storage.events.save(signedEvent);
+ * await storage.content.save(digest, bytes);
  * ```
  */
 export class StorageHandle {

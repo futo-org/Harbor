@@ -1,3 +1,5 @@
+import * as Proto from '../proto/v2';
+
 /**
  * ContentRepository stores serialized content bytes keyed by their digest.
  */
@@ -6,9 +8,9 @@ export interface IContentRepository {
    * Store content bytes with their digest as the key.
    *
    * @param digest - The content digest (e.g. SHA-256 hash)
-   * @param contentBytes - The serialized content
+   * @param content - The content message
    */
-  putContent(digest: Uint8Array, contentBytes: Uint8Array): Promise<void>;
+  save(digest: Proto.ContentDigest, content: Proto.Content): Promise<void>;
 
   /**
    * Retrieve content bytes by digest.
@@ -16,5 +18,5 @@ export interface IContentRepository {
    * @param digest - The content digest to look up
    * @returns The content bytes, or null if not found
    */
-  getContent(digest: Uint8Array): Promise<Uint8Array | null>;
+  get(digest: Proto.ContentDigest): Promise<Proto.Content | null>;
 }

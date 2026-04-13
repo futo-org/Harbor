@@ -16,18 +16,28 @@ export const PostCompose = () => {
       return;
     }
 
-    await client.createPost(identity.identityKey, postField.current.value);
+    const content = await client.contentManager.build({
+      oneofKind: 'post',
+      post: {
+        text: postField.current.value,
+      },
+    });
+    await client.contentManager.save(content);
+
+    const event = await client.buildEvent(content);
+
+    const signedEvent = await client.signEvent(event);
+    await client.commitEvent(signedEvent);
+
     postField.current.value = '';
   };
 
   return (
     <div className="card">
-      <textarea
-        ref={postField}
-        placeholder="What's on your mind?"
-        rows={3}
-      />
-      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+      <textarea ref={postField} placeholder="What's on your mind?" rows={3} />
+      <div
+        style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}
+      >
         <button onClick={post}>Post</button>
       </div>
     </div>

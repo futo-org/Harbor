@@ -1,5 +1,5 @@
 export { EventStore } from './event-store';
-export { ContentStore } from './content-store';
+export { ContentStore } from './content.store';
 export { KeysStore } from './keys-store';
 export { EventAckStore } from './event-ack-store';
 export { ProcessIdStore } from './process-id-store';

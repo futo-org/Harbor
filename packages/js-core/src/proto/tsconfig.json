@@ -1,0 +1,15 @@
+{
+  "extends": "@polycentric/tsconfig/compiled-package.json",
+  "include": ["**/*"],
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../../dist/proto",
+    "emitDeclarationOnly": false,
+    "lib": ["ES2022", "DOM"],
+    // Generated proto code legitimately destructures values it doesn't use
+    // (e.g. `wireType` in binaryRead helpers). Relax these checks here only.
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  }
+}

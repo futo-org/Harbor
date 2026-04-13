@@ -48,7 +48,10 @@ export function isInitialized(): boolean {
  * comes through as a Uint8Array. We detect errors by checking the
  * native return.
  */
-function callNativeV2(nativeFn: (input: Object) => Object, input: Uint8Array): Uint8Array {
+function callNativeV2(
+  nativeFn: (input: Object) => Object,
+  input: Uint8Array
+): Uint8Array {
   const result = nativeFn(input) as Uint8Array;
   return result;
 }
@@ -75,7 +78,7 @@ class NativePolycentricCore implements IPolycentricCore {
   verify_signed_event(signedEventBytes: Uint8Array): Uint8Array {
     return callNativeV2(
       PolycentricCore.verifySignedEventV2.bind(PolycentricCore),
-      signedEventBytes,
+      signedEventBytes
     );
   }
 
@@ -83,7 +86,7 @@ class NativePolycentricCore implements IPolycentricCore {
   decode_event_from_signed_event(signedEventBytes: Uint8Array): Uint8Array {
     return callNativeV2(
       PolycentricCore.decodeEventFromSignedEventV2.bind(PolycentricCore),
-      signedEventBytes,
+      signedEventBytes
     );
   }
 
@@ -96,16 +99,16 @@ class NativePolycentricCore implements IPolycentricCore {
   async sign_and_persist_event(
     eventBytes: Uint8Array,
     signEvent: SignEventCallback,
-    persistEvent: PersistEventCallback,
+    save: PersistEventCallback
   ): Promise<Uint8Array> {
     // Validate via native Rust FFI
     callNativeV2(
       PolycentricCore.validateEventV2.bind(PolycentricCore),
-      eventBytes,
+      eventBytes
     );
 
     const signedEventBytes = await signEvent(eventBytes);
-    await persistEvent(signedEventBytes);
+    await save(signedEventBytes);
     return signedEventBytes;
   }
 
@@ -116,7 +119,7 @@ class NativePolycentricCore implements IPolycentricCore {
     collection?: number | null,
     identity?: string | null,
     signedBy?: Uint8Array | null,
-    signedByKeyType?: number | null,
+    signedByKeyType?: number | null
   ): Promise<Uint8Array> {
     const request = ListEventsRequest.toBinary(
       ListEventsRequest.create({
@@ -127,7 +130,7 @@ class NativePolycentricCore implements IPolycentricCore {
           signedBy != null
             ? { keyType: signedByKeyType ?? 1, key: signedBy }
             : undefined,
-      }),
+      })
     );
 
     const res = await fetch(
@@ -136,10 +139,10 @@ class NativePolycentricCore implements IPolycentricCore {
         method: 'POST',
         headers: {
           'content-type': 'application/grpc-web+proto',
-          accept: 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
         },
         body: grpcWebEncode(request).buffer as ArrayBuffer,
-      },
+      }
     );
 
     if (!res.ok) throw new Error(`gRPC-web ListEvents error: ${res.status}`);
@@ -151,7 +154,7 @@ class NativePolycentricCore implements IPolycentricCore {
   /** Push events to a server via gRPC-web (network — cannot go through FFI). */
   async put_events(
     serverUrl: string,
-    eventBundlesBytes: Uint8Array,
+    eventBundlesBytes: Uint8Array
   ): Promise<void> {
     const res = await fetch(
       `${serverUrl}/polycentric.v2.EventSyncService/PutEvents`,
@@ -159,10 +162,10 @@ class NativePolycentricCore implements IPolycentricCore {
         method: 'POST',
         headers: {
           'content-type': 'application/grpc-web+proto',
-          accept: 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
         },
         body: grpcWebEncode(eventBundlesBytes).buffer as ArrayBuffer,
-      },
+      }
     );
 
     if (!res.ok) throw new Error(`gRPC-web PutEvents error: ${res.status}`);
