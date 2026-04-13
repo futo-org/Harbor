@@ -1,27 +1,24 @@
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import {
-  Background,
-  type BackgroundProps,
-} from '@/src/common/components/primitives/Background';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { useMemo } from 'react';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenProps {
   children: React.ReactNode;
-  background?: BackgroundProps;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   keyboardAvoiding?: boolean;
 }
 
 export function Screen({
   children,
-  background = { gradient: 'top' },
   edges = ['top', 'bottom'],
   keyboardAvoiding = false,
 }: ScreenProps) {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const padding = useMemo(
+  const nativePadding = useMemo(
     () => ({
       paddingTop: edges.includes('top') ? insets.top : 0,
       paddingBottom: edges.includes('bottom') ? insets.bottom : 0,
@@ -31,9 +28,17 @@ export function Screen({
     [insets, edges],
   );
 
-  const content = keyboardAvoiding ? (
+  if (isWeb) {
+    return (
+      <View style={[Atoms.flex_1, theme.atoms.bg, { position: 'relative' }]}>
+        {children}
+      </View>
+    );
+  }
+
+  const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={Atoms.flex_1}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.bottom}
     >
@@ -44,19 +49,6 @@ export function Screen({
   );
 
   return (
-    <View style={[styles.container, padding]}>
-      <Background {...background} />
-      {content}
-    </View>
+    <View style={[Atoms.flex_1, theme.atoms.bg, nativePadding]}>{body}</View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  flex: {
-    flex: 1,
-  },
-});

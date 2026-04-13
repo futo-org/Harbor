@@ -1,19 +1,21 @@
-import { memo } from 'react';
-import { View } from 'react-native';
+import { BackButton } from '@/src/common/components/composites';
 import { Box } from '@/src/common/components/layouts';
 import {
-  Text,
   Avatar,
   Button,
-  TextInput,
   HorizontalScrollGroup,
+  Text,
+  TextInput,
 } from '@/src/common/components/primitives';
-import { BackButton } from '@/src/common/components/composites';
-import { FeedChip } from '@/src/features/posts/FeedChip';
-import { Atoms } from '@/src/common/theme';
+import type {
+  ProfileEditState,
+  ProfileScreenData,
+} from '@/src/common/lib/polycentric-hooks';
 import { truncateName } from '@/src/common/lib/polycentric-hooks';
-import type { ProfileScreenData } from '@/src/common/lib/polycentric-hooks';
-import type { ProfileEditState } from '@/src/common/lib/polycentric-hooks';
+import { Atoms } from '@/src/common/theme';
+import { FeedChip } from '@/src/features/posts/FeedChip';
+import { memo } from 'react';
+import { View } from 'react-native';
 
 const BANNER_HEIGHT = 150;
 

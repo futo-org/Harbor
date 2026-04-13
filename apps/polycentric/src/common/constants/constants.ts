@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+export const WEB_MAX_CONTENT_WIDTH = 535;
+
 export const DEFAULT_IDENTITY_NAME = 'Anon';
 export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 80 : 56;
 

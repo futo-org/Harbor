@@ -167,27 +167,27 @@ export const lightPalette = {
   warning_975: '#4D3100',
 
   background_primary: '#F2F5F9',
-  background_secondary: '#ADD1F9',
+  background_secondary: '#E8EDF5',
 } as const satisfies Palette;
 
 export const darkPalette = {
   white: '#FFFFFF',
   black: '#000000',
 
-  neutral_0: '#05080E',
-  neutral_25: '#0C1220',
-  neutral_50: '#121A2B',
-  neutral_100: '#1A2436',
-  neutral_200: '#252F42',
-  neutral_300: '#3D4A5F',
-  neutral_400: '#7C869D',
-  neutral_500: '#7C869D',
-  neutral_600: '#A5ACBB',
-  neutral_700: '#B8BECA',
-  neutral_800: '#D0D4DD',
-  neutral_900: '#E4E7ED',
-  neutral_950: '#F0F2F6',
-  neutral_975: '#F7F8FB',
+  neutral_0: '#0D1016',
+  neutral_25: '#1E2127',
+  neutral_50: '#303237',
+  neutral_100: '#414348',
+  neutral_200: '#525459',
+  neutral_300: '#636569',
+  neutral_400: '#75767A',
+  neutral_500: '#86888B',
+  neutral_600: '#97999B',
+  neutral_700: '#A9AAAC',
+  neutral_800: '#BABBBC',
+  neutral_900: '#CBCCCD',
+  neutral_950: '#DCDDDE',
+  neutral_975: '#EEEEEE',
   neutral_1000: '#FFFFFF',
 
   primary_25: '#0A1A24',
@@ -246,6 +246,6 @@ export const darkPalette = {
   warning_950: '#FFF5E0',
   warning_975: '#FFFAEF',
 
-  background_primary: '#05080E',
-  background_secondary: '#062343',
+  background_primary: '#0D1016',
+  background_secondary: '#121B26',
 } as const satisfies Palette;
