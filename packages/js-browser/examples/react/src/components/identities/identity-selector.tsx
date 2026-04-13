@@ -36,7 +36,7 @@ export const IdentitySelector = () => {
   const loadIdentities = useCallback(async () => {
     if (!client) return;
     setIdentities(await client.keyPairManager.getKeys());
-    setIdentityState(await client.getCurrentIdentity());
+    setIdentityState(await client.identityManager.getCurrent());
   }, [client]);
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export const IdentitySelector = () => {
                   setInputEnabled(false);
                   setStatus('Removing signing key...');
                   try {
-                    await client.removeSigningKey(
+                    await client.identityManager.removeSigningKey(
                       identityState.identityKey,
                       pk,
                     );
@@ -206,7 +206,7 @@ export const IdentitySelector = () => {
             setStatus('Creating identity...');
             try {
               const currentKey = client.currentKeyPair!.publicKey;
-              await client.publishIdentity(null, [currentKey], []);
+              await client.identityManager.publish(null, [currentKey], []);
               await loadIdentities();
               setStatus('Identity created');
             } catch (error) {
@@ -247,7 +247,7 @@ export const IdentitySelector = () => {
                     keyType: KEY_TYPE.ED25519,
                     key: keyBytes,
                   });
-                  await client.addSigningKey(
+                  await client.identityManager.addSigningKey(
                     identityState.identityKey,
                     targetKey,
                   );
@@ -289,7 +289,7 @@ export const IdentitySelector = () => {
                 setInputEnabled(false);
                 setStatus('Claiming identity...');
                 try {
-                  await client.claimIdentity(claimIdentityKeyHex.trim());
+                  await client.identityManager.claim(claimIdentityKeyHex.trim());
                   await loadIdentities();
                   setClaimIdentityKeyHex('');
                   setStatus('Identity claimed');

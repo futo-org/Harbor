@@ -19,7 +19,7 @@ export async function createIdentityWithDefaultServer(
 
   // Publish initial identity with the current key as the sole rotation key
   const currentKey = client.currentKeyPair!.publicKey;
-  await client.publishIdentity(null, [currentKey], []);
+  await client.identityManager.publish(null, [currentKey], []);
 
   client.servers.push(server);
 }

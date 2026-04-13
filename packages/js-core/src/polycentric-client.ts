@@ -3,6 +3,7 @@ import {
   ContentManager,
   EventService,
   HydrationStatus,
+  IdentityManager,
   KeyPairManager,
   InitializationStep,
 } from './client-internal';
@@ -15,25 +16,14 @@ import type {
   IStorageDriver,
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
-import { sha256 } from '@noble/hashes/sha2';
 import { StorageHandle } from './storage/storage-handle';
+
+export type { IdentityState } from './client-internal/identity-manager';
 
 /** Private key — same shape as PublicKey, holds the secret key bytes. */
 export interface PrivateKey {
   keyType: Proto.KeyType;
   key: Uint8Array;
-}
-
-/**
- * Resolved identity state from the latest Identity document.
- */
-export interface IdentityState {
-  /** The identity key (hex-encoded sha256 of the initial Identity content) */
-  identityKey: string | null;
-  /** Rotation keys that control the identity */
-  rotationKeys: Proto.PublicKey[];
-  /** Signing keys authorized to sign events */
-  signingKeys: Proto.PublicKey[];
 }
 
 export interface KeyPair {
@@ -59,6 +49,7 @@ export class PolycentricClient {
 
   public readonly keyPairManager = new KeyPairManager(this);
   public readonly contentManager = new ContentManager(this);
+  public readonly identityManager = new IdentityManager(this);
 
   public readonly httpClient = new HTTPClient();
 
@@ -234,252 +225,6 @@ export class PolycentricClient {
   async commitEvent(signedEvent: Proto.SignedEvent): Promise<void> {
     await this.storage.events.save(signedEvent);
     this.events.emitContentCreated(signedEvent);
-  }
-
-  /**
-   * Resolves the current identity state by finding the latest Identity
-   * document on the identity collection for the active key pair.
-   *
-   * @returns The resolved identity state with rotation_keys and signing_keys
-   */
-  async getCurrentIdentity(): Promise<IdentityState> {
-    const state: IdentityState = {
-      identityKey: null,
-      rotationKeys: [],
-      signingKeys: [],
-    };
-
-    if (!this.activeIdentityKey) return state;
-
-    // TODO: Fix this so it doesn't need to go over all events
-    const allEvents = await this.storage.events.getAll();
-
-    // Find the latest identity event matching the active identity key
-    for (const signedEvent of allEvents) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-
-      if (event.key?.collection !== COLLECTION.IDENTITY) continue;
-      if (event.key.identity !== this.activeIdentityKey) continue;
-      if (!event.contentDigest?.value) continue;
-
-      const content = await this.storage.content.get(event.contentDigest);
-      if (!content) continue;
-
-      if (content.contentBody.oneofKind === 'identity') {
-        const identity = content.contentBody.identity;
-        state.identityKey = event.key.identity;
-        state.rotationKeys = [...identity.rotationKeys];
-        state.signingKeys = [...identity.signingKeys];
-      }
-    }
-
-    return state;
-  }
-
-  /**
-   * Publishes a new Identity document with the given rotation and signing keys.
-   *
-   * The identity key is the hex-encoded sha256 of the initial Identity content.
-   * For a new identity, pass null for identityKey and it will be computed.
-   *
-   * @param identityKey - Existing identity key, or null to create a new identity
-   * @param rotationKeys - Keys that control the identity
-   * @param signingKeys - Keys authorized to sign events
-   * @returns The identity key and signed event
-   */
-  async publishIdentity(
-    identityKey: string | null,
-    rotationKeys: Proto.PublicKey[],
-    signingKeys: Proto.PublicKey[],
-  ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
-    if (!this.currentKeyPair) {
-      throw new Error('No active key pair');
-    }
-
-    const identity = Proto.Identity.create({ rotationKeys, signingKeys });
-    const content = Proto.Content.create({
-      contentBody: { oneofKind: 'identity', identity },
-    });
-    const contentBytes = Proto.Content.toBinary(content);
-    const contentHash = sha256(contentBytes);
-
-    // If no identity key provided, compute from initial Identity content
-    if (!identityKey) {
-      const identityBytes = Proto.Identity.toBinary(identity);
-      identityKey = this.toHex(sha256(identityBytes), 32);
-    }
-
-    const sequence = await this.storage.events.getNextSequence(
-      this.currentKeyPair.publicKey,
-      COLLECTION.IDENTITY,
-      identityKey,
-    );
-
-    const event = Proto.Event.create({
-      key: Proto.EventKey.create({
-        collection: COLLECTION.IDENTITY,
-        identity: identityKey,
-        signedBy: this.currentKeyPair.publicKey,
-        sequence,
-      }),
-      previousSignature: new Uint8Array(0),
-      contentDigest: Proto.ContentDigest.create({
-        type: Proto.ContentDigestType.SHA256,
-        value: contentHash,
-      }),
-      createdAt: BigInt(Date.now()),
-    });
-
-    await this.storage.content.save(contentHash, contentBytes);
-    const signedEvent = await this.signEvent(event);
-    await this.commitEvent(signedEvent);
-
-    this.setActiveIdentityKey(identityKey);
-
-    return { identityKey, signedEvent };
-  }
-
-  /**
-   * Adds a signing key to the current identity and publishes the updated document.
-   *
-   * @param identityKey - The identity key to update
-   * @param publicKey - The public key to add as a signing key
-   * @returns The signed event
-   */
-  async addSigningKey(
-    identityKey: string,
-    publicKey: Proto.PublicKey,
-  ): Promise<Proto.SignedEvent> {
-    const state = await this.getCurrentIdentity();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
-
-    const signingKeys = [...state.signingKeys, publicKey];
-    const { signedEvent } = await this.publishIdentity(
-      identityKey,
-      state.rotationKeys,
-      signingKeys,
-    );
-    return signedEvent;
-  }
-
-  /**
-   * Removes a signing key from the current identity and publishes the updated document.
-   *
-   * @param identityKey - The identity key to update
-   * @param publicKey - The public key to remove from signing keys
-   * @returns The signed event
-   */
-  async removeSigningKey(
-    identityKey: string,
-    publicKey: Proto.PublicKey,
-  ): Promise<Proto.SignedEvent> {
-    const state = await this.getCurrentIdentity();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
-
-    const signingKeys = state.signingKeys.filter(
-      (k) => !this.bytesEqual(k.key, publicKey.key),
-    );
-    const { signedEvent } = await this.publishIdentity(
-      identityKey,
-      state.rotationKeys,
-      signingKeys,
-    );
-    return signedEvent;
-  }
-
-  /**
-   * Claims an identity by pulling its latest Identity document from the server
-   * and storing it locally. Verifies the current key is listed in the identity's
-   * rotation_keys or signing_keys.
-   *
-   * @param identityKey - The identity key to claim
-   * @returns The resolved identity state
-   */
-  async claimIdentity(identityKey: string): Promise<IdentityState> {
-    if (!this.core) throw new Error('Core not initialized');
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-
-    const publicKey = this.currentKeyPair.publicKey.key;
-
-    // Pull identity events from all servers
-    for (const server of this.servers) {
-      try {
-        const responseBytes = await this.core.list_events(
-          server,
-          null,
-          identityKey,
-          COLLECTION.IDENTITY,
-        );
-        const response = Proto.ListEventsResponse.fromBinary(responseBytes);
-
-        for (const bundle of response.eventBundles) {
-          if (!bundle.signedEvent) continue;
-
-          // Store content
-          if (bundle.serializedContent?.contentBytes) {
-            const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
-            if (event.contentDigest?.value) {
-              await this.storage.content.save(
-                event.contentDigest.value,
-                bundle.serializedContent.contentBytes,
-              );
-            }
-          }
-
-          // Store event
-          try {
-            await this.storage.events.save(bundle.signedEvent);
-          } catch {
-            // duplicate, skip
-          }
-        }
-      } catch {
-        // server unreachable, try next
-      }
-    }
-
-    // Find the identity document among pulled events and verify authorization
-    const allEvents = await this.storage.events.getAll();
-    let foundState: IdentityState | null = null;
-
-    for (const se of allEvents) {
-      const ev = Proto.Event.fromBinary(se.eventBytes);
-      if (ev.key?.collection !== COLLECTION.IDENTITY) continue;
-      if (ev.key.identity !== identityKey) continue;
-      if (!ev.contentDigest?.value) continue;
-
-      const cb = await this.storage.content.get(ev.contentDigest.value);
-      if (!cb) continue;
-
-      const c = Proto.Content.fromBinary(cb);
-      if (c.contentBody.oneofKind === 'identity') {
-        foundState = {
-          identityKey,
-          rotationKeys: [...c.contentBody.identity.rotationKeys],
-          signingKeys: [...c.contentBody.identity.signingKeys],
-        };
-      }
-    }
-
-    if (!foundState) {
-      throw new Error(`Identity ${identityKey} not found on any server`);
-    }
-
-    const isAuthorized =
-      foundState.rotationKeys.some((k) => this.bytesEqual(k.key, publicKey)) ||
-      foundState.signingKeys.some((k) => this.bytesEqual(k.key, publicKey));
-
-    if (!isAuthorized) {
-      throw new Error('Current key is not authorized for this identity');
-    }
-
-    this.setActiveIdentityKey(identityKey);
-
-    return foundState;
   }
 
   /**

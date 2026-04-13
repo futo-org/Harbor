@@ -10,7 +10,7 @@ export const PostCompose = () => {
   const post = async () => {
     if (!postField.current || !postField.current.value.trim()) return;
 
-    const identity = await client.getCurrentIdentity();
+    const identity = await client.identityManager.getCurrent();
     if (!identity.identityKey) {
       alert('Create an identity first');
       return;
