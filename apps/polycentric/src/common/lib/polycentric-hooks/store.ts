@@ -95,7 +95,7 @@ export function createPolycentricStore(client: PolycentricClient) {
   return createStore<PolycentricStore>()((set, get) => ({
     identities: [],
     async refreshIdentities() {
-      set({ identities: await client.getKeys() });
+      set({ identities: await client.keyPairManager.getKeys() });
     },
 
     feeds: {},

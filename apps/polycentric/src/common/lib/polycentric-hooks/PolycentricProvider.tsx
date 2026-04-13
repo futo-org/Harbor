@@ -108,8 +108,8 @@ function DefaultErrorComponent({ error }: { error: Error }) {
 async function resolveIdentity(
   client: PolycentricClient,
 ): Promise<Identity | null> {
-  const state = await client.getCurrentIdentity();
-  return state.identity ?? null;
+  const state = await client.identityManager.getCurrent();
+  return state ?? null;
 }
 
 export function PolycentricProvider({
@@ -140,7 +140,7 @@ export function PolycentricProvider({
 
         if (cancelled) return;
 
-        if ((await c.getKeys()).length === 0) {
+        if ((await c.keyPairManager.getKeys()).length === 0) {
           await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
         }
 
@@ -160,7 +160,7 @@ export function PolycentricProvider({
 
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
-          if ((await c.getKeys()).length === 0) {
+          if ((await c.keyPairManager.getKeys()).length === 0) {
             await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
             await c.sync().catch(() => {});
           }
@@ -184,7 +184,7 @@ export function PolycentricProvider({
   const switchIdentity = useCallback(
     async (publicKey: types.PublicKey) => {
       if (!client) return;
-      await client.switchKeyPair(publicKey);
+      await client.keyPairManager.switchKeyPair(publicKey);
       await client.sync().catch(() => {});
     },
     [client],
