@@ -35,17 +35,3 @@ export const currentSelectedIdentity = (identities: KeyPair[]): KeyPair => {
 
   return identities[0];
 };
-
-/**
- * Switches the current identity, and stores the currently selected identity in local storage
- *
- * @param client The PolycentricClient object currently in use
- * @param identity The identity to switch to
- */
-export const selectIdentity = async (
-  client: PolycentricClient,
-  identity: PublicKey,
-) => {
-  await client.switchKeyPair(identity);
-  localStorage.setItem(SELECTED_IDENTITY_ITEM, Identifier(identity));
-};

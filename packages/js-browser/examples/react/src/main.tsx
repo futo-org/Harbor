@@ -34,17 +34,9 @@ try {
   console.log('5. PolycentricClient created successfully');
 
   console.log('6. Loading keys...');
-  const keys = await clientInstance.getKeys();
+  const keys = await clientInstance.keyPairManager.getKeys();
 
   console.log('7. Keys loaded', keys);
-
-  let keyPair;
-  if (keys.length > 0) {
-    keyPair = await clientInstance.switchKeyPair(
-      currentSelectedIdentity(keys).publicKey,
-    );
-    console.log('8. Keys loaded', keyPair);
-  }
 
   createRoot(document.getElementById('root')!).render(
     <ClientContext.Provider value={clientInstance}>

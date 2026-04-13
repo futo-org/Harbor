@@ -16,9 +16,7 @@ const toHex = (bytes: Uint8Array) =>
 
 const fromHex = (hex: string): Uint8Array => {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
-  return new Uint8Array(
-    clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-  );
+  return new Uint8Array(clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
 };
 
 export const IdentitySelector = () => {
@@ -37,7 +35,7 @@ export const IdentitySelector = () => {
 
   const loadIdentities = useCallback(async () => {
     if (!client) return;
-    setIdentities(await client.getKeys());
+    setIdentities(await client.keyPairManager.getKeys());
     setIdentityState(await client.getCurrentIdentity());
   }, [client]);
 
@@ -78,7 +76,14 @@ export const IdentitySelector = () => {
       {/* ── Identity ─────────────────────────────────── */}
       {identityState.identityKey ? (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 4,
+            }}
+          >
             <span className="badge badge-valid">identity</span>
             <button
               onClick={async () => {
@@ -105,7 +110,9 @@ export const IdentitySelector = () => {
       {/* ── Rotation keys ────────────────────────────── */}
       {identityState.rotationKeys.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Rotation keys
           </div>
           {identityState.rotationKeys.map((pk, i) => (
@@ -119,7 +126,9 @@ export const IdentitySelector = () => {
       {/* ── Signing keys ─────────────────────────────── */}
       {identityState.signingKeys.length > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Signing keys
           </div>
           {identityState.signingKeys.map((pk, i) => (
@@ -144,7 +153,10 @@ export const IdentitySelector = () => {
                   setInputEnabled(false);
                   setStatus('Removing signing key...');
                   try {
-                    await client.removeSigningKey(identityState.identityKey, pk);
+                    await client.removeSigningKey(
+                      identityState.identityKey,
+                      pk,
+                    );
                     await loadIdentities();
                     setStatus('Signing key removed');
                   } catch (error) {
@@ -211,7 +223,9 @@ export const IdentitySelector = () => {
       {/* ── Issue Signing Key ────────────────────────── */}
       {identityState.identityKey && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Issue signing key to another public key
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -233,7 +247,10 @@ export const IdentitySelector = () => {
                     keyType: KEY_TYPE.ED25519,
                     key: keyBytes,
                   });
-                  await client.addSigningKey(identityState.identityKey, targetKey);
+                  await client.addSigningKey(
+                    identityState.identityKey,
+                    targetKey,
+                  );
                   await loadIdentities();
                   setIssueKeyHex('');
                   setStatus('Signing key issued');
@@ -253,7 +270,9 @@ export const IdentitySelector = () => {
       {/* ── Claim Identity ──────────────────────────── */}
       {!identityState.identityKey && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
             Claim an identity (pull from server by identity key)
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -291,51 +310,6 @@ export const IdentitySelector = () => {
       {status && (
         <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#8b949e' }}>
           {status}
-        </div>
-      )}
-
-      {/* ── Other key pairs ──────────────────────────── */}
-      {otherIdentities.length > 0 && (
-        <div
-          style={{
-            marginTop: 12,
-            borderTop: '1px solid #21262d',
-            paddingTop: 8,
-          }}
-        >
-          <div
-            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
-          >
-            Other key pairs
-          </div>
-          {otherIdentities.map((kp) => (
-            <div
-              key={Identifier(kp.publicKey)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '4px 0',
-              }}
-            >
-              <span style={{ ...mono, color: '#8b949e' }}>
-                {Identifier(kp.publicKey)}
-              </span>
-              <button
-                onClick={async () => {
-                  setInputEnabled(false);
-                  await client.switchKeyPair(kp.publicKey);
-                  await loadIdentities();
-                  setStatus('');
-                  setInputEnabled(true);
-                }}
-                disabled={!inputEnabled}
-                style={{ padding: '2px 10px', fontSize: '0.78rem' }}
-              >
-                Switch
-              </button>
-            </div>
-          ))}
         </div>
       )}
     </div>
