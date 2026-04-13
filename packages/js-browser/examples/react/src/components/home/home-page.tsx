@@ -1,9 +1,10 @@
 import { useContext } from 'react';
 import { ClientContext } from '../../main';
-import { GenericFeed } from '../feeds/generic-feed';
 import { IdentitySelector } from '../identities/identity-selector';
 import { PostCompose } from '../posts/post-compose';
-import { ServerSelector } from '../settings/servers';
+import { RemoteEventList } from '../events/remote-event-list';
+import { EventList } from '../events/event-list';
+import { SyncPanel } from '../sync/sync-panel';
 
 export const HomePage = () => {
   const client = useContext(ClientContext);
@@ -14,18 +15,28 @@ export const HomePage = () => {
 
   return (
     <div>
-      <div>{/*Feed goes here*/}</div>
-      {<IdentitySelector></IdentitySelector>}
-      <ServerSelector></ServerSelector>
-      <PostCompose></PostCompose>
-      <h1>Explore Feed</h1>
-      <GenericFeed query={client.queryExploreFeed()}></GenericFeed>
-      <h1>Following Feed</h1>
-      <GenericFeed query={client.queryFollowingFeed(20)}></GenericFeed>
-      <h1>Likes Feed</h1>
-      <GenericFeed query={client.queryLikesFeed(20)}></GenericFeed>
-      <h1>Comments Feed</h1>
-      <GenericFeed query={client.queryCommentsFeed()}></GenericFeed>
+      <h1 style={{ fontSize: '1.4rem', color: '#e6edf3', marginBottom: 4 }}>
+        Polycentric
+      </h1>
+      <p
+        style={{
+          color: '#484f58',
+          fontSize: '0.85rem',
+          marginTop: 0,
+          marginBottom: 20,
+        }}
+      >
+        v2 protocol demo
+      </p>
+
+      <IdentitySelector />
+      <SyncPanel />
+
+      <h2>Compose</h2>
+      <PostCompose />
+
+      <RemoteEventList />
+      <EventList />
     </div>
   );
 };

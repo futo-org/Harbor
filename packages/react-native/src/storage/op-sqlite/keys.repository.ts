@@ -1,7 +1,7 @@
 import type { Database } from './database';
 import {
-  PrivateKey,
-  PublicKey,
+  v2,
+  type PrivateKey,
   type IKeysRepository,
 } from '@polycentric/js-core';
 
@@ -10,7 +10,7 @@ export class KeysRepository implements IKeysRepository {
 
   async storeKeys(keys: {
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   }): Promise<void> {
     this.database.run(
       `INSERT OR REPLACE INTO identities (
@@ -20,9 +20,9 @@ export class KeysRepository implements IKeysRepository {
     );
   }
 
-  async retrieveKeysByPublicKey(publicKey: PublicKey): Promise<{
+  async retrieveKeysByPublicKey(publicKey: v2.PublicKey): Promise<{
     privateKey: PrivateKey;
-    publicKey: PublicKey;
+    publicKey: v2.PublicKey;
   } | null> {
     const results = this.database.execute<{
       key_type: number;
@@ -38,20 +38,18 @@ export class KeysRepository implements IKeysRepository {
     }
 
     const row = results[0]!;
+    const kt = Number(row.key_type);
 
     return {
-      privateKey: PrivateKey.create({
-        keyType: BigInt(row.key_type),
-        key: new Uint8Array(row.private_key),
-      }),
-      publicKey: PublicKey.create({
-        keyType: BigInt(row.key_type),
+      privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
+      publicKey: v2.PublicKey.create({
+        keyType: kt,
         key: new Uint8Array(row.public_key),
       }),
     };
   }
 
-  async removeKeys(publicKey: PublicKey): Promise<void> {
+  async removeKeys(publicKey: v2.PublicKey): Promise<void> {
     this.database.run('DELETE FROM identities WHERE public_key = ?', [
       publicKey.key,
     ]);
@@ -60,7 +58,7 @@ export class KeysRepository implements IKeysRepository {
   async getAllKeys(): Promise<
     {
       privateKey: PrivateKey;
-      publicKey: PublicKey;
+      publicKey: v2.PublicKey;
     }[]
   > {
     const results = this.database.execute<{
@@ -69,15 +67,15 @@ export class KeysRepository implements IKeysRepository {
       public_key: ArrayBuffer;
     }>('SELECT key_type, private_key, public_key FROM identities');
 
-    return results.map((row) => ({
-      privateKey: PrivateKey.create({
-        keyType: BigInt(row.key_type),
-        key: new Uint8Array(row.private_key),
-      }),
-      publicKey: PublicKey.create({
-        keyType: BigInt(row.key_type),
-        key: new Uint8Array(row.public_key),
-      }),
-    }));
+    return results.map((row) => {
+      const kt = Number(row.key_type);
+      return {
+        privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
+        publicKey: v2.PublicKey.create({
+          keyType: kt,
+          key: new Uint8Array(row.public_key),
+        }),
+      };
+    });
   }
 }

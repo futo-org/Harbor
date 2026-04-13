@@ -1,140 +1,112 @@
-import type { Database } from './database';
-import {
-  ContentType,
-  Delete,
-  Event,
-  Pointer,
-  SignedEvent,
-  type IEventRepository,
-} from '@polycentric/js-core';
+import type { IEventRepository } from '@polycentric/js-core';
+import { v2 } from '@polycentric/js-core';
 
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function publicKeyHex(publicKey: v2.PublicKey): string {
+  return bytesToHex(v2.PublicKey.toBinary(publicKey));
+}
+
+function eventCompoundKey(
+  publicKey: string,
+  collection: number,
+  identity: string,
+  sequence: number
+): string {
+  return `${publicKey}:${collection}:${identity}:${sequence}`;
+}
+
+/**
+ * In-memory v2 event repository for React Native.
+ * TODO: persist to SQLite once the v2 schema migration is in place.
+ */
 export class EventRepository implements IEventRepository {
-  constructor(private readonly database: Database) {}
+  private events = new Map<string, v2.SignedEvent>();
 
-  async persistEvent(signedEvent: SignedEvent): Promise<void> {
-    const rawEventBytes = signedEvent.event;
-    const event = Event.fromBinary(rawEventBytes);
+  private extractKey(signedEvent: v2.SignedEvent) {
+    const event = v2.Event.fromBinary(signedEvent.eventBytes);
+    if (!event.key?.signedBy) throw new Error('Event missing key');
+    return {
+      publicKey: publicKeyHex(event.key.signedBy),
+      collection: event.key.collection,
+      identity: event.key.identity,
+      sequence: Number(event.key.sequence),
+    };
+  }
 
-    const systemKeyType = Number(event.system?.keyType ?? 0n);
-    const systemKey = event.system?.key ?? new Uint8Array();
-    const process = event.process?.process ?? new Uint8Array();
-    const logicalClock = Number(event.logicalClock ?? 0n);
-
-    const signature = signedEvent.signature;
-    const rawEvent = rawEventBytes;
-    const moderationTags =
-      signedEvent.moderationTags.length > 0
-        ? JSON.stringify(signedEvent.moderationTags)
-        : null;
-
-    const isTombstone = event.contentType === ContentType.DELETE;
-
-    let mutationPointerSystemKeyType: number | null = null;
-    let mutationPointerSystemKey: Uint8Array | null = null;
-    let mutationPointerProcess: Uint8Array | null = null;
-    let mutationPointerLogicalClock: number | null = null;
-
-    if (isTombstone) {
-      try {
-        const deleteEvent = Delete.fromBinary(event.content);
-
-        if (deleteEvent.process && deleteEvent.logicalClock) {
-          mutationPointerProcess = deleteEvent.process.process ?? null;
-          mutationPointerLogicalClock = Number(deleteEvent.logicalClock);
-
-          if (event.references.length > 0) {
-            const targetPointer = Pointer.fromBinary(
-              event.references[0]!.reference
-            );
-            if (targetPointer.system) {
-              mutationPointerSystemKeyType = Number(
-                targetPointer.system.keyType
-              );
-              mutationPointerSystemKey = targetPointer.system.key ?? null;
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to parse delete event content:', error);
-      }
-    }
-
-    this.database.run(
-      `INSERT OR IGNORE INTO events (
-        system_key_type, system_key, process, logical_clock,
-        signature, raw_event, moderation_tags,
-        is_tombstone, mutation_pointer_system_key_type,
-        mutation_pointer_system_key, mutation_pointer_process,
-        mutation_pointer_logical_clock
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        systemKeyType,
-        systemKey,
-        process,
-        logicalClock,
-        signature,
-        rawEvent,
-        moderationTags,
-        isTombstone ? 1 : 0,
-        mutationPointerSystemKeyType,
-        mutationPointerSystemKey,
-        mutationPointerProcess,
-        mutationPointerLogicalClock,
-      ]
+  async save(signedEvent: v2.SignedEvent): Promise<void> {
+    const { publicKey, collection, identity, sequence } =
+      this.extractKey(signedEvent);
+    this.events.set(
+      eventCompoundKey(publicKey, collection, identity, sequence),
+      signedEvent
     );
   }
 
-  async persistEvents(signedEvents: SignedEvent[]): Promise<void> {
-    for (const signedEvent of signedEvents) {
-      await this.persistEvent(signedEvent);
-    }
+  async getAll(): Promise<v2.SignedEvent[]> {
+    return [...this.events.values()];
   }
 
-  async getAllEvents(): Promise<SignedEvent[]> {
-    const results = this.database.execute<{
-      signature: ArrayBuffer;
-      raw_event: ArrayBuffer;
-      moderation_tags: string | null;
-    }>('SELECT signature, raw_event, moderation_tags FROM events');
-
-    return results.map((row) =>
-      SignedEvent.create({
-        signature: new Uint8Array(row.signature),
-        event: new Uint8Array(row.raw_event),
-        moderationTags: row.moderation_tags
-          ? JSON.parse(row.moderation_tags)
-          : [],
-      })
-    );
-  }
-
-  async getEventsBatch(
+  async getBatch(
     batchSize: number,
     offset = 0
-  ): Promise<{ events: SignedEvent[]; offset: number }> {
-    const results = this.database.execute<{
-      signature: ArrayBuffer;
-      raw_event: ArrayBuffer;
-      moderation_tags: string | null;
-    }>(
-      `SELECT signature, raw_event, moderation_tags
-       FROM events
-       ORDER BY id
-       LIMIT ? OFFSET ?`,
-      [batchSize, offset]
-    );
+  ): Promise<{ events: v2.SignedEvent[]; offset: number }> {
+    const all = [...this.events.values()];
+    const slice = all.slice(offset, offset + batchSize);
+    return { events: slice, offset: offset + slice.length };
+  }
 
-    return {
-      events: results.map((row) =>
-        SignedEvent.create({
-          signature: new Uint8Array(row.signature),
-          event: new Uint8Array(row.raw_event),
-          moderationTags: row.moderation_tags
-            ? JSON.parse(row.moderation_tags)
-            : [],
-        })
-      ),
-      offset: offset + results.length,
-    };
+  async getNextSequence(
+    publicKey: v2.PublicKey,
+    collection: number,
+    identity: string
+  ): Promise<bigint> {
+    const prefix = `${publicKeyHex(publicKey)}:${collection}:${identity}:`;
+    let max = 0n;
+    for (const key of this.events.keys()) {
+      if (key.startsWith(prefix)) {
+        const seq = BigInt(key.slice(prefix.length));
+        if (seq >= max) max = seq + 1n;
+      }
+    }
+    return max === 0n ? 1n : max;
+  }
+
+  async getLatestEvent(
+    publicKey: v2.PublicKey,
+    identity: string
+  ): Promise<v2.SignedEvent | null> {
+    const pkHex = publicKeyHex(publicKey);
+    let latest: v2.SignedEvent | null = null;
+    let maxSeq = -1;
+    for (const [key, event] of this.events) {
+      const parts = key.split(':');
+      if (parts[0] !== pkHex || parts[2] !== identity) continue;
+      const seq = Number(parts[3]);
+      if (seq > maxSeq) {
+        maxSeq = seq;
+        latest = event;
+      }
+    }
+    return latest;
+  }
+
+  async getEventsByIdentity(
+    publicKey: v2.PublicKey,
+    identity: string
+  ): Promise<v2.SignedEvent[]> {
+    const pkHex = publicKeyHex(publicKey);
+    const result: { seq: number; event: v2.SignedEvent }[] = [];
+    for (const [key, event] of this.events) {
+      const parts = key.split(':');
+      if (parts[0] !== pkHex || parts[2] !== identity) continue;
+      result.push({ seq: Number(parts[3]), event });
+    }
+    result.sort((a, b) => a.seq - b.seq);
+    return result.map((r) => r.event);
   }
 }

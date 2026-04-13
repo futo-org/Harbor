@@ -13,8 +13,9 @@ use crate::util;
 use ::entity::{
     content_block_model as ContentBlockModel,
     content_delete_model as ContentDeleteModel,
-    content_follow_model as ContentFollowModel, content_model as ContentModel,
-    content_post_model as ContentPostModel,
+    content_follow_model as ContentFollowModel,
+    content_identity_model as ContentIdentityModel,
+    content_model as ContentModel, content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
 use prost::Message;
@@ -36,15 +37,24 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
-        let limit = request.into_inner().limit.unwrap_or(10).min(200) as u64;
+        let inner_req = request.into_inner();
+        let limit = inner_req.limit.unwrap_or(200).min(200) as u64;
+        let collection = inner_req.collection;
+        let identity = inner_req.identity;
+        let signed_by = inner_req.signed_by;
 
-        let events =
-            EventsRepository::Query::list_events(&self.db, Some(limit))
-                .await
-                .map_err(|e| {
-                    eprintln!("list_events error: {e}");
-                    Status::internal("internal server error")
-                })?;
+        let events = EventsRepository::Query::list_events(
+            &self.db,
+            Some(limit),
+            collection,
+            identity,
+            signed_by,
+        )
+        .await
+        .map_err(|e| {
+            eprintln!("list_events error: {e}");
+            Status::internal("internal server error")
+        })?;
 
         // Turn the events into event bundles
         let mut event_bundles: Vec<EventBundle> = vec![];
@@ -115,7 +125,17 @@ impl EventSyncService for EventSyncServiceImpl {
             .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
             let now = time::OffsetDateTime::now_utc();
-            let now = time::PrimitiveDateTime::new(now.date(), now.time());
+            let synced_at =
+                time::PrimitiveDateTime::new(now.date(), now.time());
+
+            let created_at_offset = time::OffsetDateTime::from_unix_timestamp(
+                (event.created_at / 1000) as i64,
+            )
+            .unwrap_or(now);
+            let created_at = time::PrimitiveDateTime::new(
+                created_at_offset.date(),
+                created_at_offset.time(),
+            );
 
             let content_digest = event.content_digest;
 
@@ -146,7 +166,8 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::internal("internal server error")
                 })?;
 
-                let content_row = ContentRepository::Mutation::add_content(
+                // Try to insert content; skip if it already exists
+                let content_result = ContentRepository::Mutation::add_content(
                     &txn,
                     ContentModel::ActiveModel {
                         id: NotSet,
@@ -155,16 +176,29 @@ impl EventSyncService for EventSyncServiceImpl {
                         serialized_bytes: Set(serialized_content
                             .content_bytes
                             .clone()),
-                        synced_at: Set(now),
+                        synced_at: Set(synced_at),
                     },
                 )
-                .await
-                .map_err(|e| {
-                    eprintln!("sync_events content db error: {e}");
-                    Status::internal("internal server error")
-                })?;
+                .await;
 
-                save_content_child(&txn, content_row.id, content).await?;
+                match content_result {
+                    Ok(content_row) => {
+                        save_content_child(
+                            &txn,
+                            content_row.id,
+                            content,
+                            &key.identity,
+                        )
+                        .await?;
+                    }
+                    Err(ref e) if Self::is_unique_violation(e) => {
+                        // Content already exists, skip
+                    }
+                    Err(e) => {
+                        eprintln!("sync_events content db error: {e}");
+                        return Err(Status::internal("internal server error"));
+                    }
+                }
 
                 txn.commit().await.map_err(|e| {
                     eprintln!("sync_events txn commit error: {e}");
@@ -175,7 +209,8 @@ impl EventSyncService for EventSyncServiceImpl {
             // Build the Model that we will save to the database
             let active_model = EventModel::ActiveModel {
                 id: NotSet,
-                stream_id: Set(key.stream_id),
+                collection: Set(key.collection as i16),
+                identity: Set(key.identity),
                 public_key_type: Set(signed_by.key_type as i16),
                 public_key: Set(signed_by.key),
                 sequence: Set(key.sequence as i16),
@@ -188,20 +223,41 @@ impl EventSyncService for EventSyncServiceImpl {
                 signature: Set(signed_event.signature),
                 previous_signature: Set(event.previous_signature),
                 event_bytes: Set(signed_event.event_bytes),
-                created_at: Set(now),
-                synced_at: Set(now),
+                created_at: Set(created_at),
+                synced_at: Set(synced_at),
             };
 
-            // Add the event to the database
-            EventsRepository::Mutation::add_event(&self.db, active_model)
+            // Add the event to the database, skipping duplicates
+            match EventsRepository::Mutation::add_event(&self.db, active_model)
                 .await
-                .map_err(|e| {
-                    eprintln!("sync_events db error: {e}");
-                    Status::internal("internal server error")
-                })?;
+            {
+                Ok(_) => {}
+                Err(ref e) if Self::is_unique_violation(e) => {
+                    // Duplicate event, skip
+                }
+                Err(e) => {
+                    eprintln!("sync_events db error: {e:?}");
+                    return Err(Status::internal("internal server error"));
+                }
+            }
         }
 
         Ok(Response::new(PutEventsResponse {}))
+    }
+}
+
+impl EventSyncServiceImpl {
+    fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
+        let runtime_err = match err {
+            sea_orm::DbErr::Query(e) | sea_orm::DbErr::Exec(e) => Some(e),
+            _ => None,
+        };
+        if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err
+            && let Some(db_err) = arc_err.as_database_error()
+        {
+            return db_err.is_unique_violation();
+        }
+        false
     }
 }
 
@@ -217,11 +273,13 @@ impl EventSyncService for EventSyncServiceImpl {
 //   Block          → content_block
 //   Reaction       → content_reaction
 //   ProfileUpdate  → content_profile_update
+//   Identity       → content_identity
 // ──────────────────────────────────────────────────────────────────
 async fn save_content_child<C: sea_orm::ConnectionTrait>(
     db: &C,
     content_id: i64,
     content: Content,
+    event_identity: &str,
 ) -> Result<(), Status> {
     let map_db_err = |e: sea_orm::DbErr| {
         eprintln!("save_content_child db error: {e}");
@@ -241,9 +299,12 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                 content_id: Set(content_id),
                 text: Set(post.text),
                 // Reply root EventKey (all None when not a reply)
-                reply_root_stream_id: Set(reply_root
+                reply_root_collection: Set(reply_root
                     .as_ref()
-                    .map(|k| k.stream_id.clone())),
+                    .map(|k| k.collection as i16)),
+                reply_root_identity: Set(reply_root
+                    .as_ref()
+                    .map(|k| k.identity.clone())),
                 reply_root_public_key_type: Set(reply_root.as_ref().and_then(
                     |k| k.signed_by.as_ref().map(|s| s.key_type as i16),
                 )),
@@ -254,9 +315,12 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                     .as_ref()
                     .map(|k| k.sequence as i64)),
                 // Reply parent EventKey (all None when not a reply)
-                reply_parent_stream_id: Set(reply_parent
+                reply_parent_collection: Set(reply_parent
                     .as_ref()
-                    .map(|k| k.stream_id.clone())),
+                    .map(|k| k.collection as i16)),
+                reply_parent_identity: Set(reply_parent
+                    .as_ref()
+                    .map(|k| k.identity.clone())),
                 reply_parent_public_key_type: Set(reply_parent
                     .as_ref()
                     .and_then(|k| {
@@ -286,7 +350,8 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentDeleteModel::ActiveModel {
                 content_id: Set(content_id),
-                event_key_stream_id: Set(key.stream_id),
+                event_key_collection: Set(key.collection as i16),
+                event_key_identity: Set(key.identity),
                 event_key_public_key_type: Set(signed_by.key_type as i16),
                 event_key_public_key: Set(signed_by.key),
                 event_key_sequence: Set(key.sequence as i64),
@@ -297,15 +362,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── Follow ───────────────────────────────────────────
-        // Follow an identity by its IdentityId.
         Some(ContentBody::Follow(follow)) => {
-            let identity = follow.identity.ok_or_else(|| {
-                Status::invalid_argument("follow content missing identity")
-            })?;
-
             ContentFollowModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(identity.value),
+                identity_id: Set(follow.identity),
             }
             .insert(db)
             .await
@@ -313,15 +373,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         }
 
         // ── Block ────────────────────────────────────────────
-        // Block an identity by its IdentityId.
         Some(ContentBody::Block(block)) => {
-            let identity = block.identity.ok_or_else(|| {
-                Status::invalid_argument("block content missing identity")
-            })?;
-
             ContentBlockModel::ActiveModel {
                 content_id: Set(content_id),
-                identity_id: Set(identity.value),
+                identity_id: Set(block.identity),
             }
             .insert(db)
             .await
@@ -340,7 +395,8 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
             ContentReactionModel::ActiveModel {
                 content_id: Set(content_id),
-                event_key_stream_id: Set(key.stream_id),
+                event_key_collection: Set(key.collection as i16),
+                event_key_identity: Set(key.identity),
                 event_key_public_key_type: Set(signed_by.key_type as i16),
                 event_key_public_key: Set(signed_by.key),
                 event_key_sequence: Set(key.sequence as i64),
@@ -356,6 +412,21 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
         // Update display name, avatar, or banner.
         Some(ContentBody::ProfileUpdate(_profile)) => {
             // TODO: save profile update with avatar/banner digests
+        }
+
+        // ── Identity ─────────────────────────────────────────
+        // Stores the current identity document (rotation_keys + signing_keys).
+        Some(ContentBody::Identity(identity)) => {
+            let identity_bytes = prost::Message::encode_to_vec(&identity);
+
+            ContentIdentityModel::ActiveModel {
+                content_id: Set(content_id),
+                identity: Set(event_identity.to_string()),
+                identity_bytes: Set(identity_bytes),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
         }
 
         // ── No content body ──────────────────────────────────

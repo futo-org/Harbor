@@ -20,6 +20,9 @@
     - npm install -g pnpm@9.5.0
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
+  needs:
+    - job: rs-sdk-build-wasm-browser
+      artifacts: true
 
 js-sdks-format-check:
   extends: .js-sdks-base

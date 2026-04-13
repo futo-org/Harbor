@@ -68,7 +68,7 @@ export default function SettingsTabScreen() {
   const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
   const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
-  const publicKey = currentIdentity?.identity?.keyPair.publicKey;
+  const publicKey = currentIdentity?.publicKey;
 
   return (
     <Screen>
@@ -139,43 +139,21 @@ export function IdentitySettingsContent({
     setNameDraft(username);
   }, [username]);
 
+  // TODO: Event count requires v2 storage APIs
   useEffect(() => {
-    let cancelled = false;
-
-    client.storage.processStates
-      .getCurrentLogicalClock(
-        client.currentIdentity.keyPair.keyType,
-        client.currentIdentity.keyPair.publicKey.key,
-        client.process.process,
-      )
-      .then((logicalClock) => {
-        if (!cancelled) {
-          setEventCount(Number(logicalClock));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setEventCount(0);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    setEventCount(0);
   }, [client, identity]);
 
+  // TODO: Username editing requires v2 content manager APIs
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await client.contentManager.createUsername(nameDraft);
-      await client.sync();
+      console.warn('Username editing not yet implemented in v2');
       setEditing(false);
-    } catch (err) {
-      console.error('Failed to save username:', err);
     } finally {
       setSaving(false);
     }
-  }, [client, nameDraft]);
+  }, [nameDraft]);
 
   const handleCancel = useCallback(() => {
     setNameDraft(username);
@@ -183,13 +161,7 @@ export function IdentitySettingsContent({
   }, [username]);
 
   const fullPubkey = publicKeyToString(publicKey);
-  const processId = identity?.process?.process
-    ? toBase64(
-        identity.process.process instanceof Uint8Array
-          ? identity.process.process
-          : new Uint8Array(identity.process.process),
-      )
-    : '';
+  const processId = '';
   const displayName = username;
   const avatarUrl = identiconUrl(publicKey, 160);
 
@@ -310,7 +282,7 @@ function ServersSheetContent() {
   const [isBusy, setIsBusy] = useState(false);
 
   const refreshServers = useCallback(() => {
-    setServers(client.queryManager.queryServers(client.currentSystem));
+    setServers([...client.servers]);
   }, [client]);
 
   useEffect(() => {
@@ -322,7 +294,8 @@ function ServersSheetContent() {
     if (!url || isBusy) return;
     setIsBusy(true);
     try {
-      await client.addServer(url);
+      // TODO: createAddServer not yet available — manually add to servers list
+      client.servers.push(url);
       setNewServerUrl('');
       refreshServers();
       store.getState().clearFeed('explore');
@@ -343,7 +316,8 @@ function ServersSheetContent() {
     if (!ok) return;
     setIsBusy(true);
     try {
-      await client.contentManager.createRemoveServer(server);
+      // TODO: Remove server not yet implemented in v2
+      console.warn('Remove server not yet implemented in v2');
       refreshServers();
       store.getState().clearFeed('explore');
       client.sync().catch(() => {});

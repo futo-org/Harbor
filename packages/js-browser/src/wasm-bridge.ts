@@ -20,10 +20,8 @@ export class BrowserWasmBridge implements ICoreBridge {
 
     await init(this.moduleOrPath);
 
-    const core = new PolycentricWasm();
-
     try {
-      core.initialize();
+      const core = new PolycentricWasm();
       wasmInstance = core;
       return this.getCoreInstance();
     } catch (error) {

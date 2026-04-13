@@ -1,4 +1,4 @@
-import { types } from '@polycentric/react-native';
+import { types, v2 } from '@polycentric/react-native';
 import type { PolycentricClient } from '@polycentric/react-native';
 
 export function toBase64(bytes: Uint8Array): string {
@@ -119,12 +119,70 @@ export function decodePostEvent(
   }
 }
 
+/** Decode a v2 EventBundle into PostData, or null if not a post. */
+export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
+  try {
+    if (!bundle.signedEvent) return null;
+    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    const key = event.key;
+    if (!key?.signedBy?.key) return null;
+
+    if (!bundle.serializedContent?.contentBytes) return null;
+    const content = v2.Content.fromBinary(
+      bundle.serializedContent.contentBytes,
+    );
+    if (content.contentBody.oneofKind !== 'post') return null;
+
+    const authorKey = key.signedBy.key;
+    const identityBytes = new TextEncoder().encode(key.identity);
+    const id = eventKey(authorKey, identityBytes, Number(key.sequence));
+
+    return {
+      id,
+      content: content.contentBody.post.text,
+      authorPublicKey: types.PublicKey.create({
+        keyType: key.signedBy.keyType,
+        key: authorKey,
+      }),
+      timestamp: Number(event.createdAt),
+      // v1 compat shim — store expects types.SignedEvent
+      signedEvent: types.SignedEvent.create({
+        event: bundle.signedEvent.eventBytes,
+        signature: bundle.signedEvent.signature,
+      }) as types.SignedEvent,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Build a Pointer from a SignedEvent. Tries v2 decode first, falls back to v1.
 export function getPointer(
-  client: PolycentricClient,
+  _client: PolycentricClient,
   signedEvent: types.SignedEvent,
 ): types.Pointer {
+  // Try v2 event format first (eventBytes field stored in .event shim)
+  try {
+    const v2Event = v2.Event.fromBinary(signedEvent.event);
+    if (v2Event.key?.signedBy) {
+      return types.Pointer.create({
+        system: types.PublicKey.create({
+          keyType: v2Event.key.signedBy.keyType,
+          key: v2Event.key.signedBy.key,
+        }),
+      });
+    }
+  } catch {
+    /* not v2 format */
+  }
+
+  // Fall back to v1
   const event = types.Event.fromBinary(signedEvent.event);
-  return client.queryManager.eventPointer(event);
+  return types.Pointer.create({
+    system: event.system,
+    process: event.process,
+    logicalClock: event.logicalClock,
+  });
 }
 
 /** Post id (event key) from a pointer, for store lookups. */
@@ -189,7 +247,7 @@ export function stringToPublicKey(str: string): types.PublicKey {
   const keyTypeStr = str.slice(0, idx);
   const keyBase64 = str.slice(idx + 1);
   return types.PublicKey.create({
-    keyType: BigInt(keyTypeStr),
+    keyType: Number(keyTypeStr),
     key: fromBase64(keyBase64),
   });
 }

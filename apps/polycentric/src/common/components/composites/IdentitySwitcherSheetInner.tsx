@@ -85,7 +85,8 @@ export function IdentitySwitcherSheetInner() {
         confirmText: 'Delete',
       });
       if (!ok) return;
-      await client.deleteIdentity(publicKey);
+      // TODO: deleteKeyPair not yet implemented in v2
+      console.warn('Delete identity not yet implemented in v2');
     },
     [client],
   );

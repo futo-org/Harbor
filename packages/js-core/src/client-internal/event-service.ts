@@ -1,6 +1,6 @@
 import EventEmitter from 'eventemitter3';
-import type { Identity } from '../polycentric-client';
-import type { SignedEvent } from '../proto/polycentric';
+import type { KeyPair } from '../polycentric-client';
+import type { SignedEvent } from '../proto/polycentric/v2/events';
 
 export enum ClientState {
   UNINITIALIZED = 'uninitialized',
@@ -29,7 +29,7 @@ export enum HydrationStatus {
 
 // For type safety, this interface maps event names to their payload types
 interface EventMap {
-  identityChanged: Identity | null;
+  identityChanged: KeyPair | null;
   contentCreated: SignedEvent;
   stateChanged: ClientState;
   hydrationStatus: HydrationStatus;
@@ -58,14 +58,14 @@ export class EventService {
     this.emitter.off(event, listener);
   }
 
-  // Identity events
-  emitIdentityChanged(identity: Identity | null) {
+  // KeyPair events
+  emitKeyPairChanged(identity: KeyPair | null) {
     this.emit('identityChanged', identity);
   }
-  onIdentityChanged(listener: (identity: Identity | null) => void) {
+  onKeyPairChanged(listener: (identity: KeyPair | null) => void) {
     this.on('identityChanged', listener);
   }
-  offIdentityChanged(listener: (identity: Identity | null) => void) {
+  offKeyPairChanged(listener: (identity: KeyPair | null) => void) {
     this.off('identityChanged', listener);
   }
 

@@ -20,7 +20,6 @@ export async function createPolycentricClient(
     coreBridge: new BrowserWasmBridge(polycentricWasmUrl),
     storageDriver: await IndexedDBStorageDriver.create(databaseName),
     cryptoManager: new BrowserCryptoManager(),
-    hydration: config.hydration,
   });
 }
 

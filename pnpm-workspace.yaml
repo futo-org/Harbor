@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - packages/js-browser/examples/*
   - tools/*
 
 catalog:

@@ -14,14 +14,14 @@ export class EventAckStore {
    * @param systemKeyType - The system key type
    * @param systemKey - The system key bytes
    * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the acknowledged event
+   * @param sequence - The sequence of the acknowledged event
    * @param serverUrl - The server URL that acknowledged the event
    */
   async storeEventAck(
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
     serverUrl: string,
   ): Promise<void> {
     // TODO: Business logic validation.
@@ -30,7 +30,7 @@ export class EventAckStore {
       systemKeyType,
       systemKey,
       process,
-      logicalClock,
+      sequence,
       serverUrl,
     );
   }
@@ -41,14 +41,14 @@ export class EventAckStore {
    * @param systemKeyType - The system key type
    * @param systemKey - The system key bytes
    * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
+   * @param sequence - The sequence of the event
    * @returns Promise that resolves to an array of server URLs that acknowledged the event
    */
   async getEventAcks(
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
   ): Promise<string[]> {
     // TODO: Business logic validation.
 
@@ -56,7 +56,7 @@ export class EventAckStore {
       systemKeyType,
       systemKey,
       process,
-      logicalClock,
+      sequence,
     );
   }
 
@@ -66,7 +66,7 @@ export class EventAckStore {
    * @param systemKeyType - The system key type
    * @param systemKey - The system key bytes
    * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
+   * @param sequence - The sequence of the event
    * @param serverUrl - The server URL to check
    * @returns Promise that resolves to true if acknowledged, false otherwise
    */
@@ -74,7 +74,7 @@ export class EventAckStore {
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
     serverUrl: string,
   ): Promise<boolean> {
     // TODO: Business logic validation.
@@ -83,7 +83,7 @@ export class EventAckStore {
       systemKeyType,
       systemKey,
       process,
-      logicalClock,
+      sequence,
       serverUrl,
     );
   }
@@ -94,13 +94,13 @@ export class EventAckStore {
    * @param systemKeyType - The system key type
    * @param systemKey - The system key bytes
    * @param process - The process ID bytes
-   * @param logicalClock - The logical clock of the event
+   * @param sequence - The sequence of the event
    */
   async removeEventAcks(
     systemKeyType: bigint,
     systemKey: Uint8Array,
     process: Uint8Array,
-    logicalClock: bigint,
+    sequence: bigint,
   ): Promise<void> {
     // TODO: Business logic validation.
 
@@ -108,7 +108,7 @@ export class EventAckStore {
       systemKeyType,
       systemKey,
       process,
-      logicalClock,
+      sequence,
     );
   }
 }

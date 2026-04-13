@@ -17,7 +17,6 @@ export async function createPolycentricClient(
     coreBridge: new NativeCoreBridge(),
     storageDriver: await ReactNativeStorageDriver.create(databaseName),
     cryptoManager: new ReactNativeCryptoManager(),
-    hydration: config.hydration,
   });
 }
 

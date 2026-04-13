@@ -2,6 +2,7 @@ pub mod content_blob_model;
 pub mod content_block_model;
 pub mod content_delete_model;
 pub mod content_follow_model;
+pub mod content_identity_model;
 pub mod content_image_model;
 pub mod content_model;
 pub mod content_post_model;

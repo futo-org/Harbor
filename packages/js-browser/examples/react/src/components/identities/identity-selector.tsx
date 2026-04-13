@@ -1,221 +1,306 @@
-import { KEY_TYPE, PrivateKey, type KeyPair } from '@polycentric/js-core';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { keyPairsAreEqual } from '../../utils/misc';
-import { Identifier, selectIdentity } from '../../utils/identities';
+import {
+  KEY_TYPE,
+  PublicKey,
+  type KeyPair,
+  type IdentityState,
+} from '@polycentric/js-core';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import { Identifier } from '../../utils/identities';
 import { ClientContext } from '../../main';
-import { Base64 } from 'js-base64';
 
-enum UIState {
-  Select,
-  Login,
-  Signup,
-}
+const toHex = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+const fromHex = (hex: string): Uint8Array => {
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+  return new Uint8Array(clean.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
+};
 
 export const IdentitySelector = () => {
   const client = useContext(ClientContext);
 
-  const [inputEnabled, setInputEnabled] = useState<boolean>(true);
-  const [uiState, setUIState] = useState<UIState>(UIState.Select);
+  const [inputEnabled, setInputEnabled] = useState(true);
   const [identities, setIdentities] = useState<KeyPair[]>([]);
-
-  const submitButton = useRef<HTMLButtonElement | null>(null);
-  const usernameField = useRef<HTMLInputElement | null>(null);
-  const passwordField = useRef<HTMLInputElement | null>(null);
-  const exportLink = useRef<HTMLAnchorElement | null>(null);
+  const [identityState, setIdentityState] = useState<IdentityState>({
+    identityKey: null,
+    rotationKeys: [],
+    signingKeys: [],
+  });
+  const [issueKeyHex, setIssueKeyHex] = useState('');
+  const [claimIdentityKeyHex, setClaimIdentityKeyHex] = useState('');
+  const [status, setStatus] = useState('');
 
   const loadIdentities = useCallback(async () => {
-    if (client === null) return;
-    setIdentities(await client.getAllIdentities());
+    if (!client) return;
+    setIdentities(await client.keyPairManager.getKeys());
+    setIdentityState(await client.identityManager.getCurrent());
   }, [client]);
 
   useEffect(() => {
     loadIdentities();
   }, [loadIdentities]);
 
-  if (client === null) return <div>Error: No client object provided</div>;
+  if (!client) return null;
 
-  const otherIdentities = identities.filter(
-    (identity) => !keyPairsAreEqual(identity, client.currentIdentity.keyPair),
-  );
+  // Keep `identities` referenced so it isn't flagged as unused; currently we
+  // only surface the active key pair, but the list is fetched for future UIs.
+  void identities;
 
-  if (uiState === UIState.Login) {
-    const handleLogin = async () => {
-      if (!passwordField.current) return;
+  const currentIdentifier =
+    client.currentKeyPair && Identifier(client.currentKeyPair.publicKey);
 
-      setInputEnabled(false);
-
-      try {
-        const key = PrivateKey.fromBinary(
-          Base64.toUint8Array(passwordField.current.value),
-        );
-        await client.importIdentity(key);
-        await loadIdentities();
-        setUIState(UIState.Select);
-      } catch {
-        alert('Bad identity string');
-      }
-
-      setInputEnabled(true);
-    };
-
-    return (
-      <div>
-        <button onClick={() => setUIState(UIState.Select)}>Back</button>
-        <div>Please select your backup file</div>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input
-            type="file"
-            onChange={async (e) => {
-              const element = e.target as HTMLInputElement;
-              if (
-                !element.files ||
-                element.files.length < 1 ||
-                !passwordField.current
-              )
-                return;
-
-              passwordField.current.value = await element.files[0].text();
-            }}
-          ></input>
-          <input type="password" ref={passwordField}></input>
-          <button type="submit" disabled={!inputEnabled} onClick={handleLogin}>
-            Log in
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  if (uiState === UIState.Signup) {
-    const handleSignup = async () => {
-      if (usernameField.current === null) return;
-
-      const identity = await client.createIdentity({
-        keyType: KEY_TYPE.ED25519,
-      });
-      await client.createUsername(usernameField.current.value);
-      await loadIdentities();
-
-      if (submitButton.current !== null && passwordField.current !== null) {
-        passwordField.current.value = Base64.fromUint8Array(
-          PrivateKey.toBinary(identity.privateKey),
-        );
-        submitButton.current.click();
-      }
-
-      setUIState(UIState.Select);
-
-      setInputEnabled(true);
-    };
-
-    return (
-      <div>
-        <div>What's your username?</div>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <input ref={usernameField}></input>
-          <input type="password" hidden ref={passwordField}></input>
-          <button ref={submitButton} hidden></button>
-        </form>
-        <button onClick={handleSignup} disabled={!inputEnabled}>
-          Create account
-        </button>
-      </div>
-    );
-  }
-
-  const currentUsername =
-    /* client.queryUsername(client.currentIdentity.keyPair.publicKey) || */ '';
-  const currentIdentifier = Identifier(
-    client.currentIdentity.keyPair.publicKey,
-  );
-  const isEphemeral = client.currentIdentityIsEphemeral;
+  const mono = {
+    fontFamily: 'monospace',
+    fontSize: '0.78rem',
+    wordBreak: 'break-all' as const,
+  };
 
   return (
-    <div>
-      <div>
-        <button onClick={() => setUIState(UIState.Signup)}>Sign up</button>
-        <button onClick={() => setUIState(UIState.Login)}>Log in</button>
+    <div className="card">
+      <h3>Key Pair</h3>
+
+      <div style={{ ...mono, color: '#58a6ff', marginBottom: 2 }}>
+        {currentIdentifier}
       </div>
-      {!isEphemeral ? (
-        <div>
-          <div>{currentUsername}</div>
-          <div>{currentIdentifier}</div>
-          <button
-            onClick={async () => {
-              setInputEnabled(false);
-
-              const toRemove = client.currentIdentity.keyPair.publicKey;
-
-              if (otherIdentities.length > 0) {
-                await client.switchIdentity(otherIdentities[0].publicKey);
-              } else {
-                await client.createIdentity({
-                  keyType: KEY_TYPE.ED25519,
-                  setAsCurrent: true,
-                  ephemeral: true,
-                });
-              }
-
-              await client.removeIdentity(toRemove);
-              await loadIdentities();
-
-              setInputEnabled(true);
-            }}
-            disabled={!inputEnabled}
-          >
-            Remove
-          </button>
-          <button
-            onClick={async () => {
-              if (exportLink.current === null) return;
-              const link = exportLink.current;
-              const filename = `${currentUsername}_${currentIdentifier}.pca`;
-
-              const keyBlob = new Blob([
-                Base64.fromUint8Array(
-                  PrivateKey.toBinary(
-                    client.currentIdentity.keyPair.privateKey,
-                  ),
-                ),
-              ]);
-              const url = URL.createObjectURL(keyBlob);
-
-              link.href = url;
-              link.download = filename;
-
-              link.click();
-
-              link.href = '';
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Export
-          </button>
-          <a hidden ref={exportLink}>
-            Hidden anchor that is needed to make downloads work
-          </a>
+      {client.currentKeyPair && (
+        <div style={{ ...mono, color: '#8b949e', marginBottom: 6 }}>
+          {toHex(client.currentKeyPair.publicKey.key)}
         </div>
-      ) : (
-        <div>Sign up or log in to add an account</div>
       )}
-      <div>
-        {otherIdentities.map((identity) => (
-          <div key={Identifier(identity.publicKey)}>
-            <div>{/*client.queryUsername(identity.publicKey) || ""*/}</div>
-            <div>{Identifier(identity.publicKey)}</div>
+
+      {/* ── Identity ─────────────────────────────────── */}
+      {identityState.identityKey ? (
+        <div style={{ marginBottom: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 4,
+            }}
+          >
+            <span className="badge badge-valid">identity</span>
             <button
               onClick={async () => {
-                setInputEnabled(false);
-                await selectIdentity(client, identity.publicKey);
-                setInputEnabled(true);
+                client.setActiveIdentityKey(null);
+                await loadIdentities();
+                setStatus('Disconnected from identity');
               }}
               disabled={!inputEnabled}
+              style={{ padding: '2px 8px', fontSize: '0.72rem' }}
             >
-              Switch to
+              Disconnect
             </button>
           </div>
-        ))}
+          <div style={{ ...mono, color: '#d2a8ff' }}>
+            {identityState.identityKey}
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 10, fontSize: '0.8rem', color: '#484f58' }}>
+          No active identity
+        </div>
+      )}
+
+      {/* ── Rotation keys ────────────────────────────── */}
+      {identityState.rotationKeys.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
+            Rotation keys
+          </div>
+          {identityState.rotationKeys.map((pk, i) => (
+            <div key={i} style={{ ...mono, color: '#f0883e', marginBottom: 2 }}>
+              {toHex(pk.key)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Signing keys ─────────────────────────────── */}
+      {identityState.signingKeys.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
+            Signing keys
+          </div>
+          {identityState.signingKeys.map((pk, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 6,
+                marginBottom: 4,
+                padding: '4px 8px',
+                background: '#0d1117',
+                borderRadius: 4,
+                border: '1px solid #21262d',
+              }}
+            >
+              <div style={{ ...mono, color: '#3fb950' }}>{toHex(pk.key)}</div>
+              <button
+                onClick={async () => {
+                  if (!identityState.identityKey) return;
+                  setInputEnabled(false);
+                  setStatus('Removing signing key...');
+                  try {
+                    await client.identityManager.removeSigningKey(
+                      identityState.identityKey,
+                      pk,
+                    );
+                    await loadIdentities();
+                    setStatus('Signing key removed');
+                  } catch (error) {
+                    setStatus(`Failed: ${error}`);
+                  }
+                  setInputEnabled(true);
+                }}
+                disabled={!inputEnabled}
+                style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+              >
+                Revoke
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Actions ──────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          onClick={async () => {
+            setInputEnabled(false);
+            await client.keyPairManager.createKeyPair({
+              keyType: KEY_TYPE.ED25519,
+            });
+            await loadIdentities();
+            setStatus('');
+            setInputEnabled(true);
+          }}
+          disabled={!inputEnabled}
+        >
+          New Key Pair
+        </button>
+        <button
+          onClick={async () => {
+            setInputEnabled(false);
+            setStatus('Creating identity...');
+            try {
+              const currentKey = client.currentKeyPair!.publicKey;
+              await client.identityManager.publish(null, [currentKey], []);
+              await loadIdentities();
+              setStatus('Identity created');
+            } catch (error) {
+              setStatus(`Failed: ${error}`);
+            }
+            setInputEnabled(true);
+          }}
+          disabled={!inputEnabled}
+        >
+          Create Identity
+        </button>
       </div>
+
+      {/* ── Issue Signing Key ────────────────────────── */}
+      {identityState.identityKey && (
+        <div style={{ marginTop: 10 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
+            Issue signing key to another public key
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={issueKeyHex}
+              onChange={(e) => setIssueKeyHex(e.target.value)}
+              placeholder="Target public key (hex)"
+              style={{ flex: 1, ...mono }}
+            />
+            <button
+              onClick={async () => {
+                if (!issueKeyHex.trim() || !identityState.identityKey) return;
+                setInputEnabled(false);
+                setStatus('Issuing signing key...');
+                try {
+                  const keyBytes = fromHex(issueKeyHex.trim());
+                  const targetKey = PublicKey.create({
+                    keyType: KEY_TYPE.ED25519,
+                    key: keyBytes,
+                  });
+                  await client.identityManager.addSigningKey(
+                    identityState.identityKey,
+                    targetKey,
+                  );
+                  await loadIdentities();
+                  setIssueKeyHex('');
+                  setStatus('Signing key issued');
+                } catch (error) {
+                  setStatus(`Issue failed: ${error}`);
+                }
+                setInputEnabled(true);
+              }}
+              disabled={!inputEnabled || !issueKeyHex.trim()}
+            >
+              Issue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Claim Identity ──────────────────────────── */}
+      {!identityState.identityKey && (
+        <div style={{ marginTop: 10 }}>
+          <div
+            style={{ fontSize: '0.78rem', color: '#484f58', marginBottom: 4 }}
+          >
+            Claim an identity (pull from server by identity key)
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={claimIdentityKeyHex}
+              onChange={(e) => setClaimIdentityKeyHex(e.target.value)}
+              placeholder="Identity key (hex hash)"
+              style={{ flex: 1, ...mono }}
+            />
+            <button
+              onClick={async () => {
+                if (!claimIdentityKeyHex.trim()) return;
+                setInputEnabled(false);
+                setStatus('Claiming identity...');
+                try {
+                  await client.identityManager.claim(
+                    claimIdentityKeyHex.trim(),
+                  );
+                  await loadIdentities();
+                  setClaimIdentityKeyHex('');
+                  setStatus('Identity claimed');
+                } catch (error) {
+                  setStatus(`Claim failed: ${error}`);
+                }
+                setInputEnabled(true);
+              }}
+              disabled={!inputEnabled || !claimIdentityKeyHex.trim()}
+            >
+              Claim
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Status ───────────────────────────────────── */}
+      {status && (
+        <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#8b949e' }}>
+          {status}
+        </div>
+      )}
     </div>
   );
 };

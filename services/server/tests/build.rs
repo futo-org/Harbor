@@ -6,13 +6,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file_descriptor_set_path(out_dir.join("polycentric.bin"))
         .compile_protos(
             &[
-                "../proto/polycentric/v2/identity.proto",
-                "../proto/polycentric/v2/event_key.proto",
-                "../proto/polycentric/v2/content.proto",
-                "../proto/polycentric/v2/events.proto",
-                "../proto/polycentric/v2/feeds.proto",
+                "../../../protos/polycentric/v2/identity.proto",
+                "../../../protos/polycentric/v2/event_key.proto",
+                "../../../protos/polycentric/v2/content.proto",
+                "../../../protos/polycentric/v2/events.proto",
+                "../../../protos/polycentric/v2/feeds.proto",
             ],
-            &["../proto"],
+            &["../../../protos"],
         )
         .unwrap();
 

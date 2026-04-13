@@ -3,20 +3,31 @@ package polycentric.v2;
 
 import "polycentric/v2/content.proto";
 import "polycentric/v2/event_key.proto";
+import "polycentric/v2/keypair.proto";
+
+// Contains the sequences that the current KeyPair is aware of. 
+message VectorClock {
+  repeated uint64 sequence = 1;
+}
 
 // Event messages reference, but do not include, content
 message Event {
   // Key for the event
   EventKey key = 1;
 
-  // Signature of the previous event signed by the same key. Assists in creating immutable streams.
-  bytes previous_signature = 2;
+  // Vector clock to keep the same collection on shared identities in sync
+  // (collection, vector clock)
+  map<int32, VectorClock> vector_clocks = 2;
+
+  // Signature of the previous event signed by the same key. Assists in creating
+  // immutable collections.
+  bytes previous_signature = 3;
 
   // Digest of the content
-  ContentDigest content_digest = 3;
+  ContentDigest content_digest = 4;
 
   // Timestamp, in milliseconds, of when the event was created
-  uint64 created_at = 4;
+  uint64 created_at = 5;
 }
 
 message SignedEvent {
@@ -37,6 +48,12 @@ message EventBundle {
 message ListEventsRequest {
   // Max number of events to return
   optional int32 limit = 1;
+  // Collection to filter events by
+  optional int32 collection = 2;
+  // Identity key to filter events by
+  optional string identity = 3;
+  // Filter events to those signed by this public key
+  optional PublicKey signed_by = 4;
 }
 
 message ListEventsResponse {

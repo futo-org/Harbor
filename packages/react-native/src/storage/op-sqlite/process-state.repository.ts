@@ -1,7 +1,6 @@
 import type { Database } from './database';
-import type { IProcessStateRepository } from '@polycentric/js-core';
 
-export class ProcessStateRepository implements IProcessStateRepository {
+export class ProcessStateRepository {
   constructor(private readonly database: Database) {}
 
   async persistCurrentLogicalClock(

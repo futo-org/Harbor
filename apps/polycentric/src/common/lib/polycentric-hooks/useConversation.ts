@@ -80,23 +80,7 @@ export function useNavigateToParentPost(onPostPress: (postId: string) => void) {
         return;
       }
 
-      try {
-        const feed = client.queryManager.queryAuthorFeed(
-          decoded.parentAuthorPublicKey,
-          200,
-        );
-        const items = await feed.read();
-        for (const fetched of items) {
-          const d = decodePostEvent(fetched);
-          if (d?.id === parentId) {
-            store.getState().ingestPost(d.id, fetched, d);
-            onPostPress(parentId);
-            return;
-          }
-        }
-      } catch {
-        // ignore
-      }
+      // TODO: queryAuthorFeed requires queryManager which is not yet in v2
       onPostPress(parentId);
     },
     [client, store, onPostPress],

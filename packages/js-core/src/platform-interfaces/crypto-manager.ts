@@ -13,7 +13,7 @@ export interface ICryptoManager {
    * @throws {Error} If the key type is not supported or key generation fails
    */
   generateKeyPair(
-    keyType: bigint,
+    keyType: number,
   ): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array }>;
 
   /**
@@ -24,12 +24,12 @@ export interface ICryptoManager {
    * @returns Promise that resolves to the public key bytes
    * @throws {Error} If the key type is not supported or private key is invalid
    */
-  derivePublicKey(privateKey: Uint8Array, keyType: bigint): Promise<Uint8Array>;
+  derivePublicKey(privateKey: Uint8Array, keyType: number): Promise<Uint8Array>;
 
   /**
    * Sign a message with a private key
    *
-   * @param privateKey - The private key bytes
+   * @param privateType - The private key bytes
    * @param message - The message to sign
    * @param keyType - The type of key (e.g., KEY_TYPE.ED25519)
    * @returns Promise that resolves to the signature bytes
@@ -38,7 +38,7 @@ export interface ICryptoManager {
   sign(
     privateKey: Uint8Array,
     message: Uint8Array,
-    keyType: bigint,
+    keyType: number,
   ): Promise<Uint8Array>;
 
   /**
@@ -55,7 +55,7 @@ export interface ICryptoManager {
     publicKey: Uint8Array,
     message: Uint8Array,
     signature: Uint8Array,
-    keyType: bigint,
+    keyType: number,
   ): Promise<boolean>;
 
   /**
@@ -74,7 +74,7 @@ export interface ICryptoManager {
    *
    * @returns Array of supported key type constants
    */
-  getSupportedKeyTypes(): bigint[];
+  getSupportedKeyTypes(): number[];
 
   /**
    * Convert a Uint8Array to hexadecimal string representation

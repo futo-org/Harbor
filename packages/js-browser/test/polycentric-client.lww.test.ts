@@ -169,7 +169,7 @@ describe('PolycentricClient LWW Elements', () => {
       setAsCurrent: false,
     });
 
-    await client.switchIdentity(secondIdentity.publicKey);
+    await client.switchKeyPair(secondIdentity.publicKey);
 
     const secondIdentityUsername = await client.queryUsername(
       secondIdentity.publicKey,
@@ -192,7 +192,7 @@ describe('PolycentricClient LWW Elements', () => {
     );
     expect(finalSecondIdentityUsername).toBe(thirdUsername);
 
-    await client.switchIdentity(firstIdentity.publicKey);
+    await client.switchKeyPair(firstIdentity.publicKey);
     const finalFirstIdentityUsername = await client.queryUsername(
       firstIdentity.publicKey,
     );

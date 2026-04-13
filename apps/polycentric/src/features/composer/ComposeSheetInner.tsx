@@ -24,7 +24,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
-  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
+  onPostCreated: (signedEvent: types.v2.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
@@ -72,21 +72,32 @@ export function ComposeSheetInner({
     setError(null);
     setSubmitting(true);
     try {
-      let reference: types.Reference | undefined;
-      const reply = replyToEventRef.current;
-      if (reply) {
-        const pointer = getPointer(client, reply);
-        reference = types.Reference.create({
-          referenceType: 2n,
-          reference: types.Pointer.toBinary(pointer),
-        });
-      }
+      // let reference: types.Reference | undefined;
+      // const reply = replyToEventRef.current;
+      // if (reply) {
+      //   const pointer = getPointer(client, reply);
+      //   reference = types.Reference.create({
+      //     referenceType: 2n,
+      //     reference: types.Pointer.toBinary(pointer),
+      //   });
+      // }
 
-      const signedEvent = await client.contentManager.createPost(
-        text.trim(),
-        undefined,
-        reference,
-      );
+      // TODO: reply references not yet supported in v2 createPost
+
+      const content = client.contentManager.build({
+        oneofKind: 'post',
+        post: {
+          text: text.trim(),
+        },
+      });
+      await client.contentManager.save(content);
+
+      const event = await client.buildEvent(content);
+
+      const signedEvent = await client.signEvent(event);
+
+      await client.commitEvent(signedEvent);
+
       await client.sync();
       setText('');
       await onPostCreatedRef.current(signedEvent);

@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@polycentric/js-browser": "file:../../",
-    "@polycentric/js-core": "file:../../../js-core",
-    "@polycentric/rs-core-wasm-browser": "*",
+    "@polycentric/js-browser": "workspace:*",
+    "@polycentric/js-core": "workspace:*",
+    "@polycentric/rs-core-wasm-browser": "workspace:*",
     "js-base64": "^3.7.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -29,6 +29,8 @@
     "globals": "^16.3.0",
     "typescript": "5",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0"
   }
 }

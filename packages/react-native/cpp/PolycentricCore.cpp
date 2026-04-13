@@ -203,4 +203,21 @@ jsi::Object PolycentricCore::getReference(jsi::Runtime& rt, jsi::Object pointerB
     return toUint8Array(rt, ::get_reference(input));
 }
 
+// v2 methods
+
+jsi::Object PolycentricCore::verifySignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
+    CBuffer input = toCBuffer(rt, signedEventBytes);
+    return toUint8Array(rt, ::verify_signed_event_v2(input));
+}
+
+jsi::Object PolycentricCore::decodeEventFromSignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
+    CBuffer input = toCBuffer(rt, signedEventBytes);
+    return toUint8Array(rt, ::decode_event_from_signed_event_v2(input));
+}
+
+jsi::Object PolycentricCore::validateEventV2(jsi::Runtime& rt, jsi::Object eventBytes) {
+    CBuffer input = toCBuffer(rt, eventBytes);
+    return toUint8Array(rt, ::validate_event_v2(input));
+}
+
 }
