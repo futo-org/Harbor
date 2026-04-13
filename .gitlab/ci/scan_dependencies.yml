@@ -9,7 +9,7 @@ trivy:
   allow_failure: true
   script:
     # Filesystem report
-    - trivy filesystem --scanners misconfig,vuln --exit-code 0 --severity HIGH,CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
+    - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity HIGH,CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
   cache:
     paths:
       - .trivycache/
