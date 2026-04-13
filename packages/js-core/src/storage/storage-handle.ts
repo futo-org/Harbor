@@ -2,19 +2,16 @@ import { EventStore } from './event-store';
 import { ContentStore } from './content.store';
 import { KeysStore } from './keys-store';
 import { EventAckStore } from './event-ack-store';
-import { ProcessIdStore } from './process-id-store';
 import type { IEventRepository } from '../platform-interfaces/event.repository';
 import type { IContentRepository } from '../platform-interfaces/content.repository';
 import type { IKeysRepository } from '../platform-interfaces/keys-repository';
 import type { IEventAckRepository } from '../platform-interfaces/event-ack-repository';
-import type { IProcessIdRepository } from '../platform-interfaces/process-id-repository';
 
 export interface Repositories {
   eventRepository: IEventRepository;
   contentRepository: IContentRepository;
   keysRepository: IKeysRepository;
   eventAckRepository: IEventAckRepository;
-  processIdRepository: IProcessIdRepository;
 }
 
 /**
@@ -38,7 +35,6 @@ export class StorageHandle {
   public readonly events: EventStore;
   public readonly content: ContentStore;
   public readonly keys: KeysStore;
-  public readonly processId: ProcessIdStore;
   public readonly eventAcks: EventAckStore;
 
   constructor(repositories: Repositories) {
@@ -47,6 +43,5 @@ export class StorageHandle {
     this.content = new ContentStore(this._repositories.contentRepository);
     this.keys = new KeysStore(this._repositories.keysRepository);
     this.eventAcks = new EventAckStore(this._repositories.eventAckRepository);
-    this.processId = new ProcessIdStore(this._repositories.processIdRepository);
   }
 }

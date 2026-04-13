@@ -104,7 +104,6 @@ export class PolycentricClient {
         contentRepository: this.storageDriver.createContentRepository(),
         keysRepository: this.storageDriver.createKeysRepository(),
         eventAckRepository: this.storageDriver.createEventAckRepository(),
-        processIdRepository: this.storageDriver.createProcessIdRepository(),
       });
 
       this.setStep(InitializationStep.LOADING_PROCESS_ID);

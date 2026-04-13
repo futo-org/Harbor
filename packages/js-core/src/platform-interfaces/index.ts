@@ -9,5 +9,4 @@ export type {
   PersistEventCallback,
 } from './runtime-core';
 export type { IStorageDriver } from './storage-driver';
-export type { IProcessIdRepository } from './process-id-repository';
 export type { IKeysRepository } from './keys-repository';

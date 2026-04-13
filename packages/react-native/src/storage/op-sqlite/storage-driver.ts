@@ -3,7 +3,6 @@ import { Database } from './database';
 import { EventRepository } from './event.repository';
 import { ContentRepository } from './content.repository';
 import { KeysRepository } from './keys.repository';
-import { ProcessIdRepository } from './process-id.repository';
 import { EventAckRepository } from './event-ack.repository';
 
 export class ReactNativeStorageDriver implements IStorageDriver {
@@ -29,9 +28,5 @@ export class ReactNativeStorageDriver implements IStorageDriver {
 
   createEventAckRepository() {
     return new EventAckRepository(this.database);
-  }
-
-  createProcessIdRepository() {
-    return new ProcessIdRepository(this.database);
   }
 }

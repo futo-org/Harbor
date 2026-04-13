@@ -15,7 +15,10 @@ export async function createIdentityWithDefaultServer(
   client: PolycentricClient,
   server: string
 ) {
-  await client.createKeyPair({ keyType: KEY_TYPE.ED25519, setAsCurrent: true });
+  await client.keyPairManager.createKeyPair({
+    keyType: KEY_TYPE.ED25519,
+    setAsCurrent: true,
+  });
 
   // Publish initial identity with the current key as the sole rotation key
   const currentKey = client.currentKeyPair!.publicKey;

@@ -11,7 +11,6 @@ import type {
   ICoreBridge,
   IPolycentricCore,
   SignEventCallback,
-  PersistEventCallback,
 } from '@polycentric/js-core';
 import { v2 } from '@polycentric/js-core';
 import PolycentricCore from '../NativeReactNative';
@@ -91,15 +90,12 @@ class NativePolycentricCore implements IPolycentricCore {
   }
 
   /**
-   * Sign and persist an event.
-   * Validates the event bytes via Rust FFI, then delegates signing and
-   * persistence to the JS callbacks (which use the crypto manager and
-   * storage respectively).
+   * Sign an event via the JS callback (crypto manager).
+   * Validates the event bytes via Rust FFI before delegating signing.
    */
-  async sign_and_persist_event(
+  async sign_event(
     eventBytes: Uint8Array,
-    signEvent: SignEventCallback,
-    save: PersistEventCallback
+    signEvent: SignEventCallback
   ): Promise<Uint8Array> {
     // Validate via native Rust FFI
     callNativeV2(
@@ -107,17 +103,24 @@ class NativePolycentricCore implements IPolycentricCore {
       eventBytes
     );
 
-    const signedEventBytes = await signEvent(eventBytes);
-    await save(signedEventBytes);
-    return signedEventBytes;
+    return signEvent(eventBytes);
+  }
+
+  /**
+   * Commit a signed event. Native-side persistence will eventually flow
+   * through the Rust FFI EventStore; for now it's a no-op on this bridge
+   * because PolycentricClient.commitEvent handles storage directly.
+   */
+  async commit_event(_signedEventBytes: Uint8Array): Promise<void> {
+    // no-op
   }
 
   /** Fetch events from a server via gRPC-web (network — cannot go through FFI). */
   async list_events(
     serverUrl: string,
     limit?: number | null,
-    collection?: number | null,
     identity?: string | null,
+    collection?: number | null,
     signedBy?: Uint8Array | null,
     signedByKeyType?: number | null
   ): Promise<Uint8Array> {

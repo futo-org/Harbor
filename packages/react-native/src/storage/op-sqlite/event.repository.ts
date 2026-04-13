@@ -7,12 +7,17 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
+function publicKeyHex(publicKey: v2.PublicKey): string {
+  return bytesToHex(v2.PublicKey.toBinary(publicKey));
+}
+
 function eventCompoundKey(
   publicKey: string,
+  collection: number,
   identity: string,
   sequence: number
 ): string {
-  return `${publicKey}:${identity}:${sequence}`;
+  return `${publicKey}:${collection}:${identity}:${sequence}`;
 }
 
 /**
@@ -24,18 +29,20 @@ export class EventRepository implements IEventRepository {
 
   private extractKey(signedEvent: v2.SignedEvent) {
     const event = v2.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key?.signedBy?.key) throw new Error('Event missing key');
+    if (!event.key?.signedBy) throw new Error('Event missing key');
     return {
-      publicKey: bytesToHex(event.key.signedBy.key),
+      publicKey: publicKeyHex(event.key.signedBy),
+      collection: event.key.collection,
       identity: event.key.identity,
       sequence: Number(event.key.sequence),
     };
   }
 
   async save(signedEvent: v2.SignedEvent): Promise<void> {
-    const { publicKey, identity, sequence } = this.extractKey(signedEvent);
+    const { publicKey, collection, identity, sequence } =
+      this.extractKey(signedEvent);
     this.events.set(
-      eventCompoundKey(publicKey, identity, sequence),
+      eventCompoundKey(publicKey, collection, identity, sequence),
       signedEvent
     );
   }
@@ -54,11 +61,11 @@ export class EventRepository implements IEventRepository {
   }
 
   async getNextSequence(
-    publicKey: Uint8Array,
+    publicKey: v2.PublicKey,
     collection: number,
     identity: string
   ): Promise<bigint> {
-    const prefix = `${bytesToHex(publicKey)}:${collection}:${identity}:`;
+    const prefix = `${publicKeyHex(publicKey)}:${collection}:${identity}:`;
     let max = 0n;
     for (const key of this.events.keys()) {
       if (key.startsWith(prefix)) {
@@ -70,34 +77,34 @@ export class EventRepository implements IEventRepository {
   }
 
   async getLatestEvent(
-    publicKey: Uint8Array,
+    publicKey: v2.PublicKey,
     identity: string
   ): Promise<v2.SignedEvent | null> {
-    const prefix = `${bytesToHex(publicKey)}:${identity}:`;
+    const pkHex = publicKeyHex(publicKey);
     let latest: v2.SignedEvent | null = null;
     let maxSeq = -1;
     for (const [key, event] of this.events) {
-      if (key.startsWith(prefix)) {
-        const seq = Number(key.slice(prefix.length));
-        if (seq > maxSeq) {
-          maxSeq = seq;
-          latest = event;
-        }
+      const parts = key.split(':');
+      if (parts[0] !== pkHex || parts[2] !== identity) continue;
+      const seq = Number(parts[3]);
+      if (seq > maxSeq) {
+        maxSeq = seq;
+        latest = event;
       }
     }
     return latest;
   }
 
   async getEventsByIdentity(
-    publicKey: Uint8Array,
+    publicKey: v2.PublicKey,
     identity: string
   ): Promise<v2.SignedEvent[]> {
-    const prefix = `${bytesToHex(publicKey)}:${identity}:`;
+    const pkHex = publicKeyHex(publicKey);
     const result: { seq: number; event: v2.SignedEvent }[] = [];
     for (const [key, event] of this.events) {
-      if (key.startsWith(prefix)) {
-        result.push({ seq: Number(key.slice(prefix.length)), event });
-      }
+      const parts = key.split(':');
+      if (parts[0] !== pkHex || parts[2] !== identity) continue;
+      result.push({ seq: Number(parts[3]), event });
     }
     result.sort((a, b) => a.seq - b.seq);
     return result.map((r) => r.event);
