@@ -168,12 +168,8 @@ export class PolycentricClient {
     );
     console.log('next seq', sequence.toString());
 
-    const vectorClocks = {
-      [COLLECTION.IDENTITY]: Proto.VectorClock.create({
-        sequence: [BigInt(1)],
-      }),
-      [COLLECTION.FEED]: Proto.VectorClock.create(),
-    };
+    // TODO: compute from head events via build_vector_clock
+    const vectorClocks: Proto.VectorClock[] = [];
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -325,7 +321,7 @@ export class PolycentricClient {
     let newCount = 0;
 
     const results = await Promise.allSettled(
-      this.servers.map((server) => this.core!.list_events(server)),
+      this.servers.map((server) => this.core!.list_events(server, null)),
     );
 
     for (const result of results) {

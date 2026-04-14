@@ -1,8 +1,8 @@
 use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
-    event_sync_service_client::EventSyncServiceClient, Event, ListEventsRequest, PublicKey,
-    PutEventsRequest, SignedEvent,
+    event_sync_service_client::EventSyncServiceClient, Event, ListEventsFilters, ListEventsRequest,
+    PublicKey, PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -175,38 +175,36 @@ impl PolycentricWasm {
     }
 
     /// Fetch events from a server via gRPC-web.
-    ///
-    /// # Arguments
-    /// * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
-    /// * `limit` - Maximum number of events to fetch
-    /// * `identity` - Optional serialized Identity message bytes to filter by
-    /// * `stream_id` - Optional stream ID to filter by
-    /// * `signed_by` - Optional public key bytes to filter by
-    /// * `signed_by_key_type` - Key type for signed_by (required if signed_by is set)
-    ///
-    /// # Returns
-    /// * Serialized ListEventsResponse protobuf bytes
     #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
     pub async fn list_events(
         &self,
         server_url: &str,
-        limit: Option<i32>,
+        size: Option<i32>,
         identity: Option<String>,
         collection: Option<i32>,
         signed_by: Option<Vec<u8>>,
         signed_by_key_type: Option<i32>,
+        sequence_gt: Option<i64>,
+        sequence_lt: Option<i64>,
     ) -> std::result::Result<Uint8Array, JsValue> {
         let mut client = Self::create_client(server_url);
 
+        let filters = ListEventsFilters {
+            collection,
+            identity,
+            signed_by: signed_by.map(|key| PublicKey {
+                key_type: signed_by_key_type.unwrap_or(1),
+                key,
+            }),
+            sequence_gt,
+            sequence_lt,
+        };
+
         let response = client
             .list_events(ListEventsRequest {
-                limit,
-                identity,
-                collection,
-                signed_by: signed_by.map(|key| PublicKey {
-                    key_type: signed_by_key_type.unwrap_or(1),
-                    key,
-                }),
+                filters: Some(filters),
+                size,
             })
             .await
             .map_err(|e| JsValue::from_str(&format!("gRPC list_events failed: {}", e)))?;

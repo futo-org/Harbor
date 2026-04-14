@@ -126,21 +126,27 @@ class NativePolycentricCore implements IPolycentricCore {
   /** Fetch events from a server via gRPC-web (network — cannot go through FFI). */
   async list_events(
     serverUrl: string,
-    limit?: number | null,
+    size?: number | null,
     identity?: string | null,
     collection?: number | null,
     signedBy?: Uint8Array | null,
-    signedByKeyType?: number | null
+    signedByKeyType?: number | null,
+    sequenceGt?: number | null,
+    sequenceLt?: number | null
   ): Promise<Uint8Array> {
     const request = ListEventsRequest.toBinary(
       ListEventsRequest.create({
-        limit: limit ?? undefined,
-        collection: collection ?? undefined,
-        identity: identity ?? undefined,
-        signedBy:
-          signedBy != null
-            ? { keyType: signedByKeyType ?? 1, key: signedBy }
-            : undefined,
+        size: size ?? undefined,
+        filters: {
+          collection: collection ?? undefined,
+          identity: identity ?? undefined,
+          signedBy:
+            signedBy != null
+              ? { keyType: signedByKeyType ?? 1, key: signedBy }
+              : undefined,
+          sequenceGt: sequenceGt != null ? BigInt(sequenceGt) : undefined,
+          sequenceLt: sequenceLt != null ? BigInt(sequenceLt) : undefined,
+        },
       })
     );
 

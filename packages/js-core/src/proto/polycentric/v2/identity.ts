@@ -3,10 +3,10 @@
 // tslint:disable
 import type { BinaryWriteOptions } from '@protobuf-ts/runtime';
 import type { IBinaryWriter } from '@protobuf-ts/runtime';
-import { WireType } from '@protobuf-ts/runtime';
 import type { BinaryReadOptions } from '@protobuf-ts/runtime';
 import type { IBinaryReader } from '@protobuf-ts/runtime';
 import { UnknownFieldHandler } from '@protobuf-ts/runtime';
+import { WireType } from '@protobuf-ts/runtime';
 import type { PartialMessage } from '@protobuf-ts/runtime';
 import { reflectionMergePartial } from '@protobuf-ts/runtime';
 import { MessageType } from '@protobuf-ts/runtime';
@@ -28,6 +28,12 @@ export interface Identity {
    * @generated from protobuf field: repeated polycentric.v2.PublicKey signing_keys = 2
    */
   signingKeys: PublicKey[];
+  /**
+   * Ordered list of valid collections
+   *
+   * @generated from protobuf field: repeated int32 collections = 3
+   */
+  collections: number[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Identity$Type extends MessageType<Identity> {
@@ -47,12 +53,20 @@ class Identity$Type extends MessageType<Identity> {
         repeat: 2 /*RepeatType.UNPACKED*/,
         T: () => PublicKey,
       },
+      {
+        no: 3,
+        name: 'collections',
+        kind: 'scalar',
+        repeat: 1 /*RepeatType.PACKED*/,
+        T: 5 /*ScalarType.INT32*/,
+      },
     ]);
   }
   create(value?: PartialMessage<Identity>): Identity {
     const message = globalThis.Object.create(this.messagePrototype!);
     message.rotationKeys = [];
     message.signingKeys = [];
+    message.collections = [];
     if (value !== undefined)
       reflectionMergePartial<Identity>(this, message, value);
     return message;
@@ -77,6 +91,12 @@ class Identity$Type extends MessageType<Identity> {
           message.signingKeys.push(
             PublicKey.internalBinaryRead(reader, reader.uint32(), options),
           );
+          break;
+        case /* repeated int32 collections */ 3:
+          if (wireType === WireType.LengthDelimited)
+            for (let e = reader.int32() + reader.pos; reader.pos < e; )
+              message.collections.push(reader.int32());
+          else message.collections.push(reader.int32());
           break;
         default:
           let u = options.readUnknownField;
@@ -116,6 +136,13 @@ class Identity$Type extends MessageType<Identity> {
         writer.tag(2, WireType.LengthDelimited).fork(),
         options,
       ).join();
+    /* repeated int32 collections = 3; */
+    if (message.collections.length) {
+      writer.tag(3, WireType.LengthDelimited).fork();
+      for (let i = 0; i < message.collections.length; i++)
+        writer.int32(message.collections[i]);
+      writer.join();
+    }
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(

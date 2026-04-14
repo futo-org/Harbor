@@ -38,17 +38,17 @@ impl EventSyncService for EventSyncServiceImpl {
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
         let inner_req = request.into_inner();
-        let limit = inner_req.limit.unwrap_or(200).min(200) as u64;
-        let collection = inner_req.collection;
-        let identity = inner_req.identity;
-        let signed_by = inner_req.signed_by;
+        let size = inner_req.size.unwrap_or(200).min(200) as u64;
+        let filters = inner_req.filters.unwrap_or_default();
 
         let events = EventsRepository::Query::list_events(
             &self.db,
-            Some(limit),
-            collection,
-            identity,
-            signed_by,
+            Some(size),
+            filters.collection,
+            filters.identity,
+            filters.signed_by,
+            filters.sequence_gt,
+            filters.sequence_lt,
         )
         .await
         .map_err(|e| {

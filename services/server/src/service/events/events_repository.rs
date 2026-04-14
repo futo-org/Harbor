@@ -12,6 +12,8 @@ impl Query {
         collection: Option<i32>,
         identity: Option<String>,
         signed_by: Option<crate::service::proto::PublicKey>,
+        sequence_gt: Option<i64>,
+        sequence_lt: Option<i64>,
     ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr>
     {
         if limit > Some(200) {
@@ -58,8 +60,16 @@ impl Query {
             );
         }
 
+        if let Some(gt) = sequence_gt {
+            query = query.filter(EventModel::Column::Sequence.gt(gt as i16));
+        }
+
+        if let Some(lt) = sequence_lt {
+            query = query.filter(EventModel::Column::Sequence.lt(lt as i16));
+        }
+
         query
-            .order_by_asc(EventModel::Column::Id)
+            .order_by_desc(EventModel::Column::Sequence)
             .limit(limit)
             .all(db)
             .await

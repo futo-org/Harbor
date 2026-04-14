@@ -40,13 +40,10 @@ export interface Event {
   key?: EventKey;
   /**
    * Vector clock to keep the same collection on shared identities in sync
-   * (collection, vector clock)
    *
-   * @generated from protobuf field: map<int32, polycentric.v2.VectorClock> vector_clocks = 2
+   * @generated from protobuf field: repeated polycentric.v2.VectorClock vector_clocks = 2
    */
-  vectorClocks: {
-    [key: number]: VectorClock;
-  };
+  vectorClocks: VectorClock[];
   /**
    * Signature of the previous event signed by the same key. Assists in creating
    * immutable collections.
@@ -102,33 +99,56 @@ export interface EventBundle {
   serializedContent?: SerializedContent;
 }
 /**
- * @generated from protobuf message polycentric.v2.ListEventsRequest
+ * @generated from protobuf message polycentric.v2.ListEventsFilters
  */
-export interface ListEventsRequest {
-  /**
-   * Max number of events to return
-   *
-   * @generated from protobuf field: optional int32 limit = 1
-   */
-  limit?: number;
+export interface ListEventsFilters {
   /**
    * Collection to filter events by
    *
-   * @generated from protobuf field: optional int32 collection = 2
+   * @generated from protobuf field: optional int32 collection = 1
    */
   collection?: number;
   /**
    * Identity key to filter events by
    *
-   * @generated from protobuf field: optional string identity = 3
+   * @generated from protobuf field: optional string identity = 2
    */
   identity?: string;
   /**
    * Filter events to those signed by this public key
    *
-   * @generated from protobuf field: optional polycentric.v2.PublicKey signed_by = 4
+   * @generated from protobuf field: optional polycentric.v2.PublicKey signed_by = 3
    */
   signedBy?: PublicKey;
+  /**
+   * Return sequences greater than
+   *
+   * @generated from protobuf field: optional int64 sequence_gt = 4
+   */
+  sequenceGt?: bigint;
+  /**
+   * Return sequences less than
+   *
+   * @generated from protobuf field: optional int64 sequence_lt = 5
+   */
+  sequenceLt?: bigint;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListEventsRequest
+ */
+export interface ListEventsRequest {
+  /**
+   * Filters
+   *
+   * @generated from protobuf field: optional polycentric.v2.ListEventsFilters filters = 1
+   */
+  filters?: ListEventsFilters;
+  /**
+   * Max number of events to return
+   *
+   * @generated from protobuf field: optional int32 size = 2
+   */
+  size?: number;
 }
 /**
  * @generated from protobuf message polycentric.v2.ListEventsResponse
@@ -251,9 +271,9 @@ class Event$Type extends MessageType<Event> {
       {
         no: 2,
         name: 'vector_clocks',
-        kind: 'map',
-        K: 5 /*ScalarType.INT32*/,
-        V: { kind: 'message', T: () => VectorClock },
+        kind: 'message',
+        repeat: 2 /*RepeatType.UNPACKED*/,
+        T: () => VectorClock,
       },
       {
         no: 3,
@@ -278,7 +298,7 @@ class Event$Type extends MessageType<Event> {
   }
   create(value?: PartialMessage<Event>): Event {
     const message = globalThis.Object.create(this.messagePrototype!);
-    message.vectorClocks = {};
+    message.vectorClocks = [];
     message.previousSignature = new Uint8Array(0);
     message.createdAt = 0n;
     if (value !== undefined)
@@ -304,8 +324,10 @@ class Event$Type extends MessageType<Event> {
             message.key,
           );
           break;
-        case /* map<int32, polycentric.v2.VectorClock> vector_clocks */ 2:
-          this.binaryReadMap2(message.vectorClocks, reader, options);
+        case /* repeated polycentric.v2.VectorClock vector_clocks */ 2:
+          message.vectorClocks.push(
+            VectorClock.internalBinaryRead(reader, reader.uint32(), options),
+          );
           break;
         case /* bytes previous_signature */ 3:
           message.previousSignature = reader.bytes();
@@ -340,36 +362,6 @@ class Event$Type extends MessageType<Event> {
     }
     return message;
   }
-  private binaryReadMap2(
-    map: Event['vectorClocks'],
-    reader: IBinaryReader,
-    options: BinaryReadOptions,
-  ): void {
-    let len = reader.uint32(),
-      end = reader.pos + len,
-      key: keyof Event['vectorClocks'] | undefined,
-      val: Event['vectorClocks'][any] | undefined;
-    while (reader.pos < end) {
-      let [fieldNo, wireType] = reader.tag();
-      switch (fieldNo) {
-        case 1:
-          key = reader.int32();
-          break;
-        case 2:
-          val = VectorClock.internalBinaryRead(
-            reader,
-            reader.uint32(),
-            options,
-          );
-          break;
-        default:
-          throw new globalThis.Error(
-            'unknown map entry field for polycentric.v2.Event.vector_clocks',
-          );
-      }
-    }
-    map[key ?? 0] = val ?? VectorClock.create();
-  }
   internalBinaryWrite(
     message: Event,
     writer: IBinaryWriter,
@@ -382,21 +374,13 @@ class Event$Type extends MessageType<Event> {
         writer.tag(1, WireType.LengthDelimited).fork(),
         options,
       ).join();
-    /* map<int32, polycentric.v2.VectorClock> vector_clocks = 2; */
-    for (let k of globalThis.Object.keys(message.vectorClocks)) {
-      writer
-        .tag(2, WireType.LengthDelimited)
-        .fork()
-        .tag(1, WireType.Varint)
-        .int32(parseInt(k));
-      writer.tag(2, WireType.LengthDelimited).fork();
+    /* repeated polycentric.v2.VectorClock vector_clocks = 2; */
+    for (let i = 0; i < message.vectorClocks.length; i++)
       VectorClock.internalBinaryWrite(
-        message.vectorClocks[k as any],
-        writer,
+        message.vectorClocks[i],
+        writer.tag(2, WireType.LengthDelimited).fork(),
         options,
-      );
-      writer.join().join();
-    }
+      ).join();
     /* bytes previous_signature = 3; */
     if (message.previousSignature.length)
       writer.tag(3, WireType.LengthDelimited).bytes(message.previousSignature);
@@ -605,31 +589,148 @@ class EventBundle$Type extends MessageType<EventBundle> {
  */
 export const EventBundle = new EventBundle$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
+class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
   constructor() {
-    super('polycentric.v2.ListEventsRequest', [
+    super('polycentric.v2.ListEventsFilters', [
       {
         no: 1,
-        name: 'limit',
-        kind: 'scalar',
-        opt: true,
-        T: 5 /*ScalarType.INT32*/,
-      },
-      {
-        no: 2,
         name: 'collection',
         kind: 'scalar',
         opt: true,
         T: 5 /*ScalarType.INT32*/,
       },
       {
-        no: 3,
+        no: 2,
         name: 'identity',
         kind: 'scalar',
         opt: true,
         T: 9 /*ScalarType.STRING*/,
       },
-      { no: 4, name: 'signed_by', kind: 'message', T: () => PublicKey },
+      { no: 3, name: 'signed_by', kind: 'message', T: () => PublicKey },
+      {
+        no: 4,
+        name: 'sequence_gt',
+        kind: 'scalar',
+        opt: true,
+        T: 3 /*ScalarType.INT64*/,
+        L: 0 /*LongType.BIGINT*/,
+      },
+      {
+        no: 5,
+        name: 'sequence_lt',
+        kind: 'scalar',
+        opt: true,
+        T: 3 /*ScalarType.INT64*/,
+        L: 0 /*LongType.BIGINT*/,
+      },
+    ]);
+  }
+  create(value?: PartialMessage<ListEventsFilters>): ListEventsFilters {
+    const message = globalThis.Object.create(this.messagePrototype!);
+    if (value !== undefined)
+      reflectionMergePartial<ListEventsFilters>(this, message, value);
+    return message;
+  }
+  internalBinaryRead(
+    reader: IBinaryReader,
+    length: number,
+    options: BinaryReadOptions,
+    target?: ListEventsFilters,
+  ): ListEventsFilters {
+    let message = target ?? this.create(),
+      end = reader.pos + length;
+    while (reader.pos < end) {
+      let [fieldNo, wireType] = reader.tag();
+      switch (fieldNo) {
+        case /* optional int32 collection */ 1:
+          message.collection = reader.int32();
+          break;
+        case /* optional string identity */ 2:
+          message.identity = reader.string();
+          break;
+        case /* optional polycentric.v2.PublicKey signed_by */ 3:
+          message.signedBy = PublicKey.internalBinaryRead(
+            reader,
+            reader.uint32(),
+            options,
+            message.signedBy,
+          );
+          break;
+        case /* optional int64 sequence_gt */ 4:
+          message.sequenceGt = reader.int64().toBigInt();
+          break;
+        case /* optional int64 sequence_lt */ 5:
+          message.sequenceLt = reader.int64().toBigInt();
+          break;
+        default:
+          let u = options.readUnknownField;
+          if (u === 'throw')
+            throw new globalThis.Error(
+              `Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`,
+            );
+          let d = reader.skip(wireType);
+          if (u !== false)
+            (u === true ? UnknownFieldHandler.onRead : u)(
+              this.typeName,
+              message,
+              fieldNo,
+              wireType,
+              d,
+            );
+      }
+    }
+    return message;
+  }
+  internalBinaryWrite(
+    message: ListEventsFilters,
+    writer: IBinaryWriter,
+    options: BinaryWriteOptions,
+  ): IBinaryWriter {
+    /* optional int32 collection = 1; */
+    if (message.collection !== undefined)
+      writer.tag(1, WireType.Varint).int32(message.collection);
+    /* optional string identity = 2; */
+    if (message.identity !== undefined)
+      writer.tag(2, WireType.LengthDelimited).string(message.identity);
+    /* optional polycentric.v2.PublicKey signed_by = 3; */
+    if (message.signedBy)
+      PublicKey.internalBinaryWrite(
+        message.signedBy,
+        writer.tag(3, WireType.LengthDelimited).fork(),
+        options,
+      ).join();
+    /* optional int64 sequence_gt = 4; */
+    if (message.sequenceGt !== undefined)
+      writer.tag(4, WireType.Varint).int64(message.sequenceGt);
+    /* optional int64 sequence_lt = 5; */
+    if (message.sequenceLt !== undefined)
+      writer.tag(5, WireType.Varint).int64(message.sequenceLt);
+    let u = options.writeUnknownFields;
+    if (u !== false)
+      (u == true ? UnknownFieldHandler.onWrite : u)(
+        this.typeName,
+        message,
+        writer,
+      );
+    return writer;
+  }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListEventsFilters
+ */
+export const ListEventsFilters = new ListEventsFilters$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
+  constructor() {
+    super('polycentric.v2.ListEventsRequest', [
+      { no: 1, name: 'filters', kind: 'message', T: () => ListEventsFilters },
+      {
+        no: 2,
+        name: 'size',
+        kind: 'scalar',
+        opt: true,
+        T: 5 /*ScalarType.INT32*/,
+      },
     ]);
   }
   create(value?: PartialMessage<ListEventsRequest>): ListEventsRequest {
@@ -649,22 +750,16 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
     while (reader.pos < end) {
       let [fieldNo, wireType] = reader.tag();
       switch (fieldNo) {
-        case /* optional int32 limit */ 1:
-          message.limit = reader.int32();
-          break;
-        case /* optional int32 collection */ 2:
-          message.collection = reader.int32();
-          break;
-        case /* optional string identity */ 3:
-          message.identity = reader.string();
-          break;
-        case /* optional polycentric.v2.PublicKey signed_by */ 4:
-          message.signedBy = PublicKey.internalBinaryRead(
+        case /* optional polycentric.v2.ListEventsFilters filters */ 1:
+          message.filters = ListEventsFilters.internalBinaryRead(
             reader,
             reader.uint32(),
             options,
-            message.signedBy,
+            message.filters,
           );
+          break;
+        case /* optional int32 size */ 2:
+          message.size = reader.int32();
           break;
         default:
           let u = options.readUnknownField;
@@ -690,22 +785,16 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
     writer: IBinaryWriter,
     options: BinaryWriteOptions,
   ): IBinaryWriter {
-    /* optional int32 limit = 1; */
-    if (message.limit !== undefined)
-      writer.tag(1, WireType.Varint).int32(message.limit);
-    /* optional int32 collection = 2; */
-    if (message.collection !== undefined)
-      writer.tag(2, WireType.Varint).int32(message.collection);
-    /* optional string identity = 3; */
-    if (message.identity !== undefined)
-      writer.tag(3, WireType.LengthDelimited).string(message.identity);
-    /* optional polycentric.v2.PublicKey signed_by = 4; */
-    if (message.signedBy)
-      PublicKey.internalBinaryWrite(
-        message.signedBy,
-        writer.tag(4, WireType.LengthDelimited).fork(),
+    /* optional polycentric.v2.ListEventsFilters filters = 1; */
+    if (message.filters)
+      ListEventsFilters.internalBinaryWrite(
+        message.filters,
+        writer.tag(1, WireType.LengthDelimited).fork(),
         options,
       ).join();
+    /* optional int32 size = 2; */
+    if (message.size !== undefined)
+      writer.tag(2, WireType.Varint).int32(message.size);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(
