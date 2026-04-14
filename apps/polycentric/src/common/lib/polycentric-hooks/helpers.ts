@@ -286,7 +286,10 @@ export function getIdentityIdShort(publicKey: types.PublicKey): string {
  * Short display form of a v2 identity id (hex sha256 of the initial
  * Identity content). Returns a placeholder if the id is empty.
  */
-export function shortenIdentityId(identity: string | undefined, len = 10): string {
+export function shortenIdentityId(
+  identity: string | undefined,
+  len = 10,
+): string {
   if (!identity) return '...';
   return identity.slice(0, len);
 }

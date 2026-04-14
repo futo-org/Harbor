@@ -45,7 +45,7 @@ export class IndexedDBEventRepository implements IEventRepository {
     layout.stores.push({
       name: IndexedDBEventRepository.STORE_NAME,
       options: {
-        keyPath: ['publicKey', 'collection', 'identity', 'sequence'],
+        keyPath: ['identity', 'publicKey', 'collection', 'sequence'],
       },
       indexes: [],
     });
@@ -220,5 +220,47 @@ export class IndexedDBEventRepository implements IEventRepository {
     const start = offset ?? 0;
     const events = all.slice(start, start + batchSize);
     return { events, offset: start + events.length };
+  }
+
+  async getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]> {
+    try {
+      const transaction = this.database.createTransaction(
+        IndexedDBEventRepository.STORE_NAME,
+        'readonly',
+      );
+      const store = transaction.objectStore(
+        IndexedDBEventRepository.STORE_NAME,
+      );
+
+      // Compound keyPath: [identity, publicKey, collection, sequence].
+      // Reverse cursor hits the max-sequence entry for each
+      // (publicKey, collection) group first. After reading a head,
+      // skip the rest of the group by continuing to
+      // [identity, publicKey, collection] (without sequence) — this
+      // compares less than any key with a sequence component, so the
+      // reverse cursor jumps to the previous group's max.
+      const range = IDBKeyRange.bound([identity], [identity, '\uffff']);
+      const heads: PersistedEvent[] = [];
+
+      await new Promise<void>((resolve, reject) => {
+        const request = store.openCursor(range, 'prev');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) {
+            resolve();
+            return;
+          }
+          const row = cursor.value as PersistedEvent;
+          heads.push(row);
+          // Skip to the previous group's max entry.
+          cursor.continue([identity, row.publicKey, row.collection]);
+        };
+      });
+
+      return heads.map((row) => this.toSignedEvent(row));
+    } catch (error) {
+      throw new DatabaseError('Failed to get heads by identity: ', error);
+    }
   }
 }

@@ -2,11 +2,10 @@ use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, Event, ListEventsRequest, PublicKey,
-    PutEventsRequest, SignedEvent, VectorClock,
+    PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
-use std::collections::{BTreeMap, BTreeSet};
 use tonic_web_wasm_client::Client as GrpcWebClient;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -19,6 +18,12 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "(signedEventBytes: Uint8Array) => Promise<void>")]
     pub type CommitEventCallback;
+
+    #[wasm_bindgen(typescript_type = "Uint8Array[]")]
+    pub type EventBytesArray;
+
+    #[wasm_bindgen(typescript_type = "Uint8Array[]")]
+    pub type VectorClockBytesArray;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -138,110 +143,35 @@ impl PolycentricWasm {
         Ok(Uint8Array::from(&signed_event_bytes[..]))
     }
 
-    /// Build vector clocks summarising the latest sequence we've observed per
-    /// (signer, collection) stream.
+    /// Build vector clocks from head events (one per signer+collection).
     ///
-    /// # Arguments
-    /// * `signed_by` - Raw public key bytes of the signer this event will be
-    ///   built for. Pinned to signer-index 0 inside each VectorClock so the
-    ///   caller's own stream is always listed first.
-    /// * `signed_events` - JS `Array` of `Uint8Array`, each a serialized
-    ///   `SignedEvent`.
-    ///
-    /// # Returns
-    /// A JS `Array` where `arr[collection_id]` is a `Uint8Array` of the
-    /// serialized `VectorClock` for that collection. The array is
-    /// sparse-indexed by collection ID (matching `Event.vector_clocks`
-    /// usage in the TS client). Slots for collections we've never seen are
-    /// filled with an empty `VectorClock`. Inside each clock,
-    /// `sequence[0]` is `signed_by`'s height for that collection (0 if the
-    /// signer has no prior events in it), followed by the remaining
-    /// observed signers in ascending byte order.
+    /// Thin WASM wrapper around `crate::event::vector_clock::build_vector_clocks`.
     #[wasm_bindgen]
     pub fn build_vector_clock(
         &self,
-        signed_by: Option<Vec<u8>>,
-        signed_events: js_sys::Array,
-    ) -> std::result::Result<js_sys::Array, JsValue> {
-        // 1. Group all signed_events by signed_by, tracking the max sequence
-        //    observed per collection for each signer.
-        let mut by_signer: BTreeMap<Vec<u8>, BTreeMap<i32, u64>> = BTreeMap::new();
-        let mut collections: BTreeSet<i32> = BTreeSet::new();
+        signed_by: &[u8],
+        head_events: EventBytesArray,
+    ) -> std::result::Result<VectorClockBytesArray, JsValue> {
+        use crate::event::vector_clock;
 
-        for item in signed_events.iter() {
-            let event_bytes = item
-                .dyn_into::<Uint8Array>()
-                .map_err(|_| {
-                    JsValue::from_str("signed_events must be an Array of Uint8Array entries")
-                })?
-                .to_vec();
+        let array: &js_sys::Array = head_events.unchecked_ref();
+        let heads: Vec<vector_clock::HeadEntry> = array
+            .iter()
+            .map(|item| {
+                let bytes = Uint8Array::unchecked_from_js(item).to_vec();
+                vector_clock::decode_head(&bytes)
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| JsValue::from_str(&e))?;
 
-            let signed_event = SignedEvent::decode(event_bytes.as_slice()).map_err(|e| {
-                PlatformError::DeserializationError(format!("Failed to decode SignedEvent: {}", e))
-            })?;
+        let clocks = vector_clock::build_vector_clocks(signed_by, &heads)
+            .map_err(|e| JsValue::from_str(&e))?;
 
-            let event = Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-                PlatformError::DeserializationError(format!("Failed to decode Event: {}", e))
-            })?;
-
-            let key = event.key.ok_or_else(|| {
-                PlatformError::DeserializationError("Event missing key".to_string())
-            })?;
-
-            let signer = key.signed_by.ok_or_else(|| {
-                PlatformError::DeserializationError("EventKey missing signed_by".to_string())
-            })?;
-
-            collections.insert(key.collection);
-
-            let per_collection = by_signer.entry(signer.key).or_default();
-            per_collection
-                .entry(key.collection)
-                .and_modify(|existing| {
-                    if key.sequence > *existing {
-                        *existing = key.sequence;
-                    }
-                })
-                .or_insert(key.sequence);
+        let result = js_sys::Array::new();
+        for clock in clocks {
+            result.push(&Uint8Array::from(&clock.encode_to_vec()[..]));
         }
-
-        // 2. Build the signer ordering: `signed_by` pinned at index 0 (even if
-        //    we've seen no prior events from it — its height becomes 0),
-        //    followed by every other observed signer in deterministic order.
-        let mut signer_order: Vec<Vec<u8>> = Vec::new();
-        if let Some(ref pk) = signed_by {
-            signer_order.push(pk.clone());
-        }
-        for other in by_signer.keys() {
-            if signed_by.as_ref() != Some(other) {
-                signer_order.push(other.clone());
-            }
-        }
-
-        // 3. Emit one VectorClock per collection, sparse-indexed by collection
-        //    ID. `arr[i]` is the clock for collection `i`; unused slots get
-        //    empty clocks. This matches the convention the TS client uses
-        //    when populating `Event.vector_clocks`.
-        let out = js_sys::Array::new();
-        let max_collection = collections.iter().copied().max().unwrap_or(0);
-
-        for collection_id in 0..=max_collection {
-            let mut clock = VectorClock::default();
-            if collections.contains(&collection_id) {
-                for signer in &signer_order {
-                    let height = by_signer
-                        .get(signer)
-                        .and_then(|m| m.get(&collection_id))
-                        .copied()
-                        .unwrap_or(0);
-                    clock.sequence.push(height);
-                }
-            }
-            let bytes = clock.encode_to_vec();
-            out.push(&Uint8Array::from(&bytes[..]));
-        }
-
-        Ok(out)
+        Ok(result.unchecked_into())
     }
 
     /// Fetch events from a server via gRPC-web.

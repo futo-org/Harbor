@@ -5,6 +5,15 @@ export type PersistEventCallback = (
 
 export interface IPolycentricCore {
   /**
+   * Build vector clocks from head events (one per signer+collection).
+   *
+   * Thin WASM wrapper around `crate::event::vector_clock::build_vector_clocks`.
+   */
+  build_vector_clock(
+    signed_by: Uint8Array,
+    head_events: Uint8Array[],
+  ): Uint8Array[];
+  /**
    * Commit event bytes via a JS callback
    *
    * # Arguments

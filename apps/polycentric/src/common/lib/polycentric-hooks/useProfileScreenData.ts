@@ -74,7 +74,9 @@ export function useProfileScreenData(
     ? (selfIdentity?.identityKey ?? null)
     : postIdentity;
 
-  const short = identityKey ? shortenIdentityId(identityKey) : getIdentityId(publicKey);
+  const short = identityKey
+    ? shortenIdentityId(identityKey)
+    : getIdentityId(publicKey);
   const avatarUrl = identiconUrl(publicKey);
 
   const [activeFeed, setActiveFeed] = useState<'posts' | 'likes'>('posts');
