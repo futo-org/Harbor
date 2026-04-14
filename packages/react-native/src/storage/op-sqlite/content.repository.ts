@@ -1,33 +1,43 @@
 import type { IContentRepository } from '@polycentric/js-core';
 import { v2 } from '@polycentric/js-core';
-
-/**
- * In-memory content repository for React Native.
- * TODO: persist to SQLite once the v2 schema migration is in place.
- */
-interface StoredContent {
-  digest: v2.ContentDigest;
-  content: v2.Content;
-}
+import type { Database } from './database';
 
 export class ContentRepository implements IContentRepository {
-  private store = new Map<string, StoredContent>();
-
-  private digestKey(digest: v2.ContentDigest): string {
-    return Array.from(v2.ContentDigest.toBinary(digest))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-  }
+  constructor(private readonly database: Database) {}
 
   async save(digest: v2.ContentDigest, content: v2.Content): Promise<void> {
-    this.store.set(this.digestKey(digest), { digest, content });
+    const digestBytes = v2.ContentDigest.toBinary(digest);
+    const contentBytes = v2.Content.toBinary(content);
+
+    this.database.run(
+      `INSERT OR REPLACE INTO content (digest_bytes, content_bytes) VALUES (?, ?)`,
+      [digestBytes, contentBytes]
+    );
   }
 
   async get(digest: v2.ContentDigest): Promise<v2.Content | null> {
-    return this.store.get(this.digestKey(digest))?.content ?? null;
+    const digestBytes = v2.ContentDigest.toBinary(digest);
+
+    const rows = this.database.execute<{
+      content_bytes: ArrayBuffer;
+    }>(`SELECT content_bytes FROM content WHERE digest_bytes = ?`, [
+      digestBytes,
+    ]);
+
+    if (rows.length === 0) return null;
+
+    return v2.Content.fromBinary(new Uint8Array(rows[0]!.content_bytes));
   }
 
   async getAll(): Promise<{ digest: v2.ContentDigest; content: v2.Content }[]> {
-    return [...this.store.values()];
+    const rows = this.database.execute<{
+      digest_bytes: ArrayBuffer;
+      content_bytes: ArrayBuffer;
+    }>(`SELECT digest_bytes, content_bytes FROM content`);
+
+    return rows.map((row) => ({
+      digest: v2.ContentDigest.fromBinary(new Uint8Array(row.digest_bytes)),
+      content: v2.Content.fromBinary(new Uint8Array(row.content_bytes)),
+    }));
   }
 }
