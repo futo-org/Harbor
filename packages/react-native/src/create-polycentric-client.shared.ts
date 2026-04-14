@@ -1,4 +1,4 @@
-import { KEY_TYPE, type PolycentricClient } from '@polycentric/js-core';
+import type { PolycentricClient } from '@polycentric/js-core';
 
 export interface CreatePolycentricClientConfig {
   databaseName?: string;
@@ -8,18 +8,31 @@ export function normalizeDatabaseName(databaseName?: string) {
   return (databaseName ?? 'polycentric').trim() || 'polycentric';
 }
 
-export async function createIdentityWithDefaultServer(
+/**
+ * Publishes a new Identity document authorized by the client's current
+ * keypair, and registers `server` so the new identity is synced there.
+ *
+ * The keypair itself is auto-created by `PolycentricClient.initialize()`
+ * on every device — this helper is specifically the identity-creation
+ * step of onboarding (the "I am starting a new identity" path).
+ *
+ * For the "join an existing identity" path, use
+ * `client.identityManager.claim(identityKey)` instead.
+ */
+export async function createIdentity(
   client: PolycentricClient,
   server: string
 ) {
-  await client.keyPairManager.createKeyPair({
-    keyType: KEY_TYPE.ED25519,
-    setAsCurrent: true,
-  });
+  if (!client.currentKeyPair) {
+    throw new Error(
+      'createIdentity: client has no current keypair. PolycentricClient.initialize() should have created one.'
+    );
+  }
 
-  // Publish initial identity with the current key as the sole rotation key
-  const currentKey = client.currentKeyPair!.publicKey;
+  const currentKey = client.currentKeyPair.publicKey;
   await client.identityManager.publish(null, [currentKey], []);
 
-  client.servers.push(server);
+  if (!client.servers.includes(server)) {
+    client.servers.push(server);
+  }
 }

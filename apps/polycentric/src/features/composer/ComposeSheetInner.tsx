@@ -18,7 +18,7 @@ import {
 import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { types } from '@polycentric/react-native';
+import { types, v2 } from '@polycentric/react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
@@ -35,7 +35,7 @@ export function ComposeSheetInner({
   replyToEvent,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
-  const { publicKey } = useCurrentIdentity();
+  const { publicKey, identity: currentIdentity } = useCurrentIdentity();
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
@@ -93,6 +93,8 @@ export function ComposeSheetInner({
       await client.contentManager.save(content);
 
       const event = await client.buildEvent(content);
+
+      event.vectorClocks = await client.buildVectorClock(event);
 
       const signedEvent = await client.signEvent(event);
 
@@ -250,6 +252,7 @@ export function ComposeSheetInner({
               {publicKey && (
                 <PubkeyTag
                   publicKey={publicKey}
+                  identity={currentIdentity?.identityKey ?? undefined}
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               )}

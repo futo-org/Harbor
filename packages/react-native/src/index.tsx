@@ -7,5 +7,5 @@ export { polycentric_ffi as types_ffi } from './generated/protocol';
 
 export {
   createPolycentricClient,
-  createIdentityWithDefaultServer,
+  createIdentity,
 } from './create-polycentric-client';

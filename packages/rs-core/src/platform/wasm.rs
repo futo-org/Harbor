@@ -18,6 +18,12 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "(signedEventBytes: Uint8Array) => Promise<void>")]
     pub type CommitEventCallback;
+
+    #[wasm_bindgen(typescript_type = "Uint8Array[]")]
+    pub type EventBytesArray;
+
+    #[wasm_bindgen(typescript_type = "Uint8Array[]")]
+    pub type VectorClockBytesArray;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -135,6 +141,37 @@ impl PolycentricWasm {
             .map_err(|e| PlatformError::CryptoError(format!("Event signature invalid: {:?}", e)))?;
 
         Ok(Uint8Array::from(&signed_event_bytes[..]))
+    }
+
+    /// Build vector clocks from head events (one per signer+collection).
+    ///
+    /// Thin WASM wrapper around `crate::event::vector_clock::build_vector_clocks`.
+    #[wasm_bindgen]
+    pub fn build_vector_clock(
+        &self,
+        signed_by: &[u8],
+        head_events: EventBytesArray,
+    ) -> std::result::Result<VectorClockBytesArray, JsValue> {
+        use crate::event::vector_clock;
+
+        let array: &js_sys::Array = head_events.unchecked_ref();
+        let heads: Vec<vector_clock::HeadEntry> = array
+            .iter()
+            .map(|item| {
+                let bytes = Uint8Array::unchecked_from_js(item).to_vec();
+                vector_clock::decode_head(&bytes)
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| JsValue::from_str(&e))?;
+
+        let clocks = vector_clock::build_vector_clocks(signed_by, &heads)
+            .map_err(|e| JsValue::from_str(&e))?;
+
+        let result = js_sys::Array::new();
+        for clock in clocks {
+            result.push(&Uint8Array::from(&clock.encode_to_vec()[..]));
+        }
+        Ok(result.unchecked_into())
     }
 
     /// Fetch events from a server via gRPC-web.

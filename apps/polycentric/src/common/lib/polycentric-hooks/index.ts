@@ -55,6 +55,7 @@ export {
   stringURLSafeToPublicKey,
   getIdentityId,
   getIdentityIdShort,
+  shortenIdentityId,
   pointerToURLString,
   urlStringToPointer,
   signedEventToHex,
