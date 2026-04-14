@@ -5,13 +5,13 @@
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - packages/js-*/*
+        - packages/js-*/**/*
         - .gitlab/ci/build_js_sdks.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - packages/js-*/*
+        - packages/js-*/**/*
         - .gitlab/ci/build_js_sdks.yml
 
 .js-sdks-base:
