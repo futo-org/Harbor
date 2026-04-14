@@ -54,4 +54,15 @@ export interface IEventRepository {
     publicKey: Proto.PublicKey,
     identity: string,
   ): Promise<Proto.SignedEvent[]>;
+
+  /**
+   * Get the head (highest-sequence) event for each unique (signer, collection)
+   * pair within a given identity. Useful for building vector clocks without
+   * loading every event.
+   *
+   * @param identity - The identity key (hex hash)
+   * @returns One SignedEvent per (signer, collection), each being the
+   *          highest-sequence event for that stream.
+   */
+  getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]>;
 }

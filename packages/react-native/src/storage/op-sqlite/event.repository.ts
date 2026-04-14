@@ -109,4 +109,20 @@ export class EventRepository implements IEventRepository {
     result.sort((a, b) => a.seq - b.seq);
     return result.map((r) => r.event);
   }
+
+  async getHeadsByIdentity(identity: string): Promise<v2.SignedEvent[]> {
+    // group key: "publicKeyHex:collection" → highest-sequence event
+    const heads = new Map<string, { seq: number; event: v2.SignedEvent }>();
+    for (const [key, event] of this.events) {
+      const parts = key.split(':');
+      if (parts[2] !== identity) continue;
+      const group = `${parts[0]}:${parts[1]}`;
+      const seq = Number(parts[3]);
+      const existing = heads.get(group);
+      if (!existing || seq > existing.seq) {
+        heads.set(group, { seq, event });
+      }
+    }
+    return [...heads.values()].map((h) => h.event);
+  }
 }

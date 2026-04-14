@@ -106,6 +106,14 @@ class NativePolycentricCore implements IPolycentricCore {
     return signEvent(eventBytes);
   }
 
+  /** Build vector clocks — not yet wired through native FFI. */
+  build_vector_clock(
+    _signed_by: Uint8Array,
+    _head_events: Uint8Array[]
+  ): Uint8Array[] {
+    return [];
+  }
+
   /**
    * Commit a signed event. Native-side persistence will eventually flow
    * through the Rust FFI EventStore; for now it's a no-op on this bridge

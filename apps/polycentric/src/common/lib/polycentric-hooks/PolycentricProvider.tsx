@@ -1,13 +1,11 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import {
   PolycentricClient,
-  createIdentityWithDefaultServer,
   createPolycentricClient,
   types,
   v2,
+  type IdentityState,
 } from '@polycentric/react-native';
-
-type Identity = v2.Identity;
 import {
   createContext,
   useCallback,
@@ -31,7 +29,7 @@ export interface PolycentricContextValue {
   isLoading: boolean;
   isReady: boolean;
   error: Error | null;
-  currentIdentity: Identity | null;
+  currentIdentity: IdentityState | null;
   switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
 }
 
@@ -107,9 +105,10 @@ function DefaultErrorComponent({ error }: { error: Error }) {
 
 async function resolveIdentity(
   client: PolycentricClient,
-): Promise<Identity | null> {
+): Promise<IdentityState | null> {
+  if (!client.activeIdentityKey) return null;
   const state = await client.identityManager.getCurrent();
-  return state ?? null;
+  return state.identityKey ? state : null;
 }
 
 export function PolycentricProvider({
@@ -119,7 +118,9 @@ export function PolycentricProvider({
 }: PolycentricProviderProps) {
   const [client, setClient] = useState<PolycentricClient | null>(null);
   const [store, setStore] = useState<PolycentricStoreApi | null>(null);
-  const [currentIdentity, setCurrentIdentity] = useState<Identity | null>(null);
+  const [currentIdentity, setCurrentIdentity] = useState<IdentityState | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -134,15 +135,12 @@ export function PolycentricProvider({
 
     (async () => {
       try {
+        // PolycentricClient.initialize() guarantees a keypair exists on
+        // every device. Identity (the published Identity doc) is a separate
+        // concept — the onboarding gate handles creating or pairing one.
         const c = await createPolycentricClient({
           databaseName: 'polycentric.db',
         });
-
-        if (cancelled) return;
-
-        if ((await c.keyPairManager.getKeys()).length === 0) {
-          await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
-        }
 
         if (cancelled) return;
 
@@ -154,18 +152,25 @@ export function PolycentricProvider({
         setCurrentIdentity(await resolveIdentity(c));
         setIsLoading(false);
 
-        void c.sync().catch((syncError) => {
-          console.warn('Initial Polycentric sync failed:', syncError);
-        });
+        // Only sync when we already have an identity to sync for.
+        if (c.activeIdentityKey) {
+          void c.sync().catch((syncError) => {
+            console.warn('Initial Polycentric sync failed:', syncError);
+          });
+        }
 
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
-          if ((await c.keyPairManager.getKeys()).length === 0) {
-            await createIdentityWithDefaultServer(c, DEFAULT_SERVER);
-            await c.sync().catch(() => {});
-          }
           setCurrentIdentity(await resolveIdentity(c));
           await s.getState().refreshIdentities();
+        });
+
+        // Identity onboarding (create / claim) publishes an Identity event,
+        // which flows through onContentCreated. Re-resolve so the gate
+        // flips from onboarding → app once the user completes signup.
+        c.events.onContentCreated(async () => {
+          if (cancelled) return;
+          setCurrentIdentity(await resolveIdentity(c));
         });
       } catch (err) {
         if (!cancelled) {

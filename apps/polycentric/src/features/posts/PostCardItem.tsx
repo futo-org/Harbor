@@ -116,6 +116,7 @@ export const PostCardItem = memo(function PostCardItem({
       onToggleContentExpanded={toggleContentExpanded}
       authorName={authorName}
       authorPublicKey={post.decoded.authorPublicKey}
+      authorIdentity={post.decoded.authorIdentity}
       timestamp={post.decoded.timestamp}
       replyingToName={replyingToName}
       hasParent={!!post.decoded.parentAuthorPublicKey}

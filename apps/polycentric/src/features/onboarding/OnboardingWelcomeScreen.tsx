@@ -58,10 +58,10 @@ export default function OnboardingWelcomeScreen() {
             onPress={() => router.push(Routes.onboarding.signup.setUsername)}
           />
           <Button
-            title="Import existing identity"
+            title="Pair existing identity"
             variant="tertiary"
             fullWidth
-            onPress={() => {}}
+            onPress={() => router.push('/(onboarding)/login')}
           />
         </Box>
       </Box>

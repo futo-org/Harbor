@@ -36,12 +36,13 @@ impl SignedEvent {
                 ))
             })?;
 
-        let signature_bytes: [u8; 64] = self.signature.clone().try_into().map_err(|e: Vec<u8>| {
-            CoreError::DeserializationError(format!(
-                "Incorrect signature length: expected 64, got {}",
-                e.len()
-            ))
-        })?;
+        let signature_bytes: [u8; 64] =
+            self.signature.clone().try_into().map_err(|e: Vec<u8>| {
+                CoreError::DeserializationError(format!(
+                    "Incorrect signature length: expected 64, got {}",
+                    e.len()
+                ))
+            })?;
 
         let signature = ed25519_dalek::Signature::from_bytes(&signature_bytes);
 

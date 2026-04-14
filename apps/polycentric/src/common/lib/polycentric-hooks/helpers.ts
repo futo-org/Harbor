@@ -18,6 +18,12 @@ export type PostData = {
   id: string;
   content: string;
   authorPublicKey: types.PublicKey;
+  /**
+   * v2 identity key (hex sha256 of the initial Identity content) that the
+   * author signed this post on behalf of. Undefined for legacy v1 posts,
+   * which pre-date identity separation.
+   */
+  authorIdentity?: string;
   timestamp: number;
   parentAuthorPublicKey?: types.PublicKey;
   parentProcess?: types.Process;
@@ -144,6 +150,7 @@ export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
         keyType: key.signedBy.keyType,
         key: authorKey,
       }),
+      authorIdentity: key.identity,
       timestamp: Number(event.createdAt),
       // v1 compat shim — store expects types.SignedEvent
       signedEvent: types.SignedEvent.create({
@@ -260,6 +267,11 @@ export function stringURLSafeToPublicKey(str: string): types.PublicKey {
   return stringToPublicKey(decodeURIComponent(str));
 }
 
+/**
+ * @deprecated misnamed — this returns a short base64 form of the signer's
+ * public key, not the identity id. Use {@link shortenIdentityId} or render
+ * the v2 `key.identity` string directly.
+ */
 export function getIdentityId(publicKey: types.PublicKey): string {
   const bytes = publicKey.key ?? new Uint8Array();
   if (bytes.length === 0) return '...';
@@ -268,6 +280,18 @@ export function getIdentityId(publicKey: types.PublicKey): string {
 
 export function getIdentityIdShort(publicKey: types.PublicKey): string {
   return getIdentityId(publicKey).slice(0, 4);
+}
+
+/**
+ * Short display form of a v2 identity id (hex sha256 of the initial
+ * Identity content). Returns a placeholder if the id is empty.
+ */
+export function shortenIdentityId(
+  identity: string | undefined,
+  len = 10,
+): string {
+  if (!identity) return '...';
+  return identity.slice(0, len);
 }
 
 export function pointerToURLString(pointer: types.Pointer): string {

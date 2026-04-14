@@ -3,7 +3,7 @@ import { NativeCoreBridge } from './ffi/bridge';
 import { ReactNativeStorageDriver } from './storage/op-sqlite/storage-driver';
 import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
 import {
-  createIdentityWithDefaultServer,
+  createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
 } from './create-polycentric-client.shared';
@@ -20,5 +20,5 @@ export async function createPolycentricClient(
   });
 }
 
-export { createIdentityWithDefaultServer };
+export { createIdentity };
 export type { CreatePolycentricClientConfig };

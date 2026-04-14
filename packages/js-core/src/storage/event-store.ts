@@ -70,4 +70,8 @@ export class EventStore {
   ): Promise<Proto.SignedEvent[]> {
     return this.repository.getEventsByIdentity(publicKey, identity);
   }
+
+  async getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]> {
+    return this.repository.getHeadsByIdentity(identity);
+  }
 }
