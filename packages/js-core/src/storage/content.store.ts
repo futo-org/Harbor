@@ -14,4 +14,10 @@ export class ContentStore {
   async get(digest: Proto.ContentDigest): Promise<Proto.Content | null> {
     return this.repository.get(digest);
   }
+
+  async getAll(): Promise<
+    { digest: Proto.ContentDigest; content: Proto.Content }[]
+  > {
+    return this.repository.getAll();
+  }
 }

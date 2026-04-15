@@ -49,29 +49,20 @@ export class EventStore {
     return this.repository.getBatch(batchSize, offset);
   }
 
-  async getNextSequence(
-    publicKey: Proto.PublicKey,
-    collection: number,
-    identity: string,
-  ): Promise<bigint> {
-    return this.repository.getNextSequence(publicKey, collection, identity);
-  }
-
-  async getLatestEvent(
-    publicKey: Proto.PublicKey,
-    identity: string,
+  async getByEventKey(
+    key: Proto.EventKey,
   ): Promise<Proto.SignedEvent | null> {
-    return this.repository.getLatestEvent(publicKey, identity);
+    return this.repository.getByEventKey(key);
   }
 
-  async getEventsByIdentity(
-    publicKey: Proto.PublicKey,
+  async getByIdentity(
     identity: string,
+    options?: {
+      signer?: Proto.PublicKey;
+      collection?: number;
+      headsOnly?: boolean;
+    },
   ): Promise<Proto.SignedEvent[]> {
-    return this.repository.getEventsByIdentity(publicKey, identity);
-  }
-
-  async getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]> {
-    return this.repository.getHeadsByIdentity(identity);
+    return this.repository.getByIdentity(identity, options);
   }
 }

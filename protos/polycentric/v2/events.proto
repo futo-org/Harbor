@@ -5,7 +5,8 @@ import "polycentric/v2/content.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/keypair.proto";
 
-// Contains the sequences that the current KeyPair is aware of. 
+// Contains the sequences (of the same event collection) that the current KeyPair is aware of. 
+// The order of the sequences is determined by the the keys listed 
 message VectorClock {
   repeated uint64 sequence = 1;
 }
@@ -15,18 +16,21 @@ message Event {
   // Key for the event
   EventKey key = 1;
 
-  // Vector clock to keep the same collection on shared identities in sync
-  repeated VectorClock vector_clocks = 2;
+  // Reference to the sequence, of the Identity Collection (1), that holds the identity document
+  uint64 identity_sequence = 2;
+
+  // Vector clock 
+  VectorClock vector_clock = 3;
 
   // Signature of the previous event signed by the same key. Assists in creating
   // immutable collections.
-  bytes previous_signature = 3;
+  bytes previous_signature = 4;
 
   // Digest of the content
-  ContentDigest content_digest = 4;
+  ContentDigest content_digest = 6;
 
   // Timestamp, in milliseconds, of when the event was created
-  uint64 created_at = 5;
+  uint64 created_at = 7;
 }
 
 message SignedEvent {

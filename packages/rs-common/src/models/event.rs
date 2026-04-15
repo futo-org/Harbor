@@ -6,21 +6,19 @@ use prost::Message;
 
 impl Event {
     /// Creates a new event with the given parameters.
-    ///
-    /// `vector_clocks` is a repeated field in the proto and is treated as a
-    /// sparse array indexed by collection ID — element `i` is the
-    /// `VectorClock` for collection `i`.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         key: EventKey,
-        vector_clocks: Vec<VectorClock>,
+        identity_sequence: u64,
+        vector_clock: Option<VectorClock>,
         previous_signature: Vec<u8>,
         content_digest: Option<ContentDigest>,
         created_at: u64,
     ) -> Self {
         Self {
             key: Some(key),
-            vector_clocks,
+            identity_sequence,
+            vector_clock,
             previous_signature,
             content_digest,
             created_at,
