@@ -91,7 +91,7 @@ export function IconButton({
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[animatedStyle, { alignSelf: 'flex-start' }, style]}
+      style={[animatedStyle, style]}
     >
       <Pressable
         disabled={disabled}
