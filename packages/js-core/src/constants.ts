@@ -1,7 +1,17 @@
 export const KEY_TYPE = {
-  ED25519: BigInt(1),
-  SHA256: BigInt(2),
+  ED25519: 1,
+  SHA256: 2,
 } as const;
+
+/** Collection IDs matching the EventKey.collection proto field */
+export const COLLECTION = {
+  IDENTITY: 1,
+  FEED: 2,
+  INTERACTIONS: 3,
+} as const;
+
+/** A known COLLECTION value. Callers may also pass any number. */
+export type Collection = (typeof COLLECTION)[keyof typeof COLLECTION];
 
 export enum HydrationStrategy {
   FULL = 'full',

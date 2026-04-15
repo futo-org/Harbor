@@ -1,8 +1,4 @@
-import type {
-  KeyPair,
-  PolycentricClient,
-  PublicKey,
-} from '@polycentric/js-core';
+import type { KeyPair, PublicKey } from '@polycentric/js-core';
 import { Base64 } from 'js-base64';
 
 /**
@@ -34,18 +30,4 @@ export const currentSelectedIdentity = (identities: KeyPair[]): KeyPair => {
   if (identitiesFiltered.length > 0) return identitiesFiltered[0];
 
   return identities[0];
-};
-
-/**
- * Switches the current identity, and stores the currently selected identity in local storage
- *
- * @param client The PolycentricClient object currently in use
- * @param identity The identity to switch to
- */
-export const selectIdentity = async (
-  client: PolycentricClient,
-  identity: PublicKey,
-) => {
-  await client.switchIdentity(identity);
-  localStorage.setItem(SELECTED_IDENTITY_ITEM, Identifier(identity));
 };

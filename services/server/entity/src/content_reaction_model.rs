@@ -10,7 +10,8 @@ pub struct Model {
     pub parent: HasOne<super::content_model::Entity>,
 
     // EventKey of the event being reacted to
-    pub event_key_stream_id: String,
+    pub event_key_collection: i16,
+    pub event_key_identity: String,
     pub event_key_public_key_type: i16,
     pub event_key_public_key: Vec<u8>,
     pub event_key_sequence: i64,

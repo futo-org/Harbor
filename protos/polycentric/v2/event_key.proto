@@ -1,16 +1,23 @@
 syntax = "proto3";
 package polycentric.v2;
 
-import "polycentric/v2/identity.proto";
+import "polycentric/v2/keypair.proto";
 
 // EventKey's are the unique identitifiers of Events
 message EventKey {
-  // ID of the stream the event is connected with
-  string stream_id = 1;
+  // Collection of the stream the event is connected with
+  // Reserved collections are:
+  // 1 -> Polycentric Identity
+  // 2 -> Polycentric feed
+  // 3 -> Polycentric interactions
+  int32 collection = 1;
+
+  // Identity Key (sha256 hash of the initial Identity content)
+  string identity = 2;
 
   // Public key that signed the event
-  PublicKey signed_by = 2;
+  PublicKey signed_by = 3;
 
-  // Sequence number of the event in the event stream (our logical clock)
-  uint64 sequence = 3;
+  // Sequence number of the event in the collection (our logical clock)
+  uint64 sequence = 4;
 }

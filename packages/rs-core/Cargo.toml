@@ -27,6 +27,9 @@ wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", features = ["console"], optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
+tonic-web-wasm-client = { version = "0.9", optional = true }
+tonic = { version = "*", default-features = false, optional = true }
+tonic-prost = { version = "*", optional = true }
 ed25519-dalek = "2.2.0"
 hmac-sha256 = "1.1.12"
 base64 = "0.22.1"
@@ -45,6 +48,9 @@ wasm = [
     "dep:web-sys",
     "dep:console_error_panic_hook",
     "dep:wasm-bindgen-futures",
+    "dep:tonic-web-wasm-client",
+    "dep:tonic",
+    "dep:tonic-prost",
 ]
 ffi = ["dep:libc"]
 

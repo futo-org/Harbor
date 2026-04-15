@@ -117,7 +117,7 @@ describe('PolycentricClient EventService', () => {
       switchedIdentity = identity;
     });
 
-    await client.switchIdentity(keyPair1.publicKey);
+    await client.switchKeyPair(keyPair1.publicKey);
 
     expect(identityChanged).toBe(true);
     expect(switchedIdentity).toBeDefined();

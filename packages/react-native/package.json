@@ -129,7 +129,7 @@
     "@babel/runtime": "^7.28.6",
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
-    "@polycentric/rs-core-wasm-browser": "*",
+    "@polycentric/rs-core-wasm-browser": "workspace:*",
     "@noble/curves": "^1.9.0",
     "fast-text-encoding": "^1.0.6",
     "protobufjs": "^7.0.0",

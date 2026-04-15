@@ -70,6 +70,11 @@ export interface Spec extends TurboModule {
   ): Object;
   getPointer(eventBytes: Object): Object;
   getReference(pointerBytes: Object): Object;
+
+  // v2 methods
+  verifySignedEventV2(signedEventBytes: Object): Object;
+  decodeEventFromSignedEventV2(signedEventBytes: Object): Object;
+  validateEventV2(eventBytes: Object): Object;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('PolycentricCore');

@@ -19,11 +19,10 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 export function CurrIdentityHeader() {
-  const { identity: currentIdentity } = useCurrentIdentity();
+  const { identity: currentIdentity, publicKey: pubkey } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const pubkey = currentIdentity?.keyPair.publicKey;
   const username = useUsername(
     pubkey ?? { keyType: 0n, key: new Uint8Array() },
   );
@@ -80,7 +79,10 @@ export function CurrIdentityHeader() {
           >
             {username}
           </Text>
-          <PubkeyTag publicKey={pubkey} />
+          <PubkeyTag
+            publicKey={pubkey}
+            identity={currentIdentity.identityKey ?? undefined}
+          />
           <Ionicons
             name="chevron-down"
             size={22}

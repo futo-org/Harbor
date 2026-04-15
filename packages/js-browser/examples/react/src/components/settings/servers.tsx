@@ -4,14 +4,12 @@ import { ClientContext } from '../../main';
 export const ServerSelector = () => {
   const client = useContext(ClientContext);
 
-  const [servers, setServers] = useState<string[]>([]);
+  const [servers] = useState<string[]>([]);
   const serverField = useRef<HTMLInputElement | null>(null);
 
   const loadIdentities = useCallback(async () => {
     if (client === null) return;
-    setServers(
-      await client.queryServers(client.currentIdentity.keyPair.publicKey),
-    );
+    // TODO: surface configured servers once the query API lands for v2.
   }, [client]);
 
   useEffect(() => {
@@ -20,13 +18,13 @@ export const ServerSelector = () => {
 
   if (client === null) return <div>Error: No client object provided</div>;
 
-  const addServer = async (server: string) => {
-    await client.createAddServer(server);
+  const addServer = async (_server: string) => {
+    // TODO: wire up once client exposes a server-management API for v2.
     loadIdentities();
   };
 
-  const removeServer = async (server: string) => {
-    await client.createRemoveServer(server);
+  const removeServer = async (_server: string) => {
+    // TODO: wire up once client exposes a server-management API for v2.
     loadIdentities();
   };
 

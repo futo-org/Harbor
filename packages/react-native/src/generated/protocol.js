@@ -1978,6 +1978,21 @@ export const polycentric = ($root.polycentric = (() => {
       return typeUrlPrefix + '/polycentric.Digest';
     };
 
+    /**
+     * DigestType enum.
+     * @name polycentric.Digest.DigestType
+     * @enum {number}
+     * @property {number} Unknown=0 Unknown value
+     * @property {number} SHA256=1 SHA256 value
+     */
+    Digest.DigestType = (function () {
+      const valuesById = {},
+        values = Object.create(valuesById);
+      values[(valuesById[0] = 'Unknown')] = 0;
+      values[(valuesById[1] = 'SHA256')] = 1;
+      return values;
+    })();
+
     return Digest;
   })();
 
@@ -3320,6 +3335,25 @@ export const polycentric = ($root.polycentric = (() => {
       }
       return typeUrlPrefix + '/polycentric.Reference';
     };
+
+    /**
+     * ReferenceType enum.
+     * @name polycentric.Reference.ReferenceType
+     * @enum {number}
+     * @property {number} Unknown=0 Unknown value
+     * @property {number} System=1 System value
+     * @property {number} Pointer=2 Pointer value
+     * @property {number} Bytes=3 Bytes value
+     */
+    Reference.ReferenceType = (function () {
+      const valuesById = {},
+        values = Object.create(valuesById);
+      values[(valuesById[0] = 'Unknown')] = 0;
+      values[(valuesById[1] = 'System')] = 1;
+      values[(valuesById[2] = 'Pointer')] = 2;
+      values[(valuesById[3] = 'Bytes')] = 3;
+      return values;
+    })();
 
     return Reference;
   })();

@@ -5,20 +5,41 @@ export const PostCompose = () => {
   const client = useContext(ClientContext);
   const postField = useRef<HTMLTextAreaElement | null>(null);
 
-  if (client === null) return <div>Error: No client object provided</div>;
+  if (client === null) return null;
 
   const post = async () => {
-    if (!postField.current) return;
+    if (!postField.current || !postField.current.value.trim()) return;
 
-    await client.createPost(postField.current.value);
+    const identity = await client.identityManager.getCurrent();
+    if (!identity.identityKey) {
+      alert('Create an identity first');
+      return;
+    }
+
+    const content = await client.contentManager.build({
+      oneofKind: 'post',
+      post: {
+        text: postField.current.value,
+      },
+    });
+    await client.contentManager.save(content);
+
+    const event = await client.buildEvent(content);
+
+    const signedEvent = await client.signEvent(event);
+    await client.commitEvent(signedEvent);
 
     postField.current.value = '';
   };
 
   return (
-    <div>
-      <textarea ref={postField}></textarea>
-      <button onClick={post}>Create Post</button>
+    <div className="card">
+      <textarea ref={postField} placeholder="What's on your mind?" rows={3} />
+      <div
+        style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}
+      >
+        <button onClick={post}>Post</button>
+      </div>
     </div>
   );
 };

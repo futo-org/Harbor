@@ -2,7 +2,7 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import type { Href } from 'expo-router';
 import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
-import { createIdentityWithDefaultServer } from '@polycentric/react-native';
+import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
 import {
   DEFAULT_SERVER,
@@ -93,8 +93,9 @@ export function SignupProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Create the identity
-      await createIdentityWithDefaultServer(client, DEFAULT_SERVER);
+      // Publish a new Identity doc authorized by this device's keypair.
+      // The keypair itself was already created when the client booted.
+      await createIdentity(client, DEFAULT_SERVER);
 
       // Set profile data
       // if (data.username) {

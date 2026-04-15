@@ -1,1 +1,1 @@
-tonic::include_proto!("polycentric.v1");
+tonic::include_proto!("polycentric.v2");

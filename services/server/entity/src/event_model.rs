@@ -11,9 +11,12 @@ pub struct Model {
     ////
     // Start: Event Key
     ////
-    // ID of the stream the event belongs to
+    // Collection the event belongs to (1=Identity, 2=Feed, 3=Interactions)
     #[sea_orm(unique_key = "event_key")]
-    pub stream_id: String,
+    pub collection: i16,
+    // Identity key (sha256 hash of the initial Identity content)
+    #[sea_orm(unique_key = "event_key")]
+    pub identity: String,
     #[sea_orm(unique_key = "event_key")]
     pub public_key_type: i16,
     #[sea_orm(unique_key = "event_key")]

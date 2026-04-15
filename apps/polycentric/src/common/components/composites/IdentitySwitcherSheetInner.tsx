@@ -20,7 +20,8 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  createIdentityWithDefaultServer,
+  createIdentity,
+  KEY_TYPE,
   type KeyPair,
   types,
 } from '@polycentric/react-native';
@@ -76,7 +77,14 @@ export function IdentitySwitcherSheetInner({
   const [isEditing, setIsEditing] = useState(false);
 
   const handleCreateIdentity = useCallback(async () => {
-    await createIdentityWithDefaultServer(client, DEFAULT_SERVER);
+    // Adding a second identity on this device means generating a fresh
+    // keypair for it; the initial device-wide keypair stays paired with
+    // whatever identity it currently owns.
+    await client.keyPairManager.createKeyPair({
+      keyType: KEY_TYPE.ED25519,
+      setAsCurrent: true,
+    });
+    await createIdentity(client, DEFAULT_SERVER);
     await client.sync().catch(() => {});
   }, [client]);
 
@@ -88,7 +96,8 @@ export function IdentitySwitcherSheetInner({
         confirmText: 'Delete',
       });
       if (!ok) return;
-      await client.deleteIdentity(publicKey);
+      // TODO: deleteKeyPair not yet implemented in v2
+      console.warn('Delete identity not yet implemented in v2');
     },
     [client],
   );

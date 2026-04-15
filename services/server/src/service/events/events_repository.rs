@@ -9,13 +9,18 @@ impl Query {
     pub async fn list_events(
         db: &DbConn,
         mut limit: Option<u64>,
+        collection: Option<i32>,
+        identity: Option<String>,
+        signed_by: Option<crate::service::proto::PublicKey>,
+        sequence_gt: Option<i64>,
+        sequence_lt: Option<i64>,
     ) -> Result<Vec<(EventModel::Model, Option<ContentModel::Model>)>, DbErr>
     {
         if limit > Some(200) {
             limit = Some(200);
         }
 
-        EventModel::Entity::find()
+        let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
             .join(
                 JoinType::LeftJoin,
@@ -34,8 +39,37 @@ impl Query {
                         .into_condition()
                     })
                     .into(),
-            )
-            .order_by_asc(EventModel::Column::Id)
+            );
+
+        if let Some(c) = collection {
+            query = query.filter(EventModel::Column::Collection.eq(c as i16));
+        }
+
+        if let Some(id) = identity {
+            query = query.filter(EventModel::Column::Identity.eq(id));
+        }
+
+        if let Some(pk) = signed_by {
+            query = query.filter(
+                Condition::all()
+                    .add(
+                        EventModel::Column::PublicKeyType
+                            .eq(pk.key_type as i16),
+                    )
+                    .add(EventModel::Column::PublicKey.eq(pk.key)),
+            );
+        }
+
+        if let Some(gt) = sequence_gt {
+            query = query.filter(EventModel::Column::Sequence.gt(gt as i16));
+        }
+
+        if let Some(lt) = sequence_lt {
+            query = query.filter(EventModel::Column::Sequence.lt(lt as i16));
+        }
+
+        query
+            .order_by_desc(EventModel::Column::Sequence)
             .limit(limit)
             .all(db)
             .await

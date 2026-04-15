@@ -29,7 +29,7 @@ import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
   dismissSheet: DismissSheet;
-  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
+  onPostCreated: (signedEvent: types.v2.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
@@ -41,7 +41,7 @@ export function ComposeSheetInner({
   replyToEvent,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
-  const { publicKey } = useCurrentIdentity();
+  const { publicKey, identity: currentIdentity } = useCurrentIdentity();
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
@@ -77,21 +77,34 @@ export function ComposeSheetInner({
     setError(null);
     setSubmitting(true);
     try {
-      let reference: types.Reference | undefined;
-      const reply = replyToEventRef.current;
-      if (reply) {
-        const pointer = getPointer(client, reply);
-        reference = types.Reference.create({
-          referenceType: 2n,
-          reference: types.Pointer.toBinary(pointer),
-        });
-      }
+      // let reference: types.Reference | undefined;
+      // const reply = replyToEventRef.current;
+      // if (reply) {
+      //   const pointer = getPointer(client, reply);
+      //   reference = types.Reference.create({
+      //     referenceType: 2n,
+      //     reference: types.Pointer.toBinary(pointer),
+      //   });
+      // }
 
-      const signedEvent = await client.contentManager.createPost(
-        text.trim(),
-        undefined,
-        reference,
-      );
+      // TODO: reply references not yet supported in v2 createPost
+
+      const content = client.contentManager.build({
+        oneofKind: 'post',
+        post: {
+          text: text.trim(),
+        },
+      });
+      await client.contentManager.save(content);
+
+      const event = await client.buildEvent(content);
+
+      event.vectorClocks = await client.buildVectorClock(event);
+
+      const signedEvent = await client.signEvent(event);
+
+      await client.commitEvent(signedEvent);
+
       await client.sync();
       setText('');
       await dismissSheet(DismissReason.PostSubmitted);
@@ -238,6 +251,7 @@ export function ComposeSheetInner({
               {publicKey && (
                 <PubkeyTag
                   publicKey={publicKey}
+                  identity={currentIdentity?.identityKey ?? undefined}
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               )}

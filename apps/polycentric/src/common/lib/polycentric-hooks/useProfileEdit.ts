@@ -40,9 +40,8 @@ export function useProfileEdit(
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await client.contentManager.createUsername(nameDraft);
-      await client.contentManager.createDescription(descriptionDraft);
-      await client.sync();
+      // TODO: createUsername/createDescription require v2 content manager APIs
+      console.warn('Profile editing not yet implemented in v2');
       profile.refresh();
       setEditing(false);
     } catch (err) {

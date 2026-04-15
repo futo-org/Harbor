@@ -48,7 +48,11 @@ export class IndexedDBDatabase {
    * Creates needed object stores, should only be called if they haven't already been created
    */
   private initializeDB(db: IDBDatabase) {
+    // Drop stores that exist but have a different keyPath (schema migration)
     for (const store of this.layout.stores) {
+      if (db.objectStoreNames.contains(store.name)) {
+        db.deleteObjectStore(store.name);
+      }
       const createdStore = db.createObjectStore(store.name, store.options);
       for (const index of store.indexes) {
         createdStore.createIndex(index.name, index.keyPath, index.options);
@@ -193,7 +197,7 @@ export const _createIndexedDBDatabaseLayout = (
   storeCreators: ((layout: IndexedDBDatabaseLayout) => void)[],
 ): IndexedDBDatabaseLayout => {
   const layout: IndexedDBDatabaseLayout = {
-    version: 1,
+    version: 2,
     stores: [],
   };
 

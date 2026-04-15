@@ -40,6 +40,7 @@ export { useProfileEdit, type ProfileEditState } from './useProfileEdit';
 // Helpers
 export {
   decodePostEvent,
+  decodeV2PostBundle,
   getPointer,
   pubkeyStr,
   identiconUrl,
@@ -54,6 +55,7 @@ export {
   stringURLSafeToPublicKey,
   getIdentityId,
   getIdentityIdShort,
+  shortenIdentityId,
   pointerToURLString,
   urlStringToPointer,
   signedEventToHex,
