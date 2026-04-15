@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 export default function IdentitySwitcherSheetRoute() {
   return (
     <SheetMenu
-      open
       onClose={(reason) => {
         if (reason === DismissReason.UserDismissed) router.back();
       }}

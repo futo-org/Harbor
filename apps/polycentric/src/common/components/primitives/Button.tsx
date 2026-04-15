@@ -21,12 +21,7 @@ import {
 } from 'react-native';
 import { Text } from './Text';
 
-type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'tertiary'
-  | 'disabled'
-  | 'destructive';
+type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 
 type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -78,14 +73,13 @@ export function Button({
 
   const sizeConfig = SIZE_CONFIG[size];
   const borderRadius = BorderRadius[sizeConfig.borderRadius];
-  const isDisabled = variant === 'disabled' || !!disabled;
-  const iconColor =
-    variant === 'disabled'
-      ? withHexOpacity(theme.palette.neutral_500, '80')
-      : theme.palette[
-          textColorMap[variant as Exclude<ButtonVariant, 'disabled'>]
-        ];
-  const variantStyle = getVariantStyle(theme, variant);
+  const isDisabled = !!disabled;
+  const iconColor = isDisabled
+    ? withHexOpacity(theme.palette.neutral_500, '80')
+    : theme.palette[textColorMap[variant]];
+  const surfaceStyle = isDisabled
+    ? getDisabledSurfaceStyle(theme)
+    : getVariantStyle(theme, variant);
   const hoverStyle =
     !isDisabled && hovered ? getHoverVariantStyle(theme, variant) : undefined;
 
@@ -107,7 +101,7 @@ export function Button({
             paddingHorizontal: sizeConfig.paddingH,
             borderRadius,
           },
-          variantStyle,
+          surfaceStyle,
           hoverStyle,
           style,
         ]}
@@ -121,11 +115,9 @@ export function Button({
             })}
           <Text
             fontWeight={FONT_WEIGHT}
-            color={
-              variant === 'disabled' ? 'neutral_1000' : textColorMap[variant]
-            }
+            color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
             style={
-              variant === 'disabled'
+              isDisabled
                 ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
                 : undefined
             }
@@ -158,10 +150,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const textColorMap: Record<
-  Exclude<ButtonVariant, 'disabled'>,
-  PaletteColorToken
-> = {
+const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
   primary: 'white',
   secondary: 'primary_600',
   tertiary: 'neutral_1000',
@@ -191,11 +180,6 @@ function getVariantStyle(theme: Theme, variant: ButtonVariant) {
       return {
         backgroundColor: 'transparent',
         borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
-      };
-    case 'disabled':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
       };
     case 'destructive':
       return {
@@ -227,7 +211,12 @@ function getHoverVariantStyle(theme: Theme, variant: ButtonVariant): ViewStyle {
         backgroundColor: withHexOpacity(theme.palette.negative_500, '26'),
         borderColor: withHexOpacity(theme.palette.negative_500, 'A0'),
       };
-    case 'disabled':
-      return {};
   }
+}
+
+function getDisabledSurfaceStyle(theme: Theme): ViewStyle {
+  return {
+    backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
+    borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
+  };
 }

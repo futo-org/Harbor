@@ -10,7 +10,6 @@ export default function IdentitySettingsRoute() {
 
   return (
     <SheetMenu
-      open
       onClose={(reason) => {
         if (reason === DismissReason.UserDismissed) router.back();
       }}

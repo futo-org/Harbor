@@ -15,6 +15,7 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyType } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -24,10 +25,14 @@ export function CurrIdentityHeader() {
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const username = useUsername(
-    pubkey ?? { keyType: 0n, key: new Uint8Array() },
+    pubkey ?? { keyType: KeyType.UNSPECIFIED, key: new Uint8Array() },
   );
 
+  // This component shouldn't mount if a current identity is not set.
   if (!currentIdentity || !pubkey) {
+    console.warn(
+      'CurrIdentityHeader: missing current identity or public key (unexpected)',
+    );
     return null;
   }
 

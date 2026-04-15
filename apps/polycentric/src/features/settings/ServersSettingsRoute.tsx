@@ -5,7 +5,6 @@ import { ServersSheetContent } from './SettingsScreen';
 export default function ServersSettingsRoute() {
   return (
     <SheetMenu
-      open
       onClose={(reason) => {
         if (reason === DismissReason.UserDismissed) router.back();
       }}

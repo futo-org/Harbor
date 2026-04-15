@@ -99,12 +99,7 @@ export default function FeedPostScreen() {
         />
       </Box>
       {composeOpen && (
-        <SheetMenu
-          open
-          onClose={handleComposeClose}
-          detents={[0.82]}
-          scrollable
-        >
+        <SheetMenu onClose={handleComposeClose} detents={[0.82]} scrollable>
           {(dismissSheet) => (
             <ComposeSheetInner
               dismissSheet={dismissSheet}

@@ -13,7 +13,6 @@ export enum DismissReason {
 export type DismissSheet = (reason?: DismissReason) => Promise<void>;
 
 export type SheetMenuProps = {
-  open: boolean;
   children: (dismissSheet: DismissSheet) => ReactNode;
   detents?: SheetDetent[];
   dismissible?: boolean;
@@ -26,15 +25,13 @@ function SheetMenuInnerNative({
   detents = [0.5],
   dismissible = true,
   scrollable = false,
-  open,
   onClose,
 }: SheetMenuProps) {
   const { theme } = useTheme();
   const sheetRef = useRef<TrueSheet>(null);
 
-  const presentedRef = useRef(false);
-  const openRef = useRef(open);
-  openRef.current = open;
+  /** True while dismissing during React unmount — skip onClose (parent is already gone). */
+  const skipOnCloseRef = useRef(false);
   const dismissReasonRef = useRef<DismissReason>(DismissReason.UserDismissed);
 
   const dismissSheet = useCallback(
@@ -46,12 +43,12 @@ function SheetMenuInnerNative({
   );
 
   useEffect(() => {
-    if (open && !presentedRef.current) {
-      sheetRef.current?.present().catch(() => {});
-    } else if (!open && presentedRef.current) {
+    sheetRef.current?.present().catch(() => {});
+    return () => {
+      skipOnCloseRef.current = true;
       sheetRef.current?.dismiss().catch(() => {});
-    }
-  }, [open]);
+    };
+  }, []);
 
   const surface = theme.palette.neutral_0;
 
@@ -59,14 +56,10 @@ function SheetMenuInnerNative({
     <TrueSheet
       dimmed={false}
       backgroundColor={surface}
-      onDidPresent={() => {
-        presentedRef.current = true;
-      }}
       onDidDismiss={() => {
-        presentedRef.current = false;
         const reason = dismissReasonRef.current;
         dismissReasonRef.current = DismissReason.UserDismissed;
-        if (openRef.current) {
+        if (!skipOnCloseRef.current) {
           onClose?.(reason);
         }
       }}
@@ -85,7 +78,6 @@ function SheetMenuInnerNative({
 function SheetMenuInnerWeb({
   children,
   dismissible = true,
-  open,
   onClose,
 }: SheetMenuProps) {
   const { theme } = useTheme();
@@ -99,7 +91,7 @@ function SheetMenuInnerWeb({
 
   return (
     <Modal
-      visible={open}
+      visible={true}
       transparent
       onRequestClose={dismissible ? () => void dismissSheet() : undefined}
     >

@@ -56,7 +56,8 @@ export default function SetUsernameScreen() {
         </Box>
         <Button
           title="Continue"
-          variant={canContinue ? 'primary' : 'disabled'}
+          variant="primary"
+          disabled={!canContinue}
           fullWidth
           onPress={handleContinue}
         />

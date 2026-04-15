@@ -1,18 +1,18 @@
-import { useCallback, useRef } from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Screen, Box } from '@/src/common/components/layouts';
-import { FeedViewer } from '@/src/features/posts';
-import { ProfileHeader } from './ProfileHeader';
+import { Box, Screen } from '@/src/common/components/layouts';
+import { Routes } from '@/src/common/constants';
 import {
   decodePostEvent,
-  useProfileScreenData,
-  useProfileEdit,
   publicKeyToStringURLSafe,
+  useProfileEdit,
+  useProfileScreenData,
 } from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
-import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { FeedViewer } from '@/src/features/posts';
+import { types } from '@polycentric/react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { StyleSheet, useWindowDimensions } from 'react-native';
+import { ProfileHeader } from './ProfileHeader';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
@@ -46,12 +46,7 @@ export default function ProfileScreen() {
   const handleReply = useCallback((signedEvent: types.SignedEvent) => {
     const decoded = decodePostEvent(signedEvent);
     if (!decoded?.id) return;
-    router.push(
-      Routes.tabs.post.reply(
-        decoded.id,
-        decoded.id,
-      ) as import('expo-router').Href,
-    );
+    router.push(Routes.tabs.post.reply(decoded.id, decoded.id));
   }, []);
 
   const handleBack = useCallback(() => {

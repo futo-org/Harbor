@@ -45,7 +45,8 @@ export function ComposeSheetFooterBar({
         <Button
           title="Post"
           onPress={onPost}
-          variant={canPost ? 'primary' : 'disabled'}
+          variant="primary"
+          disabled={!canPost}
           size="sm"
         />
       )}

@@ -8,7 +8,6 @@ import {
 } from '@/src/common/components/primitives';
 import {
   decodePostEvent,
-  getPointer,
   identiconUrl,
   truncateName,
   useCurrentIdentity,
@@ -29,7 +28,8 @@ import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
   dismissSheet: DismissSheet;
-  onPostCreated: (signedEvent: types.v2.SignedEvent) => void | Promise<void>;
+  /** TODO: should be v2 `SignedEvent` */
+  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
@@ -108,7 +108,8 @@ export function ComposeSheetInner({
       await client.sync();
       setText('');
       await dismissSheet(DismissReason.PostSubmitted);
-      await onPostCreatedRef.current(signedEvent);
+      // TODO
+      // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -149,7 +150,8 @@ export function ComposeSheetInner({
                 <Button
                   title="Post"
                   onPress={handlePost}
-                  variant={canPost ? 'primary' : 'disabled'}
+                  variant="primary"
+                  disabled={!canPost}
                   size="sm"
                 />
               )}

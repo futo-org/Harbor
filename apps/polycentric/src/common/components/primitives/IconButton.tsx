@@ -89,10 +89,7 @@ export function IconButton({
   const surfaceBg = variant === 'ghost' ? ghostFill : filledFill;
 
   return (
-    <Animated.View
-      pointerEvents="box-none"
-      style={[animatedStyle, style]}
-    >
+    <Animated.View pointerEvents="box-none" style={[animatedStyle, style]}>
       <Pressable
         disabled={disabled}
         onPress={onPress}
@@ -135,7 +132,6 @@ export function IconButton({
 }
 
 const styles = StyleSheet.create({
-  /** Explicit width/height + borderRadius on this node (not flex:1) so web hit-testing matches the circle. */
   hitArea: {
     alignItems: 'center',
     justifyContent: 'center',

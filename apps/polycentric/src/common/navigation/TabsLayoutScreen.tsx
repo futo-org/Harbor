@@ -14,10 +14,6 @@ import { StyleSheet, View } from 'react-native';
 
 const ICON_SIZE = 20;
 
-const stackOnlyTabOptions = {
-  href: null,
-} as const;
-
 const hiddenTabBarStyle = {
   display: 'none' as const,
   height: 0,
@@ -82,11 +78,11 @@ function TabsNavigator({ hideTabBar }: TabsNavigatorProps) {
         }}
       />
       {/* TODO: re-enable when ready */}
-      <Tabs.Screen name="search" options={stackOnlyTabOptions} />
-      <Tabs.Screen name="claims" options={stackOnlyTabOptions} />
-      <Tabs.Screen name="activity" options={stackOnlyTabOptions} />
-      <Tabs.Screen name="profile" options={stackOnlyTabOptions} />
-      <Tabs.Screen name="post" options={stackOnlyTabOptions} />
+      <Tabs.Screen name="search" options={{ href: null }} />
+      <Tabs.Screen name="claims" options={{ href: null }} />
+      <Tabs.Screen name="activity" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="post" options={{ href: null }} />
       <Tabs.Screen
         name="settings"
         options={{

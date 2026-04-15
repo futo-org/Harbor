@@ -46,7 +46,7 @@ export default function ComposeSheetRoute() {
   }, [myPublicKey]);
 
   return (
-    <SheetMenu open onClose={() => router.back()} detents={[0.82]} scrollable>
+    <SheetMenu onClose={() => router.back()} detents={[0.82]} scrollable>
       {(dismissSheet) => (
         <ComposeSheetInner
           dismissSheet={dismissSheet}
