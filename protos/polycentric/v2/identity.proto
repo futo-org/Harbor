@@ -11,8 +11,5 @@ message Identity {
 
   // List of keys that are allowed to sign events (but not change the identity content).
   repeated PublicKey signing_keys = 2;
-
-  // Ordered list of valid collections
-  repeated int32 collections = 3;
 }
 

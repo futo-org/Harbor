@@ -19,50 +19,29 @@ export interface IEventRepository {
   }>;
 
   /**
-   * Get the next sequence number for a given public key, collection, and identity.
-   * Returns max(sequence) + 1 across all stored events matching, or 1n if none exist.
+   * Point lookup by EventKey. Returns null if not present locally.
    *
-   * @param publicKey - The public key bytes of the signer
-   * @param collection - The collection ID
-   * @param identity - The identity key (hex hash)
+   * @param key - The full EventKey (collection, identity, signedBy, sequence)
    */
-  getNextSequence(
-    publicKey: Proto.PublicKey,
-    collection: number,
-    identity: string,
-  ): Promise<bigint>;
+  getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null>;
 
   /**
-   * Get the event with the highest sequence number for a given public key and identity.
-   * Returns null if no events exist for the key+identity.
+   * Query events for an identity.
    *
-   * @param publicKey - The public key bytes of the signer
-   * @param identity - The identity key (hex hash)
-   */
-  getLatestEvent(
-    publicKey: Proto.PublicKey,
-    identity: string,
-  ): Promise<Proto.SignedEvent | null>;
-
-  /**
-   * Get all events for a given public key and identity, ordered by sequence ascending.
+   * Optional `signer` and `collection` filters narrow the scan. When
+   * `headsOnly` is true, returns one event per (signer, collection) — the
+   * highest-sequence entry for each stream. Otherwise returns all matching
+   * events sorted by sequence ascending.
    *
-   * @param publicKey - The public key bytes of the signer
    * @param identity - The identity key (hex hash)
+   * @param options - Optional filters and head-only flag
    */
-  getEventsByIdentity(
-    publicKey: Proto.PublicKey,
+  getByIdentity(
     identity: string,
+    options?: {
+      signer?: Proto.PublicKey;
+      collection?: number;
+      headsOnly?: boolean;
+    },
   ): Promise<Proto.SignedEvent[]>;
-
-  /**
-   * Get the head (highest-sequence) event for each unique (signer, collection)
-   * pair within a given identity. Useful for building vector clocks without
-   * loading every event.
-   *
-   * @param identity - The identity key (hex hash)
-   * @returns One SignedEvent per (signer, collection), each being the
-   *          highest-sequence event for that stream.
-   */
-  getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]>;
 }

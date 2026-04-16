@@ -76,4 +76,35 @@ export class IndexedDBContentRepository implements IContentRepository {
       throw new DatabaseError('Failed to get content: ', error);
     }
   }
+
+  async getAll(): Promise<
+    { digest: Proto.ContentDigest; content: Proto.Content }[]
+  > {
+    try {
+      const transaction = this.database.createTransaction(
+        IndexedDBContentRepository.STORE_NAME,
+        'readonly',
+      );
+      const store = transaction.objectStore(
+        IndexedDBContentRepository.STORE_NAME,
+      );
+
+      const rows = await IndexedDBDatabase.requestAsPromise<
+        { digestHex: string; contentBytes: Uint8Array }[]
+      >(store.getAll());
+
+      return rows.map((row) => {
+        // digestHex encodes the full serialized ContentDigest proto.
+        const digestBytes = new Uint8Array(
+          row.digestHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
+        );
+        return {
+          digest: Proto.ContentDigest.fromBinary(digestBytes),
+          content: Proto.Content.fromBinary(row.contentBytes),
+        };
+      });
+    } catch (error) {
+      throw new DatabaseError('Failed to get all content: ', error);
+    }
+  }
 }

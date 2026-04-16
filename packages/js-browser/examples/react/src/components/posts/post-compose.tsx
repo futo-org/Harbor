@@ -27,7 +27,7 @@ export const PostCompose = () => {
     const event = await client.buildEvent(content);
 
     const signedEvent = await client.signEvent(event);
-    await client.commitEvent(signedEvent);
+    await client.commitEvent(signedEvent, content);
 
     postField.current.value = '';
   };

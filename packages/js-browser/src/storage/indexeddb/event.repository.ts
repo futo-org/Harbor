@@ -132,15 +132,9 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
-  async getNextSequence(
-    publicKey: Proto.PublicKey,
-    collection: number,
-    identity: string,
-  ): Promise<bigint> {
+  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
+    if (!key.signedBy) return null;
     try {
-      const pubKeyHex = bytesToHex(Proto.PublicKey.toBinary(publicKey));
-      console.log(pubKeyHex);
-
       const transaction = this.database.createTransaction(
         IndexedDBEventRepository.STORE_NAME,
         'readonly',
@@ -148,65 +142,14 @@ export class IndexedDBEventRepository implements IEventRepository {
       const store = transaction.objectStore(
         IndexedDBEventRepository.STORE_NAME,
       );
-
-      const results = await IndexedDBDatabase.requestAsPromise<
-        PersistedEvent[]
-      >(store.getAll());
-
-      let maxSeq = 0n;
-      for (const row of results) {
-        if (
-          row.publicKey === pubKeyHex &&
-          row.collection === collection &&
-          row.identity === identity
-        ) {
-          const seq = BigInt(row.sequence);
-          if (seq > maxSeq) maxSeq = seq;
-        }
-      }
-
-      return maxSeq + 1n;
+      const pkHex = bytesToHex(Proto.PublicKey.toBinary(key.signedBy));
+      const result = await IndexedDBDatabase.requestAsPromise<
+        PersistedEvent | undefined
+      >(store.get([key.identity, pkHex, key.collection, Number(key.sequence)]));
+      return result ? this.toSignedEvent(result) : null;
     } catch (error) {
-      throw new DatabaseError('Failed to get next sequence: ', error);
+      throw new DatabaseError('Failed to get event by key: ', error);
     }
-  }
-
-  async getEventsByIdentity(
-    publicKey: Proto.PublicKey,
-    identity: string,
-  ): Promise<Proto.SignedEvent[]> {
-    try {
-      const pubKeyHex = bytesToHex(Proto.PublicKey.toBinary(publicKey));
-
-      const transaction = this.database.createTransaction(
-        IndexedDBEventRepository.STORE_NAME,
-        'readonly',
-      );
-      const store = transaction.objectStore(
-        IndexedDBEventRepository.STORE_NAME,
-      );
-
-      const results = await IndexedDBDatabase.requestAsPromise<
-        PersistedEvent[]
-      >(store.getAll());
-
-      return results
-        .filter(
-          (row) => row.publicKey === pubKeyHex && row.identity === identity,
-        )
-        .sort((a, b) => a.sequence - b.sequence)
-        .map((row) => this.toSignedEvent(row));
-    } catch (error) {
-      throw new DatabaseError('Failed to get events by identity: ', error);
-    }
-  }
-
-  async getLatestEvent(
-    publicKey: Proto.PublicKey,
-    identity: string,
-  ): Promise<Proto.SignedEvent | null> {
-    const events = await this.getEventsByIdentity(publicKey, identity);
-    return events.length > 0 ? events[events.length - 1] : null;
   }
 
   async getBatch(
@@ -222,7 +165,14 @@ export class IndexedDBEventRepository implements IEventRepository {
     return { events, offset: start + events.length };
   }
 
-  async getHeadsByIdentity(identity: string): Promise<Proto.SignedEvent[]> {
+  async getByIdentity(
+    identity: string,
+    options?: {
+      signer?: Proto.PublicKey;
+      collection?: number;
+      headsOnly?: boolean;
+    },
+  ): Promise<Proto.SignedEvent[]> {
     try {
       const transaction = this.database.createTransaction(
         IndexedDBEventRepository.STORE_NAME,
@@ -233,34 +183,48 @@ export class IndexedDBEventRepository implements IEventRepository {
       );
 
       // Compound keyPath: [identity, publicKey, collection, sequence].
-      // Reverse cursor hits the max-sequence entry for each
-      // (publicKey, collection) group first. After reading a head,
-      // skip the rest of the group by continuing to
-      // [identity, publicKey, collection] (without sequence) — this
-      // compares less than any key with a sequence component, so the
-      // reverse cursor jumps to the previous group's max.
-      const range = IDBKeyRange.bound([identity], [identity, '\uffff']);
-      const heads: PersistedEvent[] = [];
+      // Build the longest prefix of fixed components so the cursor scans
+      // only matching rows.
+      const prefix: (string | number)[] = [identity];
+      if (options?.signer) {
+        prefix.push(bytesToHex(Proto.PublicKey.toBinary(options.signer)));
+        if (options.collection !== undefined) prefix.push(options.collection);
+      }
+      const range = IDBKeyRange.bound(prefix, [...prefix, []]);
+      const headsOnly = options?.headsOnly ?? false;
+      const collectionFilter = options?.collection;
+
+      // headsOnly: walk in reverse; first hit per (signer, collection) is
+      // its max-sequence entry, then skip the rest of the group.
+      // Otherwise: walk forward and collect everything matching.
+      const direction: IDBCursorDirection = headsOnly ? 'prev' : 'next';
+      const rows: PersistedEvent[] = [];
 
       await new Promise<void>((resolve, reject) => {
-        const request = store.openCursor(range, 'prev');
+        const request = store.openCursor(range, direction);
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const cursor = request.result;
-          if (!cursor) {
-            resolve();
-            return;
-          }
+          if (!cursor) return resolve();
           const row = cursor.value as PersistedEvent;
-          heads.push(row);
-          // Skip to the previous group's max entry.
-          cursor.continue([identity, row.publicKey, row.collection]);
+          if (
+            collectionFilter === undefined ||
+            row.collection === collectionFilter
+          ) {
+            rows.push(row);
+          }
+          if (headsOnly) {
+            // Skip the rest of this (signer, collection) group.
+            cursor.continue([identity, row.publicKey, row.collection]);
+          } else {
+            cursor.continue();
+          }
         };
       });
 
-      return heads.map((row) => this.toSignedEvent(row));
+      return rows.map((row) => this.toSignedEvent(row));
     } catch (error) {
-      throw new DatabaseError('Failed to get heads by identity: ', error);
+      throw new DatabaseError('Failed to get events by identity: ', error);
     }
   }
 }

@@ -94,7 +94,7 @@ export function ComposeSheetInner({
 
       const event = await client.buildEvent(content);
 
-      event.vectorClocks = await client.buildVectorClock(event);
+      console.log(event);
 
       const signedEvent = await client.signEvent(event);
 

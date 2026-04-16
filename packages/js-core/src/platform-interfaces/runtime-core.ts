@@ -5,14 +5,50 @@ export type PersistEventCallback = (
 
 export interface IPolycentricCore {
   /**
-   * Build vector clocks from head events (one per signer+collection).
+   * Copy signed events to the event store.
    *
-   * Thin WASM wrapper around `crate::event::vector_clock::build_vector_clocks`.
+   * @param signed_events - Serialized `SignedEvent` proto bytes, one per entry.
+   *   Each event has its signature verified before being inserted.
+   */
+  copy_events(signed_events: Uint8Array[]): void;
+
+  /**
+   * Copy multiple content entries into the content store.
+   *
+   * @param contentMap - Map from serialized `ContentDigest` proto bytes
+   *   to serialized `Content` proto bytes.
+   */
+  copy_contents(contentMap: Map<Uint8Array, Uint8Array>): void;
+
+  /**
+   * Return the next sequence for a (identity, collection, signer) stream.
+   */
+  next_sequence(
+    identity: string,
+    collection: number,
+    signed_by: Uint8Array,
+  ): bigint;
+
+  /**
+   * Build a vector clock for a single collection within an identity.
+   *
+   * Resolves the Identity document at `identity_sequence` from the local
+   * store and emits a `VectorClock` ordered by the identity's key list.
+   *
+   * @param identity - Identity key (hex hash)
+   * @param collection - Collection ID the event belongs to
+   * @param identity_sequence - Sequence of the identity event being referenced
+   * @param signed_by - Serialized PublicKey proto bytes of the signer
+   * @param current_sequence - Sequence of the event being built (overlaid for signer)
+   * @returns Serialized VectorClock proto bytes
    */
   build_vector_clock(
+    identity: string,
+    collection: number,
+    identity_sequence: bigint,
     signed_by: Uint8Array,
-    head_events: Uint8Array[],
-  ): Uint8Array[];
+    current_sequence: bigint,
+  ): Uint8Array;
   /**
    * Commit event bytes via a JS callback
    *

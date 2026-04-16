@@ -16,7 +16,6 @@ pub mod traits;
 pub mod digest;
 pub mod event;
 pub mod event_array;
-pub mod internal;
 pub mod moderation_tag;
 pub mod pointer;
 pub mod public_key;

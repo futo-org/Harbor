@@ -16,7 +16,8 @@ import { SerializedContent } from './content';
 import { ContentDigest } from './content';
 import { EventKey } from './event_key';
 /**
- * Contains the sequences that the current KeyPair is aware of.
+ * Contains the sequences (of the same event collection) that the current KeyPair is aware of.
+ * The order of the sequences is determined by the the keys listed
  *
  * @generated from protobuf message polycentric.v2.VectorClock
  */
@@ -39,28 +40,34 @@ export interface Event {
    */
   key?: EventKey;
   /**
-   * Vector clock to keep the same collection on shared identities in sync
+   * Reference to the sequence, of the Identity Collection (1), that holds the identity document
    *
-   * @generated from protobuf field: repeated polycentric.v2.VectorClock vector_clocks = 2
+   * @generated from protobuf field: uint64 identity_sequence = 2
    */
-  vectorClocks: VectorClock[];
+  identitySequence: bigint;
+  /**
+   * Vector clock
+   *
+   * @generated from protobuf field: polycentric.v2.VectorClock vector_clock = 3
+   */
+  vectorClock?: VectorClock;
   /**
    * Signature of the previous event signed by the same key. Assists in creating
    * immutable collections.
    *
-   * @generated from protobuf field: bytes previous_signature = 3
+   * @generated from protobuf field: bytes previous_signature = 4
    */
   previousSignature: Uint8Array;
   /**
    * Digest of the content
    *
-   * @generated from protobuf field: polycentric.v2.ContentDigest content_digest = 4
+   * @generated from protobuf field: polycentric.v2.ContentDigest content_digest = 6
    */
   contentDigest?: ContentDigest;
   /**
    * Timestamp, in milliseconds, of when the event was created
    *
-   * @generated from protobuf field: uint64 created_at = 5
+   * @generated from protobuf field: uint64 created_at = 7
    */
   createdAt: bigint;
 }
@@ -270,25 +277,26 @@ class Event$Type extends MessageType<Event> {
       { no: 1, name: 'key', kind: 'message', T: () => EventKey },
       {
         no: 2,
-        name: 'vector_clocks',
-        kind: 'message',
-        repeat: 2 /*RepeatType.UNPACKED*/,
-        T: () => VectorClock,
+        name: 'identity_sequence',
+        kind: 'scalar',
+        T: 4 /*ScalarType.UINT64*/,
+        L: 0 /*LongType.BIGINT*/,
       },
+      { no: 3, name: 'vector_clock', kind: 'message', T: () => VectorClock },
       {
-        no: 3,
+        no: 4,
         name: 'previous_signature',
         kind: 'scalar',
         T: 12 /*ScalarType.BYTES*/,
       },
       {
-        no: 4,
+        no: 6,
         name: 'content_digest',
         kind: 'message',
         T: () => ContentDigest,
       },
       {
-        no: 5,
+        no: 7,
         name: 'created_at',
         kind: 'scalar',
         T: 4 /*ScalarType.UINT64*/,
@@ -298,7 +306,7 @@ class Event$Type extends MessageType<Event> {
   }
   create(value?: PartialMessage<Event>): Event {
     const message = globalThis.Object.create(this.messagePrototype!);
-    message.vectorClocks = [];
+    message.identitySequence = 0n;
     message.previousSignature = new Uint8Array(0);
     message.createdAt = 0n;
     if (value !== undefined)
@@ -324,15 +332,21 @@ class Event$Type extends MessageType<Event> {
             message.key,
           );
           break;
-        case /* repeated polycentric.v2.VectorClock vector_clocks */ 2:
-          message.vectorClocks.push(
-            VectorClock.internalBinaryRead(reader, reader.uint32(), options),
+        case /* uint64 identity_sequence */ 2:
+          message.identitySequence = reader.uint64().toBigInt();
+          break;
+        case /* polycentric.v2.VectorClock vector_clock */ 3:
+          message.vectorClock = VectorClock.internalBinaryRead(
+            reader,
+            reader.uint32(),
+            options,
+            message.vectorClock,
           );
           break;
-        case /* bytes previous_signature */ 3:
+        case /* bytes previous_signature */ 4:
           message.previousSignature = reader.bytes();
           break;
-        case /* polycentric.v2.ContentDigest content_digest */ 4:
+        case /* polycentric.v2.ContentDigest content_digest */ 6:
           message.contentDigest = ContentDigest.internalBinaryRead(
             reader,
             reader.uint32(),
@@ -340,7 +354,7 @@ class Event$Type extends MessageType<Event> {
             message.contentDigest,
           );
           break;
-        case /* uint64 created_at */ 5:
+        case /* uint64 created_at */ 7:
           message.createdAt = reader.uint64().toBigInt();
           break;
         default:
@@ -374,26 +388,29 @@ class Event$Type extends MessageType<Event> {
         writer.tag(1, WireType.LengthDelimited).fork(),
         options,
       ).join();
-    /* repeated polycentric.v2.VectorClock vector_clocks = 2; */
-    for (let i = 0; i < message.vectorClocks.length; i++)
+    /* uint64 identity_sequence = 2; */
+    if (message.identitySequence !== 0n)
+      writer.tag(2, WireType.Varint).uint64(message.identitySequence);
+    /* polycentric.v2.VectorClock vector_clock = 3; */
+    if (message.vectorClock)
       VectorClock.internalBinaryWrite(
-        message.vectorClocks[i],
-        writer.tag(2, WireType.LengthDelimited).fork(),
+        message.vectorClock,
+        writer.tag(3, WireType.LengthDelimited).fork(),
         options,
       ).join();
-    /* bytes previous_signature = 3; */
+    /* bytes previous_signature = 4; */
     if (message.previousSignature.length)
-      writer.tag(3, WireType.LengthDelimited).bytes(message.previousSignature);
-    /* polycentric.v2.ContentDigest content_digest = 4; */
+      writer.tag(4, WireType.LengthDelimited).bytes(message.previousSignature);
+    /* polycentric.v2.ContentDigest content_digest = 6; */
     if (message.contentDigest)
       ContentDigest.internalBinaryWrite(
         message.contentDigest,
-        writer.tag(4, WireType.LengthDelimited).fork(),
+        writer.tag(6, WireType.LengthDelimited).fork(),
         options,
       ).join();
-    /* uint64 created_at = 5; */
+    /* uint64 created_at = 7; */
     if (message.createdAt !== 0n)
-      writer.tag(5, WireType.Varint).uint64(message.createdAt);
+      writer.tag(7, WireType.Varint).uint64(message.createdAt);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(
