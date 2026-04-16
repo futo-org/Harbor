@@ -1,0 +1,22 @@
+trivy:
+  stage: test
+  image:
+    name: aquasec/trivy:0.69.3
+    entrypoint: [""]
+  variables:
+    TRIVY_NO_PROGRESS: "true"
+    TRIVY_CACHE_DIR: ".trivycache/"
+  allow_failure: true
+  script:
+    # Gitlab code quality report output
+    - trivy filesystem --scanners misconfig,vuln --exit-code 0 --severity CRITICAL --format template --template "@/contrib/gitlab-codequality.tpl" -o gl-codeclimate.json .
+    # Console output
+    - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity CRITICAL .
+  cache:
+    paths:
+      - .trivycache/
+  artifacts:
+    paths:
+      - gl-codeclimate.json
+    reports:
+      codequality: gl-codeclimate.json
