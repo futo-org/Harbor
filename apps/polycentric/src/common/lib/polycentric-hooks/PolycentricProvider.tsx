@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { registerForPushNotifications } from '../notifications/registerPushToken';
 import { pubkeyStr, decodeV2PostBundle } from './helpers';
 import {
   createPolycentricStore,
@@ -129,6 +130,15 @@ export function PolycentricProvider({
       onInitialized?.();
     }
   }, [isLoading, onInitialized]);
+
+  useEffect(() => {
+    if (isLoading || error) return;
+    void registerForPushNotifications()
+      .then((token) => {
+        if (token) console.log('Push token:', token);
+      })
+      .catch((err) => console.warn('Push registration failed:', err));
+  }, [isLoading, error]);
 
   useEffect(() => {
     let cancelled = false;
