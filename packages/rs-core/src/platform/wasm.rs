@@ -169,7 +169,13 @@ impl PolycentricWasm {
 
         let clock = self
             .client
-            .build_vector_clock(identity, collection, identity_sequence, &pk, current_sequence)
+            .build_vector_clock(
+                identity,
+                collection,
+                identity_sequence,
+                &pk,
+                current_sequence,
+            )
             .map_err(|e| JsValue::from_str(&format!("build_vector_clock: {e}")))?;
 
         Ok(Uint8Array::from(&clock.encode_to_vec()[..]))

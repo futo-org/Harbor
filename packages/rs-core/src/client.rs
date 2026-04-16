@@ -87,8 +87,10 @@ impl PolycentricClient {
         })?;
 
         // 2. Decode the identity event → content digest.
-        let identity_event = Event::decode(identity_signed_event.event_bytes.as_slice())
-            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode identity event: {}", e)))?;
+        let identity_event =
+            Event::decode(identity_signed_event.event_bytes.as_slice()).map_err(|e| {
+                CoreError::InvalidEvent(format!("Failed to decode identity event: {}", e))
+            })?;
         let digest = identity_event.content_digest.ok_or_else(|| {
             CoreError::InvalidEvent("Identity event missing content_digest".into())
         })?;
