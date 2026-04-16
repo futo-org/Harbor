@@ -106,14 +106,6 @@ class NativePolycentricCore implements IPolycentricCore {
     return signEvent(eventBytes);
   }
 
-  /** Build vector clocks — not yet wired through native FFI. */
-  build_vector_clock(
-    _signed_by: Uint8Array,
-    _head_events: Uint8Array[]
-  ): Uint8Array[] {
-    return [];
-  }
-
   /**
    * Commit a signed event. Native-side persistence will eventually flow
    * through the Rust FFI EventStore; for now it's a no-op on this bridge
@@ -121,6 +113,42 @@ class NativePolycentricCore implements IPolycentricCore {
    */
   async commit_event(_signedEventBytes: Uint8Array): Promise<void> {
     // no-op
+  }
+
+  /** Copy signed events into the core — not wired through native FFI yet. */
+  copy_events(_signedEvents: Uint8Array[]): void {
+    // no-op
+  }
+
+  /** Copy content into the core — not wired through native FFI yet. */
+  copy_contents(_contentMap: Map<Uint8Array, Uint8Array>): void {
+    // no-op
+  }
+
+  /**
+   * Next sequence — not wired through native FFI yet.
+   * TODO: route through a native call once the FFI EventStore is ready.
+   */
+  next_sequence(
+    _identity: string,
+    _collection: number,
+    _signedBy: Uint8Array
+  ): bigint {
+    return 1n;
+  }
+
+  /**
+   * Build vector clock — not wired through native FFI yet.
+   * TODO: route through a native call once the FFI stores are ready.
+   */
+  build_vector_clock(
+    _identity: string,
+    _collection: number,
+    _identitySequence: bigint,
+    _signedBy: Uint8Array,
+    _currentSequence: bigint
+  ): Uint8Array {
+    return new Uint8Array(0);
   }
 
   /** Fetch events from a server via gRPC-web (network — cannot go through FFI). */

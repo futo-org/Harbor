@@ -89,10 +89,10 @@ export class IdentityManager {
 
     const digest = this.client.contentManager.buildDigest(content);
 
-    const sequence = await this.client.storage.events.getNextSequence(
-      this.client.currentKeyPair.publicKey,
-      COLLECTION.IDENTITY,
+    const sequence = this.client.core!.next_sequence(
       identityKey,
+      COLLECTION.IDENTITY,
+      Proto.PublicKey.toBinary(this.client.currentKeyPair.publicKey),
     );
 
     const event = Proto.Event.create({
@@ -109,7 +109,7 @@ export class IdentityManager {
 
     await this.client.storage.content.save(digest, content);
     const signedEvent = await this.client.signEvent(event);
-    await this.client.commitEvent(signedEvent);
+    await this.client.commitEvent(signedEvent, content);
 
     this.client.setActiveIdentityKey(identityKey);
 

@@ -109,6 +109,10 @@ export class PolycentricClient {
       this.setStep(InitializationStep.LOADING_PROCESS_ID);
 
       this.setStep(InitializationStep.HYDRATING_EVENTS);
+
+      await this.copyEvents();
+      await this.copyContents();
+
       this.setHydrationStatus(HydrationStatus.COMPLETED);
 
       const restoredIdentity = await this.restoreKeyPair();
@@ -146,6 +150,40 @@ export class PolycentricClient {
   }
 
   /**
+   * Hydrate the Rust core's in-memory stores from persistent storage.
+   * The Rust stores are ephemeral (reset on every load) so anything the
+   * core needs (events for clocks/sequences, content for identity lookups)
+   * must be copied in at startup.
+   */
+  async copyEvents() {
+    if (!this.core) return;
+
+    const signedEvents = await this.storage.events.getAll();
+
+    this.core.copy_events(
+      signedEvents.map((s) => Proto.SignedEvent.toBinary(s)),
+    );
+  }
+
+  /**
+   * A temporary function to copy all the content the browser is aware of.
+   * We should make this smarter with the EventBundles, maybe.
+   */
+  async copyContents() {
+    if (!this.core) return;
+    const contents = await this.storage.content.getAll();
+
+    const contentMap = new Map<Uint8Array, Uint8Array>();
+    for (const r of contents) {
+      contentMap.set(
+        Proto.ContentDigest.toBinary(r.digest),
+        Proto.Content.toBinary(r.content),
+      );
+    }
+    this.core.copy_contents(contentMap);
+  }
+
+  /**
    * Helper function build an Event from a Content.
    * Uses the current keypair and current identity.
    */
@@ -161,15 +199,18 @@ export class PolycentricClient {
       throw new Error('No active identity');
     }
 
-    const sequence = await this.storage.events.getNextSequence(
-      this.currentKeyPair.publicKey,
-      collection,
+    const sequence = this.core!.next_sequence(
       this.activeIdentityKey,
+      collection,
+      Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
     );
-    console.log('next seq', sequence.toString());
 
-    // TODO: compute from head events via build_vector_clock
-    const vectorClocks: Proto.VectorClock[] = [];
+    const identitySequence =
+      this.core!.next_sequence(
+        this.activeIdentityKey,
+        COLLECTION.IDENTITY,
+        Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
+      ) - 1n;
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -178,11 +219,13 @@ export class PolycentricClient {
         signedBy: this.currentKeyPair.publicKey,
         sequence,
       }),
-      vectorClocks,
+      identitySequence,
       previousSignature: new Uint8Array(0),
       contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
     });
+
+    event.vectorClock = this.buildVectorClock(event);
 
     return event;
   }
@@ -216,40 +259,51 @@ export class PolycentricClient {
 
   /**
    * Sign and persist a v2 Event.
+   *
+   * Mirrors the event (and its content, if supplied) into the Rust core so
+   * subsequent `build_vector_clock` / `next_sequence` calls see it.
    */
-  async commitEvent(signedEvent: Proto.SignedEvent): Promise<void> {
+  async commitEvent(
+    signedEvent: Proto.SignedEvent,
+    content?: Proto.Content,
+  ): Promise<void> {
     await this.storage.events.save(signedEvent);
+
+    this.core!.copy_events([Proto.SignedEvent.toBinary(signedEvent)]);
+
+    if (content) {
+      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+      if (event.contentDigest) {
+        const contentMap = new Map<Uint8Array, Uint8Array>();
+        contentMap.set(
+          Proto.ContentDigest.toBinary(event.contentDigest),
+          Proto.Content.toBinary(content),
+        );
+        this.core!.copy_contents(contentMap);
+      }
+    }
+
     this.events.emitContentCreated(signedEvent);
   }
 
   /**
-   * Build a vector clock
+   * Build a vector clock for a single collection within an identity.
+   *
+   * Delegates to the Rust core, which resolves the referenced identity
+   * document from its local content store and computes the clock.
+   * Requires the identity event and its content to already have been
+   * copied into the core via `copy_events` / `copy_contents`.
    */
-  async buildVectorClock(event: Proto.Event): Promise<Proto.VectorClock[]> {
+  buildVectorClock(event: Proto.Event): Proto.VectorClock {
     if (!this.core) throw new Error('Core not initialized');
-
-    const signerBytes = Proto.PublicKey.toBinary(event.key!.signedBy!);
-
-    // Filter out any events that are from the same collection AND signing key as our new event
-    const events = (
-      await this.storage.events.getHeadsByIdentity(event.key!.identity)
-    )
-      .map((signedEvent) => Proto.Event.fromBinary(signedEvent.eventBytes))
-      .filter(
-        (e) =>
-          !(
-            e.key?.collection === event.key?.collection &&
-            e.key?.signedBy?.key === event.key?.signedBy?.key
-          ),
-      )
-      .map((e) => Proto.Event.toBinary(e));
-
-    // Add our latest event to the heads array
-    events.push(Proto.Event.toBinary(event));
-
-    const vectorClockBytes = this.core.build_vector_clock(signerBytes, events);
-
-    return vectorClockBytes.map((bytes) => Proto.VectorClock.fromBinary(bytes));
+    const clockBytes = this.core.build_vector_clock(
+      event.key!.identity,
+      event.key!.collection,
+      event.identitySequence,
+      Proto.PublicKey.toBinary(event.key!.signedBy!),
+      event.key!.sequence,
+    );
+    return Proto.VectorClock.fromBinary(clockBytes);
   }
 
   /**

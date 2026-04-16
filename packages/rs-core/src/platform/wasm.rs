@@ -1,8 +1,9 @@
+use crate::client::PolycentricClient;
 use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
-    event_sync_service_client::EventSyncServiceClient, Event, ListEventsFilters, ListEventsRequest,
-    PublicKey, PutEventsRequest, SignedEvent,
+    event_sync_service_client::EventSyncServiceClient, ContentDigest, Event, ListEventsFilters,
+    ListEventsRequest, PublicKey, PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -20,10 +21,13 @@ extern "C" {
     pub type CommitEventCallback;
 
     #[wasm_bindgen(typescript_type = "Uint8Array[]")]
-    pub type EventBytesArray;
+    pub type SignedEventBytesArray;
 
     #[wasm_bindgen(typescript_type = "Uint8Array[]")]
-    pub type VectorClockBytesArray;
+    pub type BytesArray;
+
+    #[wasm_bindgen(typescript_type = "Map<Uint8Array, Uint8Array>")]
+    pub type ContentMap;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -37,13 +41,139 @@ pub fn wasm_init_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub struct PolycentricWasm {}
+pub struct PolycentricWasm {
+    client: PolycentricClient,
+}
 
 #[wasm_bindgen]
 impl PolycentricWasm {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self {}
+        Self {
+            client: PolycentricClient::new(),
+        }
+    }
+
+    /// Return the next sequence for a (identity, collection, signer) stream.
+    ///
+    /// # Arguments
+    /// * `identity` - Identity key (hex hash)
+    /// * `collection` - Collection ID
+    /// * `signed_by` - Serialized `PublicKey` proto bytes
+    ///
+    /// # Returns
+    /// * `u64` - max observed sequence + 1, or 1 if the stream is empty
+    #[wasm_bindgen]
+    pub fn next_sequence(
+        &self,
+        identity: &str,
+        collection: i32,
+        signed_by: &[u8],
+    ) -> std::result::Result<u64, JsValue> {
+        let pk = PublicKey::decode(signed_by)
+            .map_err(|e| JsValue::from_str(&format!("Failed to decode signed_by: {e}")))?;
+        Ok(self
+            .client
+            .next_sequence(identity, collection, pk.key_type, &pk.key))
+    }
+
+    /// Copy signed events to the event store.
+    ///
+    /// # Arguments
+    /// * `signed_events` - JS `Array` of `Uint8Array`, each a serialized
+    ///   `SignedEvent`. Each event has its signature verified before being
+    ///   inserted into the local event store.
+    #[wasm_bindgen]
+    pub fn copy_events(
+        &mut self,
+        signed_events: SignedEventBytesArray,
+    ) -> std::result::Result<(), JsValue> {
+        let array: &js_sys::Array = signed_events.unchecked_ref();
+
+        for item in array.iter() {
+            let bytes = Uint8Array::unchecked_from_js(item).to_vec();
+
+            // Decode + verify the signature in one step.
+            let signed_event = SignedEvent::from_bytes(&bytes)
+                .map_err(|e| JsValue::from_str(&format!("Invalid signed event: {:?}", e)))?;
+
+            self.client
+                .copy_event(signed_event)
+                .map_err(|e| JsValue::from_str(&format!("Failed to copy event: {:?}", e)))?;
+        }
+
+        Ok(())
+    }
+
+    /// Copy multiple content entries into the content store.
+    ///
+    /// # Arguments
+    /// * `content_map` - JS `Map<Uint8Array, Uint8Array>` where keys are
+    ///   serialized `ContentDigest` protos and values are serialized
+    ///   `Content` protos.
+    #[wasm_bindgen]
+    pub fn copy_contents(&mut self, content_map: ContentMap) -> std::result::Result<(), JsValue> {
+        let map: &js_sys::Map = content_map.unchecked_ref();
+
+        map.entries()
+            .into_iter()
+            .try_for_each(|entry| -> std::result::Result<(), JsValue> {
+                let pair: js_sys::Array = entry
+                    .map_err(|e| JsValue::from_str(&format!("Map iteration error: {:?}", e)))?
+                    .unchecked_into();
+                let digest_bytes = Uint8Array::unchecked_from_js(pair.get(0)).to_vec();
+                let content_bytes = Uint8Array::unchecked_from_js(pair.get(1)).to_vec();
+
+                let digest = ContentDigest::decode(digest_bytes.as_slice()).map_err(|e| {
+                    JsValue::from_str(&format!("Failed to decode ContentDigest: {e}"))
+                })?;
+                self.client.copy_content(&digest, content_bytes);
+                Ok(())
+            })
+    }
+
+    /// Build a vector clock for a single collection within an identity.
+    ///
+    /// Resolves the Identity document at `identity_sequence` from the
+    /// local store, reads its authorized keys, and produces a
+    /// `VectorClock` whose sequence entries are in identity-document key
+    /// order. The current signer's entry is overlaid with
+    /// `current_sequence` (the sequence of the event being built).
+    ///
+    /// # Arguments
+    /// * `identity` - Identity key (hex hash)
+    /// * `collection` - Collection ID the event belongs to
+    /// * `identity_sequence` - Sequence of the identity-collection event
+    ///   the signer is referencing
+    /// * `signed_by` - Serialized `PublicKey` proto bytes of the signer
+    /// * `current_sequence` - Sequence of the event being built
+    ///
+    /// # Returns
+    /// Serialized `VectorClock` proto bytes.
+    #[wasm_bindgen]
+    pub fn build_vector_clock(
+        &self,
+        identity: &str,
+        collection: i32,
+        identity_sequence: u64,
+        signed_by: &[u8],
+        current_sequence: u64,
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let pk = PublicKey::decode(signed_by)
+            .map_err(|e| JsValue::from_str(&format!("Failed to decode signed_by: {e}")))?;
+
+        let clock = self
+            .client
+            .build_vector_clock(
+                identity,
+                collection,
+                identity_sequence,
+                &pk,
+                current_sequence,
+            )
+            .map_err(|e| JsValue::from_str(&format!("build_vector_clock: {e}")))?;
+
+        Ok(Uint8Array::from(&clock.encode_to_vec()[..]))
     }
 
     /// Decode and verify a signed event from bytes.
@@ -65,28 +195,6 @@ impl PolycentricWasm {
             .to_bytes()
             .map_err(|e| JsValue::from_str(&format!("Failed to encode signed event: {}", e)))?;
 
-        Ok(Uint8Array::from(&bytes[..]))
-    }
-
-    /// Decode an event from a signed event's event_bytes field.
-    ///
-    /// # Arguments
-    /// * `signed_event` - Serialized SignedEvent protobuf bytes
-    ///
-    /// # Returns
-    /// * `Result<Uint8Array, JsValue>` - The serialized Event bytes or error
-    #[wasm_bindgen]
-    pub fn decode_event_from_signed_event(
-        &self,
-        signed_event: &[u8],
-    ) -> std::result::Result<Uint8Array, JsValue> {
-        let signed_event = SignedEvent::decode(signed_event)
-            .map_err(|e| JsValue::from_str(&format!("Failed to decode signed event: {}", e)))?;
-
-        let event = Event::decode(signed_event.event_bytes.as_slice())
-            .map_err(|e| JsValue::from_str(&format!("Failed to decode event: {}", e)))?;
-
-        let bytes = event.encode_to_vec();
         Ok(Uint8Array::from(&bytes[..]))
     }
 
@@ -141,37 +249,6 @@ impl PolycentricWasm {
             .map_err(|e| PlatformError::CryptoError(format!("Event signature invalid: {:?}", e)))?;
 
         Ok(Uint8Array::from(&signed_event_bytes[..]))
-    }
-
-    /// Build vector clocks from head events (one per signer+collection).
-    ///
-    /// Thin WASM wrapper around `crate::event::vector_clock::build_vector_clocks`.
-    #[wasm_bindgen]
-    pub fn build_vector_clock(
-        &self,
-        signed_by: &[u8],
-        head_events: EventBytesArray,
-    ) -> std::result::Result<VectorClockBytesArray, JsValue> {
-        use crate::event::vector_clock;
-
-        let array: &js_sys::Array = head_events.unchecked_ref();
-        let heads: Vec<vector_clock::HeadEntry> = array
-            .iter()
-            .map(|item| {
-                let bytes = Uint8Array::unchecked_from_js(item).to_vec();
-                vector_clock::decode_head(&bytes)
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| JsValue::from_str(&e))?;
-
-        let clocks = vector_clock::build_vector_clocks(signed_by, &heads)
-            .map_err(|e| JsValue::from_str(&e))?;
-
-        let result = js_sys::Array::new();
-        for clock in clocks {
-            result.push(&Uint8Array::from(&clock.encode_to_vec()[..]));
-        }
-        Ok(result.unchecked_into())
     }
 
     /// Fetch events from a server via gRPC-web.

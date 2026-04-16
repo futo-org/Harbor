@@ -7,17 +7,17 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
-function publicKeyHex(publicKey: v2.PublicKey): string {
-  return bytesToHex(v2.PublicKey.toBinary(publicKey));
+/**
+ * Stable string identity for an EventKey: hex-encoded canonical proto bytes.
+ * Used as the in-memory Map key.
+ */
+function eventKeyId(key: v2.EventKey): string {
+  return bytesToHex(v2.EventKey.toBinary(key));
 }
 
-function eventCompoundKey(
-  publicKey: string,
-  collection: number,
-  identity: string,
-  sequence: number
-): string {
-  return `${publicKey}:${collection}:${identity}:${sequence}`;
+interface StoredEvent {
+  key: v2.EventKey;
+  signedEvent: v2.SignedEvent;
 }
 
 /**
@@ -25,104 +25,75 @@ function eventCompoundKey(
  * TODO: persist to SQLite once the v2 schema migration is in place.
  */
 export class EventRepository implements IEventRepository {
-  private events = new Map<string, v2.SignedEvent>();
-
-  private extractKey(signedEvent: v2.SignedEvent) {
-    const event = v2.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key?.signedBy) throw new Error('Event missing key');
-    return {
-      publicKey: publicKeyHex(event.key.signedBy),
-      collection: event.key.collection,
-      identity: event.key.identity,
-      sequence: Number(event.key.sequence),
-    };
-  }
+  private events = new Map<string, StoredEvent>();
 
   async save(signedEvent: v2.SignedEvent): Promise<void> {
-    const { publicKey, collection, identity, sequence } =
-      this.extractKey(signedEvent);
-    this.events.set(
-      eventCompoundKey(publicKey, collection, identity, sequence),
-      signedEvent
-    );
+    const event = v2.Event.fromBinary(signedEvent.eventBytes);
+    if (!event.key) throw new Error('Event missing key');
+    this.events.set(eventKeyId(event.key), { key: event.key, signedEvent });
   }
 
   async getAll(): Promise<v2.SignedEvent[]> {
-    return [...this.events.values()];
+    return [...this.events.values()].map((e) => e.signedEvent);
   }
 
   async getBatch(
     batchSize: number,
     offset = 0
   ): Promise<{ events: v2.SignedEvent[]; offset: number }> {
-    const all = [...this.events.values()];
+    const all = await this.getAll();
     const slice = all.slice(offset, offset + batchSize);
     return { events: slice, offset: offset + slice.length };
   }
 
-  async getNextSequence(
-    publicKey: v2.PublicKey,
-    collection: number,
-    identity: string
-  ): Promise<bigint> {
-    const prefix = `${publicKeyHex(publicKey)}:${collection}:${identity}:`;
-    let max = 0n;
-    for (const key of this.events.keys()) {
-      if (key.startsWith(prefix)) {
-        const seq = BigInt(key.slice(prefix.length));
-        if (seq >= max) max = seq + 1n;
-      }
-    }
-    return max === 0n ? 1n : max;
+  async getByEventKey(key: v2.EventKey): Promise<v2.SignedEvent | null> {
+    return this.events.get(eventKeyId(key))?.signedEvent ?? null;
   }
 
-  async getLatestEvent(
-    publicKey: v2.PublicKey,
-    identity: string
-  ): Promise<v2.SignedEvent | null> {
-    const pkHex = publicKeyHex(publicKey);
-    let latest: v2.SignedEvent | null = null;
-    let maxSeq = -1;
-    for (const [key, event] of this.events) {
-      const parts = key.split(':');
-      if (parts[0] !== pkHex || parts[2] !== identity) continue;
-      const seq = Number(parts[3]);
-      if (seq > maxSeq) {
-        maxSeq = seq;
-        latest = event;
-      }
+  async getByIdentity(
+    identity: string,
+    options?: {
+      signer?: v2.PublicKey;
+      collection?: number;
+      headsOnly?: boolean;
     }
-    return latest;
-  }
-
-  async getEventsByIdentity(
-    publicKey: v2.PublicKey,
-    identity: string
   ): Promise<v2.SignedEvent[]> {
-    const pkHex = publicKeyHex(publicKey);
-    const result: { seq: number; event: v2.SignedEvent }[] = [];
-    for (const [key, event] of this.events) {
-      const parts = key.split(':');
-      if (parts[0] !== pkHex || parts[2] !== identity) continue;
-      result.push({ seq: Number(parts[3]), event });
-    }
-    result.sort((a, b) => a.seq - b.seq);
-    return result.map((r) => r.event);
-  }
+    const signerHex = options?.signer
+      ? bytesToHex(v2.PublicKey.toBinary(options.signer))
+      : undefined;
 
-  async getHeadsByIdentity(identity: string): Promise<v2.SignedEvent[]> {
-    // group key: "publicKeyHex:collection" → highest-sequence event
-    const heads = new Map<string, { seq: number; event: v2.SignedEvent }>();
-    for (const [key, event] of this.events) {
-      const parts = key.split(':');
-      if (parts[2] !== identity) continue;
-      const group = `${parts[0]}:${parts[1]}`;
-      const seq = Number(parts[3]);
-      const existing = heads.get(group);
-      if (!existing || seq > existing.seq) {
-        heads.set(group, { seq, event });
+    const matches: StoredEvent[] = [];
+    for (const stored of this.events.values()) {
+      const k = stored.key;
+      if (k.identity !== identity) continue;
+      if (
+        options?.collection !== undefined &&
+        k.collection !== options.collection
+      )
+        continue;
+      if (signerHex !== undefined) {
+        if (!k.signedBy) continue;
+        if (bytesToHex(v2.PublicKey.toBinary(k.signedBy)) !== signerHex)
+          continue;
       }
+      matches.push(stored);
     }
-    return [...heads.values()].map((h) => h.event);
+
+    if (options?.headsOnly) {
+      // Keep only the max-sequence entry per (signer, collection).
+      const heads = new Map<string, StoredEvent>();
+      for (const m of matches) {
+        if (!m.key.signedBy) continue;
+        const groupId = `${bytesToHex(v2.PublicKey.toBinary(m.key.signedBy))}:${m.key.collection}`;
+        const existing = heads.get(groupId);
+        if (!existing || m.key.sequence > existing.key.sequence) {
+          heads.set(groupId, m);
+        }
+      }
+      return [...heads.values()].map((m) => m.signedEvent);
+    }
+
+    matches.sort((a, b) => Number(a.key.sequence - b.key.sequence));
+    return matches.map((m) => m.signedEvent);
   }
 }
