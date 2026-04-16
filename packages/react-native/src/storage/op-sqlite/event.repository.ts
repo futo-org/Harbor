@@ -66,11 +66,15 @@ export class EventRepository implements IEventRepository {
     for (const stored of this.events.values()) {
       const k = stored.key;
       if (k.identity !== identity) continue;
-      if (options?.collection !== undefined && k.collection !== options.collection)
+      if (
+        options?.collection !== undefined &&
+        k.collection !== options.collection
+      )
         continue;
       if (signerHex !== undefined) {
         if (!k.signedBy) continue;
-        if (bytesToHex(v2.PublicKey.toBinary(k.signedBy)) !== signerHex) continue;
+        if (bytesToHex(v2.PublicKey.toBinary(k.signedBy)) !== signerHex)
+          continue;
       }
       matches.push(stored);
     }

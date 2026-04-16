@@ -49,9 +49,7 @@ export class EventStore {
     return this.repository.getBatch(batchSize, offset);
   }
 
-  async getByEventKey(
-    key: Proto.EventKey,
-  ): Promise<Proto.SignedEvent | null> {
+  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
     return this.repository.getByEventKey(key);
   }
 

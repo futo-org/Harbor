@@ -121,7 +121,7 @@ class NativePolycentricCore implements IPolycentricCore {
   }
 
   /** Copy content into the core — not wired through native FFI yet. */
-  copy_contents(_digests: Uint8Array[], _contents: Uint8Array[]): void {
+  copy_contents(_contentMap: Map<Uint8Array, Uint8Array>): void {
     // no-op
   }
 

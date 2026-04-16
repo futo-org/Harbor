@@ -15,11 +15,10 @@ export interface IPolycentricCore {
   /**
    * Copy multiple content entries into the content store.
    *
-   * @param digests - Serialized `ContentDigest` proto bytes, one per entry
-   * @param contents - Serialized `Content` proto bytes, one per entry
-   *   (must be the same length as `digests`; pairs by index)
+   * @param contentMap - Map from serialized `ContentDigest` proto bytes
+   *   to serialized `Content` proto bytes.
    */
-  copy_contents(digests: Uint8Array[], contents: Uint8Array[]): void;
+  copy_contents(contentMap: Map<Uint8Array, Uint8Array>): void;
 
   /**
    * Return the next sequence for a (identity, collection, signer) stream.

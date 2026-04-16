@@ -55,14 +55,6 @@ impl PolycentricClient {
     }
 
     /// Build a vector clock for a single collection within an identity.
-    ///
-    /// Resolves the Identity document at `identity_sequence` (from the
-    /// current signer's identity-collection events), reads its authorized
-    /// keys (`[...rotation_keys, ...signing_keys]`, dedupe first-wins),
-    /// and emits a `VectorClock` whose `sequence` entries are the max
-    /// observed height per signer in the target collection. The current
-    /// signer's entry is overlaid with `current_sequence` — the sequence
-    /// of the event being built.
     pub fn build_vector_clock(
         &self,
         identity: &str,
@@ -71,7 +63,7 @@ impl PolycentricClient {
         current_signer: &PublicKey,
         current_sequence: u64,
     ) -> Result<VectorClock, CoreError> {
-        // 1. Look up the referenced identity event for this signer.
+        // Retrieve referenced identity event for this signer.
         let identity_event_key = EventKey {
             identity: identity.to_string(),
             collection: IDENTITY_COLLECTION,
@@ -86,7 +78,6 @@ impl PolycentricClient {
             ))
         })?;
 
-        // 2. Decode the identity event → content digest.
         let identity_event =
             Event::decode(identity_signed_event.event_bytes.as_slice()).map_err(|e| {
                 CoreError::InvalidEvent(format!("Failed to decode identity event: {}", e))
@@ -95,7 +86,7 @@ impl PolycentricClient {
             CoreError::InvalidEvent("Identity event missing content_digest".into())
         })?;
 
-        // 3. Resolve content → Identity document.
+        // Decode the identity content
         let content = self
             .content_store
             .get_decoded(&digest)
@@ -109,7 +100,7 @@ impl PolycentricClient {
             }
         };
 
-        // 4. Iterate rotation_keys + signing_keys (deduped, first-wins)
+        // Iterate rotation_keys + signing_keys (deduped, first-wins)
         //    and collect max observed sequence per signer, overlaying the
         //    caller's current sequence for their own key.
         let current_id = (current_signer.key_type, current_signer.key.as_slice());

@@ -132,9 +132,7 @@ export class IndexedDBEventRepository implements IEventRepository {
     }
   }
 
-  async getByEventKey(
-    key: Proto.EventKey,
-  ): Promise<Proto.SignedEvent | null> {
+  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
     if (!key.signedBy) return null;
     try {
       const transaction = this.database.createTransaction(

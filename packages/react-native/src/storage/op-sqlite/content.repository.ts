@@ -27,9 +27,7 @@ export class ContentRepository implements IContentRepository {
     return this.store.get(this.digestKey(digest))?.content ?? null;
   }
 
-  async getAll(): Promise<
-    { digest: v2.ContentDigest; content: v2.Content }[]
-  > {
+  async getAll(): Promise<{ digest: v2.ContentDigest; content: v2.Content }[]> {
     return [...this.store.values()];
   }
 }

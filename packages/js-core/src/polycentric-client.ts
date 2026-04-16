@@ -111,6 +111,7 @@ export class PolycentricClient {
       this.setStep(InitializationStep.HYDRATING_EVENTS);
 
       await this.copyEvents();
+      await this.copyContents();
 
       this.setHydrationStatus(HydrationStatus.COMPLETED);
 
@@ -157,21 +158,29 @@ export class PolycentricClient {
   async copyEvents() {
     if (!this.core) return;
 
-    const [signedEvents, contentRows] = await Promise.all([
-      this.storage.events.getAll(),
-      this.storage.content.getAll(),
-    ]);
+    const signedEvents = await this.storage.events.getAll();
 
     this.core.copy_events(
       signedEvents.map((s) => Proto.SignedEvent.toBinary(s)),
     );
+  }
 
-    if (contentRows.length > 0) {
-      this.core.copy_contents(
-        contentRows.map((r) => Proto.ContentDigest.toBinary(r.digest)),
-        contentRows.map((r) => Proto.Content.toBinary(r.content)),
+  /**
+   * A temporary function to copy all the content the browser is aware of.
+   * We should make this smarter with the EventBundles, maybe.
+   */
+  async copyContents() {
+    if (!this.core) return;
+    const contents = await this.storage.content.getAll();
+
+    const contentMap = new Map<Uint8Array, Uint8Array>();
+    for (const r of contents) {
+      contentMap.set(
+        Proto.ContentDigest.toBinary(r.digest),
+        Proto.Content.toBinary(r.content),
       );
     }
+    this.core.copy_contents(contentMap);
   }
 
   /**
@@ -265,10 +274,12 @@ export class PolycentricClient {
     if (content) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
       if (event.contentDigest) {
-        this.core!.copy_contents(
-          [Proto.ContentDigest.toBinary(event.contentDigest)],
-          [Proto.Content.toBinary(content)],
+        const contentMap = new Map<Uint8Array, Uint8Array>();
+        contentMap.set(
+          Proto.ContentDigest.toBinary(event.contentDigest),
+          Proto.Content.toBinary(content),
         );
+        this.core!.copy_contents(contentMap);
       }
     }
 

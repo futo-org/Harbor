@@ -25,6 +25,9 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "Uint8Array[]")]
     pub type BytesArray;
+
+    #[wasm_bindgen(typescript_type = "Map<Uint8Array, Uint8Array>")]
+    pub type ContentMap;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -105,36 +108,28 @@ impl PolycentricWasm {
     /// Copy multiple content entries into the content store.
     ///
     /// # Arguments
-    /// * `digests` - JS `Array` of `Uint8Array`, each a serialized
-    ///   `ContentDigest` proto.
-    /// * `contents` - JS `Array` of `Uint8Array`, each a serialized
-    ///   `Content` proto. Must be the same length as `digests`; each
-    ///   `contents[i]` is stored keyed by `digests[i]`.
+    /// * `content_map` - JS `Map<Uint8Array, Uint8Array>` where keys are
+    ///   serialized `ContentDigest` protos and values are serialized
+    ///   `Content` protos.
     #[wasm_bindgen]
-    pub fn copy_contents(
-        &mut self,
-        digests: BytesArray,
-        contents: BytesArray,
-    ) -> std::result::Result<(), JsValue> {
-        let digest_array: &js_sys::Array = digests.unchecked_ref();
-        let content_array: &js_sys::Array = contents.unchecked_ref();
+    pub fn copy_contents(&mut self, content_map: ContentMap) -> std::result::Result<(), JsValue> {
+        let map: &js_sys::Map = content_map.unchecked_ref();
 
-        if digest_array.length() != content_array.length() {
-            return Err(JsValue::from_str(
-                "copy_contents: digests and contents must be the same length",
-            ));
-        }
+        map.entries()
+            .into_iter()
+            .try_for_each(|entry| -> std::result::Result<(), JsValue> {
+                let pair: js_sys::Array = entry
+                    .map_err(|e| JsValue::from_str(&format!("Map iteration error: {:?}", e)))?
+                    .unchecked_into();
+                let digest_bytes = Uint8Array::unchecked_from_js(pair.get(0)).to_vec();
+                let content_bytes = Uint8Array::unchecked_from_js(pair.get(1)).to_vec();
 
-        for i in 0..digest_array.length() {
-            let digest_bytes = Uint8Array::unchecked_from_js(digest_array.get(i)).to_vec();
-            let content_bytes = Uint8Array::unchecked_from_js(content_array.get(i)).to_vec();
-
-            let digest = ContentDigest::decode(digest_bytes.as_slice())
-                .map_err(|e| JsValue::from_str(&format!("Failed to decode ContentDigest: {e}")))?;
-            self.client.copy_content(&digest, content_bytes);
-        }
-
-        Ok(())
+                let digest = ContentDigest::decode(digest_bytes.as_slice()).map_err(|e| {
+                    JsValue::from_str(&format!("Failed to decode ContentDigest: {e}"))
+                })?;
+                self.client.copy_content(&digest, content_bytes);
+                Ok(())
+            })
     }
 
     /// Build a vector clock for a single collection within an identity.
