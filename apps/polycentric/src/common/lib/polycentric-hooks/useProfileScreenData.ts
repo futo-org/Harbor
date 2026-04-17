@@ -61,7 +61,9 @@ export function useProfileScreenData(
 
   const username = useUsername(publicKey);
   const profile = useProfile(publicKey, { getIsAborted });
-  const authorFeed = useAuthorFeed(publicKey, undefined, { getIsAborted });
+  const authorFeed = useAuthorFeed(identityIdParam, undefined, {
+    getIsAborted,
+  });
   const likesFeed = useLikesFeed({ enabled: isSelf, getIsAborted });
   const followStatus = useFollowStatus(publicKey);
 

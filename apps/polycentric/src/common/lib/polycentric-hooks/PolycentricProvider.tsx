@@ -31,6 +31,7 @@ export interface PolycentricContextValue {
   error: Error | null;
   currentIdentity: IdentityState | null;
   switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
+  refreshCurrentIdentity: () => Promise<void>;
 }
 
 interface FeedHookResult {
@@ -195,6 +196,11 @@ export function PolycentricProvider({
     [client],
   );
 
+  const refreshCurrentIdentity = useCallback(async () => {
+    if (!client) return;
+    setCurrentIdentity(await resolveIdentity(client));
+  }, [client]);
+
   const value = useMemo<PolycentricContextValue | null>(() => {
     if (!client || !store) return null;
     return {
@@ -205,8 +211,17 @@ export function PolycentricProvider({
       error,
       currentIdentity,
       switchIdentity,
+      refreshCurrentIdentity,
     };
-  }, [client, store, isLoading, error, currentIdentity, switchIdentity]);
+  }, [
+    client,
+    store,
+    isLoading,
+    error,
+    currentIdentity,
+    switchIdentity,
+    refreshCurrentIdentity,
+  ]);
 
   if (error) {
     return <DefaultErrorComponent error={error} />;
@@ -257,9 +272,12 @@ const EMPTY_FEED: FeedHookResult = {
 /** Call the gRPC-web ListEvents endpoint directly via fetch. */
 async function grpcListEvents(
   serverUrl: string,
+  filters?: Partial<v2.ListEventsFilters>,
 ): Promise<v2.ListEventsResponse> {
   const request = v2.ListEventsRequest.toBinary(
-    v2.ListEventsRequest.create({}),
+    v2.ListEventsRequest.create({
+      filters: filters ? v2.ListEventsFilters.create(filters) : undefined,
+    }),
   );
 
   // gRPC-web frame: 1-byte flag (0 = data) + 4-byte big-endian length + body
@@ -354,11 +372,72 @@ export function useFollowingFeed(_options?: {
 }
 
 export function useAuthorFeed(
-  _system: types.PublicKey,
+  identityId: string | null | undefined,
   _limit?: number,
-  _options?: { getIsAborted?: () => boolean },
+  options?: { getIsAborted?: () => boolean },
 ): FeedHookResult {
-  return EMPTY_FEED;
+  const { client, store } = usePolycentricContext();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const getIsAborted = options?.getIsAborted;
+
+  const feedKey = identityId ? `author:${identityId}` : null;
+
+  const fetchFeed = useCallback(async () => {
+    if (!identityId || !feedKey) return;
+    if (client.servers.length === 0) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const ids: string[] = [];
+      for (const server of client.servers) {
+        try {
+          const response = await grpcListEvents(server, {
+            identity: identityId,
+          });
+          if (getIsAborted?.()) return;
+          for (const bundle of response.eventBundles) {
+            const decoded = decodeV2PostBundle(bundle);
+            if (!decoded) continue;
+            store
+              .getState()
+              .ingestPost(decoded.id, decoded.signedEvent, decoded);
+            ids.push(decoded.id);
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch author feed from ${server}:`, e);
+        }
+      }
+      if (getIsAborted?.()) return;
+      store.getState().setFeed(feedKey, ids, false);
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [client, store, identityId, feedKey, getIsAborted]);
+
+  useEffect(() => {
+    if (identityId) fetchFeed();
+  }, [identityId, fetchFeed]);
+
+  const items = useStore(
+    store,
+    (s) => (feedKey ? s.feeds[feedKey]?.ids : undefined) ?? EMPTY_IDS,
+  );
+  const hasMore = useStore(
+    store,
+    (s) => (feedKey ? s.feeds[feedKey]?.hasMore : false) ?? false,
+  );
+
+  return {
+    items,
+    isLoading,
+    error,
+    loadMore: NOOP,
+    hasMore,
+    refresh: fetchFeed,
+  };
 }
 
 export function useLikesFeed(_options?: {

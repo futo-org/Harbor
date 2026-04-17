@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
 import type { Href } from 'expo-router';
 import { router, usePathname } from 'expo-router';
+import { create } from 'zustand';
 import { Routes } from '@/src/common/constants';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
@@ -24,17 +24,13 @@ interface SignupData {
   moderation: ModerationSettings;
 }
 
-interface SignupContextValue {
+interface SignupStore {
   data: SignupData;
   setUsername: (username: string) => void;
   setAbout: (about: string) => void;
   setAvatarUri: (uri: string | null) => void;
   setModeration: (moderation: ModerationSettings) => void;
-  currentStep: SignupRoute;
-  isLastStep: boolean;
-  goToNextStep: () => void;
-  close: () => void;
-  finish: () => Promise<void>;
+  reset: () => void;
 }
 
 const defaultData: SignupData = {
@@ -48,31 +44,24 @@ const defaultData: SignupData = {
   },
 };
 
-const SignupContext = createContext<SignupContextValue | null>(null);
+const useSignupStore = create<SignupStore>((set) => ({
+  data: defaultData,
+  setUsername: (username) => set((s) => ({ data: { ...s.data, username } })),
+  setAbout: (about) => set((s) => ({ data: { ...s.data, about } })),
+  setAvatarUri: (avatarUri) => set((s) => ({ data: { ...s.data, avatarUri } })),
+  setModeration: (moderation) =>
+    set((s) => ({ data: { ...s.data, moderation } })),
+  reset: () => set({ data: defaultData }),
+}));
 
-export function SignupProvider({ children }: { children: ReactNode }) {
+export function useSignup() {
   const pathname = usePathname();
-  const { client } = usePolycentricContext();
-  const [data, setData] = useState<SignupData>(defaultData);
+  const { client, refreshCurrentIdentity } = usePolycentricContext();
+  const { data, setUsername, setAbout, setAvatarUri, setModeration, reset } =
+    useSignupStore();
 
   const currentStep = pathname as SignupRoute;
   const currentIsLastStep = isLastStep(currentStep);
-
-  const setUsername = (username: string) => {
-    setData((prev) => ({ ...prev, username }));
-  };
-
-  const setAbout = (about: string) => {
-    setData((prev) => ({ ...prev, about }));
-  };
-
-  const setAvatarUri = (avatarUri: string | null) => {
-    setData((prev) => ({ ...prev, avatarUri }));
-  };
-
-  const setModeration = (moderation: ModerationSettings) => {
-    setData((prev) => ({ ...prev, moderation }));
-  };
 
   const goToNextStep = () => {
     const nextStep = getNextStep(currentStep);
@@ -82,6 +71,7 @@ export function SignupProvider({ children }: { children: ReactNode }) {
   };
 
   const close = () => {
+    reset();
     router.dismissAll();
     router.back();
   };
@@ -93,52 +83,25 @@ export function SignupProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Publish a new Identity doc authorized by this device's keypair.
-      // The keypair itself was already created when the client booted.
       await createIdentity(client, DEFAULT_SERVER);
-
-      // Set profile data
-      // if (data.username) {
-      //   await client.createUsername(data.username);
-      // }
-      // if (data.about) {
-      //   await client.createDescription(data.about);
-      // }
-      // if (data.avatarUri) {
-      //   await client.createAvatar(data.avatarUri);
-      // }
-
-      // Navigate to the main app
+      await refreshCurrentIdentity();
+      reset();
       router.replace(Routes.tabs.feed.index as Href);
     } catch (error) {
       console.error('Failed to create identity:', error);
     }
   };
 
-  return (
-    <SignupContext.Provider
-      value={{
-        data,
-        setUsername,
-        setAbout,
-        setAvatarUri,
-        setModeration,
-        currentStep,
-        isLastStep: currentIsLastStep,
-        goToNextStep,
-        close,
-        finish,
-      }}
-    >
-      {children}
-    </SignupContext.Provider>
-  );
-}
-
-export function useSignup() {
-  const context = useContext(SignupContext);
-  if (!context) {
-    throw new Error('useSignup must be used within a SignupProvider');
-  }
-  return context;
+  return {
+    data,
+    setUsername,
+    setAbout,
+    setAvatarUri,
+    setModeration,
+    currentStep,
+    isLastStep: currentIsLastStep,
+    goToNextStep,
+    close,
+    finish,
+  };
 }

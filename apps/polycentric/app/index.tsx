@@ -18,7 +18,7 @@ export default function IndexScreen() {
 
   // If no identity, then prompt signup
   if (!currentIdentity) {
-    // return <Redirect href="/(onboarding)" />;
+    return <Redirect href="/(onboarding)" />;
   }
 
   return <Redirect href={Routes.tabs.feed.index as Href} />;

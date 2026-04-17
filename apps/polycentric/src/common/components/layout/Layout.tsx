@@ -27,6 +27,7 @@ import { VerticalNav } from './nav/VerticalNav';
 import { Ionicons } from '@expo/vector-icons';
 import { FUTO_URL, openCompose } from '../../constants';
 import { Button } from '../primitives';
+import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -84,6 +85,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
       testID="primaryColumn"
       style={[
         Atoms.flex_1,
+        Atoms.pb_lg,
         { borderLeftColor: theme.palette.neutral_25, borderLeftWidth: 1 },
         { borderRightColor: theme.palette.neutral_25, borderRightWidth: 1 },
         { maxWidth: 600 },
@@ -96,13 +98,18 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
 
 type ScreenProps = {
   children: ReactElement;
+  showLeftSidebar?: boolean;
   keyboardAvoiding?: boolean;
 };
 
-function Screen({ children, keyboardAvoiding = false }: ScreenProps) {
+function Screen({
+  children,
+  showLeftSidebar = true,
+  keyboardAvoiding = false,
+}: ScreenProps) {
   const insets = useSafeAreaInsets();
 
-  const showLeftSidebar = isWeb;
+  showLeftSidebar = showLeftSidebar && isWeb;
 
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
@@ -134,6 +141,8 @@ export const LeftSidebar = memo(function LeftSidebar({
   ...props
 }: LeftSidebarProps) {
   const { width: deviceWidth } = useWindowDimensions();
+
+  const { identity } = useCurrentIdentity();
 
   const narrowSidebar = deviceWidth <= Breakpoints.xl;
 
@@ -190,16 +199,18 @@ export const LeftSidebar = memo(function LeftSidebar({
             </View>
             {/* 2nd Section (bottom) */}
             <View style={[Atoms.py_md, Atoms.self_stretch]}>
-              <Button
-                title="New Post"
-                variant="primary"
-                size="md"
-                fullWidth
-                icon={({ size, color }) => (
-                  <Ionicons name="add-circle" size={size} color={color} />
-                )}
-                onPress={() => openCompose()}
-              />
+              {identity && (
+                <Button
+                  title="New Post"
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  icon={({ size, color }) => (
+                    <Ionicons name="add-circle" size={size} color={color} />
+                  )}
+                  onPress={() => openCompose()}
+                />
+              )}
             </View>
           </View>
         </View>
@@ -239,31 +250,41 @@ export const RightSidebar = memo(function RightSidebar({
     <View style={{ width, marginRight }}>
       <View
         style={[
-          Atoms.flex_row,
-          Atoms.items_center,
-          Atoms.w_full,
-          Atoms.py_sm,
-          Atoms.px_sm,
-          Atoms.gap_sm,
-          Atoms.flex_wrap,
+          Atoms.justify_between,
+          Atoms.align_center,
+          Atoms.h_full,
+          Atoms.pb_lg,
         ]}
       >
-        <Pressable
-          accessibilityLabel="Toggle color theme"
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={toggleTheme}
-          style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+        <View style={[Atoms.flex_1]}></View>
+        <View
+          style={[
+            Atoms.flex_row,
+            Atoms.items_center,
+            Atoms.w_full,
+            Atoms.py_sm,
+            Atoms.px_sm,
+            Atoms.gap_sm,
+            Atoms.flex_wrap,
+          ]}
         >
-          <Ionicons
-            name={theme.name === 'dark' ? 'moon' : 'sunny'}
-            size={typography.fontSize.sm}
-            color={theme.palette.neutral_500}
-          />
-        </Pressable>
-        {LINKS.map(({ text, href }) => (
-          <RightSidebarLink key={href} href={href} text={text} />
-        ))}
+          <Pressable
+            accessibilityLabel="Toggle color theme"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={toggleTheme}
+            style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+          >
+            <Ionicons
+              name={theme.name === 'dark' ? 'moon' : 'sunny'}
+              size={typography.fontSize.sm}
+              color={theme.palette.neutral_500}
+            />
+          </Pressable>
+          {LINKS.map(({ text, href }) => (
+            <RightSidebarLink key={href} href={href} text={text} />
+          ))}
+        </View>
       </View>
     </View>
   );
