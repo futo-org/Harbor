@@ -25,7 +25,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { VerticalNav } from './nav/VerticalNav';
 import { Ionicons } from '@expo/vector-icons';
-import { FUTO_URL } from '../../constants';
+import { FUTO_URL, openCompose } from '../../constants';
+import { Button } from '../primitives';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -161,7 +162,7 @@ export const LeftSidebar = memo(function LeftSidebar({
               Atoms.align_center,
               Atoms.h_full,
               {
-                paddingHorizontal: narrowSidebar ? 0 : 60,
+                paddingHorizontal: narrowSidebar ? 0 : 30,
                 width: narrowSidebar ? 88 : 275,
               },
             ]}
@@ -188,6 +189,18 @@ export const LeftSidebar = memo(function LeftSidebar({
               <VerticalNav />
             </View>
             {/* 2nd Section (bottom) */}
+            <View style={[Atoms.py_md, Atoms.self_stretch]}>
+              <Button
+                title="New Post"
+                variant="primary"
+                size="md"
+                fullWidth
+                icon={({ size, color }) => (
+                  <Ionicons name="add-circle" size={size} color={color} />
+                )}
+                onPress={() => openCompose()}
+              />
+            </View>
           </View>
         </View>
       </View>

@@ -1,6 +1,7 @@
 import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
+  Atoms,
   BorderRadius,
   useTheme,
   withHexOpacity,
@@ -51,9 +52,9 @@ const SIZE_CONFIG: Record<
     borderRadius: BorderRadiusToken;
   }
 > = {
-  sm: { paddingV: 4, paddingH: 6, iconSize: 16, borderRadius: 'sm' },
-  md: { paddingV: 12, paddingH: 18, iconSize: 20, borderRadius: 'lg' },
-  lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: 'lg' },
+  sm: { paddingV: 4, paddingH: 6, iconSize: 16, borderRadius: 'full' },
+  md: { paddingV: 12, paddingH: 18, iconSize: 20, borderRadius: 'full' },
+  lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: 'full' },
 };
 
 export function Button({
@@ -95,6 +96,7 @@ export function Button({
         hitSlop={8}
         style={[
           styles.base,
+          fullWidth && Atoms.w_full,
           !fullWidth && styles.fitContent,
           {
             paddingVertical: sizeConfig.paddingV,
