@@ -2,7 +2,6 @@ import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import {
   identiconUrl,
-  publicKeyToStringURLSafe,
   useCurrentIdentity,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
@@ -108,7 +107,8 @@ export function IdentityHeader() {
       </Pressable>
       <Pressable
         onPress={() => {
-          router.push(Routes.tabs.profile(publicKeyToStringURLSafe(pubkey)));
+          if (!currentIdentity.identityKey) return;
+          router.push(Routes.tabs.profile(currentIdentity.identityKey));
         }}
       >
         <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} />

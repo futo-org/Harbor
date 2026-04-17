@@ -1,6 +1,5 @@
 export * from '../core/identity/IdentityHeader';
 export * from './FeedChip';
 export * from './FeedViewer';
-export * from './PostCard';
-export * from './PostCardItem';
+export * from './Post';
 export * from './ConversationView';

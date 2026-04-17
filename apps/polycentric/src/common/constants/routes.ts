@@ -10,7 +10,6 @@ export function openCompose(replyToPostId?: string) {
   }
 }
 
-// TODO: abandon systemKey terminology in lib and apps. just use publicKey
 export const Routes = {
   tabs: {
     feed: {
@@ -20,11 +19,9 @@ export const Routes = {
     },
     search: '/search',
     claims: '/claims',
-    profile: (publicKey: string) => `/profile/${publicKey}` as const,
-    post: Object.assign((postId: string) => `/post/${postId}` as const, {
-      reply: (postId: string, replyTo: string) =>
-        `/post/${postId}?replyTo=${encodeURIComponent(replyTo)}` as const,
-    }),
+    profile: (identityId: string) => `/${identityId}` as const,
+    post: (identityId: string, postId: string) =>
+      `/${identityId}/post/${postId}` as const,
     settings: {
       index: '/settings',
       identity: '/settings/identity',

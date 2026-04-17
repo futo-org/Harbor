@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { Screen } from '@/src/common/components/layout';
 import { View } from 'react-native';
 import { Fab, HorizontalScrollGroup } from '@/src/common/components';
@@ -13,11 +12,8 @@ import {
 import {
   useExploreFeed,
   useFollowingFeed,
-  decodePostEvent,
-  publicKeyToStringURLSafe,
 } from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
-import { openCompose, Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 
@@ -35,20 +31,6 @@ export default function FeedScreen() {
 
   const currentFeed =
     selectedFeed === 'following' ? followingFeed : exploreFeed;
-
-  const handlePostPress = useCallback((postId: string) => {
-    router.push(Routes.tabs.post(postId));
-  }, []);
-
-  const handleAuthorPress = useCallback((publicKey: types.PublicKey) => {
-    router.push(Routes.tabs.profile(publicKeyToStringURLSafe(publicKey)));
-  }, []);
-
-  const handleReply = useCallback((signedEvent: types.SignedEvent) => {
-    const decoded = decodePostEvent(signedEvent);
-    if (!decoded?.id) return;
-    openCompose(decoded.id);
-  }, []);
 
   const handleFabPress = () => {
     openCompose();
@@ -83,13 +65,9 @@ export default function FeedScreen() {
             isLoading={currentFeed.isLoading}
             error={currentFeed.error}
             onRefresh={currentFeed.refresh}
-            onPostPress={handlePostPress}
-            onAuthorPress={handleAuthorPress}
-            onReply={handleReply}
             onEndReached={currentFeed.loadMore}
             hasMore={currentFeed.hasMore}
             bottomPadding={0}
-            showTopic={false}
           />
         </View>
         {showComposeFab ? (

@@ -79,6 +79,13 @@ export function parsePostId(postId: string): {
   }
 }
 
+/** Extract the sequence number (logicalClock) from an internal eventKey postId. */
+export function postIdToSequence(postId: string): string | null {
+  const parts = postId.split(':');
+  if (parts.length !== 3) return null;
+  return parts[2];
+}
+
 export function decodePostEvent(
   signedEvent: types.SignedEvent,
 ): PostData | null {

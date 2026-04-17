@@ -1,8 +1,14 @@
 import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
+import { openCompose, Routes } from '@/src/common/constants';
 import {
+  eventKey,
   identiconUrl,
+  postIdToSequence,
   timeAgo,
   truncateName,
+  usePolycentricContext,
+  useStore,
+  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -13,63 +19,82 @@ import {
 } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
+import { router } from 'expo-router';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
 
-export interface PostCardProps {
-  displayContent: string;
-  isTruncatedPreview: boolean;
-  showContentExpandToggle: boolean;
-  contentExpanded: boolean;
-  onToggleContentExpanded: () => void;
-  authorName: string;
-  authorPublicKey: types.PublicKey;
-  /** v2 identity id the author signed under; preferred over pubkey for display. */
-  authorIdentity?: string;
-  timestamp: number;
-  replyingToName: string;
-  hasParent: boolean;
-  likes: number;
-  dislikes: number;
-  comments: number;
-  liked: boolean;
-  disliked: boolean;
-  onPress?: () => void;
-  onAuthorPress?: () => void;
-  onReply?: () => void;
-  onReplyingToPress?: () => void;
-  onLike: () => void;
-  onDislike: () => void;
+const EMPTY_PUBKEY = types.PublicKey.create();
+const PREVIEW_LIMIT = 240;
+const MAX_DISPLAY_LIMIT = 2000;
+
+interface PostProps {
+  postId: string;
   hideReplyingTo?: boolean;
-  showTopic?: boolean;
+  /** When true, tapping the card root is a no-op (e.g. the focused post in a conversation). */
+  disablePress?: boolean;
 }
 
-export function PostCard({
-  displayContent,
-  isTruncatedPreview,
-  showContentExpandToggle,
-  contentExpanded,
-  onToggleContentExpanded,
-  authorName,
-  authorPublicKey,
-  authorIdentity,
-  timestamp,
-  replyingToName,
-  hasParent,
-  likes,
-  dislikes,
-  comments,
-  liked,
-  disliked,
-  onPress,
-  onAuthorPress,
-  onReply,
-  onReplyingToPress,
-  onLike,
-  onDislike,
+export const Post = memo(function Post({
+  postId,
   hideReplyingTo = false,
-}: PostCardProps) {
+  disablePress = false,
+}: PostProps) {
   const { theme } = useTheme();
+  const { store } = usePolycentricContext();
+  const post = useStore(store, (s) => s.posts[postId]);
+
+  useEffect(() => {
+    store.getState().ensurePostMetadataLoaded(postId);
+  }, [store, postId]);
+
+  const authorName = useUsername(post?.decoded.authorPublicKey ?? EMPTY_PUBKEY);
+  const replyingToName = useUsername(
+    post?.decoded.parentAuthorPublicKey ?? EMPTY_PUBKEY,
+  );
+
+  const rawContent = post?.decoded.content ?? '';
+  const [contentExpanded, setContentExpanded] = useState(false);
+
+  useEffect(() => {
+    setContentExpanded(false);
+  }, [postId]);
+
+  const { displayContent, isTruncatedPreview, showContentExpandToggle } =
+    useMemo(() => {
+      const capped =
+        rawContent.length > MAX_DISPLAY_LIMIT
+          ? rawContent.slice(0, MAX_DISPLAY_LIMIT)
+          : rawContent;
+      const content = contentExpanded
+        ? capped
+        : capped.length > PREVIEW_LIMIT
+          ? capped.slice(0, PREVIEW_LIMIT)
+          : capped;
+      const showToggle = rawContent.length > PREVIEW_LIMIT;
+      return {
+        displayContent: content,
+        isTruncatedPreview: !contentExpanded && showToggle,
+        showContentExpandToggle: showToggle,
+      };
+    }, [rawContent, contentExpanded]);
+
+  const parentPostId = useMemo(() => {
+    const decoded = post?.decoded;
+    if (
+      !decoded?.parentAuthorPublicKey?.key ||
+      !decoded.parentProcess?.process ||
+      decoded.parentLogicalClock == null
+    ) {
+      return undefined;
+    }
+    return eventKey(
+      decoded.parentAuthorPublicKey.key,
+      decoded.parentProcess.process,
+      decoded.parentLogicalClock,
+    );
+  }, [post?.decoded]);
+
   const { hovered: replyingToHovered, onHoverIn, onHoverOut } = useWebHover();
   const {
     hovered: expandHovered,
@@ -77,8 +102,58 @@ export function PostCard({
     onHoverOut: onExpandHoverOut,
   } = useWebHover();
 
-  const avatarUrl = identiconUrl(authorPublicKey);
-  const time = timeAgo(timestamp);
+  const authorPublicKey = post?.decoded.authorPublicKey;
+  const authorIdentity = post?.decoded.authorIdentity;
+
+  const handlePress = useCallback(() => {
+    if (disablePress) return;
+    if (!authorIdentity) return;
+    const sequence = postIdToSequence(postId);
+    if (!sequence) return;
+    router.push(Routes.tabs.post(authorIdentity, sequence));
+  }, [disablePress, authorIdentity, postId]);
+
+  const handleAuthorPress = useCallback(() => {
+    if (!authorIdentity) return;
+    router.push(Routes.tabs.profile(authorIdentity));
+  }, [authorIdentity]);
+
+  const handleReply = useCallback(() => {
+    openCompose(postId);
+  }, [postId]);
+
+  const parentAuthorIdentity = useStore(store, (state) =>
+    parentPostId
+      ? (state.posts[parentPostId]?.decoded.authorIdentity ?? null)
+      : null,
+  );
+
+  const handleReplyingToPress = useCallback(() => {
+    if (!parentPostId || !parentAuthorIdentity) return;
+    const sequence = postIdToSequence(parentPostId);
+    if (!sequence) return;
+    router.push(Routes.tabs.post(parentAuthorIdentity, sequence));
+  }, [parentPostId, parentAuthorIdentity]);
+
+  const handleLike = useCallback(() => {
+    store.getState().likePost(postId);
+  }, [store, postId]);
+
+  const handleDislike = useCallback(() => {
+    store.getState().dislikePost(postId);
+  }, [store, postId]);
+
+  const toggleContentExpanded = useCallback(() => {
+    setContentExpanded((v) => !v);
+  }, []);
+
+  if (!post) return null;
+
+  const liked = post.myOpinion === types.Opinion.LIKE;
+  const disliked = post.myOpinion === types.Opinion.DISLIKE;
+  const avatarUrl = authorPublicKey ? identiconUrl(authorPublicKey) : null;
+  const time = timeAgo(post.decoded.timestamp);
+  const hasParent = !!post.decoded.parentAuthorPublicKey;
 
   return (
     <Pressable
@@ -92,14 +167,14 @@ export function PostCard({
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
         },
       ]}
-      onPress={onPress}
+      onPress={handlePress}
+      disabled={disablePress}
     >
       <View style={[Atoms.flex_row, Atoms.gap_md]}>
         <Avatar
           source={avatarUrl ? { uri: avatarUrl } : undefined}
           size="sm"
-          onPress={onAuthorPress}
-          disabled={!onAuthorPress}
+          onPress={handleAuthorPress}
           containerProps={{ style: { marginTop: 3 } }}
         />
 
@@ -119,23 +194,14 @@ export function PostCard({
                 { alignItems: 'baseline' },
               ]}
             >
-              {onAuthorPress ? (
-                <PostCardAuthorName name={authorName} onPress={onAuthorPress} />
-              ) : (
-                <Text
-                  variant="secondary"
-                  fontWeight="bold"
-                  style={{ lineHeight: 18 }}
-                >
-                  {truncateName(authorName, 16)}
-                </Text>
-              )}
-
-              <PubkeyTag
-                publicKey={authorPublicKey}
-                identity={authorIdentity}
-                style={{ transform: [{ translateY: 1 }] }}
-              />
+              <PostAuthorName name={authorName} onPress={handleAuthorPress} />
+              {authorPublicKey ? (
+                <PubkeyTag
+                  publicKey={authorPublicKey}
+                  identity={post.decoded.authorIdentity}
+                  style={{ transform: [{ translateY: 1 }] }}
+                />
+              ) : null}
             </View>
 
             {time ? (
@@ -151,10 +217,10 @@ export function PostCard({
 
           {!hideReplyingTo && hasParent && (
             <Pressable
-              onPress={onReplyingToPress}
-              disabled={!onReplyingToPress}
-              onHoverIn={onReplyingToPress ? onHoverIn : undefined}
-              onHoverOut={onReplyingToPress ? onHoverOut : undefined}
+              onPress={handleReplyingToPress}
+              disabled={!parentPostId}
+              onHoverIn={parentPostId ? onHoverIn : undefined}
+              onHoverOut={parentPostId ? onHoverOut : undefined}
               style={{ alignSelf: 'flex-start', marginTop: 2 }}
             >
               <Text
@@ -162,7 +228,7 @@ export function PostCard({
                 style={[
                   theme.atoms.text_neutral_medium,
                   { lineHeight: 16 },
-                  onReplyingToPress &&
+                  parentPostId &&
                     replyingToHovered && { textDecorationLine: 'underline' },
                 ]}
               >
@@ -171,7 +237,7 @@ export function PostCard({
                   variant="small"
                   style={[
                     theme.atoms.text_neutral_high,
-                    onReplyingToPress &&
+                    parentPostId &&
                       replyingToHovered && { textDecorationLine: 'underline' },
                   ]}
                 >
@@ -187,7 +253,7 @@ export function PostCard({
           </Text>
           {showContentExpandToggle && (
             <Pressable
-              onPress={onToggleContentExpanded}
+              onPress={toggleContentExpanded}
               onHoverIn={onExpandHoverIn}
               onHoverOut={onExpandHoverOut}
               style={{ marginTop: 2, alignSelf: 'flex-start' }}
@@ -211,36 +277,36 @@ export function PostCard({
       <View
         style={[
           Atoms.flex_row,
-          Atoms.justify_around,
-          { marginTop: 8, paddingLeft: 52 },
+          Atoms.justify_between,
+          { marginTop: 8, paddingLeft: 42 },
         ]}
       >
         <ActionButton
           icon="chatbubble-outline"
-          count={comments}
-          onPress={onReply}
+          count={post.stats.comments}
+          onPress={handleReply}
           color={theme.palette.neutral_500}
         />
         <ActionButton
           icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
-          count={dislikes}
-          onPress={onDislike}
+          count={post.stats.dislikes}
+          onPress={handleDislike}
           color={
             disliked ? theme.palette.negative_500 : theme.palette.neutral_500
           }
         />
         <ActionButton
           icon={liked ? 'arrow-up' : 'arrow-up-outline'}
-          count={likes}
-          onPress={onLike}
+          count={post.stats.likes}
+          onPress={handleLike}
           color={liked ? theme.palette.primary_500 : theme.palette.neutral_500}
         />
       </View>
     </Pressable>
   );
-}
+});
 
-function PostCardAuthorName({
+function PostAuthorName({
   name,
   onPress,
 }: {

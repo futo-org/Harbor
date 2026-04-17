@@ -1,14 +1,10 @@
 import { Screen } from '@/src/common/components/layout';
-import { Routes } from '@/src/common/constants';
 import {
-  decodePostEvent,
-  publicKeyToStringURLSafe,
   useProfileEdit,
   useProfileScreenData,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { FeedViewer } from '@/src/features/post';
-import { types } from '@polycentric/react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -16,8 +12,8 @@ import { ProfileHeader } from './ProfileHeader';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
-  const { publicKey: publicKeyParam } = useLocalSearchParams<{
-    publicKey: string;
+  const { identityId } = useLocalSearchParams<{
+    identityId: string;
   }>();
   const isAbortedRef = useRef(false);
   useFocusEffect(
@@ -29,24 +25,10 @@ export default function ProfileScreen() {
     }, []),
   );
 
-  const data = useProfileScreenData(publicKeyParam, {
+  const data = useProfileScreenData(identityId, {
     getIsAborted: () => isAbortedRef.current,
   });
   const edit = useProfileEdit(data.username, data.profile);
-
-  const handlePostPress = useCallback((postId: string) => {
-    router.replace(Routes.tabs.post(postId));
-  }, []);
-
-  const handleAuthorPress = useCallback((pk: types.PublicKey) => {
-    router.replace(Routes.tabs.profile(publicKeyToStringURLSafe(pk)));
-  }, []);
-
-  const handleReply = useCallback((signedEvent: types.SignedEvent) => {
-    const decoded = decodePostEvent(signedEvent);
-    if (!decoded?.id) return;
-    router.push(Routes.tabs.post.reply(decoded.id, decoded.id));
-  }, []);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -76,9 +58,6 @@ export default function ProfileScreen() {
               isLoading={data.authorFeed.isLoading}
               error={data.authorFeed.error}
               onRefresh={data.authorFeed.refresh}
-              onPostPress={handlePostPress}
-              onAuthorPress={handleAuthorPress}
-              onReply={handleReply}
               onEndReached={data.authorFeed.loadMore}
               hasMore={data.authorFeed.hasMore}
               bottomPadding={40}
@@ -96,9 +75,6 @@ export default function ProfileScreen() {
                 isLoading={data.likesFeed.isLoading}
                 error={data.likesFeed.error}
                 onRefresh={data.likesFeed.refresh}
-                onPostPress={handlePostPress}
-                onAuthorPress={handleAuthorPress}
-                onReply={handleReply}
                 onEndReached={data.likesFeed.loadMore}
                 hasMore={data.likesFeed.hasMore}
                 bottomPadding={40}

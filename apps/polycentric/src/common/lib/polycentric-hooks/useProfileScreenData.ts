@@ -9,12 +9,7 @@ import {
   useLikesFeed,
   useFollowStatus,
 } from './PolycentricProvider';
-import {
-  getIdentityId,
-  identiconUrl,
-  shortenIdentityId,
-  stringURLSafeToPublicKey,
-} from './helpers';
+import { getIdentityId, identiconUrl, shortenIdentityId } from './helpers';
 import { useStore } from './store';
 
 export type ProfileScreenData = {
@@ -35,19 +30,33 @@ export type ProfileScreenData = {
 };
 
 export function useProfileScreenData(
-  publicKeyParam: string | undefined,
+  identityIdParam: string | undefined,
   options?: { getIsAborted?: () => boolean },
 ): ProfileScreenData {
-  const publicKey = useMemo(
-    () =>
-      publicKeyParam
-        ? stringURLSafeToPublicKey(publicKeyParam)
-        : types.PublicKey.create(),
-    [publicKeyParam],
-  );
+  const { identity: selfIdentity, publicKey: selfPublicKey } =
+    useCurrentIdentity();
 
-  const { isCurrentIdentity, identity: selfIdentity } = useCurrentIdentity();
-  const isSelf = isCurrentIdentity(publicKey);
+  // Resolve identityId → publicKey. For self we use the current identity's
+  // public key. Otherwise scan known posts for a matching authorIdentity.
+  const { store } = usePolycentricContext();
+  const knownPublicKey = useStore(store, (state) => {
+    if (!identityIdParam) return null;
+    for (const post of Object.values(state.posts)) {
+      if (post.decoded.authorIdentity === identityIdParam) {
+        return post.decoded.authorPublicKey;
+      }
+    }
+    return null;
+  });
+
+  const isSelf =
+    !!identityIdParam && selfIdentity?.identityKey === identityIdParam;
+
+  const publicKey = useMemo(() => {
+    if (isSelf && selfPublicKey) return selfPublicKey;
+    return knownPublicKey ?? types.PublicKey.create();
+  }, [isSelf, selfPublicKey, knownPublicKey]);
+
   const getIsAborted = options?.getIsAborted;
 
   const username = useUsername(publicKey);
@@ -56,23 +65,7 @@ export function useProfileScreenData(
   const likesFeed = useLikesFeed({ enabled: isSelf, getIsAborted });
   const followStatus = useFollowStatus(publicKey);
 
-  // Resolve an identity id for this profile. For self we already know it
-  // from the client; for other users we scan locally-known posts for the
-  // first one signed by this public key.
-  const { store } = usePolycentricContext();
-  const postIdentity = useStore(store, (state) => {
-    for (const post of Object.values(state.posts)) {
-      const key = post.decoded.authorPublicKey.key;
-      if (key && bytesEqual(key, publicKey.key ?? new Uint8Array())) {
-        return post.decoded.authorIdentity ?? null;
-      }
-    }
-    return null;
-  });
-
-  const identityKey = isSelf
-    ? (selfIdentity?.identityKey ?? null)
-    : postIdentity;
+  const identityKey = identityIdParam ?? null;
 
   const short = identityKey
     ? shortenIdentityId(identityKey)
@@ -98,12 +91,4 @@ export function useProfileScreenData(
     activeFeed,
     setActiveFeed,
   };
-}
-
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }

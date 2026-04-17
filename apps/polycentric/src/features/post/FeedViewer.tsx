@@ -1,11 +1,6 @@
 import { Text } from '@/src/common/components/primitives';
-import {
-  eventKey,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { types } from '@polycentric/react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useState } from 'react';
 import {
@@ -14,20 +9,16 @@ import {
   RefreshControl,
   View,
 } from 'react-native';
-import { PostCardItem } from './PostCardItem';
+import { Post } from './Post';
 
 interface FeedViewerProps {
   items: string[];
   isLoading: boolean;
   error: Error | null;
   onRefresh: () => void;
-  onPostPress: (postId: string) => void;
-  onAuthorPress?: (publicKey: types.PublicKey) => void;
-  onReply?: (signedEvent: types.SignedEvent) => void;
   onEndReached?: () => void;
   hasMore?: boolean;
   bottomPadding?: number;
-  showTopic?: boolean;
 }
 
 export function FeedViewer({
@@ -35,16 +26,11 @@ export function FeedViewer({
   isLoading,
   error,
   onRefresh,
-  onPostPress,
-  onAuthorPress,
-  onReply,
   onEndReached,
   hasMore,
   bottomPadding,
-  showTopic = true,
 }: FeedViewerProps) {
   const { theme } = useTheme();
-  const { store } = usePolycentricContext();
 
   const [layoutBox, setLayoutBox] = useState({ w: 0, h: 0 });
   const [hasLayout, setHasLayout] = useState(false);
@@ -61,40 +47,9 @@ export function FeedViewer({
   // Hiding the invalid layout prevents the visual glitch.
   const layoutInvalid = hasLayout && (layoutBox.w < 2 || layoutBox.h < 2);
 
-  const handleReplyingToPress = useCallback(
-    (postId: string) => {
-      const post = store.getState().posts[postId];
-      if (!post) return;
-      const { decoded } = post;
-      if (
-        !decoded.parentAuthorPublicKey?.key ||
-        !decoded.parentProcess?.process ||
-        decoded.parentLogicalClock == null
-      )
-        return;
-
-      const parentId = eventKey(
-        decoded.parentAuthorPublicKey.key,
-        decoded.parentProcess.process,
-        decoded.parentLogicalClock,
-      );
-      onPostPress(parentId);
-    },
-    [store, onPostPress],
-  );
-
   const renderItem = useCallback(
-    ({ item: postId }: { item: string }) => (
-      <PostCardItem
-        postId={postId}
-        onPostPress={onPostPress}
-        onAuthorPress={onAuthorPress}
-        onReply={onReply}
-        onReplyingToPress={handleReplyingToPress}
-        showTopic={showTopic}
-      />
-    ),
-    [onPostPress, onAuthorPress, onReply, handleReplyingToPress, showTopic],
+    ({ item: postId }: { item: string }) => <Post postId={postId} />,
+    [],
   );
 
   const keyExtractor = useCallback(

@@ -1,14 +1,9 @@
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useRoutePath } from '@react-navigation/native';
-import { ComponentProps, useMemo } from 'react';
+import { ComponentProps } from 'react';
 
 import { NavItem } from './NavItem';
 import { View } from 'react-native';
-import {
-  publicKeyToString,
-  publicKeyToStringURLSafe,
-  useCurrentIdentity,
-} from '@/src/common/lib/polycentric-hooks';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Ionicons } from '@expo/vector-icons';
 
 type VerticalNavProps = {
@@ -19,8 +14,6 @@ export function VerticalNav({ style }: VerticalNavProps) {
   const theme = useTheme();
   const { identity } = useCurrentIdentity();
 
-  const publicKeySafe = identity?.identityKey;
-
   return (
     <View
       style={[Atoms.py_xs, Atoms.flex_1, Atoms.flex_col, Atoms.gap_sm, style]}
@@ -30,13 +23,13 @@ export function VerticalNav({ style }: VerticalNavProps) {
         icon={<Ionicons name="home-outline" size={24} />}
         href="/feed"
       />
-      {publicKeySafe && (
+      {identity?.identityKey && (
         <NavItem
           label="Profile"
           icon={<Ionicons name="person-outline" size={24} />}
           href={{
-            pathname: '/profile/[publicKey]',
-            params: { publicKey: publicKeySafe },
+            pathname: '/[identityId]',
+            params: { identityId: identity?.identityKey },
           }}
         />
       )}

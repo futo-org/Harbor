@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { types } from '@polycentric/react-native';
-import { usePolycentricContext, usePolycentric } from './PolycentricProvider';
-import { decodePostEvent, eventKey } from './helpers';
+import { usePolycentricContext } from './PolycentricProvider';
 import { useStore } from './store';
 
 const REPLIES_FEED_PREFIX = 'replies:';
@@ -49,40 +47,4 @@ export function usePostPage(postId: string) {
   }, [postId, store]);
 
   return { postId, replyIds, isLoading, reload };
-}
-
-/** Callback to resolve parent post (cache or fetch) and call onPostPress(postId). */
-export function useNavigateToParentPost(onPostPress: (postId: string) => void) {
-  const client = usePolycentric();
-  const { store } = usePolycentricContext();
-
-  return useCallback(
-    async (postId: string) => {
-      const post = store.getState().posts[postId];
-      if (!post) return;
-      const { decoded } = post;
-      if (
-        !decoded.parentAuthorPublicKey?.key ||
-        !decoded.parentProcess?.process ||
-        decoded.parentLogicalClock == null
-      )
-        return;
-
-      const parentId = eventKey(
-        decoded.parentAuthorPublicKey.key,
-        decoded.parentProcess.process,
-        decoded.parentLogicalClock,
-      );
-
-      const cached = store.getState().posts[parentId];
-      if (cached) {
-        onPostPress(parentId);
-        return;
-      }
-
-      // TODO: queryAuthorFeed requires queryManager which is not yet in v2
-      onPostPress(parentId);
-    },
-    [client, store, onPostPress],
-  );
 }

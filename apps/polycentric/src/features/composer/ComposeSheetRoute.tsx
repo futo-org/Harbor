@@ -1,7 +1,7 @@
 import { Routes } from '@/src/common/constants';
 import {
   decodePostEvent,
-  publicKeyToStringURLSafe,
+  postIdToSequence,
   useCurrentIdentity,
   usePolycentricContext,
   useStore,
@@ -14,7 +14,8 @@ import { ComposeSheetInner } from './ComposeSheetInner';
 
 export default function ComposeSheetRoute() {
   const { store } = usePolycentricContext();
-  const { publicKey: myPublicKey } = useCurrentIdentity();
+  const { identity: selfIdentity } = useCurrentIdentity();
+  const myIdentityId = selfIdentity?.identityKey ?? null;
   const params = useLocalSearchParams<{ replyTo?: string }>();
   const replyToPostId = params.replyTo;
 
@@ -31,19 +32,22 @@ export default function ComposeSheetRoute() {
   const handlePostCreated = useCallback(
     async (signedEvent: types.SignedEvent) => {
       const decoded = decodePostEvent(signedEvent);
-      if (decoded) {
+      if (decoded && decoded.authorIdentity) {
         store.getState().ingestPost(decoded.id, signedEvent, decoded);
-        router.replace(Routes.tabs.post(decoded.id));
+        const sequence = postIdToSequence(decoded.id);
+        if (sequence) {
+          router.replace(Routes.tabs.post(decoded.authorIdentity, sequence));
+        }
       }
     },
     [store],
   );
 
   const handleAvatarPress = useCallback(() => {
-    if (myPublicKey) {
-      router.push(Routes.tabs.profile(publicKeyToStringURLSafe(myPublicKey)));
+    if (myIdentityId) {
+      router.push(Routes.tabs.profile(myIdentityId));
     }
-  }, [myPublicKey]);
+  }, [myIdentityId]);
 
   return (
     <SheetMenu onClose={() => router.back()} detents={[0.82]} scrollable>

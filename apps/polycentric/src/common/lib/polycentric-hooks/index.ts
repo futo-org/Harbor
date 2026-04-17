@@ -17,7 +17,7 @@ export {
 } from './PolycentricProvider';
 
 // Post page (reply feed + parent list)
-export { usePostPage, useNavigateToParentPost } from './useConversation';
+export { usePostPage } from './useConversation';
 
 // Action hooks
 export {
@@ -48,6 +48,7 @@ export {
   bytesToHex,
   hexToBytes,
   eventKey,
+  postIdToSequence,
   truncateName,
   publicKeyToString,
   stringToPublicKey,

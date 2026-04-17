@@ -1,79 +1,41 @@
 import { BackButton, Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
-import { Routes } from '@/src/common/constants';
 import {
-  decodePostEvent,
-  publicKeyToStringURLSafe,
-  useCurrentIdentity,
+  postIdToSequence,
   usePolycentricContext,
   useStore,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetMenu } from '@/src/common/lib/sheet';
 import { Atoms } from '@/src/common/theme';
-import { ComposeSheetInner } from '@/src/features/composer/ComposeSheetInner';
 import { ConversationView } from '@/src/features/post/ConversationView';
-import { types } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
 export default function FeedPostScreen() {
-  const { postId, replyTo } = useLocalSearchParams<{
+  const { identityId, postId: sequenceParam } = useLocalSearchParams<{
+    identityId: string;
     postId: string;
-    replyTo?: string;
   }>();
 
   const { store } = usePolycentricContext();
-  const { publicKey: myPublicKey } = useCurrentIdentity();
-  const composeOpen = !!replyTo;
-
-  const replyToEvent = useStore(store, (s) =>
-    replyTo ? (s.posts[replyTo]?.signedEvent ?? null) : null,
-  );
-
-  const handlePostPress = useCallback((nextPostId: string) => {
-    router.replace(Routes.tabs.post(nextPostId));
-  }, []);
-
-  const handleAuthorPress = useCallback((publicKey: types.PublicKey) => {
-    router.replace(Routes.tabs.profile(publicKeyToStringURLSafe(publicKey)));
-  }, []);
-
-  const handleReply = useCallback(
-    (signedEvent: types.SignedEvent) => {
-      const decoded = decodePostEvent(signedEvent);
-      if (!decoded?.id || !postId) return;
-      router.setParams({ replyTo: decoded.id });
-    },
-    [postId],
-  );
-
-  const handleComposeClose = useCallback(() => {
-    router.setParams({ replyTo: '' });
-  }, []);
-
-  const handlePostCreated = useCallback(
-    async (signedEvent: types.SignedEvent) => {
-      const decoded = decodePostEvent(signedEvent);
-      if (decoded) {
-        store.getState().ingestPost(decoded.id, signedEvent, decoded);
-        router.replace(Routes.tabs.post(decoded.id));
+  const resolvedPostId = useStore(store, (state) => {
+    if (!identityId || !sequenceParam) return null;
+    for (const [key, post] of Object.entries(state.posts)) {
+      if (
+        post.decoded.authorIdentity === identityId &&
+        postIdToSequence(key) === sequenceParam
+      ) {
+        return key;
       }
-    },
-    [store],
-  );
-
-  const handleAvatarPress = useCallback(() => {
-    if (myPublicKey) {
-      router.push(Routes.tabs.profile(publicKeyToStringURLSafe(myPublicKey)));
     }
-  }, [myPublicKey]);
+    return null;
+  });
 
   const handleBack = useCallback(() => {
     router.back();
   }, []);
 
-  if (!postId) {
+  if (!sequenceParam || !resolvedPostId) {
     return (
       <Screen>
         <Screen.PrimaryColumn>
@@ -95,25 +57,8 @@ export default function FeedPostScreen() {
           <BackButton onPress={handleBack} />
         </View>
         <View style={[Atoms.flex_1, Atoms.mt_md]}>
-          <ConversationView
-            postId={postId}
-            onPostPress={handlePostPress}
-            onAuthorPress={handleAuthorPress}
-            onReply={handleReply}
-          />
+          <ConversationView postId={resolvedPostId} />
         </View>
-        {composeOpen && (
-          <SheetMenu onClose={handleComposeClose} detents={[0.82]} scrollable>
-            {(dismissSheet) => (
-              <ComposeSheetInner
-                dismissSheet={dismissSheet}
-                onPostCreated={handlePostCreated}
-                onAvatarPress={handleAvatarPress}
-                replyToEvent={replyToEvent}
-              />
-            )}
-          </SheetMenu>
-        )}
       </Screen.PrimaryColumn>
     </Screen>
   );
