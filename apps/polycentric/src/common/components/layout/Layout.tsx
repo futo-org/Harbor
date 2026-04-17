@@ -1,5 +1,6 @@
 import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';
 import {
   ComponentProps,
@@ -7,27 +8,23 @@ import {
   ReactElement,
   ReactNode,
   useCallback,
-  useMemo,
-  useState,
+  useState
 } from 'react';
 import {
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
-  Text,
   useWindowDimensions,
-  View,
+  View
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import WEB_LOGO from '../../assets/images/WebLogo.png';
-import { VerticalNav } from './nav/VerticalNav';
 import { Ionicons } from '@expo/vector-icons';
+import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { FUTO_URL, openCompose } from '../../constants';
-import { Button } from '../primitives';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
+import { Button } from '../primitives';
+import { VerticalNav } from './nav/VerticalNav';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -62,7 +59,7 @@ function Main({ children, style }: MainProps) {
       <View
         style={[
           Atoms.flex_1,
-          Atoms.flex_row,
+          showRightSidebar && Atoms.flex_row,
           Atoms.justify_between,
           { width: innerWidth },
         ]}
@@ -234,7 +231,7 @@ export const RightSidebar = memo(function RightSidebar({
     setActiveThemeName(next);
   }, [setActiveThemeName, theme.name]);
 
-  const LINKS: { text: ReactNode; href: ExternalPathString }[] = [
+  const LINKS: { text: string; href: ExternalPathString }[] = [
     {
       text: 'Privacy Policy',
       href: 'https://docs.polycentric.io/privacy-policy/',
@@ -243,7 +240,7 @@ export const RightSidebar = memo(function RightSidebar({
       text: 'Source Code',
       href: 'https://gitlab.futo.org/polycentric/polycentric',
     },
-    { text: <Text>FUTO &copy; 2026.</Text>, href: FUTO_URL },
+    { text: 'FUTO © 2026.', href: FUTO_URL },
   ];
 
   return (
