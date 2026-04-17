@@ -1,3 +1,3 @@
 export * from './composites';
-export * from './layouts';
+export * from './layout';
 export * from './primitives';

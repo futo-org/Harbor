@@ -1,4 +1,3 @@
-import { Box } from '@/src/common/components/layouts';
 import {
   Avatar,
   Button,
@@ -8,28 +7,34 @@ import {
 } from '@/src/common/components/primitives';
 import {
   decodePostEvent,
-  getPointer,
   identiconUrl,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, useSheetContext } from '@/src/common/lib/sheet';
+import {
+  DismissReason,
+  SheetHeaderBlock,
+  type DismissSheet,
+} from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { types, v2 } from '@polycentric/react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { types } from '@polycentric/react-native';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 
 interface ComposeSheetInnerProps {
-  onPostCreated: (signedEvent: types.v2.SignedEvent) => void | Promise<void>;
+  dismissSheet: DismissSheet;
+  /** TODO: should be v2 `SignedEvent` */
+  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   onAvatarPress?: () => void;
   replyToEvent?: types.SignedEvent | null;
 }
 
 export function ComposeSheetInner({
+  dismissSheet,
   onPostCreated,
   onAvatarPress,
   replyToEvent,
@@ -39,7 +44,6 @@ export function ComposeSheetInner({
   const username = useUsername(publicKey ?? types.PublicKey.create());
   const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
   const { theme } = useTheme();
-  const { isOpen, dismissSheet } = useSheetContext();
 
   const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
 
@@ -63,7 +67,7 @@ export function ComposeSheetInner({
   const canPost = text.trim().length > 0 && !submitting;
 
   const handleClose = useCallback(() => {
-    if (!submitting) void dismissSheet();
+    if (!submitting) void dismissSheet(DismissReason.UserDismissed);
   }, [submitting, dismissSheet]);
 
   const handlePost = useCallback(async () => {
@@ -102,28 +106,23 @@ export function ComposeSheetInner({
 
       await client.sync();
       setText('');
-      await onPostCreatedRef.current(signedEvent);
+      await dismissSheet(DismissReason.PostSubmitted);
+      // TODO
+      // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
     } finally {
       setSubmitting(false);
     }
-  }, [text, submitting, client]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setText('');
-      setError(null);
-    }
-  }, [isOpen]);
+  }, [text, submitting, client, dismissSheet]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
     : "What's on your mind?";
 
   return (
-    <Box style={[Atoms.flex_1, theme.atoms.bg]}>
+    <View style={[Atoms.flex_1, theme.atoms.bg]}>
       <SheetHeaderBlock
         title={title}
         onClose={handleClose}
@@ -132,7 +131,7 @@ export function ComposeSheetInner({
           isWeb ? (
             <View style={{ minWidth: 80, minHeight: 36 }} />
           ) : (
-            <Box
+            <View
               style={{
                 minWidth: 80,
                 minHeight: 36,
@@ -150,15 +149,16 @@ export function ComposeSheetInner({
                 <Button
                   title="Post"
                   onPress={handlePost}
-                  variant={canPost ? 'primary' : 'disabled'}
+                  variant="primary"
+                  disabled={!canPost}
                   size="sm"
                 />
               )}
-            </Box>
+            </View>
           )
         }
       />
-      <Box
+      <View
         style={[
           Atoms.flex_1,
           {
@@ -169,7 +169,7 @@ export function ComposeSheetInner({
         ]}
       >
         {isReply && (
-          <Box
+          <View
             style={[
               Atoms.p_md,
               Atoms.rounded_md,
@@ -198,11 +198,11 @@ export function ComposeSheetInner({
             >
               {replyContentPreview}
             </Text>
-          </Box>
+          </View>
         )}
 
         {error && (
-          <Box
+          <View
             style={[
               Atoms.p_md,
               {
@@ -218,10 +218,10 @@ export function ComposeSheetInner({
             <Text variant="secondary" color="negative_500">
               {error}
             </Text>
-          </Box>
+          </View>
         )}
 
-        <Box style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
+        <View style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
           <Pressable
             onPress={onAvatarPress}
             disabled={!onAvatarPress}
@@ -232,8 +232,8 @@ export function ComposeSheetInner({
               size="sm"
             />
           </Pressable>
-          <Box style={Atoms.flex_1}>
-            <Box
+          <View style={Atoms.flex_1}>
+            <View
               style={[
                 Atoms.flex_row,
                 Atoms.gap_xs,
@@ -256,7 +256,7 @@ export function ComposeSheetInner({
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               )}
-            </Box>
+            </View>
             <TextInput
               variant="plain"
               placeholder={placeholder}
@@ -275,9 +275,9 @@ export function ComposeSheetInner({
                 maxHeight: 280,
               }}
             />
-          </Box>
-        </Box>
-      </Box>
+          </View>
+        </View>
+      </View>
       <ComposeSheetFooterBar
         variant={isWeb ? 'web' : 'native'}
         charCount={text.length}
@@ -285,6 +285,6 @@ export function ComposeSheetInner({
         canPost={canPost}
         onPost={handlePost}
       />
-    </Box>
+    </View>
   );
 }

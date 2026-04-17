@@ -2,10 +2,10 @@ trivy:
   stage: test
   image:
     name: aquasec/trivy:0.69.3
-    entrypoint: [""]
+    entrypoint: ['']
   variables:
-    TRIVY_NO_PROGRESS: "true"
-    TRIVY_CACHE_DIR: ".trivycache/"
+    TRIVY_NO_PROGRESS: 'true'
+    TRIVY_CACHE_DIR: '.trivycache/'
   allow_failure: true
   script:
     # Gitlab code quality report output

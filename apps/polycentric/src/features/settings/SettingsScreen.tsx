@@ -1,19 +1,19 @@
 import {
   Avatar,
-  Box,
   Button,
   IconButton,
   IdentityBadge,
   LinkButton,
   ListItem,
   ListItemGroup,
-  PageHeader,
+  ScreenHeader,
   Screen,
   Text,
   TextInput,
 } from '@/src/common/components';
 import {
   REPORT_BUG_URL,
+  Routes,
   SOURCE_CODE_URL,
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
@@ -27,14 +27,11 @@ import {
   usePolycentricContext,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  SheetHeaderBlock,
-  useSheet,
-  useSheetContext,
-} from '@/src/common/lib/sheet';
+import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { types } from '@polycentric/react-native';
+import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
 
@@ -65,371 +62,52 @@ function AppearanceSettingRow() {
 }
 
 export default function SettingsTabScreen() {
-  const { Sheet: IdentitySheet, present: presentIdentity } = useSheet();
-  const { Sheet: ServersSheet, present: presentServers } = useSheet();
   const currentIdentity = useCurrentIdentity();
   const publicKey = currentIdentity?.publicKey;
 
   return (
     <Screen>
-      <Box style={[Atoms.px_lg, Atoms.flex_1]}>
-        <PageHeader title="Settings" />
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            Atoms.gap_xl,
-            { paddingBottom: TAB_BAR_HEIGHT + 16 },
-          ]}
-        >
-          <ListItemWrapper onPress={() => presentIdentity()}>
-            <>
-              {publicKey && <IdentityBadge publicKey={publicKey} size="lg" />}
-            </>
-          </ListItemWrapper>
-
-          <ListItemGroup label="Appearance">
-            <AppearanceSettingRow />
-          </ListItemGroup>
-
-          <ListItemGroup label="Servers">
-            <ListItemWrapper onPress={() => presentServers()}>
-              <Text variant="body">Polycentric servers</Text>
+      <Screen.PrimaryColumn>
+        <View style={[Atoms.px_lg, Atoms.flex_1]}>
+          <ScreenHeader title="Settings" />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              Atoms.gap_xl,
+              { paddingBottom: TAB_BAR_HEIGHT + 16 },
+            ]}
+          >
+            <ListItemWrapper
+              onPress={() => router.push(Routes.tabs.settings.identity)}
+            >
+              <>
+                {publicKey && <IdentityBadge publicKey={publicKey} size="lg" />}
+              </>
             </ListItemWrapper>
-          </ListItemGroup>
 
-          <ListItemGroup>
-            <ListItemWrapper onPress={() => Linking.openURL(REPORT_BUG_URL)}>
-              <Text variant="body">Report a bug</Text>
-            </ListItemWrapper>
-          </ListItemGroup>
+            <ListItemGroup label="Appearance">
+              <AppearanceSettingRow />
+            </ListItemGroup>
 
-          <SourceCodeItem />
-        </ScrollView>
-      </Box>
-      {publicKey ? (
-        <IdentitySheet detents={[1]} dismissible scrollable>
-          <IdentitySettingsContent publicKey={publicKey} />
-        </IdentitySheet>
-      ) : null}
-      <ServersSheet detents={[0.5, 1]} dismissible scrollable>
-        <ServersSheetContent />
-      </ServersSheet>
+            <ListItemGroup label="Servers">
+              <ListItemWrapper
+                onPress={() => router.push(Routes.tabs.settings.servers)}
+              >
+                <Text variant="body">Polycentric servers</Text>
+              </ListItemWrapper>
+            </ListItemGroup>
+
+            <ListItemGroup>
+              <ListItemWrapper onPress={() => Linking.openURL(REPORT_BUG_URL)}>
+                <Text variant="body">Report a bug</Text>
+              </ListItemWrapper>
+            </ListItemGroup>
+
+            <SourceCodeItem />
+          </ScrollView>
+        </View>
+      </Screen.PrimaryColumn>
     </Screen>
-  );
-}
-
-export function IdentitySettingsContent({
-  publicKey,
-}: {
-  publicKey: types.PublicKey;
-}) {
-  const { theme } = useTheme();
-  const { dismissSheet } = useSheetContext();
-  const client = usePolycentric();
-  const { identity } = useCurrentIdentity();
-  const username = useUsername(publicKey);
-
-  const [nameExpanded, setNameExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [nameDraft, setNameDraft] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [eventCount, setEventCount] = useState(0);
-
-  useEffect(() => {
-    setNameDraft(username);
-  }, [username]);
-
-  // TODO: Event count requires v2 storage APIs
-  useEffect(() => {
-    setEventCount(0);
-  }, [client, identity]);
-
-  // TODO: Username editing requires v2 content manager APIs
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      console.warn('Username editing not yet implemented in v2');
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  }, [nameDraft]);
-
-  const handleCancel = useCallback(() => {
-    setNameDraft(username);
-    setEditing(false);
-  }, [username]);
-
-  const fullPubkey = publicKeyToString(publicKey);
-  const processId = '';
-  const displayName = username;
-  const avatarUrl = identiconUrl(publicKey, 160);
-
-  return (
-    <Box style={Atoms.flex_1}>
-      <SheetHeaderBlock title="Identity" onClose={() => void dismissSheet()} />
-      <Box style={[Atoms.p_lg, Atoms.gap_xl]}>
-        {/* Hero: avatar + name */}
-        <Box style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
-          <Avatar
-            source={avatarUrl ? { uri: avatarUrl } : undefined}
-            size="massive"
-          />
-
-          {editing ? (
-            <Box style={[Atoms.gap_sm, { width: '100%' }]}>
-              <TextInput
-                value={nameDraft}
-                onChangeText={setNameDraft}
-                placeholder="Display name"
-                autoFocus
-              />
-              <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_center]}>
-                <Button
-                  title={saving ? 'Saving...' : 'Save'}
-                  onPress={handleSave}
-                  variant="primary"
-                  size="sm"
-                />
-                <Button
-                  title="Cancel"
-                  onPress={handleCancel}
-                  variant="tertiary"
-                  size="sm"
-                />
-              </Box>
-            </Box>
-          ) : (
-            <Box style={[Atoms.items_center, Atoms.gap_xs]}>
-              <Text
-                variant="title"
-                fontWeight="bold"
-                numberOfLines={nameExpanded ? undefined : 2}
-                ellipsizeMode="tail"
-                style={{ textAlign: 'center' }}
-                onPress={() => setNameExpanded((v) => !v)}
-              >
-                {displayName || 'Anonymous'}
-              </Text>
-              <LinkButton title="Edit name" onPress={() => setEditing(true)} />
-            </Box>
-          )}
-
-          <Text variant="subtitle" color="neutral_500">
-            {eventCount} {eventCount === 1 ? 'event' : 'events'}
-          </Text>
-        </Box>
-
-        {/* Details */}
-        <Box
-          style={[
-            Atoms.gap_md,
-            Atoms.p_md,
-            Atoms.rounded_md,
-            {
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            },
-          ]}
-        >
-          <Box style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
-              PUBLIC KEY
-            </Text>
-            <Text
-              variant="secondary"
-              style={{ fontFamily: 'monospace' }}
-              selectable
-            >
-              {fullPubkey}
-            </Text>
-          </Box>
-
-          <Box
-            style={{
-              height: 1,
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            }}
-          />
-
-          <Box style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
-              PROCESS ID
-            </Text>
-            <Text
-              variant="secondary"
-              style={{ fontFamily: 'monospace' }}
-              selectable
-            >
-              {processId}
-            </Text>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
-  );
-}
-
-function ServersSheetContent() {
-  const client = usePolycentric();
-  const { store } = usePolycentricContext();
-  const { identity } = useCurrentIdentity();
-  const { theme } = useTheme();
-  const { dismissSheet } = useSheetContext();
-
-  const [servers, setServers] = useState<string[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newServerUrl, setNewServerUrl] = useState('');
-  const [isBusy, setIsBusy] = useState(false);
-
-  const refreshServers = useCallback(() => {
-    setServers([...client.servers]);
-  }, [client]);
-
-  useEffect(() => {
-    refreshServers();
-  }, [identity, refreshServers]);
-
-  const handleAddServer = async () => {
-    const url = newServerUrl.trim();
-    if (!url || isBusy) return;
-    setIsBusy(true);
-    try {
-      // TODO: createAddServer not yet available — manually add to servers list
-      client.servers.push(url);
-      setNewServerUrl('');
-      refreshServers();
-      store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
-    } catch (err) {
-      console.error('Failed to add server:', err);
-    } finally {
-      setIsBusy(false);
-    }
-  };
-
-  const handleRemoveServer = async (server: string) => {
-    const ok = await confirm({
-      title: 'Remove Server',
-      message: `Remove ${server}?`,
-      confirmText: 'Remove',
-    });
-    if (!ok) return;
-    setIsBusy(true);
-    try {
-      // TODO: Remove server not yet implemented in v2
-      console.warn('Remove server not yet implemented in v2');
-      refreshServers();
-      store.getState().clearFeed('explore');
-      client.sync().catch(() => {});
-    } catch (err) {
-      console.error('Failed to remove server:', err);
-    } finally {
-      setIsBusy(false);
-    }
-  };
-
-  return (
-    <Box style={Atoms.flex_1}>
-      <SheetHeaderBlock
-        title="Servers"
-        onClose={() => void dismissSheet()}
-        trailing={
-          <Box style={{ minWidth: 72, alignItems: 'flex-end' }}>
-            <LinkButton
-              title={isEditing ? 'Done' : 'Edit'}
-              onPress={() => {
-                setIsEditing((v) => !v);
-                setNewServerUrl('');
-              }}
-            />
-          </Box>
-        }
-      />
-      <Box style={[Atoms.p_lg, Atoms.gap_lg]}>
-        {servers.length === 0 ? (
-          <Text variant="secondary" color="neutral_500">
-            No servers configured
-          </Text>
-        ) : (
-          <Box style={Atoms.gap_sm}>
-            {servers.map((server) => (
-              <Box
-                key={server}
-                style={[
-                  Atoms.flex_row,
-                  Atoms.justify_between,
-                  Atoms.items_center,
-                  Atoms.p_md,
-                  Atoms.rounded_md,
-                  {
-                    backgroundColor: withHexOpacity(
-                      theme.palette.neutral_500,
-                      '20',
-                    ),
-                  },
-                ]}
-              >
-                <Text
-                  variant="secondary"
-                  style={{ fontFamily: 'monospace', flex: 1 }}
-                  numberOfLines={1}
-                >
-                  {server}
-                </Text>
-                {isEditing && (
-                  <IconButton
-                    variant="ghost"
-                    compact
-                    icon={() => (
-                      <Ionicons
-                        name="remove-circle-outline"
-                        size={22}
-                        color={theme.palette.negative_500}
-                      />
-                    )}
-                    onPress={() => handleRemoveServer(server)}
-                  />
-                )}
-              </Box>
-            ))}
-          </Box>
-        )}
-
-        {isEditing && (
-          <Box style={[Atoms.flex_row, Atoms.gap_sm, Atoms.items_center]}>
-            <Box style={Atoms.flex_1}>
-              <TextInput
-                placeholder="https://server.example.com"
-                value={newServerUrl}
-                onChangeText={setNewServerUrl}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-            </Box>
-            {isBusy ? (
-              <ActivityIndicator accessibilityLabel="Adding server" />
-            ) : (
-              <IconButton
-                variant="ghost"
-                icon={() => (
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={28}
-                    color={
-                      newServerUrl.trim()
-                        ? theme.palette.primary_500
-                        : theme.palette.neutral_500
-                    }
-                  />
-                )}
-                onPress={handleAddServer}
-              />
-            )}
-          </Box>
-        )}
-      </Box>
-    </Box>
   );
 }
 
@@ -444,7 +122,7 @@ function ListItemWrapper({
 
   return (
     <ListItem onPress={onPress}>
-      <Box
+      <View
         style={[
           Atoms.flex_row,
           Atoms.items_center,
@@ -458,20 +136,21 @@ function ListItemWrapper({
           size={18}
           color={theme.palette.neutral_500}
         />
-      </Box>
+      </View>
     </ListItem>
   );
 }
 
 function SourceCodeItem() {
   return (
-    <Box
+    <View
       style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
     >
       <LinkButton
         title="Source code"
         onPress={() => Linking.openURL(SOURCE_CODE_URL)}
+        underlineOnHover
       />
-    </Box>
+    </View>
   );
 }

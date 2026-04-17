@@ -1,15 +1,16 @@
-import { Pressable, StyleSheet, Animated, View } from 'react-native';
-import { Text } from './Text';
+import { usePressAnimation } from '@/src/common/lib/animation';
+import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
-  useTheme,
-  withHexOpacity,
   BorderRadius,
   typography,
+  useTheme,
+  withHexOpacity,
   type BorderRadiusToken,
-  type PaletteColorToken,
   type FontWeightToken,
+  type PaletteColorToken,
 } from '@/src/common/theme';
-import { usePressAnimation } from '@/src/common/lib/animation';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 
 type ChipSize = 'sm' | 'md' | 'lg';
 
@@ -25,6 +26,7 @@ interface ChipProps {
   onPress?: () => void;
   /** Resolved `#RRGGBB` or `#RRGGBBAA` (e.g. from `withHexOpacity`). */
   backgroundColor?: string;
+  hoverBackgroundColor?: string;
   borderColor?: string;
   textColor?: PaletteColorToken;
 }
@@ -41,24 +43,24 @@ const SIZE_CONFIG: Record<
 > = {
   sm: {
     paddingV: 4,
-    paddingH: 6,
+    paddingH: 8,
     iconSize: 12,
     fontSize: 'xs',
-    borderRadius: 'sm',
+    borderRadius: 'full',
   },
   md: {
     paddingV: 6,
-    paddingH: 6,
+    paddingH: 8,
     iconSize: 14,
     fontSize: 'sm',
-    borderRadius: 'md',
+    borderRadius: 'full',
   },
   lg: {
     paddingV: 6,
     paddingH: 18,
     iconSize: 16,
     fontSize: 'md',
-    borderRadius: 'md',
+    borderRadius: 'full',
   },
 };
 
@@ -77,11 +79,13 @@ export function Chip({
   isPressable = true,
   onPress,
   backgroundColor: backgroundColorProp,
+  hoverBackgroundColor,
   borderColor: borderColorProp,
   textColor = 'neutral_1000',
 }: ChipProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const sizeConfig = SIZE_CONFIG[size];
   const resolvedFontWeight = fontWeight || FONT_WEIGHT_MAP[size];
@@ -90,13 +94,15 @@ export function Chip({
     backgroundColorProp ?? withHexOpacity(theme.palette.neutral_500, '20');
   const borderColor =
     borderColorProp ?? withHexOpacity(theme.palette.neutral_500, '40');
+  const resolvedBg =
+    hovered && hoverBackgroundColor ? hoverBackgroundColor : backgroundColor;
 
   const containerStyle = [
     styles.base,
     {
       paddingVertical: sizeConfig.paddingV,
       paddingHorizontal: sizeConfig.paddingH,
-      backgroundColor,
+      backgroundColor: resolvedBg,
       borderColor,
       borderRadius: BorderRadius[sizeConfig.borderRadius],
     },
@@ -131,6 +137,8 @@ export function Chip({
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
+        onHoverIn={onHoverIn}
+        onHoverOut={onHoverOut}
         style={containerStyle}
       >
         {content}

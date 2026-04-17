@@ -14,6 +14,20 @@ export function fromBase64(base64: string): Uint8Array {
   return bytes;
 }
 
+export function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function fromHex(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  }
+  return bytes;
+}
+
 export type PostData = {
   id: string;
   content: string;
@@ -246,25 +260,25 @@ export function pubkeyStr(key: types.PublicKey): string {
 export function publicKeyToString(key: types.PublicKey): string {
   const keyType = key.keyType ?? 0;
   const keyBytes = key.key ?? new Uint8Array();
-  return `${keyType}_${toBase64(keyBytes)}`;
+  return `${keyType}_${toHex(keyBytes)}`;
 }
 
 export function stringToPublicKey(str: string): types.PublicKey {
   const idx = str.indexOf('_');
   const keyTypeStr = str.slice(0, idx);
-  const keyBase64 = str.slice(idx + 1);
+  const keyHex = str.slice(idx + 1);
   return types.PublicKey.create({
     keyType: Number(keyTypeStr),
-    key: fromBase64(keyBase64),
+    key: fromHex(keyHex),
   });
 }
 
 export function publicKeyToStringURLSafe(key: types.PublicKey): string {
-  return encodeURIComponent(publicKeyToString(key));
+  return publicKeyToString(key);
 }
 
 export function stringURLSafeToPublicKey(str: string): types.PublicKey {
-  return stringToPublicKey(decodeURIComponent(str));
+  return stringToPublicKey(str);
 }
 
 /**
@@ -298,20 +312,19 @@ export function pointerToURLString(pointer: types.Pointer): string {
   const systemStr = publicKeyToString(
     pointer.system ?? types.PublicKey.create(),
   );
-  const processStr = toBase64(pointer.process?.process ?? new Uint8Array());
+  const processStr = toHex(pointer.process?.process ?? new Uint8Array());
   const clockStr = String(pointer.logicalClock ?? 0);
-  return encodeURIComponent(`${systemStr}.${processStr}.${clockStr}`);
+  return `${systemStr}.${processStr}.${clockStr}`;
 }
 
 export function urlStringToPointer(str: string): types.Pointer {
-  const decoded = decodeURIComponent(str);
-  const parts = decoded.split('.');
+  const parts = str.split('.');
   const systemStr = parts[0];
   const processStr = parts[1];
   const clockStr = parts[2];
   return types.Pointer.create({
     system: stringToPublicKey(systemStr),
-    process: types.Process.create({ process: fromBase64(processStr) }),
+    process: types.Process.create({ process: fromHex(processStr) }),
     logicalClock: BigInt(clockStr),
   });
 }

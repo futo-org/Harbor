@@ -1,1 +1,1 @@
-export { default } from '../(tabs)/feed/post/[postId]';
+export { default } from '@/src/features/post/PostScreen';

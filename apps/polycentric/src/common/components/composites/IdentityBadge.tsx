@@ -5,10 +5,10 @@ import {
   PubkeyTag,
   type TextVariant,
 } from '@/src/common/components/primitives';
-import { Box } from '@/src/common/components/layouts';
 import { useUsername, identiconUrl } from '@/src/common/lib/polycentric-hooks';
 import { types } from '@polycentric/react-native';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
+import { View } from 'react-native';
 
 type BadgeSize = 'md' | 'lg';
 
@@ -32,14 +32,14 @@ export function IdentityBadge({
   const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
 
   return (
-    <Box style={[Atoms.flex_row, Atoms.items_center, rowGap, { flex: 1 }]}>
+    <View style={[Atoms.flex_row, Atoms.items_center, rowGap, { flex: 1 }]}>
       {showAvatar && (
         <Avatar
           source={avatarUrl ? { uri: avatarUrl } : undefined}
           size={sizeConfig.avatarSize}
         />
       )}
-      <Box
+      <View
         style={[
           Atoms.flex_row,
           Atoms.gap_sm,
@@ -55,8 +55,8 @@ export function IdentityBadge({
           {username}
         </Text>
         {showId && <PubkeyTag publicKey={publicKey} />}
-      </Box>
-    </Box>
+      </View>
+    </View>
   );
 }
 

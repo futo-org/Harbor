@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import type { Href } from 'expo-router';
 import { router, usePathname } from 'expo-router';
+import { Routes } from '@/src/common/constants';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
 import {
@@ -107,7 +109,7 @@ export function SignupProvider({ children }: { children: ReactNode }) {
       // }
 
       // Navigate to the main app
-      router.replace('/(tabs)/feed');
+      router.replace(Routes.tabs.feed.index as Href);
     } catch (error) {
       console.error('Failed to create identity:', error);
     }

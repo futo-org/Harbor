@@ -62,5 +62,7 @@ export {
   hexToSignedEvent,
   toBase64,
   fromBase64,
+  toHex,
+  fromHex,
 } from './helpers';
 export type { PostData } from './helpers';

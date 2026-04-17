@@ -1,22 +1,21 @@
-import { useCallback, useRef } from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Screen, Box } from '@/src/common/components/layouts';
-import { FeedViewer } from '@/src/features/posts';
-import { ProfileHeader } from './ProfileHeader';
-import {
-  useProfileScreenData,
-  useProfileEdit,
-  publicKeyToStringURLSafe,
-} from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
+import { Screen } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants';
-import { webSafeRouterBack } from '@/src/common/navigation/webSafeRouterBack';
+import {
+  decodePostEvent,
+  publicKeyToStringURLSafe,
+  useProfileEdit,
+  useProfileScreenData,
+} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { FeedViewer } from '@/src/features/post';
+import { types } from '@polycentric/react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { ProfileHeader } from './ProfileHeader';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
   const { publicKey: publicKeyParam } = useLocalSearchParams<{
     publicKey: string;
   }>();
@@ -36,32 +35,37 @@ export default function ProfileScreen() {
   const edit = useProfileEdit(data.username, data.profile);
 
   const handlePostPress = useCallback((postId: string) => {
-    router.replace(Routes.post(postId));
+    router.replace(Routes.tabs.post(postId));
   }, []);
 
   const handleAuthorPress = useCallback((pk: types.PublicKey) => {
-    router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
+    router.replace(Routes.tabs.profile(publicKeyToStringURLSafe(pk)));
+  }, []);
+
+  const handleReply = useCallback((signedEvent: types.SignedEvent) => {
+    const decoded = decodePostEvent(signedEvent);
+    if (!decoded?.id) return;
+    router.push(Routes.tabs.post.reply(decoded.id, decoded.id));
   }, []);
 
   const handleBack = useCallback(() => {
-    webSafeRouterBack();
+    router.back();
   }, []);
 
   return (
     <Screen>
-      <Box style={Atoms.flex_1}>
+      <Screen.PrimaryColumn>
         <ProfileHeader
           data={data}
           edit={edit}
-          screenWidth={screenWidth}
           bannerColors={[
             theme.palette.background_secondary,
             theme.palette.background_primary,
           ]}
           onBack={handleBack}
         />
-        <Box style={[Atoms.flex_1, profileStyles.feedArea]}>
-          <Box
+        <View style={[Atoms.flex_1, profileStyles.feedArea]}>
+          <View
             style={[
               profileStyles.feedLayer,
               data.activeFeed !== 'posts' && profileStyles.hidden,
@@ -74,13 +78,14 @@ export default function ProfileScreen() {
               onRefresh={data.authorFeed.refresh}
               onPostPress={handlePostPress}
               onAuthorPress={handleAuthorPress}
+              onReply={handleReply}
               onEndReached={data.authorFeed.loadMore}
               hasMore={data.authorFeed.hasMore}
               bottomPadding={40}
             />
-          </Box>
+          </View>
           {data.isSelf && (
-            <Box
+            <View
               style={[
                 profileStyles.feedLayer,
                 data.activeFeed !== 'likes' && profileStyles.hidden,
@@ -93,14 +98,15 @@ export default function ProfileScreen() {
                 onRefresh={data.likesFeed.refresh}
                 onPostPress={handlePostPress}
                 onAuthorPress={handleAuthorPress}
+                onReply={handleReply}
                 onEndReached={data.likesFeed.loadMore}
                 hasMore={data.likesFeed.hasMore}
                 bottomPadding={40}
               />
-            </Box>
+            </View>
           )}
-        </Box>
-      </Box>
+        </View>
+      </Screen.PrimaryColumn>
     </Screen>
   );
 }

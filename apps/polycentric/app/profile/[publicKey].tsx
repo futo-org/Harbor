@@ -1,1 +1,1 @@
-export { default } from '../(tabs)/feed/profile/[publicKey]';
+export { default } from '@/src/features/profile/ProfileScreen';

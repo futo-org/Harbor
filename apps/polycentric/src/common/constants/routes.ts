@@ -1,13 +1,34 @@
+import { router } from 'expo-router';
+
+export function openCompose(replyToPostId?: string) {
+  if (replyToPostId) {
+    router.push(
+      `${Routes.tabs.feed.compose}?replyTo=${encodeURIComponent(replyToPostId)}`,
+    );
+  } else {
+    router.push(Routes.tabs.feed.compose);
+  }
+}
+
 // TODO: abandon systemKey terminology in lib and apps. just use publicKey
 export const Routes = {
   tabs: {
-    feed: '/feed',
+    feed: {
+      index: '/feed',
+      compose: '/feed/compose',
+      identity: '/feed/identity',
+    },
     search: '/search',
     claims: '/claims',
-    profile: '/profile',
+    profile: (publicKey: string) => `/profile/${publicKey}` as const,
+    post: Object.assign((postId: string) => `/post/${postId}` as const, {
+      reply: (postId: string, replyTo: string) =>
+        `/post/${postId}?replyTo=${encodeURIComponent(replyTo)}` as const,
+    }),
     settings: {
       index: '/settings',
-      polycentricServers: '/settings/polycentric-servers',
+      identity: '/settings/identity',
+      servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
       appearance: '/settings/appearance',
@@ -29,6 +50,4 @@ export const Routes = {
       setModeration: '/signup/set_moderation',
     },
   },
-  profile: (publicKey: string) => `/feed/profile/${publicKey}` as const,
-  post: (postId: string) => `/feed/post/${postId}` as const,
 } as const;
