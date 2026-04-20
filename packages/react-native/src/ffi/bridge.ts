@@ -159,8 +159,8 @@ class NativePolycentricCore implements IPolycentricCore {
     collection?: number | null,
     signedBy?: Uint8Array | null,
     signedByKeyType?: number | null,
-    sequenceGt?: number | null,
-    sequenceLt?: number | null
+    sequenceGt?: bigint | null,
+    sequenceLt?: bigint | null
   ): Promise<Uint8Array> {
     const request = ListEventsRequest.toBinary(
       ListEventsRequest.create({
@@ -172,8 +172,8 @@ class NativePolycentricCore implements IPolycentricCore {
             signedBy != null
               ? { keyType: signedByKeyType ?? 1, key: signedBy }
               : undefined,
-          sequenceGt: sequenceGt != null ? BigInt(sequenceGt) : undefined,
-          sequenceLt: sequenceLt != null ? BigInt(sequenceLt) : undefined,
+          sequenceGt: sequenceGt ?? undefined,
+          sequenceLt: sequenceLt ?? undefined,
         },
       })
     );

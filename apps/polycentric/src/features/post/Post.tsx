@@ -1,14 +1,12 @@
-import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
+import { Avatar, IdentityTag, Text } from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  eventKey,
   identiconUrl,
   postIdToSequence,
   timeAgo,
   truncateName,
-  usePolycentricContext,
-  useStore,
   useUsername,
+  type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -18,42 +16,35 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { types } from '@polycentric/react-native';
+import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
 
-const EMPTY_PUBKEY = types.PublicKey.create();
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
 
 interface PostProps {
-  postId: string;
+  post: PostData;
   hideReplyingTo?: boolean;
   /** When true, tapping the card root is a no-op (e.g. the focused post in a conversation). */
   disablePress?: boolean;
 }
 
 export const Post = memo(function Post({
-  postId,
-  hideReplyingTo = false,
+  post,
+  hideReplyingTo: _hideReplyingTo = false,
   disablePress = false,
 }: PostProps) {
   const { theme } = useTheme();
-  const { store } = usePolycentricContext();
-  const post = useStore(store, (s) => s.posts[postId]);
+  const postId = post.id;
 
-  useEffect(() => {
-    store.getState().ensurePostMetadataLoaded(postId);
-  }, [store, postId]);
+  const authorIdentity = post.identity ?? null;
 
-  const authorName = useUsername(post?.decoded.authorPublicKey ?? EMPTY_PUBKEY);
-  const replyingToName = useUsername(
-    post?.decoded.parentAuthorPublicKey ?? EMPTY_PUBKEY,
-  );
+  const authorName = useUsername(authorIdentity);
 
-  const rawContent = post?.decoded.content ?? '';
+  const rawContent = post.content ?? '';
   const [contentExpanded, setContentExpanded] = useState(false);
 
   useEffect(() => {
@@ -79,31 +70,11 @@ export const Post = memo(function Post({
       };
     }, [rawContent, contentExpanded]);
 
-  const parentPostId = useMemo(() => {
-    const decoded = post?.decoded;
-    if (
-      !decoded?.parentAuthorPublicKey?.key ||
-      !decoded.parentProcess?.process ||
-      decoded.parentLogicalClock == null
-    ) {
-      return undefined;
-    }
-    return eventKey(
-      decoded.parentAuthorPublicKey.key,
-      decoded.parentProcess.process,
-      decoded.parentLogicalClock,
-    );
-  }, [post?.decoded]);
-
-  const { hovered: replyingToHovered, onHoverIn, onHoverOut } = useWebHover();
   const {
     hovered: expandHovered,
     onHoverIn: onExpandHoverIn,
     onHoverOut: onExpandHoverOut,
   } = useWebHover();
-
-  const authorPublicKey = post?.decoded.authorPublicKey;
-  const authorIdentity = post?.decoded.authorIdentity;
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
@@ -119,41 +90,24 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const handleReply = useCallback(() => {
-    openCompose(postId);
-  }, [postId]);
-
-  const parentAuthorIdentity = useStore(store, (state) =>
-    parentPostId
-      ? (state.posts[parentPostId]?.decoded.authorIdentity ?? null)
-      : null,
-  );
-
-  const handleReplyingToPress = useCallback(() => {
-    if (!parentPostId || !parentAuthorIdentity) return;
-    const sequence = postIdToSequence(parentPostId);
+    if (!authorIdentity) return;
+    const sequence = postIdToSequence(postId);
     if (!sequence) return;
-    router.push(Routes.tabs.post(parentAuthorIdentity, sequence));
-  }, [parentPostId, parentAuthorIdentity]);
+    openCompose({ identityId: authorIdentity, sequence });
+  }, [authorIdentity, postId]);
 
-  const handleLike = useCallback(() => {
-    store.getState().likePost(postId);
-  }, [store, postId]);
+  const handleLike = useCallback(() => {}, []);
 
-  const handleDislike = useCallback(() => {
-    store.getState().dislikePost(postId);
-  }, [store, postId]);
+  const handleDislike = useCallback(() => {}, []);
 
   const toggleContentExpanded = useCallback(() => {
     setContentExpanded((v) => !v);
   }, []);
 
-  if (!post) return null;
-
-  const liked = post.myOpinion === types.Opinion.LIKE;
-  const disliked = post.myOpinion === types.Opinion.DISLIKE;
-  const avatarUrl = authorPublicKey ? identiconUrl(authorPublicKey) : null;
-  const time = timeAgo(post.decoded.timestamp);
-  const hasParent = !!post.decoded.parentAuthorPublicKey;
+  const liked = false;
+  const disliked = false;
+  const avatarUrl = authorIdentity ? identiconUrl(authorIdentity) : null;
+  const time = timeAgo(Number(post.createdAt));
 
   return (
     <Pressable
@@ -195,10 +149,9 @@ export const Post = memo(function Post({
               ]}
             >
               <PostAuthorName name={authorName} onPress={handleAuthorPress} />
-              {authorPublicKey ? (
-                <PubkeyTag
-                  publicKey={authorPublicKey}
-                  identity={post.decoded.authorIdentity}
+              {authorIdentity ? (
+                <IdentityTag
+                  identity={authorIdentity}
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               ) : null}
@@ -214,38 +167,6 @@ export const Post = memo(function Post({
               </Text>
             ) : null}
           </View>
-
-          {!hideReplyingTo && hasParent && (
-            <Pressable
-              onPress={handleReplyingToPress}
-              disabled={!parentPostId}
-              onHoverIn={parentPostId ? onHoverIn : undefined}
-              onHoverOut={parentPostId ? onHoverOut : undefined}
-              style={{ alignSelf: 'flex-start', marginTop: 2 }}
-            >
-              <Text
-                variant="small"
-                style={[
-                  theme.atoms.text_neutral_medium,
-                  { lineHeight: 16 },
-                  parentPostId &&
-                    replyingToHovered && { textDecorationLine: 'underline' },
-                ]}
-              >
-                Replying to{' '}
-                <Text
-                  variant="small"
-                  style={[
-                    theme.atoms.text_neutral_high,
-                    parentPostId &&
-                      replyingToHovered && { textDecorationLine: 'underline' },
-                  ]}
-                >
-                  {truncateName(replyingToName, 16)}
-                </Text>
-              </Text>
-            </Pressable>
-          )}
 
           <Text variant="secondary" style={{ marginTop: 4, lineHeight: 20 }}>
             {displayContent}
@@ -283,13 +204,11 @@ export const Post = memo(function Post({
       >
         <ActionButton
           icon="chatbubble-outline"
-          count={post.stats.comments}
           onPress={handleReply}
           color={theme.palette.neutral_500}
         />
         <ActionButton
           icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
-          count={post.stats.dislikes}
           onPress={handleDislike}
           color={
             disliked ? theme.palette.negative_500 : theme.palette.neutral_500
@@ -297,7 +216,6 @@ export const Post = memo(function Post({
         />
         <ActionButton
           icon={liked ? 'arrow-up' : 'arrow-up-outline'}
-          count={post.stats.likes}
           onPress={handleLike}
           color={liked ? theme.palette.primary_500 : theme.palette.neutral_500}
         />

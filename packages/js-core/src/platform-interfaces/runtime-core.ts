@@ -78,6 +78,8 @@ export interface IPolycentricCore {
    * * `stream_id` - Optional stream ID to filter by
    * * `signed_by` - Optional public key bytes to filter by
    * * `signed_by_key_type` - Key type for signed_by (required if signed_by is set)
+   * * `sequence_gt` - Optional exclusive lower bound on EventKey.sequence
+   * * `sequence_lt` - Optional exclusive upper bound on EventKey.sequence
    *
    * # Returns
    * * Serialized ListEventsResponse protobuf bytes
@@ -89,6 +91,8 @@ export interface IPolycentricCore {
     collection?: number | null,
     signed_by?: Uint8Array | null,
     signed_by_key_type?: number | null,
+    sequence_gt?: bigint | null,
+    sequence_lt?: bigint | null,
   ): Promise<Uint8Array>;
 
   /**

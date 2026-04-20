@@ -22,7 +22,6 @@ import {
   createIdentity,
   KEY_TYPE,
   type KeyPair,
-  types,
 } from '@polycentric/react-native';
 import {
   createContext,
@@ -51,7 +50,7 @@ interface IdentitySwitcherContextType {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   dismiss: () => Promise<void>;
-  onDeleteIdentity: (publicKey: types.PublicKey) => void;
+  onDeleteIdentity: (keyPair: IdentityKeyPair) => void;
 }
 
 const IdentitySwitcherContext =
@@ -89,7 +88,7 @@ export function IdentitySwitcher({
   }, [client]);
 
   const handleDeleteIdentity = useCallback(
-    async (publicKey: types.PublicKey) => {
+    async (_keyPair: IdentityKeyPair) => {
       const ok = await confirm({
         title: 'Delete identity',
         message: 'Are you sure? This cannot be undone.',
@@ -99,7 +98,7 @@ export function IdentitySwitcher({
       // TODO: deleteKeyPair not yet implemented in v2
       console.warn('Delete identity not yet implemented in v2');
     },
-    [client],
+    [],
   );
 
   const contextValue = useMemo(
@@ -170,9 +169,10 @@ function IdentityListItemContent({
 }) {
   const { theme } = useTheme();
   const { isEditing } = useIdentitySwitcher();
-  const { isCurrentIdentity } = useCurrentIdentity();
+  const { isCurrentIdentity, client } = useCurrentIdentity();
 
-  const isCurrent = isCurrentIdentity(item.publicKey);
+  const identityKey = client.getIdentityKeyFor(item);
+  const isCurrent = isCurrentIdentity(identityKey);
 
   const hoverSurface =
     hovered && !isActive
@@ -209,10 +209,14 @@ function IdentityListItemContent({
           Atoms.gap_md,
         ]}
       >
-        <IdentityBadge publicKey={item.publicKey} />
+        {identityKey ? (
+          <IdentityBadge identityKey={identityKey} />
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
         <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md]}>
           {isCurrent && <SelectionIndicator />}
-          {isEditing && <DeleteButton publicKey={item.publicKey} />}
+          {isEditing && <DeleteButton keyPair={item} />}
         </View>
       </View>
     </View>
@@ -220,11 +224,12 @@ function IdentityListItemContent({
 }
 
 function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
-  const { isCurrentIdentity, switchIdentity } = useCurrentIdentity();
+  const { isCurrentIdentity, switchIdentity, client } = useCurrentIdentity();
   const { dismiss } = useIdentitySwitcher();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const isCurrent = isCurrentIdentity(item.publicKey);
+  const identityKey = client.getIdentityKeyFor(item);
+  const isCurrent = isCurrentIdentity(identityKey);
 
   const handleSwitchIdentity = async () => {
     // Start dismiss animation, then switch identity after animation begins
@@ -262,7 +267,7 @@ function DraggableIdentityListItem({
   );
 }
 
-function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
+function DeleteButton({ keyPair }: { keyPair: IdentityKeyPair }) {
   const { theme } = useTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
   const { onDeleteIdentity } = useIdentitySwitcher();
@@ -279,7 +284,7 @@ function DeleteButton({ publicKey }: { publicKey: types.PublicKey }) {
             color={theme.palette.neutral_1000}
           />
         )}
-        onPress={() => onDeleteIdentity(publicKey)}
+        onPress={() => onDeleteIdentity(keyPair)}
       />
     </Animated.View>
   );

@@ -9,10 +9,8 @@ import {
   FeedViewer,
   type FeedType,
 } from '@/src/features/post';
-import {
-  useExploreFeed,
-  useFollowingFeed,
-} from '@/src/common/lib/polycentric-hooks';
+import { useExploreFeed } from './hooks/useExploreFeed';
+import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { openCompose } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';

@@ -2,31 +2,30 @@ import {
   Text,
   Avatar,
   type AvatarSizePreset,
-  PubkeyTag,
+  IdentityTag,
   type TextVariant,
 } from '@/src/common/components/primitives';
 import { useUsername, identiconUrl } from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
 import { View } from 'react-native';
 
 type BadgeSize = 'md' | 'lg';
 
 interface IdentityBadgeProps {
-  publicKey: types.PublicKey;
+  identityKey: string;
   size?: BadgeSize;
   showAvatar?: boolean;
   showId?: boolean;
 }
 
 export function IdentityBadge({
-  publicKey,
+  identityKey,
   size = 'md',
   showAvatar = true,
   showId = true,
 }: IdentityBadgeProps) {
-  const username = useUsername(publicKey);
-  const avatarUrl = identiconUrl(publicKey);
+  const username = useUsername(identityKey);
+  const avatarUrl = identiconUrl(identityKey);
 
   const sizeConfig = CONFIG[size];
   const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
@@ -54,7 +53,7 @@ export function IdentityBadge({
         >
           {username}
         </Text>
-        {showId && <PubkeyTag publicKey={publicKey} />}
+        {showId && <IdentityTag identity={identityKey} />}
       </View>
     </View>
   );

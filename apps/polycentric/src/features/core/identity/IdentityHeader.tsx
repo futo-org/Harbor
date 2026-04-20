@@ -1,4 +1,4 @@
-import { Avatar, PubkeyTag, Text } from '@/src/common/components/primitives';
+import { Avatar, IdentityTag, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import {
   identiconUrl,
@@ -13,28 +13,23 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { KeyType } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 export function IdentityHeader() {
-  const { identity: currentIdentity, publicKey: pubkey } = useCurrentIdentity();
+  const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const username = useUsername(
-    pubkey ?? { keyType: KeyType.UNSPECIFIED, key: new Uint8Array() },
-  );
+  const username = useUsername(currentIdentity?.identityKey);
 
   // This component shouldn't mount if a current identity is not set.
-  if (!currentIdentity || !pubkey) {
-    console.warn(
-      'CurrIdentityHeader: missing current identity or public key (unexpected)',
-    );
+  if (!currentIdentity?.identityKey) {
+    console.warn('CurrIdentityHeader: missing current identity (unexpected)');
     return null;
   }
 
-  const avatarUrl = identiconUrl(pubkey);
+  const avatarUrl = identiconUrl(currentIdentity.identityKey);
 
   const identityRowHoverOverlay =
     theme.scheme === 'light'
@@ -82,10 +77,7 @@ export function IdentityHeader() {
           >
             {username}
           </Text>
-          <PubkeyTag
-            publicKey={pubkey}
-            identity={currentIdentity.identityKey ?? undefined}
-          />
+          <IdentityTag identity={currentIdentity.identityKey} />
           <Ionicons
             name="chevron-down"
             size={22}

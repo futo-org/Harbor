@@ -3,7 +3,6 @@ import {
   PolycentricClient,
   createPolycentricClient,
   types,
-  v2,
   type IdentityState,
 } from '@polycentric/react-native';
 import {
@@ -16,7 +15,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
-import { pubkeyStr, decodeV2PostBundle } from './helpers';
+import { pubkeyStr } from './helpers';
 import {
   createPolycentricStore,
   useStore,
@@ -32,22 +31,6 @@ export interface PolycentricContextValue {
   currentIdentity: IdentityState | null;
   switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
   refreshCurrentIdentity: () => Promise<void>;
-}
-
-interface FeedHookResult {
-  items: string[];
-  isLoading: boolean;
-  error: Error | null;
-  loadMore: () => Promise<void>;
-  hasMore: boolean;
-  refresh: () => void;
-}
-
-interface ProfileHookResult {
-  description: string | null;
-  isLoading: boolean;
-  error: Error | null;
-  refresh: () => void;
 }
 
 interface FollowStatusResult {
@@ -253,213 +236,6 @@ export function usePolycentric(): PolycentricClient {
   return client;
 }
 
-// TODO: Feed queries require queryManager which is not yet implemented in v2.
-// These hooks return empty/no-op results until the query layer is ported.
-
-const EMPTY_IDS: string[] = [];
-const NOOP = async () => {};
-const NOOP_SYNC = () => {};
-
-const EMPTY_FEED: FeedHookResult = {
-  items: EMPTY_IDS,
-  isLoading: false,
-  error: null,
-  loadMore: NOOP,
-  hasMore: false,
-  refresh: NOOP_SYNC,
-};
-
-/** Call the gRPC-web ListEvents endpoint directly via fetch. */
-async function grpcListEvents(
-  serverUrl: string,
-  filters?: Partial<v2.ListEventsFilters>,
-): Promise<v2.ListEventsResponse> {
-  const request = v2.ListEventsRequest.toBinary(
-    v2.ListEventsRequest.create({
-      filters: filters ? v2.ListEventsFilters.create(filters) : undefined,
-    }),
-  );
-
-  // gRPC-web frame: 1-byte flag (0 = data) + 4-byte big-endian length + body
-  const frame = new Uint8Array(5 + request.length);
-  frame[0] = 0;
-  new DataView(frame.buffer).setUint32(1, request.length, false);
-  frame.set(request, 5);
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.EventSyncService/ListEvents`,
-    {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/grpc-web+proto',
-        accept: 'application/grpc-web+proto',
-      },
-      body: frame,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web error: ${res.status}`);
-
-  const buf = new Uint8Array(await res.arrayBuffer());
-  // First frame: skip 5-byte header to get the response protobuf
-  const responseBytes = buf.slice(5);
-  // The response may include a trailers frame at the end; find the data
-  // frame length from the header and only decode that many bytes.
-  const dataLen = new DataView(buf.buffer, buf.byteOffset).getUint32(1, false);
-  return v2.ListEventsResponse.fromBinary(responseBytes.slice(0, dataLen));
-}
-
-export function useExploreFeed(options?: {
-  perServerLimit?: number;
-  enabled?: boolean;
-}): FeedHookResult {
-  const { client, store } = usePolycentricContext();
-  const enabled = options?.enabled ?? true;
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchFeed = useCallback(async () => {
-    if (client.servers.length === 0) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const ids: string[] = [];
-      for (const server of client.servers) {
-        try {
-          const response = await grpcListEvents(server);
-          for (const bundle of response.eventBundles) {
-            const decoded = decodeV2PostBundle(bundle);
-            if (!decoded) continue;
-            store
-              .getState()
-              .ingestPost(decoded.id, decoded.signedEvent, decoded);
-            ids.push(decoded.id);
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch from ${server}:`, e);
-        }
-      }
-      store.getState().setFeed('explore', ids, false);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [client, store]);
-
-  useEffect(() => {
-    if (enabled) fetchFeed();
-  }, [enabled, fetchFeed]);
-
-  const items = useStore(store, (s) => s.feeds['explore']?.ids ?? EMPTY_IDS);
-  const hasMore = useStore(store, (s) => s.feeds['explore']?.hasMore ?? false);
-
-  return {
-    items,
-    isLoading,
-    error,
-    loadMore: NOOP,
-    hasMore,
-    refresh: fetchFeed,
-  };
-}
-
-export function useFollowingFeed(_options?: {
-  limit?: number;
-  enabled?: boolean;
-}): FeedHookResult {
-  return EMPTY_FEED;
-}
-
-export function useAuthorFeed(
-  identityId: string | null | undefined,
-  _limit?: number,
-  options?: { getIsAborted?: () => boolean },
-): FeedHookResult {
-  const { client, store } = usePolycentricContext();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const getIsAborted = options?.getIsAborted;
-
-  const feedKey = identityId ? `author:${identityId}` : null;
-
-  const fetchFeed = useCallback(async () => {
-    if (!identityId || !feedKey) return;
-    if (client.servers.length === 0) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const ids: string[] = [];
-      for (const server of client.servers) {
-        try {
-          const response = await grpcListEvents(server, {
-            identity: identityId,
-          });
-          if (getIsAborted?.()) return;
-          for (const bundle of response.eventBundles) {
-            const decoded = decodeV2PostBundle(bundle);
-            if (!decoded) continue;
-            store
-              .getState()
-              .ingestPost(decoded.id, decoded.signedEvent, decoded);
-            ids.push(decoded.id);
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch author feed from ${server}:`, e);
-        }
-      }
-      if (getIsAborted?.()) return;
-      store.getState().setFeed(feedKey, ids, false);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [client, store, identityId, feedKey, getIsAborted]);
-
-  useEffect(() => {
-    if (identityId) fetchFeed();
-  }, [identityId, fetchFeed]);
-
-  const items = useStore(
-    store,
-    (s) => (feedKey ? s.feeds[feedKey]?.ids : undefined) ?? EMPTY_IDS,
-  );
-  const hasMore = useStore(
-    store,
-    (s) => (feedKey ? s.feeds[feedKey]?.hasMore : false) ?? false,
-  );
-
-  return {
-    items,
-    isLoading,
-    error,
-    loadMore: NOOP,
-    hasMore,
-    refresh: fetchFeed,
-  };
-}
-
-export function useLikesFeed(_options?: {
-  limit?: number;
-  enabled?: boolean;
-  getIsAborted?: () => boolean;
-}): FeedHookResult {
-  return EMPTY_FEED;
-}
-
-export function useProfile(
-  _system: types.PublicKey,
-  _options?: { getIsAborted?: () => boolean },
-): ProfileHookResult {
-  return {
-    description: null,
-    isLoading: false,
-    error: null,
-    refresh: NOOP_SYNC,
-  };
-}
-
 export function useIdentities() {
   const { store } = usePolycentricContext();
   return useStore(store, (s) => s.identities);
@@ -468,45 +244,38 @@ export function useIdentities() {
 export function useCurrentIdentity() {
   const { client, currentIdentity, switchIdentity } = usePolycentricContext();
 
-  const publicKey = client.currentKeyPair?.publicKey ?? null;
+  const activeIdentityKey = currentIdentity?.identityKey ?? null;
 
   const isCurrentIdentity = useCallback(
-    (pubkey: types.PublicKey) => {
-      if (!publicKey) return false;
-      return pubkeyStr(publicKey) === pubkeyStr(pubkey);
+    (identityKey: string | null | undefined) => {
+      if (!activeIdentityKey || !identityKey) return false;
+      return activeIdentityKey === identityKey;
     },
-    [publicKey],
+    [activeIdentityKey],
   );
 
   return {
     identity: currentIdentity,
-    publicKey,
+    identityKey: activeIdentityKey,
     client,
     isCurrentIdentity,
     switchIdentity,
   };
 }
 
-export function useFollowStatus(_system: types.PublicKey): FollowStatusResult {
+export function useFollowStatus(
+  _identityKey: string | null | undefined,
+): FollowStatusResult {
   return {
     isFollowing: false,
     isLoading: false,
-    toggleFollow: NOOP,
-    refresh: NOOP_SYNC,
+    toggleFollow: async () => {},
+    refresh: () => {},
   };
 }
 
-export function useUsername(pubkey: types.PublicKey): string {
-  const { store } = usePolycentricContext();
-  const key = pubkeyStr(pubkey);
-  const stablePubkey = useMemo(() => pubkey, [key]);
-
-  const name = useStore(store, (s) => s.usernames[key]);
-
-  useEffect(() => {
-    if (!key) return;
-    store.getState().ensureUsernameLoaded(key, stablePubkey);
-  }, [store, key, stablePubkey]);
+export function useUsername(_identityKey: string | null | undefined): string {
+  const name = undefined;
 
   return name ?? DEFAULT_IDENTITY_NAME;
 }

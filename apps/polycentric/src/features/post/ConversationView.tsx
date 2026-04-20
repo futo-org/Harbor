@@ -1,59 +1,65 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
-import { RefreshControl, View, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { type PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
-import { usePostPage } from '@/src/common/lib/polycentric-hooks';
+import { usePostById } from './hooks/usePostById';
 
 interface ConversationViewProps {
-  postId: string;
+  post: PostData;
 }
 
-function PostRow({ postId, isFocus }: { postId: string; isFocus: boolean }) {
-  return (
-    <View style={styles.replyContainer}>
-      <Post postId={postId} hideReplyingTo={false} disablePress={isFocus} />
-    </View>
+// TODO: reply list previously lived in a store-backed feed. Reintroduce reply
+// loading via `listEvents` with a parent-pointer filter once that filter is
+// supported.
+export function ConversationView({ post }: ConversationViewProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { post: rootPost } = usePostById(
+    post.reply?.root?.identity,
+    post.reply?.root?.sequence,
   );
-}
+  const { post: parentPost } = usePostById(
+    post.reply?.parent?.identity,
+    post.reply?.parent?.sequence,
+  );
 
-export function ConversationView({ postId }: ConversationViewProps) {
-  const { replyIds, isLoading, reload } = usePostPage(postId);
-  const [userDidPull, setUserDidPull] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading) setUserDidPull(false);
-  }, [isLoading]);
+  const items = useMemo(() => {
+    const list: PostData[] = [];
+    if (rootPost) list.push(rootPost);
+    // Skip parent if it's the same as root (thread of depth 1).
+    if (parentPost && parentPost.id !== rootPost?.id) list.push(parentPost);
+    list.push(post);
+    return list;
+  }, [rootPost, parentPost, post]);
 
   const handleRefresh = useCallback(() => {
-    setUserDidPull(true);
-    reload();
-  }, [reload]);
-
-  const listIds = useMemo(() => [postId, ...replyIds], [postId, replyIds]);
-
-  const renderItem = useCallback(
-    ({ item, index }: { item: string; index: number }) => (
-      <PostRow postId={item} isFocus={index === 0} />
-    ),
-    [],
-  );
-
-  const showRefreshing = userDidPull && isLoading;
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 0);
+  }, []);
 
   return (
     <FlashList
-      data={listIds}
-      keyExtractor={(id) => id}
-      renderItem={renderItem}
+      data={items}
+      keyExtractor={(p) => p.id}
+      renderItem={({ item }) => (
+        <View style={styles.row}>
+          <Post
+            post={item}
+            hideReplyingTo={false}
+            disablePress={item.id === post.id}
+          />
+        </View>
+      )}
       refreshControl={
-        <RefreshControl refreshing={showRefreshing} onRefresh={handleRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     />
   );
 }
 
 const styles = StyleSheet.create({
-  replyContainer: {
+  row: {
     width: '100%',
   },
 });

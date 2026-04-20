@@ -1,4 +1,5 @@
 import { Text } from '@/src/common/components/primitives';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { FlashList } from '@shopify/flash-list';
@@ -12,7 +13,7 @@ import {
 import { Post } from './Post';
 
 interface FeedViewerProps {
-  items: string[];
+  items: PostData[];
   isLoading: boolean;
   error: Error | null;
   onRefresh: () => void;
@@ -48,12 +49,12 @@ export function FeedViewer({
   const layoutInvalid = hasLayout && (layoutBox.w < 2 || layoutBox.h < 2);
 
   const renderItem = useCallback(
-    ({ item: postId }: { item: string }) => <Post postId={postId} />,
+    ({ item }: { item: PostData }) => <Post post={item} />,
     [],
   );
 
   const keyExtractor = useCallback(
-    (item: string, index: number) => `${item}:${index}`,
+    (item: PostData, index: number) => `${item.id}:${index}`,
     [],
   );
 

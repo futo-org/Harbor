@@ -30,7 +30,6 @@ import {
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { types } from '@polycentric/react-native';
 import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
@@ -62,8 +61,7 @@ function AppearanceSettingRow() {
 }
 
 export default function SettingsTabScreen() {
-  const currentIdentity = useCurrentIdentity();
-  const publicKey = currentIdentity?.publicKey;
+  const { identityKey } = useCurrentIdentity();
 
   return (
     <Screen>
@@ -81,7 +79,9 @@ export default function SettingsTabScreen() {
               onPress={() => router.push(Routes.tabs.settings.identity)}
             >
               <>
-                {publicKey && <IdentityBadge publicKey={publicKey} size="lg" />}
+                {identityKey && (
+                  <IdentityBadge identityKey={identityKey} size="lg" />
+                )}
               </>
             </ListItemWrapper>
 

@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 
-export function openCompose(replyToPostId?: string) {
-  if (replyToPostId) {
-    router.push(
-      `${Routes.tabs.feed.compose}?replyTo=${encodeURIComponent(replyToPostId)}`,
-    );
+export function openCompose(replyTo?: {
+  identityId: string;
+  sequence: string;
+}) {
+  if (replyTo) {
+    const path = `${encodeURIComponent(replyTo.identityId)}/${encodeURIComponent(replyTo.sequence)}`;
+    router.push(`${Routes.tabs.feed.compose}?replyTo=${path}`);
   } else {
     router.push(Routes.tabs.feed.compose);
   }

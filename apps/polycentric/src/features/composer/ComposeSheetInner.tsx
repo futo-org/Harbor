@@ -1,17 +1,17 @@
 import {
   Avatar,
   Button,
-  PubkeyTag,
+  IdentityTag,
   Text,
   TextInput,
 } from '@/src/common/components/primitives';
 import {
-  decodePostEvent,
   identiconUrl,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
   useUsername,
+  type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import {
   DismissReason,
@@ -20,41 +20,46 @@ import {
 } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { types } from '@polycentric/react-native';
+import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
+import { Routes } from '@/src/common/constants';
+import { router } from 'expo-router';
 
 interface ComposeSheetInnerProps {
   dismissSheet: DismissSheet;
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
-  onAvatarPress?: () => void;
-  replyToEvent?: types.SignedEvent | null;
+  replyTo?: PostData | null;
 }
 
 export function ComposeSheetInner({
   dismissSheet,
   onPostCreated,
-  onAvatarPress,
-  replyToEvent,
+  replyTo,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
-  const { publicKey, identity: currentIdentity } = useCurrentIdentity();
-  const username = useUsername(publicKey ?? types.PublicKey.create());
-  const avatarUrl = publicKey ? identiconUrl(publicKey) : undefined;
+  const { identityKey: currentIdentityKey, identity: currentIdentity } =
+    useCurrentIdentity();
+  const username = useUsername(currentIdentityKey);
+  const avatarUrl = currentIdentityKey
+    ? identiconUrl(currentIdentityKey)
+    : undefined;
   const { theme } = useTheme();
 
-  const replyDecoded = replyToEvent ? decodePostEvent(replyToEvent) : null;
-
-  const replyToEventRef = useRef(replyToEvent);
-  replyToEventRef.current = replyToEvent;
   const onPostCreatedRef = useRef(onPostCreated);
   onPostCreatedRef.current = onPostCreated;
-  const replyAuthorPubkey =
-    replyDecoded?.authorPublicKey ?? types.PublicKey.create();
-  const replyAuthorName = useUsername(replyAuthorPubkey);
-  const replyContent = replyDecoded?.content ?? '';
+
+  const replyToEventKey = v2.EventKey.create({
+    collection: COLLECTION.FEED,
+    identity: replyTo?.identity,
+    signedBy: replyTo?.signedBy,
+    sequence: BigInt(replyTo?.sequence ?? 0),
+  });
+
+  const replyAuthorName = useUsername(replyTo?.identity ?? null);
+  const replyContent = replyTo?.content ?? '';
   const replyContentPreview =
     replyContent.length > 30 ? `${replyContent.slice(0, 30)}…` : replyContent;
 
@@ -62,7 +67,7 @@ export function ComposeSheetInner({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isReply = !!replyToEvent;
+  const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
   const canPost = text.trim().length > 0 && !submitting;
 
@@ -88,12 +93,20 @@ export function ComposeSheetInner({
 
       // TODO: reply references not yet supported in v2 createPost
 
+      let post: types.v2.Post = { text: text.trim() };
+
+      if (isReply) {
+        post.reply = {
+          root: replyToEventKey,
+          parent: replyToEventKey,
+        };
+      }
+
       const content = client.contentManager.build({
         oneofKind: 'post',
-        post: {
-          text: text.trim(),
-        },
+        post,
       });
+
       await client.contentManager.save(content);
 
       const event = await client.buildEvent(content);
@@ -116,6 +129,12 @@ export function ComposeSheetInner({
       setSubmitting(false);
     }
   }, [text, submitting, client, dismissSheet]);
+
+  const onAvatarPress = useCallback(() => {
+    if (currentIdentityKey) {
+      router.push(Routes.tabs.profile(currentIdentityKey));
+    }
+  }, [currentIdentityKey]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -249,10 +268,9 @@ export function ComposeSheetInner({
                   {truncateName(username, 16)}
                 </Text>
               </Pressable>
-              {publicKey && (
-                <PubkeyTag
-                  publicKey={publicKey}
-                  identity={currentIdentity?.identityKey ?? undefined}
+              {currentIdentity?.identityKey && (
+                <IdentityTag
+                  identity={currentIdentity.identityKey}
                   style={{ transform: [{ translateY: 1 }] }}
                 />
               )}

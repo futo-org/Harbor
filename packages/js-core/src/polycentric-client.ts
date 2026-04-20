@@ -307,6 +307,56 @@ export class PolycentricClient {
   }
 
   /**
+   * Generic query wrapper around `core.list_events`. Fans the query out to
+   * every configured server and returns the aggregated event bundles.
+   * Does not persist — callers decide what to do with the response.
+   */
+  async listEvents(options?: {
+    limit?: number | null;
+    identity?: string | null;
+    collection?: number | null;
+    signedBy?: Proto.PublicKey | null;
+    /** Exclusive lower bound on EventKey.sequence. */
+    sequenceGt?: number | bigint | null;
+    /** Exclusive upper bound on EventKey.sequence. */
+    sequenceLt?: number | bigint | null;
+  }): Promise<Proto.EventBundle[]> {
+    if (!this.core) throw new Error('Core not initialized');
+
+    const sequenceGt =
+      options?.sequenceGt != null ? BigInt(options.sequenceGt) : null;
+    const sequenceLt =
+      options?.sequenceLt != null ? BigInt(options.sequenceLt) : null;
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core!.list_events(
+          server,
+          options?.limit ?? null,
+          options?.identity ?? null,
+          options?.collection ?? null,
+          options?.signedBy?.key ?? null,
+          options?.signedBy?.keyType ?? null,
+          sequenceGt,
+          sequenceLt,
+        ),
+      ),
+    );
+
+    const bundles: Proto.EventBundle[] = [];
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('listEvents failed for a server:', result.reason);
+        continue;
+      }
+      const response = Proto.ListEventsResponse.fromBinary(result.value);
+      bundles.push(...response.eventBundles);
+    }
+
+    return bundles;
+  }
+
+  /**
    * Push local events for the active key to all configured servers,
    * including content alongside each event.
    */
@@ -365,53 +415,47 @@ export class PolycentricClient {
   }
 
   /**
-   * Pull signed events from all configured servers and persist new ones locally.
+   * Pull signed events for the active identity from all configured servers
+   * and persist new ones locally. Existing events/content are not overwritten.
    *
    * @returns The number of new events persisted
    */
   async pull(): Promise<number> {
     if (!this.core) throw new Error('Core not initialized');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const bundles = await this.listEvents({
+      identity: this.activeIdentityKey,
+    });
 
     let newCount = 0;
+    for (const bundle of bundles) {
+      if (!bundle.signedEvent) continue;
 
-    const results = await Promise.allSettled(
-      this.servers.map((server) => this.core!.list_events(server, null)),
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('Pull failed for a server:', result.reason);
-        continue;
-      }
-
-      const response = Proto.ListEventsResponse.fromBinary(result.value);
-
-      for (const bundle of response.eventBundles) {
-        if (!bundle.signedEvent) continue;
-
-        // Always store content if included (even if event is a duplicate)
-        if (bundle.serializedContent?.contentBytes) {
-          try {
-            const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
-            if (event.contentDigest?.value) {
+      if (bundle.serializedContent?.contentBytes) {
+        try {
+          const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
+          if (event.contentDigest?.value) {
+            const existing = await this.storage.content.get(
+              event.contentDigest,
+            );
+            if (!existing) {
               const content = Proto.Content.fromBinary(
                 bundle.serializedContent.contentBytes,
               );
               await this.storage.content.save(event.contentDigest, content);
             }
-          } catch {
-            // content decode failed, skip
           }
-        }
-
-        try {
-          // Currently we are storing all events (and above content).
-          // We probably dont want to be do this and only storing what we OWN or FOLLOW
-          await this.storage.events.save(bundle.signedEvent);
-          newCount++;
         } catch {
-          // duplicate event, skip
+          // content decode failed, skip
         }
+      }
+
+      try {
+        await this.storage.events.save(bundle.signedEvent);
+        newCount++;
+      } catch {
+        // duplicate event, skip
       }
     }
 
@@ -440,6 +484,19 @@ export class PolycentricClient {
   public setActiveIdentityKey(identityKey: string | null) {
     this.activeIdentityKey = identityKey;
     this.saveActiveIdentityKey(identityKey);
+  }
+
+  /**
+   * Look up the v2 identity key bound to the given key pair locally.
+   * Returns null if this device has never associated an identity with the pair.
+   */
+  public getIdentityKeyFor(keyPair: KeyPair): string | null {
+    const storageKey = `polycentric:activeIdentity:${this.toHex(keyPair.publicKey.key, 32)}`;
+    try {
+      return localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
   }
 
   private identityStorageKey(): string | null {

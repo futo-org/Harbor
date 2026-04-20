@@ -8,29 +8,27 @@ import {
 } from '@/src/common/components';
 import {
   identiconUrl,
-  publicKeyToString,
   usePolycentric,
   useUsername,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { types } from '@polycentric/react-native';
 import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 export function IdentitySettings({
-  publicKey,
+  identityKey,
   dismissSheet,
 }: {
-  publicKey: types.PublicKey;
+  identityKey: string;
   dismissSheet: DismissSheet;
 }) {
   const { theme } = useTheme();
   const client = usePolycentric();
   const { identity } = useCurrentIdentity();
-  const username = useUsername(publicKey);
+  const username = useUsername(identityKey);
 
   const [nameExpanded, setNameExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -63,10 +61,10 @@ export function IdentitySettings({
     setEditing(false);
   }, [username]);
 
-  const fullPubkey = publicKeyToString(publicKey);
+  const fullPubkey = identityKey;
   const processId = '';
   const displayName = username;
-  const avatarUrl = identiconUrl(publicKey, 160);
+  const avatarUrl = identiconUrl(identityKey, 160);
 
   return (
     <View style={Atoms.flex_1}>
@@ -181,9 +179,9 @@ export function IdentitySettings({
 }
 
 export default function IdentitySettingsScreen() {
-  const { publicKey } = useCurrentIdentity();
+  const { identityKey } = useCurrentIdentity();
 
-  if (!publicKey) return null;
+  if (!identityKey) return null;
 
   return (
     <SheetMenu
@@ -195,7 +193,10 @@ export default function IdentitySettingsScreen() {
       scrollable
     >
       {(dismissSheet) => (
-        <IdentitySettings publicKey={publicKey} dismissSheet={dismissSheet} />
+        <IdentitySettings
+          identityKey={identityKey}
+          dismissSheet={dismissSheet}
+        />
       )}
     </SheetMenu>
   );

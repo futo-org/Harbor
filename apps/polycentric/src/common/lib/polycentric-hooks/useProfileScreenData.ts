@@ -1,19 +1,15 @@
-import { useMemo, useState, useEffect } from 'react';
-import { types } from '@polycentric/react-native';
+import { useState, useEffect } from 'react';
 import {
-  usePolycentricContext,
   useCurrentIdentity,
   useUsername,
-  useProfile,
-  useAuthorFeed,
-  useLikesFeed,
   useFollowStatus,
 } from './PolycentricProvider';
-import { getIdentityId, identiconUrl, shortenIdentityId } from './helpers';
-import { useStore } from './store';
+import { useAuthorFeed } from '../../../features/feed/hooks/useAuthorFeed';
+import { useLikesFeed } from '../../../features/feed/hooks/useLikesFeed';
+import { useProfile } from '../../../features/profile/hooks/useProfile';
+import { identiconUrl, shortenIdentityId } from './helpers';
 
 export type ProfileScreenData = {
-  publicKey: types.PublicKey;
   /** v2 identity id (hex) for this profile, or null if none can be resolved. */
   identityKey: string | null;
   isSelf: boolean;
@@ -22,7 +18,7 @@ export type ProfileScreenData = {
   authorFeed: ReturnType<typeof useAuthorFeed>;
   likesFeed: ReturnType<typeof useLikesFeed>;
   followStatus: ReturnType<typeof useFollowStatus>;
-  /** Short display string — identity id when known, pubkey short otherwise. */
+  /** Short display string derived from the identity key. */
   short: string;
   avatarUrl: string;
   activeFeed: 'posts' | 'likes';
@@ -33,46 +29,25 @@ export function useProfileScreenData(
   identityIdParam: string | undefined,
   options?: { getIsAborted?: () => boolean },
 ): ProfileScreenData {
-  const { identity: selfIdentity, publicKey: selfPublicKey } =
-    useCurrentIdentity();
-
-  // Resolve identityId → publicKey. For self we use the current identity's
-  // public key. Otherwise scan known posts for a matching authorIdentity.
-  const { store } = usePolycentricContext();
-  const knownPublicKey = useStore(store, (state) => {
-    if (!identityIdParam) return null;
-    for (const post of Object.values(state.posts)) {
-      if (post.decoded.authorIdentity === identityIdParam) {
-        return post.decoded.authorPublicKey;
-      }
-    }
-    return null;
-  });
+  const { identity: selfIdentity } = useCurrentIdentity();
 
   const isSelf =
     !!identityIdParam && selfIdentity?.identityKey === identityIdParam;
 
-  const publicKey = useMemo(() => {
-    if (isSelf && selfPublicKey) return selfPublicKey;
-    return knownPublicKey ?? types.PublicKey.create();
-  }, [isSelf, selfPublicKey, knownPublicKey]);
-
   const getIsAborted = options?.getIsAborted;
 
-  const username = useUsername(publicKey);
-  const profile = useProfile(publicKey, { getIsAborted });
+  const identityKey = identityIdParam ?? null;
+
+  const username = useUsername(identityKey);
+  const profile = useProfile(identityKey, { getIsAborted });
   const authorFeed = useAuthorFeed(identityIdParam, undefined, {
     getIsAborted,
   });
   const likesFeed = useLikesFeed({ enabled: isSelf, getIsAborted });
-  const followStatus = useFollowStatus(publicKey);
+  const followStatus = useFollowStatus(identityKey);
 
-  const identityKey = identityIdParam ?? null;
-
-  const short = identityKey
-    ? shortenIdentityId(identityKey)
-    : getIdentityId(publicKey);
-  const avatarUrl = identiconUrl(publicKey);
+  const short = identityKey ? shortenIdentityId(identityKey) : '...';
+  const avatarUrl = identityKey ? identiconUrl(identityKey) : '';
 
   const [activeFeed, setActiveFeed] = useState<'posts' | 'likes'>('posts');
   useEffect(() => {
@@ -80,7 +55,6 @@ export function useProfileScreenData(
   }, [isSelf]);
 
   return {
-    publicKey,
     identityKey,
     isSelf,
     username,
