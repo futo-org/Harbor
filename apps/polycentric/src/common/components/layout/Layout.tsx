@@ -8,14 +8,14 @@ import {
   ReactElement,
   ReactNode,
   useCallback,
-  useState
+  useState,
 } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   useWindowDimensions,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
