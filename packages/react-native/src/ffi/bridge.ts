@@ -19,13 +19,7 @@ const { ListEventsRequest, GetFeedRequest, SignedEvent } = v2;
 
 // ── Native module helpers ────────────────────────────────────────────
 
-/**
- * Call a v2 native function that returns raw bytes (not wrapped in
- * polycentric_ffi.Result). Negative CBuffer length means error string.
- * The C++ layer encodes errors as CBuffer with negative length, which
- * comes through as a Uint8Array. We detect errors by checking the
- * native return.
- */
+// Call a v2 native function. C++ layer throws JSError on failure via CResult.
 function callNativeV2(
   nativeFn: (input: Object) => Object,
   input: Uint8Array

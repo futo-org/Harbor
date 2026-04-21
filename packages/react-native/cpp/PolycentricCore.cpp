@@ -75,17 +75,17 @@ PolycentricCore::PolycentricCore(std::shared_ptr<CallInvoker> jsInvoker)
 // v2 methods
 
 jsi::Object PolycentricCore::verifySignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
-    CBuffer input = toCResult(rt, signedEventBytes);
+    CResult input = toCResult(rt, signedEventBytes);
     return resultToUint8Array(rt, ::verify_signed_event_v2(input));
 }
 
 jsi::Object PolycentricCore::decodeEventFromSignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
-    CBuffer input = toCResult(rt, signedEventBytes);
+    CResult input = toCResult(rt, signedEventBytes);
     return resultToUint8Array(rt, ::decode_event_from_signed_event_v2(input));
 }
 
 jsi::Object PolycentricCore::validateEventV2(jsi::Runtime& rt, jsi::Object eventBytes) {
-    CBuffer input = toCResult(rt, eventBytes);
+    CResult input = toCResult(rt, eventBytes);
     return resultToUint8Array(rt, ::validate_event_v2(input));
 }
 
@@ -94,8 +94,8 @@ jsi::Object PolycentricCore::nextSequenceV2(
     jsi::Object identity,
     double collection,
     jsi::Object signedBy) {
-    CBuffer identityBuf = toCResult(rt, identity);
-    CBuffer signedByBuf = toCResult(rt, signedBy);
+    CResult identityBuf = toCResult(rt, identity);
+    CResult signedByBuf = toCResult(rt, signedBy);
     int32_t collectionInt = static_cast<int32_t>(collection);
     return resultToUint8Array(rt, ::next_sequence_v2(identityBuf, collectionInt, signedByBuf));
 }
@@ -107,8 +107,8 @@ jsi::Object PolycentricCore::buildVectorClockV2(
     double identitySequence,
     jsi::Object signedBy,
     double currentSequence) {
-    CBuffer identityBuf = toCResult(rt, identity);
-    CBuffer signedByBuf = toCResult(rt, signedBy);
+    CResult identityBuf = toCResult(rt, identity);
+    CResult signedByBuf = toCResult(rt, signedBy);
     int32_t collectionInt = static_cast<int32_t>(collection);
     uint64_t idSeq = static_cast<uint64_t>(identitySequence);
     uint64_t curSeq = static_cast<uint64_t>(currentSequence);
@@ -118,7 +118,7 @@ jsi::Object PolycentricCore::buildVectorClockV2(
 }
 
 jsi::Object PolycentricCore::copyEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
-    CBuffer input = toCResult(rt, signedEventBytes);
+    CResult input = toCResult(rt, signedEventBytes);
     return resultToUint8Array(rt, ::copy_event_v2(input));
 }
 
@@ -126,8 +126,8 @@ jsi::Object PolycentricCore::copyContentV2(
     jsi::Runtime& rt,
     jsi::Object digestBytes,
     jsi::Object contentBytes) {
-    CBuffer digestBuf = toCResult(rt, digestBytes);
-    CBuffer contentBuf = toCResult(rt, contentBytes);
+    CResult digestBuf = toCResult(rt, digestBytes);
+    CResult contentBuf = toCResult(rt, contentBytes);
     return resultToUint8Array(rt, ::copy_content_v2(digestBuf, contentBuf));
 }
 
