@@ -3,6 +3,7 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
   BorderRadius,
+  Spacing,
   useTheme,
   withHexOpacity,
   type BorderRadiusToken,
@@ -52,8 +53,18 @@ const SIZE_CONFIG: Record<
     borderRadius: BorderRadiusToken;
   }
 > = {
-  sm: { paddingV: 4, paddingH: 6, iconSize: 16, borderRadius: 'full' },
-  md: { paddingV: 12, paddingH: 18, iconSize: 20, borderRadius: 'full' },
+  sm: {
+    paddingV: 4,
+    paddingH: Spacing['lg'],
+    iconSize: 16,
+    borderRadius: 'full',
+  },
+  md: {
+    paddingV: 12,
+    paddingH: Spacing['xl'],
+    iconSize: 20,
+    borderRadius: 'full',
+  },
   lg: { paddingV: 18, paddingH: 24, iconSize: 24, borderRadius: 'full' },
 };
 
@@ -74,6 +85,10 @@ export function Button({
 
   const sizeConfig = SIZE_CONFIG[size];
   const borderRadius = BorderRadius[sizeConfig.borderRadius];
+  const iconOnly = !!icon && !title;
+  const paddingHorizontal = iconOnly
+    ? sizeConfig.paddingV
+    : sizeConfig.paddingH;
   const isDisabled = !!disabled;
   const iconColor = isDisabled
     ? withHexOpacity(theme.palette.neutral_500, '80')
@@ -100,7 +115,7 @@ export function Button({
           !fullWidth && styles.fitContent,
           {
             paddingVertical: sizeConfig.paddingV,
-            paddingHorizontal: sizeConfig.paddingH,
+            paddingHorizontal,
             borderRadius,
           },
           surfaceStyle,
@@ -109,24 +124,27 @@ export function Button({
         ]}
         {...props}
       >
-        <View style={[styles.content, icon && title && { marginLeft: -3 }]}>
+        <View style={[styles.content]}>
           {icon &&
             icon({
               size: sizeConfig.iconSize,
               color: iconColor,
             })}
-          <Text
-            fontWeight={FONT_WEIGHT}
-            color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
-            style={
-              isDisabled
-                ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
-                : undefined
-            }
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
+          {!iconOnly && (
+            <Text
+              fontSize={size}
+              fontWeight={FONT_WEIGHT}
+              color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
+              style={
+                isDisabled
+                  ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
+                  : undefined
+              }
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+          )}
         </View>
       </Pressable>
     </Animated.View>

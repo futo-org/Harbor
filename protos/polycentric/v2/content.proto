@@ -57,13 +57,11 @@ message Delete {
 }
 
 message Follow {
-  // Serialized Identity message bytes
-  bytes identity = 1;
+  string identity = 1;
 }
 
 message Block {
-  // Serialized Identity message bytes
-  bytes identity = 1;
+  string identity = 1;
 }
 
 enum Opinion {
@@ -89,6 +87,8 @@ message ProfileUpdate {
   optional Image avatar = 2;
   // Reference to the Blob of a banner
   optional Image banner = 3;
+  // Bio
+  optional string description = 4;
 }
 
 // If an uploaded Blob is uploaded to the servers Object Storage and not

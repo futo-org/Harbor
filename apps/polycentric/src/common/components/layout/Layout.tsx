@@ -19,12 +19,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { VerticalNav } from './nav/VerticalNav';
+import { Button } from '../primitives';
+import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import { Ionicons } from '@expo/vector-icons';
 import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
-import { Button } from '../primitives';
-import { VerticalNav } from './nav/VerticalNav';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -174,7 +175,13 @@ export const LeftSidebar = memo(function LeftSidebar({
             ]}
           >
             {/* 1st section (top) */}
-            <View>
+            <View
+              style={[
+                Atoms.w_full,
+                narrowSidebar && Atoms.align_center,
+                Atoms.flex_col,
+              ]}
+            >
               <Link
                 href="/"
                 style={[
@@ -193,21 +200,37 @@ export const LeftSidebar = memo(function LeftSidebar({
               </Link>
 
               <VerticalNav />
+
+              <View
+                style={[
+                  Atoms.py_md,
+                  Atoms.self_stretch,
+                  narrowSidebar && Atoms.align_center,
+                ]}
+              >
+                {identity && (
+                  <Button
+                    title={narrowSidebar ? '' : 'Post'}
+                    variant="primary"
+                    size="md"
+                    fullWidth={!narrowSidebar}
+                    icon={({ size, color }) => (
+                      <Ionicons name="add-circle" size={size} color={color} />
+                    )}
+                    onPress={() => openCompose()}
+                  />
+                )}
+              </View>
             </View>
             {/* 2nd Section (bottom) */}
-            <View style={[Atoms.py_md, Atoms.self_stretch]}>
-              {identity && (
-                <Button
-                  title="New Post"
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  icon={({ size, color }) => (
-                    <Ionicons name="add-circle" size={size} color={color} />
-                  )}
-                  onPress={() => openCompose()}
-                />
-              )}
+            <View
+              style={[
+                Atoms.py_md,
+                Atoms.self_stretch,
+                narrowSidebar && Atoms.align_center,
+              ]}
+            >
+              {identity && <IdentityFooter compact={narrowSidebar} />}
             </View>
           </View>
         </View>

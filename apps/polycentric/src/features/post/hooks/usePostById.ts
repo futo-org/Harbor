@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { v2 } from '@polycentric/react-native';
+import { COLLECTION, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   usePolycentricContext,
@@ -37,6 +37,7 @@ export function usePostById(
       try {
         const bundles = await client.listEvents({
           identity: identityId,
+          collection: COLLECTION.FEED,
           sequenceGt: seqNum - 1,
           sequenceLt: seqNum + 1,
         });

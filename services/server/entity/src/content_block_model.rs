@@ -9,8 +9,8 @@ pub struct Model {
     #[sea_orm(belongs_to, from = "content_id", to = "id")]
     pub parent: HasOne<super::content_model::Entity>,
 
-    // Identity being blocked
-    pub identity_id: Vec<u8>,
+    // Identity being blocked (hex-encoded identity key)
+    pub identity_id: String,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

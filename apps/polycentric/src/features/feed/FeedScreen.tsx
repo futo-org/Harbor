@@ -1,24 +1,27 @@
-import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/common/components/layout';
 import { View } from 'react-native';
-import { Fab, HorizontalScrollGroup } from '@/src/common/components';
-import {
-  IdentityHeader,
-  FeedChip,
-  FeedViewer,
-  type FeedType,
-} from '@/src/features/post';
+import { Fab } from '@/src/common/components';
+import { FeedViewer, type FeedType } from '@/src/features/post';
+import { ComposerInput } from '@/src/features/composer';
 import { useExploreFeed } from './hooks/useExploreFeed';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { openCompose } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { usePathname } from 'expo-router';
+
+function feedTypeFromPath(pathname: string): FeedType {
+  // The /feed route shows the following feed; /explore is the public feed.
+  // Default to explore so any unrelated caller gets a sensible view.
+  return pathname.startsWith('/feed') ? 'following' : 'explore';
+}
 
 export default function FeedScreen() {
   const showComposeFab = !isWeb;
 
-  const [selectedFeed, setSelectedFeed] = useState<FeedType>('explore');
+  const pathname = usePathname();
+  const selectedFeed = feedTypeFromPath(pathname);
 
   const exploreFeed = useExploreFeed({
     enabled: selectedFeed === 'explore',
@@ -37,26 +40,8 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.mx_lg, Atoms.mt_lg]}>
-          <IdentityHeader />
-          <View style={Atoms.mt_lg}>
-            <HorizontalScrollGroup>
-              <FeedChip
-                type="explore"
-                title="Explore"
-                isSelected={selectedFeed === 'explore'}
-                onPress={() => setSelectedFeed('explore')}
-              />
-              <FeedChip
-                type="following"
-                title="Following"
-                isSelected={selectedFeed === 'following'}
-                onPress={() => setSelectedFeed('following')}
-              />
-            </HorizontalScrollGroup>
-          </View>
-        </View>
-        <View style={[Atoms.flex_1, Atoms.mt_md]}>
+        {selectedFeed === 'following' ? <ComposerInput /> : null}
+        <View style={[Atoms.flex_1]}>
           <FeedViewer
             key={selectedFeed}
             items={currentFeed.items}

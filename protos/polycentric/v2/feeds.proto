@@ -5,7 +5,7 @@ import "polycentric/v2/events.proto";
 
 enum FeedAlgorithm {
   FEED_ALGORITHM_UNSPECIFIED = 0;
-  FEED_ALGORITHM_LATEST = 1;
+  FEED_ALGORITHM_FOLLOWING = 1;
   FEED_ALGORITHM_SUGGESTED = 2;
 }
 
@@ -14,10 +14,13 @@ message GetFeedRequest {
   optional int32 limit = 2;
   optional string before_token = 3;
   optional string after_token = 4;
+  // Identity of the caller, required when algorithm depends on the caller's
+  // social graph (e.g. FEED_ALGORITHM_FOLLOWING).
+  optional string identity = 5;
 }
 
 message GetFeedResponse {
-  repeated Event events = 1;
+  repeated EventBundle event_bundles = 1;
   string next_token = 2;
   string previous_token = 3;
 }

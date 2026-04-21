@@ -357,6 +357,73 @@ export class PolycentricClient {
   }
 
   /**
+   * Fetch a curated feed from every configured server and return the
+   * aggregated events. Does not persist — callers decide what to do with
+   * the response.
+   *
+   * For `FeedAlgorithm.FOLLOWING` the caller must be authenticated locally
+   * (an active identity) so that the server can scope the feed to their
+   * follow graph.
+   */
+  async getFeed(options?: {
+    algorithm?: Proto.FeedAlgorithm;
+    limit?: number | null;
+    identity?: string | null;
+  }): Promise<Proto.EventBundle[]> {
+    if (!this.core) throw new Error('Core not initialized');
+
+    const algorithm = options?.algorithm ?? Proto.FeedAlgorithm.UNSPECIFIED;
+    const identity =
+      options?.identity ??
+      (algorithm === Proto.FeedAlgorithm.FOLLOWING
+        ? this.activeIdentityKey
+        : null);
+
+    if (algorithm === Proto.FeedAlgorithm.FOLLOWING && !identity) {
+      throw new Error('getFeed(FOLLOWING) requires an active identity');
+    }
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core!.get_feed(
+          server,
+          algorithm,
+          options?.limit ?? null,
+          identity,
+        ),
+      ),
+    );
+
+    const bundles: Proto.EventBundle[] = [];
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('getFeed failed for a server:', result.reason);
+        continue;
+      }
+      const response = Proto.GetFeedResponse.fromBinary(result.value);
+      bundles.push(...response.eventBundles);
+    }
+
+    return bundles;
+  }
+
+  /**
+   * Return non-deleted event bundles for an `(identity, collection)` stream
+   * from the local core. Tombstone CRDT is applied by the core: any event
+   * targeted by a `Delete` content in the same collection is excluded.
+   * Content-type filtering is left to the caller.
+   *
+   * Requires the core to be hydrated — e.g. client initialization (which
+   * replays from local storage) and optionally `sync()` to pull new events
+   * from servers.
+   */
+  listValidEvents(identity: string, collection: number): Proto.EventBundle[] {
+    if (!this.core) throw new Error('Core not initialized');
+    const bytes = this.core.list_valid_events(identity, collection);
+    return Proto.ListEventsResponse.fromBinary(bytes).eventBundles;
+  }
+
+  /**
    * Push local events for the active key to all configured servers,
    * including content alongside each event.
    */

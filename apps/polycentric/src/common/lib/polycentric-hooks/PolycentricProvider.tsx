@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import useFollows from '@/src/features/follow/hooks/useFollows';
 import { pubkeyStr } from './helpers';
 import {
   createPolycentricStore,
@@ -31,13 +32,6 @@ export interface PolycentricContextValue {
   currentIdentity: IdentityState | null;
   switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
   refreshCurrentIdentity: () => Promise<void>;
-}
-
-interface FollowStatusResult {
-  isFollowing: boolean;
-  isLoading: boolean;
-  toggleFollow: () => Promise<void>;
-  refresh: () => void;
 }
 
 const PolycentricContext = createContext<PolycentricContextValue | null>(null);
@@ -134,19 +128,24 @@ export function PolycentricProvider({
         setClient(c);
         setStore(s);
         setCurrentIdentity(await resolveIdentity(c));
-        setIsLoading(false);
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
-          void c.sync().catch((syncError) => {
-            console.warn('Initial Polycentric sync failed:', syncError);
-          });
+          await c
+            .sync()
+            .then(() => useFollows.getState().refresh(c))
+            .catch((syncError) => {
+              console.warn('Initial Polycentric sync failed:', syncError);
+            });
         }
+
+        setIsLoading(false);
 
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
           setCurrentIdentity(await resolveIdentity(c));
           await s.getState().refreshIdentities();
+          await useFollows.getState().refresh(c);
         });
 
         // Identity onboarding (create / claim) publishes an Identity event,
@@ -260,17 +259,6 @@ export function useCurrentIdentity() {
     client,
     isCurrentIdentity,
     switchIdentity,
-  };
-}
-
-export function useFollowStatus(
-  _identityKey: string | null | undefined,
-): FollowStatusResult {
-  return {
-    isFollowing: false,
-    isLoading: false,
-    toggleFollow: async () => {},
-    refresh: () => {},
   };
 }
 

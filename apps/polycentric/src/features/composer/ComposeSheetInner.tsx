@@ -111,8 +111,6 @@ export function ComposeSheetInner({
 
       const event = await client.buildEvent(content);
 
-      console.log(event);
-
       const signedEvent = await client.signEvent(event);
 
       await client.commitEvent(signedEvent);

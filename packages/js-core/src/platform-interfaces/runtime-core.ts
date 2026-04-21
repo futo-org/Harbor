@@ -130,4 +130,32 @@ export interface IPolycentricCore {
    * * `Result<Uint8Array, JsValue>` - The verified SignedEvent bytes or error
    */
   verify_signed_event(signed_event: Uint8Array): Uint8Array;
+
+  /**
+   * Return non-deleted event bundles for an `(identity, collection)`
+   * stream from the local core stores. `Delete` content in the same
+   * collection tombstones the event it targets; tombstoned events are
+   * excluded. Content-type filtering is left to the caller.
+   *
+   * @param identity - Identity key (hex hash)
+   * @param collection - Collection ID
+   * @returns Serialized `ListEventsResponse` proto bytes
+   */
+  list_valid_events(identity: string, collection: number): Uint8Array;
+
+  /**
+   * Fetch a curated feed from a server via gRPC-web.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @param algorithm - FeedAlgorithm enum value (0=UNSPECIFIED, 1=FOLLOWING, 2=SUGGESTED)
+   * @param limit - Optional maximum number of events to return
+   * @param identity - Optional caller identity key (required for FOLLOWING)
+   * @returns Serialized `GetFeedResponse` proto bytes
+   */
+  get_feed(
+    server_url: string,
+    algorithm: number,
+    limit?: number | null,
+    identity?: string | null,
+  ): Promise<Uint8Array>;
 }

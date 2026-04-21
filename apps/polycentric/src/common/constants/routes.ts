@@ -17,11 +17,12 @@ export const Routes = {
     feed: {
       index: '/feed',
       compose: '/feed/compose',
-      identity: '/feed/identity',
     },
     search: '/search',
     claims: '/claims',
+    identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,
+    editProfile: (identityId: string) => `/${identityId}/edit` as const,
     post: (identityId: string, postId: string) =>
       `/${identityId}/post/${postId}` as const,
     settings: {
