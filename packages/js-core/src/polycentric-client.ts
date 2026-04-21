@@ -357,6 +357,22 @@ export class PolycentricClient {
   }
 
   /**
+   * Return non-deleted event bundles for an `(identity, collection)` stream
+   * from the local core. Tombstone CRDT is applied by the core: any event
+   * targeted by a `Delete` content in the same collection is excluded.
+   * Content-type filtering is left to the caller.
+   *
+   * Requires the core to be hydrated — e.g. client initialization (which
+   * replays from local storage) and optionally `sync()` to pull new events
+   * from servers.
+   */
+  listValidEvents(identity: string, collection: number): Proto.EventBundle[] {
+    if (!this.core) throw new Error('Core not initialized');
+    const bytes = this.core.list_valid_events(identity, collection);
+    return Proto.ListEventsResponse.fromBinary(bytes).eventBundles;
+  }
+
+  /**
    * Push local events for the active key to all configured servers,
    * including content alongside each event.
    */

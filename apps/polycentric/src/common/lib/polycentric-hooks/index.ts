@@ -22,10 +22,6 @@ export type { PolycentricStore, PolycentricStoreApi } from './store';
 
 // Profile screen hooks
 export {
-  useProfileScreenData,
-  type ProfileScreenData,
-} from './useProfileScreenData';
-export {
   useProfileEdit,
   type ProfileEditState,
 } from '../../../features/profile/hooks/useProfileEdit';

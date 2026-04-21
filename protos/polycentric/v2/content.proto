@@ -57,13 +57,11 @@ message Delete {
 }
 
 message Follow {
-  // Serialized Identity message bytes
-  bytes identity = 1;
+  string identity = 1;
 }
 
 message Block {
-  // Serialized Identity message bytes
-  bytes identity = 1;
+  string identity = 1;
 }
 
 enum Opinion {

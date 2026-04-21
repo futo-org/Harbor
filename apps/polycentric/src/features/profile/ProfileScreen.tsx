@@ -1,17 +1,28 @@
 import { Screen } from '@/src/common/components/layout';
-import { useProfileScreenData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { useAuthorFeed } from '@/src/features/feed/hooks/useAuthorFeed';
+import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
 import { FeedViewer } from '@/src/features/post';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ProfileHeader } from './ProfileHeader';
+import { ProfileProvider, useProfileContext } from './ProfileContext';
 
 export default function ProfileScreen() {
+  const { identityId } = useLocalSearchParams<{ identityId: string }>();
+
+  return (
+    <ProfileProvider identityKey={identityId ?? null}>
+      <ProfileScreenContent />
+    </ProfileProvider>
+  );
+}
+
+function ProfileScreenContent() {
   const { theme } = useTheme();
-  const { identityId } = useLocalSearchParams<{
-    identityId: string;
-  }>();
+  const { identityKey, isSelf, activeFeed } = useProfileContext();
+
   const isAbortedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -22,7 +33,11 @@ export default function ProfileScreen() {
     }, []),
   );
 
-  const data = useProfileScreenData(identityId, {
+  const authorFeed = useAuthorFeed(identityKey ?? undefined, undefined, {
+    getIsAborted: () => isAbortedRef.current,
+  });
+  const likesFeed = useLikesFeed({
+    enabled: isSelf,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -34,7 +49,6 @@ export default function ProfileScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <ProfileHeader
-          data={data}
           bannerColors={[
             theme.palette.background_secondary,
             theme.palette.background_primary,
@@ -45,33 +59,33 @@ export default function ProfileScreen() {
           <View
             style={[
               profileStyles.feedLayer,
-              data.activeFeed !== 'posts' && profileStyles.hidden,
+              activeFeed !== 'posts' && profileStyles.hidden,
             ]}
           >
             <FeedViewer
-              items={data.authorFeed.items}
-              isLoading={data.authorFeed.isLoading}
-              error={data.authorFeed.error}
-              onRefresh={data.authorFeed.refresh}
-              onEndReached={data.authorFeed.loadMore}
-              hasMore={data.authorFeed.hasMore}
+              items={authorFeed.items}
+              isLoading={authorFeed.isLoading}
+              error={authorFeed.error}
+              onRefresh={authorFeed.refresh}
+              onEndReached={authorFeed.loadMore}
+              hasMore={authorFeed.hasMore}
               bottomPadding={40}
             />
           </View>
-          {data.isSelf && (
+          {isSelf && (
             <View
               style={[
                 profileStyles.feedLayer,
-                data.activeFeed !== 'likes' && profileStyles.hidden,
+                activeFeed !== 'likes' && profileStyles.hidden,
               ]}
             >
               <FeedViewer
-                items={data.likesFeed.items}
-                isLoading={data.likesFeed.isLoading}
-                error={data.likesFeed.error}
-                onRefresh={data.likesFeed.refresh}
-                onEndReached={data.likesFeed.loadMore}
-                hasMore={data.likesFeed.hasMore}
+                items={likesFeed.items}
+                isLoading={likesFeed.isLoading}
+                error={likesFeed.error}
+                onRefresh={likesFeed.refresh}
+                onEndReached={likesFeed.loadMore}
+                hasMore={likesFeed.hasMore}
                 bottomPadding={40}
               />
             </View>

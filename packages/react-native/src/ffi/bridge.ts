@@ -196,6 +196,20 @@ class NativePolycentricCore implements IPolycentricCore {
     return grpcWebDecodeFirst(buf);
   }
 
+  /**
+   * List non-deleted event bundles — not wired through native FFI yet.
+   * TODO: route through a native call once the FFI stores are ready.
+   */
+  list_valid_events(_identity: string, _collection: number): Uint8Array {
+    return v2.ListEventsResponse.toBinary(
+      v2.ListEventsResponse.create({
+        eventBundles: [],
+        previousToken: '',
+        nextToken: '',
+      })
+    );
+  }
+
   /** Push events to a server via gRPC-web (network — cannot go through FFI). */
   async put_events(
     serverUrl: string,

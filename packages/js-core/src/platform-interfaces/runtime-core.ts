@@ -130,4 +130,16 @@ export interface IPolycentricCore {
    * * `Result<Uint8Array, JsValue>` - The verified SignedEvent bytes or error
    */
   verify_signed_event(signed_event: Uint8Array): Uint8Array;
+
+  /**
+   * Return non-deleted event bundles for an `(identity, collection)`
+   * stream from the local core stores. `Delete` content in the same
+   * collection tombstones the event it targets; tombstoned events are
+   * excluded. Content-type filtering is left to the caller.
+   *
+   * @param identity - Identity key (hex hash)
+   * @param collection - Collection ID
+   * @returns Serialized `ListEventsResponse` proto bytes
+   */
+  list_valid_events(identity: string, collection: number): Uint8Array;
 }

@@ -1,7 +1,7 @@
 use polycentric_common::{
     error::CoreError,
     models::protos_v2::{
-        content::ContentBody, ContentDigest, Event, EventBundle, ListEventsResponse, PublicKey,
+        content::ContentBody, Content, ContentDigest, Event, EventBundle, PublicKey,
         SerializedContent, SignedEvent, VectorClock,
     },
 };
@@ -131,5 +131,66 @@ impl PolycentricClient {
         }
 
         Ok(VectorClock { sequence })
+    }
+
+    /// Return the bundles (SignedEvent + SerializedContent) for an
+    /// (identity, collection) stream, applying CRDT tombstone semantics:
+    /// any event whose `EventKey` is targeted by a `Delete` content within
+    /// the same collection is excluded.
+    ///
+    /// Content-type filtering (e.g. "just Follow events") is intentionally
+    /// left to the caller — this method only understands `Delete` so it
+    /// stays generic across collections.
+    pub fn list_valid_events(
+        &self,
+        identity: &str,
+        collection: i32,
+    ) -> Result<Vec<EventBundle>, CoreError> {
+        let mut bundles: Vec<(EventKey, EventBundle)> = Vec::new();
+        let mut tombstoned: HashSet<EventKey> = HashSet::new();
+
+        for (event_key, signed_event) in self
+            .event_store
+            .by_identity_and_collection(identity, collection)
+        {
+            let event = Event::decode(signed_event.event_bytes.as_slice())
+                .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
+
+            let content_bytes = event
+                .content_digest
+                .as_ref()
+                .and_then(|d| self.content_store.get(d))
+                .map(|b| b.to_vec());
+
+            if let Some(bytes) = content_bytes.as_deref() {
+                if let Ok(content) = Content::decode(bytes) {
+                    if let Some(ContentBody::Delete(d)) = content.content_body {
+                        if let Some(target) = d.event_key {
+                            if let Some(signed_by) = target.signed_by {
+                                tombstoned.insert(EventKey {
+                                    identity: target.identity,
+                                    collection: target.collection,
+                                    signed_by_key_type: signed_by.key_type,
+                                    signed_by_key: signed_by.key,
+                                    sequence: target.sequence,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            let bundle = EventBundle {
+                signed_event: Some(signed_event.clone()),
+                serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
+            };
+            bundles.push((event_key.clone(), bundle));
+        }
+
+        Ok(bundles
+            .into_iter()
+            .filter(|(k, _)| !tombstoned.contains(k))
+            .map(|(_, b)| b)
+            .collect())
     }
 }

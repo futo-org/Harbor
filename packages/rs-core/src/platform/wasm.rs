@@ -3,7 +3,7 @@ use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, ContentDigest, Event, ListEventsFilters,
-    ListEventsRequest, PublicKey, PutEventsRequest, SignedEvent,
+    ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -314,9 +314,38 @@ impl PolycentricWasm {
         Ok(())
     }
 
+    /// Return non-deleted event bundles for an `(identity, collection)`
+    /// stream from the local core stores. `Delete` content in the same
+    /// collection tombstones the event it targets.
+    ///
+    /// Content-type filtering (e.g. extracting just Follow events) is left
+    /// to the JS caller.
+    ///
+    /// # Arguments
+    /// * `identity` - Identity key (hex hash)
+    /// * `collection` - Collection ID
+    ///
+    /// # Returns
+    /// Serialized `ListEventsResponse` proto bytes.
+    #[wasm_bindgen]
+    pub fn list_valid_events(
+        &self,
+        identity: &str,
+        collection: i32,
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let event_bundles = self
+            .client
+            .list_valid_events(identity, collection)
+            .map_err(|e| JsValue::from_str(&format!("list_valid_events: {e}")))?;
 
-    
+        let response = ListEventsResponse {
+            event_bundles,
+            previous_token: String::new(),
+            next_token: String::new(),
+        };
 
+        Ok(Uint8Array::from(&response.encode_to_vec()[..]))
+    }
 }
 
 impl PolycentricWasm {
