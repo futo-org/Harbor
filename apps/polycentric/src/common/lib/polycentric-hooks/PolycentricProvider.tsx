@@ -122,6 +122,8 @@ export function PolycentricProvider({
 
         if (cancelled) return;
 
+        c.servers = [DEFAULT_SERVER];
+
         const s = createPolycentricStore(c);
         await s.getState().refreshIdentities();
 
