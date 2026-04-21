@@ -16,7 +16,7 @@ import { v2 } from '@polycentric/js-core';
 import PolycentricCore from '../NativeReactNative';
 import { polycentric_ffi } from '../generated/protocol';
 
-const { ListEventsRequest } = v2;
+const { ListEventsRequest, GetFeedRequest } = v2;
 
 // ── Native module helpers ────────────────────────────────────────────
 
@@ -208,6 +208,39 @@ class NativePolycentricCore implements IPolycentricCore {
         nextToken: '',
       })
     );
+  }
+
+  /** Fetch a curated feed from a server via gRPC-web. */
+  async get_feed(
+    serverUrl: string,
+    algorithm: number,
+    limit?: number | null,
+    identity?: string | null
+  ): Promise<Uint8Array> {
+    const request = GetFeedRequest.toBinary(
+      GetFeedRequest.create({
+        algorithm,
+        limit: limit ?? undefined,
+        identity: identity ?? undefined,
+      })
+    );
+
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.FeedsService/GetFeed`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(request).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) throw new Error(`gRPC-web GetFeed error: ${res.status}`);
+
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return grpcWebDecodeFirst(buf);
   }
 
   /** Push events to a server via gRPC-web (network — cannot go through FFI). */

@@ -41,7 +41,8 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let db = connect_db_with_retry().await;
     let events_service =
-        service::events::events_service::build_events_service(db);
+        service::events::events_service::build_events_service(db.clone());
+    let feeds_service = service::feeds::feeds_service::build_feeds_service(db);
     let reflection_service = build_reflection_service()?;
 
     println!("GRPC server is listening on {addr}");
@@ -65,6 +66,7 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
         .layer(tonic_web::GrpcWebLayer::new())
         .add_service(reflection_service)
         .add_service(events_service)
+        .add_service(feeds_service)
         .serve(addr)
         .await?;
 

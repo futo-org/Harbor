@@ -23,6 +23,11 @@ export function VerticalNav({ style }: VerticalNavProps) {
         icon={<Ionicons name="home-outline" size={24} />}
         href="/feed"
       />
+      <NavItem
+        label="Explore"
+        icon={<Ionicons name="search-outline" size={24} />}
+        href="/explore"
+      />
       {identity?.identityKey && (
         <NavItem
           label="Profile"

@@ -115,7 +115,7 @@ export const Post = memo(function Post({
       style={[
         Atoms.w_full,
         Atoms.px_lg,
-        Atoms.pt_sm,
+        Atoms.pt_md,
         { paddingBottom: 6 },
         {
           borderBottomWidth: 1,
@@ -125,12 +125,11 @@ export const Post = memo(function Post({
       onPress={handlePress}
       disabled={disablePress}
     >
-      <View style={[Atoms.flex_row, Atoms.gap_md]}>
+      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
         <Avatar
           source={avatarUrl ? { uri: avatarUrl } : undefined}
-          size="sm"
+          size="md"
           onPress={handleAuthorPress}
-          containerProps={{ style: { marginTop: 3 } }}
         />
 
         <View style={Atoms.flex_1}>
@@ -149,7 +148,10 @@ export const Post = memo(function Post({
                 { alignItems: 'baseline' },
               ]}
             >
-              <PostAuthorName name={authorName} onPress={handleAuthorPress} />
+              <PostAuthorName
+                name={authorName || '...'}
+                onPress={handleAuthorPress}
+              />
               {authorIdentity ? (
                 <IdentityTag
                   identity={authorIdentity}
@@ -200,7 +202,7 @@ export const Post = memo(function Post({
         style={[
           Atoms.flex_row,
           Atoms.justify_between,
-          { marginTop: 8, paddingLeft: 42 },
+          { marginTop: 8, paddingLeft: 50 },
         ]}
       >
         <ActionButton

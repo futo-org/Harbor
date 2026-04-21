@@ -16,7 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-export function IdentityHeader() {
+type IdentityFooterProps = {
+  /** Render only the avatar — used in the narrow sidebar. */
+  compact?: boolean;
+};
+
+export function IdentityFooter({ compact = false }: IdentityFooterProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
@@ -37,53 +42,54 @@ export function IdentityHeader() {
       ? withHexOpacity(theme.palette.neutral_500, '14')
       : withHexOpacity(theme.palette.black, '28');
 
+  const avatar = (
+    <Pressable
+      onPress={() => {
+        if (!currentIdentity.identityKey) return;
+        router.push(Routes.tabs.profile(currentIdentity.identityKey));
+      }}
+    >
+      <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} />
+    </Pressable>
+  );
+
+  if (compact) {
+    return avatar;
+  }
+
   return (
     <View
       style={[
         Atoms.flex_row,
         Atoms.justify_between,
         Atoms.items_center,
-        Atoms.gap_md,
+        Atoms.gap_sm,
       ]}
     >
+      {avatar}
       <Pressable
-        onPress={() => router.push(Routes.tabs.feed.identity)}
+        onPress={() => router.push(Routes.tabs.identitySwitch)}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         hitSlop={10}
         style={[
+          Atoms.flex_1,
+          Atoms.flex_row,
+          Atoms.align_center,
           Atoms.px_sm,
           Atoms.py_sm,
-          {
-            flexShrink: 1,
-            borderRadius: BorderRadius.sm,
-            overflow: 'hidden',
-            position: 'relative',
-          },
         ]}
       >
-        <View
-          style={[
-            Atoms.flex_row,
-            Atoms.gap_sm,
-            { flex: 1, alignItems: 'baseline' },
-          ]}
-        >
+        <View style={[Atoms.flex_col, Atoms.flex_1]}>
           <Text
-            variant="title"
+            fontSize="md"
             fontWeight="bold"
             color="neutral_1000"
             numberOfLines={1}
-            style={{ flexShrink: 1 }}
           >
             {username}
           </Text>
           <IdentityTag identity={currentIdentity.identityKey} />
-          <Ionicons
-            name="chevron-down"
-            size={22}
-            color={theme.palette.neutral_1000}
-          />
         </View>
         {hovered ? (
           <View
@@ -97,14 +103,11 @@ export function IdentityHeader() {
             ]}
           />
         ) : null}
-      </Pressable>
-      <Pressable
-        onPress={() => {
-          if (!currentIdentity.identityKey) return;
-          router.push(Routes.tabs.profile(currentIdentity.identityKey));
-        }}
-      >
-        <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} />
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color={theme.palette.neutral_1000}
+        />
       </Pressable>
     </View>
   );

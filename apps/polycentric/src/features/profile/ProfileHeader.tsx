@@ -43,6 +43,8 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
+  if (profile.isLoading) return <></>;
+
   return (
     <>
       <View style={{ position: 'relative' }}>
@@ -119,25 +121,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
             <FollowButton identity={identityKey!} />
           )}
         </View>
-      </View>
-
-      <View style={[Atoms.mx_lg, Atoms.mt_lg, Atoms.mb_md]}>
-        <HorizontalScrollGroup>
-          <FeedChip
-            type="posts"
-            title="Posts"
-            isSelected={activeFeed === 'posts'}
-            onPress={() => setActiveFeed('posts')}
-          />
-          {isSelf && (
-            <FeedChip
-              type="likes"
-              title="Likes"
-              isSelected={activeFeed === 'likes'}
-              onPress={() => setActiveFeed('likes')}
-            />
-          )}
-        </HorizontalScrollGroup>
       </View>
     </>
   );
