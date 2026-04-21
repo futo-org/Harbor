@@ -1,0 +1,40 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/keypair.proto";
+
+message SignedNotificationRequest {
+  PublicKey key = 1;
+  bytes signature = 2;
+  bytes request = 3;
+}
+
+message NotificationRequest {
+  oneof request {
+    ExpoNotificationRequest expo = 1;
+  }
+}
+
+message NotificationResponse {}
+
+// Request to handle notifications through the specified expo push server
+message ExpoNotificationRequest {
+  string server = 1;
+  string token = 2;
+}
+
+// List of all notification services supported by the server, seperated by service type
+// This list will rarely contain more than one item
+message SupportedNotificationServices {
+  repeated string expo_servers = 1;
+}
+
+message NotificationServicesRequest {}
+
+/**
+ * Push notifications provided by polycentric servers
+ */
+service NotificationsService {
+  rpc RequestNotifications(SignedNotificationRequest) returns (NotificationResponse);
+  rpc RequestSupportedNotificationServices(NotificationServicesRequest) returns (SupportedNotificationServices);
+}
