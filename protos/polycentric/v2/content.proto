@@ -89,6 +89,8 @@ message ProfileUpdate {
   optional Image avatar = 2;
   // Reference to the Blob of a banner
   optional Image banner = 3;
+  // Bio
+  optional string description = 4;
 }
 
 // If an uploaded Blob is uploaded to the servers Object Storage and not

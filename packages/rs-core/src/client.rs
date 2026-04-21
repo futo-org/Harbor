@@ -1,7 +1,8 @@
 use polycentric_common::{
     error::CoreError,
     models::protos_v2::{
-        content::ContentBody, ContentDigest, Event, PublicKey, SignedEvent, VectorClock,
+        content::ContentBody, ContentDigest, Event, EventBundle, ListEventsResponse, PublicKey,
+        SerializedContent, SignedEvent, VectorClock,
     },
 };
 

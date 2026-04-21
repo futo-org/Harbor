@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { usePolycentric } from './PolycentricProvider';
+import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
+import { COLLECTION, v2 } from '@polycentric/react-native';
 
 interface ProfileRef {
   description: string | null;
@@ -40,8 +41,18 @@ export function useProfileEdit(
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // TODO: createUsername/createDescription require v2 content manager APIs
-      console.warn('Profile editing not yet implemented in v2');
+      const content = client.contentManager.build({
+        oneofKind: 'profileUpdate',
+        profileUpdate: {
+          name: nameDraft,
+          description: descriptionDraft,
+        },
+      });
+      await client.contentManager.save(content);
+      const event = await client.buildEvent(content, COLLECTION.PROFILE);
+      const signedEvent = await client.signEvent(event);
+      await client.commitEvent(signedEvent);
+      await client.sync();
       profile.refresh();
       setEditing(false);
     } catch (err) {

@@ -5,9 +5,9 @@ import {
   postIdToSequence,
   timeAgo,
   truncateName,
-  useUsername,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
@@ -42,7 +42,8 @@ export const Post = memo(function Post({
 
   const authorIdentity = post.identity ?? null;
 
-  const authorName = useUsername(authorIdentity);
+  const authorProfile = useProfile(authorIdentity);
+  const authorName = authorProfile.name ?? '';
 
   const rawContent = post.content ?? '';
   const [contentExpanded, setContentExpanded] = useState(false);

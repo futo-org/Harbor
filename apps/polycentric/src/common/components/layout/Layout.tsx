@@ -198,13 +198,19 @@ export const LeftSidebar = memo(function LeftSidebar({
               <VerticalNav />
             </View>
             {/* 2nd Section (bottom) */}
-            <View style={[Atoms.py_md, Atoms.self_stretch]}>
+            <View
+              style={[
+                Atoms.py_md,
+                Atoms.self_stretch,
+                narrowSidebar && Atoms.align_center,
+              ]}
+            >
               {identity && (
                 <Button
-                  title="New Post"
+                  title={narrowSidebar ? '' : 'New Post'}
                   variant="primary"
                   size="md"
-                  fullWidth
+                  fullWidth={!narrowSidebar}
                   icon={({ size, color }) => (
                     <Ionicons name="add-circle" size={size} color={color} />
                   )}

@@ -22,6 +22,7 @@ export const Routes = {
     search: '/search',
     claims: '/claims',
     profile: (identityId: string) => `/${identityId}` as const,
+    editProfile: (identityId: string) => `/${identityId}/edit` as const,
     post: (identityId: string, postId: string) =>
       `/${identityId}/post/${postId}` as const,
     settings: {

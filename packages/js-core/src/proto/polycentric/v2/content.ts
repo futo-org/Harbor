@@ -217,6 +217,12 @@ export interface ProfileUpdate {
    * @generated from protobuf field: optional polycentric.v2.Image banner = 3
    */
   banner?: Image;
+  /**
+   * Bio
+   *
+   * @generated from protobuf field: optional string description = 4
+   */
+  description?: string;
 }
 /**
  * If an uploaded Blob is uploaded to the servers Object Storage and not
@@ -1216,6 +1222,13 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
       },
       { no: 2, name: 'avatar', kind: 'message', T: () => Image },
       { no: 3, name: 'banner', kind: 'message', T: () => Image },
+      {
+        no: 4,
+        name: 'description',
+        kind: 'scalar',
+        opt: true,
+        T: 9 /*ScalarType.STRING*/,
+      },
     ]);
   }
   create(value?: PartialMessage<ProfileUpdate>): ProfileUpdate {
@@ -1253,6 +1266,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
             options,
             message.banner,
           );
+          break;
+        case /* optional string description */ 4:
+          message.description = reader.string();
           break;
         default:
           let u = options.readUnknownField;
@@ -1295,6 +1311,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
         writer.tag(3, WireType.LengthDelimited).fork(),
         options,
       ).join();
+    /* optional string description = 4; */
+    if (message.description !== undefined)
+      writer.tag(4, WireType.LengthDelimited).string(message.description);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(

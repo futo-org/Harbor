@@ -1,15 +1,12 @@
 import {
   Avatar,
-  Button,
-  IconButton,
-  IdentityBadge,
+  IdentityTag,
   LinkButton,
   ListItem,
   ListItemGroup,
   ScreenHeader,
   Screen,
   Text,
-  TextInput,
 } from '@/src/common/components';
 import {
   REPORT_BUG_URL,
@@ -17,22 +14,15 @@ import {
   SOURCE_CODE_URL,
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
-import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
   identiconUrl,
-  publicKeyToString,
-  toBase64,
   useCurrentIdentity,
-  usePolycentric,
-  usePolycentricContext,
-  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
+import { Linking, ScrollView, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -80,7 +70,7 @@ export default function SettingsTabScreen() {
             >
               <>
                 {identityKey && (
-                  <IdentityBadge identityKey={identityKey} size="lg" />
+                  <CurrentIdentityBadge identityKey={identityKey} />
                 )}
               </>
             </ListItemWrapper>
@@ -108,6 +98,36 @@ export default function SettingsTabScreen() {
         </View>
       </Screen.PrimaryColumn>
     </Screen>
+  );
+}
+
+function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
+  const profile = useProfile(identityKey);
+  const avatarUrl = identiconUrl(identityKey);
+
+  return (
+    <View
+      style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md, { flex: 1 }]}
+    >
+      <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} size="md" />
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.gap_sm,
+          { flex: 1, alignItems: 'baseline' },
+        ]}
+      >
+        <Text
+          variant="subtitle"
+          fontWeight="semibold"
+          numberOfLines={1}
+          style={{ flexShrink: 1 }}
+        >
+          {profile.name || 'Anonymous'}
+        </Text>
+        <IdentityTag identity={identityKey} />
+      </View>
+    </View>
   );
 }
 

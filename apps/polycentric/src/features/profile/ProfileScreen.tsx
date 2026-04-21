@@ -1,8 +1,5 @@
 import { Screen } from '@/src/common/components/layout';
-import {
-  useProfileEdit,
-  useProfileScreenData,
-} from '@/src/common/lib/polycentric-hooks';
+import { useProfileScreenData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { FeedViewer } from '@/src/features/post';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -28,7 +25,6 @@ export default function ProfileScreen() {
   const data = useProfileScreenData(identityId, {
     getIsAborted: () => isAbortedRef.current,
   });
-  const edit = useProfileEdit(data.username, data.profile);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -39,7 +35,6 @@ export default function ProfileScreen() {
       <Screen.PrimaryColumn>
         <ProfileHeader
           data={data}
-          edit={edit}
           bannerColors={[
             theme.palette.background_secondary,
             theme.palette.background_primary,

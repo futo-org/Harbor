@@ -38,8 +38,9 @@ export function useProfileScreenData(
 
   const identityKey = identityIdParam ?? null;
 
-  const username = useUsername(identityKey);
-  const profile = useProfile(identityKey, { getIsAborted });
+  const fallbackUsername = useUsername(identityKey);
+  const profile = useProfile(identityKey);
+  const username = profile.name ?? fallbackUsername;
   const authorFeed = useAuthorFeed(identityIdParam, undefined, {
     getIsAborted,
   });

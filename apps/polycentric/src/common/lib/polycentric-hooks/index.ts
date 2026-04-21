@@ -25,7 +25,10 @@ export {
   useProfileScreenData,
   type ProfileScreenData,
 } from './useProfileScreenData';
-export { useProfileEdit, type ProfileEditState } from './useProfileEdit';
+export {
+  useProfileEdit,
+  type ProfileEditState,
+} from '../../../features/profile/hooks/useProfileEdit';
 
 // Helpers
 export {

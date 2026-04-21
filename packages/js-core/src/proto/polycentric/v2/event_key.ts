@@ -22,7 +22,9 @@ export interface EventKey {
    * Reserved collections are:
    * 1 -> Polycentric Identity
    * 2 -> Polycentric feed
-   * 3 -> Polycentric interactions
+   * 3 -> Polycentric profile
+   * 4 -> Polycentric interactions (likes etc)
+   * 5 -> Polycentric social graph (follows)
    *
    * @generated from protobuf field: int32 collection = 1
    */

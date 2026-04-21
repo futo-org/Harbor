@@ -1,21 +1,16 @@
 import { DismissReason, SheetMenu } from '@/src/common/lib/sheet';
-import {
-  Avatar,
-  Button,
-  LinkButton,
-  Text,
-  TextInput,
-} from '@/src/common/components';
+import { Avatar, Text } from '@/src/common/components';
 import {
   identiconUrl,
-  usePolycentric,
-  useUsername,
+  publicKeyToString,
   useCurrentIdentity,
+  usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 export function IdentitySettings({
@@ -27,43 +22,14 @@ export function IdentitySettings({
 }) {
   const { theme } = useTheme();
   const client = usePolycentric();
-  const { identity } = useCurrentIdentity();
-  const username = useUsername(identityKey);
+  const profile = useProfile(identityKey);
 
   const [nameExpanded, setNameExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [nameDraft, setNameDraft] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [eventCount, setEventCount] = useState(0);
 
-  useEffect(() => {
-    setNameDraft(username);
-  }, [username]);
-
-  // TODO: Event count requires v2 storage APIs
-  useEffect(() => {
-    setEventCount(0);
-  }, [client, identity]);
-
-  // TODO: Username editing requires v2 content manager APIs
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      console.warn('Username editing not yet implemented in v2');
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  }, [nameDraft]);
-
-  const handleCancel = useCallback(() => {
-    setNameDraft(username);
-    setEditing(false);
-  }, [username]);
-
-  const fullPubkey = identityKey;
-  const processId = '';
-  const displayName = username;
+  const signingKey = client.currentKeyPair?.publicKey
+    ? publicKeyToString(client.currentKeyPair.publicKey)
+    : '';
+  const displayName = profile.name;
   const avatarUrl = identiconUrl(identityKey, 160);
 
   return (
@@ -79,54 +45,18 @@ export function IdentitySettings({
             />
           </Link>
 
-          {editing ? (
-            <View style={[Atoms.gap_sm, { width: '100%' }]}>
-              <TextInput
-                value={nameDraft}
-                onChangeText={setNameDraft}
-                placeholder="Display name"
-                autoFocus
-              />
-              <View
-                style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_center]}
-              >
-                <Button
-                  title={saving ? 'Saving...' : 'Save'}
-                  onPress={handleSave}
-                  variant="primary"
-                  size="sm"
-                />
-                <Button
-                  title="Cancel"
-                  onPress={handleCancel}
-                  variant="tertiary"
-                  size="sm"
-                />
-              </View>
-            </View>
-          ) : (
-            <View style={[Atoms.items_center, Atoms.gap_xs]}>
-              <Text
-                variant="title"
-                fontWeight="bold"
-                numberOfLines={nameExpanded ? undefined : 2}
-                ellipsizeMode="tail"
-                style={{ textAlign: 'center' }}
-                onPress={() => setNameExpanded((v) => !v)}
-              >
-                {displayName || 'Anonymous'}
-              </Text>
-              <LinkButton
-                title="Edit name"
-                onPress={() => setEditing(true)}
-                underlineOnHover
-              />
-            </View>
-          )}
-
-          <Text variant="subtitle" color="neutral_500">
-            {eventCount} {eventCount === 1 ? 'event' : 'events'}
-          </Text>
+          <View style={[Atoms.items_center, Atoms.gap_xs]}>
+            <Text
+              variant="title"
+              fontWeight="bold"
+              numberOfLines={nameExpanded ? undefined : 2}
+              ellipsizeMode="tail"
+              style={{ textAlign: 'center' }}
+              onPress={() => setNameExpanded((v) => !v)}
+            >
+              {displayName || 'Anonymous'}
+            </Text>
+          </View>
         </View>
 
         {/* Details */}
@@ -142,14 +72,14 @@ export function IdentitySettings({
         >
           <View style={Atoms.gap_xs}>
             <Text variant="small" color="neutral_500">
-              PUBLIC KEY
+              IDENTITY
             </Text>
             <Text
               variant="secondary"
               style={{ fontFamily: 'monospace' }}
               selectable
             >
-              {fullPubkey}
+              {identityKey}
             </Text>
           </View>
 
@@ -162,14 +92,14 @@ export function IdentitySettings({
 
           <View style={Atoms.gap_xs}>
             <Text variant="small" color="neutral_500">
-              PROCESS ID
+              SIGNING KEY
             </Text>
             <Text
               variant="secondary"
               style={{ fontFamily: 'monospace' }}
               selectable
             >
-              {processId}
+              {signingKey}
             </Text>
           </View>
         </View>

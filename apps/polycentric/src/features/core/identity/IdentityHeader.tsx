@@ -3,8 +3,8 @@ import { Routes } from '@/src/common/constants';
 import {
   identiconUrl,
   useCurrentIdentity,
-  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
@@ -21,7 +21,8 @@ export function IdentityHeader() {
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const username = useUsername(currentIdentity?.identityKey);
+  const profile = useProfile(currentIdentity?.identityKey);
+  const username = profile.name ?? '';
 
   // This component shouldn't mount if a current identity is not set.
   if (!currentIdentity?.identityKey) {
