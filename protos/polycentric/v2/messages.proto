@@ -1,0 +1,8 @@
+syntax = "proto3";
+package polycentric.v2;
+
+message SignedMessage {
+  PublicKey signed_by = 1;
+  bytes signature = 2;
+  bytes message_bytes = 3;
+}
