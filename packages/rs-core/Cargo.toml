@@ -17,6 +17,7 @@ rand = "0.8"
 polycentric-common = { path = "../rs-common" }
 getrandom = { version = "0.2", features = ["js"] }
 sha2 = "0.10"
+image = "0.25.10"
 
 # FFI
 libc = { version = "0.2.172", optional = true }

@@ -384,6 +384,20 @@ impl PolycentricWasm {
 
         Ok(Uint8Array::from(&response.encode_to_vec()[..]))
     }
+
+    /// Decode `image` bytes, resize to fill `width` x `height` preserving
+    /// aspect ratio (center-cropped), and encode as JPEG.
+    #[wasm_bindgen]
+    pub fn process_image_to_jpeg(
+        &self,
+        image: &[u8],
+        width: u32,
+        height: u32,
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let jpeg = crate::media::process_image::process_image(image, width, height)
+            .map_err(|e| JsValue::from_str(&format!("process_image failed: {e}")))?;
+        Ok(Uint8Array::from(&jpeg[..]))
+    }
 }
 
 impl PolycentricWasm {
