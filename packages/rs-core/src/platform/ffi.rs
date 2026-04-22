@@ -69,7 +69,7 @@ fn client() -> &'static RwLock<PolycentricClient> {
 /// Verify a v2 SignedEvent's ed25519 signature and return the verified
 /// SignedEvent bytes.
 #[no_mangle]
-pub extern "C" fn verify_signed_event_v2(signed_event_bytes: CResult) -> CResult {
+pub extern "C" fn verify_signed_event(signed_event_bytes: CResult) -> CResult {
     match SignedEvent::from_bytes(signed_event_bytes.as_slice()) {
         Ok(verified) => match Serializable::to_bytes(&verified) {
             Ok(bytes) => CResult::ok(bytes),
@@ -81,7 +81,7 @@ pub extern "C" fn verify_signed_event_v2(signed_event_bytes: CResult) -> CResult
 
 /// Decode the Event from a v2 SignedEvent's event_bytes field.
 #[no_mangle]
-pub extern "C" fn decode_event_from_signed_event_v2(signed_event_bytes: CResult) -> CResult {
+pub extern "C" fn decode_event_from_signed_event(signed_event_bytes: CResult) -> CResult {
     match SignedEvent::decode(signed_event_bytes.as_slice()) {
         Ok(signed_event) => match Event::decode(signed_event.event_bytes.as_slice()) {
             Ok(event) => CResult::ok(Message::encode_to_vec(&event)),
@@ -94,7 +94,7 @@ pub extern "C" fn decode_event_from_signed_event_v2(signed_event_bytes: CResult)
 /// Validate that bytes are a valid v2 Event. Returns the bytes unchanged on
 /// success, or an error.
 #[no_mangle]
-pub extern "C" fn validate_event_v2(event_bytes: CResult) -> CResult {
+pub extern "C" fn validate_event(event_bytes: CResult) -> CResult {
     let input = event_bytes.as_slice();
     match Event::decode(input) {
         Ok(_) => CResult::ok(input.to_vec()),
@@ -103,11 +103,7 @@ pub extern "C" fn validate_event_v2(event_bytes: CResult) -> CResult {
 }
 
 #[no_mangle]
-pub extern "C" fn next_sequence_v2(
-    identity: CResult,
-    collection: i32,
-    signed_by: CResult,
-) -> CResult {
+pub extern "C" fn next_sequence(identity: CResult, collection: i32, signed_by: CResult) -> CResult {
     let identity_str = match std::str::from_utf8(identity.as_slice()) {
         Ok(s) => s,
         Err(e) => return CResult::error(&format!("identity not utf-8: {e}")),
@@ -125,7 +121,7 @@ pub extern "C" fn next_sequence_v2(
 }
 
 #[no_mangle]
-pub extern "C" fn build_vector_clock_v2(
+pub extern "C" fn build_vector_clock(
     identity: CResult,
     collection: i32,
     identity_sequence: u64,
@@ -157,7 +153,7 @@ pub extern "C" fn build_vector_clock_v2(
 }
 
 #[no_mangle]
-pub extern "C" fn copy_event_v2(signed_event_bytes: CResult) -> CResult {
+pub extern "C" fn copy_event(signed_event_bytes: CResult) -> CResult {
     let signed_event = match SignedEvent::from_bytes(signed_event_bytes.as_slice()) {
         Ok(s) => s,
         Err(e) => return CResult::error(&format!("invalid signed event: {e}")),
@@ -173,7 +169,7 @@ pub extern "C" fn copy_event_v2(signed_event_bytes: CResult) -> CResult {
 }
 
 #[no_mangle]
-pub extern "C" fn copy_content_v2(digest_bytes: CResult, content_bytes: CResult) -> CResult {
+pub extern "C" fn copy_content(digest_bytes: CResult, content_bytes: CResult) -> CResult {
     let digest = match ContentDigest::decode(digest_bytes.as_slice()) {
         Ok(d) => d,
         Err(e) => return CResult::error(&format!("decode ContentDigest: {e}")),

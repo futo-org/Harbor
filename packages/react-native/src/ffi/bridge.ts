@@ -1,5 +1,5 @@
 /**
- * FFI bridge implementing the v2 IPolycentricCore interface.
+ * FFI bridge implementing the IPolycentricCore interface.
  *
  * Crypto operations (verify, validate, sign) route through the native
  * TurboModule → C++ → Rust FFI static library.
@@ -19,8 +19,8 @@ const { ListEventsRequest, GetFeedRequest, SignedEvent } = v2;
 
 // ── Native module helpers ────────────────────────────────────────────
 
-// Call a v2 native function. C++ layer throws JSError on failure via CResult.
-function callNativeV2(
+// Call a native function. C++ layer throws JSError on failure via CResult.
+function callNative(
   nativeFn: (input: Object) => Object,
   input: Uint8Array
 ): Uint8Array {
@@ -48,16 +48,16 @@ function grpcWebDecodeFirst(buf: Uint8Array): Uint8Array {
 class NativePolycentricCore implements IPolycentricCore {
   /** Verify ed25519 signature via Rust FFI and return SignedEvent bytes. */
   verify_signed_event(signedEventBytes: Uint8Array): Uint8Array {
-    return callNativeV2(
-      PolycentricCore.verifySignedEventV2.bind(PolycentricCore),
+    return callNative(
+      PolycentricCore.verifySignedEvent.bind(PolycentricCore),
       signedEventBytes
     );
   }
 
   /** Decode the inner Event bytes from a SignedEvent via Rust FFI. */
   decode_event_from_signed_event(signedEventBytes: Uint8Array): Uint8Array {
-    return callNativeV2(
-      PolycentricCore.decodeEventFromSignedEventV2.bind(PolycentricCore),
+    return callNative(
+      PolycentricCore.decodeEventFromSignedEvent.bind(PolycentricCore),
       signedEventBytes
     );
   }
@@ -70,10 +70,7 @@ class NativePolycentricCore implements IPolycentricCore {
     eventBytes: Uint8Array,
     signEvent: SignEventCallback
   ): Promise<Uint8Array> {
-    callNativeV2(
-      PolycentricCore.validateEventV2.bind(PolycentricCore),
-      eventBytes
-    );
+    callNative(PolycentricCore.validateEvent.bind(PolycentricCore), eventBytes);
 
     const signature = await signEvent(eventBytes);
 
@@ -81,8 +78,8 @@ class NativePolycentricCore implements IPolycentricCore {
       SignedEvent.create({ signature, eventBytes })
     );
 
-    callNativeV2(
-      PolycentricCore.verifySignedEventV2.bind(PolycentricCore),
+    callNative(
+      PolycentricCore.verifySignedEvent.bind(PolycentricCore),
       signedEventBytes
     );
 
@@ -100,13 +97,13 @@ class NativePolycentricCore implements IPolycentricCore {
 
   copy_events(signedEvents: Uint8Array[]): void {
     for (const bytes of signedEvents) {
-      PolycentricCore.copyEventV2(bytes);
+      PolycentricCore.copyEvent(bytes);
     }
   }
 
   copy_contents(contentMap: Map<Uint8Array, Uint8Array>): void {
     for (const [digest, content] of contentMap) {
-      PolycentricCore.copyContentV2(digest, content);
+      PolycentricCore.copyContent(digest, content);
     }
   }
 
@@ -116,7 +113,7 @@ class NativePolycentricCore implements IPolycentricCore {
     signedBy: Uint8Array
   ): bigint {
     const identityBytes = new TextEncoder().encode(identity);
-    const result = PolycentricCore.nextSequenceV2(
+    const result = PolycentricCore.nextSequence(
       identityBytes,
       collection,
       signedBy
@@ -136,7 +133,7 @@ class NativePolycentricCore implements IPolycentricCore {
     currentSequence: bigint
   ): Uint8Array {
     const identityBytes = new TextEncoder().encode(identity);
-    return PolycentricCore.buildVectorClockV2(
+    return PolycentricCore.buildVectorClock(
       identityBytes,
       collection,
       Number(identitySequence),

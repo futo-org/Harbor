@@ -72,24 +72,23 @@ namespace facebook::react {
 PolycentricCore::PolycentricCore(std::shared_ptr<CallInvoker> jsInvoker)
     : NativeReactNativeCxxSpec(std::move(jsInvoker)) {}
 
-// v2 methods
 
-jsi::Object PolycentricCore::verifySignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
+jsi::Object PolycentricCore::verifySignedEvent(jsi::Runtime& rt, jsi::Object signedEventBytes) {
     CResult input = toCResult(rt, signedEventBytes);
-    return resultToUint8Array(rt, ::verify_signed_event_v2(input));
+    return resultToUint8Array(rt, ::verify_signed_event(input));
 }
 
-jsi::Object PolycentricCore::decodeEventFromSignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
+jsi::Object PolycentricCore::decodeEventFromSignedEvent(jsi::Runtime& rt, jsi::Object signedEventBytes) {
     CResult input = toCResult(rt, signedEventBytes);
-    return resultToUint8Array(rt, ::decode_event_from_signed_event_v2(input));
+    return resultToUint8Array(rt, ::decode_event_from_signed_event(input));
 }
 
-jsi::Object PolycentricCore::validateEventV2(jsi::Runtime& rt, jsi::Object eventBytes) {
+jsi::Object PolycentricCore::validateEvent(jsi::Runtime& rt, jsi::Object eventBytes) {
     CResult input = toCResult(rt, eventBytes);
-    return resultToUint8Array(rt, ::validate_event_v2(input));
+    return resultToUint8Array(rt, ::validate_event(input));
 }
 
-jsi::Object PolycentricCore::nextSequenceV2(
+jsi::Object PolycentricCore::nextSequence(
     jsi::Runtime& rt,
     jsi::Object identity,
     double collection,
@@ -97,10 +96,10 @@ jsi::Object PolycentricCore::nextSequenceV2(
     CResult identityBuf = toCResult(rt, identity);
     CResult signedByBuf = toCResult(rt, signedBy);
     int32_t collectionInt = static_cast<int32_t>(collection);
-    return resultToUint8Array(rt, ::next_sequence_v2(identityBuf, collectionInt, signedByBuf));
+    return resultToUint8Array(rt, ::next_sequence(identityBuf, collectionInt, signedByBuf));
 }
 
-jsi::Object PolycentricCore::buildVectorClockV2(
+jsi::Object PolycentricCore::buildVectorClock(
     jsi::Runtime& rt,
     jsi::Object identity,
     double collection,
@@ -114,21 +113,21 @@ jsi::Object PolycentricCore::buildVectorClockV2(
     uint64_t curSeq = static_cast<uint64_t>(currentSequence);
     return resultToUint8Array(
         rt,
-        ::build_vector_clock_v2(identityBuf, collectionInt, idSeq, signedByBuf, curSeq));
+        ::build_vector_clock(identityBuf, collectionInt, idSeq, signedByBuf, curSeq));
 }
 
-jsi::Object PolycentricCore::copyEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes) {
+jsi::Object PolycentricCore::copyEvent(jsi::Runtime& rt, jsi::Object signedEventBytes) {
     CResult input = toCResult(rt, signedEventBytes);
-    return resultToUint8Array(rt, ::copy_event_v2(input));
+    return resultToUint8Array(rt, ::copy_event(input));
 }
 
-jsi::Object PolycentricCore::copyContentV2(
+jsi::Object PolycentricCore::copyContent(
     jsi::Runtime& rt,
     jsi::Object digestBytes,
     jsi::Object contentBytes) {
     CResult digestBuf = toCResult(rt, digestBytes);
     CResult contentBuf = toCResult(rt, contentBytes);
-    return resultToUint8Array(rt, ::copy_content_v2(digestBuf, contentBuf));
+    return resultToUint8Array(rt, ::copy_content(digestBuf, contentBuf));
 }
 
 }
