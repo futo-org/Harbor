@@ -14,7 +14,7 @@ message RegisterPushNotificationResponse {}
 /**
  * Push notifications provided by polycentric servers
  */
-service NotificationsService {
+service NotificationService {
   // This endpoint expects a signed RegisterPushNotificationRequest message
   rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
 }
