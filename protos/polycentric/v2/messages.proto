@@ -1,6 +1,8 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/keypair.proto";
+
 message SignedMessage {
   PublicKey signed_by = 1;
   bytes signature = 2;
