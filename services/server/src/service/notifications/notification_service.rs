@@ -5,6 +5,7 @@ use crate::service::proto::{RegisterPushNotificationResponse, SignedMessage};
 use crate::util;
 use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
 use prost::Message;
+use sea_orm::EnumIter;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
