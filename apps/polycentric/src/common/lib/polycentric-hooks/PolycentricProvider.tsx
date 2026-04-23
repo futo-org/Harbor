@@ -41,7 +41,7 @@ const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 export const DEFAULT_SERVER =
   (process.env.EXPO_PUBLIC_POLYCENTRIC_SERVER ?? '').trim() ||
-  `http://${DEFAULT_HOST}:8787`;
+  `http://${DEFAULT_HOST}:50051`;
 
 interface PolycentricProviderProps {
   children: ReactNode;
@@ -121,6 +121,8 @@ export function PolycentricProvider({
         });
 
         if (cancelled) return;
+
+        c.servers = [DEFAULT_SERVER];
 
         const s = createPolycentricStore(c);
         await s.getState().refreshIdentities();
