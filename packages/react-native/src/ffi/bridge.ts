@@ -1,5 +1,5 @@
 /**
- * FFI bridge implementing the v2 IPolycentricCore interface.
+ * FFI bridge implementing the IPolycentricCore interface.
  *
  * Crypto operations (verify, validate, sign) route through the native
  * TurboModule → C++ → Rust FFI static library.
@@ -14,40 +14,13 @@ import type {
 } from '@polycentric/js-core';
 import { v2 } from '@polycentric/js-core';
 import PolycentricCore from '../NativeReactNative';
-import { polycentric_ffi } from '../generated/protocol';
 
-const { ListEventsRequest, GetFeedRequest } = v2;
+const { ListEventsRequest, GetFeedRequest, SignedEvent } = v2;
 
 // ── Native module helpers ────────────────────────────────────────────
 
-function decodeResult(result: Object): polycentric_ffi.Result {
-  return polycentric_ffi.Result.decode(result as Uint8Array);
-}
-
-function unwrapResult(result: polycentric_ffi.Result): Uint8Array {
-  if (result.result !== 'value') {
-    throw new Error(result.error ?? `Unexpected result: ${result.result}`);
-  }
-  return result.value ?? new Uint8Array(0);
-}
-
-export function initialize(): void {
-  unwrapResult(decodeResult(PolycentricCore.initializeCore()));
-}
-
-export function isInitialized(): boolean {
-  const bytes = unwrapResult(decodeResult(PolycentricCore.isInitialized()));
-  return bytes.length > 0 && bytes[0] === 1;
-}
-
-/**
- * Call a v2 native function that returns raw bytes (not wrapped in
- * polycentric_ffi.Result). Negative CBuffer length means error string.
- * The C++ layer encodes errors as CBuffer with negative length, which
- * comes through as a Uint8Array. We detect errors by checking the
- * native return.
- */
-function callNativeV2(
+// Call a native function. C++ layer throws JSError on failure via CResult.
+function callNative(
   nativeFn: (input: Object) => Object,
   input: Uint8Array
 ): Uint8Array {
@@ -75,16 +48,16 @@ function grpcWebDecodeFirst(buf: Uint8Array): Uint8Array {
 class NativePolycentricCore implements IPolycentricCore {
   /** Verify ed25519 signature via Rust FFI and return SignedEvent bytes. */
   verify_signed_event(signedEventBytes: Uint8Array): Uint8Array {
-    return callNativeV2(
-      PolycentricCore.verifySignedEventV2.bind(PolycentricCore),
+    return callNative(
+      PolycentricCore.verifySignedEvent.bind(PolycentricCore),
       signedEventBytes
     );
   }
 
   /** Decode the inner Event bytes from a SignedEvent via Rust FFI. */
   decode_event_from_signed_event(signedEventBytes: Uint8Array): Uint8Array {
-    return callNativeV2(
-      PolycentricCore.decodeEventFromSignedEventV2.bind(PolycentricCore),
+    return callNative(
+      PolycentricCore.decodeEventFromSignedEvent.bind(PolycentricCore),
       signedEventBytes
     );
   }
@@ -97,13 +70,20 @@ class NativePolycentricCore implements IPolycentricCore {
     eventBytes: Uint8Array,
     signEvent: SignEventCallback
   ): Promise<Uint8Array> {
-    // Validate via native Rust FFI
-    callNativeV2(
-      PolycentricCore.validateEventV2.bind(PolycentricCore),
-      eventBytes
+    callNative(PolycentricCore.validateEvent.bind(PolycentricCore), eventBytes);
+
+    const signature = await signEvent(eventBytes);
+
+    const signedEventBytes = SignedEvent.toBinary(
+      SignedEvent.create({ signature, eventBytes })
     );
 
-    return signEvent(eventBytes);
+    callNative(
+      PolycentricCore.verifySignedEvent.bind(PolycentricCore),
+      signedEventBytes
+    );
+
+    return signedEventBytes;
   }
 
   /**
@@ -115,40 +95,51 @@ class NativePolycentricCore implements IPolycentricCore {
     // no-op
   }
 
-  /** Copy signed events into the core — not wired through native FFI yet. */
-  copy_events(_signedEvents: Uint8Array[]): void {
-    // no-op
+  copy_events(signedEvents: Uint8Array[]): void {
+    for (const bytes of signedEvents) {
+      PolycentricCore.copyEvent(bytes);
+    }
   }
 
-  /** Copy content into the core — not wired through native FFI yet. */
-  copy_contents(_contentMap: Map<Uint8Array, Uint8Array>): void {
-    // no-op
+  copy_contents(contentMap: Map<Uint8Array, Uint8Array>): void {
+    for (const [digest, content] of contentMap) {
+      PolycentricCore.copyContent(digest, content);
+    }
   }
 
-  /**
-   * Next sequence — not wired through native FFI yet.
-   * TODO: route through a native call once the FFI EventStore is ready.
-   */
   next_sequence(
-    _identity: string,
-    _collection: number,
-    _signedBy: Uint8Array
+    identity: string,
+    collection: number,
+    signedBy: Uint8Array
   ): bigint {
-    return 1n;
+    const identityBytes = new TextEncoder().encode(identity);
+    const result = PolycentricCore.nextSequence(
+      identityBytes,
+      collection,
+      signedBy
+    ) as Uint8Array;
+    return new DataView(
+      result.buffer,
+      result.byteOffset,
+      result.byteLength
+    ).getBigUint64(0, true);
   }
 
-  /**
-   * Build vector clock — not wired through native FFI yet.
-   * TODO: route through a native call once the FFI stores are ready.
-   */
   build_vector_clock(
-    _identity: string,
-    _collection: number,
-    _identitySequence: bigint,
-    _signedBy: Uint8Array,
-    _currentSequence: bigint
+    identity: string,
+    collection: number,
+    identitySequence: bigint,
+    signedBy: Uint8Array,
+    currentSequence: bigint
   ): Uint8Array {
-    return new Uint8Array(0);
+    const identityBytes = new TextEncoder().encode(identity);
+    return PolycentricCore.buildVectorClock(
+      identityBytes,
+      collection,
+      Number(identitySequence),
+      signedBy,
+      Number(currentSequence)
+    ) as Uint8Array;
   }
 
   /** Fetch events from a server via gRPC-web (network — cannot go through FFI). */
@@ -271,9 +262,6 @@ export class NativeCoreBridge implements ICoreBridge {
 
   async initialize(): Promise<IPolycentricCore> {
     if (!this.core) {
-      if (!isInitialized()) {
-        initialize();
-      }
       this.core = new NativePolycentricCore();
     }
     return this.core;
@@ -287,7 +275,7 @@ export class NativeCoreBridge implements ICoreBridge {
   }
 
   initialized(): boolean {
-    return this.core !== undefined && isInitialized();
+    return this.core !== undefined;
   }
 
   supportedOnPlatform(): boolean {

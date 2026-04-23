@@ -8,4 +8,10 @@ export interface IStorageDriver {
   createContentRepository: () => IContentRepository;
   createKeysRepository: () => IKeysRepository;
   createEventAckRepository: () => IEventAckRepository;
+  /** Persist which v2 identity is active for this signing public key (Ed25519: 32 bytes). */
+  saveActiveIdentityKey: (
+    publicKey: Uint8Array,
+    identityKey: string | null,
+  ) => void;
+  loadActiveIdentityKey: (publicKey: Uint8Array) => string | null;
 }

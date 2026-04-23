@@ -1,9 +1,6 @@
+import type { IKeysRepository, PrivateKey } from '@polycentric/js-core';
+import { v2 } from '@polycentric/js-core';
 import type { Database } from './database';
-import {
-  v2,
-  type PrivateKey,
-  type IKeysRepository,
-} from '@polycentric/js-core';
 
 export class KeysRepository implements IKeysRepository {
   constructor(private readonly database: Database) {}
@@ -12,11 +9,14 @@ export class KeysRepository implements IKeysRepository {
     privateKey: PrivateKey;
     publicKey: v2.PublicKey;
   }): Promise<void> {
+    const keyType = keys.privateKey.keyType;
+    const privateKey = keys.privateKey.key;
+    const publicKey = keys.publicKey.key;
+
     this.database.run(
-      `INSERT OR REPLACE INTO identities (
-        key_type, private_key, public_key, process_id
-      ) VALUES (?, ?, ?, NULL)`,
-      [Number(keys.privateKey.keyType), keys.privateKey.key, keys.publicKey.key]
+      `INSERT OR REPLACE INTO keys (public_key, key_type, private_key)
+       VALUES (?, ?, ?)`,
+      [publicKey, keyType, privateKey]
     );
   }
 
@@ -24,35 +24,30 @@ export class KeysRepository implements IKeysRepository {
     privateKey: PrivateKey;
     publicKey: v2.PublicKey;
   } | null> {
-    const results = this.database.execute<{
+    const rows = this.database.execute<{
       key_type: number;
       private_key: ArrayBuffer;
-      public_key: ArrayBuffer;
-    }>(
-      'SELECT key_type, private_key, public_key FROM identities WHERE public_key = ?',
-      [publicKey.key]
-    );
+    }>(`SELECT key_type, private_key FROM keys WHERE public_key = ?`, [
+      publicKey.key,
+    ]);
 
-    if (results.length === 0) {
-      return null;
-    }
+    if (rows.length === 0) return null;
 
-    const row = results[0]!;
-    const kt = Number(row.key_type);
-
+    const row = rows[0]!;
     return {
-      privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
+      privateKey: {
+        keyType: row.key_type,
+        key: new Uint8Array(row.private_key),
+      },
       publicKey: v2.PublicKey.create({
-        keyType: kt,
-        key: new Uint8Array(row.public_key),
+        keyType: row.key_type,
+        key: new Uint8Array(publicKey.key),
       }),
     };
   }
 
   async removeKeys(publicKey: v2.PublicKey): Promise<void> {
-    this.database.run('DELETE FROM identities WHERE public_key = ?', [
-      publicKey.key,
-    ]);
+    this.database.run(`DELETE FROM keys WHERE public_key = ?`, [publicKey.key]);
   }
 
   async getAllKeys(): Promise<
@@ -61,21 +56,21 @@ export class KeysRepository implements IKeysRepository {
       publicKey: v2.PublicKey;
     }[]
   > {
-    const results = this.database.execute<{
+    const rows = this.database.execute<{
       key_type: number;
       private_key: ArrayBuffer;
       public_key: ArrayBuffer;
-    }>('SELECT key_type, private_key, public_key FROM identities');
+    }>(`SELECT key_type, private_key, public_key FROM keys`);
 
-    return results.map((row) => {
-      const kt = Number(row.key_type);
-      return {
-        privateKey: { keyType: kt, key: new Uint8Array(row.private_key) },
-        publicKey: v2.PublicKey.create({
-          keyType: kt,
-          key: new Uint8Array(row.public_key),
-        }),
-      };
-    });
+    return rows.map((row) => ({
+      privateKey: {
+        keyType: row.key_type,
+        key: new Uint8Array(row.private_key),
+      },
+      publicKey: v2.PublicKey.create({
+        keyType: row.key_type,
+        key: new Uint8Array(row.public_key),
+      }),
+    }));
   }
 }

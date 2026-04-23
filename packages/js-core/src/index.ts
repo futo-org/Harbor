@@ -27,9 +27,6 @@ export type * from './platform-interfaces';
 export { StorageHandle } from './storage';
 export type { Repositories } from './storage';
 
-export type { DatabaseSchema } from './schemas/v1';
-export { schemaV1 as polycentricSchema } from './schemas/v1';
-
 export { PolycentricClient } from './polycentric-client';
 export type {
   PolycentricClientConfig,

@@ -109,9 +109,8 @@ export class IdentityManager {
 
     await this.client.storage.content.save(digest, content);
     const signedEvent = await this.client.signEvent(event);
-    await this.client.commitEvent(signedEvent, content);
-
     this.client.setActiveIdentityKey(identityKey);
+    await this.client.commitEvent(signedEvent, content);
 
     return { identityKey, signedEvent };
   }

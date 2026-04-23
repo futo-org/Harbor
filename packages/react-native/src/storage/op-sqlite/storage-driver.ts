@@ -15,11 +15,11 @@ export class ReactNativeStorageDriver implements IStorageDriver {
   }
 
   createEventRepository() {
-    return new EventRepository();
+    return new EventRepository(this.database);
   }
 
   createContentRepository() {
-    return new ContentRepository();
+    return new ContentRepository(this.database);
   }
 
   createKeysRepository() {
@@ -28,5 +28,30 @@ export class ReactNativeStorageDriver implements IStorageDriver {
 
   createEventAckRepository() {
     return new EventAckRepository(this.database);
+  }
+
+  saveActiveIdentityKey(
+    publicKey: Uint8Array,
+    identityKey: string | null
+  ): void {
+    if (identityKey) {
+      this.database.run(
+        `INSERT OR REPLACE INTO active_identity_for_key (public_key, identity_key) VALUES (?, ?)`,
+        [publicKey, identityKey]
+      );
+    } else {
+      this.database.run(
+        `DELETE FROM active_identity_for_key WHERE public_key = ?`,
+        [publicKey]
+      );
+    }
+  }
+
+  loadActiveIdentityKey(publicKey: Uint8Array): string | null {
+    const rows = this.database.execute<{ identity_key: string }>(
+      `SELECT identity_key FROM active_identity_for_key WHERE public_key = ?`,
+      [publicKey]
+    );
+    return rows[0]?.identity_key ?? null;
   }
 }
