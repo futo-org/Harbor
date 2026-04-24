@@ -349,7 +349,7 @@ export class PolycentricClient {
       }
     }
 
-    this.events.emitContentCreated(signedEvent);
+    this.events.emitContentCreated({ signedEvent, content });
   }
 
   /**
@@ -490,16 +490,20 @@ export class PolycentricClient {
   }
 
   /**
-   * Decode an image, resize to fill `width` x `height` (aspect-preserving,
-   * center-cropped), and encode as JPEG. Runs in the core.
+   * Decode an image, resize into `width` x `height` per `mode`, and
+   * encode as JPEG via the core.
+   *
+   * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
+   * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
    */
   processImageToJpeg(
     image: Uint8Array,
     width: number,
     height: number,
+    mode: 'fill' | 'fit' = 'fill',
   ): Uint8Array {
     if (!this.core) throw new Error('Core not initialized');
-    return this.core.process_image_to_jpeg(image, width, height);
+    return this.core.process_image_to_jpeg(image, width, height, mode);
   }
 
   /**

@@ -107,7 +107,13 @@ export interface Post {
     /**
      * @generated from protobuf field: optional polycentric.v2.PostReply reply = 2
      */
-    reply?: PostReply; // optional ImageManifest image = 2;
+    reply?: PostReply;
+    /**
+     * Multiple images
+     *
+     * @generated from protobuf field: repeated polycentric.v2.ImageSet images = 3
+     */
+    images: ImageSet[];
 }
 /**
  * @generated from protobuf message polycentric.v2.PostReply
@@ -565,12 +571,14 @@ class Post$Type extends MessageType<Post> {
     constructor() {
         super("polycentric.v2.Post", [
             { no: 1, name: "text", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "reply", kind: "message", T: () => PostReply }
+            { no: 2, name: "reply", kind: "message", T: () => PostReply },
+            { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet }
         ]);
     }
     create(value?: PartialMessage<Post>): Post {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.text = "";
+        message.images = [];
         if (value !== undefined)
             reflectionMergePartial<Post>(this, message, value);
         return message;
@@ -585,6 +593,9 @@ class Post$Type extends MessageType<Post> {
                     break;
                 case /* optional polycentric.v2.PostReply reply */ 2:
                     message.reply = PostReply.internalBinaryRead(reader, reader.uint32(), options, message.reply);
+                    break;
+                case /* repeated polycentric.v2.ImageSet images */ 3:
+                    message.images.push(ImageSet.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -604,6 +615,9 @@ class Post$Type extends MessageType<Post> {
         /* optional polycentric.v2.PostReply reply = 2; */
         if (message.reply)
             PostReply.internalBinaryWrite(message.reply, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.ImageSet images = 3; */
+        for (let i = 0; i < message.images.length; i++)
+            ImageSet.internalBinaryWrite(message.images[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

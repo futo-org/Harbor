@@ -3,7 +3,7 @@ import {
   IdentityTag,
   ProfileAvatar,
   Text,
-  TextInput,
+  TextArea,
 } from '@/src/common/components/primitives';
 import {
   truncateName,
@@ -17,26 +17,39 @@ import {
   SheetHeaderBlock,
   type DismissSheet,
 } from '@/src/common/lib/sheet';
+import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useCallback, useEffect, useRef } from 'react';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
+import { useComposerStore } from './hooks/useComposerStore';
 import { Routes } from '@/src/common/constants';
 import { router } from 'expo-router';
+
+const MAX_ATTACHMENTS = 4;
+const THUMBNAIL_SIZE = 72;
+
+/** Longest edge lengths for post image variants. */
+const POST_VARIANT_SIZES = [512, 1280];
 
 interface ComposeSheetInnerProps {
   dismissSheet: DismissSheet;
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
+  /** Open the image picker as soon as the composer mounts. */
+  attachOnMount?: boolean;
 }
 
 export function ComposeSheetInner({
   dismissSheet,
   onPostCreated,
   replyTo,
+  attachOnMount = false,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
   const { identityKey: currentIdentityKey, identity: currentIdentity } =
@@ -59,37 +72,87 @@ export function ComposeSheetInner({
   const replyContentPreview =
     replyContent.length > 30 ? `${replyContent.slice(0, 30)}…` : replyContent;
 
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const text = useComposerStore((s) => s.text);
+  const attachments = useComposerStore((s) => s.attachments);
+  const submitting = useComposerStore((s) => s.submitting);
+  const error = useComposerStore((s) => s.error);
+  const setText = useComposerStore((s) => s.setText);
+  const addAttachments = useComposerStore((s) => s.addAttachments);
+  const removeAttachment = useComposerStore((s) => s.removeAttachment);
+  const setSubmitting = useComposerStore((s) => s.setSubmitting);
+  const setError = useComposerStore((s) => s.setError);
+  const resetComposer = useComposerStore((s) => s.reset);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
-  const canPost = text.trim().length > 0 && !submitting;
+  const canPost =
+    (text.trim().length > 0 || attachments.length > 0) && !submitting;
+  const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const handleClose = useCallback(() => {
     if (!submitting) void dismissSheet(DismissReason.UserDismissed);
   }, [submitting, dismissSheet]);
 
+  const handleAttachImage = useCallback(async () => {
+    if (attachDisabled) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_ATTACHMENTS - attachments.length,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const additions = result.assets
+      .slice(0, MAX_ATTACHMENTS - attachments.length)
+      .map((asset, i) => ({
+        id: `${Date.now()}-${i}-${asset.uri}`,
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+      }));
+    addAttachments(additions);
+  }, [attachDisabled, attachments.length, addAttachments]);
+
+  const handleRemoveAttachment = useCallback(
+    (id: string) => removeAttachment(id),
+    [removeAttachment],
+  );
+
+  // Auto-open the image picker once when the caller requested it
+  // (e.g. tapping the attach icon in the inline composer).
+  const attachOnMountFiredRef = useRef(false);
+  useEffect(() => {
+    if (!attachOnMount || attachOnMountFiredRef.current) return;
+    attachOnMountFiredRef.current = true;
+    void handleAttachImage();
+  }, [attachOnMount, handleAttachImage]);
+
   const handlePost = useCallback(async () => {
-    if (!text.trim() || submitting) return;
+    if (submitting) return;
+    if (text.trim().length === 0 && attachments.length === 0) return;
 
     setError(null);
     setSubmitting(true);
     try {
-      // let reference: types.Reference | undefined;
-      // const reply = replyToEventRef.current;
-      // if (reply) {
-      //   const pointer = getPointer(client, reply);
-      //   reference = types.Reference.create({
-      //     referenceType: 2n,
-      //     reference: types.Pointer.toBinary(pointer),
-      //   });
-      // }
+      // Process + upload attachments first so every blob body is on
+      // the server before the content that references it.
+      const imageSets: v2.ImageSet[] =
+        attachments.length > 0
+          ? await Promise.all(
+              attachments.map((a) =>
+                processAndUploadImage(client, a.uri, {
+                  mode: 'fit',
+                  sizes: POST_VARIANT_SIZES,
+                  sourceWidth: a.width,
+                  sourceHeight: a.height,
+                }),
+              ),
+            )
+          : [];
 
-      // TODO: reply references not yet supported in v2 createPost
-
-      let post: types.v2.Post = { text: text.trim() };
+      const post: types.v2.Post = {
+        text: text.trim(),
+        images: imageSets,
+      };
 
       if (isReply) {
         post.reply = {
@@ -109,11 +172,16 @@ export function ComposeSheetInner({
 
       const signedEvent = await client.signEvent(event);
 
-      await client.commitEvent(signedEvent);
+      // `commitEvent` persists the event locally and, when content is
+      // passed, seeds the core's content store + emits contentCreated
+      // with both signedEvent and content so feeds can decode directly.
+      await client.commitEvent(signedEvent, content);
 
-      await client.sync();
-      setText('');
+      resetComposer();
       await dismissSheet(DismissReason.PostSubmitted);
+      void client.sync().catch((err) => {
+        console.warn('compose sync failed:', err);
+      });
       // TODO
       // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
@@ -122,13 +190,18 @@ export function ComposeSheetInner({
     } finally {
       setSubmitting(false);
     }
-  }, [text, submitting, client, dismissSheet]);
-
-  const onAvatarPress = useCallback(() => {
-    if (currentIdentityKey) {
-      router.push(Routes.tabs.profile(currentIdentityKey));
-    }
-  }, [currentIdentityKey]);
+  }, [
+    text,
+    attachments,
+    submitting,
+    client,
+    dismissSheet,
+    isReply,
+    replyToEventKey,
+    resetComposer,
+    setSubmitting,
+    setError,
+  ]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -142,12 +215,10 @@ export function ComposeSheetInner({
         closeDisabled={submitting}
         trailing={
           isWeb ? (
-            <View style={{ minWidth: 80, minHeight: 36 }} />
+            <View style={{ minWidth: 80 }} />
           ) : (
             <View
               style={{
-                minWidth: 80,
-                minHeight: 36,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -174,13 +245,14 @@ export function ComposeSheetInner({
       <View
         style={[
           Atoms.flex_1,
+          Atoms.py_lg,
+          Atoms.px_lg,
           {
-            paddingHorizontal: 15,
-            paddingTop: 10,
-            minHeight: 0,
+            minHeight: 200,
           },
         ]}
       >
+        {/* Reply preview */}
         {isReply && (
           <View
             style={[
@@ -214,6 +286,7 @@ export function ComposeSheetInner({
           </View>
         )}
 
+        {/* Error displays */}
         {error && (
           <View
             style={[
@@ -234,68 +307,106 @@ export function ComposeSheetInner({
           </View>
         )}
 
-        <View style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_md]}>
-          <Pressable
-            onPress={onAvatarPress}
-            disabled={!onAvatarPress}
-            style={{ marginTop: 3 }}
-          >
-            {currentIdentityKey ? (
-              <ProfileAvatar identityKey={currentIdentityKey} size="sm" />
-            ) : null}
-          </Pressable>
-          <View style={Atoms.flex_1}>
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.gap_xs,
-                { alignItems: 'baseline', marginTop: -1 },
-              ]}
-            >
-              <Pressable onPress={onAvatarPress} disabled={!onAvatarPress}>
-                <Text
-                  variant="secondary"
-                  fontWeight="bold"
-                  style={{ lineHeight: 18 }}
-                >
-                  {truncateName(username, 16)}
-                </Text>
-              </Pressable>
-              {currentIdentity?.identityKey && (
-                <IdentityTag
-                  identity={currentIdentity.identityKey}
-                  style={{ transform: [{ translateY: 1 }] }}
-                />
-              )}
+        {/* Main block */}
+        <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1]}>
+          {currentIdentityKey ? (
+            <View style={[Atoms.self_start]}>
+              <ProfileAvatar identityKey={currentIdentityKey} size="md" />
             </View>
-            <TextInput
+          ) : null}
+          <View style={Atoms.flex_1}>
+            <TextArea
               variant="plain"
               placeholder={placeholder}
-              multiline
-              scrollEnabled
               autoFocus
               value={text}
               onChangeText={setText}
               disabled={submitting}
               maxLength={2000}
-              style={{
-                paddingHorizontal: 0,
-                paddingTop: 8,
-                fontSize: 15,
-                minHeight: 180,
-                maxHeight: 280,
-              }}
+              style={[
+                Atoms.px_0,
+                Atoms.py_0,
+                Atoms.pt_sm,
+                Atoms.text_lg,
+                Atoms.flex_1,
+              ]}
             />
+            {attachments.length > 0 && (
+              <View
+                style={[
+                  Atoms.flex_row,
+                  Atoms.gap_sm,
+                  { flexWrap: 'wrap', marginTop: 8 },
+                ]}
+              >
+                {attachments.map((a) => (
+                  <AttachmentThumb
+                    key={a.id}
+                    uri={a.uri}
+                    disabled={submitting}
+                    onRemove={() => handleRemoveAttachment(a.id)}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         </View>
       </View>
+      {/*  Footer */}
       <ComposeSheetFooterBar
         variant={isWeb ? 'web' : 'native'}
         charCount={text.length}
         submitting={submitting}
         canPost={canPost}
         onPost={handlePost}
+        onAttachImage={() => void handleAttachImage()}
+        attachDisabled={attachDisabled}
       />
+    </View>
+  );
+}
+
+function AttachmentThumb({
+  uri,
+  disabled,
+  onRemove,
+}: {
+  uri: string;
+  disabled: boolean;
+  onRemove: () => void;
+}) {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        width: THUMBNAIL_SIZE,
+        height: THUMBNAIL_SIZE,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+      }}
+    >
+      <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
+      <Pressable
+        onPress={onRemove}
+        disabled={disabled}
+        accessibilityLabel="Remove attachment"
+        hitSlop={6}
+        style={{
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
+          opacity: disabled ? 0.4 : 1,
+        }}
+      >
+        <Ionicons name="close" size={14} color={theme.palette.white} />
+      </Pressable>
     </View>
   );
 }

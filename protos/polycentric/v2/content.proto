@@ -37,7 +37,8 @@ message Post {
   // Main text content of the post
   string text = 1;
   optional PostReply reply = 2;
-  // optional ImageManifest image = 2;
+  // Multiple images
+  repeated ImageSet images = 3;
 }
 
 message PostReply {

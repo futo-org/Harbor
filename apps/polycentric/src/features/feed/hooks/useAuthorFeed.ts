@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   usePolycentricContext,
@@ -46,6 +47,33 @@ export function useAuthorFeed(
   useEffect(() => {
     if (identityId) fetchFeed();
   }, [identityId, fetchFeed]);
+
+  // Inject locally-committed posts by this author as soon as they're
+  // committed, before the server round-trip.
+  useEffect(() => {
+    if (!identityId) return;
+    const listener = ({
+      signedEvent,
+      content,
+    }: {
+      signedEvent: v2.SignedEvent;
+      content?: v2.Content;
+    }) => {
+      if (!content) return;
+      const decoded = decodeV2PostBundle(
+        v2.EventBundle.create({
+          signedEvent,
+          serializedContent: { contentBytes: v2.Content.toBinary(content) },
+        }),
+      );
+      if (!decoded || decoded.identity !== identityId) return;
+      setItems((prev) =>
+        prev.some((p) => p.id === decoded.id) ? prev : [decoded, ...prev],
+      );
+    };
+    client.events.onContentCreated(listener);
+    return () => client.events.offContentCreated(listener);
+  }, [client, identityId]);
 
   return {
     items,

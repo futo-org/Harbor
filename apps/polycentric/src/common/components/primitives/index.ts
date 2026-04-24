@@ -1,5 +1,6 @@
 export * from '../Avatar/Avatar';
 export * from '../Avatar/ProfileAvatar';
+export * from '../TextArea/TextArea';
 export * from './Button';
 export * from './Chip';
 export * from './HorizontalScrollGroup';

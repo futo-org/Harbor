@@ -5,9 +5,11 @@ import {
 } from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
+  pickImageVariant,
   postIdToSequence,
   timeAgo,
   truncateName,
+  usePolycentric,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -23,7 +25,7 @@ import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -97,7 +99,7 @@ export const Post = memo(function Post({
     if (!authorIdentity) return;
     const sequence = postIdToSequence(postId);
     if (!sequence) return;
-    openCompose({ identityId: authorIdentity, sequence });
+    openCompose({ replyTo: { identityId: authorIdentity, sequence } });
   }, [authorIdentity, postId]);
 
   const handleLike = useCallback(() => {}, []);
@@ -179,6 +181,7 @@ export const Post = memo(function Post({
             {displayContent}
             {isTruncatedPreview ? '...' : ''}
           </Text>
+          {post.images?.length > 0 && <PostImages images={post.images} />}
           {showContentExpandToggle && (
             <Pressable
               onPress={toggleContentExpanded}
@@ -230,6 +233,58 @@ export const Post = memo(function Post({
     </Pressable>
   );
 });
+
+/** Target pixel size we want for displayed attachments. */
+const POST_IMAGE_TARGET = 512;
+/** Width of a single post image in the column. Height follows aspect. */
+const POST_IMAGE_WIDTH = 280;
+
+type PostImageSource = {
+  uri: string;
+  aspectRatio: number;
+};
+
+function PostImages({ images }: { images: v2.ImageSet[] }) {
+  const client = usePolycentric();
+  const sources = useMemo<PostImageSource[]>(
+    () =>
+      images
+        .map((imageSet) => {
+          const variant = pickImageVariant(imageSet, POST_IMAGE_TARGET);
+          const digest = variant?.blob?.digest;
+          if (!digest) return null;
+          const uri = client.blobUrl(digest);
+          if (!uri) return null;
+          const w = variant.width || 1;
+          const h = variant.height || 1;
+          return { uri, aspectRatio: w / h };
+        })
+        .filter((s): s is PostImageSource => s != null),
+    [client, images],
+  );
+
+  if (sources.length === 0) return null;
+
+  return (
+    <View
+      style={[Atoms.flex_row, Atoms.gap_sm, { flexWrap: 'wrap', marginTop: 8 }]}
+    >
+      {sources.map((s, i) => (
+        <Image
+          key={s.uri + i}
+          source={{ uri: s.uri }}
+          resizeMode="cover"
+          style={{
+            width: POST_IMAGE_WIDTH,
+            aspectRatio: s.aspectRatio,
+            borderRadius: 8,
+            backgroundColor: 'rgba(0,0,0,0.04)',
+          }}
+        />
+      ))}
+    </View>
+  );
+}
 
 function PostAuthorName({
   name,

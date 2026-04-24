@@ -160,8 +160,12 @@ export interface IPolycentricCore {
   ): Promise<Uint8Array>;
 
   /**
-   * Decode `image` bytes, resize to fill `width` x `height` (aspect ratio
-   * preserved, center-cropped) and encode as JPEG.
+   * Decode `image` bytes, resize into `width` x `height` per `mode`,
+   * and encode as JPEG.
+   *
+   * - `"fill"` scales + center-crops — output is always `width` x `height`.
+   * - `"fit"` preserves aspect ratio — output fits inside the bounds.
+   *   Callers derive the actual output dims from the source aspect.
    *
    * @returns JPEG-encoded bytes
    */
@@ -169,6 +173,7 @@ export interface IPolycentricCore {
     image: Uint8Array,
     width: number,
     height: number,
+    mode: 'fill' | 'fit',
   ): Uint8Array;
 
   /**

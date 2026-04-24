@@ -37,6 +37,9 @@ export type PostData = {
   content: string;
   createdAt: number;
 
+  /** Attached image sets, in author-provided order. */
+  images: v2.ImageSet[];
+
   /** Set when the underlying `v2.Post` carried a `reply`. */
   reply?: {
     root?: EventKeyRef;
@@ -105,6 +108,7 @@ export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
       sequence: key.sequence.toString(),
       content: post.text,
       createdAt: Number(event.createdAt ?? 0),
+      images: post.images,
       reply,
       signedEvent: v2.SignedEvent.create({
         eventBytes: bundle.signedEvent.eventBytes,

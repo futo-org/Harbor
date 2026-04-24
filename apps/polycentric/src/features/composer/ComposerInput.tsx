@@ -3,6 +3,7 @@ import { openCompose } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 /**
@@ -13,6 +14,11 @@ export function ComposerInput() {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
+  const {
+    hovered: attachHovered,
+    onHoverIn: onAttachHoverIn,
+    onHoverOut: onAttachHoverOut,
+  } = useWebHover();
 
   if (!currentIdentity?.identityKey) return null;
 
@@ -23,7 +29,6 @@ export function ComposerInput() {
 
   return (
     <Pressable
-      accessibilityRole="button"
       accessibilityLabel="New post"
       onPress={() => openCompose()}
       onHoverIn={onHoverIn}
@@ -46,6 +51,32 @@ export function ComposerInput() {
       <Text variant="body" color="neutral_500" style={Atoms.flex_1}>
         What&apos;s on your mind?
       </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Attach image"
+        onPress={(e) => {
+          e.stopPropagation?.();
+          openCompose({ attachImage: true });
+        }}
+        onHoverIn={onAttachHoverIn}
+        onHoverOut={onAttachHoverOut}
+        hitSlop={8}
+        style={[
+          Atoms.p_xs,
+          Atoms.rounded_md,
+          {
+            backgroundColor: attachHovered
+              ? withHexOpacity(theme.palette.neutral_500, '20')
+              : 'transparent',
+          },
+        ]}
+      >
+        <Ionicons
+          name="image-outline"
+          size={22}
+          color={theme.palette.neutral_700}
+        />
+      </Pressable>
       {hovered ? (
         <View
           pointerEvents="none"

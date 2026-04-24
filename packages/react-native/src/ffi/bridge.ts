@@ -238,7 +238,8 @@ class NativePolycentricCore implements IPolycentricCore {
   process_image_to_jpeg(
     _image: Uint8Array,
     _width: number,
-    _height: number
+    _height: number,
+    _mode: 'fill' | 'fit'
   ): Uint8Array {
     throw new Error('process_image_to_jpeg is not implemented on native yet');
   }

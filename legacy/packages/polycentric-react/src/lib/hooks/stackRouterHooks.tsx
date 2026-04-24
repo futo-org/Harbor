@@ -225,7 +225,7 @@ export const useStackRouter = (
           const newIndex = Math.max(state.index - count, 0);
           return {
             index: newIndex,
-            history: newStack,
+          history: newStack,
             currentPath: newStack[newIndex],
           };
         });

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { sha256 } from '@noble/hashes/sha2';
+import { useCallback, useEffect, useState } from 'react';
+import { COLLECTION } from '@polycentric/react-native';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { processAndUploadImage } from '../../../common/lib/images/processAndUploadImage';
 
 interface ProfileRef {
   description: string | null;
@@ -32,12 +32,6 @@ export function useProfileEdit(
   const [nameDraft, setNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
-
-  const [avatarImageSet, setAvatarImageSet] = useState<v2.ImageSet | null>(
-    null,
-  );
-  const [avatarBlobBodies, setAvatarBlobBodies] = useState<Uint8Array[]>([]);
-
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -48,69 +42,28 @@ export function useProfileEdit(
     setDescriptionDraft(profile.description ?? '');
   }, [profile.description]);
 
-  useEffect(() => {
-    if (!avatarUri) {
-      setAvatarImageSet(null);
-      setAvatarBlobBodies([]);
-      return;
-    }
-    (async () => {
-      const response = await fetch(avatarUri);
-      const raw = new Uint8Array(await response.arrayBuffer());
-      const sizes = [48, 128, 512];
-      const variants = await Promise.all(
-        sizes.map(async (size) => {
-          const jpeg = client.processImageToJpeg(raw, size, size);
-          const image = v2.Image.create({
-            blob: {
-              digest: {
-                type: v2.ContentDigestType.SHA256,
-                value: sha256(jpeg),
-              },
-              mimeType: 'image/jpeg',
-              size: BigInt(jpeg.length),
-            },
-            width: size,
-            height: size,
-          });
-          return { image, body: jpeg };
-        }),
-      );
-
-      setAvatarImageSet(
-        v2.ImageSet.create({ images: variants.map((v) => v.image) }),
-      );
-      setAvatarBlobBodies(variants.map((v) => v.body));
-    })();
-  }, [avatarUri, client]);
-
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // Upload every avatar variant's bytes first; the server verifies
-      // the body against each declared digest before accepting.
-      if (avatarImageSet && avatarBlobBodies.length > 0) {
-        await Promise.all(
-          avatarImageSet.images.map((image, i) => {
-            const body = avatarBlobBodies[i];
-            if (!image.blob || !body) return Promise.resolve();
-            return client.uploadBlob(image.blob, body);
-          }),
-        );
-      }
+      // When the user picked a new avatar, resize + upload every
+      // variant and capture the returned ImageSet. Default sizes and
+      // `fill` mode give us the square variants avatars want.
+      const avatar = avatarUri
+        ? await processAndUploadImage(client, avatarUri)
+        : undefined;
 
       const content = client.contentManager.build({
         oneofKind: 'profileUpdate',
         profileUpdate: {
           name: nameDraft,
           description: descriptionDraft,
-          avatar: avatarImageSet ?? undefined,
+          avatar,
         },
       });
       await client.contentManager.save(content);
       const event = await client.buildEvent(content, COLLECTION.PROFILE);
       const signedEvent = await client.signEvent(event);
-      await client.commitEvent(signedEvent);
+      await client.commitEvent(signedEvent, content);
       await client.sync();
       profile.refresh();
       setEditing(false);
@@ -119,21 +72,12 @@ export function useProfileEdit(
     } finally {
       setSaving(false);
     }
-  }, [
-    client,
-    nameDraft,
-    descriptionDraft,
-    avatarImageSet,
-    avatarBlobBodies,
-    profile,
-  ]);
+  }, [client, nameDraft, descriptionDraft, avatarUri, profile]);
 
   const handleCancel = useCallback(() => {
     setNameDraft(username);
     setDescriptionDraft(profile.description ?? '');
     setAvatarUri(null);
-    setAvatarImageSet(null);
-    setAvatarBlobBodies([]);
     setEditing(false);
   }, [username, profile.description]);
 

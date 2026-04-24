@@ -433,16 +433,23 @@ impl PolycentricWasm {
         Ok(())
     }
 
-    /// Decode `image` bytes, resize to fill `width` x `height` preserving
-    /// aspect ratio (center-cropped), and encode as JPEG.
+    /// Decode `image` bytes, resize into `width` x `height` per `mode`,
+    /// and encode as JPEG. `mode` is `"fill"` (scale + center-crop —
+    /// output is exactly `width` x `height`) or `"fit"` (preserve
+    /// aspect, output fits inside `width` x `height`).
     #[wasm_bindgen]
     pub fn process_image_to_jpeg(
         &self,
         image: &[u8],
         width: u32,
         height: u32,
+        mode: &str,
     ) -> std::result::Result<Uint8Array, JsValue> {
-        let jpeg = crate::media::process_image::process_image(image, width, height)
+        let mode = match mode {
+            "fit" => crate::media::process_image::ResizeMode::Fit,
+            _ => crate::media::process_image::ResizeMode::Fill,
+        };
+        let jpeg = crate::media::process_image::process_image(image, width, height, mode)
             .map_err(|e| JsValue::from_str(&format!("process_image failed: {e}")))?;
         Ok(Uint8Array::from(&jpeg[..]))
     }
