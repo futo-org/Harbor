@@ -1,5 +1,5 @@
-export * from './Avatar';
-export * from './Background';
+export * from '../Avatar/Avatar';
+export * from '../Avatar/ProfileAvatar';
 export * from './Button';
 export * from './Chip';
 export * from './HorizontalScrollGroup';

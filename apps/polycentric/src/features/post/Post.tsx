@@ -1,7 +1,10 @@
-import { Avatar, IdentityTag, Text } from '@/src/common/components/primitives';
+import {
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  identiconUrl,
   postIdToSequence,
   timeAgo,
   truncateName,
@@ -107,7 +110,6 @@ export const Post = memo(function Post({
 
   const liked = false;
   const disliked = false;
-  const avatarUrl = authorIdentity ? identiconUrl(authorIdentity) : null;
   const time = timeAgo(Number(post.createdAt));
 
   return (
@@ -126,11 +128,13 @@ export const Post = memo(function Post({
       disabled={disablePress}
     >
       <View style={[Atoms.flex_row, Atoms.gap_lg]}>
-        <Avatar
-          source={avatarUrl ? { uri: avatarUrl } : undefined}
-          size="md"
-          onPress={handleAuthorPress}
-        />
+        {authorIdentity ? (
+          <ProfileAvatar
+            identityKey={authorIdentity}
+            size="md"
+            onPress={handleAuthorPress}
+          />
+        ) : null}
 
         <View style={Atoms.flex_1}>
           <View

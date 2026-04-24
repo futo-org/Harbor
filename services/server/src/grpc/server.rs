@@ -1,6 +1,8 @@
-use crate::db::client::build_db_client;
 use crate::service;
+use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::server::server_service::ServerConfig;
 use http::header::HeaderName;
+use sea_orm::DatabaseConnection;
 use tonic::transport::Server;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -19,30 +21,21 @@ fn build_reflection_service() -> Result<
     Ok(service)
 }
 
-/// Attempt to connect to the database, retrying with backoff.
-async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
-    let mut delay = std::time::Duration::from_secs(1);
-    loop {
-        match build_db_client().await {
-            Ok(db) => return db,
-            Err(e) => {
-                eprintln!(
-                    "Failed to connect to database: {e}, retrying in {delay:?}"
-                );
-                tokio::time::sleep(delay).await;
-                delay = (delay * 2).min(std::time::Duration::from_secs(30));
-            }
-        }
-    }
-}
-
 /// Serve the gRPC
-pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn serve_grpc(
+    db: DatabaseConnection,
+    filestore: ContentFilestore,
+    server_config: ServerConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
-    let db = connect_db_with_retry().await;
     let events_service =
         service::events::events_service::build_events_service(db.clone());
-    let feeds_service = service::feeds::feeds_service::build_feeds_service(db);
+    let feeds_service =
+        service::feeds::feeds_service::build_feeds_service(db.clone());
+    let content_service =
+        service::content::content_service::build_content_service(db, filestore);
+    let server_info_service =
+        service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
 
     println!("GRPC server is listening on {addr}");
@@ -67,6 +60,8 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(reflection_service)
         .add_service(events_service)
         .add_service(feeds_service)
+        .add_service(content_service)
+        .add_service(server_info_service)
         .serve(addr)
         .await?;
 

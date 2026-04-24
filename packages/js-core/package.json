@@ -15,7 +15,7 @@
     "dist"
   ],
   "scripts": {
-    "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto ../../protos/polycentric/v2/keypair.proto ../../protos/polycentric/v2/event_key.proto ../../protos/polycentric/v2/identity.proto ../../protos/polycentric/v2/content.proto ../../protos/polycentric/v2/events.proto ../../protos/polycentric/v2/feeds.proto",
+    "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto ../../protos/polycentric/v2/keypair.proto ../../protos/polycentric/v2/event_key.proto ../../protos/polycentric/v2/identity.proto ../../protos/polycentric/v2/content.proto ../../protos/polycentric/v2/events.proto ../../protos/polycentric/v2/feeds.proto ../../protos/polycentric/v2/server.proto",
     "build": "webpack",
     "dev": "webpack --watch",
     "test": "echo 'No tests'"

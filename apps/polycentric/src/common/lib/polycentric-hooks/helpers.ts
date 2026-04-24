@@ -14,20 +14,6 @@ export function fromBase64(base64: string): Uint8Array {
   return bytes;
 }
 
-export function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-export function fromHex(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
-  }
-  return bytes;
-}
-
 /**
  * BigInt-free mirror of `v2.EventKey`. The proto's `sequence` is a `bigint`,
  * which crashes React Native's render logger when any component receives it
@@ -137,6 +123,20 @@ export function identiconUrl(seed: string, size = 80): string {
   return `https://api.dicebear.com/7.x/identicon/png?seed=${seed}&size=${size}`;
 }
 
+/**
+ * Pick the smallest image variant at or above `targetSize`. Falls back
+ * to the largest available variant if none are big enough. Returns
+ * `null` when the set is empty.
+ */
+export function pickImageVariant(
+  imageSet: v2.ImageSet | null | undefined,
+  targetSize: number,
+): v2.Image | null {
+  if (!imageSet || imageSet.images.length === 0) return null;
+  const sorted = [...imageSet.images].sort((a, b) => a.width - b.width);
+  return sorted.find((img) => img.width >= targetSize) ?? sorted[sorted.length - 1]!;
+}
+
 export function timeAgo(unixMs: number): string {
   if (!unixMs) return '';
   const diff = Date.now() - unixMs;
@@ -174,7 +174,7 @@ export function pubkeyStr(key: v2.PublicKey): string {
 export function publicKeyToString(key: v2.PublicKey): string {
   const keyType = key.keyType ?? 0;
   const keyBytes = key.key ?? new Uint8Array();
-  return `${keyType}_${toHex(keyBytes)}`;
+  return `${keyType}_${bytesToHex(keyBytes)}`;
 }
 
 export function stringToPublicKey(str: string): v2.PublicKey {
@@ -183,7 +183,7 @@ export function stringToPublicKey(str: string): v2.PublicKey {
   const keyHex = str.slice(idx + 1);
   return v2.PublicKey.create({
     keyType: Number(keyTypeStr),
-    key: fromHex(keyHex),
+    key: hexToBytes(keyHex),
   });
 }
 
@@ -224,7 +224,7 @@ export function shortenIdentityId(
 
 export function pointerToURLString(pointer: v2.Pointer): string {
   const systemStr = publicKeyToString(pointer.system ?? v2.PublicKey.create());
-  const processStr = toHex(pointer.process?.process ?? new Uint8Array());
+  const processStr = bytesToHex(pointer.process?.process ?? new Uint8Array());
   const clockStr = String(pointer.logicalClock ?? 0);
   return `${systemStr}.${processStr}.${clockStr}`;
 }

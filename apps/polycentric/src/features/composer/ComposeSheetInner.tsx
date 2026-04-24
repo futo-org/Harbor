@@ -1,12 +1,11 @@
 import {
-  Avatar,
   Button,
   IdentityTag,
+  ProfileAvatar,
   Text,
   TextInput,
 } from '@/src/common/components/primitives';
 import {
-  identiconUrl,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
@@ -43,9 +42,6 @@ export function ComposeSheetInner({
   const { identityKey: currentIdentityKey, identity: currentIdentity } =
     useCurrentIdentity();
   const username = useUsername(currentIdentityKey);
-  const avatarUrl = currentIdentityKey
-    ? identiconUrl(currentIdentityKey)
-    : undefined;
   const { theme } = useTheme();
 
   const onPostCreatedRef = useRef(onPostCreated);
@@ -244,10 +240,9 @@ export function ComposeSheetInner({
             disabled={!onAvatarPress}
             style={{ marginTop: 3 }}
           >
-            <Avatar
-              source={avatarUrl ? { uri: avatarUrl } : undefined}
-              size="sm"
-            />
+            {currentIdentityKey ? (
+              <ProfileAvatar identityKey={currentIdentityKey} size="sm" />
+            ) : null}
           </Pressable>
           <View style={Atoms.flex_1}>
             <View

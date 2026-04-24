@@ -1,9 +1,9 @@
 import {
-  Avatar,
   IdentityTag,
   LinkButton,
   ListItem,
   ListItemGroup,
+  ProfileAvatar,
   ScreenHeader,
   Screen,
   Text,
@@ -14,10 +14,7 @@ import {
   SOURCE_CODE_URL,
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
-import {
-  identiconUrl,
-  useCurrentIdentity,
-} from '@/src/common/lib/polycentric-hooks';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,13 +100,12 @@ export default function SettingsTabScreen() {
 
 function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
   const profile = useProfile(identityKey);
-  const avatarUrl = identiconUrl(identityKey);
 
   return (
     <View
       style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md, { flex: 1 }]}
     >
-      <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} size="md" />
+      <ProfileAvatar identityKey={identityKey} size="md" />
       <View
         style={[
           Atoms.flex_row,

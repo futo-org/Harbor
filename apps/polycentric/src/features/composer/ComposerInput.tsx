@@ -1,9 +1,6 @@
-import { Avatar, Text } from '@/src/common/components/primitives';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
-import {
-  identiconUrl,
-  useCurrentIdentity,
-} from '@/src/common/lib/polycentric-hooks';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -18,8 +15,6 @@ export function ComposerInput() {
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   if (!currentIdentity?.identityKey) return null;
-
-  const avatarUrl = identiconUrl(currentIdentity.identityKey);
 
   const hoverOverlay =
     theme.scheme === 'light'
@@ -47,7 +42,7 @@ export function ComposerInput() {
         },
       ]}
     >
-      <Avatar source={{ uri: avatarUrl }} size="md" />
+      <ProfileAvatar identityKey={currentIdentity.identityKey} size="md" />
       <Text variant="body" color="neutral_500" style={Atoms.flex_1}>
         What&apos;s on your mind?
       </Text>

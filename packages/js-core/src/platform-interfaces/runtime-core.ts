@@ -158,4 +158,36 @@ export interface IPolycentricCore {
     limit?: number | null,
     identity?: string | null,
   ): Promise<Uint8Array>;
+
+  /**
+   * Decode `image` bytes, resize to fill `width` x `height` (aspect ratio
+   * preserved, center-cropped) and encode as JPEG.
+   *
+   * @returns JPEG-encoded bytes
+   */
+  process_image_to_jpeg(
+    image: Uint8Array,
+    width: number,
+    height: number,
+  ): Uint8Array;
+
+  /**
+   * Upload a blob body to a server via gRPC-web. The server verifies
+   * that the body matches the digest declared in the request.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @param request_bytes - Serialized `UploadBlobRequest` proto bytes
+   */
+  upload_blob(
+    server_url: string,
+    request_bytes: Uint8Array,
+  ): Promise<void>;
+
+  /**
+   * Fetch a server's public info (version, CDN URL) over gRPC-web.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @returns Serialized `GetServerInfoResponse` proto bytes
+   */
+  get_server_info(server_url: string): Promise<Uint8Array>;
 }

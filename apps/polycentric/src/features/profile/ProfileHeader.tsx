@@ -1,13 +1,12 @@
 import { BackButton } from '@/src/common/components/composites';
 import {
-  Avatar,
   Button,
   HorizontalScrollGroup,
+  ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import {
-  identiconUrl,
   shortenIdentityId,
   truncateName,
   useUsername,
@@ -37,7 +36,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const username = profile.name ?? fallbackUsername;
 
   const short = identityKey ? shortenIdentityId(identityKey) : '...';
-  const avatarUrl = identityKey ? identiconUrl(identityKey) : '';
 
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
@@ -82,7 +80,9 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
       </View>
 
       <View style={[Atoms.mx_lg, { marginTop: -40 }]}>
-        <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} size="xl" />
+        {identityKey ? (
+          <ProfileAvatar identityKey={identityKey} size="xl" />
+        ) : null}
       </View>
 
       <View

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package polycentric.v2;
+
+/**
+ * Current version the server is running on.
+ */
+message ServerVersion {
+    string version = 1;
+}
+
+/**
+ * Relevant information about the current server, such as version, public endpoints, etc.
+ */
+message ServerInfo {
+    ServerVersion version = 1;
+    // URL used to resolve HTTP assets (blobs, images, etc)
+    string cdn_url = 2;
+}
+
+message GetServerInfoRequest {
+}
+
+message GetServerInfoResponse {
+    ServerInfo server_info = 1;
+}
+
+service ServerService {
+    // Returns relevant information about a server
+    rpc GetInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
+}

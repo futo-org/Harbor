@@ -12,7 +12,7 @@ import {
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
-const SIZE_MAP: Record<AvatarSizePreset, number> = {
+export const AVATAR_SIZE_MAP: Record<AvatarSizePreset, number> = {
   xs: 24,
   sm: 32,
   md: 40,
@@ -21,33 +21,30 @@ const SIZE_MAP: Record<AvatarSizePreset, number> = {
   massive: 170,
 };
 
+export function resolveAvatarSize(size: AvatarSizePreset | number): number {
+  return typeof size === 'number' ? size : AVATAR_SIZE_MAP[size];
+}
+
 interface AvatarProps extends Omit<ImageProps, 'source'> {
   source?: ImageSourcePropType;
   size?: AvatarSizePreset | number;
-  border?: boolean;
-  borderWidth?: number;
   containerProps?: ViewProps;
   onPress?: () => void;
-  disabled?: boolean;
 }
 
 export function Avatar({
   source,
   size: sizeProp = 'md',
-  border = true,
-  borderWidth = 1,
   containerProps,
-  resizeMode = 'cover',
   onPress,
-  disabled = false,
   ...imageProps
 }: AvatarProps) {
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
   const { style: imageStyle, ...restImageProps } = imageProps;
 
-  const size = typeof sizeProp === 'number' ? sizeProp : SIZE_MAP[sizeProp];
-  const showHoverDim = !!onPress && !disabled && hovered;
+  const size = resolveAvatarSize(sizeProp);
+  const showHoverDim = !!onPress && hovered;
 
   const radius = size / 2;
   const circleStyle = [
@@ -58,65 +55,30 @@ export function Avatar({
       borderRadius: radius,
       backgroundColor: theme.palette.background_primary,
     },
-    border && {
-      borderWidth,
+    {
+      borderWidth: 1,
       borderColor: withHexOpacity(theme.palette.neutral_500, '80'),
     },
     containerProps?.style,
   ];
 
-  if (onPress) {
-    return (
-      <Pressable
-        {...containerProps}
-        accessibilityRole="button"
-        disabled={disabled}
-        onPress={onPress}
-        onHoverIn={disabled ? undefined : onHoverIn}
-        onHoverOut={disabled ? undefined : onHoverOut}
-        style={circleStyle}
-      >
-        <AvatarImage
-          source={source}
-          resizeMode={resizeMode}
-          imageStyle={imageStyle}
-          restImageProps={restImageProps}
-        />
-        <HoverOverlay visible={showHoverDim} borderRadius={size / 2} />
-      </Pressable>
-    );
-  }
-
   return (
-    <View {...containerProps} style={circleStyle}>
-      <AvatarImage
+    <Pressable
+      {...containerProps}
+      accessibilityRole="button"
+      onPress={onPress}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+      style={circleStyle}
+    >
+      <Image
+        {...restImageProps}
         source={source}
-        resizeMode={resizeMode}
-        imageStyle={imageStyle}
-        restImageProps={restImageProps}
+        resizeMode={'cover'}
+        style={[styles.image, imageStyle]}
       />
-    </View>
-  );
-}
-
-function AvatarImage({
-  source,
-  resizeMode,
-  imageStyle,
-  restImageProps,
-}: {
-  source?: ImageSourcePropType;
-  resizeMode: ImageProps['resizeMode'];
-  imageStyle: ImageProps['style'];
-  restImageProps: Omit<ImageProps, 'source' | 'style' | 'resizeMode'>;
-}) {
-  return (
-    <Image
-      {...restImageProps}
-      source={source}
-      resizeMode={resizeMode}
-      style={[styles.image, imageStyle]}
-    />
+      <HoverOverlay visible={showHoverDim} borderRadius={size / 2} />
+    </Pressable>
   );
 }
 

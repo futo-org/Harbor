@@ -83,10 +83,10 @@ message Reaction {
 message ProfileUpdate {
   // A friendly display name for the user
   optional string name = 1;
-  // Reference to the Blob for the avatar
-  optional Image avatar = 2;
-  // Reference to the Blob of a banner
-  optional Image banner = 3;
+  // Reference to the Blob for the avatar (support multiple different sizes)
+  optional ImageSet avatar = 2;
+  // Reference to the Blob of a banner (support multiple different sizes)
+  optional ImageSet banner = 3;
   // Bio
   optional string description = 4;
 }
@@ -100,12 +100,21 @@ message Blob {
   int64 size = 3;
 }
 
+// Single image with reference to the blob
 message Image {
   Blob blob = 1;
   int32 width = 2;
   int32 height = 3;
 }
 
+// Collection of different variants of an image
+message ImageSet {
+  repeated Image images = 1;
+}
+
+/**
+ * gRPC requests
+ */
 message SyncContentRequest {
   // Digest that was created from the serialized content_bytes
   ContentDigest digest = 1;
@@ -115,7 +124,21 @@ message SyncContentRequest {
 
 message SyncContentResponse {}
 
+/**
+ * Request message for upoading a blob
+ */
+message UploadBlobRequest {
+  // Reference message of the blob (mime type, content digest).
+  Blob blob = 1;
+  // Body (content) of the blob
+  bytes body = 2;
+}
+
+message UploadBlobResponse {}
+
 service ContentService {
   // Synchronises events from a client to the server
   rpc SyncContent(SyncContentRequest) returns (SyncContentResponse);
+  // Uploads a blob. If the blob is not referenced in a time window, it will be deleted.
+  rpc UploadBlob(UploadBlobRequest) returns (UploadBlobResponse);
 }

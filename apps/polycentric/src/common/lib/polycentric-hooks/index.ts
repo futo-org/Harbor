@@ -4,6 +4,7 @@ export {
   usePolycentric,
   usePolycentricContext,
   DEFAULT_SERVER,
+  DEFAULT_SEED_SERVERS,
 } from './PolycentricProvider';
 
 // Data query hooks
@@ -31,6 +32,7 @@ export {
   decodeV2PostBundle,
   pubkeyStr,
   identiconUrl,
+  pickImageVariant,
   timeAgo,
   bytesToHex,
   hexToBytes,
@@ -49,7 +51,5 @@ export {
   hexToSignedEvent,
   toBase64,
   fromBase64,
-  toHex,
-  fromHex,
 } from './helpers';
 export type { EventKeyRef, PostData } from './helpers';

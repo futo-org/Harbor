@@ -243,6 +243,15 @@ class NativePolycentricCore implements IPolycentricCore {
     return grpcWebDecodeFirst(buf);
   }
 
+  /** Image processing is not wired through native FFI yet. */
+  process_image_to_jpeg(
+    _image: Uint8Array,
+    _width: number,
+    _height: number
+  ): Uint8Array {
+    throw new Error('process_image_to_jpeg is not implemented on native yet');
+  }
+
   /** Push events to a server via gRPC-web (network — cannot go through FFI). */
   async put_events(
     serverUrl: string,
@@ -261,6 +270,49 @@ class NativePolycentricCore implements IPolycentricCore {
     );
 
     if (!res.ok) throw new Error(`gRPC-web PutEvents error: ${res.status}`);
+  }
+
+  /** Upload a blob body to a server via gRPC-web. */
+  async upload_blob(
+    serverUrl: string,
+    requestBytes: Uint8Array
+  ): Promise<void> {
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.ContentService/UploadBlob`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(requestBytes).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) throw new Error(`gRPC-web UploadBlob error: ${res.status}`);
+  }
+
+  /** Fetch a server's public info via gRPC-web. */
+  async get_server_info(serverUrl: string): Promise<Uint8Array> {
+    // GetServerInfoRequest has no fields, so the body is an empty proto.
+    const request = new Uint8Array(0);
+
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.ServerService/GetInfo`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(request).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) throw new Error(`gRPC-web GetInfo error: ${res.status}`);
+
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return grpcWebDecodeFirst(buf);
   }
 }
 
