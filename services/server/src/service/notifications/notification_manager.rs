@@ -1,6 +1,8 @@
 use std::{collections::HashMap, error::Error, fmt};
 
-use expo_push_notification_client::{Expo, ExpoClientOptions, ExpoPushMessage};
+use expo_push_notification_client::{
+    DetailsErrorType, Expo, ExpoClientOptions, ExpoPushMessage, ExpoPushTicket,
+};
 use polycentric_common::models::protos_v2::PublicKey;
 use sea_orm::{DbConn, DbErr, EnumIter};
 
@@ -95,11 +97,21 @@ impl NotificationManager {
         let rows =
             token_repository::Query::tokens_for_identity(db, identity).await?;
 
-        let expo_tokens: Vec<String> = rows
-            .into_iter()
-            .filter(|r| r.service == PushService::Expo.as_ref())
-            .map(|r| r.token)
-            .collect();
+        let mut expo_tokens: Vec<String> = vec![];
+        for row in rows {
+            if let Err(_) = self.verify_token(&row.service, &row.token).await {
+                // Remove any invalid tokens
+                token_repository::Mutation::unregister(
+                    db,
+                    &row.identity,
+                    &row.service,
+                    &row.token,
+                )
+                .await?;
+            } else {
+                expo_tokens.push(row.token);
+            }
+        }
 
         if expo_tokens.is_empty() {
             return Ok(());
@@ -111,15 +123,35 @@ impl NotificationManager {
             .build()
             .map_err(|e| NotificationError::PushService(e.to_string()))?;
 
-        let _tickets = self
+        let tickets = self
             .expo
             .send_push_notifications(message)
             .await
             .map_err(|e| NotificationError::PushService(e.to_string()))?;
 
-        // TODO: zip tickets with expo_tokens; on DeviceNotRegistered,
-        // call token_repository::Mutation::unregister to clean up.
-        // Also defer ticket IDs for later get_push_notification_receipts polling.
+        for (token, ticket) in expo_tokens.iter().zip(tickets.iter()) {
+            if let ExpoPushTicket::Error(err) = ticket
+                && matches!(
+                    err.details.as_ref().and_then(|d| d.error.as_ref()),
+                    Some(DetailsErrorType::DeviceNotRegistered)
+                )
+            {
+                // Remove invalid tokens
+                token_repository::Mutation::unregister(
+                    db,
+                    identity,
+                    PushService::Expo.as_ref(),
+                    token,
+                )
+                .await?;
+            }
+        }
+
+        // Polling expo.get_push_notification_receipts would have added too much complexity
+        // to be worthwhile in this initial implementation
+
+        // However, it may become neccessary if we run into rate limiting issues
+        // related to dead tokens
 
         Ok(())
     }
@@ -129,10 +161,10 @@ impl NotificationManager {
         service: &str,
         _token: &str,
     ) -> Result<(), NotificationError> {
-        if service != PushService::Expo.as_ref() {
-            Err(NotificationError::UnknownService(service.to_string()))
-        } else {
+        if service == PushService::Expo.as_ref() {
             Ok(())
+        } else {
+            Err(NotificationError::UnknownService(service.to_string()))
         }
     }
 }
