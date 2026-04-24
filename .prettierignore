@@ -16,4 +16,6 @@ packages/react-native/lib
 packages/rs-core
 packages/rs-core-wasm-browser
 packages/rs-core-wasm-node
+packages/js-core/src/proto/polycentric.ts
+packages/js-core/src/proto/polycentric/v2
 legacy

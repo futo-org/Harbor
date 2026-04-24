@@ -2,70 +2,54 @@
 
 #include <PolycentricSpecJSI.h>
 #include <jsi/jsi.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 
-// rust ffi types
 extern "C" {
-    struct CBuffer {
+    struct CResult {
+        bool success;
         const uint8_t* bytes;
-        int length;
+        uint32_t length;
     };
 
-    CBuffer initialize();
-    CBuffer is_initialized();
-    CBuffer create_event(CBuffer event_creation_data, unsigned long unix_ms);
-    CBuffer ingest_event(CBuffer signed_event);
-    CBuffer sync_events_for_system(CBuffer system, CBuffer network_requests);
-    CBuffer query_explore_feed(CBuffer system, CBuffer network_requests, CBuffer feed_query, CBuffer cursor);
-    CBuffer query_search_feed(CBuffer system, CBuffer network_requests, CBuffer feed_query, CBuffer search_query, CBuffer cursor);
-    CBuffer query_author_feed(CBuffer system, CBuffer author, CBuffer network_requests, unsigned long limit, CBuffer latest_event_bytes);
-    CBuffer query_references_feed(CBuffer system, CBuffer network_requests, CBuffer feed_query, CBuffer reference, CBuffer cursor);
-    CBuffer query_crdt_for_system(CBuffer target_system, unsigned long content_type, CBuffer current_system, CBuffer network_requests);
-    CBuffer query_comments_feed(CBuffer system, CBuffer network_requests, CBuffer feed_query, CBuffer cursor);
-    CBuffer query_following_feed(CBuffer system, unsigned long limit, CBuffer latest_event_bytes);
-    CBuffer query_likes_feed(CBuffer system, unsigned long limit, CBuffer latest_event_bytes);
-    CBuffer query_opinion(CBuffer current_system, CBuffer target_pointer);
-    CBuffer query_event_is_deleted(CBuffer pointer_bytes);
-    CBuffer query_follows_for_system(CBuffer system_bytes);
-    CBuffer query_blocks_for_system(CBuffer system_bytes);
-    CBuffer query_servers_for_system(CBuffer system_bytes);
-    CBuffer query_authorities_for_system(CBuffer system_bytes);
-    CBuffer query_topics_for_system(CBuffer system_bytes);
-    CBuffer query_feed_with_cursor(CBuffer feed_query_bytes);
-    CBuffer query_events(CBuffer system_bytes, CBuffer process_bytes, unsigned long start_clock, unsigned long end_clock);
-    CBuffer get_pointer(CBuffer event_bytes);
-    CBuffer get_reference(CBuffer pointer_bytes);
+    CResult verify_signed_event(CResult signed_event_bytes);
+    CResult decode_event_from_signed_event(CResult signed_event_bytes);
+    CResult validate_event(CResult event_bytes);
+    CResult next_sequence(CResult identity, int32_t collection, CResult signed_by);
+    CResult build_vector_clock(
+        CResult identity,
+        int32_t collection,
+        uint64_t identity_sequence,
+        CResult signed_by,
+        uint64_t current_sequence);
+    CResult copy_event(CResult signed_event_bytes);
+    CResult copy_content(CResult digest_bytes, CResult content_bytes);
 
-    // v2 functions
-    CBuffer verify_signed_event_v2(CBuffer signed_event_bytes);
-    CBuffer decode_event_from_signed_event_v2(CBuffer signed_event_bytes);
-    CBuffer validate_event_v2(CBuffer event_bytes);
-
-    void free_bytes(CBuffer buf);
+    void free_result(CResult result);
 }
 
-// RAII wrapper for CBuffer that integrates with JSI ArrayBuffer
-class CBufferWrapper : public facebook::jsi::MutableBuffer {
+// RAII wrapper for CResult that integrates with JSI ArrayBuffer.
+class CResultWrapper : public facebook::jsi::MutableBuffer {
 public:
-    CBufferWrapper(CBuffer buf) : buffer_(buf) {}
+    CResultWrapper(CResult result) : result_(result) {}
 
-    ~CBufferWrapper() override {
-        if (buffer_.bytes != nullptr) {
-            free_bytes(buffer_);
+    ~CResultWrapper() override {
+        if (result_.bytes != nullptr) {
+            free_result(result_);
         }
     }
 
     size_t size() const override {
-        return static_cast<size_t>(buffer_.length);
+        return static_cast<size_t>(result_.length);
     }
 
     uint8_t* data() override {
-        return const_cast<uint8_t*>(buffer_.bytes);
+        return const_cast<uint8_t*>(result_.bytes);
     }
 
 private:
-    CBuffer buffer_;
+    CResult result_;
 };
 
 namespace facebook::react {
@@ -74,35 +58,23 @@ class PolycentricCore : public NativeReactNativeCxxSpec<PolycentricCore> {
 public:
     PolycentricCore(std::shared_ptr<CallInvoker> jsInvoker);
 
-    jsi::Object initializeCore(jsi::Runtime& rt);
-    jsi::Object isInitialized(jsi::Runtime& rt);
-    jsi::Object createEvent(jsi::Runtime& rt, jsi::Object eventCreationData, double unixMs);
-    jsi::Object ingestEvent(jsi::Runtime& rt, jsi::Object signedEvent);
-    jsi::Object syncEventsForSystem(jsi::Runtime& rt, jsi::Object system, jsi::Object networkRequests);
-    jsi::Object queryExploreFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object networkRequests, jsi::Object feedQuery, jsi::Object cursor);
-    jsi::Object querySearchFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object networkRequests, jsi::Object feedQuery, jsi::Object searchQuery, jsi::Object cursor);
-    jsi::Object queryAuthorFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object author, jsi::Object networkRequests, double limit, jsi::Object latestEvent);
-    jsi::Object queryReferencesFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object networkRequests, jsi::Object feedQuery, jsi::Object reference, jsi::Object cursor);
-    jsi::Object queryCrdtForSystem(jsi::Runtime& rt, jsi::Object targetSystem, double contentType, jsi::Object currentSystem, jsi::Object networkRequests);
-    jsi::Object queryCommentsFeed(jsi::Runtime& rt, jsi::Object system, jsi::Object networkRequests, jsi::Object feedQuery, jsi::Object cursor);
-    jsi::Object queryFollowingFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object latestEvent);
-    jsi::Object queryLikesFeed(jsi::Runtime& rt, jsi::Object system, double limit, jsi::Object latestEvent);
-    jsi::Object queryOpinion(jsi::Runtime& rt, jsi::Object currentSystem, jsi::Object targetPointer);
-    jsi::Object queryEventIsDeleted(jsi::Runtime& rt, jsi::Object pointer);
-    jsi::Object queryFollowsForSystem(jsi::Runtime& rt, jsi::Object system);
-    jsi::Object queryBlocksForSystem(jsi::Runtime& rt, jsi::Object system);
-    jsi::Object queryServersForSystem(jsi::Runtime& rt, jsi::Object system);
-    jsi::Object queryAuthoritiesForSystem(jsi::Runtime& rt, jsi::Object system);
-    jsi::Object queryTopicsForSystem(jsi::Runtime& rt, jsi::Object system);
-    jsi::Object queryFeedWithCursor(jsi::Runtime& rt, jsi::Object feedQuery);
-    jsi::Object queryEvents(jsi::Runtime& rt, jsi::Object system, jsi::Object process, double startClock, double endClock);
-    jsi::Object getPointer(jsi::Runtime& rt, jsi::Object eventBytes);
-    jsi::Object getReference(jsi::Runtime& rt, jsi::Object pointerBytes);
-
-    // v2 methods
-    jsi::Object verifySignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes);
-    jsi::Object decodeEventFromSignedEventV2(jsi::Runtime& rt, jsi::Object signedEventBytes);
-    jsi::Object validateEventV2(jsi::Runtime& rt, jsi::Object eventBytes);
+    jsi::Object verifySignedEvent(jsi::Runtime& rt, jsi::Object signedEventBytes);
+    jsi::Object decodeEventFromSignedEvent(jsi::Runtime& rt, jsi::Object signedEventBytes);
+    jsi::Object validateEvent(jsi::Runtime& rt, jsi::Object eventBytes);
+    jsi::Object nextSequence(
+        jsi::Runtime& rt,
+        jsi::Object identity,
+        double collection,
+        jsi::Object signedBy);
+    jsi::Object buildVectorClock(
+        jsi::Runtime& rt,
+        jsi::Object identity,
+        double collection,
+        double identitySequence,
+        jsi::Object signedBy,
+        double currentSequence);
+    jsi::Object copyEvent(jsi::Runtime& rt, jsi::Object signedEventBytes);
+    jsi::Object copyContent(jsi::Runtime& rt, jsi::Object digestBytes, jsi::Object contentBytes);
 };
 
 }

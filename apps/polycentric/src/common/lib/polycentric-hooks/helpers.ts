@@ -134,7 +134,9 @@ export function pickImageVariant(
 ): v2.Image | null {
   if (!imageSet || imageSet.images.length === 0) return null;
   const sorted = [...imageSet.images].sort((a, b) => a.width - b.width);
-  return sorted.find((img) => img.width >= targetSize) ?? sorted[sorted.length - 1]!;
+  return (
+    sorted.find((img) => img.width >= targetSize) ?? sorted[sorted.length - 1]!
+  );
 }
 
 export function timeAgo(unixMs: number): string {

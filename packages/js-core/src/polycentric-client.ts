@@ -646,7 +646,9 @@ export class PolycentricClient {
   public setCurrentKeyPair(keyPair: KeyPair) {
     this.currentKeyPair = keyPair;
     // Restore saved identity key for this key pair
-    this.activeIdentityKey = this.loadActiveIdentityKey();
+    this.activeIdentityKey = this.storageDriver.loadActiveIdentityKey(
+      keyPair.publicKey.key,
+    );
   }
 
   /**
@@ -654,7 +656,11 @@ export class PolycentricClient {
    */
   public setActiveIdentityKey(identityKey: string | null) {
     this.activeIdentityKey = identityKey;
-    this.saveActiveIdentityKey(identityKey);
+    if (!this.currentKeyPair) return;
+    this.storageDriver.saveActiveIdentityKey(
+      this.currentKeyPair.publicKey.key,
+      identityKey,
+    );
   }
 
   /**
@@ -662,41 +668,7 @@ export class PolycentricClient {
    * Returns null if this device has never associated an identity with the pair.
    */
   public getIdentityKeyFor(keyPair: KeyPair): string | null {
-    const storageKey = `polycentric:activeIdentity:${bytesToHex(keyPair.publicKey.key, 32)}`;
-    try {
-      return localStorage.getItem(storageKey);
-    } catch {
-      return null;
-    }
-  }
-
-  private identityStorageKey(): string | null {
-    if (!this.currentKeyPair) return null;
-    return `polycentric:activeIdentity:${bytesToHex(this.currentKeyPair.publicKey.key, 32)}`;
-  }
-
-  private saveActiveIdentityKey(identityKey: string | null) {
-    const key = this.identityStorageKey();
-    if (!key) return;
-    try {
-      if (identityKey) {
-        localStorage.setItem(key, identityKey);
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // localStorage unavailable (SSR, etc.)
-    }
-  }
-
-  private loadActiveIdentityKey(): string | null {
-    const key = this.identityStorageKey();
-    if (!key) return null;
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
+    return this.storageDriver.loadActiveIdentityKey(keyPair.publicKey.key);
   }
 
   private setState(state: ClientState) {

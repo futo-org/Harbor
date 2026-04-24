@@ -178,10 +178,7 @@ export interface IPolycentricCore {
    * @param server_url - Base URL of the gRPC-web server
    * @param request_bytes - Serialized `UploadBlobRequest` proto bytes
    */
-  upload_blob(
-    server_url: string,
-    request_bytes: Uint8Array,
-  ): Promise<void>;
+  upload_blob(server_url: string, request_bytes: Uint8Array): Promise<void>;
 
   /**
    * Fetch a server's public info (version, CDN URL) over gRPC-web.

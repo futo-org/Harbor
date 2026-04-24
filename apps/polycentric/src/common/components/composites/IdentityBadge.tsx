@@ -32,10 +32,7 @@ export function IdentityBadge({
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, rowGap, { flex: 1 }]}>
       {showAvatar && (
-        <ProfileAvatar
-          identityKey={identityKey}
-          size={sizeConfig.avatarSize}
-        />
+        <ProfileAvatar identityKey={identityKey} size={sizeConfig.avatarSize} />
       )}
       <View
         style={[

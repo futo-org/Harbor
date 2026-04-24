@@ -40,8 +40,7 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
-    "test": "jest",
-    "generate": "mkdir -p ./src/generated && npx pbjs -t static-module -w es6 -o ./src/generated/protocol.js ../../protos/polycentric.proto ../../protos/rs-core-ffi.proto && npx pbts -o ./src/generated/protocol.d.ts ./src/generated/protocol.js"
+    "test": "jest"
   },
   "keywords": [
     "react-native",
@@ -68,7 +67,6 @@
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
-    "protobufjs-cli": "^2.0.0",
     "react": "19.2.0",
     "react-native": "0.83.0",
     "react-native-builder-bob": "^0.40.17",
@@ -132,7 +130,6 @@
     "@polycentric/rs-core-wasm-browser": "workspace:*",
     "@noble/curves": "^1.9.0",
     "fast-text-encoding": "^1.0.6",
-    "protobufjs": "^7.0.0",
     "react-native-get-random-values": "^1.11.0"
   }
 }

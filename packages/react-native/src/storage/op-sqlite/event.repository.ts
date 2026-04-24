@@ -1,53 +1,88 @@
 import type { IEventRepository } from '@polycentric/js-core';
 import { v2 } from '@polycentric/js-core';
+import type { Database } from './database';
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-/**
- * Stable string identity for an EventKey: hex-encoded canonical proto bytes.
- * Used as the in-memory Map key.
- */
-function eventKeyId(key: v2.EventKey): string {
-  return bytesToHex(v2.EventKey.toBinary(key));
-}
-
-interface StoredEvent {
-  key: v2.EventKey;
-  signedEvent: v2.SignedEvent;
-}
-
-/**
- * In-memory v2 event repository for React Native.
- * TODO: persist to SQLite once the v2 schema migration is in place.
- */
 export class EventRepository implements IEventRepository {
-  private events = new Map<string, StoredEvent>();
+  constructor(private readonly database: Database) {}
 
   async save(signedEvent: v2.SignedEvent): Promise<void> {
     const event = v2.Event.fromBinary(signedEvent.eventBytes);
     if (!event.key) throw new Error('Event missing key');
-    this.events.set(eventKeyId(event.key), { key: event.key, signedEvent });
+    if (!event.key.signedBy?.key) throw new Error('Event key missing signedBy');
+
+    const publicKeyBytes = v2.PublicKey.toBinary(event.key.signedBy);
+
+    this.database.run(
+      `INSERT OR REPLACE INTO events (identity, public_key_bytes, collection, sequence, signature, event_bytes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        event.key.identity,
+        publicKeyBytes,
+        event.key.collection,
+        Number(event.key.sequence),
+        signedEvent.signature,
+        signedEvent.eventBytes,
+      ]
+    );
   }
 
   async getAll(): Promise<v2.SignedEvent[]> {
-    return [...this.events.values()].map((e) => e.signedEvent);
+    const rows = this.database.execute<{
+      signature: ArrayBuffer;
+      event_bytes: ArrayBuffer;
+    }>(`SELECT signature, event_bytes FROM events`);
+
+    return rows.map((row) =>
+      v2.SignedEvent.create({
+        signature: new Uint8Array(row.signature),
+        eventBytes: new Uint8Array(row.event_bytes),
+      })
+    );
   }
 
   async getBatch(
     batchSize: number,
     offset = 0
   ): Promise<{ events: v2.SignedEvent[]; offset: number }> {
-    const all = await this.getAll();
-    const slice = all.slice(offset, offset + batchSize);
-    return { events: slice, offset: offset + slice.length };
+    const rows = this.database.execute<{
+      signature: ArrayBuffer;
+      event_bytes: ArrayBuffer;
+    }>(`SELECT signature, event_bytes FROM events LIMIT ? OFFSET ?`, [
+      batchSize,
+      offset,
+    ]);
+
+    const events = rows.map((row) =>
+      v2.SignedEvent.create({
+        signature: new Uint8Array(row.signature),
+        eventBytes: new Uint8Array(row.event_bytes),
+      })
+    );
+
+    return { events, offset: offset + events.length };
   }
 
   async getByEventKey(key: v2.EventKey): Promise<v2.SignedEvent | null> {
-    return this.events.get(eventKeyId(key))?.signedEvent ?? null;
+    if (!key.signedBy?.key) return null;
+
+    const publicKeyBytes = v2.PublicKey.toBinary(key.signedBy);
+
+    const rows = this.database.execute<{
+      signature: ArrayBuffer;
+      event_bytes: ArrayBuffer;
+    }>(
+      `SELECT signature, event_bytes FROM events
+       WHERE identity = ? AND public_key_bytes = ? AND collection = ? AND sequence = ?`,
+      [key.identity, publicKeyBytes, key.collection, Number(key.sequence)]
+    );
+
+    if (rows.length === 0) return null;
+
+    const row = rows[0]!;
+    return v2.SignedEvent.create({
+      signature: new Uint8Array(row.signature),
+      eventBytes: new Uint8Array(row.event_bytes),
+    });
   }
 
   async getByIdentity(
@@ -58,42 +93,38 @@ export class EventRepository implements IEventRepository {
       headsOnly?: boolean;
     }
   ): Promise<v2.SignedEvent[]> {
-    const signerHex = options?.signer
-      ? bytesToHex(v2.PublicKey.toBinary(options.signer))
-      : undefined;
+    const params: (string | Uint8Array | number)[] = [identity];
+    const whereClauses = ['identity = ?'];
 
-    const matches: StoredEvent[] = [];
-    for (const stored of this.events.values()) {
-      const k = stored.key;
-      if (k.identity !== identity) continue;
-      if (
-        options?.collection !== undefined &&
-        k.collection !== options.collection
-      )
-        continue;
-      if (signerHex !== undefined) {
-        if (!k.signedBy) continue;
-        if (bytesToHex(v2.PublicKey.toBinary(k.signedBy)) !== signerHex)
-          continue;
-      }
-      matches.push(stored);
+    if (options?.signer?.key) {
+      whereClauses.push('public_key_bytes = ?');
+      params.push(v2.PublicKey.toBinary(options.signer));
     }
 
-    if (options?.headsOnly) {
-      // Keep only the max-sequence entry per (signer, collection).
-      const heads = new Map<string, StoredEvent>();
-      for (const m of matches) {
-        if (!m.key.signedBy) continue;
-        const groupId = `${bytesToHex(v2.PublicKey.toBinary(m.key.signedBy))}:${m.key.collection}`;
-        const existing = heads.get(groupId);
-        if (!existing || m.key.sequence > existing.key.sequence) {
-          heads.set(groupId, m);
-        }
-      }
-      return [...heads.values()].map((m) => m.signedEvent);
+    if (options?.collection !== undefined) {
+      whereClauses.push('collection = ?');
+      params.push(options.collection);
     }
 
-    matches.sort((a, b) => Number(a.key.sequence - b.key.sequence));
-    return matches.map((m) => m.signedEvent);
+    const whereClause = whereClauses.join(' AND ');
+
+    const sql = options?.headsOnly
+      ? `SELECT signature, event_bytes FROM (
+          SELECT signature, event_bytes, ROW_NUMBER() OVER (PARTITION BY public_key_bytes, collection ORDER BY sequence DESC) as rn
+          FROM events WHERE ${whereClause}
+        ) WHERE rn = 1`
+      : `SELECT signature, event_bytes FROM events WHERE ${whereClause}`;
+
+    const rows = this.database.execute<{
+      signature: ArrayBuffer;
+      event_bytes: ArrayBuffer;
+    }>(sql, params);
+
+    return rows.map((row) =>
+      v2.SignedEvent.create({
+        signature: new Uint8Array(row.signature),
+        eventBytes: new Uint8Array(row.event_bytes),
+      })
+    );
   }
 }
