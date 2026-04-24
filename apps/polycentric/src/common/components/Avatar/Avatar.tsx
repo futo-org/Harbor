@@ -17,7 +17,7 @@ export const AVATAR_SIZE_MAP: Record<AvatarSizePreset, number> = {
   sm: 32,
   md: 40,
   lg: 56,
-  xl: 80,
+  xl: 112,
   massive: 170,
 };
 

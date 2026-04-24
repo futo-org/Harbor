@@ -5,27 +5,19 @@ import {
 } from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  pickImageVariant,
   postIdToSequence,
   timeAgo,
   truncateName,
-  usePolycentric,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Atoms,
-  type Theme,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
-import { v2 } from '@polycentric/react-native';
+import { PostImages } from './PostImages';
+import { PostToolbar } from './PostToolbar';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import { Image, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -205,86 +197,17 @@ export const Post = memo(function Post({
         </View>
       </View>
 
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.justify_between,
-          { marginTop: 8, paddingLeft: 50 },
-        ]}
-      >
-        <ActionButton
-          icon="chatbubble-outline"
-          onPress={handleReply}
-          color={theme.palette.neutral_500}
-        />
-        <ActionButton
-          icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
-          onPress={handleDislike}
-          color={
-            disliked ? theme.palette.negative_500 : theme.palette.neutral_500
-          }
-        />
-        <ActionButton
-          icon={liked ? 'arrow-up' : 'arrow-up-outline'}
-          onPress={handleLike}
-          color={liked ? theme.palette.primary_500 : theme.palette.neutral_500}
-        />
-      </View>
+      <PostToolbar
+        onReply={handleReply}
+        onLike={handleLike}
+        onDislike={handleDislike}
+        liked={liked}
+        disliked={disliked}
+        style={{ marginTop: 8, paddingLeft: 50 }}
+      />
     </Pressable>
   );
 });
-
-/** Target pixel size we want for displayed attachments. */
-const POST_IMAGE_TARGET = 512;
-/** Width of a single post image in the column. Height follows aspect. */
-const POST_IMAGE_WIDTH = 280;
-
-type PostImageSource = {
-  uri: string;
-  aspectRatio: number;
-};
-
-function PostImages({ images }: { images: v2.ImageSet[] }) {
-  const client = usePolycentric();
-  const sources = useMemo<PostImageSource[]>(
-    () =>
-      images
-        .map((imageSet) => {
-          const variant = pickImageVariant(imageSet, POST_IMAGE_TARGET);
-          const digest = variant?.blob?.digest;
-          if (!digest) return null;
-          const uri = client.blobUrl(digest);
-          if (!uri) return null;
-          const w = variant.width || 1;
-          const h = variant.height || 1;
-          return { uri, aspectRatio: w / h };
-        })
-        .filter((s): s is PostImageSource => s != null),
-    [client, images],
-  );
-
-  if (sources.length === 0) return null;
-
-  return (
-    <View
-      style={[Atoms.flex_row, Atoms.gap_sm, { flexWrap: 'wrap', marginTop: 8 }]}
-    >
-      {sources.map((s, i) => (
-        <Image
-          key={s.uri + i}
-          source={{ uri: s.uri }}
-          resizeMode="cover"
-          style={{
-            width: POST_IMAGE_WIDTH,
-            aspectRatio: s.aspectRatio,
-            borderRadius: 8,
-            backgroundColor: 'rgba(0,0,0,0.04)',
-          }}
-        />
-      ))}
-    </View>
-  );
-}
 
 function PostAuthorName({
   name,
@@ -307,67 +230,6 @@ function PostAuthorName({
       >
         {truncateName(name, 16)}
       </Text>
-    </Pressable>
-  );
-}
-
-function actionIconHoverColor(iconColor: string, theme: Theme): string {
-  if (iconColor === theme.palette.primary_500) {
-    return theme.palette.primary_600;
-  }
-  if (iconColor === theme.palette.negative_500) {
-    return theme.palette.negative_600;
-  }
-  return theme.palette.neutral_700;
-}
-
-function ActionButton({
-  icon,
-  count,
-  onPress,
-  color,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  count?: number;
-  onPress?: () => void;
-  color: string;
-}) {
-  const { theme } = useTheme();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
-  const resolvedIconColor = hovered
-    ? actionIconHoverColor(color, theme)
-    : color;
-
-  const iconSurface: StyleProp<ViewStyle> = [
-    Atoms.p_xs,
-    Atoms.rounded_md,
-    {
-      backgroundColor: hovered
-        ? withHexOpacity(theme.palette.neutral_500, '14')
-        : 'transparent',
-    },
-  ];
-
-  return (
-    <Pressable
-      style={[Atoms.flex_row, Atoms.items_center, { gap: 3, minHeight: 20 }]}
-      onPress={onPress}
-      disabled={!onPress}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
-    >
-      <View style={iconSurface}>
-        <Ionicons name={icon} size={16} color={resolvedIconColor} />
-      </View>
-      {count !== undefined ? (
-        <Text
-          variant="small"
-          color="neutral_500"
-          style={{ minWidth: 28, lineHeight: 16 }}
-        >
-          {count ? String(count) : ' '}
-        </Text>
-      ) : null}
     </Pressable>
   );
 }

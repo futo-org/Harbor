@@ -79,7 +79,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         </View>
       </View>
 
-      <View style={[Atoms.mx_lg, { marginTop: -40 }]}>
+      <View style={[Atoms.mx_lg, { marginTop: -56 }]}>
         {identityKey ? (
           <ProfileAvatar identityKey={identityKey} size="xl" />
         ) : null}
