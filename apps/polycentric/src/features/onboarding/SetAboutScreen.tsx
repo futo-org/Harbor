@@ -1,14 +1,14 @@
 import {
-  Screen,
-  Text,
   Button,
-  TextInput,
+  Screen,
   ScreenHeader,
+  Text,
+  TextInput,
 } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
+import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 import { router } from 'expo-router';
 import { View } from 'react-native';
-import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 
 export default function SetAboutScreen() {
   const { data, setAbout, goToNextStep, close } = useSignup();
@@ -16,9 +16,9 @@ export default function SetAboutScreen() {
   return (
     <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
+        <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.mx_lg]}>
           <ScreenHeader onBack={() => router.back()} onClose={close} />
-          <View style={[Atoms.flex_1, Atoms.gap_lg]}>
+          <View style={[Atoms.flex_1, Atoms.gap_lg, Atoms.min_h_0]}>
             <Text variant="title">About this identity</Text>
             <TextInput
               placeholder="Tell others a bit about yourself"
@@ -29,6 +29,7 @@ export default function SetAboutScreen() {
             />
           </View>
           <Button
+            style={Atoms.mt_auto}
             title="Continue"
             variant="primary"
             fullWidth

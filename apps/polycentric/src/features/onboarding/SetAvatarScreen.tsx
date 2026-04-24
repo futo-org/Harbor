@@ -1,11 +1,11 @@
-import { Screen, Button, ScreenHeader, Avatar } from '@/src/common/components';
+import { Avatar, Button, Screen, ScreenHeader } from '@/src/common/components';
+import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
 import { Atoms } from '@/src/common/theme';
+import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { View } from 'react-native';
-import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
-import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
-import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function SetAvatarScreen() {
   const { data, setAvatarUri, goToNextStep, close } = useSignup();
@@ -40,9 +40,16 @@ export default function SetAvatarScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
+        <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.mx_lg]}>
           <ScreenHeader onBack={() => router.back()} onClose={close} />
-          <View style={[Atoms.flex_1, Atoms.items_center, Atoms.mt_2xl]}>
+          <View
+            style={[
+              Atoms.flex_1,
+              Atoms.items_center,
+              Atoms.mt_2xl,
+              Atoms.min_h_0,
+            ]}
+          >
             <Avatar
               size="massive"
               source={data.avatarUri ? { uri: data.avatarUri } : undefined}
@@ -80,6 +87,7 @@ export default function SetAvatarScreen() {
             )}
           </View>
           <Button
+            style={Atoms.mt_auto}
             title="Continue"
             variant="primary"
             fullWidth
