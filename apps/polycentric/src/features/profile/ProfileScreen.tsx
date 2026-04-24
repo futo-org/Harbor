@@ -1,13 +1,12 @@
 import { Screen } from '@/src/common/components/layout';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
 import { useAuthorFeed } from '@/src/features/feed/hooks/useAuthorFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
-import { FeedViewer } from '@/src/features/post';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
+import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
@@ -45,6 +44,13 @@ function ProfileScreenContent() {
     router.back();
   }, []);
 
+  const tabs = isSelf
+    ? [
+        { key: 'posts', feed: authorFeed, bottomPadding: 40 },
+        { key: 'likes', feed: likesFeed, bottomPadding: 40 },
+      ]
+    : [{ key: 'posts', feed: authorFeed, bottomPadding: 40 }];
+
   return (
     <Screen>
       <Screen.PrimaryColumn>
@@ -55,60 +61,8 @@ function ProfileScreenContent() {
           ]}
           onBack={handleBack}
         />
-        <View style={[Atoms.flex_1, profileStyles.feedArea]}>
-          <View
-            style={[
-              profileStyles.feedLayer,
-              activeFeed !== 'posts' && profileStyles.hidden,
-            ]}
-          >
-            <FeedViewer
-              items={authorFeed.items}
-              isLoading={authorFeed.isLoading}
-              error={authorFeed.error}
-              onRefresh={authorFeed.refresh}
-              onEndReached={authorFeed.loadMore}
-              hasMore={authorFeed.hasMore}
-              bottomPadding={40}
-            />
-          </View>
-          {isSelf && (
-            <View
-              style={[
-                profileStyles.feedLayer,
-                activeFeed !== 'likes' && profileStyles.hidden,
-              ]}
-            >
-              <FeedViewer
-                items={likesFeed.items}
-                isLoading={likesFeed.isLoading}
-                error={likesFeed.error}
-                onRefresh={likesFeed.refresh}
-                onEndReached={likesFeed.loadMore}
-                hasMore={likesFeed.hasMore}
-                bottomPadding={40}
-              />
-            </View>
-          )}
-        </View>
+        <ProfileFeedSwitcher tabs={tabs} activeKey={activeFeed} />
       </Screen.PrimaryColumn>
     </Screen>
   );
 }
-
-const profileStyles = StyleSheet.create({
-  feedArea: {
-    minHeight: 0,
-  },
-  feedLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  hidden: {
-    opacity: 0,
-    pointerEvents: 'none',
-  },
-});

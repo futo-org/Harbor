@@ -78,15 +78,28 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
+
   return (
     <View
       testID="primaryColumn"
       style={[
         Atoms.flex_1,
         Atoms.pb_lg,
-        { borderLeftColor: theme.palette.neutral_25, borderLeftWidth: 1 },
-        { borderRightColor: theme.palette.neutral_25, borderRightWidth: 1 },
-        { maxWidth: 600 },
+        {
+          maxWidth: 600,
+          borderLeftColor: theme.palette.neutral_25,
+          borderLeftWidth: 1,
+          borderRightColor: theme.palette.neutral_25,
+          borderRightWidth: 1,
+        },
+        // Web page-scroll: let the column grow with content so the
+        // borders span the full scrollable height. `self_start` opts
+        // out of the row's cross-axis stretch; `minHeight` keeps
+        // borders painting to the viewport bottom on short-content
+        // pages.
+        isWeb && Atoms.self_start,
+        isWeb && { minHeight: windowHeight },
       ]}
     >
       {children}
@@ -268,42 +281,52 @@ export const RightSidebar = memo(function RightSidebar({
 
   return (
     <View style={{ width, marginRight }}>
+      {/* Pin to viewport on web so it stays visible while the primary
+          column scrolls; the outer View reserves the row space. */}
       <View
-        style={[
-          Atoms.justify_between,
-          Atoms.align_center,
-          Atoms.h_full,
-          Atoms.pb_lg,
-        ]}
+        style={
+          isWeb
+            ? { position: 'fixed', top: 0, height: '100%', width }
+            : undefined
+        }
       >
-        <View style={[Atoms.flex_1]}></View>
         <View
           style={[
-            Atoms.flex_row,
-            Atoms.items_center,
-            Atoms.w_full,
-            Atoms.py_sm,
-            Atoms.px_sm,
-            Atoms.gap_sm,
-            Atoms.flex_wrap,
+            Atoms.justify_between,
+            Atoms.align_center,
+            Atoms.h_full,
+            Atoms.pb_lg,
           ]}
         >
-          <Pressable
-            accessibilityLabel="Toggle color theme"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={toggleTheme}
-            style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+          <View style={[Atoms.flex_1]}></View>
+          <View
+            style={[
+              Atoms.flex_row,
+              Atoms.items_center,
+              Atoms.w_full,
+              Atoms.py_sm,
+              Atoms.px_sm,
+              Atoms.gap_sm,
+              Atoms.flex_wrap,
+            ]}
           >
-            <Ionicons
-              name={theme.name === 'dark' ? 'moon' : 'sunny'}
-              size={typography.fontSize.sm}
-              color={theme.palette.neutral_500}
-            />
-          </Pressable>
-          {LINKS.map(({ text, href }) => (
-            <RightSidebarLink key={href} href={href} text={text} />
-          ))}
+            <Pressable
+              accessibilityLabel="Toggle color theme"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={toggleTheme}
+              style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+            >
+              <Ionicons
+                name={theme.name === 'dark' ? 'moon' : 'sunny'}
+                size={typography.fontSize.sm}
+                color={theme.palette.neutral_500}
+              />
+            </Pressable>
+            {LINKS.map(({ text, href }) => (
+              <RightSidebarLink key={href} href={href} text={text} />
+            ))}
+          </View>
         </View>
       </View>
     </View>
