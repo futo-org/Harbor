@@ -1,9 +1,8 @@
-use std::{collections::HashMap, error::Error, fmt};
+use std::{error::Error, fmt};
 
 use expo_push_notification_client::{
     DetailsErrorType, Expo, ExpoClientOptions, ExpoPushMessage, ExpoPushTicket,
 };
-use polycentric_common::models::protos_v2::PublicKey;
 use sea_orm::{DbConn, DbErr, EnumIter};
 
 use super::token_repository;
