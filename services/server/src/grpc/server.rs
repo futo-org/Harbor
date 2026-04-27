@@ -1,5 +1,10 @@
-use crate::db::client::build_db_client;
+use std::sync::Arc;
+
 use crate::service;
+use crate::{
+    db::client::build_db_client,
+    service::notifications::notification_manager::NotificationManager,
+};
 use http::header::HeaderName;
 use tonic::transport::Server;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -40,11 +45,17 @@ async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
 pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let db = connect_db_with_retry().await;
+
+    let notification_manager = Arc::new(NotificationManager::new(
+        std::env::var("EXPO_ACCESS_TOKEN").ok(),
+    ));
+
     let events_service =
         service::events::events_service::build_events_service(db.clone());
     let notification_service =
         service::notifications::notification_service::build_notification_service(
             db.clone(),
+            notification_manager.clone()
         );
     let reflection_service = build_reflection_service()?;
 

@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use crate::service::identity::identity_repository;
+use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
@@ -5,13 +9,11 @@ use crate::service::proto::{RegisterPushNotificationResponse, SignedMessage};
 use crate::util;
 use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
 use prost::Message;
-use sea_orm::EnumIter;
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
 pub struct NotificationServiceImpl {
-    #[allow(dead_code)]
     db: sea_orm::DatabaseConnection,
+    notification_manager: Arc<NotificationManager>,
 }
 
 #[tonic::async_trait]
@@ -37,18 +39,40 @@ impl NotificationService for NotificationServiceImpl {
         let request = RegisterPushNotificationRequest::decode(
             &signed_message.message_bytes[..],
         )
-        .map_err(|e| {
+        .map_err(|_| {
             Status::invalid_argument(
                 "Argument is not a RegisterPushNotificationRequest",
             )
         })?;
 
-        Err(Status::unimplemented("register_push_notifications"))
+        let identity_result =
+            identity_repository::Query::identity_for_public_key(
+                &self.db, &signed_by,
+            )
+            .await;
+
+        let identity = match identity_result {
+            Ok(Some(id)) => Ok(id),
+            _ => Err(Status::invalid_argument(
+                "No valid identity found for provided PublicKey",
+            )),
+        }?;
+
+        self.notification_manager
+            .register(&self.db, identity, request.service, request.token)
+            .await
+            .map_err(|err| Status::unknown(err.to_string()))?;
+
+        Ok(RegisterPushNotificationResponse {}.into())
     }
 }
 
 pub fn build_notification_service(
     db: sea_orm::DatabaseConnection,
+    notification_manager: Arc<NotificationManager>,
 ) -> NotificationServiceServer<NotificationServiceImpl> {
-    NotificationServiceServer::new(NotificationServiceImpl { db })
+    NotificationServiceServer::new(NotificationServiceImpl {
+        db,
+        notification_manager,
+    })
 }
