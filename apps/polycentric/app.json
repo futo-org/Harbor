@@ -7,7 +7,7 @@
     "icon": "./src/common/assets/images/AppIcon.png",
     "scheme": "polycentric",
     "web": {
-      "output": "static"
+      "output": "server"
     },
     "userInterfaceStyle": "automatic",
     "ios": {

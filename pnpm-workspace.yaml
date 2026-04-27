@@ -6,5 +6,6 @@ packages:
 
 catalog:
   typescript: ^5.9.3
+  '@noble/hashes': ^1.8.0
 
 linkWorkspacePackages: true

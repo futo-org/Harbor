@@ -20,6 +20,7 @@ export const PostCompose = () => {
       oneofKind: 'post',
       post: {
         text: postField.current.value,
+        images: [],
       },
     });
     await client.contentManager.save(content);
