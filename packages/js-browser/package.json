@@ -33,7 +33,7 @@
   "dependencies": {
     "@polycentric/js-core": "workspace:*",
     "@noble/curves": "^1.9.0",
-    "@noble/hashes": "^1.8.0",
+    "@noble/hashes": "catalog:",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",
     "js-base64": "^3.7.8"
   },

@@ -6,7 +6,7 @@
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - packages/rs-core/**/*
-        - packages/rs-common/**/*
+        - packages/rs-common/**/*A
         - .gitlab/ci/build_rs_core.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
@@ -95,6 +95,10 @@ rs-sdk-clippy:
 
 rs-sdk-build-wasm-browser:
   extends: .rs-sdk-build-wasm
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.js-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
   script:
     - just build-wasm-web
   artifacts:
