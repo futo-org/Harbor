@@ -60,7 +60,7 @@ function Main({ children, style }: MainProps) {
       <View
         style={[
           Atoms.flex_1,
-          showRightSidebar && Atoms.flex_row,
+          Atoms.flex_row,
           Atoms.justify_between,
           { width: innerWidth },
         ]}
