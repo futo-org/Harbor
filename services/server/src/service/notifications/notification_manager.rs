@@ -72,6 +72,8 @@ impl NotificationManager {
         }
     }
 
+    /// Registers a push token for a public key after verifying that the
+    /// service is supported and the token is well-formed.
     pub async fn register(
         &self,
         db: &DbConn,
@@ -87,6 +89,9 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Sends a push notification to every authorized key of an identity that
+    /// has a registered token. Tokens reported as invalid by the push service
+    /// are unregistered as part of the send.
     pub async fn send(
         &self,
         db: &DbConn,

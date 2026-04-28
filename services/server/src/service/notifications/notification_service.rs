@@ -15,6 +15,7 @@ pub struct NotificationServiceImpl {
     notification_manager: Arc<NotificationManager>,
 }
 
+/// Implementation of the NotificationService
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
     async fn register_push_notifications(
