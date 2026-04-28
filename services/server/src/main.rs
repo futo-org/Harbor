@@ -7,10 +7,11 @@ mod util;
 use crate::db::client::build_db_client;
 use crate::grpc::server::build_grpc_router;
 use crate::routes::build_routes;
-use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::content::content_filestore::{
+    ContentFilestore, ContentFilestoreConfig,
+};
 use crate::service::server::server_service::ServerConfig;
 use sea_orm::DatabaseConnection;
-use std::path::PathBuf;
 
 /// Connect to the database, retrying with backoff.
 async fn connect_db_with_retry() -> DatabaseConnection {
@@ -29,14 +30,6 @@ async fn connect_db_with_retry() -> DatabaseConnection {
     }
 }
 
-/// Resolve the directory where uploaded blobs are persisted. Override
-/// with the `BLOBS_DIR` env var; defaults to `./data/blobs`.
-fn blobs_dir() -> PathBuf {
-    std::env::var("BLOBS_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("./data/blobs"))
-}
-
 /// Build the server config served by `ServerService.GetInfo`. Version
 /// comes from the crate's `Cargo.toml`; `CDN_URL` overrides the public
 /// URL clients use to fetch blob bodies.
@@ -53,7 +46,9 @@ async fn main() {
     util::dotenv::load(".env");
 
     let db = connect_db_with_retry().await;
-    let filestore = ContentFilestore::new(blobs_dir());
+    let filestore_cfg = ContentFilestoreConfig::from_env()
+        .expect("blob store configuration error");
+    let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
     let grpc_router =

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Rust (edition 2024)
-- Docker (for PostgreSQL)
+- Docker (for PostgreSQL and RustFS (Object storage))
 
 ## Getting Started
 
