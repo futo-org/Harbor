@@ -1,10 +1,13 @@
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::server::server_service::ServerConfig;
+use axum::Router;
 use http::header::HeaderName;
 use sea_orm::DatabaseConnection;
-use tonic::transport::Server;
+use tonic::service::Routes;
+use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_layer::Layer;
 
 /// Builds reflection for gRPC docs. The file descriptors are created in ./build.rs.
 fn build_reflection_service() -> Result<
@@ -21,13 +24,13 @@ fn build_reflection_service() -> Result<
     Ok(service)
 }
 
-/// Serve the gRPC
-pub async fn serve_grpc(
+/// Build the gRPC services as an `axum::Router` so they can be merged with
+/// the HTTP router and served on a single port.
+pub fn build_grpc_router(
     db: DatabaseConnection,
     filestore: ContentFilestore,
     server_config: ServerConfig,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "0.0.0.0:50051".parse()?;
+) -> Result<Router, Box<dyn std::error::Error>> {
     let events_service =
         service::events::events_service::build_events_service(db.clone());
     let feeds_service =
@@ -38,7 +41,14 @@ pub async fn serve_grpc(
         service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
 
-    println!("GRPC server is listening on {addr}");
+    let grpc_web = GrpcWebLayer::new();
+
+    let routes = Routes::default()
+        .add_service(grpc_web.layer(reflection_service))
+        .add_service(grpc_web.layer(events_service))
+        .add_service(grpc_web.layer(feeds_service))
+        .add_service(grpc_web.layer(content_service))
+        .add_service(grpc_web.layer(server_info_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())
@@ -53,17 +63,5 @@ pub async fn serve_grpc(
         ])
         .allow_methods([http::Method::POST, http::Method::OPTIONS]);
 
-    Server::builder()
-        .accept_http1(true)
-        .layer(cors)
-        .layer(tonic_web::GrpcWebLayer::new())
-        .add_service(reflection_service)
-        .add_service(events_service)
-        .add_service(feeds_service)
-        .add_service(content_service)
-        .add_service(server_info_service)
-        .serve(addr)
-        .await?;
-
-    Ok(())
+    Ok(routes.into_axum_router().layer(cors))
 }

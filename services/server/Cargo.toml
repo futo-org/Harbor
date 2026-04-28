@@ -7,7 +7,7 @@ edition = "2024"
 # Workspace
 entity = { path = "./entity" }
 # 3rd Party
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["http2"] }
 ed25519-dalek = "2.2.0"
 log = "0.4"
 polycentric-common = { path = "../../packages/rs-common" }
@@ -22,5 +22,6 @@ tonic-prost = "*"
 tonic-reflection = "*"
 tonic-web = "*"
 tower-http = { version = "*", features = ["cors"] }
+tower-layer = "*"
 http = "*"
 

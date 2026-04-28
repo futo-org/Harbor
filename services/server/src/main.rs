@@ -5,7 +5,7 @@ mod service;
 mod util;
 
 use crate::db::client::build_db_client;
-use crate::grpc::server;
+use crate::grpc::server::build_grpc_router;
 use crate::routes::build_routes;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::server::server_service::ServerConfig;
@@ -56,24 +56,15 @@ async fn main() {
     let filestore = ContentFilestore::new(blobs_dir());
     let server_cfg = server_config();
 
-    let grpc = {
-        let db = db.clone();
-        let filestore = filestore.clone();
-        let server_cfg = server_cfg.clone();
-        tokio::spawn(async move {
-            if let Err(e) = server::serve_grpc(db, filestore, server_cfg).await
-            {
-                eprintln!("gRPC server error: {e}");
-            }
-        })
-    };
+    let grpc_router =
+        build_grpc_router(db.clone(), filestore.clone(), server_cfg)
+            .expect("failed to build gRPC router");
+    let http_router = build_routes(db, filestore);
 
-    let routes = build_routes(db, filestore);
+    let app = http_router.merge(grpc_router);
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("HTTP server listening on http://0.0.0.0:3000");
+    println!("Server listening on http://0.0.0.0:3000");
     println!("API docs available at http://0.0.0.0:3000/docs");
-    let http =
-        tokio::spawn(async { axum::serve(listener, routes).await.unwrap() });
-
-    tokio::try_join!(grpc, http).unwrap();
+    axum::serve(listener, app).await.unwrap();
 }

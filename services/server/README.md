@@ -28,9 +28,8 @@ DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 cargo run -p server
 ```
 
-The server starts two services:
-- gRPC on `0.0.0.0:50051`
-- HTTP on `0.0.0.0:3000`
+The server listens on `0.0.0.0:3000`, multiplexing gRPC (h2c), gRPC-Web,
+and plain HTTP routes on the same port.
 
 The `DATABASE_URL` environment variable can be set to override the default connection string (`postgres://postgres:testing@localhost:5432`).
 

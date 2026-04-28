@@ -24,11 +24,12 @@ RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PORT=8080
 
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json
 COPY --from=build /app/apps/polycentric/dist ./dist
 COPY --from=build /app/apps/polycentric/server.js ./server.js
 
-EXPOSE 3000
+EXPOSE 8080
 CMD ["node", "server.js"]

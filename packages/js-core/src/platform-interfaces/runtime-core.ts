@@ -72,7 +72,7 @@ export interface IPolycentricCore {
    * Fetch events from a server via gRPC-web.
    *
    * # Arguments
-   * * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
+   * * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:3000")
    * * `limit` - Maximum number of events to fetch
    * * `identity` - Optional serialized Identity message bytes to filter by
    * * `stream_id` - Optional stream ID to filter by

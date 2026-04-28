@@ -43,7 +43,7 @@ const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 /**
  * Comma-separated list of gRPC-web server URLs the client seeds
  * `client.servers` with. Read from `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`;
- * falls back to `http://<host>:50051` for local dev.
+ * falls back to `http://<host>:3000` for local dev.
  */
 export const DEFAULT_SEED_SERVERS: string[] = (() => {
   const raw = (process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS ?? '').trim();
@@ -51,7 +51,7 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:50051`];
+  return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:3000`];
 })();
 
 /** First seed server — used by identity onboarding helpers. */
