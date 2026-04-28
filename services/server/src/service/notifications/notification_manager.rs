@@ -64,10 +64,10 @@ pub struct NotificationManager {
 }
 
 impl NotificationManager {
-    pub fn new(expo_access_token: Option<String>) -> Self {
+    pub fn new() -> Self {
         Self {
             expo: Expo::new(ExpoClientOptions {
-                access_token: expo_access_token,
+                access_token: std::env::var("EXPO_ACCESS_TOKEN").ok(),
             }),
         }
     }

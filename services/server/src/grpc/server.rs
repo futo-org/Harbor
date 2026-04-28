@@ -46,9 +46,7 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let db = connect_db_with_retry().await;
 
-    let notification_manager = Arc::new(NotificationManager::new(
-        std::env::var("EXPO_ACCESS_TOKEN").ok(),
-    ));
+    let notification_manager = Arc::new(NotificationManager::new());
 
     let events_service =
         service::events::events_service::build_events_service(db.clone());
