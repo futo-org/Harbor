@@ -99,38 +99,6 @@ impl Query {
 
         Ok(keys)
     }
-
-    pub async fn identity_for_public_key(
-        db: &DbConn,
-        public_key: &crate::service::proto::PublicKey,
-    ) -> Result<Option<String>, DbErr> {
-        use ::entity::event_model as EventModel;
-
-        let row = EventModel::Entity::find()
-            .filter(
-                EventModel::Column::PublicKeyType
-                    .eq(public_key.key_type as i16),
-            )
-            .filter(EventModel::Column::PublicKey.eq(public_key.key.clone()))
-            .order_by_desc(EventModel::Column::Id)
-            .one(db)
-            .await?;
-
-        let identity = match row.map(|r| r.identity) {
-            Some(id) => id,
-            None => return Ok(None),
-        };
-
-        let authorized_keys = Query::authorized_keys(db, &identity).await?;
-
-        let key_is_authorized =
-            authorized_keys.iter().any(|key| key.key == *public_key);
-
-        match key_is_authorized {
-            true => Ok(Some(identity)),
-            false => Ok(None),
-        }
-    }
 }
 
 #[derive(Debug, FromQueryResult)]

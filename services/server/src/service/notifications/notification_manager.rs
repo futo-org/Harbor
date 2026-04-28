@@ -6,6 +6,7 @@ use expo_push_notification_client::{
 use sea_orm::{DbConn, DbErr, EnumIter};
 
 use super::token_repository;
+use crate::service::{identity::identity_repository, proto::PublicKey};
 
 #[derive(EnumIter)]
 pub enum PushService {
@@ -74,13 +75,13 @@ impl NotificationManager {
     pub async fn register(
         &self,
         db: &DbConn,
-        identity: String,
+        public_key: &PublicKey,
         service: String,
         token: String,
     ) -> Result<(), NotificationError> {
         self.verify_token(&service, &token).await?;
 
-        token_repository::Mutation::register(db, identity, service, token)
+        token_repository::Mutation::register(db, public_key, service, token)
             .await?;
 
         Ok(())
@@ -93,22 +94,38 @@ impl NotificationManager {
         title: String,
         body: String,
     ) -> Result<(), NotificationError> {
-        let rows =
-            token_repository::Query::tokens_for_identity(db, identity).await?;
+        let authorized_keys =
+            identity_repository::Query::authorized_keys(db, identity).await?;
 
-        let mut expo_tokens: Vec<String> = vec![];
+        let mut rows = vec![];
+
+        for key in authorized_keys {
+            let token_res =
+                token_repository::Query::token_for_public_key(db, &key.key)
+                    .await?;
+            if let Some(token) = token_res {
+                rows.push(token);
+            }
+        }
+
+        let mut expo_tokens: Vec<(PublicKey, String)> = vec![];
         for row in rows {
+            let public_key = PublicKey {
+                key: row.public_key,
+                key_type: row.public_key_type as i32,
+            };
+
             if let Err(_) = self.verify_token(&row.service, &row.token).await {
                 // Remove any invalid tokens
                 token_repository::Mutation::unregister(
                     db,
-                    &row.identity,
+                    &public_key,
                     &row.service,
                     &row.token,
                 )
                 .await?;
             } else {
-                expo_tokens.push(row.token);
+                expo_tokens.push((public_key, row.token));
             }
         }
 
@@ -116,11 +133,13 @@ impl NotificationManager {
             return Ok(());
         }
 
-        let message = ExpoPushMessage::builder(expo_tokens.clone())
-            .title(title)
-            .body(body)
-            .build()
-            .map_err(|e| NotificationError::PushService(e.to_string()))?;
+        let message = ExpoPushMessage::builder(
+            expo_tokens.iter().map(|item| item.1.clone()),
+        )
+        .title(title)
+        .body(body)
+        .build()
+        .map_err(|e| NotificationError::PushService(e.to_string()))?;
 
         let tickets = self
             .expo
@@ -128,19 +147,26 @@ impl NotificationManager {
             .await
             .map_err(|e| NotificationError::PushService(e.to_string()))?;
 
-        for (token, ticket) in expo_tokens.iter().zip(tickets.iter()) {
+        for (key_and_token, ticket) in expo_tokens.iter().zip(tickets.iter()) {
             if let ExpoPushTicket::Error(err) = ticket
                 && matches!(
                     err.details.as_ref().and_then(|d| d.error.as_ref()),
                     Some(DetailsErrorType::DeviceNotRegistered)
                 )
             {
+                let public_key = PublicKey {
+                    key: key_and_token.0.key.clone(),
+                    key_type: key_and_token.0.key_type as i32,
+                };
+
+                let token = &key_and_token.1;
+
                 // Remove invalid tokens
                 token_repository::Mutation::unregister(
                     db,
-                    identity,
+                    &public_key,
                     PushService::Expo.as_ref(),
-                    token,
+                    &token,
                 )
                 .await?;
             }

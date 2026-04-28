@@ -45,21 +45,8 @@ impl NotificationService for NotificationServiceImpl {
             )
         })?;
 
-        let identity_result =
-            identity_repository::Query::identity_for_public_key(
-                &self.db, &signed_by,
-            )
-            .await;
-
-        let identity = match identity_result {
-            Ok(Some(id)) => Ok(id),
-            _ => Err(Status::invalid_argument(
-                "No valid identity found for provided PublicKey",
-            )),
-        }?;
-
         self.notification_manager
-            .register(&self.db, identity, request.service, request.token)
+            .register(&self.db, &signed_by, request.service, request.token)
             .await
             .map_err(|err| Status::unknown(err.to_string()))?;
 

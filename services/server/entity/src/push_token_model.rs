@@ -4,14 +4,14 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "push_token")]
 pub struct Model {
-    // Identity that registered this token.
+    // Public key that registered this token
     #[sea_orm(primary_key, auto_increment = false)]
-    pub identity: String,
+    pub public_key_type: i16,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub public_key: Vec<u8>,
 
     // Push service name, matches PushService strum serialize value
-    #[sea_orm(primary_key, auto_increment = false)]
     pub service: String,
-    #[sea_orm(primary_key, auto_increment = false)]
     pub token: String,
 }
 
