@@ -154,11 +154,7 @@ impl NotificationManager {
                     Some(DetailsErrorType::DeviceNotRegistered)
                 )
             {
-                let public_key = PublicKey {
-                    key: key_and_token.0.key.clone(),
-                    key_type: key_and_token.0.key_type as i32,
-                };
-
+                let public_key = &key_and_token.0;
                 let token = &key_and_token.1;
 
                 // Remove invalid tokens

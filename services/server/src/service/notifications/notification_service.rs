@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::service::identity::identity_repository;
 use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
