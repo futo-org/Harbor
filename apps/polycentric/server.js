@@ -7,7 +7,7 @@ const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
 const handler = createRequestHandler({
   build: path.join(__dirname, 'dist', 'server'),
 });
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 
 const MIME_TYPES = {
   '.html': 'text/html',

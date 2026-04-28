@@ -8,8 +8,7 @@ use proto::{
 };
 use sha2::{Digest, Sha256};
 
-/// Default gRPC server address for tests
-pub const GRPC_ADDR: &str = "http://localhost:50051";
+pub const GRPC_ADDR: &str = "http://localhost:3000";
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();

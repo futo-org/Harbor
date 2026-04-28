@@ -43,7 +43,7 @@ export interface PolycentricClientConfig {
   /**
    * gRPC-web URLs the client should start with. Used to seed
    * `client.servers` before `initialize()` fetches each server's
-   * `ServerInfo`. Defaults to `['http://localhost:50051']`.
+   * `ServerInfo`.
    */
   seedServers?: string[];
 }
@@ -71,7 +71,7 @@ export class PolycentricClient {
   public currentKeyPair: KeyPair | null = null;
   /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
   public activeIdentityKey: string | null = null;
-  public servers: string[] = ['http://localhost:50051'];
+  public servers: string[] = ['http://localhost:3000'];
 
   /** CDN URL per server, populated by `fetchServerInfo` during init. */
   private cdnUrlByServer = new Map<string, string>();

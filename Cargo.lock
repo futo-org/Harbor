@@ -3359,6 +3359,7 @@ dependencies = [
  "tonic-reflection",
  "tonic-web",
  "tower-http",
+ "tower-layer",
 ]
 
 [[package]]

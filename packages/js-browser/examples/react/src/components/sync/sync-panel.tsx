@@ -102,7 +102,7 @@ export const SyncPanel = () => {
           value={newServer}
           onChange={(e) => setNewServer(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addServer()}
-          placeholder="http://localhost:50051"
+          placeholder="http://localhost:3000"
           style={{ flex: 1 }}
         />
         <button onClick={addServer}>Add</button>
