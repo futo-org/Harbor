@@ -155,22 +155,18 @@ export interface Delete {
  */
 export interface Follow {
   /**
-   * Serialized Identity message bytes
-   *
-   * @generated from protobuf field: bytes identity = 1
+   * @generated from protobuf field: string identity = 1
    */
-  identity: Uint8Array;
+  identity: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.Block
  */
 export interface Block {
   /**
-   * Serialized Identity message bytes
-   *
-   * @generated from protobuf field: bytes identity = 1
+   * @generated from protobuf field: string identity = 1
    */
-  identity: Uint8Array;
+  identity: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.Reaction
@@ -217,6 +213,12 @@ export interface ProfileUpdate {
    * @generated from protobuf field: optional polycentric.v2.Image banner = 3
    */
   banner?: Image;
+  /**
+   * Bio
+   *
+   * @generated from protobuf field: optional string description = 4
+   */
+  description?: string;
 }
 /**
  * If an uploaded Blob is uploaded to the servers Object Storage and not
@@ -966,12 +968,12 @@ export const Delete = new Delete$Type();
 class Follow$Type extends MessageType<Follow> {
   constructor() {
     super('polycentric.v2.Follow', [
-      { no: 1, name: 'identity', kind: 'scalar', T: 12 /*ScalarType.BYTES*/ },
+      { no: 1, name: 'identity', kind: 'scalar', T: 9 /*ScalarType.STRING*/ },
     ]);
   }
   create(value?: PartialMessage<Follow>): Follow {
     const message = globalThis.Object.create(this.messagePrototype!);
-    message.identity = new Uint8Array(0);
+    message.identity = '';
     if (value !== undefined)
       reflectionMergePartial<Follow>(this, message, value);
     return message;
@@ -987,8 +989,8 @@ class Follow$Type extends MessageType<Follow> {
     while (reader.pos < end) {
       let [fieldNo, wireType] = reader.tag();
       switch (fieldNo) {
-        case /* bytes identity */ 1:
-          message.identity = reader.bytes();
+        case /* string identity */ 1:
+          message.identity = reader.string();
           break;
         default:
           let u = options.readUnknownField;
@@ -1014,9 +1016,9 @@ class Follow$Type extends MessageType<Follow> {
     writer: IBinaryWriter,
     options: BinaryWriteOptions,
   ): IBinaryWriter {
-    /* bytes identity = 1; */
-    if (message.identity.length)
-      writer.tag(1, WireType.LengthDelimited).bytes(message.identity);
+    /* string identity = 1; */
+    if (message.identity !== '')
+      writer.tag(1, WireType.LengthDelimited).string(message.identity);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(
@@ -1035,12 +1037,12 @@ export const Follow = new Follow$Type();
 class Block$Type extends MessageType<Block> {
   constructor() {
     super('polycentric.v2.Block', [
-      { no: 1, name: 'identity', kind: 'scalar', T: 12 /*ScalarType.BYTES*/ },
+      { no: 1, name: 'identity', kind: 'scalar', T: 9 /*ScalarType.STRING*/ },
     ]);
   }
   create(value?: PartialMessage<Block>): Block {
     const message = globalThis.Object.create(this.messagePrototype!);
-    message.identity = new Uint8Array(0);
+    message.identity = '';
     if (value !== undefined)
       reflectionMergePartial<Block>(this, message, value);
     return message;
@@ -1056,8 +1058,8 @@ class Block$Type extends MessageType<Block> {
     while (reader.pos < end) {
       let [fieldNo, wireType] = reader.tag();
       switch (fieldNo) {
-        case /* bytes identity */ 1:
-          message.identity = reader.bytes();
+        case /* string identity */ 1:
+          message.identity = reader.string();
           break;
         default:
           let u = options.readUnknownField;
@@ -1083,9 +1085,9 @@ class Block$Type extends MessageType<Block> {
     writer: IBinaryWriter,
     options: BinaryWriteOptions,
   ): IBinaryWriter {
-    /* bytes identity = 1; */
-    if (message.identity.length)
-      writer.tag(1, WireType.LengthDelimited).bytes(message.identity);
+    /* string identity = 1; */
+    if (message.identity !== '')
+      writer.tag(1, WireType.LengthDelimited).string(message.identity);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(
@@ -1216,6 +1218,13 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
       },
       { no: 2, name: 'avatar', kind: 'message', T: () => Image },
       { no: 3, name: 'banner', kind: 'message', T: () => Image },
+      {
+        no: 4,
+        name: 'description',
+        kind: 'scalar',
+        opt: true,
+        T: 9 /*ScalarType.STRING*/,
+      },
     ]);
   }
   create(value?: PartialMessage<ProfileUpdate>): ProfileUpdate {
@@ -1253,6 +1262,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
             options,
             message.banner,
           );
+          break;
+        case /* optional string description */ 4:
+          message.description = reader.string();
           break;
         default:
           let u = options.readUnknownField;
@@ -1295,6 +1307,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
         writer.tag(3, WireType.LengthDelimited).fork(),
         options,
       ).join();
+    /* optional string description = 4; */
+    if (message.description !== undefined)
+      writer.tag(4, WireType.LengthDelimited).string(message.description);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(

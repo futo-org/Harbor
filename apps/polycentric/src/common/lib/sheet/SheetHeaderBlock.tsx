@@ -1,9 +1,8 @@
-import { Box } from '@/src/common/components/layouts';
-import { Text } from '@/src/common/components/primitives';
+import { IconButton, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 export type SheetHeaderBlockProps = {
   title: string;
@@ -20,15 +19,11 @@ export function SheetHeaderBlock({
 }: SheetHeaderBlockProps) {
   const { theme } = useTheme();
 
-  const iconColor = closeDisabled
-    ? theme.palette.neutral_500
-    : theme.palette.neutral_1000;
-
   const right = trailing ?? <View style={{ width: 40, height: 40 }} />;
 
   return (
-    <Box style={Atoms.flex_shrink_0}>
-      <Box
+    <View style={Atoms.flex_shrink_0}>
+      <View
         style={[
           Atoms.flex_row,
           Atoms.justify_between,
@@ -43,21 +38,14 @@ export function SheetHeaderBlock({
           },
         ]}
       >
-        <Pressable
+        <IconButton
+          icon={(p) => <Ionicons name="close" {...p} />}
           onPress={onClose}
           disabled={closeDisabled}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          style={{
-            width: 40,
-            height: 40,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Ionicons name="close" size={24} color={iconColor} />
-        </Pressable>
+          iconColor={closeDisabled ? 'neutral_500' : 'neutral_1000'}
+          variant="filled"
+          size="md"
+        />
         <Text
           variant="body"
           fontWeight="semibold"
@@ -65,7 +53,7 @@ export function SheetHeaderBlock({
         >
           {title}
         </Text>
-        <Box
+        <View
           style={{
             minWidth: 40,
             alignItems: 'flex-end',
@@ -73,8 +61,8 @@ export function SheetHeaderBlock({
           }}
         >
           {right}
-        </Box>
-      </Box>
-    </Box>
+        </View>
+      </View>
+    </View>
   );
 }

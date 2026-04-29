@@ -1,25 +1,28 @@
-import { useCallback, useRef } from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Screen, Box } from '@/src/common/components/layouts';
-import { FeedViewer } from '@/src/features/posts';
-import { ProfileHeader } from './ProfileHeader';
-import {
-  useProfileScreenData,
-  useProfileEdit,
-  publicKeyToStringURLSafe,
-} from '@/src/common/lib/polycentric-hooks';
-import { types } from '@polycentric/react-native';
-import { Routes } from '@/src/common/constants';
-import { webSafeRouterBack } from '@/src/common/navigation/webSafeRouterBack';
+import { Screen } from '@/src/common/components/layout';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { useAuthorFeed } from '@/src/features/feed/hooks/useAuthorFeed';
+import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
+import { FeedViewer } from '@/src/features/post';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { ProfileHeader } from './ProfileHeader';
+import { ProfileProvider, useProfileContext } from './ProfileContext';
 
 export default function ProfileScreen() {
+  const { identityId } = useLocalSearchParams<{ identityId: string }>();
+
+  return (
+    <ProfileProvider identityKey={identityId ?? null}>
+      <ProfileScreenContent />
+    </ProfileProvider>
+  );
+}
+
+function ProfileScreenContent() {
   const { theme } = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
-  const { publicKey: publicKeyParam } = useLocalSearchParams<{
-    publicKey: string;
-  }>();
+  const { identityKey, isSelf, activeFeed } = useProfileContext();
+
   const isAbortedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -30,77 +33,65 @@ export default function ProfileScreen() {
     }, []),
   );
 
-  const data = useProfileScreenData(publicKeyParam, {
+  const authorFeed = useAuthorFeed(identityKey ?? undefined, undefined, {
     getIsAborted: () => isAbortedRef.current,
   });
-  const edit = useProfileEdit(data.username, data.profile);
-
-  const handlePostPress = useCallback((postId: string) => {
-    router.replace(Routes.post(postId));
-  }, []);
-
-  const handleAuthorPress = useCallback((pk: types.PublicKey) => {
-    router.replace(Routes.profile(publicKeyToStringURLSafe(pk)));
-  }, []);
+  const likesFeed = useLikesFeed({
+    enabled: isSelf,
+    getIsAborted: () => isAbortedRef.current,
+  });
 
   const handleBack = useCallback(() => {
-    webSafeRouterBack();
+    router.back();
   }, []);
 
   return (
     <Screen>
-      <Box style={Atoms.flex_1}>
+      <Screen.PrimaryColumn>
         <ProfileHeader
-          data={data}
-          edit={edit}
-          screenWidth={screenWidth}
           bannerColors={[
             theme.palette.background_secondary,
             theme.palette.background_primary,
           ]}
           onBack={handleBack}
         />
-        <Box style={[Atoms.flex_1, profileStyles.feedArea]}>
-          <Box
+        <View style={[Atoms.flex_1, profileStyles.feedArea]}>
+          <View
             style={[
               profileStyles.feedLayer,
-              data.activeFeed !== 'posts' && profileStyles.hidden,
+              activeFeed !== 'posts' && profileStyles.hidden,
             ]}
           >
             <FeedViewer
-              items={data.authorFeed.items}
-              isLoading={data.authorFeed.isLoading}
-              error={data.authorFeed.error}
-              onRefresh={data.authorFeed.refresh}
-              onPostPress={handlePostPress}
-              onAuthorPress={handleAuthorPress}
-              onEndReached={data.authorFeed.loadMore}
-              hasMore={data.authorFeed.hasMore}
+              items={authorFeed.items}
+              isLoading={authorFeed.isLoading}
+              error={authorFeed.error}
+              onRefresh={authorFeed.refresh}
+              onEndReached={authorFeed.loadMore}
+              hasMore={authorFeed.hasMore}
               bottomPadding={40}
             />
-          </Box>
-          {data.isSelf && (
-            <Box
+          </View>
+          {isSelf && (
+            <View
               style={[
                 profileStyles.feedLayer,
-                data.activeFeed !== 'likes' && profileStyles.hidden,
+                activeFeed !== 'likes' && profileStyles.hidden,
               ]}
             >
               <FeedViewer
-                items={data.likesFeed.items}
-                isLoading={data.likesFeed.isLoading}
-                error={data.likesFeed.error}
-                onRefresh={data.likesFeed.refresh}
-                onPostPress={handlePostPress}
-                onAuthorPress={handleAuthorPress}
-                onEndReached={data.likesFeed.loadMore}
-                hasMore={data.likesFeed.hasMore}
+                items={likesFeed.items}
+                isLoading={likesFeed.isLoading}
+                error={likesFeed.error}
+                onRefresh={likesFeed.refresh}
+                onEndReached={likesFeed.loadMore}
+                hasMore={likesFeed.hasMore}
                 bottomPadding={40}
               />
-            </Box>
+            </View>
           )}
-        </Box>
-      </Box>
+        </View>
+      </Screen.PrimaryColumn>
     </Screen>
   );
 }

@@ -7,7 +7,9 @@ export const KEY_TYPE = {
 export const COLLECTION = {
   IDENTITY: 1,
   FEED: 2,
-  INTERACTIONS: 3,
+  PROFILE: 3,
+  INTERACTIONS: 4,
+  GRAPH: 5,
 } as const;
 
 /** A known COLLECTION value. Callers may also pass any number. */

@@ -16,7 +16,7 @@ import { v2 } from '@polycentric/js-core';
 import PolycentricCore from '../NativeReactNative';
 import { polycentric_ffi } from '../generated/protocol';
 
-const { ListEventsRequest } = v2;
+const { ListEventsRequest, GetFeedRequest } = v2;
 
 // ── Native module helpers ────────────────────────────────────────────
 
@@ -159,8 +159,8 @@ class NativePolycentricCore implements IPolycentricCore {
     collection?: number | null,
     signedBy?: Uint8Array | null,
     signedByKeyType?: number | null,
-    sequenceGt?: number | null,
-    sequenceLt?: number | null
+    sequenceGt?: bigint | null,
+    sequenceLt?: bigint | null
   ): Promise<Uint8Array> {
     const request = ListEventsRequest.toBinary(
       ListEventsRequest.create({
@@ -172,8 +172,8 @@ class NativePolycentricCore implements IPolycentricCore {
             signedBy != null
               ? { keyType: signedByKeyType ?? 1, key: signedBy }
               : undefined,
-          sequenceGt: sequenceGt != null ? BigInt(sequenceGt) : undefined,
-          sequenceLt: sequenceLt != null ? BigInt(sequenceLt) : undefined,
+          sequenceGt: sequenceGt ?? undefined,
+          sequenceLt: sequenceLt ?? undefined,
         },
       })
     );
@@ -191,6 +191,53 @@ class NativePolycentricCore implements IPolycentricCore {
     );
 
     if (!res.ok) throw new Error(`gRPC-web ListEvents error: ${res.status}`);
+
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return grpcWebDecodeFirst(buf);
+  }
+
+  /**
+   * List non-deleted event bundles — not wired through native FFI yet.
+   * TODO: route through a native call once the FFI stores are ready.
+   */
+  list_valid_events(_identity: string, _collection: number): Uint8Array {
+    return v2.ListEventsResponse.toBinary(
+      v2.ListEventsResponse.create({
+        eventBundles: [],
+        previousToken: '',
+        nextToken: '',
+      })
+    );
+  }
+
+  /** Fetch a curated feed from a server via gRPC-web. */
+  async get_feed(
+    serverUrl: string,
+    algorithm: number,
+    limit?: number | null,
+    identity?: string | null
+  ): Promise<Uint8Array> {
+    const request = GetFeedRequest.toBinary(
+      GetFeedRequest.create({
+        algorithm,
+        limit: limit ?? undefined,
+        identity: identity ?? undefined,
+      })
+    );
+
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.FeedsService/GetFeed`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(request).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) throw new Error(`gRPC-web GetFeed error: ${res.status}`);
 
     const buf = new Uint8Array(await res.arrayBuffer());
     return grpcWebDecodeFirst(buf);

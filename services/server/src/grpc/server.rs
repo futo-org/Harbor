@@ -50,6 +50,8 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
 
     let events_service =
         service::events::events_service::build_events_service(db.clone());
+    let feeds_service =
+        service::feeds::feeds_service::build_feeds_service(db.clone());
     let notification_service =
         service::notifications::notification_service::build_notification_service(
             db.clone(),
@@ -79,6 +81,7 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(reflection_service)
         .add_service(events_service)
         .add_service(notification_service)
+        .add_service(feeds_service)
         .serve(addr)
         .await?;
 

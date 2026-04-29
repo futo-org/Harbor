@@ -1,168 +1,127 @@
 import { BackButton } from '@/src/common/components/composites';
-import { Box } from '@/src/common/components/layouts';
 import {
   Avatar,
   Button,
   HorizontalScrollGroup,
   Text,
-  TextInput,
 } from '@/src/common/components/primitives';
-import type {
-  ProfileEditState,
-  ProfileScreenData,
+import { Routes } from '@/src/common/constants';
+import {
+  identiconUrl,
+  shortenIdentityId,
+  truncateName,
+  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { truncateName } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { FeedChip } from '@/src/features/posts/FeedChip';
-import { memo } from 'react';
+import { FeedChip } from '@/src/features/post/FeedChip';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { router } from 'expo-router';
+import { memo, useCallback } from 'react';
 import { View } from 'react-native';
+import { useProfileContext } from './ProfileContext';
+import FollowButton from '../follow/FollowButton';
 
 const BANNER_HEIGHT = 150;
 
 export interface ProfileHeaderProps {
-  data: ProfileScreenData;
-  edit: ProfileEditState;
-  screenWidth: number;
   bannerColors: [string, string];
   onBack: () => void;
 }
 
-function ProfileHeaderInner({
-  data,
-  edit,
-  screenWidth,
-  bannerColors,
-  onBack,
-}: ProfileHeaderProps) {
+function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
+  const { identityKey, isSelf, activeFeed, setActiveFeed } =
+    useProfileContext();
+
+  const fallbackUsername = useUsername(identityKey);
+  const profile = useProfile(identityKey);
+  const username = profile.name ?? fallbackUsername;
+
+  const short = identityKey ? shortenIdentityId(identityKey) : '...';
+  const avatarUrl = identityKey ? identiconUrl(identityKey) : '';
+
+  const handleEdit = useCallback(() => {
+    if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
+  }, [identityKey]);
+
+  if (profile.isLoading) return <></>;
+
   return (
     <>
-      <Box style={{ position: 'relative' }}>
+      <View style={{ position: 'relative' }}>
         <View
           style={{
-            width: screenWidth,
             height: BANNER_HEIGHT,
             backgroundColor: bannerColors[1],
             overflow: 'hidden',
           }}
         >
           <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: bannerColors[0],
-              opacity: 0.5,
-            }}
+            style={[
+              Atoms.absolute,
+              {
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: bannerColors[0],
+                opacity: 0.5,
+              },
+            ]}
           />
         </View>
-        <Box
+        <View
           style={[
-            { position: 'absolute', top: 0, left: 0 },
+            Atoms.absolute,
+            { top: 0, left: 0 },
             Atoms.mx_lg,
             Atoms.mt_md,
           ]}
         >
           <BackButton onPress={onBack} />
-        </Box>
-      </Box>
+        </View>
+      </View>
 
-      <Box style={[Atoms.mx_lg, { marginTop: -40 }]}>
-        <Avatar
-          source={data.avatarUrl ? { uri: data.avatarUrl } : undefined}
-          size="xl"
-        />
-      </Box>
+      <View style={[Atoms.mx_lg, { marginTop: -40 }]}>
+        <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} size="xl" />
+      </View>
 
-      <Box style={[Atoms.mx_lg, Atoms.mt_md, Atoms.gap_xs]}>
-        {edit.editing ? (
-          <Box style={Atoms.gap_sm}>
-            <TextInput
-              value={edit.nameDraft}
-              onChangeText={edit.setNameDraft}
-              placeholder="Display name"
-              autoFocus
+      <View
+        style={[
+          Atoms.mx_lg,
+          Atoms.pb_lg,
+          Atoms.flex_row,
+          Atoms.justify_between,
+        ]}
+      >
+        <View style={[Atoms.mt_md, Atoms.gap_xs]}>
+          <Text variant="title" fontWeight="bold">
+            {truncateName(username, 32)}
+          </Text>
+          <Text variant="secondary" color="neutral_500">
+            {short}
+          </Text>
+          {profile.description ? (
+            <View style={Atoms.mt_sm}>
+              <Text variant="body" fontSize="sm" color="neutral_1000">
+                {profile.description}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={Atoms.mt_md}>
+          {isSelf ? (
+            <Button
+              title="Edit profile"
+              onPress={handleEdit}
+              variant="tertiary"
+              size="sm"
             />
-            <TextInput
-              value={edit.descriptionDraft}
-              onChangeText={edit.setDescriptionDraft}
-              placeholder="Bio"
-              numberOfLines={3}
-            />
-            <Box style={[Atoms.flex_row, Atoms.gap_sm]}>
-              <Button
-                title={edit.saving ? 'Saving...' : 'Save'}
-                onPress={edit.handleSave}
-                variant="primary"
-                size="sm"
-              />
-              <Button
-                title="Cancel"
-                onPress={edit.handleCancel}
-                variant="tertiary"
-                size="sm"
-              />
-            </Box>
-          </Box>
-        ) : (
-          <>
-            <Text variant="title" fontWeight="bold">
-              {truncateName(data.username, 32)}
-            </Text>
-            <Text variant="secondary" color="neutral_500">
-              {data.short}
-            </Text>
-            {data.profile.description ? (
-              <Box style={Atoms.mt_sm}>
-                <Text variant="body" color="neutral_1000">
-                  {data.profile.description}
-                </Text>
-              </Box>
-            ) : null}
-            {data.isSelf && (
-              <Box style={Atoms.mt_md}>
-                <Button
-                  title="Edit"
-                  onPress={() => edit.setEditing(true)}
-                  variant="tertiary"
-                  size="sm"
-                />
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
-
-      {!data.isSelf && (
-        <Box style={[Atoms.mx_lg, Atoms.mt_md]}>
-          <Button
-            title={data.followStatus.isFollowing ? 'Following' : 'Follow'}
-            variant={data.followStatus.isFollowing ? 'secondary' : 'primary'}
-            size="sm"
-            onPress={data.followStatus.toggleFollow}
-          />
-        </Box>
-      )}
-
-      <Box style={[Atoms.mx_lg, Atoms.mt_lg, Atoms.mb_md]}>
-        <HorizontalScrollGroup>
-          <FeedChip
-            type="posts"
-            title="Posts"
-            isSelected={data.activeFeed === 'posts'}
-            onPress={() => data.setActiveFeed('posts')}
-          />
-          {data.isSelf && (
-            <FeedChip
-              type="likes"
-              title="Likes"
-              isSelected={data.activeFeed === 'likes'}
-              onPress={() => data.setActiveFeed('likes')}
-            />
+          ) : (
+            <FollowButton identity={identityKey!} />
           )}
-        </HorizontalScrollGroup>
-      </Box>
+        </View>
+      </View>
     </>
   );
 }

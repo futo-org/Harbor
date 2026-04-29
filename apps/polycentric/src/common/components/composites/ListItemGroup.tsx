@@ -1,6 +1,6 @@
-import { Box } from '@/src/common/components/layouts';
 import { Text } from '@/src/common/components/primitives';
 import { Atoms } from '@/src/common/theme';
+import { View } from 'react-native';
 
 interface ListItemGroupProps {
   label?: string;
@@ -9,13 +9,13 @@ interface ListItemGroupProps {
 
 export function ListItemGroup({ label, children }: ListItemGroupProps) {
   return (
-    <Box style={Atoms.gap_sm}>
+    <View style={Atoms.gap_sm}>
       {label && (
         <Text variant="secondary" color="neutral_500">
           {label}
         </Text>
       )}
       {children}
-    </Box>
+    </View>
   );
 }

@@ -7,17 +7,7 @@ export {
 } from './PolycentricProvider';
 
 // Data query hooks
-export {
-  useExploreFeed,
-  useFollowingFeed,
-  useAuthorFeed,
-  useLikesFeed,
-  useProfile,
-  useUsername,
-} from './PolycentricProvider';
-
-// Post page (reply feed + parent list)
-export { usePostPage, useNavigateToParentPost } from './useConversation';
+export { useUsername } from './PolycentricProvider';
 
 // Action hooks
 export {
@@ -28,26 +18,24 @@ export {
 
 // Store
 export { useStore } from './store';
-export type { PostState, PolycentricStore, PolycentricStoreApi } from './store';
+export type { PolycentricStore, PolycentricStoreApi } from './store';
 
 // Profile screen hooks
 export {
-  useProfileScreenData,
-  type ProfileScreenData,
-} from './useProfileScreenData';
-export { useProfileEdit, type ProfileEditState } from './useProfileEdit';
+  useProfileEdit,
+  type ProfileEditState,
+} from '../../../features/profile/hooks/useProfileEdit';
 
 // Helpers
 export {
-  decodePostEvent,
   decodeV2PostBundle,
-  getPointer,
   pubkeyStr,
   identiconUrl,
   timeAgo,
   bytesToHex,
   hexToBytes,
   eventKey,
+  postIdToSequence,
   truncateName,
   publicKeyToString,
   stringToPublicKey,
@@ -57,10 +45,11 @@ export {
   getIdentityIdShort,
   shortenIdentityId,
   pointerToURLString,
-  urlStringToPointer,
   signedEventToHex,
   hexToSignedEvent,
   toBase64,
   fromBase64,
+  toHex,
+  fromHex,
 } from './helpers';
-export type { PostData } from './helpers';
+export type { EventKeyRef, PostData } from './helpers';

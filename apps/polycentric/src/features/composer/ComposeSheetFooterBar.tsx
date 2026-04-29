@@ -1,7 +1,6 @@
-import { Box } from '@/src/common/components/layouts';
 import { Button, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -27,7 +26,7 @@ export function ComposeSheetFooterBar({
   );
 
   const postSlot = (
-    <Box
+    <View
       style={{
         minWidth: 80,
         minHeight: 36,
@@ -45,11 +44,12 @@ export function ComposeSheetFooterBar({
         <Button
           title="Post"
           onPress={onPost}
-          variant={canPost ? 'primary' : 'disabled'}
+          variant="primary"
+          disabled={!canPost}
           size="sm"
         />
       )}
-    </Box>
+    </View>
   );
 
   const borderTop = {
@@ -59,7 +59,7 @@ export function ComposeSheetFooterBar({
 
   if (variant === 'web') {
     return (
-      <Box
+      <View
         style={[
           Atoms.flex_row,
           Atoms.justify_between,
@@ -73,12 +73,12 @@ export function ComposeSheetFooterBar({
       >
         {countLabel}
         {postSlot}
-      </Box>
+      </View>
     );
   }
 
   return (
-    <Box
+    <View
       style={[
         Atoms.flex_row,
         Atoms.justify_end,
@@ -90,6 +90,6 @@ export function ComposeSheetFooterBar({
       ]}
     >
       {countLabel}
-    </Box>
+    </View>
   );
 }

@@ -1,13 +1,34 @@
-// TODO: abandon systemKey terminology in lib and apps. just use publicKey
+import { router } from 'expo-router';
+
+export function openCompose(replyTo?: {
+  identityId: string;
+  sequence: string;
+}) {
+  if (replyTo) {
+    const path = `${encodeURIComponent(replyTo.identityId)}/${encodeURIComponent(replyTo.sequence)}`;
+    router.push(`${Routes.tabs.feed.compose}?replyTo=${path}`);
+  } else {
+    router.push(Routes.tabs.feed.compose);
+  }
+}
+
 export const Routes = {
   tabs: {
-    feed: '/feed',
+    feed: {
+      index: '/feed',
+      compose: '/feed/compose',
+    },
     search: '/search',
     claims: '/claims',
-    profile: '/profile',
+    identitySwitch: '/identity/switch',
+    profile: (identityId: string) => `/${identityId}` as const,
+    editProfile: (identityId: string) => `/${identityId}/edit` as const,
+    post: (identityId: string, postId: string) =>
+      `/${identityId}/post/${postId}` as const,
     settings: {
       index: '/settings',
-      polycentricServers: '/settings/polycentric-servers',
+      identity: '/settings/identity',
+      servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
       appearance: '/settings/appearance',
@@ -29,6 +50,4 @@ export const Routes = {
       setModeration: '/signup/set_moderation',
     },
   },
-  profile: (publicKey: string) => `/feed/profile/${publicKey}` as const,
-  post: (postId: string) => `/feed/post/${postId}` as const,
 } as const;

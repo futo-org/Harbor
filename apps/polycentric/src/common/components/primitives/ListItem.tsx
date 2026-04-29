@@ -1,5 +1,5 @@
-import { Pressable, Animated } from 'react-native';
-import { Box } from '@/src/common/components/layouts';
+import { usePressAnimation } from '@/src/common/lib/animation';
+import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
   Spacing,
@@ -7,7 +7,7 @@ import {
   withHexOpacity,
   type SpacingToken,
 } from '@/src/common/theme';
-import { usePressAnimation } from '@/src/common/lib/animation';
+import { Animated, Pressable, View } from 'react-native';
 
 interface ListItemProps {
   children?: React.ReactNode;
@@ -27,37 +27,52 @@ export function ListItem({
 }: ListItemProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const content = (
-    <Box
-      style={[
-        Atoms.rounded_md,
-        {
-          paddingVertical: Spacing[marginVertical],
-          paddingHorizontal: Spacing[marginHorizontal],
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
-      ]}
-      {...props}
-    >
-      {children}
-    </Box>
-  );
+  const padding = {
+    paddingVertical: Spacing[marginVertical],
+    paddingHorizontal: Spacing[marginHorizontal],
+  };
 
-  if (pressable) {
+  if (!pressable) {
     return (
-      <Animated.View style={animatedStyle}>
-        <Pressable
-          onPress={onPress}
-          hitSlop={8}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-        >
-          {content}
-        </Pressable>
-      </Animated.View>
+      <View
+        style={[
+          Atoms.rounded_md,
+          {
+            ...padding,
+            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+          },
+        ]}
+        {...props}
+      >
+        {children}
+      </View>
     );
   }
 
-  return content;
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        onPress={onPress}
+        hitSlop={8}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onHoverIn={onHoverIn}
+        onHoverOut={onHoverOut}
+        style={[
+          Atoms.rounded_md,
+          {
+            ...padding,
+            backgroundColor: withHexOpacity(
+              theme.palette.neutral_500,
+              hovered ? '35' : '20',
+            ),
+          },
+        ]}
+      >
+        <View {...props}>{children}</View>
+      </Pressable>
+    </Animated.View>
+  );
 }

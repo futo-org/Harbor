@@ -1,20 +1,21 @@
+import { usePressAnimation } from '@/src/common/lib/animation';
+import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
-  Pressable,
-  StyleSheet,
-  Animated,
-  View,
-  StyleProp,
-  ViewStyle,
-} from 'react-native';
-import { BlurView } from 'expo-blur';
-import {
+  BorderRadius,
   useTheme,
   withHexOpacity,
-  BorderRadius,
-  type PaletteColorToken,
   type BorderRadiusToken,
+  type PaletteColorToken,
 } from '@/src/common/theme';
-import { usePressAnimation } from '@/src/common/lib/animation';
+import { isWeb } from '@/src/common/util/platform';
+import {
+  Animated,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';
 type IconButtonVariant = 'filled' | 'ghost';
@@ -24,10 +25,10 @@ type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 interface IconButtonProps {
   icon: IconRenderFn;
   onPress: () => void;
+  disabled?: boolean;
   size?: IconButtonSize;
   variant?: IconButtonVariant;
   iconColor?: PaletteColorToken;
-  blurIntensity?: number;
   borderRadius?: BorderRadiusToken;
   style?: StyleProp<ViewStyle>;
   /** Remove container padding (ghost variant only) */
@@ -46,18 +47,18 @@ const SIZE_CONFIG: Record<
 export function IconButton({
   icon,
   onPress,
+  disabled = false,
   size = 'md',
   variant = 'filled',
   iconColor = 'neutral_1000',
-  blurIntensity = 80,
   borderRadius,
   style,
   compact = false,
   ...props
 }: IconButtonProps) {
   const { theme } = useTheme();
-  const isDark = theme.scheme === 'dark';
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
+  const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const sizeConfig = SIZE_CONFIG[size];
   const resolvedIconColor = theme.palette[iconColor];
@@ -70,51 +71,60 @@ export function IconButton({
     color: resolvedIconColor,
   });
 
+  const ghostFill = withHexOpacity(
+    theme.palette.neutral_500,
+    hovered ? '22' : '00',
+  );
+  const filledFill = withHexOpacity(
+    theme.palette.neutral_500,
+    hovered ? '22' : '10',
+  );
+
+  const chromeBorder = {
+    borderWidth: 1,
+    borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
+  };
+
+  const showChrome = !(variant === 'ghost' && compact);
+  const surfaceBg = variant === 'ghost' ? ghostFill : filledFill;
+
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View pointerEvents="box-none" style={[animatedStyle, style]}>
       <Pressable
+        disabled={disabled}
         onPress={onPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        hitSlop={8}
-        style={style}
+        onPressIn={disabled ? undefined : onPressIn}
+        onPressOut={disabled ? undefined : onPressOut}
+        onHoverIn={disabled ? undefined : onHoverIn}
+        onHoverOut={disabled ? undefined : onHoverOut}
+        style={[
+          styles.hitArea,
+          {
+            width: sizeConfig.containerSize,
+            height: sizeConfig.containerSize,
+            borderRadius: resolvedBorderRadius,
+            ...(isWeb
+              ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
+              : {}),
+          },
+        ]}
         {...props}
       >
-        {variant === 'ghost' ? (
-          compact ? (
-            iconElement
-          ) : (
-            <View
-              style={[
-                styles.container,
-                {
-                  width: sizeConfig.containerSize,
-                  height: sizeConfig.containerSize,
-                },
-              ]}
-            >
-              {iconElement}
-            </View>
-          )
-        ) : (
-          <BlurView
-            intensity={blurIntensity}
-            tint={isDark ? 'dark' : 'light'}
+        {showChrome ? (
+          <View
             style={[
-              styles.container,
+              styles.surface,
+              chromeBorder,
               {
-                width: sizeConfig.containerSize,
-                height: sizeConfig.containerSize,
                 borderRadius: resolvedBorderRadius,
-                backgroundColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '10',
-                ),
+                backgroundColor: surfaceBg,
               },
             ]}
           >
             {iconElement}
-          </BlurView>
+          </View>
+        ) : (
+          iconElement
         )}
       </Pressable>
     </Animated.View>
@@ -122,9 +132,14 @@ export function IconButton({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  hitArea: {
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  surface: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

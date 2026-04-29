@@ -11,7 +11,7 @@ import { UnknownFieldHandler } from '@protobuf-ts/runtime';
 import type { PartialMessage } from '@protobuf-ts/runtime';
 import { reflectionMergePartial } from '@protobuf-ts/runtime';
 import { MessageType } from '@protobuf-ts/runtime';
-import { Event } from './events';
+import { EventBundle } from './events';
 /**
  * @generated from protobuf message polycentric.v2.GetFeedRequest
  */
@@ -32,15 +32,22 @@ export interface GetFeedRequest {
    * @generated from protobuf field: optional string after_token = 4
    */
   afterToken?: string;
+  /**
+   * Identity of the caller, required when algorithm depends on the caller's
+   * social graph (e.g. FEED_ALGORITHM_FOLLOWING).
+   *
+   * @generated from protobuf field: optional string identity = 5
+   */
+  identity?: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFeedResponse
  */
 export interface GetFeedResponse {
   /**
-   * @generated from protobuf field: repeated polycentric.v2.Event events = 1
+   * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
    */
-  events: Event[];
+  eventBundles: EventBundle[];
   /**
    * @generated from protobuf field: string next_token = 2
    */
@@ -59,9 +66,9 @@ export enum FeedAlgorithm {
    */
   UNSPECIFIED = 0,
   /**
-   * @generated from protobuf enum value: FEED_ALGORITHM_LATEST = 1;
+   * @generated from protobuf enum value: FEED_ALGORITHM_FOLLOWING = 1;
    */
-  LATEST = 1,
+  FOLLOWING = 1,
   /**
    * @generated from protobuf enum value: FEED_ALGORITHM_SUGGESTED = 2;
    */
@@ -102,6 +109,13 @@ class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
         opt: true,
         T: 9 /*ScalarType.STRING*/,
       },
+      {
+        no: 5,
+        name: 'identity',
+        kind: 'scalar',
+        opt: true,
+        T: 9 /*ScalarType.STRING*/,
+      },
     ]);
   }
   create(value?: PartialMessage<GetFeedRequest>): GetFeedRequest {
@@ -133,6 +147,9 @@ class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
           break;
         case /* optional string after_token */ 4:
           message.afterToken = reader.string();
+          break;
+        case /* optional string identity */ 5:
+          message.identity = reader.string();
           break;
         default:
           let u = options.readUnknownField;
@@ -170,6 +187,9 @@ class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
     /* optional string after_token = 4; */
     if (message.afterToken !== undefined)
       writer.tag(4, WireType.LengthDelimited).string(message.afterToken);
+    /* optional string identity = 5; */
+    if (message.identity !== undefined)
+      writer.tag(5, WireType.LengthDelimited).string(message.identity);
     let u = options.writeUnknownFields;
     if (u !== false)
       (u == true ? UnknownFieldHandler.onWrite : u)(
@@ -190,10 +210,10 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
     super('polycentric.v2.GetFeedResponse', [
       {
         no: 1,
-        name: 'events',
+        name: 'event_bundles',
         kind: 'message',
         repeat: 2 /*RepeatType.UNPACKED*/,
-        T: () => Event,
+        T: () => EventBundle,
       },
       { no: 2, name: 'next_token', kind: 'scalar', T: 9 /*ScalarType.STRING*/ },
       {
@@ -206,7 +226,7 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
   }
   create(value?: PartialMessage<GetFeedResponse>): GetFeedResponse {
     const message = globalThis.Object.create(this.messagePrototype!);
-    message.events = [];
+    message.eventBundles = [];
     message.nextToken = '';
     message.previousToken = '';
     if (value !== undefined)
@@ -224,9 +244,9 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
     while (reader.pos < end) {
       let [fieldNo, wireType] = reader.tag();
       switch (fieldNo) {
-        case /* repeated polycentric.v2.Event events */ 1:
-          message.events.push(
-            Event.internalBinaryRead(reader, reader.uint32(), options),
+        case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
+          message.eventBundles.push(
+            EventBundle.internalBinaryRead(reader, reader.uint32(), options),
           );
           break;
         case /* string next_token */ 2:
@@ -259,10 +279,10 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
     writer: IBinaryWriter,
     options: BinaryWriteOptions,
   ): IBinaryWriter {
-    /* repeated polycentric.v2.Event events = 1; */
-    for (let i = 0; i < message.events.length; i++)
-      Event.internalBinaryWrite(
-        message.events[i],
+    /* repeated polycentric.v2.EventBundle event_bundles = 1; */
+    for (let i = 0; i < message.eventBundles.length; i++)
+      EventBundle.internalBinaryWrite(
+        message.eventBundles[i],
         writer.tag(1, WireType.LengthDelimited).fork(),
         options,
       ).join();

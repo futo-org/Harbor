@@ -9,7 +9,9 @@ message EventKey {
   // Reserved collections are:
   // 1 -> Polycentric Identity
   // 2 -> Polycentric feed
-  // 3 -> Polycentric interactions
+  // 3 -> Polycentric profile
+  // 4 -> Polycentric interactions (likes etc)
+  // 5 -> Polycentric social graph (follows)
   int32 collection = 1;
 
   // Identity Key (sha256 hash of the initial Identity content)
