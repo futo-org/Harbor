@@ -150,6 +150,10 @@ export function PolycentricProvider({
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
+          // Read follows from the local store immediately — don't gate
+          // the UI on the network sync. The sync runs in parallel and
+          // re-refreshes once new events have been pulled in.
+          await useFollows.getState().refresh(c);
           void c
             .sync()
             .then(() => useFollows.getState().refresh(c))
