@@ -99,6 +99,17 @@ impl Query {
 
         Ok(keys)
     }
+
+    pub async fn is_rotation_key(
+        db: &DbConn,
+        identity_key: &str,
+        public_key: &[u8],
+    ) -> Result<bool, DbErr> {
+        let authorized_keys = Self::authorized_keys(db, identity_key).await?;
+        Ok(authorized_keys
+            .iter()
+            .any(|k| k.is_rotation_key && k.key.key.as_slice() == public_key))
+    }
 }
 
 #[derive(Debug, FromQueryResult)]

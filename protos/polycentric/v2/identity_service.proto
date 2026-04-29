@@ -1,0 +1,39 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/keypair.proto";
+import "polycentric/v2/events.proto";
+import "polycentric/v2/server.proto";
+
+// Identity invitation for multi-device pairing
+message IdentityInvitation {
+  string identity = 1;
+  int64 created_at = 2;
+  int32 ttl_seconds = 3;
+}
+
+// Body for claiming an invitation (what gets signed)
+message ClaimInvitationBody {
+  string invitation_signature = 1;
+}
+
+message InvitationStatus {
+  IdentityInvitation invitation = 1;
+  repeated PublicKey claimers = 2;
+  bool expired = 3;
+}
+
+message GetInvitationStatusRequest {
+  string invitation_signature = 1;
+}
+
+message GetIdentityStateRequest {
+  string identity = 1;
+}
+
+service IdentityService {
+  rpc GetIdentityState(GetIdentityStateRequest) returns (EventBundle);
+  rpc CreateInvitation(SignedMessage) returns (IdentityInvitation);
+  rpc GetInvitationStatus(GetInvitationStatusRequest) returns (InvitationStatus);
+  rpc ClaimInvitation(SignedMessage) returns (InvitationStatus);
+}

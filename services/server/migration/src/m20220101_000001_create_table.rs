@@ -2,7 +2,8 @@ use ::entity::{
     content_blob_model, content_block_model, content_delete_model,
     content_follow_model, content_identity_model, content_image_model,
     content_model, content_post_model, content_profile_update_model,
-    content_reaction_model, event_model,
+    content_reaction_model, event_model, identity_invitation_claimer_model,
+    identity_invitation_model,
 };
 use sea_orm::{EntityTrait, Schema};
 use sea_orm_migration::prelude::*;
@@ -51,11 +52,33 @@ impl MigrationTrait for Migration {
         create_entity(manager, &schema, content_blob_model::Entity).await?;
         create_entity(manager, &schema, content_identity_model::Entity)
             .await?;
+        create_entity(manager, &schema, identity_invitation_model::Entity)
+            .await?;
+        create_entity(
+            manager,
+            &schema,
+            identity_invitation_claimer_model::Entity,
+        )
+        .await?;
 
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(identity_invitation_claimer_model::Entity)
+                    .to_owned(),
+            )
+            .await?;
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(identity_invitation_model::Entity)
+                    .to_owned(),
+            )
+            .await?;
         manager
             .drop_table(
                 Table::drop()
