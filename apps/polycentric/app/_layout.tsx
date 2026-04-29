@@ -1,7 +1,6 @@
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { WideShell } from '@/src/features/wideshell';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { Stack } from 'expo-router';

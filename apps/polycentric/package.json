@@ -32,6 +32,7 @@
     "expo": "~55.0.0",
     "expo-blur": "~55.0.8",
     "expo-build-properties": "~55.0.9",
+    "expo-clipboard": "~55.0.13",
     "expo-constants": "~55.0.7",
     "expo-dev-client": "~55.0.10",
     "expo-document-picker": "~55.0.8",
@@ -52,6 +53,7 @@
     "react-native": "0.83.2",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.30.0",
+    "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "~4.2.1",
     "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "~4.23.0",
@@ -60,6 +62,7 @@
     "react-native-web": "~0.21.2",
     "react-native-webview": "13.16.0",
     "react-native-worklets": "0.7.2",
+    "rn-emoji-picker": "^1.1.6",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

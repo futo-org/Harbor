@@ -6,28 +6,26 @@ import {
   TextInput,
 } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
-import { validateUsername } from '@/src/common/util/validation';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-export default function SetUsernameScreen() {
-  const { data, setUsername, close, goToNextStep } = useSignup();
+export default function SetDisplayNameScreen() {
+  const { data, setDisplayName, close, goToNextStep } = useSignup();
   const [error, setError] = useState<string | null>(null);
 
-  const canContinue = data.username.trim().length > 0;
+  const canContinue = data.displayName.trim().length > 0;
 
   const handleChangeText = (text: string) => {
     if (error) {
       setError(null);
     }
-    setUsername(text);
+    setDisplayName(text);
   };
 
   const handleContinue = () => {
-    const validationError = validateUsername(data.username);
-    if (validationError) {
-      setError(validationError);
+    if (!data.displayName.trim()) {
+      setError('Display name is required');
       return;
     }
     goToNextStep();
@@ -42,10 +40,11 @@ export default function SetUsernameScreen() {
             <Text variant="title">Set a display name</Text>
             <View style={Atoms.gap_xs}>
               <TextInput
-                placeholder="Enter username"
-                value={data.username}
+                placeholder="Enter display name"
+                value={data.displayName}
                 onChangeText={handleChangeText}
                 error={error ? true : false}
+                autoCapitalize="words"
                 autoFocus
               />
               {error && (

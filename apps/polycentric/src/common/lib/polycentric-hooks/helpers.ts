@@ -1,5 +1,4 @@
 import { v2 } from '@polycentric/react-native';
-import type { PolycentricClient } from '@polycentric/react-native';
 
 export function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode.apply(null, Array.from(bytes)));
@@ -226,13 +225,6 @@ export function shortenIdentityId(
 ): string {
   if (!identity) return '...';
   return identity.slice(0, len);
-}
-
-export function pointerToURLString(pointer: v2.Pointer): string {
-  const systemStr = publicKeyToString(pointer.system ?? v2.PublicKey.create());
-  const processStr = bytesToHex(pointer.process?.process ?? new Uint8Array());
-  const clockStr = String(pointer.logicalClock ?? 0);
-  return `${systemStr}.${processStr}.${clockStr}`;
 }
 
 export function signedEventToHex(signedEvent: v2.SignedEvent): string {

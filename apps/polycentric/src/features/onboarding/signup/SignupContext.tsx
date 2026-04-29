@@ -8,6 +8,7 @@ import {
   DEFAULT_SERVER,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { publishProfileUpdate } from '@/src/features/profile/lib/publishProfileUpdate';
 
 type ModerationLevel = 1 | 2 | 3;
 
@@ -18,7 +19,7 @@ interface ModerationSettings {
 }
 
 interface SignupData {
-  username: string;
+  displayName: string;
   about: string;
   avatarUri: string | null;
   moderation: ModerationSettings;
@@ -26,7 +27,7 @@ interface SignupData {
 
 interface SignupStore {
   data: SignupData;
-  setUsername: (username: string) => void;
+  setDisplayName: (displayName: string) => void;
   setAbout: (about: string) => void;
   setAvatarUri: (uri: string | null) => void;
   setModeration: (moderation: ModerationSettings) => void;
@@ -34,7 +35,7 @@ interface SignupStore {
 }
 
 const defaultData: SignupData = {
-  username: '',
+  displayName: '',
   about: '',
   avatarUri: null,
   moderation: {
@@ -46,7 +47,8 @@ const defaultData: SignupData = {
 
 const useSignupStore = create<SignupStore>((set) => ({
   data: defaultData,
-  setUsername: (username) => set((s) => ({ data: { ...s.data, username } })),
+  setDisplayName: (displayName) =>
+    set((s) => ({ data: { ...s.data, displayName } })),
   setAbout: (about) => set((s) => ({ data: { ...s.data, about } })),
   setAvatarUri: (avatarUri) => set((s) => ({ data: { ...s.data, avatarUri } })),
   setModeration: (moderation) =>
@@ -57,7 +59,7 @@ const useSignupStore = create<SignupStore>((set) => ({
 export function useSignup() {
   const pathname = usePathname();
   const { client, refreshCurrentIdentity } = usePolycentricContext();
-  const { data, setUsername, setAbout, setAvatarUri, setModeration, reset } =
+  const { data, setDisplayName, setAbout, setAvatarUri, setModeration, reset } =
     useSignupStore();
 
   const currentStep = pathname as SignupRoute;
@@ -84,6 +86,11 @@ export function useSignup() {
 
     try {
       await createIdentity(client, DEFAULT_SERVER);
+      await publishProfileUpdate(client, {
+        name: data.displayName,
+        description: data.about,
+        avatarUri: data.avatarUri,
+      });
       await refreshCurrentIdentity();
       reset();
       router.replace(Routes.tabs.feed.index as Href);
@@ -94,7 +101,7 @@ export function useSignup() {
 
   return {
     data,
-    setUsername,
+    setDisplayName,
     setAbout,
     setAvatarUri,
     setModeration,

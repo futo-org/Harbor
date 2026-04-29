@@ -76,6 +76,14 @@ export default function SettingsTabScreen() {
               <AppearanceSettingRow />
             </ListItemGroup>
 
+            <ListItemGroup label="Identity">
+              <ListItemWrapper
+                onPress={() => router.push(Routes.tabs.settings.pairIdentity)}
+              >
+                <Text variant="body">Pair Identity</Text>
+              </ListItemWrapper>
+            </ListItemGroup>
+
             <ListItemGroup label="Servers">
               <ListItemWrapper
                 onPress={() => router.push(Routes.tabs.settings.servers)}

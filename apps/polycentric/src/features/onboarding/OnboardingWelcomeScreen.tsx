@@ -39,7 +39,9 @@ export default function OnboardingWelcomeScreen() {
               title="Create new identity"
               variant="primary"
               fullWidth
-              onPress={() => router.push(Routes.onboarding.signup.setUsername)}
+              onPress={() =>
+                router.push(Routes.onboarding.signup.setDisplayName)
+              }
             />
             <Button
               title="Pair existing identity"
