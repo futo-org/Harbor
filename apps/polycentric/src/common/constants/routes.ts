@@ -1,15 +1,22 @@
 import { router } from 'expo-router';
 
-export function openCompose(replyTo?: {
-  identityId: string;
-  sequence: string;
-}) {
+export type OpenComposeOptions = {
+  replyTo?: { identityId: string; sequence: string };
+  /** Immediately launch the image picker once the composer mounts. */
+  attachImage?: boolean;
+};
+
+export function openCompose(options: OpenComposeOptions = {}) {
+  const { replyTo, attachImage } = options;
+  const params = new URLSearchParams();
   if (replyTo) {
-    const path = `${encodeURIComponent(replyTo.identityId)}/${encodeURIComponent(replyTo.sequence)}`;
-    router.push(`${Routes.tabs.feed.compose}?replyTo=${path}`);
-  } else {
-    router.push(Routes.tabs.feed.compose);
+    params.set('replyTo', `${replyTo.identityId}/${replyTo.sequence}`);
   }
+  if (attachImage) params.set('attach', '1');
+  const qs = params.toString();
+  router.push(
+    qs ? `${Routes.tabs.feed.compose}?${qs}` : Routes.tabs.feed.compose,
+  );
 }
 
 export const Routes = {

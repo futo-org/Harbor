@@ -1,9 +1,10 @@
-import { Avatar, IdentityTag, Text } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
 import {
-  identiconUrl,
-  useCurrentIdentity,
-} from '@/src/common/lib/polycentric-hooks';
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
+import { Routes } from '@/src/common/constants';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -35,8 +36,6 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     return null;
   }
 
-  const avatarUrl = identiconUrl(currentIdentity.identityKey);
-
   const identityRowHoverOverlay =
     theme.scheme === 'light'
       ? withHexOpacity(theme.palette.neutral_500, '14')
@@ -49,7 +48,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
         router.push(Routes.tabs.profile(currentIdentity.identityKey));
       }}
     >
-      <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} />
+      <ProfileAvatar identityKey={currentIdentity.identityKey} />
     </Pressable>
   );
 

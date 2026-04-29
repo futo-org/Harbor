@@ -1,7 +1,10 @@
-import { Avatar, IdentityTag, Text } from '@/src/common/components/primitives';
+import {
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  identiconUrl,
   postIdToSequence,
   timeAgo,
   truncateName,
@@ -9,17 +12,11 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Atoms,
-  type Theme,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
-import { v2 } from '@polycentric/react-native';
+import { PostImages } from './PostImages';
+import { PostToolbar } from './PostToolbar';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
 
 const PREVIEW_LIMIT = 240;
@@ -94,7 +91,7 @@ export const Post = memo(function Post({
     if (!authorIdentity) return;
     const sequence = postIdToSequence(postId);
     if (!sequence) return;
-    openCompose({ identityId: authorIdentity, sequence });
+    openCompose({ replyTo: { identityId: authorIdentity, sequence } });
   }, [authorIdentity, postId]);
 
   const handleLike = useCallback(() => {}, []);
@@ -107,7 +104,6 @@ export const Post = memo(function Post({
 
   const liked = false;
   const disliked = false;
-  const avatarUrl = authorIdentity ? identiconUrl(authorIdentity) : null;
   const time = timeAgo(Number(post.createdAt));
 
   return (
@@ -126,11 +122,13 @@ export const Post = memo(function Post({
       disabled={disablePress}
     >
       <View style={[Atoms.flex_row, Atoms.gap_lg]}>
-        <Avatar
-          source={avatarUrl ? { uri: avatarUrl } : undefined}
-          size="md"
-          onPress={handleAuthorPress}
-        />
+        {authorIdentity ? (
+          <ProfileAvatar
+            identityKey={authorIdentity}
+            size="md"
+            onPress={handleAuthorPress}
+          />
+        ) : null}
 
         <View style={Atoms.flex_1}>
           <View
@@ -175,6 +173,7 @@ export const Post = memo(function Post({
             {displayContent}
             {isTruncatedPreview ? '...' : ''}
           </Text>
+          {post.images?.length > 0 && <PostImages images={post.images} />}
           {showContentExpandToggle && (
             <Pressable
               onPress={toggleContentExpanded}
@@ -198,31 +197,14 @@ export const Post = memo(function Post({
         </View>
       </View>
 
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.justify_between,
-          { marginTop: 8, paddingLeft: 50 },
-        ]}
-      >
-        <ActionButton
-          icon="chatbubble-outline"
-          onPress={handleReply}
-          color={theme.palette.neutral_500}
-        />
-        <ActionButton
-          icon={disliked ? 'arrow-down' : 'arrow-down-outline'}
-          onPress={handleDislike}
-          color={
-            disliked ? theme.palette.negative_500 : theme.palette.neutral_500
-          }
-        />
-        <ActionButton
-          icon={liked ? 'arrow-up' : 'arrow-up-outline'}
-          onPress={handleLike}
-          color={liked ? theme.palette.primary_500 : theme.palette.neutral_500}
-        />
-      </View>
+      <PostToolbar
+        onReply={handleReply}
+        onLike={handleLike}
+        onDislike={handleDislike}
+        liked={liked}
+        disliked={disliked}
+        style={{ marginTop: 8, paddingLeft: 50 }}
+      />
     </Pressable>
   );
 });
@@ -248,67 +230,6 @@ function PostAuthorName({
       >
         {truncateName(name, 16)}
       </Text>
-    </Pressable>
-  );
-}
-
-function actionIconHoverColor(iconColor: string, theme: Theme): string {
-  if (iconColor === theme.palette.primary_500) {
-    return theme.palette.primary_600;
-  }
-  if (iconColor === theme.palette.negative_500) {
-    return theme.palette.negative_600;
-  }
-  return theme.palette.neutral_700;
-}
-
-function ActionButton({
-  icon,
-  count,
-  onPress,
-  color,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  count?: number;
-  onPress?: () => void;
-  color: string;
-}) {
-  const { theme } = useTheme();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
-  const resolvedIconColor = hovered
-    ? actionIconHoverColor(color, theme)
-    : color;
-
-  const iconSurface: StyleProp<ViewStyle> = [
-    Atoms.p_xs,
-    Atoms.rounded_md,
-    {
-      backgroundColor: hovered
-        ? withHexOpacity(theme.palette.neutral_500, '14')
-        : 'transparent',
-    },
-  ];
-
-  return (
-    <Pressable
-      style={[Atoms.flex_row, Atoms.items_center, { gap: 3, minHeight: 20 }]}
-      onPress={onPress}
-      disabled={!onPress}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
-    >
-      <View style={iconSurface}>
-        <Ionicons name={icon} size={16} color={resolvedIconColor} />
-      </View>
-      {count !== undefined ? (
-        <Text
-          variant="small"
-          color="neutral_500"
-          style={{ minWidth: 28, lineHeight: 16 }}
-        >
-          {count ? String(count) : ' '}
-        </Text>
-      ) : null}
     </Pressable>
   );
 }

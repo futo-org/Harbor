@@ -14,57 +14,52 @@ services:
       retries: 5
       start_period: 10s
 
-  opensearch:
-    image: opensearchproject/opensearch:2.1.0
-    ports:
-      - '127.0.0.1:9200:9200'
-    environment:
-      - cluster.name=opensearch-cluster
-      - node.name=opensearch-node1
-      - bootstrap.memory_lock=true
-      - 'OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m'
-      - 'DISABLE_INSTALL_DEMO_CONFIG=true'
-      - 'DISABLE_SECURITY_PLUGIN=true'
-      - 'discovery.type=single-node'
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -s http://localhost:9200 || exit 1']
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 15s
-
-  legacy-server:
+  server:
     build:
       context: .
-      dockerfile: legacy/services/polycentric-server/Dockerfile
+      dockerfile: services/server/Dockerfile
     ports:
-      - '127.0.0.1:${POLYCENTRIC_PORT:-8787}:8787'
+      - ${POLYCENTRIC_SERVER_PORT:-3000}:3000
     environment:
       - RUST_LOG=debug
       - DATABASE_URL=postgres://postgres:testing@postgres:5432
-      - OPENSEARCH_STRING=http://opensearch:9200
-      - ADMIN_TOKEN=123
-      - CHALLENGE_KEY=456
-      - STATSD_ADDRESS=127.0.0.1
+      - CONTENT_BLOB_OS_BUCKET=polycentric-blobs
+      - CONTENT_BLOB_OS_ENDPOINT=http://rustfs:9000
+      - CONTENT_BLOB_OS_FORCE_PATH_STYLE=true
+      - CONTENT_BLOB_OS_ACCESS_KEY=rustfsadmin
+      - CONTENT_BLOB_OS_SECRET_KEY=rustfsadmin
     depends_on:
       postgres:
         condition: service_healthy
-      opensearch:
-        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
 
-  legacy-verifiers:
-    build: ./legacy/services/verifiers-server
-    working_dir: /app/legacy/services/verifiers-server
+  rustfs:
+    image: rustfs/rustfs:latest
     volumes:
-      - .:/app
+      - rustfs-data:/data
     ports:
-      - '127.0.0.1:${VERIFIERS_PORT:-3002}:3002'
-    environment:
-      - SERVER_URL=http://legacy-server:8787
-    command: sh -c "npm install && npx nodemon src/app.ts"
+      - 9000:9000
+      - 9001:9001
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  rustfs-init:
+    image: rustfs/rc:latest
     depends_on:
-      postgres:
+      rustfs:
         condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until rc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin >/dev/null 2>&1; do
+        echo 'waiting for rustfs...'; sleep 1;
+      done;
+      rc mb -p rustfs/polycentric-blobs"
 
 volumes:
   postgres-data:
+  rustfs-data:

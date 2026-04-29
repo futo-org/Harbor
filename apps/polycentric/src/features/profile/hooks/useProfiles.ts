@@ -9,8 +9,8 @@ export type ProfileData = {
   identifier: string;
   name: string | null;
   description: string | null;
-  avatar: v2.Image | null;
-  banner: v2.Image | null;
+  avatar: v2.ImageSet | null;
+  banner: v2.ImageSet | null;
   isLoading: boolean;
   error: Error | null;
 };

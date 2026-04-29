@@ -4,3 +4,4 @@ pub mod feeds;
 pub mod identity;
 pub mod notifications;
 pub mod proto;
+pub mod server;

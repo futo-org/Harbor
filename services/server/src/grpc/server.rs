@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use crate::service;
-use crate::{
-    db::client::build_db_client,
-    service::notifications::notification_manager::NotificationManager,
-};
+use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::server::server_service::ServerConfig;
+use axum::Router;
 use http::header::HeaderName;
-use tonic::transport::Server;
+use sea_orm::DatabaseConnection;
+use tonic::service::Routes;
+use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_layer::Layer;
 
 /// Builds reflection for gRPC docs. The file descriptors are created in ./build.rs.
 fn build_reflection_service() -> Result<
@@ -24,42 +26,31 @@ fn build_reflection_service() -> Result<
     Ok(service)
 }
 
-/// Attempt to connect to the database, retrying with backoff.
-async fn connect_db_with_retry() -> sea_orm::DatabaseConnection {
-    let mut delay = std::time::Duration::from_secs(1);
-    loop {
-        match build_db_client().await {
-            Ok(db) => return db,
-            Err(e) => {
-                eprintln!(
-                    "Failed to connect to database: {e}, retrying in {delay:?}"
-                );
-                tokio::time::sleep(delay).await;
-                delay = (delay * 2).min(std::time::Duration::from_secs(30));
-            }
-        }
-    }
-}
-
-/// Serve the gRPC
-pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "0.0.0.0:50051".parse()?;
-    let db = connect_db_with_retry().await;
-
-    let notification_manager = Arc::new(NotificationManager::new());
-
+/// Build the gRPC services as an `axum::Router` so they can be merged with
+/// the HTTP router and served on a single port.
+pub fn build_grpc_router(
+    db: DatabaseConnection,
+    filestore: ContentFilestore,
+    server_config: ServerConfig,
+) -> Result<Router, Box<dyn std::error::Error>> {
     let events_service =
         service::events::events_service::build_events_service(db.clone());
     let feeds_service =
         service::feeds::feeds_service::build_feeds_service(db.clone());
-    let notification_service =
-        service::notifications::notification_service::build_notification_service(
-            db.clone(),
-            notification_manager.clone()
-        );
+    let content_service =
+        service::content::content_service::build_content_service(db, filestore);
+    let server_info_service =
+        service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
 
-    println!("GRPC server is listening on {addr}");
+    let grpc_web = GrpcWebLayer::new();
+
+    let routes = Routes::default()
+        .add_service(grpc_web.layer(reflection_service))
+        .add_service(grpc_web.layer(events_service))
+        .add_service(grpc_web.layer(feeds_service))
+        .add_service(grpc_web.layer(content_service))
+        .add_service(grpc_web.layer(server_info_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())
@@ -72,18 +63,8 @@ pub async fn serve_grpc() -> Result<(), Box<dyn std::error::Error>> {
             HeaderName::from_static("grpc-status"),
             HeaderName::from_static("grpc-message"),
         ])
-        .allow_methods([http::Method::POST, http::Method::OPTIONS]);
+        .allow_methods([http::Method::POST, http::Method::OPTIONS])
+        .max_age(std::time::Duration::from_secs(86400));
 
-    Server::builder()
-        .accept_http1(true)
-        .layer(cors)
-        .layer(tonic_web::GrpcWebLayer::new())
-        .add_service(reflection_service)
-        .add_service(events_service)
-        .add_service(notification_service)
-        .add_service(feeds_service)
-        .serve(addr)
-        .await?;
-
-    Ok(())
+    Ok(routes.into_axum_router().layer(cors))
 }

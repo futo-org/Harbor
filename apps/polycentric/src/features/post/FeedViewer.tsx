@@ -3,7 +3,7 @@ import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
@@ -22,10 +22,94 @@ interface FeedViewerProps {
   bottomPadding?: number;
 }
 
-export function FeedViewer({
+export function FeedViewer(props: FeedViewerProps) {
+  if (props.error) {
+    return (
+      <View
+        style={[
+          Atoms.flex_1,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.p_lg,
+        ]}
+      >
+        <Text color="neutral_500">Failed to load feed</Text>
+      </View>
+    );
+  }
+
+  // On web let the page scroll naturally — the Stack's content area
+  // already has `overflow: auto`. Inline rendering keeps that scroll
+  // chain intact instead of FlashList swallowing it.
+  if (isWeb) {
+    return <WebFeedViewer {...props} />;
+  }
+  return <NativeFeedViewer {...props} />;
+}
+
+function WebFeedViewer({
   items,
   isLoading,
-  error,
+  onEndReached,
+  hasMore,
+  bottomPadding,
+}: FeedViewerProps) {
+  const { theme } = useTheme();
+  const sentinelRef = useRef<View>(null);
+
+  // IntersectionObserver on a sentinel at the bottom triggers
+  // `onEndReached` when the user scrolls near it.
+  useEffect(() => {
+    if (!hasMore || !onEndReached) return;
+    const node = sentinelRef.current as unknown as Element | null;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) onEndReached();
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, onEndReached, items.length]);
+
+  if (items.length === 0 && !isLoading) {
+    return (
+      <View
+        style={[
+          Atoms.flex_1,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.p_lg,
+        ]}
+      >
+        <Text color="neutral_500">No posts yet</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ paddingBottom: bottomPadding }}>
+      {items.map((item, i) => (
+        <Post key={`${item.id}:${i}`} post={item} />
+      ))}
+      {hasMore && <View ref={sentinelRef} style={{ height: 1 }} />}
+      {isLoading && items.length > 0 ? (
+        <View style={[Atoms.items_center, Atoms.p_lg]}>
+          <ActivityIndicator
+            size="small"
+            color={theme.palette.neutral_500}
+            accessibilityLabel="Loading more posts"
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function NativeFeedViewer({
+  items,
+  isLoading,
   onRefresh,
   onEndReached,
   hasMore,
@@ -42,10 +126,8 @@ export function FeedViewer({
     setHasLayout(true);
   }, []);
 
-  // Our routing and navigation leaves
-  // inactive screens mounted with tiny dimensions.
-  // When navigating back, this can cause a momentary visual glitch.
-  // Hiding the invalid layout prevents the visual glitch.
+  // Inactive screens stay mounted with tiny dimensions. Hide the list
+  // briefly until it has a valid layout to avoid a flash on back-nav.
   const layoutInvalid = hasLayout && (layoutBox.w < 2 || layoutBox.h < 2);
 
   const renderItem = useCallback(
@@ -58,31 +140,9 @@ export function FeedViewer({
     [],
   );
 
-  if (error) {
-    return (
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.items_center,
-          Atoms.justify_center,
-          Atoms.p_lg,
-        ]}
-      >
-        <Text color="neutral_500">Failed to load feed</Text>
-      </View>
-    );
-  }
-
   return (
     <View
-      style={[
-        Atoms.flex_1,
-        isWeb &&
-          layoutInvalid && {
-            opacity: 0,
-            pointerEvents: 'none',
-          },
-      ]}
+      style={[Atoms.flex_1, layoutInvalid && { opacity: 0 }]}
       onLayout={onFeedContainerLayout}
     >
       <FlashList

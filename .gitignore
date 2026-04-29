@@ -34,6 +34,7 @@ yarn-debug.log*
 yarn-error.log*
 
 dist
+services/server/data
 
 # Turborepo
 .turbo/

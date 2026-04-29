@@ -17,6 +17,7 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './storage/storage-handle';
+import { bytesToHex } from './utils/hex';
 
 export type { IdentityState } from './client-internal/identity-manager';
 
@@ -39,6 +40,12 @@ export interface PolycentricClientConfig {
   coreBridge: ICoreBridge;
   storageDriver: IStorageDriver;
   cryptoManager: ICryptoManager;
+  /**
+   * gRPC-web URLs the client should start with. Used to seed
+   * `client.servers` before `initialize()` fetches each server's
+   * `ServerInfo`.
+   */
+  seedServers?: string[];
 }
 
 /**
@@ -64,7 +71,10 @@ export class PolycentricClient {
   public currentKeyPair: KeyPair | null = null;
   /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
   public activeIdentityKey: string | null = null;
-  public servers: string[] = ['http://localhost:50051'];
+  public servers: string[] = ['http://localhost:3000'];
+
+  /** CDN URL per server, populated by `fetchServerInfo` during init. */
+  private cdnUrlByServer = new Map<string, string>();
 
   public readonly cryptoManager: ICryptoManager;
 
@@ -75,6 +85,9 @@ export class PolycentricClient {
     this.coreBridge = config.coreBridge;
     this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
+    if (config.seedServers && config.seedServers.length > 0) {
+      this.servers = [...config.seedServers];
+    }
   }
 
   public static async create(
@@ -126,12 +139,65 @@ export class PolycentricClient {
         });
       }
 
+      // Resolve each server's CDN URL. Failures are tolerated — clients
+      // still work without a CDN, they just can't fetch blob bodies.
+      await this.fetchServerInfo();
+
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
     } catch (error) {
       this.setError(error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
+  }
+
+  /**
+   * Call `ServerService.GetInfo` on every configured server and cache
+   * each server's `cdn_url`. Failures are logged, not thrown.
+   */
+  private async fetchServerInfo(): Promise<void> {
+    if (!this.core) return;
+
+    const results = await Promise.allSettled(
+      this.servers.map(async (server) => {
+        const bytes = await this.core!.get_server_info(server);
+        const response = Proto.GetServerInfoResponse.fromBinary(bytes);
+        return { server, info: response.serverInfo };
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('fetchServerInfo failed:', result.reason);
+        continue;
+      }
+      const { server, info } = result.value;
+      if (info?.cdnUrl) {
+        this.cdnUrlByServer.set(server, info.cdnUrl);
+      }
+    }
+  }
+
+  /**
+   * Return the CDN base URL for `server`, as reported by
+   * `ServerService.GetInfo`. Returns `null` if info hasn't been
+   * fetched yet or the server didn't report one.
+   */
+  cdnUrlFor(server: string): string | null {
+    return this.cdnUrlByServer.get(server) ?? null;
+  }
+
+  /**
+   * Build the HTTP URL for a blob by its content digest, using the
+   * first server's reported CDN URL. Returns `null` when no CDN is
+   * known.
+   */
+  blobUrl(digest: Proto.ContentDigest): string | null {
+    const server = this.servers[0];
+    if (!server) return null;
+    const cdn = this.cdnUrlByServer.get(server);
+    if (!cdn) return null;
+    return `${cdn}/blob/${digest.type}_${bytesToHex(digest.value)}`;
   }
 
   /**
@@ -283,7 +349,7 @@ export class PolycentricClient {
       }
     }
 
-    this.events.emitContentCreated(signedEvent);
+    this.events.emitContentCreated({ signedEvent, content });
   }
 
   /**
@@ -424,6 +490,48 @@ export class PolycentricClient {
   }
 
   /**
+   * Decode an image, resize into `width` x `height` per `mode`, and
+   * encode as JPEG via the core.
+   *
+   * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
+   * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
+   */
+  processImageToJpeg(
+    image: Uint8Array,
+    width: number,
+    height: number,
+    mode: 'fill' | 'fit' = 'fill',
+  ): Uint8Array {
+    if (!this.core) throw new Error('Core not initialized');
+    return this.core.process_image_to_jpeg(image, width, height, mode);
+  }
+
+  /**
+   * Upload a blob body to all configured servers. The server verifies
+   * that `body` hashes to `blob.digest` before persisting. Rejections
+   * from individual servers are logged but do not throw.
+   */
+  async uploadBlob(blob: Proto.Blob, body: Uint8Array): Promise<void> {
+    if (!this.core) throw new Error('Core not initialized');
+
+    const requestBytes = Proto.UploadBlobRequest.toBinary(
+      Proto.UploadBlobRequest.create({ blob, body }),
+    );
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core!.upload_blob(server, requestBytes),
+      ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('uploadBlob failed for a server:', result.reason);
+      }
+    }
+  }
+
+  /**
    * Push local events for the active key to all configured servers,
    * including content alongside each event.
    */
@@ -542,7 +650,9 @@ export class PolycentricClient {
   public setCurrentKeyPair(keyPair: KeyPair) {
     this.currentKeyPair = keyPair;
     // Restore saved identity key for this key pair
-    this.activeIdentityKey = this.loadActiveIdentityKey();
+    this.activeIdentityKey = this.storageDriver.loadActiveIdentityKey(
+      keyPair.publicKey.key,
+    );
   }
 
   /**
@@ -550,7 +660,11 @@ export class PolycentricClient {
    */
   public setActiveIdentityKey(identityKey: string | null) {
     this.activeIdentityKey = identityKey;
-    this.saveActiveIdentityKey(identityKey);
+    if (!this.currentKeyPair) return;
+    this.storageDriver.saveActiveIdentityKey(
+      this.currentKeyPair.publicKey.key,
+      identityKey,
+    );
   }
 
   /**
@@ -558,41 +672,7 @@ export class PolycentricClient {
    * Returns null if this device has never associated an identity with the pair.
    */
   public getIdentityKeyFor(keyPair: KeyPair): string | null {
-    const storageKey = `polycentric:activeIdentity:${this.toHex(keyPair.publicKey.key, 32)}`;
-    try {
-      return localStorage.getItem(storageKey);
-    } catch {
-      return null;
-    }
-  }
-
-  private identityStorageKey(): string | null {
-    if (!this.currentKeyPair) return null;
-    return `polycentric:activeIdentity:${this.toHex(this.currentKeyPair.publicKey.key, 32)}`;
-  }
-
-  private saveActiveIdentityKey(identityKey: string | null) {
-    const key = this.identityStorageKey();
-    if (!key) return;
-    try {
-      if (identityKey) {
-        localStorage.setItem(key, identityKey);
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {
-      // localStorage unavailable (SSR, etc.)
-    }
-  }
-
-  private loadActiveIdentityKey(): string | null {
-    const key = this.identityStorageKey();
-    if (!key) return null;
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
+    return this.storageDriver.loadActiveIdentityKey(keyPair.publicKey.key);
   }
 
   private setState(state: ClientState) {
@@ -623,12 +703,6 @@ export class PolycentricClient {
       if (a[i] !== b[i]) return false;
     }
     return true;
-  }
-
-  private toHex(bytes: Uint8Array, len = 8): string {
-    return Array.from(bytes.slice(0, len))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
   }
 
   get currentSystem(): Proto.PublicKey {

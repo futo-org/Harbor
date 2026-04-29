@@ -22,6 +22,7 @@ import {
   useStore,
   type PolycentricStoreApi,
 } from './store';
+import { Atoms, useTheme } from '../../theme';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -39,9 +40,22 @@ const PolycentricContext = createContext<PolycentricContextValue | null>(null);
 // Defaults for local development
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
-export const DEFAULT_SERVER =
-  (process.env.EXPO_PUBLIC_POLYCENTRIC_SERVER ?? '').trim() ||
-  `http://${DEFAULT_HOST}:8787`;
+/**
+ * Comma-separated list of gRPC-web server URLs the client seeds
+ * `client.servers` with. Read from `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`;
+ * falls back to `http://<host>:3000` for local dev.
+ */
+export const DEFAULT_SEED_SERVERS: string[] = (() => {
+  const raw = (process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS ?? '').trim();
+  const parsed = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:3000`];
+})();
+
+/** First seed server — used by identity onboarding helpers. */
+export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
 
 interface PolycentricProviderProps {
   children: ReactNode;
@@ -50,15 +64,17 @@ interface PolycentricProviderProps {
 }
 
 function DefaultLoadingComponent() {
+  const { theme } = useTheme();
   return (
     <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      style={[
+        theme.atoms.bg,
+        Atoms.flex_1,
+        Atoms.align_center,
+        Atoms.justify_center,
+      ]}
     >
-      <ActivityIndicator />
+      {/* <ActivityIndicator /> */}
     </View>
   );
 }
@@ -127,9 +143,12 @@ export function PolycentricProvider({
         // concept — the onboarding gate handles creating or pairing one.
         const c = await createPolycentricClient({
           databaseName: 'polycentric.db',
+          seedServers: DEFAULT_SEED_SERVERS,
         });
 
         if (cancelled) return;
+
+        c.servers = [DEFAULT_SERVER];
 
         const s = createPolycentricStore(c);
         await s.getState().refreshIdentities();
@@ -140,7 +159,11 @@ export function PolycentricProvider({
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
-          await c
+          // Read follows from the local store immediately — don't gate
+          // the UI on the network sync. The sync runs in parallel and
+          // re-refreshes once new events have been pulled in.
+          await useFollows.getState().refresh(c);
+          void c
             .sync()
             .then(() => useFollows.getState().refresh(c))
             .catch((syncError) => {

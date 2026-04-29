@@ -1,6 +1,6 @@
-import { Avatar, Button, Text, TextInput } from '@/src/common/components';
+import { Button, Text, TextInput } from '@/src/common/components';
+import AvatarEdit from '@/src/common/components/Avatar/AvatarEdit';
 import {
-  identiconUrl,
   useCurrentIdentity,
   useProfileEdit,
   useUsername,
@@ -29,8 +29,6 @@ function EditProfileSheet({
   const username = profile.name ?? fallbackUsername;
   const edit = useProfileEdit(username, profile);
 
-  const avatarUrl = identiconUrl(identityKey, 160);
-
   const handleSave = useCallback(async () => {
     await edit.handleSave();
     await dismissSheet();
@@ -45,7 +43,11 @@ function EditProfileSheet({
       />
       <View style={[Atoms.p_lg, Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md]}>
-          <Avatar source={{ uri: avatarUrl }} size="massive" />
+          <AvatarEdit
+            identity={identityKey}
+            size="massive"
+            onSelect={edit.setAvatarUri}
+          />
         </View>
 
         <View style={Atoms.gap_md}>

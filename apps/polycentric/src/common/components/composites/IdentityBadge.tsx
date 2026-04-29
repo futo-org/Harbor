@@ -1,11 +1,11 @@
 import {
   Text,
-  Avatar,
   type AvatarSizePreset,
   IdentityTag,
+  ProfileAvatar,
   type TextVariant,
 } from '@/src/common/components/primitives';
-import { useUsername, identiconUrl } from '@/src/common/lib/polycentric-hooks';
+import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
 import { View } from 'react-native';
 
@@ -25,7 +25,6 @@ export function IdentityBadge({
   showId = true,
 }: IdentityBadgeProps) {
   const username = useUsername(identityKey);
-  const avatarUrl = identiconUrl(identityKey);
 
   const sizeConfig = CONFIG[size];
   const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
@@ -33,10 +32,7 @@ export function IdentityBadge({
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, rowGap, { flex: 1 }]}>
       {showAvatar && (
-        <Avatar
-          source={avatarUrl ? { uri: avatarUrl } : undefined}
-          size={sizeConfig.avatarSize}
-        />
+        <ProfileAvatar identityKey={identityKey} size={sizeConfig.avatarSize} />
       )}
       <View
         style={[

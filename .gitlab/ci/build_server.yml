@@ -15,10 +15,7 @@
         - .gitlab/ci/build_server.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
-    DOCKER_FULL_IMAGE_NAME: '${CI_REGISTRY}/${CI_PROJECT_PATH}'
     RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'
-  before_script:
-    - cd services/server
 
 .server-rust-base:
   extends: .server-workflow
@@ -28,19 +25,36 @@
 server-format-check:
   extends: .server-rust-base
   script:
-    - cargo fmt --check
+    - cargo fmt --check --package server
 
 server-clippy:
   extends: .server-rust-base
   script:
-    - cargo clippy -- -D warnings
+    - cargo clippy --package server -- -D warnings
 
 server-build:
   extends: .server-rust-base
   stage: build
   script:
-    - cargo build --release
+    - cargo build --release --package server
   artifacts:
     paths:
       - target/release/server
     expire_in: 1 week
+
+server-image:
+  extends: .server-workflow
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: ['']
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  stage: build
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=./services/server \
+        --output type=image,name=$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA,push=true

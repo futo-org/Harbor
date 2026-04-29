@@ -1,7 +1,6 @@
 import { DismissReason, SheetMenu } from '@/src/common/lib/sheet';
-import { Avatar, Text } from '@/src/common/components';
+import { ProfileAvatar, Text } from '@/src/common/components';
 import {
-  identiconUrl,
   publicKeyToString,
   useCurrentIdentity,
   usePolycentric,
@@ -30,7 +29,6 @@ export function IdentitySettings({
     ? publicKeyToString(client.currentKeyPair.publicKey)
     : '';
   const displayName = profile.name;
-  const avatarUrl = identiconUrl(identityKey, 160);
 
   return (
     <View style={Atoms.flex_1}>
@@ -39,10 +37,7 @@ export function IdentitySettings({
         {/* Hero: avatar + name */}
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <Link href={'/feed/compose'}>
-            <Avatar
-              source={avatarUrl ? { uri: avatarUrl } : undefined}
-              size="massive"
-            />
+            <ProfileAvatar identityKey={identityKey} size="massive" />
           </Link>
 
           <View style={[Atoms.items_center, Atoms.gap_xs]}>

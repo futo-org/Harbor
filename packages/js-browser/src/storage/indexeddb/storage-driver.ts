@@ -40,4 +40,38 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   createEventAckRepository() {
     return new IndexedDBEventAckRepository(this.database);
   }
+
+  saveActiveIdentityKey(
+    publicKey: Uint8Array,
+    identityKey: string | null,
+  ): void {
+    try {
+      const key = IndexedDBStorageDriver.activeIdentityKey(publicKey);
+      if (identityKey) {
+        localStorage.setItem(key, identityKey);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch {}
+  }
+
+  loadActiveIdentityKey(publicKey: Uint8Array): string | null {
+    try {
+      return localStorage.getItem(
+        IndexedDBStorageDriver.activeIdentityKey(publicKey),
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private static activeIdentityKey(publicKey: Uint8Array): string {
+    return `polycentric:activeIdentity:${IndexedDBStorageDriver.toHex(publicKey, 32)}`;
+  }
+
+  private static toHex(bytes: Uint8Array, len = 8): string {
+    return Array.from(bytes.slice(0, len))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
 }

@@ -13,6 +13,14 @@ import {
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 
+// Anchor the root stack on the tabs so that deep-linking directly
+// into a modal route (e.g. `/feed/compose`, `/settings/identity`)
+// mounts the tabs underneath — giving the modal something to sit on
+// and a sensible target for the close button's `router.back()`.
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
 function RootStack() {
   const { theme } = useTheme();
 

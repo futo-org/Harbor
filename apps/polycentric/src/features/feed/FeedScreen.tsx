@@ -1,13 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/common/components/layout';
-import { View } from 'react-native';
 import { Fab } from '@/src/common/components';
 import { FeedViewer, type FeedType } from '@/src/features/post';
 import { ComposerInput } from '@/src/features/composer';
 import { useExploreFeed } from './hooks/useExploreFeed';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { openCompose } from '@/src/common/constants';
-import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { usePathname } from 'expo-router';
 
@@ -41,18 +39,16 @@ export default function FeedScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         {selectedFeed === 'following' ? <ComposerInput /> : null}
-        <View style={[Atoms.flex_1]}>
-          <FeedViewer
-            key={selectedFeed}
-            items={currentFeed.items}
-            isLoading={currentFeed.isLoading}
-            error={currentFeed.error}
-            onRefresh={currentFeed.refresh}
-            onEndReached={currentFeed.loadMore}
-            hasMore={currentFeed.hasMore}
-            bottomPadding={0}
-          />
-        </View>
+        <FeedViewer
+          key={selectedFeed}
+          items={currentFeed.items}
+          isLoading={currentFeed.isLoading}
+          error={currentFeed.error}
+          onRefresh={currentFeed.refresh}
+          onEndReached={currentFeed.loadMore}
+          hasMore={currentFeed.hasMore}
+          bottomPadding={0}
+        />
         {showComposeFab ? (
           <Fab
             title="New Post"

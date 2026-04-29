@@ -2,6 +2,7 @@ include:
   - local: '.gitlab/ci/build_rs_core.yml'
   - local: '.gitlab/ci/build_js_sdks.yml'
   - local: '.gitlab/ci/build_server.yml'
+  - local: '.gitlab/ci/build_app.yml'
   - local: '.gitlab/ci/deploy_pages.yml'
   - local: '.gitlab/ci/scan_dependencies.yml'
 stages:

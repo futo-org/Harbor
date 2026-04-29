@@ -1,12 +1,17 @@
 import { Button, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { ActivityIndicator, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
   submitting: boolean;
   canPost: boolean;
   onPost: () => void;
+  /** Optional hook for the "attach image" button. Button is hidden when omitted. */
+  onAttachImage?: () => void;
+  attachDisabled?: boolean;
   variant: 'native' | 'web';
 };
 
@@ -15,14 +20,39 @@ export function ComposeSheetFooterBar({
   submitting,
   canPost,
   onPost,
+  onAttachImage,
+  attachDisabled = false,
   variant,
 }: ComposeSheetFooterBarProps) {
   const { theme } = useTheme();
 
-  const countLabel = (
-    <Text variant="small" color="neutral_500">
-      {charCount}/2000
-    </Text>
+  const attachButton = onAttachImage ? (
+    <Pressable
+      onPress={onAttachImage}
+      disabled={attachDisabled}
+      hitSlop={10}
+      accessibilityLabel="Attach image"
+      style={[
+        Atoms.p_xs,
+        Atoms.rounded_md,
+        { opacity: attachDisabled ? 0.4 : 1 },
+      ]}
+    >
+      <Ionicons
+        name="image-outline"
+        size={22}
+        color={theme.palette.neutral_700}
+      />
+    </Pressable>
+  ) : null;
+
+  const leading = (
+    <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
+      {attachButton}
+      <Text variant="small" color="neutral_500">
+        {charCount}/2000
+      </Text>
+    </View>
   );
 
   const postSlot = (
@@ -68,10 +98,9 @@ export function ComposeSheetFooterBar({
           Atoms.px_lg,
           theme.atoms.bg,
           borderTop,
-          { paddingBottom: 24 },
         ]}
       >
-        {countLabel}
+        {leading}
         {postSlot}
       </View>
     );
@@ -81,15 +110,15 @@ export function ComposeSheetFooterBar({
     <View
       style={[
         Atoms.flex_row,
-        Atoms.justify_end,
+        Atoms.justify_between,
+        Atoms.items_center,
         Atoms.py_md,
         Atoms.px_lg,
         theme.atoms.bg,
         borderTop,
-        { paddingBottom: 24 },
       ]}
     >
-      {countLabel}
+      {leading}
     </View>
   );
 }

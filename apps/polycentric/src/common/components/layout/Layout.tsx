@@ -1,5 +1,6 @@
 import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';
 import {
   ComponentProps,
@@ -7,28 +8,24 @@ import {
   ReactElement,
   ReactNode,
   useCallback,
-  useMemo,
   useState,
 } from 'react';
 import {
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { VerticalNav } from './nav/VerticalNav';
-import { Ionicons } from '@expo/vector-icons';
-import { FUTO_URL, openCompose } from '../../constants';
 import { Button } from '../primitives';
-import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
+import { Ionicons } from '@expo/vector-icons';
+import WEB_LOGO from '../../assets/images/WebLogo.png';
+import { FUTO_URL, openCompose } from '../../constants';
+import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -81,15 +78,28 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
+
   return (
     <View
       testID="primaryColumn"
       style={[
         Atoms.flex_1,
         Atoms.pb_lg,
-        { borderLeftColor: theme.palette.neutral_25, borderLeftWidth: 1 },
-        { borderRightColor: theme.palette.neutral_25, borderRightWidth: 1 },
-        { maxWidth: 600 },
+        {
+          maxWidth: 600,
+          borderLeftColor: theme.palette.neutral_25,
+          borderLeftWidth: 1,
+          borderRightColor: theme.palette.neutral_25,
+          borderRightWidth: 1,
+        },
+        // Web page-scroll: let the column grow with content so the
+        // borders span the full scrollable height. `self_start` opts
+        // out of the row's cross-axis stretch; `minHeight` keeps
+        // borders painting to the viewport bottom on short-content
+        // pages.
+        isWeb && Atoms.self_start,
+        isWeb && { minHeight: windowHeight },
       ]}
     >
       {children}
@@ -257,7 +267,7 @@ export const RightSidebar = memo(function RightSidebar({
     setActiveThemeName(next);
   }, [setActiveThemeName, theme.name]);
 
-  const LINKS: { text: ReactNode; href: ExternalPathString }[] = [
+  const LINKS: { text: string; href: ExternalPathString }[] = [
     {
       text: 'Privacy Policy',
       href: 'https://docs.polycentric.io/privacy-policy/',
@@ -266,47 +276,57 @@ export const RightSidebar = memo(function RightSidebar({
       text: 'Source Code',
       href: 'https://gitlab.futo.org/polycentric/polycentric',
     },
-    { text: <Text>FUTO &copy; 2026.</Text>, href: FUTO_URL },
+    { text: 'FUTO © 2026.', href: FUTO_URL },
   ];
 
   return (
     <View style={{ width, marginRight }}>
+      {/* Pin to viewport on web so it stays visible while the primary
+          column scrolls; the outer View reserves the row space. */}
       <View
-        style={[
-          Atoms.justify_between,
-          Atoms.align_center,
-          Atoms.h_full,
-          Atoms.pb_lg,
-        ]}
+        style={
+          isWeb
+            ? { position: 'fixed', top: 0, height: '100%', width }
+            : undefined
+        }
       >
-        <View style={[Atoms.flex_1]}></View>
         <View
           style={[
-            Atoms.flex_row,
-            Atoms.items_center,
-            Atoms.w_full,
-            Atoms.py_sm,
-            Atoms.px_sm,
-            Atoms.gap_sm,
-            Atoms.flex_wrap,
+            Atoms.justify_between,
+            Atoms.align_center,
+            Atoms.h_full,
+            Atoms.pb_lg,
           ]}
         >
-          <Pressable
-            accessibilityLabel="Toggle color theme"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={toggleTheme}
-            style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+          <View style={[Atoms.flex_1]}></View>
+          <View
+            style={[
+              Atoms.flex_row,
+              Atoms.items_center,
+              Atoms.w_full,
+              Atoms.py_sm,
+              Atoms.px_sm,
+              Atoms.gap_sm,
+              Atoms.flex_wrap,
+            ]}
           >
-            <Ionicons
-              name={theme.name === 'dark' ? 'moon' : 'sunny'}
-              size={typography.fontSize.sm}
-              color={theme.palette.neutral_500}
-            />
-          </Pressable>
-          {LINKS.map(({ text, href }) => (
-            <RightSidebarLink key={href} href={href} text={text} />
-          ))}
+            <Pressable
+              accessibilityLabel="Toggle color theme"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={toggleTheme}
+              style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+            >
+              <Ionicons
+                name={theme.name === 'dark' ? 'moon' : 'sunny'}
+                size={typography.fontSize.sm}
+                color={theme.palette.neutral_500}
+              />
+            </Pressable>
+            {LINKS.map(({ text, href }) => (
+              <RightSidebarLink key={href} href={href} text={text} />
+            ))}
+          </View>
         </View>
       </View>
     </View>

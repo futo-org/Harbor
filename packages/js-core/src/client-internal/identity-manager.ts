@@ -1,6 +1,7 @@
 import type { PolycentricClient } from '../polycentric-client';
 import { COLLECTION } from '../constants';
 import * as Proto from '../proto/v2';
+import { bytesToHex } from '../utils/hex';
 import { sha256 } from '@noble/hashes/sha2';
 
 /**
@@ -84,7 +85,7 @@ export class IdentityManager {
     // If no identity key provided, compute from initial Identity content
     if (!identityKey) {
       const identityBytes = Proto.Identity.toBinary(identity);
-      identityKey = this.toHex(sha256(identityBytes), 32);
+      identityKey = bytesToHex(sha256(identityBytes), 32);
     }
 
     const digest = this.client.contentManager.buildDigest(content);
@@ -109,9 +110,8 @@ export class IdentityManager {
 
     await this.client.storage.content.save(digest, content);
     const signedEvent = await this.client.signEvent(event);
-    await this.client.commitEvent(signedEvent, content);
-
     this.client.setActiveIdentityKey(identityKey);
+    await this.client.commitEvent(signedEvent, content);
 
     return { identityKey, signedEvent };
   }
@@ -312,11 +312,5 @@ export class IdentityManager {
       if (a[i] !== b[i]) return false;
     }
     return true;
-  }
-
-  private toHex(bytes: Uint8Array, len = 8): string {
-    return Array.from(bytes.slice(0, len))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
   }
 }

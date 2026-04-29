@@ -72,7 +72,7 @@ export interface IPolycentricCore {
    * Fetch events from a server via gRPC-web.
    *
    * # Arguments
-   * * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:50051")
+   * * `server_url` - The base URL of the gRPC-web server (e.g. "http://localhost:3000")
    * * `limit` - Maximum number of events to fetch
    * * `identity` - Optional serialized Identity message bytes to filter by
    * * `stream_id` - Optional stream ID to filter by
@@ -158,4 +158,38 @@ export interface IPolycentricCore {
     limit?: number | null,
     identity?: string | null,
   ): Promise<Uint8Array>;
+
+  /**
+   * Decode `image` bytes, resize into `width` x `height` per `mode`,
+   * and encode as JPEG.
+   *
+   * - `"fill"` scales + center-crops — output is always `width` x `height`.
+   * - `"fit"` preserves aspect ratio — output fits inside the bounds.
+   *   Callers derive the actual output dims from the source aspect.
+   *
+   * @returns JPEG-encoded bytes
+   */
+  process_image_to_jpeg(
+    image: Uint8Array,
+    width: number,
+    height: number,
+    mode: 'fill' | 'fit',
+  ): Uint8Array;
+
+  /**
+   * Upload a blob body to a server via gRPC-web. The server verifies
+   * that the body matches the digest declared in the request.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @param request_bytes - Serialized `UploadBlobRequest` proto bytes
+   */
+  upload_blob(server_url: string, request_bytes: Uint8Array): Promise<void>;
+
+  /**
+   * Fetch a server's public info (version, CDN URL) over gRPC-web.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @returns Serialized `GetServerInfoResponse` proto bytes
+   */
+  get_server_info(server_url: string): Promise<Uint8Array>;
 }

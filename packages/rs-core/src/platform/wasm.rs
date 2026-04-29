@@ -2,9 +2,11 @@ use crate::client::PolycentricClient;
 use crate::platform::error::PlatformError;
 use js_sys::Uint8Array;
 use polycentric_common::models::protos_v2::{
+    content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
-    ContentDigest, Event, FeedAlgorithm, GetFeedRequest, ListEventsFilters, ListEventsRequest,
-    ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent,
+    server_service_client::ServerServiceClient, ContentDigest, Event, FeedAlgorithm,
+    GetFeedRequest, GetServerInfoRequest, ListEventsFilters, ListEventsRequest, ListEventsResponse,
+    PublicKey, PutEventsRequest, SignedEvent, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -384,6 +386,73 @@ impl PolycentricWasm {
 
         Ok(Uint8Array::from(&response.encode_to_vec()[..]))
     }
+
+    /// Fetch a server's public info (version, CDN URL, etc) over
+    /// gRPC-web.
+    ///
+    /// # Returns
+    /// Serialized `GetServerInfoResponse` proto bytes.
+    #[wasm_bindgen]
+    pub async fn get_server_info(
+        &self,
+        server_url: &str,
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let mut client = Self::create_server_client(server_url);
+
+        let response = client
+            .get_info(GetServerInfoRequest {})
+            .await
+            .map_err(|e| JsValue::from_str(&format!("gRPC get_server_info failed: {e}")))?;
+
+        let bytes = response.into_inner().encode_to_vec();
+        Ok(Uint8Array::from(&bytes[..]))
+    }
+
+    /// Upload a blob body to a server via gRPC-web. The server verifies
+    /// that `body` matches the declared `Blob.digest`.
+    ///
+    /// # Arguments
+    /// * `server_url` - Base URL of the gRPC-web server
+    /// * `request_bytes` - Serialized `UploadBlobRequest` proto bytes
+    #[wasm_bindgen]
+    pub async fn upload_blob(
+        &self,
+        server_url: &str,
+        request_bytes: &[u8],
+    ) -> std::result::Result<(), JsValue> {
+        let request = UploadBlobRequest::decode(request_bytes)
+            .map_err(|e| JsValue::from_str(&format!("Failed to decode UploadBlobRequest: {e}")))?;
+
+        let mut client = Self::create_content_client(server_url);
+
+        client
+            .upload_blob(request)
+            .await
+            .map_err(|e| JsValue::from_str(&format!("gRPC upload_blob failed: {e}")))?;
+
+        Ok(())
+    }
+
+    /// Decode `image` bytes, resize into `width` x `height` per `mode`,
+    /// and encode as JPEG. `mode` is `"fill"` (scale + center-crop —
+    /// output is exactly `width` x `height`) or `"fit"` (preserve
+    /// aspect, output fits inside `width` x `height`).
+    #[wasm_bindgen]
+    pub fn process_image_to_jpeg(
+        &self,
+        image: &[u8],
+        width: u32,
+        height: u32,
+        mode: &str,
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let mode = match mode {
+            "fit" => crate::media::process_image::ResizeMode::Fit,
+            _ => crate::media::process_image::ResizeMode::Fill,
+        };
+        let jpeg = crate::media::process_image::process_image(image, width, height, mode)
+            .map_err(|e| JsValue::from_str(&format!("process_image failed: {e}")))?;
+        Ok(Uint8Array::from(&jpeg[..]))
+    }
 }
 
 impl PolycentricWasm {
@@ -395,6 +464,16 @@ impl PolycentricWasm {
     fn create_feeds_client(server_url: &str) -> FeedsServiceClient<GrpcWebClient> {
         let web_client = GrpcWebClient::new(server_url.to_string());
         FeedsServiceClient::new(web_client)
+    }
+
+    fn create_content_client(server_url: &str) -> ContentServiceClient<GrpcWebClient> {
+        let web_client = GrpcWebClient::new(server_url.to_string());
+        ContentServiceClient::new(web_client)
+    }
+
+    fn create_server_client(server_url: &str) -> ServerServiceClient<GrpcWebClient> {
+        let web_client = GrpcWebClient::new(server_url.to_string());
+        ServerServiceClient::new(web_client)
     }
 }
 
