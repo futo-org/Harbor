@@ -150,7 +150,7 @@ export function PolycentricProvider({
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
-          await c
+          void c
             .sync()
             .then(() => useFollows.getState().refresh(c))
             .catch((syncError) => {
