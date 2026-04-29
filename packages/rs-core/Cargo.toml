@@ -63,10 +63,3 @@ omit-default-module-path = true
 
 [package.metadata.wasm-pack.profile.release.wasm-bindgen]
 omit-default-module-path = true
-
-[profile.release]
-opt-level = "s"
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = "debuginfo"

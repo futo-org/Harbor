@@ -72,11 +72,11 @@ _build-ffi target dest: _ensure-ffi
         echo "Skipping {{target}} (not installed — run 'rustup target add {{target}}' to enable)"
         exit 0
     fi
-    if ! cargo rustc --release --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
+    if ! cargo rustc --profile release-rs-core --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
         echo "FAILED: {{target}}"
         exit 1
     fi
-    lib="../../target/{{target}}/release/libpolycentric_core.a"
+    lib="../../target/{{target}}/release-rs-core/libpolycentric_core.a"
     if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
     mkdir -p "{{dest}}"
     cp "$lib" "{{dest}}/libpolycentric_core.a"
