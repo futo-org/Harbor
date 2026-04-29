@@ -40,13 +40,17 @@ pub fn build_grpc_router(
     let feeds_service =
         service::feeds::feeds_service::build_feeds_service(db.clone());
     let content_service =
-        service::content::content_service::build_content_service(db, filestore);
+        service::content::content_service::build_content_service(
+            db.clone(),
+            filestore,
+        );
     let server_info_service =
         service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
-    let notification_service = service::notifications::notification_service::build_notification_service(
+    let notification_service =
+        service::notifications::notification_service::build_notification_service(
             db.clone(),
-            notification_manager.clone()
+            notification_manager,
         );
 
     let grpc_web = GrpcWebLayer::new();

@@ -4,6 +4,8 @@ mod routes;
 mod service;
 mod util;
 
+use std::sync::Arc;
+
 use crate::db::client::build_db_client;
 use crate::grpc::server::build_grpc_router;
 use crate::routes::build_routes;
