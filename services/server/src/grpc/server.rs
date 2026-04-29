@@ -61,7 +61,8 @@ pub fn build_grpc_router(
             HeaderName::from_static("grpc-status"),
             HeaderName::from_static("grpc-message"),
         ])
-        .allow_methods([http::Method::POST, http::Method::OPTIONS]);
+        .allow_methods([http::Method::POST, http::Method::OPTIONS])
+        .max_age(std::time::Duration::from_secs(86400));
 
     Ok(routes.into_axum_router().layer(cors))
 }
