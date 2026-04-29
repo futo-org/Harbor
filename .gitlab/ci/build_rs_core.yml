@@ -22,6 +22,22 @@
     WASM_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm'
     ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
     RUST_CORE_PATH: packages/rs-core
+    CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+  cache:
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-sdk-cargo-deps
+      paths:
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-sdk-target-${CI_JOB_NAME}
+      paths:
+        - target
   before_script:
     - cd packages/rs-core
 
@@ -82,6 +98,9 @@ build-android-image:
   extends: .rs-sdk-workflow
   image: ${ANDROID_IMAGE}
   stage: build
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
 
 rs-sdk-format-check:
   extends: .rust-check

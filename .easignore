@@ -1,0 +1,79 @@
+# EAS-only ignore list. When this file exists, EAS uses it instead of
+# `.gitignore` files for the upload bundle. Mirrors the root
+# `.gitignore` minus the wildcard in
+# `packages/rs-core-wasm-browser/.gitignore` — those wasm artifacts
+# aren't committed, but EAS can't run wasm-pack, so it needs the
+# prebuilt output uploaded.
+
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+
+# Rust build output
+target/
+
+# Note: workspace package `dist/` and `build/` directories are NOT
+# ignored — packages like `@polycentric/js-core` are consumed via their
+# built output (their `main` field points into `dist/`), so EAS needs
+# them uploaded. Native build dirs are excluded individually below.
+.expo/
+web-build/
+*.tsbuildinfo
+
+# The app's own web export isn't part of the native build.
+apps/polycentric/dist/
+
+# Test / CI artifacts
+coverage/
+__screenshots__/
+junit.xml
+junit-server.xml
+
+# Env / local
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Native build artifacts under the app. Patterns containing a `/`
+# match relative to this `.easignore`, so use the full project path.
+apps/polycentric/ios/Pods/
+apps/polycentric/ios/build/
+apps/polycentric/ios/DerivedData/
+apps/polycentric/android/.gradle/
+apps/polycentric/android/build/
+apps/polycentric/android/app/build/
+apps/polycentric/android/app/.cxx/
+*.xcuserstate
+*.iml
+
+# Metro / Expo generated
+.metro-health-check*
+expo-env.d.ts
+
+# Turborepo
+.turbo/
+
+# Misc
+.claude/
+docker-compose.live*
+
+# Backend / legacy aren't part of the mobile app upload
+services/
+legacy/
+
+# Browser SDK demo (~150MB of node_modules + bundle, irrelevant to the native build)
+packages/js-browser/examples/

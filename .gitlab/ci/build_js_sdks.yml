@@ -1,5 +1,5 @@
 .js-sdk-workflow:
-  image: node:24
+  image: node:24-slim
   rules:
     - if: $CI_COMMIT_TAG =~ /^js-sdk-/
       when: always
@@ -39,6 +39,10 @@ js-sdks-build:
     paths:
       - packages/js-*/dist
     expire_in: 1 week
+  rules:
+    - !reference [.js-sdk-workflow, rules]
+    - !reference [.rn-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
 
 .js-sdks-publish-npm:
   rules:
