@@ -10,6 +10,7 @@ use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
+use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::server::server_service::ServerConfig;
 use sea_orm::DatabaseConnection;
 
@@ -46,14 +47,19 @@ async fn main() {
     util::dotenv::load(".env");
 
     let db = connect_db_with_retry().await;
+    let notification_manager = Arc::new(NotificationManager::new());
     let filestore_cfg = ContentFilestoreConfig::from_env()
         .expect("blob store configuration error");
     let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
-    let grpc_router =
-        build_grpc_router(db.clone(), filestore.clone(), server_cfg)
-            .expect("failed to build gRPC router");
+    let grpc_router = build_grpc_router(
+        db.clone(),
+        notification_manager.clone(),
+        filestore.clone(),
+        server_cfg,
+    )
+    .expect("failed to build gRPC router");
     let http_router = build_routes(db, filestore);
 
     let app = http_router.merge(grpc_router);

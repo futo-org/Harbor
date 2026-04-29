@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::server::server_service::ServerConfig;
 use axum::Router;
 use http::header::HeaderName;
@@ -30,6 +31,7 @@ fn build_reflection_service() -> Result<
 /// the HTTP router and served on a single port.
 pub fn build_grpc_router(
     db: DatabaseConnection,
+    notification_manager: Arc<NotificationManager>,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
@@ -42,6 +44,10 @@ pub fn build_grpc_router(
     let server_info_service =
         service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
+    let notification_service = service::notifications::notification_service::build_notification_service(
+            db.clone(),
+            notification_manager.clone()
+        );
 
     let grpc_web = GrpcWebLayer::new();
 
@@ -50,7 +56,8 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(events_service))
         .add_service(grpc_web.layer(feeds_service))
         .add_service(grpc_web.layer(content_service))
-        .add_service(grpc_web.layer(server_info_service));
+        .add_service(grpc_web.layer(server_info_service))
+        .add_service(grpc_web.layer(notification_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())
