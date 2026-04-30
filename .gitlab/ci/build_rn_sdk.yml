@@ -41,13 +41,13 @@ rn-sdk-build:
   stage: build
   script:
     - mkdir -p packages/react-native/android/libs/arm64-v8a
-    - cp target/aarch64-linux-android/release/libpolycentric_core.a packages/react-native/android/libs/arm64-v8a/
+    - cp target/aarch64-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/arm64-v8a/
     - mkdir -p packages/react-native/android/libs/armeabi-v7a
-    - cp target/armv7-linux-androideabi/release/libpolycentric_core.a packages/react-native/android/libs/armeabi-v7a/
+    - cp target/armv7-linux-androideabi/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/armeabi-v7a/
     - mkdir -p packages/react-native/android/libs/x86
-    - cp target/i686-linux-android/release/libpolycentric_core.a packages/react-native/android/libs/x86/
+    - cp target/i686-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/x86/
     - mkdir -p packages/react-native/android/libs/x86_64
-    - cp target/x86_64-linux-android/release/libpolycentric_core.a packages/react-native/android/libs/x86_64/
+    - cp target/x86_64-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/x86_64/
     - mkdir -p packages/react-native/ios/libs/aarch64-apple-ios
     - cp buildRsCoreIOSDevice/binary/libpolycentric_core-ios-device.a packages/react-native/ios/libs/aarch64-apple-ios/libpolycentric_core.a
     - cd packages/react-native
