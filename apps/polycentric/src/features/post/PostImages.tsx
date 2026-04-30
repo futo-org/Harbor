@@ -67,6 +67,7 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
     return (
       <>
         <Pressable
+          unstable_pressDelay={300}
           onPress={(e) => {
             e.stopPropagation?.();
             openViewer(0);

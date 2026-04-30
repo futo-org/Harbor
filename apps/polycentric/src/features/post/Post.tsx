@@ -108,7 +108,7 @@ export const Post = memo(function Post({
 
   return (
     <Pressable
-      style={[
+      style={({ pressed }) => [
         Atoms.w_full,
         Atoms.px_lg,
         Atoms.pt_md,
@@ -116,6 +116,9 @@ export const Post = memo(function Post({
         {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
+        },
+        pressed && {
+          backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
         },
       ]}
       onPress={handlePress}
