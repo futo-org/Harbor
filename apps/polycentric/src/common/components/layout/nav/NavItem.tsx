@@ -37,7 +37,7 @@ export function NavItem({ href, icon, label, ...props }: NavItemProps) {
     }
   }, [isActive]);
 
-  // Wrap the icon that is provided
+  // Wrap the icon that is provided.
   const renderIcon = (iconNode?: ReactNode): ReactNode => {
     if (!iconNode) return null;
 

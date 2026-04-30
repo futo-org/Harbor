@@ -156,6 +156,9 @@ rs-sdk-build-ios-device:
   artifacts:
     paths:
       - buildRsCoreIOSDevice/binary/*.a
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
 
 rs-sdk-build-ios-sim-arm64:
   stage: build
