@@ -4,42 +4,44 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 
-interface UseInvitationClaimerOptions {
-  inviteCode?: string;
-  inviteServer?: string;
+interface UsePairIdentityClaimerOptions {
+  pairingSessionCode?: string;
+  pairingSessionServer?: string;
 }
 
-export function useInvitationClaimer(options?: UseInvitationClaimerOptions) {
+export function usePairIdentityClaimer(
+  options?: UsePairIdentityClaimerOptions,
+) {
   const client = usePolycentric();
-  const inviteCode = options?.inviteCode;
-  const inviteServer = options?.inviteServer;
+  const pairingSessionCode = options?.pairingSessionCode;
+  const pairingSessionServer = options?.pairingSessionServer;
   const [identityKey, setIdentityKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
   const [claimInProgress, setClaimInProgress] = useState(false);
 
   useEffect(() => {
-    if (!inviteCode || identityKey) return;
+    if (!pairingSessionCode || identityKey) return;
 
     const claimAndWait = async () => {
       setClaimInProgress(true);
       try {
-        if (!inviteServer) {
-          throw new Error('Invitation server is required.');
+        if (!pairingSessionServer) {
+          throw new Error('Pairing session server is required.');
         }
 
-        const status = await client.invitationManager.claimInvitation(
-          inviteCode,
-          inviteServer,
+        const status = await client.pairingSessionManager.joinPairingSession(
+          pairingSessionCode,
+          pairingSessionServer,
         );
-        const invitation = status.invitation;
-        if (!invitation) {
-          throw new Error('Invitation not found or expired.');
+        const pairingSession = status.pairingSession;
+        if (!pairingSession) {
+          throw new Error('Pairing session not found or expired.');
         }
-        setIdentityKey(invitation.identity);
+        setIdentityKey(pairingSession.issuerIdentity);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to claim invitation';
+          err instanceof Error ? err.message : 'Failed to join pairing session';
         setError(errorMessage);
       } finally {
         setClaimInProgress(false);
@@ -47,10 +49,10 @@ export function useInvitationClaimer(options?: UseInvitationClaimerOptions) {
     };
 
     claimAndWait();
-  }, [inviteCode, inviteServer, identityKey, client]);
+  }, [pairingSessionCode, pairingSessionServer, identityKey, client]);
 
   useEffect(() => {
-    if (!identityKey || !inviteServer) return;
+    if (!identityKey || !pairingSessionServer) return;
 
     let cancelled = false;
 
@@ -58,7 +60,7 @@ export function useInvitationClaimer(options?: UseInvitationClaimerOptions) {
       try {
         const state = await client.identityManager.fetchIdentityState(
           identityKey,
-          inviteServer,
+          pairingSessionServer,
         );
         const currentKey = client.currentKeyPair?.publicKey;
 
@@ -69,8 +71,8 @@ export function useInvitationClaimer(options?: UseInvitationClaimerOptions) {
         state.signingKeys.forEach((k) => authorized.add(publicKeyToString(k)));
 
         if (authorized.has(publicKeyToString(currentKey))) {
-          if (!client.servers.includes(inviteServer)) {
-            client.servers.push(inviteServer);
+          if (!client.servers.includes(pairingSessionServer)) {
+            client.servers.push(pairingSessionServer);
           }
           await client.identityManager.claim(identityKey);
           setApproved(true);
@@ -89,7 +91,7 @@ export function useInvitationClaimer(options?: UseInvitationClaimerOptions) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [identityKey, inviteServer, client]);
+  }, [identityKey, pairingSessionServer, client]);
 
   return {
     error,

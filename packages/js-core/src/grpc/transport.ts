@@ -1,22 +1,27 @@
+import { GrpcWebFetchTransport } from '@protobuf-ts/grpcweb-transport';
 import * as Proto from '../proto/v2';
 
-function grpcWebEncode(body: Uint8Array): Uint8Array {
-  const frame = new Uint8Array(5 + body.length);
-  frame[0] = 0;
-  new DataView(frame.buffer).setUint32(1, body.length, false);
-  frame.set(body, 5);
-  return frame;
+let grpcWebFetch: typeof fetch | undefined;
+
+// protobuf-ts's grpc-web transport reads `response.body` as a stream.
+// React Native's default fetch path does not reliably provide that, which
+// causes `RpcError: missing response body`
+//
+// We keep the transport generic here and let the Expo app inject a fetch
+// implementation that does expose a usable body stream.
+// See:
+// - https://github.com/timostamm/protobuf-ts/blob/657e64e80009e503e94f608fda423fbcbf4fb5a7/packages/grpcweb-transport/src/grpc-web-transport.ts#L235
+// - https://github.com/facebook/react-native/issues/27741#issuecomment-2362901032
+export function setGrpcWebFetch(fetchImpl?: typeof fetch) {
+  grpcWebFetch = fetchImpl;
 }
 
-function grpcWebDecodeFirst(buf: Uint8Array): Uint8Array {
-  const dataLen = new DataView(buf.buffer, buf.byteOffset).getUint32(1, false);
-  return buf.slice(5, 5 + dataLen);
+function grpcWebTransport(serverUrl: string) {
+  return new GrpcWebFetchTransport({
+    baseUrl: serverUrl,
+    fetch: grpcWebFetch,
+  });
 }
-
-const HEADERS = {
-  'content-type': 'application/grpc-web+proto',
-  accept: 'application/grpc-web+proto',
-} as const;
 
 export async function listEvents(
   serverUrl: string,
@@ -27,8 +32,10 @@ export async function listEvents(
   signedByKeyType?: number | null,
   sequenceGt?: bigint | null,
   sequenceLt?: bigint | null,
-): Promise<Uint8Array> {
-  const request = Proto.ListEventsRequest.toBinary(
+): Promise<Proto.ListEventsResponse> {
+  return new Proto.EventSyncServiceClient(
+    grpcWebTransport(serverUrl),
+  ).listEvents(
     Proto.ListEventsRequest.create({
       size: size ?? undefined,
       filters: {
@@ -42,36 +49,16 @@ export async function listEvents(
         sequenceLt: sequenceLt ?? undefined,
       },
     }),
-  );
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.EventSyncService/ListEvents`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(request).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web ListEvents error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+  ).response;
 }
 
 export async function putEvents(
   serverUrl: string,
-  eventBundlesBytes: Uint8Array,
+  request: Proto.PutEventsRequest,
 ): Promise<void> {
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.EventSyncService/PutEvents`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(eventBundlesBytes).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web PutEvents error: ${res.status}`);
+  await new Proto.EventSyncServiceClient(grpcWebTransport(serverUrl)).putEvents(
+    request,
+  ).response;
 }
 
 export async function getFeed(
@@ -79,138 +66,85 @@ export async function getFeed(
   algorithm: number,
   limit?: number | null,
   identity?: string | null,
-): Promise<Uint8Array> {
-  const request = Proto.GetFeedRequest.toBinary(
+): Promise<Proto.GetFeedResponse> {
+  return new Proto.FeedsServiceClient(grpcWebTransport(serverUrl)).getFeed(
     Proto.GetFeedRequest.create({
       algorithm,
       limit: limit ?? undefined,
       identity: identity ?? undefined,
     }),
-  );
+  ).response;
+}
 
-  const res = await fetch(`${serverUrl}/polycentric.v2.FeedsService/GetFeed`, {
-    method: 'POST',
-    headers: HEADERS,
-    body: grpcWebEncode(request).buffer as ArrayBuffer,
-  });
-
-  if (!res.ok) throw new Error(`gRPC-web GetFeed error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+export async function getPostThread(
+  serverUrl: string,
+  request: Proto.GetPostThreadRequest,
+): Promise<Proto.GetPostThreadResponse> {
+  return new Proto.FeedsServiceClient(grpcWebTransport(serverUrl)).getPostThread(
+    request,
+  ).response;
 }
 
 export async function uploadBlob(
   serverUrl: string,
-  requestBytes: Uint8Array,
+  request: Proto.UploadBlobRequest,
 ): Promise<void> {
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.ContentService/UploadBlob`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(requestBytes).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web UploadBlob error: ${res.status}`);
+  await new Proto.ContentServiceClient(grpcWebTransport(serverUrl)).uploadBlob(
+    request,
+  ).response;
 }
 
-export async function getServerInfo(serverUrl: string): Promise<Uint8Array> {
-  const request = Proto.GetServerInfoRequest.toBinary(
+export async function getServerInfo(
+  serverUrl: string,
+): Promise<Proto.GetServerInfoResponse> {
+  return new Proto.ServerServiceClient(grpcWebTransport(serverUrl)).getInfo(
     Proto.GetServerInfoRequest.create({}),
-  );
-
-  const res = await fetch(`${serverUrl}/polycentric.v2.ServerService/GetInfo`, {
-    method: 'POST',
-    headers: HEADERS,
-    body: grpcWebEncode(request).buffer as ArrayBuffer,
-  });
-
-  if (!res.ok) throw new Error(`gRPC-web GetInfo error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+  ).response;
 }
 
-export async function getIdentityState(
-  serverUrl: string,
-  identityKey: string,
-): Promise<Uint8Array> {
-  const request = Proto.GetIdentityStateRequest.toBinary(
-    Proto.GetIdentityStateRequest.create({ identity: identityKey }),
-  );
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.IdentityService/GetIdentityState`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(request).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
-}
-
-export async function createInvitation(
+export async function createPairingSession(
   serverUrl: string,
   signedMessage: Proto.SignedMessage,
-): Promise<Uint8Array> {
-  const request = Proto.SignedMessage.toBinary(signedMessage);
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.IdentityService/CreateInvitation`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(request).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+): Promise<Proto.PairingSession> {
+  const response = await new Proto.PairingServiceClient(
+    grpcWebTransport(serverUrl),
+  ).createPairingSession(
+    Proto.CreatePairingSessionRequest.create({ signedMessage }),
+  ).response;
+  if (!response.session) {
+    throw new Error('gRPC-web CreatePairingSession missing session');
+  }
+  return response.session;
 }
 
-export async function getInvitationStatus(
+export async function getPairingSession(
   serverUrl: string,
-  invitationSignature: string,
-): Promise<Uint8Array> {
-  const request = Proto.GetInvitationStatusRequest.toBinary(
-    Proto.GetInvitationStatusRequest.create({ invitationSignature }),
-  );
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.IdentityService/GetInvitationStatus`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(request).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+  pairingSessionSignature: string,
+): Promise<Proto.PairingSession> {
+  const response = await new Proto.PairingServiceClient(
+    grpcWebTransport(serverUrl),
+  ).getPairingSession(
+    Proto.GetPairingSessionRequest.create({
+      pairingSessionSignature,
+    }),
+  ).response;
+  if (!response.session) {
+    throw new Error('gRPC-web GetPairingSession missing session');
+  }
+  return response.session;
 }
 
-export async function claimInvitation(
+export async function joinPairingSession(
   serverUrl: string,
   signedMessage: Proto.SignedMessage,
-): Promise<Uint8Array> {
-  const request = Proto.SignedMessage.toBinary(signedMessage);
-
-  const res = await fetch(
-    `${serverUrl}/polycentric.v2.IdentityService/ClaimInvitation`,
-    {
-      method: 'POST',
-      headers: HEADERS,
-      body: grpcWebEncode(request).buffer as ArrayBuffer,
-    },
-  );
-
-  if (!res.ok) throw new Error(`gRPC-web error: ${res.status}`);
-
-  return grpcWebDecodeFirst(new Uint8Array(await res.arrayBuffer()));
+): Promise<Proto.PairingSession> {
+  const response = await new Proto.PairingServiceClient(
+    grpcWebTransport(serverUrl),
+  ).joinPairingSession(
+    Proto.JoinPairingSessionRequest.create({ signedMessage }),
+  ).response;
+  if (!response.session) {
+    throw new Error('gRPC-web JoinPairingSession missing session');
+  }
+  return response.session;
 }

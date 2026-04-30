@@ -100,6 +100,7 @@ impl Query {
         Ok(keys)
     }
 
+    /// Returns true when `public_key` is a rotation key on the latest identity state.
     pub async fn is_rotation_key(
         db: &DbConn,
         identity_key: &str,

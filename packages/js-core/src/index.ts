@@ -29,8 +29,8 @@ export type { Repositories } from './storage';
 
 export { PolycentricClient } from './polycentric-client';
 export { IdentityManager } from './client-internal/identity-manager';
-export { InvitationManager } from './client-internal/invitation-manager';
-export type { ActiveInvitation } from './client-internal/invitation-manager';
+export { PairingSessionManager } from './client-internal/pairing-session-manager';
+export type { ActivePairingSession } from './client-internal/pairing-session-manager';
 export type {
   PolycentricClientConfig,
   KeyPair,

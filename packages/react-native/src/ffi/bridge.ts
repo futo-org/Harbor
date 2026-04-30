@@ -14,6 +14,7 @@ import type {
 } from '@polycentric/js-core';
 import {
   getFeed,
+  getPostThread,
   getServerInfo,
   listEvents,
   putEvents,
@@ -154,7 +155,7 @@ class NativePolycentricCore implements IPolycentricCore {
       signedByKeyType,
       sequenceGt,
       sequenceLt
-    );
+    ).then((response) => ListEventsResponse.toBinary(response));
   }
 
   /**
@@ -178,30 +179,20 @@ class NativePolycentricCore implements IPolycentricCore {
     limit?: number | null,
     identity?: string | null
   ): Promise<Uint8Array> {
-    return getFeed(serverUrl, algorithm, limit, identity);
+    return getFeed(serverUrl, algorithm, limit, identity).then((response) =>
+      v2.GetFeedResponse.toBinary(response)
+    );
   }
 
   /** Fetch a parent post and its direct replies from a server via gRPC-web. */
-  async get_post_thread(
+  get_post_thread(
     serverUrl: string,
     requestBytes: Uint8Array
   ): Promise<Uint8Array> {
-    const res = await fetch(
-      `${serverUrl}/polycentric.v2.FeedsService/GetPostThread`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/grpc-web+proto',
-          'accept': 'application/grpc-web+proto',
-        },
-        body: grpcWebEncode(requestBytes).buffer as ArrayBuffer,
-      }
-    );
-
-    if (!res.ok) throw new Error(`gRPC-web GetPostThread error: ${res.status}`);
-
-    const buf = new Uint8Array(await res.arrayBuffer());
-    return grpcWebDecodeFirst(buf);
+    return getPostThread(
+      serverUrl,
+      v2.GetPostThreadRequest.fromBinary(requestBytes),
+    ).then((response) => v2.GetPostThreadResponse.toBinary(response));
   }
 
   /** Image processing is not wired through native FFI yet. */
@@ -216,17 +207,22 @@ class NativePolycentricCore implements IPolycentricCore {
 
   /** Push events to a server via gRPC-web (network — cannot go through FFI). */
   put_events(serverUrl: string, eventBundlesBytes: Uint8Array): Promise<void> {
-    return putEvents(serverUrl, eventBundlesBytes);
+    return putEvents(
+      serverUrl,
+      v2.PutEventsRequest.fromBinary(eventBundlesBytes)
+    );
   }
 
   /** Upload a blob body to a server via gRPC-web. */
   upload_blob(serverUrl: string, requestBytes: Uint8Array): Promise<void> {
-    return uploadBlob(serverUrl, requestBytes);
+    return uploadBlob(serverUrl, v2.UploadBlobRequest.fromBinary(requestBytes));
   }
 
   /** Fetch a server's public info via gRPC-web. */
   get_server_info(serverUrl: string): Promise<Uint8Array> {
-    return getServerInfo(serverUrl);
+    return getServerInfo(serverUrl).then((response) =>
+      v2.GetServerInfoResponse.toBinary(response)
+    );
   }
 }
 

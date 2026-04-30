@@ -1,9 +1,4 @@
-import {
-  Atoms,
-  Breakpoints,
-  typography,
-  useTheme
-} from '@/src/common/theme';
+import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';

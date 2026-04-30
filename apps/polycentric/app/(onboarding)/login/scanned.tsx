@@ -1,1 +1,1 @@
-export { default } from '@/src/features/identity-pairing/screens/InvitationClaimerScreen';
+export { default } from '@/src/features/identity-pairing/screens/PairIdentityClaimerScreen';

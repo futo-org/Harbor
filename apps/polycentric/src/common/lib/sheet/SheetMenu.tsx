@@ -118,7 +118,7 @@ function SheetMenuInnerWeb({
 
 const styles = StyleSheet.create({
   sheetBody: {
-    flex: 1,
+    width: '100%',
   },
   webModalRoot: {
     flex: 1,

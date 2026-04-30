@@ -1,11 +1,9 @@
 import { sha256 } from '@noble/hashes/sha2';
 import { COLLECTION } from '../constants';
-import { getIdentityState } from '../grpc/transport';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
 import { bytesToHex } from '../utils/hex';
-import { verifyEventBundle } from '../utils/verify-bundle';
 
 /**
  * Resolved identity state from the latest Identity document.
@@ -122,60 +120,18 @@ export class IdentityManager {
     const signedEvent = await this.client.signEvent(event);
     this.client.setActiveIdentityKey(identityKey);
     await this.client.commitEvent(signedEvent, content);
+    await this.client.push();
 
     return { identityKey, signedEvent };
   }
 
   /**
-   * Adds a signing key to the current identity and publishes the updated document.
-   */
-  async addSigningKey(
-    identityKey: string,
-    publicKey: Proto.PublicKey,
-  ): Promise<Proto.SignedEvent> {
-    const state = await this.getCurrent();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
-
-    const signingKeys = [...state.signingKeys, publicKey];
-    const { signedEvent } = await this.publish(
-      identityKey,
-      state.rotationKeys,
-      signingKeys,
-    );
-    return signedEvent;
-  }
-
-  /**
-   * Removes a signing key from the current identity and publishes the updated document.
-   */
-  async removeSigningKey(
-    identityKey: string,
-    publicKey: Proto.PublicKey,
-  ): Promise<Proto.SignedEvent> {
-    const state = await this.getCurrent();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
-
-    const signingKeys = state.signingKeys.filter(
-      (k) => !bytesEqual(k.key, publicKey.key),
-    );
-    const { signedEvent } = await this.publish(
-      identityKey,
-      state.rotationKeys,
-      signingKeys,
-    );
-    return signedEvent;
-  }
-
-  /**
    * Fetches the latest identity state of any identity.
-   * Checks that the event bundle is validly signed,
+   * Checks that the event is validly signed,
    * and that the signer is a rotation key for the identity.
    *
    * This does NOT check:
+   * - if serialized content matches event.content_digest
    * - if the vector clocks are valid
    * - if a more recent identity state exists
    * - if the full identity collection is valid
@@ -186,21 +142,37 @@ export class IdentityManager {
   ): Promise<IdentityState> {
     const targetServer = server ?? this.client.servers[0];
     if (!targetServer) throw new Error('No servers configured');
+    if (!this.client.core) {
+      throw new Error('Core not initialized');
+    }
 
-    const bundle = Proto.EventBundle.fromBinary(
-      await getIdentityState(targetServer, identityKey),
+    // Ask targetServer for the latest identity event for the identity.
+    // This is specifically intended for polling while pairing to an identity.
+    const response = Proto.ListEventsResponse.fromBinary(
+      await this.client.core.list_events(
+        targetServer,
+        1,
+        identityKey,
+        COLLECTION.IDENTITY,
+        null,
+        null,
+        null,
+        null,
+      ),
     );
+    const bundle = response.eventBundles[0];
 
-    const valid = await verifyEventBundle(bundle, this.client.cryptoManager);
-    if (!valid) {
-      throw new Error(`Identity ${identityKey} bundle failed verification`);
+    if (!bundle?.signedEvent || !bundle.serializedContent) {
+      throw new Error(`Identity ${identityKey} not found`);
     }
 
     const signedEvent = bundle.signedEvent;
     const serializedContent = bundle.serializedContent;
-    if (!signedEvent || !serializedContent) {
-      throw new Error(`Identity ${identityKey} not found`);
-    }
+
+    // Verify signature against event.key.signed_by via core.
+    this.client.core.verify_signed_event(
+      Proto.SignedEvent.toBinary(signedEvent),
+    );
 
     const event = Proto.Event.fromBinary(signedEvent.eventBytes);
     const signedBy = event.key?.signedBy;
@@ -217,6 +189,11 @@ export class IdentityManager {
       throw new Error('Event content is not an Identity');
     }
 
+    // Verify that the event signer is a rotation key on the identity.
+    // This is just a basic precaution.
+    // We should ideally check that the signer was a rotation key in the previous
+    // identity state, and validate the full identity collection history.
+    //
     const signerIsRotationKey = identity.rotationKeys.some((k) =>
       IdentityManager.keysEqual(k, signedBy),
     );
@@ -333,7 +310,7 @@ export class IdentityManager {
       }
     }
 
-    if (versions.length === 0) return true;
+    if (versions.length === 0) return true; // identity not found locally
 
     versions.sort((a, b) =>
       a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
@@ -354,14 +331,48 @@ export class IdentityManager {
     );
   }
 
-  async addRotationKey(
-    identityKey: string,
+  /**
+   * Adds a signing key to the current identity and publishes the updated document.
+   */
+  async addSigningKey(publicKey: Proto.PublicKey): Promise<Proto.SignedEvent> {
+    const state = await this.getCurrent();
+    if (!state.identityKey) throw new Error('No active identity');
+
+    const signingKeys = [...state.signingKeys, publicKey];
+    const { signedEvent } = await this.publish(
+      state.identityKey,
+      state.rotationKeys,
+      signingKeys,
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Removes a signing key from the current identity and publishes the updated document.
+   */
+  async removeSigningKey(
     publicKey: Proto.PublicKey,
   ): Promise<Proto.SignedEvent> {
     const state = await this.getCurrent();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
+    if (!state.identityKey) throw new Error('No active identity');
+
+    const signingKeys = state.signingKeys.filter(
+      (k) => !bytesEqual(k.key, publicKey.key),
+    );
+    const { signedEvent } = await this.publish(
+      state.identityKey,
+      state.rotationKeys,
+      signingKeys,
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Adds a rotation key to the current identity and publishes the updated document.
+   */
+  async addRotationKey(publicKey: Proto.PublicKey): Promise<Proto.SignedEvent> {
+    const state = await this.getCurrent();
+    if (!state.identityKey) throw new Error('No active identity');
 
     const keyExists = state.rotationKeys.some((k) =>
       IdentityManager.keysEqual(k, publicKey),
@@ -372,27 +383,27 @@ export class IdentityManager {
 
     const rotationKeys = [...state.rotationKeys, publicKey];
     const { signedEvent } = await this.publish(
-      identityKey,
+      state.identityKey,
       rotationKeys,
       state.signingKeys,
     );
     return signedEvent;
   }
 
+  /**
+   * Removes a rotation key from the current identity and publishes the updated document.
+   */
   async removeRotationKey(
-    identityKey: string,
     publicKey: Proto.PublicKey,
   ): Promise<Proto.SignedEvent> {
     const state = await this.getCurrent();
-    if (state.identityKey !== identityKey) {
-      throw new Error('Identity key mismatch');
-    }
+    if (!state.identityKey) throw new Error('No active identity');
 
     const rotationKeys = state.rotationKeys.filter(
       (k) => !IdentityManager.keysEqual(k, publicKey),
     );
     const { signedEvent } = await this.publish(
-      identityKey,
+      state.identityKey,
       rotationKeys,
       state.signingKeys,
     );

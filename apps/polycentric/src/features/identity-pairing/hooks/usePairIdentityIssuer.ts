@@ -3,15 +3,17 @@ import {
   stringToPublicKey,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { type ActiveInvitation } from '@polycentric/react-native';
+import { type ActivePairingSession } from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-export function useInvitationIssuer(identityKey: string | null | undefined) {
+export function usePairIdentityIssuer(identityKey: string | null | undefined) {
   const client = usePolycentric();
-  const [currentInvitation, setCurrentInvitation] =
-    useState<ActiveInvitation | null>(null);
-  const [invitationLoading, setInvitationLoading] = useState(false);
-  const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [currentPairingSession, setCurrentPairingSession] =
+    useState<ActivePairingSession | null>(null);
+  const [pairingSessionLoading, setPairingSessionLoading] = useState(false);
+  const [pairingSessionError, setPairingSessionError] = useState<string | null>(
+    null,
+  );
   const [alreadyApprovedOrDeniedClaimers, setHiddenClaimers] = useState<
     Set<string>
   >(new Set());
@@ -32,33 +34,32 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
       .catch(() => {});
   }, [client.identityManager, identityKey]);
 
-  const code = currentInvitation?.code ?? null;
-  const server = currentInvitation?.server ?? null;
-  const expired = currentInvitation?.expired ?? false;
+  const code = currentPairingSession?.code ?? null;
+  const server = currentPairingSession?.server ?? null;
 
   useEffect(() => {
-    if (!code || !server || expired) return;
+    if (!code || !server) return;
 
     let cancelled = false;
     const poll = async () => {
       try {
-        const status = await client.invitationManager.getInvitationStatus(
-          code,
-          server,
-        );
+        const status =
+          await client.pairingSessionManager.getPairingSessionStatus(
+            code,
+            server,
+          );
         if (cancelled) return;
-        setCurrentInvitation((prev) => {
+        setCurrentPairingSession((prev) => {
           if (!prev) return null;
           return {
             ...prev,
             claimers: [...status.claimers],
-            expired: status.expired,
           };
         });
       } catch {
         if (cancelled) return;
-        setCurrentInvitation(null);
-        setInvitationError(
+        setCurrentPairingSession(null);
+        setPairingSessionError(
           'Pairing failed. Close and reopen Pair Identity to try again.',
         );
       }
@@ -70,13 +71,13 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [client.invitationManager, code, server, expired]);
+  }, [client.pairingSessionManager, code, server]);
 
   const pendingClaimers = useMemo<string[]>(() => {
-    if (!currentInvitation) return [];
+    if (!currentPairingSession) return [];
     const seen = new Set<string>();
     const result: string[] = [];
-    for (const claimer of currentInvitation.claimers) {
+    for (const claimer of currentPairingSession.claimers) {
       const claimerStr = publicKeyToString(claimer);
       if (
         seen.has(claimerStr) ||
@@ -90,15 +91,15 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
     }
     return result;
   }, [
-    currentInvitation,
+    currentPairingSession,
     alreadyApprovedOrDeniedClaimers,
     alreadyAuthorizedClaimers,
   ]);
 
-  const createInvitation = useCallback(async () => {
+  const createPairingSession = useCallback(async () => {
     if (!identityKey) return;
-    setInvitationLoading(true);
-    setInvitationError(null);
+    setPairingSessionLoading(true);
+    setPairingSessionError(null);
     try {
       const currentKey = client.currentKeyPair?.publicKey;
       if (!currentKey) throw new Error('No active key pair');
@@ -108,24 +109,31 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
           currentKey,
         );
       if (!isRotationKey) {
-        throw new Error('Only rotation key holders can create invitations');
+        throw new Error(
+          'Only rotation key holders can create pairing sessions',
+        );
       }
-      const invitation =
-        await client.invitationManager.createInvitation(identityKey);
-      setCurrentInvitation(invitation);
+      const targetServer = client.servers[0];
+      if (!targetServer) throw new Error('No servers configured');
+      const pairingSession =
+        await client.pairingSessionManager.createPairingSessionOnServer(
+          identityKey,
+          targetServer,
+        );
+      setCurrentPairingSession(pairingSession);
       setHiddenClaimers(new Set());
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Failed to create invitation';
-      setInvitationError(message);
+        err instanceof Error ? err.message : 'Failed to create pairing session';
+      setPairingSessionError(message);
     } finally {
-      setInvitationLoading(false);
+      setPairingSessionLoading(false);
     }
   }, [client, identityKey]);
 
-  const clearInvitation = useCallback(() => {
-    setCurrentInvitation(null);
-    setInvitationError(null);
+  const clearPairingSession = useCallback(() => {
+    setCurrentPairingSession(null);
+    setPairingSessionError(null);
     setHiddenClaimers(new Set());
   }, []);
 
@@ -140,11 +148,10 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
       try {
         const claimer = stringToPublicKey(claimerStr);
         if (asRotationKey) {
-          await client.identityManager.addRotationKey(identityKey, claimer);
+          await client.identityManager.addRotationKey(claimer);
         } else {
-          await client.identityManager.addSigningKey(identityKey, claimer);
+          await client.identityManager.addSigningKey(claimer);
         }
-        await client.push();
       } catch (err) {
         setHiddenClaimers((prev) => {
           const next = new Set(prev);
@@ -158,12 +165,12 @@ export function useInvitationIssuer(identityKey: string | null | undefined) {
   );
 
   return {
-    currentInvitation,
+    currentPairingSession,
     pendingClaimers,
-    invitationError,
-    invitationLoading,
-    createInvitation,
-    clearInvitation,
+    pairingSessionError,
+    pairingSessionLoading,
+    createPairingSession,
+    clearPairingSession,
     denyClaimer,
     approveClaimer,
   };

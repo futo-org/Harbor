@@ -6,7 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
-import { useInvitationClaimer } from '@/src/features/identity-pairing/hooks/useInvitationClaimer';
+import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -20,23 +20,23 @@ const parseInput = (text: string) => {
   return { server: null, code: text.trim() };
 };
 
-export default function InvitationClaimerScreen() {
+export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
-  const { inviteCode: paramInviteCode } = useLocalSearchParams<{
-    inviteCode?: string;
+  const { pairingSessionCode: paramPairingSessionCode } = useLocalSearchParams<{
+    pairingSessionCode?: string;
   }>();
   const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
-  const [inviteCode, setInviteCode] = useState<string | undefined>(
-    paramInviteCode,
-  );
-  const [inviteServer, setInviteServer] = useState<string | undefined>(
-    undefined,
-  );
+  const [pairingSessionCode, setPairingSessionCode] = useState<
+    string | undefined
+  >(paramPairingSessionCode);
+  const [pairingSessionServer, setPairingSessionServer] = useState<
+    string | undefined
+  >(undefined);
 
-  const { error, approved, claimInProgress } = useInvitationClaimer({
-    inviteCode,
-    inviteServer,
+  const { error, approved, claimInProgress } = usePairIdentityClaimer({
+    pairingSessionCode,
+    pairingSessionServer,
   });
 
   const pubKeyStr = client.currentKeyPair
@@ -55,7 +55,7 @@ export default function InvitationClaimerScreen() {
   }, [approved, refreshCurrentIdentity]);
 
   const renderBody = () => {
-    if (!inviteCode) {
+    if (!pairingSessionCode) {
       return (
         <>
           <View style={Atoms.gap_xs}>
@@ -63,8 +63,8 @@ export default function InvitationClaimerScreen() {
           </View>
           <PairIdentityCamera
             onCodeScanned={(code, server) => {
-              setInviteCode(code);
-              setInviteServer(server ?? undefined);
+              setPairingSessionCode(code);
+              setPairingSessionServer(server ?? undefined);
             }}
             parseInput={parseInput}
           />
@@ -72,7 +72,7 @@ export default function InvitationClaimerScreen() {
       );
     }
 
-    if (inviteCode && error && !claimInProgress) {
+    if (pairingSessionCode && error && !claimInProgress) {
       return (
         <>
           <Text variant="title">Error</Text>
@@ -84,8 +84,8 @@ export default function InvitationClaimerScreen() {
             variant="secondary"
             fullWidth
             onPress={() => {
-              setInviteCode(undefined);
-              setInviteServer(undefined);
+              setPairingSessionCode(undefined);
+              setPairingSessionServer(undefined);
             }}
           />
         </>
@@ -174,7 +174,8 @@ export default function InvitationClaimerScreen() {
             Atoms.py_lg,
             Atoms.px_lg,
             { backgroundColor: theme.atoms.bg.backgroundColor },
-            ...(!inviteCode || (inviteCode && error && !claimInProgress)
+            ...(!pairingSessionCode ||
+            (pairingSessionCode && error && !claimInProgress)
               ? [Atoms.flex_col, Atoms.gap_lg]
               : []),
           ]}

@@ -1,10 +1,8 @@
 export {
-  claimInvitation,
-  createInvitation,
-  getFeed,
+  createPairingSession, getFeed, getPairingSession, getPostThread,
   getServerInfo,
+  joinPairingSession,
   listEvents,
-  putEvents,
-  uploadBlob
+  putEvents, setGrpcWebFetch, uploadBlob
 } from './transport';
 

@@ -4,9 +4,9 @@ import {
   EventService,
   HydrationStatus,
   IdentityManager,
-  InvitationManager,
   KeyPairManager,
   InitializationStep,
+  PairingSessionManager,
 } from './client-internal';
 import { KEY_TYPE, COLLECTION, type Collection } from './constants';
 import { HTTPClient } from './http';
@@ -58,7 +58,7 @@ export class PolycentricClient {
   public readonly keyPairManager = new KeyPairManager(this);
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
-  public readonly invitationManager = new InvitationManager(this);
+  public readonly pairingSessionManager = new PairingSessionManager(this);
 
   public readonly httpClient = new HTTPClient();
 

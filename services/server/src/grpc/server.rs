@@ -40,8 +40,8 @@ pub fn build_grpc_router(
             db.clone(),
             filestore,
         );
-    let identity_service =
-        service::identity::identity_service::build_identity_service(db);
+    let pairing_service =
+        service::pair_identity::pairing_service::build_pairing_service(db);
     let server_info_service =
         service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
@@ -53,7 +53,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(events_service))
         .add_service(grpc_web.layer(feeds_service))
         .add_service(grpc_web.layer(content_service))
-        .add_service(grpc_web.layer(identity_service))
+        .add_service(grpc_web.layer(pairing_service))
         .add_service(grpc_web.layer(server_info_service));
 
     let cors = CorsLayer::new()

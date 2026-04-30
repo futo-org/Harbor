@@ -21,7 +21,7 @@ export function PairIdentityCamera({
 }: PairIdentityCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
-  const [useCamera, setUseCamera] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
   const [input, setInput] = useState('');
   const { theme } = useTheme();
   const scannedRef = useRef(false);
@@ -40,10 +40,10 @@ export function PairIdentityCamera({
   });
 
   useEffect(() => {
-    if (!hasPermission && useCamera) {
+    if (!hasPermission && cameraEnabled) {
       void requestPermission();
     }
-  }, [hasPermission, requestPermission, useCamera]);
+  }, [hasPermission, requestPermission, cameraEnabled]);
 
   const handleContinue = () => {
     if (!input.trim()) return;
@@ -51,7 +51,7 @@ export function PairIdentityCamera({
     onCodeScanned(code, server);
   };
 
-  const canUseCamera = hasPermission && useCamera && device !== undefined;
+  const canUseCamera = hasPermission && cameraEnabled && device !== undefined;
 
   return (
     <>
@@ -79,7 +79,7 @@ export function PairIdentityCamera({
           </View>
           <LinkButton
             title="Can't scan? Enter code manually"
-            onPress={() => setUseCamera(false)}
+            onPress={() => setCameraEnabled(false)}
             variant="small"
             underlineOnHover
           />
@@ -96,7 +96,7 @@ export function PairIdentityCamera({
             <LinkButton
               title="Use camera instead"
               onPress={() => {
-                setUseCamera(true);
+                setCameraEnabled(true);
                 scannedRef.current = false;
               }}
               variant="small"
