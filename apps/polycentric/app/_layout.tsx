@@ -6,6 +6,7 @@ import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -25,6 +26,8 @@ function RootStack() {
   const { theme } = useTheme();
 
   const stack = (
+    <>
+      <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
     <Stack
       screenOptions={{
         headerShown: false,
@@ -60,6 +63,7 @@ function RootStack() {
         }}
       />
     </Stack>
+    </>
   );
 
   return stack;
