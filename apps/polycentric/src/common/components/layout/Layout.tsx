@@ -85,7 +85,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
       testID="primaryColumn"
       style={[
         Atoms.flex_1,
-        Atoms.pb_lg,
+        isWeb && Atoms.pb_lg,
         {
           maxWidth: 600,
           borderLeftColor: theme.palette.neutral_25,
@@ -137,7 +137,7 @@ function Screen({
   return (
     <View
       testID="layout-screen"
-      style={[Atoms.flex_row, Atoms.flex_1]}
+      style={[Atoms.flex_row, Atoms.flex_1, { paddingTop: insets.top }]}
       dir="ltr"
     >
       {showLeftSidebar && <LeftSidebar />}

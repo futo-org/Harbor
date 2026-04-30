@@ -2,15 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
 import { FeedViewer, type FeedType } from '@/src/features/post';
-import { ComposerInput } from '@/src/features/composer';
-import { useFollowingFeed } from './hooks/useFollowingFeed';
+import { useExploreFeed } from './hooks/useExploreFeed';
 import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 
-export default function FeedScreen() {
+export default function ExploreScreen() {
   const showComposeFab = !isWeb;
 
-  const feed = useFollowingFeed({
+  const feed = useExploreFeed({
     enabled: true,
   });
 
@@ -21,7 +20,6 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <ComposerInput />
         <FeedViewer
           items={feed.items}
           isLoading={feed.isLoading}
