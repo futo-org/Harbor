@@ -21,10 +21,3 @@ hmac-sha256 = "1.1.12"
 [build-dependencies]
 prost-build = "0.14"
 tonic-prost-build = "*"
-
-[profile.release]
-opt-level = "s"
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-strip = "debuginfo"

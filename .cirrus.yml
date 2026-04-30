@@ -8,7 +8,7 @@ build_ios_device_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios
-    - cp ../../target/aarch64-apple-ios/release/libpolycentric_core.a ../../libpolycentric_core-ios-device.a
+    - cp ../../target/aarch64-apple-ios/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-device.a
   binary_artifacts:
     path: 'libpolycentric_core-ios-device.a'
 
@@ -22,7 +22,7 @@ build_ios_sim_arm64_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios-sim
-    - cp ../../target/aarch64-apple-ios-sim/release/libpolycentric_core.a ../../libpolycentric_core-ios-sim-arm64.a
+    - cp ../../target/aarch64-apple-ios-sim/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-sim-arm64.a
   binary_artifacts:
     path: 'libpolycentric_core-ios-sim-arm64.a'
 
@@ -36,6 +36,6 @@ build_ios_sim_x86_task:
     - cd packages/rs-core
     - brew install just protobuf llvm
     - just build-ffi-ios-sim-x86
-    - cp ../../target/x86_64-apple-ios/release/libpolycentric_core.a ../../libpolycentric_core-ios-sim-x86_64.a
+    - cp ../../target/x86_64-apple-ios/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-sim-x86_64.a
   binary_artifacts:
     path: 'libpolycentric_core-ios-sim-x86_64.a'
