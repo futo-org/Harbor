@@ -1,6 +1,6 @@
 import { Button } from '@/src/common/components/primitives';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Platform, StyleSheet, View } from 'react-native';
 
 type IconRenderFn = (props: {
@@ -35,7 +35,7 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
         };
 
   return (
-    <View style={styles.container}>
+    <View style={[Atoms.absolute, { bottom: 0, right: 0 }, Atoms.p_lg]}>
       <Button
         onPress={onPress}
         title={title}
@@ -57,13 +57,3 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
     </View>
   );
 }
-
-const GAP_ABOVE_TAB_BAR = 8;
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: TAB_BAR_HEIGHT + GAP_ABOVE_TAB_BAR,
-    right: 24,
-  },
-});
