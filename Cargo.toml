@@ -9,3 +9,12 @@ members = [
 ]
 exclude = ["legacy/"]
 resolver = "2"
+
+# Size-optimized profile for rs-core FFI artifacts (Android, iOS).
+[profile.release-rs-core]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
