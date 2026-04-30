@@ -1,5 +1,5 @@
-import FeedTabScreen from '@/src/features/feed/FeedScreen';
+import ExploreScreen from '@/src/features/feed/ExploreScreen';
 
 export default function FeedIndexRoute() {
-  return <FeedTabScreen />;
+  return <ExploreScreen />;
 }

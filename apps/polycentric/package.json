@@ -4,13 +4,15 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "dev": "APP_VARIANT=dev expo start",
+    "android": "APP_VARIANT=dev expo run:android",
+    "ios": "APP_VARIANT=dev expo run:ios",
+    "android:prod": "expo run:android",
+    "ios:prod": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "lint": "expo lint",
-    "prebuild": "expo prebuild --clean"
+    "prebuild": "APP_VARIANT=dev expo prebuild --clean"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.9",
