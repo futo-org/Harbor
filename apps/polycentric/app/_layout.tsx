@@ -6,6 +6,7 @@ import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -25,41 +26,44 @@ function RootStack() {
   const { theme } = useTheme();
 
   const stack = (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        fullScreenGestureEnabled: !isWeb,
-        contentStyle: [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
-        ...(isWeb ? { animation: 'none' as const } : {}),
-      }}
-    >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(onboarding)" />
-      <Stack.Screen
-        name="feed"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'none',
-          contentStyle: { backgroundColor: 'transparent' },
+    <>
+      <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          fullScreenGestureEnabled: !isWeb,
+          contentStyle: [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
+          ...(isWeb ? { animation: 'none' as const } : {}),
         }}
-      />
-      <Stack.Screen
-        name="settings"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'none',
-          contentStyle: { backgroundColor: 'transparent' },
-        }}
-      />
-      <Stack.Screen
-        name="[identityId]/edit"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'none',
-          contentStyle: { backgroundColor: 'transparent' },
-        }}
-      />
-    </Stack>
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(onboarding)" />
+        <Stack.Screen
+          name="feed"
+          options={{
+            presentation: 'transparentModal',
+            animation: 'none',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            presentation: 'transparentModal',
+            animation: 'none',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+        <Stack.Screen
+          name="[identityId]/edit"
+          options={{
+            presentation: 'transparentModal',
+            animation: 'none',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+      </Stack>
+    </>
   );
 
   return stack;
