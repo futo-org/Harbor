@@ -1,4 +1,10 @@
-import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  Breakpoints,
+  themes,
+  typography,
+  useTheme,
+} from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';
@@ -26,6 +32,7 @@ import { Ionicons } from '@expo/vector-icons';
 import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
+import Topbar from './Topbar';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -86,7 +93,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
       style={[
         Atoms.flex_1,
         isWeb && Atoms.pb_lg,
-        {
+        isWeb && {
           maxWidth: 600,
           borderLeftColor: theme.palette.neutral_25,
           borderLeftWidth: 1,
@@ -119,6 +126,7 @@ function Screen({
   keyboardAvoiding = false,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   showLeftSidebar = showLeftSidebar && isWeb;
 
@@ -137,7 +145,15 @@ function Screen({
   return (
     <View
       testID="layout-screen"
-      style={[Atoms.flex_row, Atoms.flex_1, { paddingTop: insets.top }]}
+      style={[
+        Atoms.flex_row,
+        Atoms.flex_1,
+        { paddingTop: insets.top },
+        !isWeb && {
+          borderBottomWidth: 1,
+          borderBottomColor: theme.palette.neutral_25,
+        },
+      ]}
       dir="ltr"
     >
       {showLeftSidebar && <LeftSidebar />}
@@ -361,5 +377,6 @@ Screen.LeftSidebar = LeftSidebar;
 Screen.RightSidebar = RightSidebar;
 Screen.Main = Main;
 Screen.PrimaryColumn = PrimaryColumn;
+Screen.Topbar = Topbar;
 
 export { Screen };

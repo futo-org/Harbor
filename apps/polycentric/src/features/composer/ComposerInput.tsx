@@ -42,7 +42,7 @@ export function ComposerInput() {
         {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '40'),
-          backgroundColor: theme.palette.background_primary,
+          backgroundColor: theme.palette.neutral_0,
           overflow: 'hidden',
         },
       ]}

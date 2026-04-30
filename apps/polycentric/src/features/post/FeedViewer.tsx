@@ -1,66 +1,80 @@
-import { Text } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { FlashList } from '@shopify/flash-list';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  type LayoutChangeEvent,
-  RefreshControl,
-  View,
-} from 'react-native';
+  FlashList,
+  type FlashListProps,
+  type ListRenderItem,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
+import { isValidElement, useEffect, useRef } from 'react';
+import { View } from 'react-native';
 import { Post } from './Post';
 
-interface FeedViewerProps {
-  items: PostData[];
-  isLoading: boolean;
-  error: Error | null;
-  onRefresh: () => void;
-  onEndReached?: () => void;
-  hasMore?: boolean;
-  bottomPadding?: number;
-}
+export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
-export function FeedViewer(props: FeedViewerProps) {
-  if (props.error) {
+// `renderItem` is required by FlashList but FeedViewer defaults it to a
+// `Post` renderer for `PostData`, so consumers can omit it.
+export type FeedViewerProps<T = PostData> = Omit<
+  FlashListProps<T>,
+  'renderItem'
+> & {
+  renderItem?: FlashListProps<T>['renderItem'];
+};
+
+const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
+  <Post post={item} />
+);
+
+const defaultKeyExtractor = (item: PostData, index: number) =>
+  `${item.id}:${index}`;
+
+export function FeedViewer<T extends PostData = PostData>(
+  props: FeedViewerProps<T>,
+) {
+  const renderItem =
+    (props.renderItem as ListRenderItem<T>) ??
+    (defaultRenderItem as unknown as ListRenderItem<T>);
+  const keyExtractor =
+    props.keyExtractor ??
+    (defaultKeyExtractor as unknown as FlashListProps<T>['keyExtractor']);
+
+  if (isWeb) {
     return (
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.items_center,
-          Atoms.justify_center,
-          Atoms.p_lg,
-        ]}
-      >
-        <Text color="neutral_500">Failed to load feed</Text>
-      </View>
+      <WebFeedViewer<T>
+        {...props}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+      />
     );
   }
 
-  // On web let the page scroll naturally — the Stack's content area
-  // already has `overflow: auto`. Inline rendering keeps that scroll
-  // chain intact instead of FlashList swallowing it.
-  if (isWeb) {
-    return <WebFeedViewer {...props} />;
-  }
-  return <NativeFeedViewer {...props} />;
+  return (
+    <FlashList<T>
+      {...props}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+    />
+  );
 }
 
-function WebFeedViewer({
-  items,
-  isLoading,
+// Renders the FlashList contract inline so the page-level scroll on web
+// is preserved (the Stack content area already has `overflow: auto`).
+// Only the props the feed actually uses are honored.
+function WebFeedViewer<T>({
+  data,
+  renderItem,
+  keyExtractor,
+  ListHeaderComponent,
+  ListFooterComponent,
+  ListEmptyComponent,
   onEndReached,
-  hasMore,
-  bottomPadding,
-}: FeedViewerProps) {
-  const { theme } = useTheme();
+  contentContainerStyle,
+}: FlashListProps<T>) {
   const sentinelRef = useRef<View>(null);
+  const items = (data as readonly T[] | null | undefined) ?? [];
 
-  // IntersectionObserver on a sentinel at the bottom triggers
-  // `onEndReached` when the user scrolls near it.
   useEffect(() => {
-    if (!hasMore || !onEndReached) return;
+    if (!onEndReached) return;
     const node = sentinelRef.current as unknown as Element | null;
     if (!node || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
@@ -71,117 +85,48 @@ function WebFeedViewer({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasMore, onEndReached, items.length]);
+  }, [onEndReached, items.length]);
 
-  if (items.length === 0 && !isLoading) {
-    return (
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.items_center,
-          Atoms.justify_center,
-          Atoms.p_lg,
-        ]}
-      >
-        <Text color="neutral_500">No posts yet</Text>
-      </View>
-    );
-  }
+  const isEmpty = items.length === 0;
 
   return (
-    <View style={{ paddingBottom: bottomPadding }}>
-      {items.map((item, i) => (
-        <Post key={`${item.id}:${i}`} post={item} />
-      ))}
-      {hasMore && <View ref={sentinelRef} style={{ height: 1 }} />}
-      {isLoading && items.length > 0 ? (
-        <View style={[Atoms.items_center, Atoms.p_lg]}>
-          <ActivityIndicator
-            size="small"
-            color={theme.palette.neutral_500}
-            accessibilityLabel="Loading more posts"
-          />
-        </View>
+    <View style={contentContainerStyle}>
+      {renderNode(ListHeaderComponent)}
+      {isEmpty
+        ? renderNode(ListEmptyComponent)
+        : items.map((item, index) => {
+            const key =
+              typeof keyExtractor === 'function'
+                ? keyExtractor(item, index)
+                : `${index}`;
+            return (
+              <View key={key}>
+                {renderItem?.({
+                  item,
+                  index,
+                  target: 'Cell',
+                  extraData: undefined,
+                }) ?? null}
+              </View>
+            );
+          })}
+      {onEndReached && !isEmpty ? (
+        <View ref={sentinelRef} style={{ height: 1 }} />
       ) : null}
+      {renderNode(ListFooterComponent)}
     </View>
   );
 }
 
-function NativeFeedViewer({
-  items,
-  isLoading,
-  onRefresh,
-  onEndReached,
-  hasMore,
-  bottomPadding,
-}: FeedViewerProps) {
-  const { theme } = useTheme();
+type ReactNodeOrComponent =
+  | React.ReactElement
+  | React.ComponentType
+  | null
+  | undefined;
 
-  const [layoutBox, setLayoutBox] = useState({ w: 0, h: 0 });
-  const [hasLayout, setHasLayout] = useState(false);
-
-  const onFeedContainerLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setLayoutBox({ w: width, h: height });
-    setHasLayout(true);
-  }, []);
-
-  // Inactive screens stay mounted with tiny dimensions. Hide the list
-  // briefly until it has a valid layout to avoid a flash on back-nav.
-  const layoutInvalid = hasLayout && (layoutBox.w < 2 || layoutBox.h < 2);
-
-  const renderItem = useCallback(
-    ({ item }: { item: PostData }) => <Post post={item} />,
-    [],
-  );
-
-  const keyExtractor = useCallback(
-    (item: PostData, index: number) => `${item.id}:${index}`,
-    [],
-  );
-
-  return (
-    <View
-      style={[Atoms.flex_1, layoutInvalid && { opacity: 0 }]}
-      onLayout={onFeedContainerLayout}
-    >
-      <FlashList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomPadding }}
-        onEndReached={hasMore ? onEndReached : undefined}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
-        }
-        ListFooterComponent={
-          hasMore && items.length > 0 ? (
-            <View style={[Atoms.items_center, Atoms.p_lg]}>
-              <ActivityIndicator
-                size="small"
-                color={theme.palette.neutral_500}
-                accessibilityLabel="Loading more posts"
-              />
-            </View>
-          ) : undefined
-        }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View
-              style={[
-                Atoms.flex_1,
-                Atoms.items_center,
-                Atoms.justify_center,
-                Atoms.p_lg,
-              ]}
-            >
-              <Text color="neutral_500">No posts yet</Text>
-            </View>
-          ) : null
-        }
-      />
-    </View>
-  );
+function renderNode(node: ReactNodeOrComponent) {
+  if (node == null) return null;
+  if (isValidElement(node)) return node;
+  const Component = node as React.ComponentType;
+  return <Component />;
 }

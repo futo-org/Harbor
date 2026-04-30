@@ -1,38 +1,86 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
-import { FeedViewer, type FeedType } from '@/src/features/post';
+import { Text } from '@/src/common/components/primitives';
+import { FeedViewer } from '@/src/features/post';
 import { useExploreFeed } from './hooks/useExploreFeed';
 import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
 
 export default function ExploreScreen() {
+  const { theme } = useTheme();
   const showComposeFab = !isWeb;
 
-  const feed = useExploreFeed({
-    enabled: true,
-  });
+  const feed = useExploreFeed({ enabled: true });
 
-  const handleFabPress = () => {
-    openCompose();
-  };
+  if (feed.error) {
+    return (
+      <Screen>
+        <Screen.PrimaryColumn>
+          <View
+            style={[
+              Atoms.flex_1,
+              Atoms.items_center,
+              Atoms.justify_center,
+              Atoms.p_lg,
+            ]}
+          >
+            <Text color="neutral_500">Failed to load feed</Text>
+          </View>
+        </Screen.PrimaryColumn>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
         <FeedViewer
-          items={feed.items}
-          isLoading={feed.isLoading}
-          error={feed.error}
-          onRefresh={feed.refresh}
-          onEndReached={feed.loadMore}
-          hasMore={feed.hasMore}
-          bottomPadding={0}
+          data={feed.items}
+          ListHeaderComponent={!isWeb ? Screen.Topbar : undefined}
+          ListEmptyComponent={
+            !feed.isLoading ? (
+              <View
+                style={[
+                  Atoms.flex_1,
+                  Atoms.items_center,
+                  Atoms.justify_center,
+                  Atoms.p_lg,
+                ]}
+              >
+                <Text color="neutral_500">No posts yet</Text>
+              </View>
+            ) : null
+          }
+          ListFooterComponent={
+            feed.hasMore && feed.items.length > 0 ? (
+              <View style={[Atoms.items_center, Atoms.p_lg]}>
+                <ActivityIndicator
+                  size="small"
+                  color={theme.palette.neutral_500}
+                  accessibilityLabel="Loading more posts"
+                />
+              </View>
+            ) : null
+          }
+          onEndReached={feed.hasMore ? feed.loadMore : undefined}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            !isWeb ? (
+              <RefreshControl
+                refreshing={feed.isLoading}
+                onRefresh={feed.refresh}
+              />
+            ) : undefined
+          }
+          showsVerticalScrollIndicator={false}
         />
         {showComposeFab ? (
           <Fab
             title="New Post"
-            onPress={handleFabPress}
+            onPress={openCompose}
             icon={() => <Ionicons name="add-circle" size={22} color="white" />}
           />
         ) : null}
