@@ -1,0 +1,63 @@
+.rn-sdk-workflow:
+  image: node:24-slim
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^rn-sdk-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - packages/react-native/**/*
+        - .gitlab/ci/build_rn_sdks.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - packages/react-native/**/*
+        - .gitlab/ci/build_rn_sdks.yml
+
+.rn-sdk-base:
+  extends: .rn-sdk-workflow
+  before_script:
+    - npm install -g pnpm@9.5.0
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+  needs:
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-sdk-build-android-arm64
+      artifacts: true
+    - job: rs-sdk-build-android-armv7
+      artifacts: true
+    - job: rs-sdk-build-android-x86
+      artifacts: true
+    - job: rs-sdk-build-android-x86_64
+      artifacts: true
+    - job: rs-sdk-build-ios-device
+      artifacts: true
+    - job: rs-sdk-build-wasm-browser
+      artifacts: true
+
+rn-sdk-build:
+  extends: .rn-sdk-base
+  stage: build
+  script:
+    - mkdir -p packages/react-native/android/libs/arm64-v8a
+    - cp target/aarch64-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/arm64-v8a/
+    - mkdir -p packages/react-native/android/libs/armeabi-v7a
+    - cp target/armv7-linux-androideabi/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/armeabi-v7a/
+    - mkdir -p packages/react-native/android/libs/x86
+    - cp target/i686-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/x86/
+    - mkdir -p packages/react-native/android/libs/x86_64
+    - cp target/x86_64-linux-android/release-rs-core/libpolycentric_core.a packages/react-native/android/libs/x86_64/
+    - mkdir -p packages/react-native/ios/libs/aarch64-apple-ios
+    - cp buildRsCoreIOSDevice/binary/libpolycentric_core-ios-device.a packages/react-native/ios/libs/aarch64-apple-ios/libpolycentric_core.a
+    - cd packages/react-native
+    - pnpm build
+  artifacts:
+    paths:
+      - packages/react-native/lib
+      - packages/react-native/android/libs
+      - packages/react-native/ios/libs
+    expire_in: 1 week
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]

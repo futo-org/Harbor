@@ -1,4 +1,4 @@
 **/target
 **/node_modules
-**/dist
+apps/polycentric/dist
 **/.git

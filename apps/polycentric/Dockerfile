@@ -13,16 +13,20 @@ WORKDIR /app
 ARG EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 
+# CI populates packages/js-*/dist, packages/react-native/lib, and
+# packages/rs-core-wasm-browser from upstream artifacts and sets this
+# to skip the redundant `pnpm run build`. Local builds leave it unset
+# and fall through to a full workspace build.
+ARG SKIP_WORKSPACE_BUILD=
+
 COPY .npmrc turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps apps
 COPY packages packages
 COPY tools tools
 RUN pnpm install --frozen-lockfile
-# Build js-*
-RUN pnpm run build
-# Export Expo static app
+RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
 RUN cd apps/polycentric && npx expo export --platform web
-# Self-contained prod bundle: real-file node_modules + package.json (no symlinks)
+# Non symlinked packages and node_modules
 RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy
 
 # Stage 3: Run
