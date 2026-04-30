@@ -15,4 +15,4 @@ stages:
   - test
 default:
   tags:
-    - dind
+    - dind_fast
