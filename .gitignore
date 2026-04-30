@@ -41,4 +41,6 @@ services/server/data
 
 # Generated files
 docker-compose.live*
+
+# Secrets
 .env
