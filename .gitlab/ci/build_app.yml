@@ -14,14 +14,21 @@
         - apps/**/*
         - .gitlab/ci/build_app.yml
 
-app-web-image:
+.app-build-base:
   extends: .app-workflow
+  needs:
+    - job: rn-sdk-build
+      artifacts: true
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-sdk-build-wasm-browser
+      artifacts: true
+
+app-web-image:
+  extends: .app-build-base
   image:
     name: moby/buildkit:rootless
     entrypoint: ['']
-  needs:
-    - job: rs-sdk-build-wasm-browser
-      artifacts: true
   before_script:
     - mkdir -p ~/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
@@ -33,4 +40,32 @@ app-web-image:
         --local context=. \
         --local dockerfile=./apps/polycentric \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
+        --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
         --output type=image,name=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA,push=true
+
+.app-build-expo:
+  extends: .app-build-base
+  stage: build
+  image: node:24-slim
+  before_script:
+    - npm install -g pnpm@9.5.0
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+    - apt-get update && apt-get install -y --no-install-recommends git
+    - cd ./apps/polycentric
+
+app-android-apk:
+  extends: .app-build-expo
+  script:
+    - npx eas-cli build --platform android --profile preview --non-interactive --no-wait
+
+app-android-aab:
+  extends: .app-build-expo
+  script:
+    - npx eas-cli build --platform android --non-interactive --no-wait
+  when: manual
+
+app-ios:
+  extends: .app-build-expo
+  script:
+    - npx eas-cli build --platform ios --non-interactive --no-wait
