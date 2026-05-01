@@ -119,7 +119,7 @@ impl NotificationManager {
                 key_type: row.public_key_type as i32,
             };
 
-            if let Err(_) = self.verify_token(&row.service, &row.token).await {
+            if self.verify_token(&row.service, &row.token).await.is_err() {
                 // Remove any invalid tokens
                 token_repository::Mutation::unregister(
                     db,
@@ -164,9 +164,9 @@ impl NotificationManager {
                 // Remove invalid tokens
                 token_repository::Mutation::unregister(
                     db,
-                    &public_key,
+                    public_key,
                     PushService::Expo.as_ref(),
-                    &token,
+                    token,
                 )
                 .await?;
             }
