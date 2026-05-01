@@ -6,11 +6,16 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+interface ComposerInputProps {
+  /** When set, opens the composer pre-filled to reply to this post. */
+  replyTo?: { identityId: string; sequence: string };
+}
+
 /**
  * A non-interactive placeholder that looks like a composer input. Tapping
  * anywhere on it opens the full compose modal.
  */
-export function ComposerInput() {
+export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
@@ -30,7 +35,7 @@ export function ComposerInput() {
   return (
     <Pressable
       accessibilityLabel="New post"
-      onPress={() => openCompose()}
+      onPress={() => openCompose({ replyTo })}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
       style={[
@@ -42,21 +47,21 @@ export function ComposerInput() {
         {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '40'),
-          backgroundColor: theme.palette.background_primary,
+          backgroundColor: theme.palette.neutral_0,
           overflow: 'hidden',
         },
       ]}
     >
       <ProfileAvatar identityKey={currentIdentity.identityKey} size="md" />
       <Text variant="body" color="neutral_500" style={Atoms.flex_1}>
-        What&apos;s on your mind?
+        {replyTo ? 'Post your reply' : "What's on your mind?"}
       </Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Attach image"
         onPress={(e) => {
           e.stopPropagation?.();
-          openCompose({ attachImage: true });
+          openCompose({ attachImage: true, replyTo });
         }}
         onHoverIn={onAttachHoverIn}
         onHoverOut={onAttachHoverOut}

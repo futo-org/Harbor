@@ -3,8 +3,6 @@ fusmi-2026-web:
   image: node:20
   rules:
     - if: $CI_COMMIT_TAG == "fusmi-2026-web"
-  tags:
-    - dind
   before_script:
     - npm install -g pnpm@9.5.0 wrangler
     - pnpm install

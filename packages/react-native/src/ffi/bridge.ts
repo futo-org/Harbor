@@ -234,6 +234,29 @@ class NativePolycentricCore implements IPolycentricCore {
     return grpcWebDecodeFirst(buf);
   }
 
+  /** Fetch a parent post and its direct replies from a server via gRPC-web. */
+  async get_post_thread(
+    serverUrl: string,
+    requestBytes: Uint8Array
+  ): Promise<Uint8Array> {
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.FeedsService/GetPostThread`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(requestBytes).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) throw new Error(`gRPC-web GetPostThread error: ${res.status}`);
+
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return grpcWebDecodeFirst(buf);
+  }
+
   /** Image processing is not wired through native FFI yet. */
   process_image_to_jpeg(
     _image: Uint8Array,

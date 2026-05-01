@@ -3,25 +3,17 @@ import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
 import { Text } from '@/src/common/components/primitives';
 import { FeedViewer } from '@/src/features/post';
-import { ComposerInput } from '@/src/features/composer';
-import { useFollowingFeed } from './hooks/useFollowingFeed';
+import { useExploreFeed } from './hooks/useExploreFeed';
 import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 
-const ListHeader = () => (
-  <>
-    {!isWeb ? <Screen.Topbar /> : null}
-    <ComposerInput />
-  </>
-);
-
-export default function FeedScreen() {
+export default function ExploreScreen() {
   const { theme } = useTheme();
   const showComposeFab = !isWeb;
 
-  const feed = useFollowingFeed({ enabled: true });
+  const feed = useExploreFeed({ enabled: true });
 
   if (feed.error) {
     return (
@@ -47,7 +39,7 @@ export default function FeedScreen() {
       <Screen.PrimaryColumn>
         <FeedViewer
           data={feed.items}
-          ListHeaderComponent={ListHeader}
+          ListHeaderComponent={!isWeb ? Screen.Topbar : undefined}
           ListEmptyComponent={
             !feed.isLoading ? (
               <View

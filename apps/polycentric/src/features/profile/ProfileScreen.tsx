@@ -54,14 +54,19 @@ function ProfileScreenContent() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <ProfileHeader
-          bannerColors={[
-            theme.palette.background_secondary,
-            theme.palette.background_primary,
-          ]}
-          onBack={handleBack}
+        <ProfileFeedSwitcher
+          tabs={tabs}
+          activeKey={activeFeed}
+          ListHeaderComponent={
+            <ProfileHeader
+              bannerColors={[
+                theme.palette.background_secondary,
+                theme.palette.background_primary,
+              ]}
+              onBack={handleBack}
+            />
+          }
         />
-        <ProfileFeedSwitcher tabs={tabs} activeKey={activeFeed} />
       </Screen.PrimaryColumn>
     </Screen>
   );

@@ -50,8 +50,8 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     dark: theme.scheme === 'dark',
     colors: {
       primary: theme.palette.primary_500,
-      background: theme.palette.neutral_25,
-      card: theme.palette.neutral_0,
+      background: theme.palette.neutral_0,
+      card: theme.palette.neutral_25,
       text: theme.palette.neutral_1000,
       border: theme.palette.neutral_200,
       notification: theme.palette.negative_500,

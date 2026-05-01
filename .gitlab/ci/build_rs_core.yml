@@ -22,13 +22,27 @@
     WASM_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm'
     ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
     RUST_CORE_PATH: packages/rs-core
+    CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+  cache:
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-sdk-cargo-deps
+      paths:
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-sdk-target-${CI_JOB_NAME}
+      paths:
+        - target
   before_script:
     - cd packages/rs-core
 
 .build-images:
   extends: .rs-sdk-workflow
-  tags:
-    - dind
   services:
     - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
       command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
@@ -82,6 +96,9 @@ build-android-image:
   extends: .rs-sdk-workflow
   image: ${ANDROID_IMAGE}
   stage: build
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
 
 rs-sdk-format-check:
   extends: .rust-check
@@ -137,6 +154,9 @@ rs-sdk-build-ios-device:
   artifacts:
     paths:
       - buildRsCoreIOSDevice/binary/*.a
+  rules:
+    - !reference [.rs-sdk-workflow, rules]
+    - !reference [.app-workflow, rules]
 
 rs-sdk-build-ios-sim-arm64:
   stage: build
@@ -168,7 +188,7 @@ rs-sdk-build-android-arm64:
     - just build-ffi-android-arm64
   artifacts:
     paths:
-      - target/aarch64-linux-android/release
+      - target/aarch64-linux-android/release-rs-core
     expire_in: 1 week
 
 rs-sdk-build-android-armv7:
@@ -177,7 +197,7 @@ rs-sdk-build-android-armv7:
     - just build-ffi-android-armv7
   artifacts:
     paths:
-      - target/armv7-linux-androideabi/release
+      - target/armv7-linux-androideabi/release-rs-core
     expire_in: 1 week
 
 rs-sdk-build-android-x86:
@@ -186,7 +206,7 @@ rs-sdk-build-android-x86:
     - just build-ffi-android-x86
   artifacts:
     paths:
-      - target/i686-linux-android/release
+      - target/i686-linux-android/release-rs-core
     expire_in: 1 week
 
 rs-sdk-build-android-x86_64:
@@ -195,7 +215,7 @@ rs-sdk-build-android-x86_64:
     - just build-ffi-android-x86_64
   artifacts:
     paths:
-      - target/x86_64-linux-android/release
+      - target/x86_64-linux-android/release-rs-core
     expire_in: 1 week
 
 rs-sdk-publish:
@@ -223,10 +243,10 @@ rs-sdk-publish:
       REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rs-core/${VERSION}"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSDevice/binary/libpolycentric_core-ios-device.a "${REGISTRY_URL}/libpolycentric_core-ios-device.a"
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimArm64/binary/libpolycentric_core-ios-sim-arm64.a "${REGISTRY_URL}/libpolycentric_core-ios-sim-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-armv7.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86_64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-arm64.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-armv7.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86.a"
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86_64.a"
 
 .rs-sdk-publish-npm:
   rules:

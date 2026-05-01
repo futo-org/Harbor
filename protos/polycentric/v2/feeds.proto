@@ -1,6 +1,7 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
 
 enum FeedAlgorithm {
@@ -25,10 +26,25 @@ message GetFeedResponse {
   string previous_token = 3;
 }
 
+message GetPostThreadRequest {
+  // Parent post to return the thread for
+  EventKey event_key = 1;
+  int32 limit = 2;
+}
+
+message GetPostThreadResponse {
+  EventBundle parent = 1;
+  repeated EventBundle replies = 2;
+  // string next_token = 3;
+  // string previous_token = 4;
+}
+
 /**
  * Curated feeds provided by servers
  */
 service FeedsService {
   // Returns a curated feed base on the rwquest inputs
   rpc GetFeed(GetFeedRequest) returns (GetFeedResponse);
+  // Replies to a post
+  rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
 }
