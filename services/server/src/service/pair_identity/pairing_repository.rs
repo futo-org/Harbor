@@ -28,7 +28,7 @@ impl Query {
     /// Before insert, performs cleanup in two steps:
     /// 1) deletes expired sessions globally, and
     /// 2) deletes any existing session for the same identity,
-    /// so each identity has at most one active session.
+    ///    so each identity has at most one active session.
     pub async fn create_pairing_session(
         db: &DbConn,
         issuer_identity: &str,
