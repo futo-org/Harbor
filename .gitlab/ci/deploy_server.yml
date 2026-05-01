@@ -22,7 +22,7 @@
     - git config user.email "ci@futo.org"
     - git config user.name "GitLab CI"
     - git add inventory/polycentric-2026/server.yaml
-    - git commit -m "polycentric-2026 $ENVIRONMENT: bump server to $CI_COMMIT_SHA"
+    - 'git commit -m "polycentric-2026 $ENVIRONMENT: bump server to $CI_COMMIT_SHA"'
     # Export the commit as a patch artifact
     - git format-patch -1 -o "$CI_PROJECT_DIR/deploy-patches/"
   artifacts:
