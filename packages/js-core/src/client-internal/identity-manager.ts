@@ -277,6 +277,7 @@ export class IdentityManager {
   ): Promise<boolean> {
     const allEvents = await this.client.storage.events.getAll();
 
+    // Build timeline of identity versions sorted by createdAt
     const versions: {
       createdAt: bigint;
       rotationKeys: Proto.PublicKey[];
@@ -307,9 +308,10 @@ export class IdentityManager {
       a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
     );
 
+    // Find the identity version active at the given time (or latest if no time)
     let active = versions[versions.length - 1];
     if (atTime !== undefined) {
-      active = versions[0];
+      active = versions[0]; // fallback to first
       for (const v of versions) {
         if (v.createdAt <= atTime) active = v;
         else break;
