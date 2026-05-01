@@ -12,16 +12,16 @@ variables:
 .server-deploy-prepare:
   # extends: .server-deploy-workflow
   stage: deploy
-  image: python:3.11
+  image: alpine/git:latest
   before_script:
-    - apt-get update && apt-get install -y --no-install-recommends jq
-    - pip install yq
+    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    - chmod +x /usr/local/bin/yq
   script:
     # Pull in the manifest repository
     - git clone "https://git:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
     - cd manifest-inventory
     # Use 'yq' to change the yaml value to the current commit
-    - yq -y -i ".image.version.$ENVIRONMENT = \"$CI_COMMIT_SHA\"" inventory/polycentric-2026/server.yml
+    - yq -i ".image.version.$ENVIRONMENT = strenv(CI_COMMIT_SHA)" inventory/polycentric-2026/server.yml
     # Commit the change in the manifest repo
     - git config user.email "ci@futo.org"
     - git config user.name "GitLab CI"
