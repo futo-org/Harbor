@@ -474,6 +474,42 @@ export class PolycentricClient {
   }
 
   /**
+   * Fetch a parent post and its direct replies for a given EventKey.
+   * Queries every configured server and returns the first successful
+   * response. Does not persist — callers decide what to do with the
+   * response.
+   */
+  async getPostThread(options: {
+    eventKey: Proto.EventKey;
+    limit?: number | null;
+  }): Promise<Proto.GetPostThreadResponse | null> {
+    if (!this.core) throw new Error('Core not initialized');
+
+    const requestBytes = Proto.GetPostThreadRequest.toBinary(
+      Proto.GetPostThreadRequest.create({
+        eventKey: options.eventKey,
+        limit: options.limit ?? 0,
+      }),
+    );
+
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core!.get_post_thread(server, requestBytes),
+      ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('getPostThread failed for a server:', result.reason);
+        continue;
+      }
+      return Proto.GetPostThreadResponse.fromBinary(result.value);
+    }
+
+    return null;
+  }
+
+  /**
    * Return non-deleted event bundles for an `(identity, collection)` stream
    * from the local core. Tombstone CRDT is applied by the core: any event
    * targeted by a `Delete` content in the same collection is excluded.

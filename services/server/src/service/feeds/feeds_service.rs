@@ -4,7 +4,8 @@ use crate::service::proto::feeds_service_server::{
 };
 use crate::service::proto::{
     EventBundle, FeedAlgorithm, GetFeedRequest, GetFeedResponse,
-    SerializedContent, SignedEvent,
+    GetPostThreadRequest, GetPostThreadResponse, SerializedContent,
+    SignedEvent,
 };
 use tonic::{Request, Response, Status};
 
@@ -75,6 +76,75 @@ impl FeedsService for FeedsServiceImpl {
             event_bundles: rows_to_bundles(rows),
             next_token: String::new(),
             previous_token: String::new(),
+        };
+        Ok(Response::new(reply))
+    }
+
+    // Return a parent post and its direct replies.
+    async fn get_post_thread(
+        &self,
+        request: Request<GetPostThreadRequest>,
+    ) -> Result<Response<GetPostThreadResponse>, Status> {
+        let inner_req = request.into_inner();
+
+        let limit = if inner_req.limit <= 0 {
+            200
+        } else {
+            inner_req.limit.min(200) as u64
+        };
+
+        let event_key = inner_req
+            .event_key
+            .ok_or_else(|| Status::invalid_argument("event_key is required"))?;
+        let signed_by = event_key.signed_by.ok_or_else(|| {
+            Status::invalid_argument("event_key.signed_by is required")
+        })?;
+
+        let collection: i16 =
+            event_key.collection.try_into().map_err(|_| {
+                Status::invalid_argument("event_key.collection out of range")
+            })?;
+        let public_key_type: i16 =
+            signed_by.key_type.try_into().map_err(|_| {
+                Status::invalid_argument(
+                    "event_key.signed_by.key_type out of range",
+                )
+            })?;
+        let sequence: i16 = event_key.sequence.try_into().map_err(|_| {
+            Status::invalid_argument("event_key.sequence out of range")
+        })?;
+
+        let parent_row = FeedsRepository::Query::find_event_by_key(
+            &self.db,
+            collection,
+            &event_key.identity,
+            public_key_type,
+            signed_by.key.clone(),
+            sequence,
+        )
+        .await
+        .map_err(map_db_err)?
+        .ok_or_else(|| Status::not_found("parent event not found"))?;
+
+        let reply_rows =
+            FeedsRepository::Query::list_replies_by_parent_event_key(
+                &self.db,
+                collection,
+                &event_key.identity,
+                public_key_type,
+                signed_by.key,
+                sequence,
+                limit,
+            )
+            .await
+            .map_err(map_db_err)?;
+
+        let parent_bundle =
+            rows_to_bundles(vec![parent_row]).into_iter().next();
+
+        let reply = GetPostThreadResponse {
+            parent: parent_bundle,
+            replies: rows_to_bundles(reply_rows),
         };
         Ok(Response::new(reply))
     }
