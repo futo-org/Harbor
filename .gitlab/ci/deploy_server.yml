@@ -1,0 +1,41 @@
+.server-deploy-workflow:
+  # rules:
+  #   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  #     changes:
+  #       - services/server/**/*
+  #       - .gitlab/ci/build_server.yml
+  #       - .gitlab/ci/deploy_server.yml
+
+.server-deploy-prepare:
+  extends: .server-deploy-workflow
+  stage: deploy
+  image: python:3.11
+  before_script:
+    - pip install yq
+  script:
+    # Pull in the manifest repository
+    - git clone git@gitlab.futo.org:devops/manifest-inventory.git
+    - cd manifest-inventory
+    # Use 'yq' to change the yaml value to the current commit
+    - yq -y -i ".image.version.$ENVIRONMENT = \"$CI_COMMIT_SHA\"" inventory/polycentric-2026/server.yaml
+    # Commit the change in the manifest repo
+    - git config user.email "ci@futo.org"
+    - git config user.name "GitLab CI"
+    - git add inventory/polycentric-2026/server.yaml
+    - git commit -m "polycentric-2026 $ENVIRONMENT: bump server to $CI_COMMIT_SHA"
+    # Export the commit as a patch artifact
+    - git format-patch -1 -o "$CI_PROJECT_DIR/deploy-patches/"
+  artifacts:
+    paths:
+      - deploy-patches/
+    expire_in: 1 week
+
+server-deploy-prepare-staging:
+  extends: .server-deploy-prepare
+  variables:
+    ENVIRONMENT: staging
+
+server-deploy-prepare-production:
+  extends: .server-deploy-prepare
+  variables:
+    ENVIRONMENT: polycentric
