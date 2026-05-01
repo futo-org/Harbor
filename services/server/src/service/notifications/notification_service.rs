@@ -69,8 +69,8 @@ mod tests {
     use super::*;
     use crate::service::notifications::notification_manager::PushService;
     use crate::service::proto::{KeyType, PublicKey};
-    use ed25519_dalek::{Signer, SigningKey};
     use ::entity::push_token_model as PushTokenModel;
+    use ed25519_dalek::{Signer, SigningKey};
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
