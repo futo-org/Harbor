@@ -1,13 +1,13 @@
-.server-deploy-workflow:
-  # rules:
-  #   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  #     changes:
-  #       - services/server/**/*
-  #       - .gitlab/ci/build_server.yml
-  #       - .gitlab/ci/deploy_server.yml
+# .server-deploy-workflow:
+# rules:
+#   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+#     changes:
+#       - services/server/**/*
+#       - .gitlab/ci/build_server.yml
+#       - .gitlab/ci/deploy_server.yml
 
 .server-deploy-prepare:
-  extends: .server-deploy-workflow
+  # extends: .server-deploy-workflow
   stage: deploy
   image: python:3.11
   before_script:
