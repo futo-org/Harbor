@@ -17,10 +17,10 @@ variables:
     - pip install yq
   script:
     # Pull in the manifest repository
-    - git clone "https://git:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}"
+    - git clone "https://git:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
     - cd manifest-inventory
     # Use 'yq' to change the yaml value to the current commit
-    - yq -y -i ".image.version.$ENVIRONMENT = \"$CI_COMMIT_SHA\"" inventory/polycentric-2026/server.yaml
+    - yq -y -i ".image.version.$ENVIRONMENT = \"$CI_COMMIT_SHA\"" inventory/polycentric-2026/server.yml
     # Commit the change in the manifest repo
     - git config user.email "ci@futo.org"
     - git config user.name "GitLab CI"
