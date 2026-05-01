@@ -5,3 +5,5 @@ export * from './polycentric/v2/content';
 export * from './polycentric/v2/events';
 export * from './polycentric/v2/feeds';
 export * from './polycentric/v2/server';
+export * from './polycentric/v2/messages';
+export * from './polycentric/v2/notifications';
