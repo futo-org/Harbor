@@ -15,14 +15,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
 import {
   createPolycentricStore,
   useStore,
   type PolycentricStoreApi,
 } from './store';
-import { Atoms, useTheme } from '../../theme';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -125,13 +125,17 @@ export function PolycentricProvider({
   }, [isLoading, onInitialized]);
 
   useEffect(() => {
-    if (isLoading || error) return;
-    void registerForPushNotifications()
-      .then((token) => {
-        if (token) console.log('Push token:', token);
-      })
-      .catch((err) => console.warn('Push registration failed:', err));
-  }, [isLoading, error]);
+    if (!client || !currentIdentity) return;
+    void (async () => {
+      try {
+        const token = await registerForPushNotifications();
+        if (!token) return;
+        await client.registerPushNotifications(DEFAULT_SEED_SERVERS, { service: 'expo', token });
+      } catch (err) {
+        console.warn('Push registration failed:', err);
+      }
+    })();
+  }, [client, currentIdentity?.identityKey]);
 
   useEffect(() => {
     let cancelled = false;

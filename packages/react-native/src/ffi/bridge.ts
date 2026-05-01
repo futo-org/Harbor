@@ -329,6 +329,30 @@ class NativePolycentricCore implements IPolycentricCore {
     const buf = new Uint8Array(await res.arrayBuffer());
     return grpcWebDecodeFirst(buf);
   }
+
+  /** Register a push notification token with a server via gRPC-web. */
+  async register_push_notifications(
+    serverUrl: string,
+    signedMessageBytes: Uint8Array
+  ): Promise<void> {
+    const res = await fetch(
+      `${serverUrl}/polycentric.v2.NotificationService/RegisterPushNotifications`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/grpc-web+proto',
+          'accept': 'application/grpc-web+proto',
+        },
+        body: grpcWebEncode(signedMessageBytes).buffer as ArrayBuffer,
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        `gRPC-web RegisterPushNotifications error: ${res.status}`
+      );
+    }
+  }
 }
 
 // ── Core bridge ──────────────────────────────────────────────────────
