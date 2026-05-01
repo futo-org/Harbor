@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
 import {
   publicKeyToString,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { useEffect, useState } from 'react';
 
 interface UsePairIdentityClaimerOptions {
   pairingSessionCode?: string;
@@ -71,10 +71,14 @@ export function usePairIdentityClaimer(
         state.signingKeys.forEach((k) => authorized.add(publicKeyToString(k)));
 
         if (authorized.has(publicKeyToString(currentKey))) {
+          // add the pairing session server to our servers list
           if (!client.servers.includes(pairingSessionServer)) {
             client.servers.push(pairingSessionServer);
           }
+
+          // fetch and apply the identity document
           await client.identityManager.claim(identityKey);
+
           setApproved(true);
         }
       } catch {

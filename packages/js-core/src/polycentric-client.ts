@@ -4,11 +4,11 @@ import {
   EventService,
   HydrationStatus,
   IdentityManager,
-  KeyPairManager,
   InitializationStep,
+  KeyPairManager,
   PairingSessionManager,
 } from './client-internal';
-import { KEY_TYPE, COLLECTION, type Collection } from './constants';
+import { COLLECTION, KEY_TYPE, type Collection } from './constants';
 import { HTTPClient } from './http';
 import type {
   ICoreBridge,
@@ -642,6 +642,8 @@ export class PolycentricClient {
     });
 
     let newCount = 0;
+    const signedEventBytes: Uint8Array[] = [];
+    const contentMap = new Map<Uint8Array, Uint8Array>();
     for (const bundle of bundles) {
       if (!bundle.signedEvent) continue;
 
@@ -652,12 +654,16 @@ export class PolycentricClient {
             const existing = await this.storage.content.get(
               event.contentDigest,
             );
+            const content = Proto.Content.fromBinary(
+              bundle.serializedContent.contentBytes,
+            );
             if (!existing) {
-              const content = Proto.Content.fromBinary(
-                bundle.serializedContent.contentBytes,
-              );
               await this.storage.content.save(event.contentDigest, content);
             }
+            contentMap.set(
+              Proto.ContentDigest.toBinary(event.contentDigest),
+              Proto.Content.toBinary(content),
+            );
           }
         } catch {
           // content decode failed, skip
@@ -670,6 +676,15 @@ export class PolycentricClient {
       } catch {
         // duplicate event, skip
       }
+      signedEventBytes.push(Proto.SignedEvent.toBinary(bundle.signedEvent));
+    }
+
+    // mirror into rs-core
+    if (signedEventBytes.length > 0) {
+      this.core.copy_events(signedEventBytes);
+    }
+    if (contentMap.size > 0) {
+      this.core.copy_contents(contentMap);
     }
 
     return newCount;
