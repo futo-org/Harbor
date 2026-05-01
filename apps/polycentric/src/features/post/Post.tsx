@@ -27,12 +27,21 @@ interface PostProps {
   hideReplyingTo?: boolean;
   /** When true, tapping the card root is a no-op (e.g. the focused post in a conversation). */
   disablePress?: boolean;
+  /** Draw a vertical line above the avatar — connects up to the previous post. */
+  showThreadLineAbove?: boolean;
+  /** Draw a vertical line below the avatar — connects down to the next post. */
+  showThreadLineBelow?: boolean;
+  /** Hide the bottom hairline (used inside conversation views where the thread line is the visual seam instead). */
+  hideBottomBorder?: boolean;
 }
 
 export const Post = memo(function Post({
   post,
   hideReplyingTo: _hideReplyingTo = false,
   disablePress = false,
+  showThreadLineAbove = false,
+  showThreadLineBelow = false,
+  hideBottomBorder = false,
 }: PostProps) {
   const { theme } = useTheme();
   const postId = post.id;
@@ -108,12 +117,11 @@ export const Post = memo(function Post({
 
   return (
     <Pressable
+      role="article"
       style={({ pressed }) => [
         Atoms.w_full,
         Atoms.px_lg,
-        Atoms.pt_md,
-        { paddingBottom: 6 },
-        {
+        !hideBottomBorder && {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
         },
@@ -124,16 +132,68 @@ export const Post = memo(function Post({
       onPress={handlePress}
       disabled={disablePress}
     >
+      {/* Top padding bar */}
       <View style={[Atoms.flex_row, Atoms.gap_lg]}>
-        {authorIdentity ? (
-          <ProfileAvatar
-            identityKey={authorIdentity}
-            size="md"
-            onPress={handleAuthorPress}
-          />
-        ) : null}
+        <View
+          style={[
+            Atoms.align_center,
+            !showThreadLineAbove && Atoms.pt_md,
+            showThreadLineAbove && Atoms.mb_xs,
+            {
+              flexBasis: 40,
+            },
+          ]}
+        >
+          {showThreadLineAbove ? (
+            <View
+              style={[
+                Atoms.flex_1,
+                {
+                  width: 2,
+                  backgroundColor: withHexOpacity(
+                    theme.palette.neutral_500,
+                    '30',
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+        </View>
+        {/* Empty */}
+        <View style={[Atoms.flex_1, showThreadLineAbove && Atoms.pt_md]}></View>
+      </View>
 
-        <View style={Atoms.flex_1}>
+      {/* Main post body */}
+      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
+        {/* Left side (avatar and thread line) */}
+        <View style={[Atoms.align_center]}>
+          {authorIdentity ? (
+            <ProfileAvatar
+              identityKey={authorIdentity}
+              size="md"
+              onPress={handleAuthorPress}
+            />
+          ) : null}
+          {showThreadLineBelow ? (
+            <View
+              style={[
+                Atoms.flex_1,
+                Atoms.mt_xs,
+                {
+                  width: 2,
+                  backgroundColor: withHexOpacity(
+                    theme.palette.neutral_500,
+                    '30',
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+        </View>
+
+        {/* Main post content */}
+        <View style={[Atoms.flex_1, Atoms.pb_md]}>
+          {/* Author name and other topbar items */}
           <View
             style={[
               Atoms.flex_row,
@@ -172,10 +232,12 @@ export const Post = memo(function Post({
             ) : null}
           </View>
 
-          <Text variant="secondary" style={{ marginTop: 4, lineHeight: 20 }}>
-            {displayContent}
-            {isTruncatedPreview ? '...' : ''}
-          </Text>
+          {displayContent ? (
+            <Text variant="secondary" style={[Atoms.mt_xs]}>
+              {displayContent}
+              {isTruncatedPreview ? '...' : ''}
+            </Text>
+          ) : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
           {showContentExpandToggle && (
             <Pressable
@@ -197,17 +259,16 @@ export const Post = memo(function Post({
               </Text>
             </Pressable>
           )}
+          <PostToolbar
+            onReply={handleReply}
+            onLike={handleLike}
+            onDislike={handleDislike}
+            liked={liked}
+            disliked={disliked}
+            style={{ marginTop: 8 }}
+          />
         </View>
       </View>
-
-      <PostToolbar
-        onReply={handleReply}
-        onLike={handleLike}
-        onDislike={handleDislike}
-        liked={liked}
-        disliked={disliked}
-        style={{ marginTop: 8, paddingLeft: 50 }}
-      />
     </Pressable>
   );
 });
