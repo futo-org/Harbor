@@ -24,7 +24,6 @@ impl AsRef<str> for PushService {
 #[derive(Debug)]
 pub enum NotificationError {
     UnknownService(String),
-    InvalidToken,
     Database(DbErr),
     PushService(String),
 }
@@ -35,7 +34,6 @@ impl fmt::Display for NotificationError {
             NotificationError::UnknownService(s) => {
                 write!(f, "unknown push service: {s}")
             }
-            NotificationError::InvalidToken => write!(f, "invalid push token"),
             NotificationError::Database(e) => write!(f, "database error: {e}"),
             NotificationError::PushService(e) => {
                 write!(f, "push service error: {e}")
@@ -92,6 +90,7 @@ impl NotificationManager {
     /// Sends a push notification to every authorized key of an identity that
     /// has a registered token. Tokens reported as invalid by the push service
     /// are unregistered as part of the send.
+    #[allow(dead_code)] // TODO remove this once the notification manager is used
     pub async fn send(
         &self,
         db: &DbConn,
