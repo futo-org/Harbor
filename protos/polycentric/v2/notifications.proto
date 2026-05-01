@@ -1,7 +1,6 @@
 syntax = "proto3";
 package polycentric.v2;
 
-import "polycentric/v2/keypair.proto";
 import "polycentric/v2/messages.proto";
 
 message RegisterPushNotificationRequest {
