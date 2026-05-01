@@ -12,7 +12,9 @@ variables:
 .server-deploy-prepare:
   # extends: .server-deploy-workflow
   stage: deploy
-  image: alpine/git:latest
+  image:
+    name: alpine/git:latest
+    entrypoint: ['']
   before_script:
     - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
     - chmod +x /usr/local/bin/yq
