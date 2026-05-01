@@ -80,9 +80,9 @@ export async function getPostThread(
   serverUrl: string,
   request: Proto.GetPostThreadRequest,
 ): Promise<Proto.GetPostThreadResponse> {
-  return new Proto.FeedsServiceClient(grpcWebTransport(serverUrl)).getPostThread(
-    request,
-  ).response;
+  return new Proto.FeedsServiceClient(
+    grpcWebTransport(serverUrl),
+  ).getPostThread(request).response;
 }
 
 export async function uploadBlob(

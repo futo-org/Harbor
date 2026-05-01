@@ -1,8 +1,12 @@
 export {
-  createPairingSession, getFeed, getPairingSession, getPostThread,
+  createPairingSession,
+  getFeed,
+  getPairingSession,
+  getPostThread,
   getServerInfo,
   joinPairingSession,
   listEvents,
-  putEvents, setGrpcWebFetch, uploadBlob
+  putEvents,
+  setGrpcWebFetch,
+  uploadBlob,
 } from './transport';
-

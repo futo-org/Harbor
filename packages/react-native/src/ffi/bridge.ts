@@ -191,7 +191,7 @@ class NativePolycentricCore implements IPolycentricCore {
   ): Promise<Uint8Array> {
     return getPostThread(
       serverUrl,
-      v2.GetPostThreadRequest.fromBinary(requestBytes),
+      v2.GetPostThreadRequest.fromBinary(requestBytes)
     ).then((response) => v2.GetPostThreadResponse.toBinary(response));
   }
 

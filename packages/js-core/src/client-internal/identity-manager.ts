@@ -26,7 +26,7 @@ export class IdentityManager {
     return a.keyType === b.keyType && bytesEqual(a.key, b.key);
   }
 
-  constructor(private readonly client: PolycentricClient) { }
+  constructor(private readonly client: PolycentricClient) {}
 
   /**
    * Resolves the current identity state by finding the latest Identity
