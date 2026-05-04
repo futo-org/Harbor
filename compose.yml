@@ -20,6 +20,8 @@ services:
       dockerfile: services/server/Dockerfile
     ports:
       - ${POLYCENTRIC_SERVER_PORT:-3000}:3000
+      # HTTP server debug
+      - 127.0.0.1:6060:6060
     environment:
       - RUST_LOG=debug
       - DATABASE_URL=postgres://postgres:testing@postgres:5432

@@ -1,4 +1,5 @@
 mod db;
+mod debug;
 mod grpc;
 mod routes;
 mod service;
@@ -62,12 +63,25 @@ async fn main() {
         server_cfg,
     )
     .expect("failed to build gRPC router");
-    let http_router = build_routes(db, filestore);
+    let http_router = build_routes(db.clone(), filestore);
 
     let app = http_router.merge(grpc_router);
+    let debug_app = debug::debug_router(db);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let app_listener =
+        tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let debug_listener =
+        tokio::net::TcpListener::bind("0.0.0.0:6060").await.unwrap();
+
     println!("Server listening on http://0.0.0.0:3000");
     println!("API docs available at http://0.0.0.0:3000/docs");
-    axum::serve(listener, app).await.unwrap();
+    println!("Debug UI on http://0.0.0.0:6060");
+
+    // Debug listener runs in the background; main listener is awaited so
+    // the process exits cleanly if 0.0.0.0:3000 dies.
+    tokio::spawn(async move {
+        axum::serve(debug_listener, debug_app).await.unwrap()
+    });
+
+    axum::serve(app_listener, app).await.unwrap();
 }
