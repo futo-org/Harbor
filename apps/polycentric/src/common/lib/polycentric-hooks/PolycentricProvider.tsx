@@ -130,7 +130,10 @@ export function PolycentricProvider({
       try {
         const token = await registerForPushNotifications();
         if (!token) return;
-        await client.registerPushNotifications(DEFAULT_SEED_SERVERS, { service: 'expo', token });
+        await client.registerPushNotifications(DEFAULT_SEED_SERVERS, {
+          service: 'expo',
+          token,
+        });
       } catch (err) {
         console.warn('Push registration failed:', err);
       }
@@ -209,7 +212,7 @@ export function PolycentricProvider({
     async (publicKey: types.PublicKey) => {
       if (!client) return;
       await client.keyPairManager.switchKeyPair(publicKey);
-      await client.sync().catch(() => { });
+      await client.sync().catch(() => {});
     },
     [client],
   );
