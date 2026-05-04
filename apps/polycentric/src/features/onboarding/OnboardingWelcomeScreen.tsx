@@ -1,24 +1,17 @@
-import { Screen, Text, Button } from '@/src/common/components';
+import { Button, Screen, Text } from '@/src/common/components';
+import { Routes } from '@/src/common/constants/routes';
 import { Atoms } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { View } from 'react-native';
-import { Routes } from '@/src/common/constants/routes';
 
-import WEB_LOGO from '../../common/assets/images/WebLogo.png';
 import { Image } from 'expo-image';
+import WEB_LOGO from '../../common/assets/images/WebLogo.png';
 
 export default function OnboardingWelcomeScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View
-          style={[
-            Atoms.flex_col,
-            Atoms.justify_between,
-            Atoms.mx_lg,
-            Atoms.h_full,
-          ]}
-        >
+        <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.mx_lg]}>
           <View
             style={[
               Atoms.flex_1,
@@ -41,12 +34,14 @@ export default function OnboardingWelcomeScreen() {
               </Text> */}
             </View>
           </View>
-          <View style={Atoms.gap_md}>
+          <View style={[Atoms.gap_md, Atoms.w_full, Atoms.mt_auto]}>
             <Button
               title="Create new identity"
               variant="primary"
               fullWidth
-              onPress={() => router.push(Routes.onboarding.signup.setUsername)}
+              onPress={() =>
+                router.push(Routes.onboarding.signup.setDisplayName)
+              }
             />
             <Button
               title="Pair existing identity"

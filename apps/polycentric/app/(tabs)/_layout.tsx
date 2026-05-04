@@ -1,6 +1,5 @@
 import { useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-
 import { Slot } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 

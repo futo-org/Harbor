@@ -38,20 +38,15 @@ impl PolycentricClient {
         self.content_store.insert(digest, content_bytes);
     }
 
-    /// Return the next sequence number for a given stream:
-    /// max(sequence) + 1 across the (identity, collection, signer) stream,
-    /// or 1 if no events exist for that stream.
-    pub fn next_sequence(
-        &self,
-        identity: &str,
-        collection: i32,
-        signer_key_type: i32,
-        signer_key: &[u8],
-    ) -> u64 {
+    /// Return the next sequence number for a given collection:
+    /// max(sequence) + 1 across all events in the collection for an identity,
+    /// or 1 if no events exist for that collection.
+    pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {
         self.event_store
-            .by_identity_collection_signer(identity, collection, signer_key_type, signer_key)
-            .next_back()
-            .map(|(k, _)| k.sequence + 1)
+            .by_identity_and_collection(identity, collection)
+            .map(|(k, _)| k.sequence)
+            .max()
+            .map(|s| s + 1)
             .unwrap_or(1)
     }
 
@@ -65,19 +60,17 @@ impl PolycentricClient {
         current_sequence: u64,
     ) -> Result<VectorClock, CoreError> {
         // Retrieve referenced identity event for this signer.
-        let identity_event_key = EventKey {
-            identity: identity.to_string(),
-            collection: IDENTITY_COLLECTION,
-            signed_by_key_type: current_signer.key_type,
-            signed_by_key: current_signer.key.clone(),
-            sequence: identity_sequence,
-        };
-        let identity_signed_event = self.event_store.get(&identity_event_key).ok_or_else(|| {
-            CoreError::InvalidEvent(format!(
-                "No identity event found at sequence {}",
-                identity_sequence
-            ))
-        })?;
+        let identity_signed_event = self
+            .event_store
+            .by_identity_and_collection(identity, IDENTITY_COLLECTION)
+            .find(|(k, _)| k.sequence == identity_sequence)
+            .map(|(_, e)| e)
+            .ok_or_else(|| {
+                CoreError::InvalidEvent(format!(
+                    "No identity event found at sequence {}",
+                    identity_sequence
+                ))
+            })?;
 
         let identity_event =
             Event::decode(identity_signed_event.event_bytes.as_slice()).map_err(|e| {

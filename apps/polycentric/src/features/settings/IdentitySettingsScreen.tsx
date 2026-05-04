@@ -31,7 +31,7 @@ export function IdentitySettings({
   const displayName = profile.name;
 
   return (
-    <View style={Atoms.flex_1}>
+    <View>
       <SheetHeaderBlock title="Identity" onClose={() => void dismissSheet()} />
       <View style={[Atoms.p_lg, Atoms.gap_xl]}>
         {/* Hero: avatar + name */}

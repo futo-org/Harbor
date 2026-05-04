@@ -35,7 +35,7 @@ function EditProfileSheet({
   }, [edit, dismissSheet]);
 
   return (
-    <View style={Atoms.flex_1}>
+    <View>
       <SheetHeaderBlock
         title="Edit profile"
         onClose={() => void dismissSheet()}

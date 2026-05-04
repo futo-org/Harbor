@@ -1,8 +1,8 @@
-import { Redirect } from 'expo-router';
-import type { Href } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
 import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import type { Href } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function IndexScreen() {
   const { client, currentIdentity, isLoading, isReady } =

@@ -81,7 +81,7 @@ export function ServersSettings({
   };
 
   return (
-    <View style={Atoms.flex_1}>
+    <View>
       <SheetHeaderBlock
         title="Servers"
         onClose={() => void dismissSheet()}
