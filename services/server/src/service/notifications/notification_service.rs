@@ -24,13 +24,13 @@ impl NotificationService for NotificationServiceImpl {
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
         let signed_message = request.into_inner();
 
-        let signed_by = signed_message.signed_by.ok_or_else(|| {
-            Status::invalid_argument("SignedMessage missing signed_by")
+        let public_key = signed_message.public_key.ok_or_else(|| {
+            Status::invalid_argument("SignedMessage missing public_key")
         })?;
 
         // Validate the SignedMessage
         util::signing::verify_signature(
-            &signed_by.key,
+            &public_key.key,
             &signed_message.signature[..],
             &signed_message.message_bytes[..],
         )
@@ -46,7 +46,7 @@ impl NotificationService for NotificationServiceImpl {
         })?;
 
         self.notification_manager
-            .register(&self.db, &signed_by, request.service, request.token)
+            .register(&self.db, &public_key, request.service, request.token)
             .await
             .map_err(|err| Status::unknown(err.to_string()))?;
 
@@ -82,11 +82,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn register_rejects_signed_message_without_signed_by() {
+    async fn register_rejects_signed_message_without_public_key() {
         let service = impl_for_testing().await;
 
         let request = Request::new(SignedMessage {
-            signed_by: None,
+            public_key: None,
             signature: vec![],
             message_bytes: vec![],
         });
@@ -94,7 +94,7 @@ mod tests {
         let status = service
             .register_push_notifications(request)
             .await
-            .expect_err("expected an error for missing signed_by");
+            .expect_err("expected an error for missing public_key");
 
         assert_eq!(status.code(), Code::InvalidArgument);
     }
@@ -117,7 +117,7 @@ mod tests {
         signature[0] ^= 0xff;
 
         let request = Request::new(SignedMessage {
-            signed_by: Some(PublicKey {
+            public_key: Some(PublicKey {
                 key_type: KeyType::Ed25519.into(),
                 key: signing_key.verifying_key().to_bytes().to_vec(),
             }),
@@ -161,7 +161,7 @@ mod tests {
         let signature = signing_key.sign(&message_bytes);
 
         let request = Request::new(SignedMessage {
-            signed_by: Some(PublicKey {
+            public_key: Some(PublicKey {
                 key_type: KeyType::Ed25519.into(),
                 key: public_key_bytes,
             }),
@@ -190,7 +190,7 @@ mod tests {
         let signature = signing_key.sign(&message_bytes);
 
         let request = Request::new(SignedMessage {
-            signed_by: Some(PublicKey {
+            public_key: Some(PublicKey {
                 key_type: KeyType::Ed25519.into(),
                 key: signing_key.verifying_key().to_bytes().to_vec(),
             }),
@@ -218,7 +218,7 @@ mod tests {
         let signature = signing_key.sign(&message_bytes);
 
         let request = Request::new(SignedMessage {
-            signed_by: Some(PublicKey {
+            public_key: Some(PublicKey {
                 key_type: KeyType::Ed25519.into(),
                 key: signing_key.verifying_key().to_bytes().to_vec(),
             }),

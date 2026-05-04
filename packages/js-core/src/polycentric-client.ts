@@ -566,7 +566,7 @@ export class PolycentricClient {
     );
     const signedMessageBytes = Proto.SignedMessage.toBinary(
       Proto.SignedMessage.create({
-        signedBy: this.currentKeyPair.publicKey,
+        publicKey: this.currentKeyPair.publicKey,
         signature,
         messageBytes,
       }),

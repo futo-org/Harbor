@@ -6,7 +6,7 @@ import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { NotificationService } from "./notifications";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { RegisterPushNotificationResponse } from "./notifications";
-import type { SignedMessage } from "./messages";
+import type { SignedMessage } from "./server";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
