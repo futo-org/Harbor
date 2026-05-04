@@ -208,7 +208,7 @@ export function ComposeSheetInner({
     : "What's on your mind?";
 
   return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
+    <View style={theme.atoms.bg}>
       <SheetHeaderBlock
         title={title}
         onClose={handleClose}
