@@ -1,13 +1,24 @@
-# .server-deploy-workflow:
-# rules:
-#   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-#     changes:
-#       - services/server/**/*
-#       - .gitlab/ci/build_server.yml
-#       - .gitlab/ci/deploy_server.yml
+.server-deploy-workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - services/server/**/*
+        - .gitlab/ci/build_server.yml
+        - .gitlab/ci/deploy_server.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/server/**/*
+        - .gitlab/ci/build_server.yml
+        - .gitlab/ci/deploy_server.yml
+  needs:
+    - job: server-image
+      artifacts: false
 
 variables:
-  MANIFEST_GIT_REPO: https://gitlab.futo.org/mark/manifest-inventory.git
+  MANIFEST_GIT_TOKEN: $CI_JOB_TOKEN
+  MANIFEST_GIT_REPO: https://gitlab.futo.org/devops/manifest-inventory.git
   MANIFEST_GIT_USER_EMAIL: ci@futo.org
   MANIFEST_GIT_USER_NAME: GitLab CI
 
@@ -16,7 +27,7 @@ variables:
 #################################################################
 
 .server-deploy-prepare:
-  # extends: .server-deploy-workflow
+  extends: .server-deploy-workflow
   stage: deploy
   image:
     name: alpine/git:latest
@@ -59,7 +70,7 @@ server-deploy-prepare-production:
 ###############################
 
 .server-deploy-apply:
-  # extends: .server-deploy-workflow
+  extends: .server-deploy-workflow
   stage: deploy
   image:
     name: alpine/git:latest
