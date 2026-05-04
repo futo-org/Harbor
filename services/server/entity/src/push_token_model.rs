@@ -13,6 +13,8 @@ pub struct Model {
     // Push service name, matches PushService strum serialize value
     pub service: String,
     pub token: String,
+
+    pub created_at: TimeDateTime,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

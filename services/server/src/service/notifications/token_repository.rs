@@ -32,11 +32,15 @@ impl Mutation {
         service: String,
         token: String,
     ) -> Result<(), DbErr> {
+        let now = time::OffsetDateTime::now_utc();
+        let created_at = time::PrimitiveDateTime::new(now.date(), now.time());
+
         let active = PushTokenModel::ActiveModel {
             public_key_type: Set(public_key.key_type as i16),
             public_key: Set(public_key.key.clone()),
             service: Set(service),
             token: Set(token),
+            created_at: Set(created_at),
         };
 
         PushTokenModel::Entity::insert(active)
