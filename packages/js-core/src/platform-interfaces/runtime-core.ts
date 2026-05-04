@@ -20,14 +20,8 @@ export interface IPolycentricCore {
    */
   copy_contents(contentMap: Map<Uint8Array, Uint8Array>): void;
 
-  /**
-   * Return the next sequence for a (identity, collection, signer) stream.
-   */
-  next_sequence(
-    identity: string,
-    collection: number,
-    signed_by: Uint8Array,
-  ): bigint;
+  /** Return the next sequence for an (identity, collection) stream. */
+  next_sequence(identity: string, collection: number): bigint;
 
   /**
    * Build a vector clock for a single collection within an identity.

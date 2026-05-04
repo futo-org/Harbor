@@ -146,14 +146,10 @@ export const IdentitySelector = () => {
               <div style={{ ...mono, color: '#3fb950' }}>{toHex(pk.key)}</div>
               <button
                 onClick={async () => {
-                  if (!identityState.identityKey) return;
                   setInputEnabled(false);
                   setStatus('Removing signing key...');
                   try {
-                    await client.identityManager.removeSigningKey(
-                      identityState.identityKey,
-                      pk,
-                    );
+                    await client.identityManager.removeSigningKey(pk);
                     await loadIdentities();
                     setStatus('Signing key removed');
                   } catch (error) {
@@ -225,7 +221,7 @@ export const IdentitySelector = () => {
             />
             <button
               onClick={async () => {
-                if (!issueKeyHex.trim() || !identityState.identityKey) return;
+                if (!issueKeyHex.trim()) return;
                 setInputEnabled(false);
                 setStatus('Issuing signing key...');
                 try {
@@ -234,10 +230,7 @@ export const IdentitySelector = () => {
                     keyType: KEY_TYPE.ED25519,
                     key: keyBytes,
                   });
-                  await client.identityManager.addSigningKey(
-                    identityState.identityKey,
-                    targetKey,
-                  );
+                  await client.identityManager.addSigningKey(targetKey);
                   await loadIdentities();
                   setIssueKeyHex('');
                   setStatus('Signing key issued');

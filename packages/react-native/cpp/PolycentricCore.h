@@ -16,7 +16,7 @@ extern "C" {
     CResult verify_signed_event(CResult signed_event_bytes);
     CResult decode_event_from_signed_event(CResult signed_event_bytes);
     CResult validate_event(CResult event_bytes);
-    CResult next_sequence(CResult identity, int32_t collection, CResult signed_by);
+    CResult next_sequence(CResult identity, int32_t collection);
     CResult build_vector_clock(
         CResult identity,
         int32_t collection,
@@ -64,8 +64,7 @@ public:
     jsi::Object nextSequence(
         jsi::Runtime& rt,
         jsi::Object identity,
-        double collection,
-        jsi::Object signedBy);
+        double collection);
     jsi::Object buildVectorClock(
         jsi::Runtime& rt,
         jsi::Object identity,

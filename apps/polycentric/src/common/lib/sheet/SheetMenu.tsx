@@ -43,7 +43,6 @@ function SheetMenuInnerNative({
   );
 
   useEffect(() => {
-    sheetRef.current?.present().catch(() => {});
     return () => {
       skipOnCloseRef.current = true;
       sheetRef.current?.dismiss().catch(() => {});
@@ -65,6 +64,7 @@ function SheetMenuInnerNative({
       }}
       ref={sheetRef}
       detents={detents}
+      initialDetentIndex={0}
       dismissible={dismissible}
       scrollable={scrollable}
     >
@@ -118,7 +118,7 @@ function SheetMenuInnerWeb({
 
 const styles = StyleSheet.create({
   sheetBody: {
-    flex: 1,
+    width: '100%',
   },
   webModalRoot: {
     flex: 1,

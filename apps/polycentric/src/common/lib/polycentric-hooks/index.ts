@@ -11,11 +11,7 @@ export {
 export { useUsername } from './PolycentricProvider';
 
 // Action hooks
-export {
-  useCurrentIdentity,
-  useIdentities,
-  useFollowStatus,
-} from './PolycentricProvider';
+export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
 
 // Store
 export { useStore } from './store';
@@ -46,7 +42,6 @@ export {
   getIdentityId,
   getIdentityIdShort,
   shortenIdentityId,
-  pointerToURLString,
   signedEventToHex,
   hexToSignedEvent,
   toBase64,

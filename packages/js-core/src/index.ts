@@ -28,6 +28,9 @@ export { StorageHandle } from './storage';
 export type { Repositories } from './storage';
 
 export { PolycentricClient } from './polycentric-client';
+export { IdentityManager } from './client-internal/identity-manager';
+export { PairingSessionManager } from './client-internal/pairing-session-manager';
+export type { ActivePairingSession } from './client-internal/pairing-session-manager';
 export type {
   PolycentricClientConfig,
   KeyPair,
@@ -38,6 +41,7 @@ export type {
 export * from './errors';
 export * as Errors from './errors';
 export * from './utils';
+export * from './grpc';
 
 export { KEY_TYPE, COLLECTION, HydrationStrategy } from './constants';
 

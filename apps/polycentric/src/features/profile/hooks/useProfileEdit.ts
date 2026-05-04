@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { COLLECTION } from '@polycentric/react-native';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
-import { processAndUploadImage } from '../../../common/lib/images/processAndUploadImage';
+import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 
 interface ProfileRef {
   description: string | null;
@@ -45,26 +44,11 @@ export function useProfileEdit(
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // When the user picked a new avatar, resize + upload every
-      // variant and capture the returned ImageSet. Default sizes and
-      // `fill` mode give us the square variants avatars want.
-      const avatar = avatarUri
-        ? await processAndUploadImage(client, avatarUri)
-        : undefined;
-
-      const content = client.contentManager.build({
-        oneofKind: 'profileUpdate',
-        profileUpdate: {
-          name: nameDraft,
-          description: descriptionDraft,
-          avatar,
-        },
+      await publishProfileUpdate(client, {
+        name: nameDraft,
+        description: descriptionDraft,
+        avatarUri,
       });
-      await client.contentManager.save(content);
-      const event = await client.buildEvent(content, COLLECTION.PROFILE);
-      const signedEvent = await client.signEvent(event);
-      await client.commitEvent(signedEvent, content);
-      await client.sync();
       profile.refresh();
       setEditing(false);
     } catch (err) {

@@ -11,6 +11,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { PublicKey } from "./keypair";
 /**
  * *
  * Current version the server is running on.
@@ -54,6 +55,23 @@ export interface GetServerInfoResponse {
      * @generated from protobuf field: polycentric.v2.ServerInfo server_info = 1
      */
     serverInfo?: ServerInfo;
+}
+/**
+ * @generated from protobuf message polycentric.v2.SignedMessage
+ */
+export interface SignedMessage {
+    /**
+     * @generated from protobuf field: bytes signature = 1
+     */
+    signature: Uint8Array;
+    /**
+     * @generated from protobuf field: bytes message_bytes = 2
+     */
+    messageBytes: Uint8Array;
+    /**
+     * @generated from protobuf field: polycentric.v2.PublicKey public_key = 3
+     */
+    publicKey?: PublicKey;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ServerVersion$Type extends MessageType<ServerVersion> {
@@ -240,6 +258,68 @@ class GetServerInfoResponse$Type extends MessageType<GetServerInfoResponse> {
  * @generated MessageType for protobuf message polycentric.v2.GetServerInfoResponse
  */
 export const GetServerInfoResponse = new GetServerInfoResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SignedMessage$Type extends MessageType<SignedMessage> {
+    constructor() {
+        super("polycentric.v2.SignedMessage", [
+            { no: 1, name: "signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 2, name: "message_bytes", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 3, name: "public_key", kind: "message", T: () => PublicKey }
+        ]);
+    }
+    create(value?: PartialMessage<SignedMessage>): SignedMessage {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.signature = new Uint8Array(0);
+        message.messageBytes = new Uint8Array(0);
+        if (value !== undefined)
+            reflectionMergePartial<SignedMessage>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SignedMessage): SignedMessage {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bytes signature */ 1:
+                    message.signature = reader.bytes();
+                    break;
+                case /* bytes message_bytes */ 2:
+                    message.messageBytes = reader.bytes();
+                    break;
+                case /* polycentric.v2.PublicKey public_key */ 3:
+                    message.publicKey = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.publicKey);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SignedMessage, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bytes signature = 1; */
+        if (message.signature.length)
+            writer.tag(1, WireType.LengthDelimited).bytes(message.signature);
+        /* bytes message_bytes = 2; */
+        if (message.messageBytes.length)
+            writer.tag(2, WireType.LengthDelimited).bytes(message.messageBytes);
+        /* polycentric.v2.PublicKey public_key = 3; */
+        if (message.publicKey)
+            PublicKey.internalBinaryWrite(message.publicKey, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SignedMessage
+ */
+export const SignedMessage = new SignedMessage$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.ServerService
  */

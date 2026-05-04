@@ -1,7 +1,7 @@
 import { Routes } from '@/src/common/constants/routes';
 
 export const SIGNUP_STEPS = [
-  Routes.onboarding.signup.setUsername,
+  Routes.onboarding.signup.setDisplayName,
   Routes.onboarding.signup.setAbout,
   Routes.onboarding.signup.setAvatar,
   Routes.onboarding.signup.setModeration,
