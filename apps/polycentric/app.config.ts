@@ -23,6 +23,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
     },
+    entitlements: {
+      'aps-environment': 'production',
+    },
   },
   android: {
     adaptiveIcon: {
@@ -68,6 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-image',
+    'expo-notifications',
   ],
   experiments: {
     typedRoutes: true,

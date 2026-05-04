@@ -1,4 +1,5 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
+import useFollows from '@/src/features/follow/hooks/useFollows';
 import {
   PolycentricClient,
   createPolycentricClient,
@@ -16,15 +17,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
-import useFollows from '@/src/features/follow/hooks/useFollows';
-import { pubkeyStr } from './helpers';
+import { Platform, Text, View } from 'react-native';
+import { Atoms, useTheme } from '../../theme';
+import { registerForPushNotifications } from '../notifications/registerPushToken';
 import {
   createPolycentricStore,
   useStore,
   type PolycentricStoreApi,
 } from './store';
-import { Atoms, useTheme } from '../../theme';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -125,6 +125,22 @@ export function PolycentricProvider({
       onInitialized?.();
     }
   }, [isLoading, onInitialized]);
+
+  useEffect(() => {
+    if (!client || !currentIdentity) return;
+    void (async () => {
+      try {
+        const token = await registerForPushNotifications();
+        if (!token) return;
+        await client.registerPushNotifications(DEFAULT_SEED_SERVERS, {
+          service: 'expo',
+          token,
+        });
+      } catch (err) {
+        console.warn('Push registration failed:', err);
+      }
+    })();
+  }, [client, currentIdentity?.identityKey]);
 
   useEffect(() => {
     let cancelled = false;

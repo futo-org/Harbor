@@ -198,4 +198,16 @@ export interface IPolycentricCore {
    * @returns Serialized `GetServerInfoResponse` proto bytes
    */
   get_server_info(server_url: string): Promise<Uint8Array>;
+
+  /**
+   * Register a push notification token with a server via gRPC-web.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @param signed_message_bytes - Serialized `SignedMessage` proto bytes
+   *   wrapping a `RegisterPushNotificationRequest`
+   */
+  register_push_notifications(
+    server_url: string,
+    signed_message_bytes: Uint8Array,
+  ): Promise<void>;
 }

@@ -7,6 +7,7 @@ export {
   joinPairingSession,
   listEvents,
   putEvents,
+  registerPushNotifications,
   setGrpcWebFetch,
   uploadBlob,
 } from './transport';

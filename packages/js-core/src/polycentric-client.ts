@@ -543,6 +543,52 @@ export class PolycentricClient {
   }
 
   /**
+   * Sign a `RegisterPushNotificationRequest` with the active key pair and
+   * deliver it to every configured server via gRPC-web. Per-server failures
+   * are logged but do not throw — registration is best-effort across the
+   * server set.
+   */
+  async registerPushNotifications(
+    servers: string[],
+    request: Proto.RegisterPushNotificationRequest,
+  ): Promise<void> {
+    if (!this.core) throw new Error('Core not initialized');
+    if (!this.currentKeyPair) {
+      throw new Error('registerPushNotifications requires an active key pair');
+    }
+
+    const messageBytes =
+      Proto.RegisterPushNotificationRequest.toBinary(request);
+    const signature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      messageBytes,
+      this.currentKeyPair.keyType,
+    );
+    const signedMessageBytes = Proto.SignedMessage.toBinary(
+      Proto.SignedMessage.create({
+        publicKey: this.currentKeyPair.publicKey,
+        signature,
+        messageBytes,
+      }),
+    );
+
+    const results = await Promise.allSettled(
+      servers.map((server) =>
+        this.core!.register_push_notifications(server, signedMessageBytes),
+      ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(
+          'registerPushNotifications failed for a server:',
+          result.reason,
+        );
+      }
+    }
+  }
+
+  /**
    * Upload a blob body to all configured servers. The server verifies
    * that `body` hashes to `blob.digest` before persisting. Rejections
    * from individual servers are logged but do not throw.
