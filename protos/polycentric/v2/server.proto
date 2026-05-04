@@ -1,6 +1,8 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/keypair.proto";
+
 /**
  * Current version the server is running on.
  */
@@ -27,4 +29,10 @@ message GetServerInfoResponse {
 service ServerService {
     // Returns relevant information about a server
     rpc GetInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
+}
+
+message SignedMessage {
+  bytes signature = 1;
+  bytes message_bytes = 2;
+  PublicKey public_key = 3;
 }

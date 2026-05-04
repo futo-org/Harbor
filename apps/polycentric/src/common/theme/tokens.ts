@@ -546,6 +546,9 @@ export const Atoms = StyleSheet.create({
   mt_3xl: {
     marginTop: Spacing['3xl'],
   },
+  mt_auto: {
+    marginTop: 'auto',
+  },
 
   mb_0: {
     marginBottom: Spacing['0'],

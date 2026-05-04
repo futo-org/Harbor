@@ -35,6 +35,7 @@ export const Routes = {
     settings: {
       index: '/settings',
       identity: '/settings/identity',
+      pairIdentity: '/settings/pair-identity',
       servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
@@ -51,7 +52,7 @@ export const Routes = {
   onboarding: {
     index: '/',
     signup: {
-      setUsername: '/signup/set_username',
+      setDisplayName: '/signup/set_display_name',
       setAbout: '/signup/set_about',
       setAvatar: '/signup/set_avatar',
       setModeration: '/signup/set_moderation',

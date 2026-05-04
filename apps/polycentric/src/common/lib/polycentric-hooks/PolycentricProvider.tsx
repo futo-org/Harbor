@@ -2,9 +2,11 @@ import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import {
   PolycentricClient,
   createPolycentricClient,
+  setGrpcWebFetch,
   types,
   type IdentityState,
 } from '@polycentric/react-native';
+import { fetch as expoFetch } from 'expo/fetch';
 import {
   createContext,
   useCallback,
@@ -129,6 +131,7 @@ export function PolycentricProvider({
 
     (async () => {
       try {
+        setGrpcWebFetch(expoFetch);
         // PolycentricClient.initialize() guarantees a keypair exists on
         // every device. Identity (the published Identity doc) is a separate
         // concept — the onboarding gate handles creating or pairing one.

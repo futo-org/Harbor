@@ -1,18 +1,21 @@
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { ComponentProps } from 'react';
 
-import { NavItem } from './NavItem';
-import { View } from 'react-native';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
+import { NavItem } from './NavItem';
 
 type VerticalNavProps = {
   style?: ComponentProps<typeof View>['style'];
 };
 
 export function VerticalNav({ style }: VerticalNavProps) {
-  const theme = useTheme();
   const { identity } = useCurrentIdentity();
+
+  if (!identity) {
+    return null;
+  }
 
   return (
     <View

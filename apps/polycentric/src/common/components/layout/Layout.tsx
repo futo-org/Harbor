@@ -1,10 +1,4 @@
-import {
-  Atoms,
-  Breakpoints,
-  themes,
-  typography,
-  useTheme,
-} from '@/src/common/theme';
+import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';
@@ -25,13 +19,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { VerticalNav } from './nav/VerticalNav';
-import { Button } from '../primitives';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import { Ionicons } from '@expo/vector-icons';
 import WEB_LOGO from '../../assets/images/WebLogo.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
+import { Button } from '../primitives';
+import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
 
 type MainProps = {
@@ -59,7 +53,6 @@ function Main({ children, style }: MainProps) {
       style={[
         Atoms.flex_shrink_1,
         Atoms.flex_grow_1,
-
         { width: containerWidth },
       ]}
       role="main"
@@ -132,7 +125,7 @@ function Screen({
 
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
-      style={Atoms.flex_1}
+      style={[Atoms.flex_1, Atoms.flex_row, Atoms.w_full, Atoms.min_w_0]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={insets.bottom}
     >

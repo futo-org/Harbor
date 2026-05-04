@@ -9,3 +9,5 @@ pub mod content_post_model;
 pub mod content_profile_update_model;
 pub mod content_reaction_model;
 pub mod event_model;
+pub mod pairing_session_claimer_model;
+pub mod pairing_session_model;

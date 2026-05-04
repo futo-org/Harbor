@@ -10,6 +10,7 @@ entity = { path = "./entity" }
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1"
 axum = { version = "0.8.8", features = ["http2"] }
+chrono = { version = "0.4", features = ["serde"] }
 ed25519-dalek = "2.2.0"
 log = "0.4"
 polycentric-common = { path = "../../packages/rs-common" }

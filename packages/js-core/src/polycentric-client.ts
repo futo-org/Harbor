@@ -4,10 +4,11 @@ import {
   EventService,
   HydrationStatus,
   IdentityManager,
-  KeyPairManager,
   InitializationStep,
+  KeyPairManager,
+  PairingSessionManager,
 } from './client-internal';
-import { KEY_TYPE, COLLECTION, type Collection } from './constants';
+import { COLLECTION, KEY_TYPE, type Collection } from './constants';
 import { HTTPClient } from './http';
 import type {
   ICoreBridge,
@@ -57,6 +58,7 @@ export class PolycentricClient {
   public readonly keyPairManager = new KeyPairManager(this);
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
+  public readonly pairingSessionManager = new PairingSessionManager(this);
 
   public readonly httpClient = new HTTPClient();
 
@@ -221,10 +223,10 @@ export class PolycentricClient {
    * core needs (events for clocks/sequences, content for identity lookups)
    * must be copied in at startup.
    */
-  async copyEvents() {
+  async copyEvents(events?: Proto.SignedEvent[]) {
     if (!this.core) return;
 
-    const signedEvents = await this.storage.events.getAll();
+    const signedEvents = events ?? (await this.storage.events.getAll());
 
     this.core.copy_events(
       signedEvents.map((s) => Proto.SignedEvent.toBinary(s)),
@@ -235,12 +237,14 @@ export class PolycentricClient {
    * A temporary function to copy all the content the browser is aware of.
    * We should make this smarter with the EventBundles, maybe.
    */
-  async copyContents() {
+  async copyContents(
+    contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
+  ) {
     if (!this.core) return;
-    const contents = await this.storage.content.getAll();
+    const list = contents ?? (await this.storage.content.getAll());
 
     const contentMap = new Map<Uint8Array, Uint8Array>();
-    for (const r of contents) {
+    for (const r of list) {
       contentMap.set(
         Proto.ContentDigest.toBinary(r.digest),
         Proto.Content.toBinary(r.content),
@@ -268,15 +272,11 @@ export class PolycentricClient {
     const sequence = this.core!.next_sequence(
       this.activeIdentityKey,
       collection,
-      Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
     );
 
     const identitySequence =
-      this.core!.next_sequence(
-        this.activeIdentityKey,
-        COLLECTION.IDENTITY,
-        Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
-      ) - 1n;
+      this.core!.next_sequence(this.activeIdentityKey, COLLECTION.IDENTITY) -
+      1n;
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -640,6 +640,11 @@ export class PolycentricClient {
     });
 
     let newCount = 0;
+    const signedEvents: Proto.SignedEvent[] = [];
+    const contents: {
+      digest: Proto.ContentDigest;
+      content: Proto.Content;
+    }[] = [];
     for (const bundle of bundles) {
       if (!bundle.signedEvent) continue;
 
@@ -650,12 +655,13 @@ export class PolycentricClient {
             const existing = await this.storage.content.get(
               event.contentDigest,
             );
+            const content = Proto.Content.fromBinary(
+              bundle.serializedContent.contentBytes,
+            );
             if (!existing) {
-              const content = Proto.Content.fromBinary(
-                bundle.serializedContent.contentBytes,
-              );
               await this.storage.content.save(event.contentDigest, content);
             }
+            contents.push({ digest: event.contentDigest, content });
           }
         } catch {
           // content decode failed, skip
@@ -668,7 +674,12 @@ export class PolycentricClient {
       } catch {
         // duplicate event, skip
       }
+      signedEvents.push(bundle.signedEvent);
     }
+
+    // mirror into rs-core
+    await this.copyEvents(signedEvents);
+    await this.copyContents(contents);
 
     return newCount;
   }

@@ -1,33 +1,31 @@
-import { useState } from 'react';
 import {
-  Screen,
-  Text,
   Button,
-  TextInput,
+  Screen,
   ScreenHeader,
+  Text,
+  TextInput,
 } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
-import { View } from 'react-native';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
-import { validateUsername } from '@/src/common/util/validation';
+import { useState } from 'react';
+import { View } from 'react-native';
 
-export default function SetUsernameScreen() {
-  const { data, setUsername, close, goToNextStep } = useSignup();
+export default function SetDisplayNameScreen() {
+  const { data, setDisplayName, close, goToNextStep } = useSignup();
   const [error, setError] = useState<string | null>(null);
 
-  const canContinue = data.username.trim().length > 0;
+  const canContinue = data.displayName.trim().length > 0;
 
   const handleChangeText = (text: string) => {
     if (error) {
       setError(null);
     }
-    setUsername(text);
+    setDisplayName(text);
   };
 
   const handleContinue = () => {
-    const validationError = validateUsername(data.username);
-    if (validationError) {
-      setError(validationError);
+    if (!data.displayName.trim()) {
+      setError('Display name is required');
       return;
     }
     goToNextStep();
@@ -36,16 +34,17 @@ export default function SetUsernameScreen() {
   return (
     <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_col, Atoms.mx_lg, Atoms.h_full]}>
+        <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.mx_lg]}>
           <ScreenHeader onClose={close} />
-          <View style={[Atoms.flex_1, Atoms.gap_lg]}>
-            <Text variant="title">Set a username</Text>
+          <View style={[Atoms.flex_1, Atoms.gap_lg, Atoms.min_h_0]}>
+            <Text variant="title">Set a display name</Text>
             <View style={Atoms.gap_xs}>
               <TextInput
-                placeholder="Enter username"
-                value={data.username}
+                placeholder="Enter display name"
+                value={data.displayName}
                 onChangeText={handleChangeText}
                 error={error ? true : false}
+                autoCapitalize="words"
                 autoFocus
               />
               {error && (
@@ -56,6 +55,7 @@ export default function SetUsernameScreen() {
             </View>
           </View>
           <Button
+            style={Atoms.mt_auto}
             title="Continue"
             variant="primary"
             disabled={!canContinue}

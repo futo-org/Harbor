@@ -1,0 +1,92 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/keypair.proto";
+import "polycentric/v2/server.proto";
+
+/**
+ * Issuer-signed payload for creating a pairing session.
+ */
+message InitialPairingSession {
+  // Identity key the session is created for.
+  string issuer_identity = 1;
+  // Creation timestamp in unix milliseconds.
+  int64 created_at = 2;
+}
+
+/**
+ * Payload that claimers sign when attempting to join a pairing session.
+ */
+message JoinPairingSessionBody {
+  string pairing_session_signature = 1;
+}
+
+/**
+ * Pairing session stored and returned by the server.
+ */
+message PairingSession {
+  // Signature of the signed InitialPairingSession payload.
+  string pairing_session_signature = 1;
+  // Public key that signed the InitialPairingSession payload.
+  PublicKey signed_by = 2;
+  // Session metadata.
+  InitialPairingSession initial_session = 3;
+  // Expiration timestamp in unix milliseconds.
+  int64 expires_at = 4;
+  // Public keys that have joined the session so far.
+  repeated PublicKey claimer_pubkeys = 5;
+}
+
+/**
+ * Request payload for fetching a pairing session by signature.
+ */
+message GetPairingSessionRequest {
+  string pairing_session_signature = 1;
+}
+
+/**
+ * Wrapper request for CreatePairingSession RPC.
+ */
+message CreatePairingSessionRequest {
+  SignedMessage signed_message = 1;
+}
+
+/**
+ * Wrapper response for CreatePairingSession RPC.
+ */
+message CreatePairingSessionResponse {
+  PairingSession session = 1;
+}
+
+/**
+ * Wrapper response for GetPairingSession RPC.
+ */
+message GetPairingSessionResponse {
+  PairingSession session = 1;
+}
+
+/**
+ * Wrapper request for JoinPairingSession RPC.
+ */
+message JoinPairingSessionRequest {
+  SignedMessage signed_message = 1;
+}
+
+/**
+ * Wrapper response for JoinPairingSession RPC.
+ */
+message JoinPairingSessionResponse {
+  PairingSession session = 1;
+}
+
+/**
+ * Pairing APIs used for device pairing.
+ */
+service PairingService {
+  // Creates a session after validating the issuer signature and authorization.
+  rpc CreatePairingSession(CreatePairingSessionRequest) returns (CreatePairingSessionResponse);
+  // Returns a pairing session for an active session signature.
+  rpc GetPairingSession(GetPairingSessionRequest) returns (GetPairingSessionResponse);
+  // Registers a claimer for a valid session signature.
+  rpc JoinPairingSession(JoinPairingSessionRequest) returns (JoinPairingSessionResponse);
+}
