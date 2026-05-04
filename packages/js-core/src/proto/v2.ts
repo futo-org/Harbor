@@ -8,6 +8,7 @@ export * from './polycentric/v2/feeds.client';
 export * from './polycentric/v2/identity';
 export * from './polycentric/v2/keypair';
 export * from './polycentric/v2/notifications';
+export * from './polycentric/v2/notifications.client';
 export * from './polycentric/v2/pairing_service';
 export * from './polycentric/v2/pairing_service.client';
 export * from './polycentric/v2/server';

@@ -148,3 +148,12 @@ export async function joinPairingSession(
   }
   return response.session;
 }
+
+export async function registerPushNotifications(
+  serverUrl: string,
+  signedMessage: Proto.SignedMessage,
+): Promise<void> {
+  await new Proto.NotificationServiceClient(
+    grpcWebTransport(serverUrl),
+  ).registerPushNotifications(signedMessage).response;
+}
