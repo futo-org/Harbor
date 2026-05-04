@@ -19,7 +19,7 @@
 variables:
   MANIFEST_GIT_TOKEN: $CI_JOB_TOKEN
   MANIFEST_GIT_REPO: https://gitlab.futo.org/devops/manifest-inventory.git
-  MANIFEST_GIT_USER_EMAIL: ci@futo.org
+  MANIFEST_GIT_USER_EMAIL: $GITLAB_USER_EMAIL
   MANIFEST_GIT_USER_NAME: GitLab CI
 
 #################################################################
@@ -37,7 +37,7 @@ variables:
     - chmod +x /usr/local/bin/yq
   script:
     # Pull in the manifest repository
-    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
+    - git clone "https://${CI_COMMIT_USER_LOGIN}:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
     - cd manifest-inventory
     # Use 'yq' to change the yaml value to the current commit
     - yq -i ".image.version.$ENVIRONMENT = strenv(CI_COMMIT_SHA)" inventory/polycentric-2026/server.yml
@@ -78,7 +78,7 @@ server-deploy-prepare-production:
   when: manual
   script:
     # Pull in the manifest repository
-    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
+    - git clone "https://${CI_COMMIT_USER_LOGIN}:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
     - cd manifest-inventory
     # Show the patch we are about to apply
     - cat "$CI_PROJECT_DIR/deploy-patches/"*.patch
