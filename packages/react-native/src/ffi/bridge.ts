@@ -18,6 +18,7 @@ import {
   getServerInfo,
   listEvents,
   putEvents,
+  registerPushNotifications,
   uploadBlob,
   v2,
 } from '@polycentric/js-core';
@@ -217,6 +218,17 @@ class NativePolycentricCore implements IPolycentricCore {
   get_server_info(serverUrl: string): Promise<Uint8Array> {
     return getServerInfo(serverUrl).then((response) =>
       v2.GetServerInfoResponse.toBinary(response)
+    );
+  }
+
+  /** Register a push notification token with a server via gRPC-web. */
+  register_push_notifications(
+    serverUrl: string,
+    signedMessageBytes: Uint8Array
+  ): Promise<void> {
+    return registerPushNotifications(
+      serverUrl,
+      v2.SignedMessage.fromBinary(signedMessageBytes)
     );
   }
 }

@@ -12,6 +12,7 @@ aws-sdk-s3 = "1"
 axum = { version = "0.8.8", features = ["http2"] }
 chrono = { version = "0.4", features = ["serde"] }
 ed25519-dalek = "2.2.0"
+expo_push_notification_client = "2.0.1"
 log = "0.4"
 polycentric-common = { path = "../../packages/rs-common" }
 prost = "0.14"

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/server.proto";
+
+message RegisterPushNotificationRequest {
+  string service = 1;
+  string token = 2;
+}
+
+message RegisterPushNotificationResponse {}
+
+/**
+ * Push notifications provided by polycentric servers
+ */
+service NotificationService {
+  // This endpoint expects a signed RegisterPushNotificationRequest message
+  rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
+}
