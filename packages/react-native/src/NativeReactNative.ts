@@ -7,7 +7,7 @@ export interface Spec extends TurboModule {
   verifySignedEvent(signedEventBytes: Object): Object;
   decodeEventFromSignedEvent(signedEventBytes: Object): Object;
   validateEvent(eventBytes: Object): Object;
-  nextSequence(identity: Object, collection: number, signedBy: Object): Object;
+  nextSequence(identity: Object, collection: number): Object;
   buildVectorClock(
     identity: Object,
     collection: number,

@@ -100,16 +100,11 @@ class NativePolycentricCore implements IPolycentricCore {
     }
   }
 
-  next_sequence(
-    identity: string,
-    collection: number,
-    signedBy: Uint8Array
-  ): bigint {
+  next_sequence(identity: string, collection: number): bigint {
     const identityBytes = new TextEncoder().encode(identity);
     const result = PolycentricCore.nextSequence(
       identityBytes,
-      collection,
-      signedBy
+      collection
     ) as Uint8Array;
     return new DataView(
       result.buffer,

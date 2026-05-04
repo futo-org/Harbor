@@ -91,12 +91,10 @@ jsi::Object PolycentricCore::validateEvent(jsi::Runtime& rt, jsi::Object eventBy
 jsi::Object PolycentricCore::nextSequence(
     jsi::Runtime& rt,
     jsi::Object identity,
-    double collection,
-    jsi::Object signedBy) {
+    double collection) {
     CResult identityBuf = toCResult(rt, identity);
-    CResult signedByBuf = toCResult(rt, signedBy);
     int32_t collectionInt = static_cast<int32_t>(collection);
-    return resultToUint8Array(rt, ::next_sequence(identityBuf, collectionInt, signedByBuf));
+    return resultToUint8Array(rt, ::next_sequence(identityBuf, collectionInt));
 }
 
 jsi::Object PolycentricCore::buildVectorClock(

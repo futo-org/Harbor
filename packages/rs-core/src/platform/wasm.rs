@@ -58,27 +58,10 @@ impl PolycentricWasm {
         }
     }
 
-    /// Return the next sequence for a (identity, collection, signer) stream.
-    ///
-    /// # Arguments
-    /// * `identity` - Identity key (hex hash)
-    /// * `collection` - Collection ID
-    /// * `signed_by` - Serialized `PublicKey` proto bytes
-    ///
-    /// # Returns
-    /// * `u64` - max observed sequence + 1, or 1 if the stream is empty
+    /// Return the next sequence for an (identity, collection) stream.
     #[wasm_bindgen]
-    pub fn next_sequence(
-        &self,
-        identity: &str,
-        collection: i32,
-        signed_by: &[u8],
-    ) -> std::result::Result<u64, JsValue> {
-        let pk = PublicKey::decode(signed_by)
-            .map_err(|e| JsValue::from_str(&format!("Failed to decode signed_by: {e}")))?;
-        Ok(self
-            .client
-            .next_sequence(identity, collection, pk.key_type, &pk.key))
+    pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {
+        self.client.next_sequence(identity, collection)
     }
 
     /// Copy signed events to the event store.

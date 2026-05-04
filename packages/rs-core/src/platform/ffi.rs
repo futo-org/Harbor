@@ -103,20 +103,16 @@ pub extern "C" fn validate_event(event_bytes: CResult) -> CResult {
 }
 
 #[no_mangle]
-pub extern "C" fn next_sequence(identity: CResult, collection: i32, signed_by: CResult) -> CResult {
+pub extern "C" fn next_sequence(identity: CResult, collection: i32) -> CResult {
     let identity_str = match std::str::from_utf8(identity.as_slice()) {
         Ok(s) => s,
         Err(e) => return CResult::error(&format!("identity not utf-8: {e}")),
-    };
-    let pk = match PublicKey::decode(signed_by.as_slice()) {
-        Ok(p) => p,
-        Err(e) => return CResult::error(&format!("decode signed_by: {e}")),
     };
     let c = match client().read() {
         Ok(c) => c,
         Err(e) => return CResult::error(&format!("lock poisoned: {e}")),
     };
-    let seq = c.next_sequence(identity_str, collection, pk.key_type, &pk.key);
+    let seq = c.next_sequence(identity_str, collection);
     CResult::ok(seq.to_le_bytes().to_vec())
 }
 

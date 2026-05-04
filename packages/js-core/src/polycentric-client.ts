@@ -270,15 +270,11 @@ export class PolycentricClient {
     const sequence = this.core!.next_sequence(
       this.activeIdentityKey,
       collection,
-      Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
     );
 
     const identitySequence =
-      this.core!.next_sequence(
-        this.activeIdentityKey,
-        COLLECTION.IDENTITY,
-        Proto.PublicKey.toBinary(this.currentKeyPair.publicKey),
-      ) - 1n;
+      this.core!.next_sequence(this.activeIdentityKey, COLLECTION.IDENTITY) -
+      1n;
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({

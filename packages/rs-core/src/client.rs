@@ -40,14 +40,8 @@ impl PolycentricClient {
 
     /// Return the next sequence number for a given collection:
     /// max(sequence) + 1 across all events in the collection for an identity,
-    /// or 1 if no events exist for that collection. Signer is ignored.
-    pub fn next_sequence(
-        &self,
-        identity: &str,
-        collection: i32,
-        _signer_key_type: i32,
-        _signer_key: &[u8],
-    ) -> u64 {
+    /// or 1 if no events exist for that collection.
+    pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {
         self.event_store
             .by_identity_and_collection(identity, collection)
             .map(|(k, _)| k.sequence)
