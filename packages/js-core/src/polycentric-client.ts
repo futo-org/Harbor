@@ -223,10 +223,10 @@ export class PolycentricClient {
    * core needs (events for clocks/sequences, content for identity lookups)
    * must be copied in at startup.
    */
-  async copyEvents() {
+  async copyEvents(events?: Proto.SignedEvent[]) {
     if (!this.core) return;
 
-    const signedEvents = await this.storage.events.getAll();
+    const signedEvents = events ?? (await this.storage.events.getAll());
 
     this.core.copy_events(
       signedEvents.map((s) => Proto.SignedEvent.toBinary(s)),
@@ -237,12 +237,14 @@ export class PolycentricClient {
    * A temporary function to copy all the content the browser is aware of.
    * We should make this smarter with the EventBundles, maybe.
    */
-  async copyContents() {
+  async copyContents(
+    contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
+  ) {
     if (!this.core) return;
-    const contents = await this.storage.content.getAll();
+    const list = contents ?? (await this.storage.content.getAll());
 
     const contentMap = new Map<Uint8Array, Uint8Array>();
-    for (const r of contents) {
+    for (const r of list) {
       contentMap.set(
         Proto.ContentDigest.toBinary(r.digest),
         Proto.Content.toBinary(r.content),
@@ -638,8 +640,11 @@ export class PolycentricClient {
     });
 
     let newCount = 0;
-    const signedEventBytes: Uint8Array[] = [];
-    const contentMap = new Map<Uint8Array, Uint8Array>();
+    const signedEvents: Proto.SignedEvent[] = [];
+    const contents: {
+      digest: Proto.ContentDigest;
+      content: Proto.Content;
+    }[] = [];
     for (const bundle of bundles) {
       if (!bundle.signedEvent) continue;
 
@@ -656,10 +661,7 @@ export class PolycentricClient {
             if (!existing) {
               await this.storage.content.save(event.contentDigest, content);
             }
-            contentMap.set(
-              Proto.ContentDigest.toBinary(event.contentDigest),
-              Proto.Content.toBinary(content),
-            );
+            contents.push({ digest: event.contentDigest, content });
           }
         } catch {
           // content decode failed, skip
@@ -672,16 +674,12 @@ export class PolycentricClient {
       } catch {
         // duplicate event, skip
       }
-      signedEventBytes.push(Proto.SignedEvent.toBinary(bundle.signedEvent));
+      signedEvents.push(bundle.signedEvent);
     }
 
     // mirror into rs-core
-    if (signedEventBytes.length > 0) {
-      this.core.copy_events(signedEventBytes);
-    }
-    if (contentMap.size > 0) {
-      this.core.copy_contents(contentMap);
-    }
+    await this.copyEvents(signedEvents);
+    await this.copyContents(contents);
 
     return newCount;
   }
