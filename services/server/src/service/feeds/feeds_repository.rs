@@ -1,5 +1,6 @@
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
+use ::entity::content_post_model as ContentPostModel;
 use ::entity::event_model as EventModel;
 use sea_orm::sea_query::{Expr, IntoCondition};
 use sea_orm::*;
@@ -83,6 +84,61 @@ impl Query {
             .all(db)
             .await
     }
+
+    /// Look up a single event (with joined content) by its EventKey tuple.
+    pub async fn find_event_by_key(
+        db: &DbConn,
+        collection: i16,
+        identity: &str,
+        public_key_type: i16,
+        public_key: Vec<u8>,
+        sequence: i16,
+    ) -> Result<Option<FeedRow>, DbErr> {
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .filter(EventModel::Column::Collection.eq(collection))
+            .filter(EventModel::Column::Identity.eq(identity))
+            .filter(EventModel::Column::PublicKeyType.eq(public_key_type))
+            .filter(EventModel::Column::PublicKey.eq(public_key))
+            .filter(EventModel::Column::Sequence.eq(sequence))
+            .one(db)
+            .await
+    }
+
+    /// Return Feed events that are direct replies to the given parent
+    /// EventKey, newest first.
+    pub async fn list_replies_by_parent_event_key(
+        db: &DbConn,
+        collection: i16,
+        identity: &str,
+        public_key_type: i16,
+        public_key: Vec<u8>,
+        sequence: i16,
+        limit: u64,
+    ) -> Result<Vec<FeedRow>, DbErr> {
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .join(JoinType::InnerJoin, content_post_join())
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
+            .filter(
+                ContentPostModel::Column::ReplyParentCollection.eq(collection),
+            )
+            .filter(ContentPostModel::Column::ReplyParentIdentity.eq(identity))
+            .filter(
+                ContentPostModel::Column::ReplyParentPublicKeyType
+                    .eq(public_key_type),
+            )
+            .filter(
+                ContentPostModel::Column::ReplyParentPublicKey.eq(public_key),
+            )
+            .filter(ContentPostModel::Column::ReplyParentSequence.eq(sequence))
+            .order_by_desc(EventModel::Column::CreatedAt)
+            .limit(limit)
+            .all(db)
+            .await
+    }
 }
 
 /// Relation joining an event to its content row on (digest_type, digest_bytes).
@@ -95,5 +151,13 @@ fn content_join() -> RelationDef {
                 .equals((content_tbl, ContentModel::Column::DigestBytes))
                 .into_condition()
         })
+        .into()
+}
+
+/// Relation joining a content row to its content_post row on content id.
+fn content_post_join() -> RelationDef {
+    ContentModel::Entity::belongs_to(ContentPostModel::Entity)
+        .from(ContentModel::Column::Id)
+        .to(ContentPostModel::Column::ContentId)
         .into()
 }

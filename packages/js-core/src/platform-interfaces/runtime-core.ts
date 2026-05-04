@@ -160,6 +160,18 @@ export interface IPolycentricCore {
   ): Promise<Uint8Array>;
 
   /**
+   * Fetch a parent post and its direct replies from a server via gRPC-web.
+   *
+   * @param server_url - Base URL of the gRPC-web server
+   * @param request_bytes - Serialized `GetPostThreadRequest` proto bytes
+   * @returns Serialized `GetPostThreadResponse` proto bytes
+   */
+  get_post_thread(
+    server_url: string,
+    request_bytes: Uint8Array,
+  ): Promise<Uint8Array>;
+
+  /**
    * Decode `image` bytes, resize into `width` x `height` per `mode`,
    * and encode as JPEG.
    *

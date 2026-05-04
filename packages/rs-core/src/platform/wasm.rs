@@ -5,8 +5,9 @@ use polycentric_common::models::protos_v2::{
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
     server_service_client::ServerServiceClient, ContentDigest, Event, FeedAlgorithm,
-    GetFeedRequest, GetServerInfoRequest, ListEventsFilters, ListEventsRequest, ListEventsResponse,
-    PublicKey, PutEventsRequest, SignedEvent, UploadBlobRequest,
+    GetFeedRequest, GetPostThreadRequest, GetServerInfoRequest, ListEventsFilters,
+    ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent,
+    UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -325,6 +326,35 @@ impl PolycentricWasm {
             })
             .await
             .map_err(|e| JsValue::from_str(&format!("gRPC get_feed failed: {e}")))?;
+
+        let bytes = response.into_inner().encode_to_vec();
+        Ok(Uint8Array::from(&bytes[..]))
+    }
+
+    /// Fetch a parent post and its direct replies from a server via gRPC-web.
+    ///
+    /// # Arguments
+    /// * `server_url` - The base URL of the gRPC-web server
+    /// * `request_bytes` - Serialized GetPostThreadRequest protobuf bytes
+    ///
+    /// # Returns
+    /// Serialized GetPostThreadResponse protobuf bytes.
+    #[wasm_bindgen]
+    pub async fn get_post_thread(
+        &self,
+        server_url: &str,
+        request_bytes: &[u8],
+    ) -> std::result::Result<Uint8Array, JsValue> {
+        let request = GetPostThreadRequest::decode(request_bytes).map_err(|e| {
+            JsValue::from_str(&format!("Failed to decode GetPostThreadRequest: {e}"))
+        })?;
+
+        let mut client = Self::create_feeds_client(server_url);
+
+        let response = client
+            .get_post_thread(request)
+            .await
+            .map_err(|e| JsValue::from_str(&format!("gRPC get_post_thread failed: {e}")))?;
 
         let bytes = response.into_inner().encode_to_vec();
         Ok(Uint8Array::from(&bytes[..]))

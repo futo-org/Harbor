@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { FeedsService } from "./feeds";
+import type { GetPostThreadResponse } from "./feeds";
+import type { GetPostThreadRequest } from "./feeds";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { GetFeedResponse } from "./feeds";
 import type { GetFeedRequest } from "./feeds";
@@ -22,6 +24,12 @@ export interface IFeedsServiceClient {
      * @generated from protobuf rpc: GetFeed
      */
     getFeed(input: GetFeedRequest, options?: RpcOptions): UnaryCall<GetFeedRequest, GetFeedResponse>;
+    /**
+     * Replies to a post
+     *
+     * @generated from protobuf rpc: GetPostThread
+     */
+    getPostThread(input: GetPostThreadRequest, options?: RpcOptions): UnaryCall<GetPostThreadRequest, GetPostThreadResponse>;
 }
 /**
  * *
@@ -43,5 +51,14 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
     getFeed(input: GetFeedRequest, options?: RpcOptions): UnaryCall<GetFeedRequest, GetFeedResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Replies to a post
+     *
+     * @generated from protobuf rpc: GetPostThread
+     */
+    getPostThread(input: GetPostThreadRequest, options?: RpcOptions): UnaryCall<GetPostThreadRequest, GetPostThreadResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetPostThreadRequest, GetPostThreadResponse>("unary", this._transport, method, opt, input);
     }
 }

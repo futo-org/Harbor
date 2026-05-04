@@ -85,7 +85,7 @@ function ActionButton({
     : color;
 
   const iconSurface: StyleProp<ViewStyle> = [
-    Atoms.p_xs,
+    // Atoms.p_xs,
     Atoms.rounded_md,
     {
       backgroundColor: hovered
