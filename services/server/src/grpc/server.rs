@@ -45,7 +45,9 @@ pub fn build_grpc_router(
             filestore,
         );
     let pairing_service =
-        service::pair_identity::pairing_service::build_pairing_service(db);
+        service::pair_identity::pairing_service::build_pairing_service(
+            db.clone(),
+        );
     let server_info_service =
         service::server::server_service::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
