@@ -17,10 +17,9 @@
       artifacts: false
 
 variables:
-  MANIFEST_GIT_TOKEN: $CI_JOB_TOKEN
   MANIFEST_GIT_REPO: https://gitlab.futo.org/devops/manifest-inventory.git
   MANIFEST_GIT_USER_EMAIL: $GITLAB_USER_EMAIL
-  MANIFEST_GIT_USER_NAME: GitLab CI
+  MANIFEST_GIT_USER_NAME: $GITLAB_USER_NAME
 
 #################################################################
 # Prepare the manifest changes as .patch files so we can review #
