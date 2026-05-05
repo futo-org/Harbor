@@ -213,7 +213,7 @@ impl EventSyncService for EventSyncServiceImpl {
                 identity: Set(key.identity),
                 public_key_type: Set(signed_by.key_type as i16),
                 public_key: Set(signed_by.key),
-                sequence: Set(key.sequence as i16),
+                sequence: Set(key.sequence as i64),
                 content_digest_type: Set(content_digest
                     .as_ref()
                     .map(|d| d.r#type)),

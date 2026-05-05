@@ -148,7 +148,7 @@ impl FeedsService for FeedsServiceImpl {
                     "event_key.signed_by.key_type out of range",
                 )
             })?;
-        let sequence: i16 = event_key.sequence.try_into().map_err(|_| {
+        let sequence: i64 = event_key.sequence.try_into().map_err(|_| {
             Status::invalid_argument("event_key.sequence out of range")
         })?;
 
