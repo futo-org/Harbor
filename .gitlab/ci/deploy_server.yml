@@ -1,12 +1,5 @@
 .server-deploy-workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - services/server/**/*
-        - .gitlab/ci/build_server.yml
-        - .gitlab/ci/deploy_server.yml
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
-      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - services/server/**/*
