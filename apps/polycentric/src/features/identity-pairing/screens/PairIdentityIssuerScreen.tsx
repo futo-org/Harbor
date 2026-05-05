@@ -279,6 +279,7 @@ export default function PairIdentityIssuerScreen() {
                                 claimerToApprove,
                                 pairAsRotationKey,
                               );
+                              router.back();
                             } catch {
                             } finally {
                               setApprovingClaimers((prev) => {
