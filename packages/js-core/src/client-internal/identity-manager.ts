@@ -112,7 +112,7 @@ export class IdentityManager {
 
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
-    this.client.setActiveIdentityKey(resolvedIdentityKey);
+    await this.client.setActiveIdentityKey(resolvedIdentityKey);
 
     let event: Proto.Event;
     if (isBootstrap) {
@@ -251,7 +251,7 @@ export class IdentityManager {
       throw new Error('Current key is not authorized for this identity');
     }
 
-    this.client.setActiveIdentityKey(identityKey);
+    await this.client.setActiveIdentityKey(identityKey);
     await this.client.pull();
 
     // Re-publish the same identity document signed by our own key,

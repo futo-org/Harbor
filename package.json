@@ -26,5 +26,10 @@
   },
   "dependencies": {
     "expo": "^55.0.15"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

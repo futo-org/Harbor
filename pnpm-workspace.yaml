@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - packages/js-browser/examples/*
+  - packages/js-node/examples/*
   - tools/*
 
 catalog:

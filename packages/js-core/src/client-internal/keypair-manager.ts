@@ -43,7 +43,7 @@ export class KeyPairManager {
 
     // setAsCurrent defaults to true
     if (!(options.setAsCurrent === false)) {
-      this.client.setCurrentKeyPair(keyPair);
+      await this.client.setCurrentKeyPair(keyPair);
     }
 
     return keyPair;
@@ -85,7 +85,7 @@ export class KeyPairManager {
       publicKey: keys.publicKey,
     };
 
-    this.client.setCurrentKeyPair(keyPair);
+    await this.client.setCurrentKeyPair(keyPair);
     return keyPair;
   }
 }

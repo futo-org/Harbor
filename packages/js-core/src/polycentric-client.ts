@@ -220,7 +220,7 @@ export class PolycentricClient {
       return false;
     }
 
-    this.setCurrentKeyPair(identity);
+    await this.setCurrentKeyPair(identity);
     return true;
   }
 
@@ -696,10 +696,10 @@ export class PolycentricClient {
     return this.pull();
   }
 
-  public setCurrentKeyPair(keyPair: KeyPair) {
+  public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {
     this.currentKeyPair = keyPair;
     // Restore saved identity key for this key pair
-    this.activeIdentityKey = this.storageDriver.loadActiveIdentityKey(
+    this.activeIdentityKey = await this.storageDriver.loadActiveIdentityKey(
       keyPair.publicKey.key,
     );
   }
@@ -707,10 +707,10 @@ export class PolycentricClient {
   /**
    * Explicitly set the active identity key and persist it.
    */
-  public setActiveIdentityKey(identityKey: string | null) {
+  public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
     this.activeIdentityKey = identityKey;
     if (!this.currentKeyPair) return;
-    this.storageDriver.saveActiveIdentityKey(
+    await this.storageDriver.saveActiveIdentityKey(
       this.currentKeyPair.publicKey.key,
       identityKey,
     );
@@ -720,7 +720,7 @@ export class PolycentricClient {
    * Look up the v2 identity key bound to the given key pair locally.
    * Returns null if this device has never associated an identity with the pair.
    */
-  public getIdentityKeyFor(keyPair: KeyPair): string | null {
+  public getIdentityKeyFor(keyPair: KeyPair): Promise<string | null> {
     return this.storageDriver.loadActiveIdentityKey(keyPair.publicKey.key);
   }
 

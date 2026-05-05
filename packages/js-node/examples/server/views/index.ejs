@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <title>Polycentric Node example</title>
+  <style>
+    table { border-collapse: collapse; }
+    td, th { border: 1px solid #999; padding: 0.25em 0.5em; vertical-align: top; }
+  </style>
+</head>
+<body>
+
+<h1>Polycentric Node example</h1>
+
+<h2>Key pair</h2>
+<p>Public key:<br><code><%= publicKeyHex %></code></p>
+
+<h2>Identity</h2>
+<% if (activeIdentityKey) { %>
+  <p>Active: <code><%= activeIdentityKey %></code></p>
+<% } else { %>
+  <p>No identity yet.</p>
+  <form method="post" action="/identity">
+    <button type="submit">Create identity</button>
+  </form>
+<% } %>
+
+<h2>Servers</h2>
+<ul>
+  <% servers.forEach(function (s) { %>
+    <li><code><%= s %></code></li>
+  <% }) %>
+</ul>
+<form method="post" action="/sync">
+  <button type="submit">Sync now</button>
+</form>
+
+<h2>New post</h2>
+<% if (activeIdentityKey) { %>
+  <form method="post" action="/post">
+    <textarea name="text" rows="3" cols="60" required></textarea><br>
+    <button type="submit">Post</button>
+  </form>
+<% } else { %>
+  <p><em>Create an identity first.</em></p>
+<% } %>
+
+<h2>Feed (<%= posts.length %>)</h2>
+<% if (posts.length === 0) { %>
+  <p><em>No posts yet.</em></p>
+<% } else { %>
+  <table>
+    <tr><th>created</th><th>text</th><th>identity</th><th>signer</th><th>sig</th></tr>
+    <% posts.forEach(function (p) { %>
+      <tr>
+        <td><%= p.createdAt %></td>
+        <td><%= p.text %></td>
+        <td><code><%= p.identityKey.slice(0, 12) %>...</code></td>
+        <td><code><%= p.signerHex.slice(0, 12) %>...</code></td>
+        <td><code><%= p.signaturePrefix %></code></td>
+      </tr>
+    <% }) %>
+  </table>
+<% } %>
+
+<p><a href="/">Refresh</a></p>
+
+</body>
+</html>
