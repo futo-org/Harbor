@@ -7,12 +7,14 @@
       changes:
         - services/server/**/*
         - .gitlab/ci/build_server.yml
+        - .gitlab/ci/deploy_server.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - services/server/**/*
         - .gitlab/ci/build_server.yml
+        - .gitlab/ci/deploy_server.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
     RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'

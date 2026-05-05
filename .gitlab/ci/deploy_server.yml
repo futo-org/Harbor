@@ -1,0 +1,93 @@
+.server-deploy-workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/server/**/*
+        - .gitlab/ci/build_server.yml
+        - .gitlab/ci/deploy_server.yml
+  needs:
+    - job: server-image
+      artifacts: false
+
+variables:
+  MANIFEST_GIT_REPO: https://gitlab.futo.org/devops/manifest-inventory.git
+  MANIFEST_GIT_USER_EMAIL: $GITLAB_USER_EMAIL
+  MANIFEST_GIT_USER_NAME: $GITLAB_USER_NAME
+
+#################################################################
+# Prepare the manifest changes as .patch files so we can review #
+#################################################################
+
+.server-deploy-prepare:
+  extends: .server-deploy-workflow
+  stage: deploy
+  image:
+    name: alpine/git:latest
+    entrypoint: ['']
+  before_script:
+    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    - chmod +x /usr/local/bin/yq
+  script:
+    # Pull in the manifest repository
+    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
+    - cd manifest-inventory
+    # Use 'yq' to change the yaml value to the current commit
+    - yq -i ".image.version.$ENVIRONMENT = strenv(CI_COMMIT_SHA)" inventory/polycentric-2026/server.yml
+    # Commit the change in the manifest repo
+    - git config user.email "$MANIFEST_GIT_USER_EMAIL"
+    - git config user.name "$MANIFEST_GIT_USER_NAME"
+    - git add inventory/polycentric-2026/server.yml
+    - 'git commit -m "polycentric-2026 $ENVIRONMENT: bump server to $CI_COMMIT_SHA"'
+    # Export the commit as a patch artifact
+    - git format-patch -1 -o "$CI_PROJECT_DIR/deploy-patches/"
+    # Print the patch in the job log for review
+    - cat "$CI_PROJECT_DIR/deploy-patches/"*.patch
+  artifacts:
+    paths:
+      - deploy-patches/
+    expire_in: 1 week
+
+server-deploy-prepare-staging:
+  extends: .server-deploy-prepare
+  variables:
+    ENVIRONMENT: staging
+
+server-deploy-prepare-production:
+  extends: .server-deploy-prepare
+  variables:
+    ENVIRONMENT: polycentric
+
+###############################
+# Deploy the manifest changes #
+###############################
+
+.server-deploy-apply:
+  extends: .server-deploy-workflow
+  stage: deploy
+  image:
+    name: alpine/git:latest
+    entrypoint: ['']
+  when: manual
+  script:
+    # Pull in the manifest repository
+    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
+    - cd manifest-inventory
+    # Show the patch we are about to apply
+    - cat "$CI_PROJECT_DIR/deploy-patches/"*.patch
+    # Apply the patch and push it to the manifest repo
+    - git config user.email "$MANIFEST_GIT_USER_EMAIL"
+    - git config user.name "$MANIFEST_GIT_USER_NAME"
+    - git am "$CI_PROJECT_DIR/deploy-patches/"*.patch
+    - git push origin HEAD
+
+server-deploy-apply-staging:
+  extends: .server-deploy-apply
+  needs:
+    - job: server-deploy-prepare-staging
+      artifacts: true
+
+server-deploy-apply-production:
+  extends: .server-deploy-apply
+  needs:
+    - job: server-deploy-prepare-production
+      artifacts: true

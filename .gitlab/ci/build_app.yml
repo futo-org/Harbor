@@ -7,12 +7,14 @@
       changes:
         - apps/**/*
         - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - apps/**/*
         - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
 
 .app-build-base:
   extends: .app-workflow
