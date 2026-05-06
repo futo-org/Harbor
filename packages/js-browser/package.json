@@ -25,8 +25,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "webpack",
-    "dev": "webpack --watch",
+    "build": "tsc -b && webpack",
+    "dev": "tsc -b && webpack --watch",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -36,9 +36,6 @@
     "@noble/hashes": "catalog:",
     "@sqlite.org/sqlite-wasm": "3.49.1-build4",
     "js-base64": "^3.7.8"
-  },
-  "peerDependencies": {
-    "@polycentric/rs-core-wasm-browser": "workspace:*"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",

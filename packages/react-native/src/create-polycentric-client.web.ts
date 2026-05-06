@@ -1,10 +1,12 @@
 import { PolycentricClient } from '@polycentric/js-core';
 import {
   BrowserCryptoManager,
-  BrowserWasmBridge,
   IndexedDBStorageDriver,
 } from '@polycentric/js-browser';
-import polycentricWasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
+import {
+  PolycentricCore,
+  uniffiInitAsync,
+} from '@polycentric/rs-core-uniffi-web';
 import {
   createIdentity,
   normalizeDatabaseName,
@@ -16,8 +18,11 @@ export async function createPolycentricClient(
 ): Promise<PolycentricClient> {
   const databaseName = normalizeDatabaseName(config.databaseName);
 
+  // Load + initialize the wasm module before constructing the core.
+  await uniffiInitAsync();
+
   return PolycentricClient.create({
-    coreBridge: new BrowserWasmBridge(polycentricWasmUrl),
+    core: new PolycentricCore(),
     storageDriver: await IndexedDBStorageDriver.create(databaseName),
     cryptoManager: new BrowserCryptoManager(),
     seedServers: config.seedServers,

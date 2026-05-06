@@ -1,0 +1,9 @@
+---
+rust:
+  directory: ../rs-core
+  manifestPath: Cargo.toml
+web:
+  entrypoint: dist/index.ts
+  ts: dist/generated
+  wasmCrateName: polycentric_react_native_wasm
+  manifestPatchFile: ubrn-wasm-patch.toml

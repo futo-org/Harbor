@@ -1,5 +1,5 @@
 import { PolycentricClient } from '@polycentric/js-core';
-import { NativeCoreBridge } from './ffi/bridge';
+import { PolycentricCore } from './generated/rn/polycentric_core';
 import { ReactNativeStorageDriver } from './storage/op-sqlite/storage-driver';
 import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
 import {
@@ -14,7 +14,7 @@ export async function createPolycentricClient(
   const databaseName = normalizeDatabaseName(config.databaseName);
 
   return PolycentricClient.create({
-    coreBridge: new NativeCoreBridge(),
+    core: new PolycentricCore(),
     storageDriver: await ReactNativeStorageDriver.create(databaseName),
     cryptoManager: new ReactNativeCryptoManager(),
     seedServers: config.seedServers,

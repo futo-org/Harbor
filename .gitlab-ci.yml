@@ -1,4 +1,5 @@
 include:
+  - local: '.gitlab/ci/setup_images.yml'
   - local: '.gitlab/ci/build_rs_core.yml'
   - local: '.gitlab/ci/build_js_sdks.yml'
   - local: '.gitlab/ci/build_rn_sdk.yml'
