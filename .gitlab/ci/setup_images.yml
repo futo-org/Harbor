@@ -1,0 +1,32 @@
+variables:
+  RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust'
+
+.setup-images-workflow:
+  stage: setup
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: ['']
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - .gitlab/images/**/*
+        - .gitlab/ci/setup_images.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - .gitlab/images/**/*
+        - .gitlab/ci/setup_images.yml
+
+setup-image-rust:
+  extends: .setup-images-workflow
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=.gitlab/images/rust \
+        --local dockerfile=.gitlab/images/rust \
+        --output type=image,name=$RUST_IMAGE,push=true

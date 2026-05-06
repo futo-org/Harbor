@@ -158,22 +158,21 @@ export class IdentityManager {
   ): Promise<IdentityState> {
     const targetServer = server ?? this.client.servers[0];
     if (!targetServer) throw new Error('No servers configured');
-    if (!this.client.core) {
-      throw new Error('Core not initialized');
-    }
 
     // Ask targetServer for the latest identity event for the identity.
     // This is specifically intended for polling while pairing to an identity.
     const response = Proto.ListEventsResponse.fromBinary(
-      await this.client.core.list_events(
-        targetServer,
-        1,
-        identityKey,
-        COLLECTION.IDENTITY,
-        null,
-        null,
-        null,
-        null,
+      new Uint8Array(
+        await this.client.core.listEvents(
+          targetServer,
+          1,
+          identityKey,
+          COLLECTION.IDENTITY,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+        ),
       ),
     );
     const bundle = response.eventBundles[0];
@@ -186,8 +185,8 @@ export class IdentityManager {
     const serializedContent = bundle.serializedContent;
 
     // Verify signature against event.key.signed_by via core.
-    this.client.core.verify_signed_event(
-      Proto.SignedEvent.toBinary(signedEvent),
+    this.client.core.verifySignedEvent(
+      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
     );
 
     const event = Proto.Event.fromBinary(signedEvent.eventBytes);

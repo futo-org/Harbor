@@ -4,10 +4,12 @@
   "description": "Polycentric SDK for react native applications",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
+  "browser": "./src/index.web.ts",
+  "react-native": "./src/index.tsx",
   "exports": {
     ".": {
+      "browser": "./src/index.web.ts",
       "react-native": "./src/index.tsx",
-      "browser": "./src/index.tsx",
       "source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
@@ -34,6 +36,9 @@
     "!**/.*"
   ],
   "scripts": {
+    "ubrn:ios": "ubrn build ios --and-generate",
+    "ubrn:android": "ubrn build android --and-generate",
+    "ubrn:clean": "rm -rfv cpp/ android/CMakeLists.txt android/src/main/java android/*.cpp ios/ src/Native* src/index.*ts* src/generated/rn",
     "dev": "bob build --watch",
     "clean": "del-cli android/build lib",
     "build": "bob build",
@@ -47,6 +52,10 @@
     "ios",
     "android"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.futo.org/polycentric/polycentric.git"
+  },
   "author": "FUTO",
   "homepage": "https://polycentric.io",
   "license": "MIT",
@@ -85,13 +94,9 @@
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
+    "exclude": "{**/{__tests__,__fixtures__,__mocks__}/**,**/*.d.ts}",
     "targets": [
-      [
-        "module",
-        {
-          "esm": true
-        }
-      ],
+      "module",
       [
         "typescript",
         {
@@ -103,12 +108,7 @@
   "codegenConfig": {
     "name": "PolycentricSpec",
     "type": "modules",
-    "jsSrcsDir": "src",
-    "ios": {
-      "modulesProvider": {
-        "PolycentricCore": "PolycentricCoreProvider"
-      }
-    }
+    "jsSrcsDir": "src"
   },
   "prettier": {
     "quoteProps": "consistent",
@@ -125,11 +125,12 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
+    "@noble/curves": "^1.9.0",
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
-    "@polycentric/rs-core-wasm-browser": "workspace:*",
-    "@noble/curves": "^1.9.0",
+    "@polycentric/rs-core-uniffi-web": "workspace:*",
     "fast-text-encoding": "^1.0.6",
-    "react-native-get-random-values": "^1.11.0"
+    "react-native-get-random-values": "^1.11.0",
+    "uniffi-bindgen-react-native": "0.31.0-2"
   }
 }

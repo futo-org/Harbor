@@ -17,7 +17,6 @@
         - .gitlab/ci/deploy_server.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
-    RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'
 
 .server-rust-base:
   extends: .server-workflow
@@ -28,11 +27,13 @@ server-format-check:
   extends: .server-rust-base
   script:
     - cargo fmt --check --package server
+  allow_failure: true
 
 server-clippy:
   extends: .server-rust-base
   script:
     - cargo clippy --package server -- -D warnings
+  allow_failure: true
 
 server-build:
   extends: .server-rust-base

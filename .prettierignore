@@ -19,3 +19,5 @@ packages/rs-core-wasm-node
 packages/js-core/src/proto/polycentric.ts
 packages/js-core/src/proto/polycentric/v2
 legacy
+
+rust_modules

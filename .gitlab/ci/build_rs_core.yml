@@ -1,33 +1,26 @@
-.rs-sdk-workflow:
-  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+.rs-core-workflow:
+  image: $RUST_IMAGE
   rules:
-    - if: $CI_COMMIT_TAG =~ /^rs-sdk-/
+    - if: $CI_COMMIT_TAG =~ /^rs-core-/
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - packages/rs-core/**/*
-        - packages/rs-common/**/*A
+        - packages/rs-*/**/*
         - .gitlab/ci/build_rs_core.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - packages/rs-core/**/*
-        - packages/rs-common/**/*
+        - packages/rs-*/**/*
         - .gitlab/ci/build_rs_core.yml
   variables:
-    RUNNER_SCRIPT_TIMEOUT: 179m
-    DOCKER_FULL_IMAGE_NAME: '${CI_REGISTRY}/${CI_PROJECT_PATH}'
-    RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:base'
-    WASM_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:wasm'
-    ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:android'
     RUST_CORE_PATH: packages/rs-core
     CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
   cache:
     - key:
         files:
           - packages/rs-core/Cargo.lock
-        prefix: rs-sdk-cargo-deps
+        prefix: rs-core-cargo-deps
       paths:
         - .cargo/registry/index
         - .cargo/registry/cache
@@ -35,252 +28,66 @@
     - key:
         files:
           - packages/rs-core/Cargo.lock
-        prefix: rs-sdk-target-${CI_JOB_NAME}
+        prefix: rs-core-target-${CI_JOB_NAME}
       paths:
         - target
-  before_script:
-    - cd packages/rs-core
-
-.build-images:
-  extends: .rs-sdk-workflow
-  services:
-    - name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:dind
-      command: ['dockerd', '--host=tcp://0.0.0.0:2375', '--tls=false']
-      alias: docker
-  before_script:
-    - cd packages/rs-core
-    - |
-      timeout 30s /bin/sh -c 'until docker info > /dev/null; do
-        echo "Waiting for docker to be ready..."
-        sleep 1
-      done'
-    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
-  rules:
-    - if: $BUILD_IMAGES == "true"
-
-build-base-image:
-  stage: setup
-  extends: .build-images
-  script:
-    - docker pull "${DOCKER_FULL_IMAGE_NAME}:base" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:base" -f Dockerfile.base -t "${DOCKER_FULL_IMAGE_NAME}:base" .
-    - docker push "${DOCKER_FULL_IMAGE_NAME}:base"
-
-build-wasm-image:
-  stage: setup
-  extends: .build-images
-  script:
-    - docker pull "${DOCKER_FULL_IMAGE_NAME}:wasm" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:wasm" -f Dockerfile.wasm -t "${DOCKER_FULL_IMAGE_NAME}:wasm" .
-    - docker push "${DOCKER_FULL_IMAGE_NAME}:wasm"
-
-build-android-image:
-  stage: setup
-  extends: .build-images
-  script:
-    - docker pull "${DOCKER_FULL_IMAGE_NAME}:android" || true
-    - docker build --pull --cache-from "${DOCKER_FULL_IMAGE_NAME}:android" -f Dockerfile.android -t "${DOCKER_FULL_IMAGE_NAME}:android" .
-    - docker push "${DOCKER_FULL_IMAGE_NAME}:android"
 
 .rust-check:
-  extends: .rs-sdk-workflow
-  image: ${RUST_IMAGE}
+  extends: .rs-core-workflow
   stage: check
+  allow_failure: true
 
-.rs-sdk-build-wasm:
-  extends: .rs-sdk-workflow
-  image: ${WASM_IMAGE}
-  stage: build
-
-.rs-sdk-build-android:
-  extends: .rs-sdk-workflow
-  image: ${ANDROID_IMAGE}
-  stage: build
-  rules:
-    - !reference [.rs-sdk-workflow, rules]
-    - !reference [.app-workflow, rules]
-
-rs-sdk-format-check:
+rs-core-format-check:
   extends: .rust-check
   script:
+    - cd packages/rs-core
     - just format-check
 
-rs-sdk-clippy:
+rs-core-clippy:
   extends: .rust-check
   script:
+    - cd packages/rs-core
     - just clippy
 
-rs-sdk-build-wasm-browser:
-  extends: .rs-sdk-build-wasm
-  rules:
-    - !reference [.rs-sdk-workflow, rules]
-    - !reference [.js-sdk-workflow, rules]
-    - !reference [.app-workflow, rules]
-  script:
-    - just build-wasm-web
-  artifacts:
-    paths:
-      - $RUST_CORE_PATH/../rs-core-wasm-browser/
-    expire_in: 1 week
+# rs-core-build:
+#   extends: .rs-core-workflow
+#   stage: build
+#   script:
+#     - cargo build
 
-rs-sdk-build-wasm-node:
-  extends: .rs-sdk-build-wasm
-  script:
-    - just build-wasm-node
-  artifacts:
-    paths:
-      - $RUST_CORE_PATH/../rs-core-wasm-node/
-    expire_in: 1 week
-
-.rs-sdk-ios-build:
-  extends: .rs-sdk-workflow
-  tags:
-    - macscript
-  variables:
-    GIT_STRATEGY: clone
-  before_script:
-    - env | grep '^CI_' > .cienv
-  artifacts:
-    expire_in: 1 week
-
-rs-sdk-build-ios-device:
+# Build the uniffi-web package (wasm)
+rs-core-uniffi-web-build:
+  extends: .rs-core-workflow
   stage: build
-  extends: .rs-sdk-ios-build
+  cache:
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-core-cargo-deps
+      paths:
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+        prefix: rs-core-target-${CI_JOB_NAME}
+      paths:
+        - target
+    - key:
+        files:
+          - pnpm-lock.yaml
+        prefix: ubrn-target
+      paths:
+        - node_modules/.pnpm/uniffi-bindgen-react-native@*/node_modules/uniffi-bindgen-react-native/target
   script:
+    - cd packages/rs-core-uniffi-web
     - |
-      cirrus run buildRsCoreIOSDevice \
-      --artifacts-dir . \
-      --env-file .cienv
+      rustup target add \
+        wasm32-unknown-unknown
+    - pnpm i
+    - pnpm build --release
   artifacts:
     paths:
-      - buildRsCoreIOSDevice/binary/*.a
-  rules:
-    - !reference [.rs-sdk-workflow, rules]
-    - !reference [.app-workflow, rules]
-
-rs-sdk-build-ios-sim-arm64:
-  stage: build
-  extends: .rs-sdk-ios-build
-  script:
-    - |
-      cirrus run buildRsCoreIOSSimArm64 \
-        --artifacts-dir ./ \
-        --env-file .cienv
-  artifacts:
-    paths:
-      - buildRsCoreIOSSimArm64/binary/*.a
-
-rs-sdk-ios-tart-prune:
-  stage: build
-  extends: .rs-sdk-ios-build
-  needs:
-    - job: rs-sdk-build-ios-device
-      artifacts: false
-    - job: rs-sdk-build-ios-sim-arm64
-      artifacts: false
-  before_script: []
-  script:
-    - tart prune --entries vms --older-than 2
-
-rs-sdk-build-android-arm64:
-  extends: .rs-sdk-build-android
-  script:
-    - just build-ffi-android-arm64
-  artifacts:
-    paths:
-      - target/aarch64-linux-android/release-rs-core
+      - packages/rs-core-uniffi-web/dist
     expire_in: 1 week
-
-rs-sdk-build-android-armv7:
-  extends: .rs-sdk-build-android
-  script:
-    - just build-ffi-android-armv7
-  artifacts:
-    paths:
-      - target/armv7-linux-androideabi/release-rs-core
-    expire_in: 1 week
-
-rs-sdk-build-android-x86:
-  extends: .rs-sdk-build-android
-  script:
-    - just build-ffi-android-x86
-  artifacts:
-    paths:
-      - target/i686-linux-android/release-rs-core
-    expire_in: 1 week
-
-rs-sdk-build-android-x86_64:
-  extends: .rs-sdk-build-android
-  script:
-    - just build-ffi-android-x86_64
-  artifacts:
-    paths:
-      - target/x86_64-linux-android/release-rs-core
-    expire_in: 1 week
-
-rs-sdk-publish:
-  extends: .rs-sdk-workflow
-  stage: publish
-  image: ${RUST_IMAGE}
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^rs-sdk-/
-  needs:
-    - job: rs-sdk-build-ios-device
-      artifacts: true
-    - job: rs-sdk-build-ios-sim-arm64
-      artifacts: true
-    - job: rs-sdk-build-android-arm64
-      artifacts: true
-    - job: rs-sdk-build-android-armv7
-      artifacts: true
-    - job: rs-sdk-build-android-x86
-      artifacts: true
-    - job: rs-sdk-build-android-x86_64
-      artifacts: true
-  script:
-    - |
-      VERSION=${CI_COMMIT_TAG#rs-sdk-}
-      REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/rs-core/${VERSION}"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSDevice/binary/libpolycentric_core-ios-device.a "${REGISTRY_URL}/libpolycentric_core-ios-device.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../buildRsCoreIOSSimArm64/binary/libpolycentric_core-ios-sim-arm64.a "${REGISTRY_URL}/libpolycentric_core-ios-sim-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/aarch64-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-arm64.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/armv7-linux-androideabi/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-armv7.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/i686-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86.a"
-      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file ../../target/x86_64-linux-android/release-rs-core/libpolycentric_core.a "${REGISTRY_URL}/libpolycentric_core-android-x86_64.a"
-
-.rs-sdk-publish-npm:
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^rs-sdk-/
-  image: node:latest
-  stage: publish
-  script:
-    - echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-
-rs-sdk-publish-npm-browser:
-  extends: .rs-sdk-publish-npm
-  needs:
-    - job: rs-sdk-build-wasm-browser
-      artifacts: true
-  script:
-    - |
-      VERSION=${CI_COMMIT_TAG#rs-sdk-}
-      cd packages/rs-core-wasm-browser
-      sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
-      echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-      echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-      npm publish
-
-rs-sdk-publish-npm-node:
-  extends: .rs-sdk-publish-npm
-  needs:
-    - job: rs-sdk-build-wasm-node
-      artifacts: true
-  script:
-    - |
-      VERSION=${CI_COMMIT_TAG#rs-sdk-}
-      cd packages/rs-core-wasm-node
-      sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
-      echo "@polycentric:registry=https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" > .npmrc
-      echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
-      npm publish

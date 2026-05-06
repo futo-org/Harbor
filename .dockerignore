@@ -2,3 +2,8 @@
 **/node_modules
 apps/polycentric/dist
 **/.git
+
+# iOS-only artifacts produced by rn-ios-build — not used by the web image,
+# and the xcframework alone is ~hundreds of MB.
+packages/react-native/PolycentricReactNativeFramework.xcframework
+**/*.a

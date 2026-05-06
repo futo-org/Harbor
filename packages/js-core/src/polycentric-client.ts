@@ -10,15 +10,14 @@ import {
 } from './client-internal';
 import { COLLECTION, KEY_TYPE, type Collection } from './constants';
 import { HTTPClient } from './http';
-import type {
-  ICoreBridge,
-  ICryptoManager,
-  IPolycentricCore,
-  IStorageDriver,
-} from './platform-interfaces';
+import type { ICryptoManager, IStorageDriver } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './storage/storage-handle';
 import { bytesToHex } from './utils/hex';
+
+import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
+
+type CoreType = PolycentricCoreLike;
 
 export type { IdentityState } from './client-internal/identity-manager';
 
@@ -38,7 +37,12 @@ export interface KeyPair {
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
  */
 export interface PolycentricClientConfig {
-  coreBridge: ICoreBridge;
+  /**
+   * The uniffi-generated `PolycentricCore` instance from
+   * `@polycentric/react-native`. Owns crypto, local stores, image
+   * processing, and gRPC client transport.
+   */
+  core: CoreType;
   storageDriver: IStorageDriver;
   cryptoManager: ICryptoManager;
   /**
@@ -67,8 +71,7 @@ export class PolycentricClient {
   public hydrationStatus: HydrationStatus = HydrationStatus.NOT_STARTED;
   public error: Error | null = null;
 
-  public core: IPolycentricCore | undefined;
-  public readonly coreBridge: ICoreBridge;
+  public readonly core: CoreType;
 
   public currentKeyPair: KeyPair | null = null;
   /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
@@ -84,7 +87,7 @@ export class PolycentricClient {
   public readonly storageDriver: IStorageDriver;
 
   constructor(config: PolycentricClientConfig) {
-    this.coreBridge = config.coreBridge;
+    this.core = config.core;
     this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
     if (config.seedServers && config.seedServers.length > 0) {
@@ -106,12 +109,6 @@ export class PolycentricClient {
       this.setStep(InitializationStep.STARTING);
 
       this.setStep(InitializationStep.INITIALIZING_CORE);
-      if (this.coreBridge.initialized()) {
-        this.core = this.coreBridge.getCoreInstance();
-      } else {
-        await this.coreBridge.initialize();
-        this.core = this.coreBridge.getCoreInstance();
-      }
 
       this.setStep(InitializationStep.SETTING_UP_STORAGE);
       this.storageHandle = new StorageHandle({
@@ -158,12 +155,12 @@ export class PolycentricClient {
    * each server's `cdn_url`. Failures are logged, not thrown.
    */
   private async fetchServerInfo(): Promise<void> {
-    if (!this.core) return;
-
     const results = await Promise.allSettled(
       this.servers.map(async (server) => {
-        const bytes = await this.core!.get_server_info(server);
-        const response = Proto.GetServerInfoResponse.fromBinary(bytes);
+        const bytes = await this.core.getServerInfo(server);
+        const response = Proto.GetServerInfoResponse.fromBinary(
+          new Uint8Array(bytes),
+        );
         return { server, info: response.serverInfo };
       }),
     );
@@ -224,12 +221,12 @@ export class PolycentricClient {
    * must be copied in at startup.
    */
   async copyEvents(events?: Proto.SignedEvent[]) {
-    if (!this.core) return;
-
     const signedEvents = events ?? (await this.storage.events.getAll());
 
-    this.core.copy_events(
-      signedEvents.map((s) => Proto.SignedEvent.toBinary(s)),
+    this.core.copyEvents(
+      signedEvents.map(
+        (s) => Proto.SignedEvent.toBinary(s).buffer as ArrayBuffer,
+      ),
     );
   }
 
@@ -240,17 +237,15 @@ export class PolycentricClient {
   async copyContents(
     contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
   ) {
-    if (!this.core) return;
     const list = contents ?? (await this.storage.content.getAll());
 
-    const contentMap = new Map<Uint8Array, Uint8Array>();
-    for (const r of list) {
-      contentMap.set(
-        Proto.ContentDigest.toBinary(r.digest),
-        Proto.Content.toBinary(r.content),
-      );
-    }
-    this.core.copy_contents(contentMap);
+    this.core.copyContents(
+      list.map((r) => ({
+        digestBytes: Proto.ContentDigest.toBinary(r.digest)
+          .buffer as ArrayBuffer,
+        contentBytes: Proto.Content.toBinary(r.content).buffer as ArrayBuffer,
+      })),
+    );
   }
 
   /**
@@ -269,14 +264,10 @@ export class PolycentricClient {
       throw new Error('No active identity');
     }
 
-    const sequence = this.core!.next_sequence(
-      this.activeIdentityKey,
-      collection,
-    );
+    const sequence = this.core.nextSequence(this.activeIdentityKey, collection);
 
     const identitySequence =
-      this.core!.next_sequence(this.activeIdentityKey, COLLECTION.IDENTITY) -
-      1n;
+      this.core.nextSequence(this.activeIdentityKey, COLLECTION.IDENTITY) - 1n;
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -302,25 +293,24 @@ export class PolycentricClient {
   async signEvent(event: Proto.Event): Promise<Proto.SignedEvent> {
     const eventBytes = Proto.Event.toBinary(event);
 
-    if (!this.core) {
-      throw new Error('Can not sign event as core is not initialized');
-    }
-
-    const signedEventBytes = await this.core.sign_event(
-      eventBytes,
-      async (eventBytes) => {
-        if (!this.currentKeyPair) {
-          throw new Error('No keypair');
-        }
-        return await this.crypto.sign(
-          this.currentKeyPair.privateKey.key,
-          eventBytes,
-          this.currentKeyPair.keyType,
-        );
+    const signedEventBytes = await this.core.signEvent(
+      eventBytes.buffer as ArrayBuffer,
+      {
+        sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
+          if (!this.currentKeyPair) {
+            throw new Error('No keypair');
+          }
+          const signature = await this.crypto.sign(
+            this.currentKeyPair.privateKey.key,
+            new Uint8Array(bytes),
+            this.currentKeyPair.keyType,
+          );
+          return signature.buffer as ArrayBuffer;
+        },
       },
     );
 
-    return Proto.SignedEvent.fromBinary(signedEventBytes);
+    return Proto.SignedEvent.fromBinary(new Uint8Array(signedEventBytes));
   }
 
   /**
@@ -335,17 +325,20 @@ export class PolycentricClient {
   ): Promise<void> {
     await this.storage.events.save(signedEvent);
 
-    this.core!.copy_events([Proto.SignedEvent.toBinary(signedEvent)]);
+    this.core.copyEvents([
+      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
+    ]);
 
     if (content) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
       if (event.contentDigest) {
-        const contentMap = new Map<Uint8Array, Uint8Array>();
-        contentMap.set(
-          Proto.ContentDigest.toBinary(event.contentDigest),
-          Proto.Content.toBinary(content),
-        );
-        this.core!.copy_contents(contentMap);
+        this.core.copyContents([
+          {
+            digestBytes: Proto.ContentDigest.toBinary(event.contentDigest)
+              .buffer as ArrayBuffer,
+            contentBytes: Proto.Content.toBinary(content).buffer as ArrayBuffer,
+          },
+        ]);
       }
     }
 
@@ -361,15 +354,14 @@ export class PolycentricClient {
    * copied into the core via `copy_events` / `copy_contents`.
    */
   buildVectorClock(event: Proto.Event): Proto.VectorClock {
-    if (!this.core) throw new Error('Core not initialized');
-    const clockBytes = this.core.build_vector_clock(
+    const clockBytes = this.core.buildVectorClock(
       event.key!.identity,
       event.key!.collection,
       event.identitySequence,
-      Proto.PublicKey.toBinary(event.key!.signedBy!),
+      Proto.PublicKey.toBinary(event.key!.signedBy!).buffer as ArrayBuffer,
       event.key!.sequence,
     );
-    return Proto.VectorClock.fromBinary(clockBytes);
+    return Proto.VectorClock.fromBinary(new Uint8Array(clockBytes));
   }
 
   /**
@@ -387,22 +379,21 @@ export class PolycentricClient {
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
   }): Promise<Proto.EventBundle[]> {
-    if (!this.core) throw new Error('Core not initialized');
-
     const sequenceGt =
-      options?.sequenceGt != null ? BigInt(options.sequenceGt) : null;
+      options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
     const sequenceLt =
-      options?.sequenceLt != null ? BigInt(options.sequenceLt) : null;
+      options?.sequenceLt != null ? BigInt(options.sequenceLt) : undefined;
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core!.list_events(
+        this.core.listEvents(
           server,
-          options?.limit ?? null,
-          options?.identity ?? null,
-          options?.collection ?? null,
-          options?.signedBy?.key ?? null,
-          options?.signedBy?.keyType ?? null,
+          options?.limit ?? undefined,
+          options?.identity ?? undefined,
+          options?.collection ?? undefined,
+          (options?.signedBy?.key.buffer as ArrayBuffer | undefined) ??
+            undefined,
+          options?.signedBy?.keyType ?? undefined,
           sequenceGt,
           sequenceLt,
         ),
@@ -415,7 +406,9 @@ export class PolycentricClient {
         console.error('listEvents failed for a server:', result.reason);
         continue;
       }
-      const response = Proto.ListEventsResponse.fromBinary(result.value);
+      const response = Proto.ListEventsResponse.fromBinary(
+        new Uint8Array(result.value),
+      );
       bundles.push(...response.eventBundles);
     }
 
@@ -436,8 +429,6 @@ export class PolycentricClient {
     limit?: number | null;
     identity?: string | null;
   }): Promise<Proto.EventBundle[]> {
-    if (!this.core) throw new Error('Core not initialized');
-
     const algorithm = options?.algorithm ?? Proto.FeedAlgorithm.UNSPECIFIED;
     const identity =
       options?.identity ??
@@ -451,11 +442,11 @@ export class PolycentricClient {
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core!.get_feed(
+        this.core.getFeed(
           server,
           algorithm,
-          options?.limit ?? null,
-          identity,
+          options?.limit ?? undefined,
+          identity ?? undefined,
         ),
       ),
     );
@@ -466,7 +457,9 @@ export class PolycentricClient {
         console.error('getFeed failed for a server:', result.reason);
         continue;
       }
-      const response = Proto.GetFeedResponse.fromBinary(result.value);
+      const response = Proto.GetFeedResponse.fromBinary(
+        new Uint8Array(result.value),
+      );
       bundles.push(...response.eventBundles);
     }
 
@@ -483,8 +476,6 @@ export class PolycentricClient {
     eventKey: Proto.EventKey;
     limit?: number | null;
   }): Promise<Proto.GetPostThreadResponse | null> {
-    if (!this.core) throw new Error('Core not initialized');
-
     const requestBytes = Proto.GetPostThreadRequest.toBinary(
       Proto.GetPostThreadRequest.create({
         eventKey: options.eventKey,
@@ -494,7 +485,7 @@ export class PolycentricClient {
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core!.get_post_thread(server, requestBytes),
+        this.core.getPostThread(server, requestBytes.buffer as ArrayBuffer),
       ),
     );
 
@@ -503,7 +494,9 @@ export class PolycentricClient {
         console.error('getPostThread failed for a server:', result.reason);
         continue;
       }
-      return Proto.GetPostThreadResponse.fromBinary(result.value);
+      return Proto.GetPostThreadResponse.fromBinary(
+        new Uint8Array(result.value),
+      );
     }
 
     return null;
@@ -520,9 +513,9 @@ export class PolycentricClient {
    * from servers.
    */
   listValidEvents(identity: string, collection: number): Proto.EventBundle[] {
-    if (!this.core) throw new Error('Core not initialized');
-    const bytes = this.core.list_valid_events(identity, collection);
-    return Proto.ListEventsResponse.fromBinary(bytes).eventBundles;
+    const bytes = this.core.listValidEvents(identity, collection);
+    return Proto.ListEventsResponse.fromBinary(new Uint8Array(bytes))
+      .eventBundles;
   }
 
   /**
@@ -538,8 +531,14 @@ export class PolycentricClient {
     height: number,
     mode: 'fill' | 'fit' = 'fill',
   ): Uint8Array {
-    if (!this.core) throw new Error('Core not initialized');
-    return this.core.process_image_to_jpeg(image, width, height, mode);
+    return new Uint8Array(
+      this.core.processImageToJpeg(
+        image.buffer as ArrayBuffer,
+        width,
+        height,
+        mode,
+      ),
+    );
   }
 
   /**
@@ -552,7 +551,6 @@ export class PolycentricClient {
     servers: string[],
     request: Proto.RegisterPushNotificationRequest,
   ): Promise<void> {
-    if (!this.core) throw new Error('Core not initialized');
     if (!this.currentKeyPair) {
       throw new Error('registerPushNotifications requires an active key pair');
     }
@@ -574,7 +572,10 @@ export class PolycentricClient {
 
     const results = await Promise.allSettled(
       servers.map((server) =>
-        this.core!.register_push_notifications(server, signedMessageBytes),
+        this.core.registerPushNotifications(
+          server,
+          signedMessageBytes.buffer as ArrayBuffer,
+        ),
       ),
     );
 
@@ -594,15 +595,13 @@ export class PolycentricClient {
    * from individual servers are logged but do not throw.
    */
   async uploadBlob(blob: Proto.Blob, body: Uint8Array): Promise<void> {
-    if (!this.core) throw new Error('Core not initialized');
-
     const requestBytes = Proto.UploadBlobRequest.toBinary(
       Proto.UploadBlobRequest.create({ blob, body }),
     );
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core!.upload_blob(server, requestBytes),
+        this.core.uploadBlob(server, requestBytes.buffer as ArrayBuffer),
       ),
     );
 
@@ -618,7 +617,6 @@ export class PolycentricClient {
    * including content alongside each event.
    */
   async push(): Promise<void> {
-    if (!this.core) throw new Error('Core not initialized');
     if (!this.currentKeyPair) throw new Error('No active key pair');
 
     const localEvents = await this.storage.events.getAll();
@@ -661,7 +659,9 @@ export class PolycentricClient {
     );
 
     const results = await Promise.allSettled(
-      this.servers.map((server) => this.core!.put_events(server, requestBytes)),
+      this.servers.map((server) =>
+        this.core.putEvents(server, requestBytes.buffer as ArrayBuffer),
+      ),
     );
 
     for (const result of results) {
@@ -678,7 +678,6 @@ export class PolycentricClient {
    * @returns The number of new events persisted
    */
   async pull(): Promise<number> {
-    if (!this.core) throw new Error('Core not initialized');
     if (!this.activeIdentityKey) throw new Error('No active identity');
 
     const bundles = await this.listEvents({

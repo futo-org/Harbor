@@ -1,0 +1,11 @@
+---
+rust:
+  directory: ../rs-core
+  manifestPath: Cargo.toml
+turboModule:
+  entrypoint: src/uniffi-init.tsx
+bindings:
+  ts: src/generated/rn
+noOverwrite:
+  - src/index.tsx
+  - src/index.web.ts
