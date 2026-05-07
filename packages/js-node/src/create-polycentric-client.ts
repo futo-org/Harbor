@@ -1,15 +1,24 @@
-import type { PolycentricClient } from '@polycentric/js-core';
+import { PolycentricClient } from '@polycentric/js-core';
+
+import { NodeCryptoManager } from './crypto/node-crypto-manager.js';
+import { createNodeStorageDriver } from './storage/better-sqlite3/index.js';
+import { PolycentricCore, uniffiInitAsync } from './uniffi-init.js';
 
 export interface CreatePolycentricNodeClientConfig {
   databasePath: string;
   seedServers?: string[];
 }
 
-// TODO Use uniffi-generated PolycentricCore
 export async function createPolycentricNodeClient(
-  _config: CreatePolycentricNodeClientConfig,
+  config: CreatePolycentricNodeClientConfig,
 ): Promise<PolycentricClient> {
-  throw new Error(
-    'createPolycentricNodeClient is not implemented yet. Use createNodeStorageDriver for storage-only access.',
-  );
+  await uniffiInitAsync();
+  const core = new PolycentricCore();
+  const { driver } = await createNodeStorageDriver(config.databasePath);
+  return PolycentricClient.create({
+    core,
+    storageDriver: driver,
+    cryptoManager: new NodeCryptoManager(),
+    seedServers: config.seedServers,
+  });
 }

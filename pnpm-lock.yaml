@@ -15,7 +15,7 @@ catalogs:
 
 patchedDependencies:
   uniffi-bindgen-react-native@0.31.0-2:
-    hash: 41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11
+    hash: 8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319
     path: patches/uniffi-bindgen-react-native@0.31.0-2.patch
 
 importers:
@@ -326,6 +326,9 @@ importers:
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../js-core
+      '@polycentric/rs-core-uniffi-web':
+        specifier: workspace:*
+        version: link:../rs-core-uniffi-web
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.6.2
@@ -402,7 +405,7 @@ importers:
         version: 1.11.0(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))
       uniffi-bindgen-react-native:
         specifier: 0.31.0-2
-        version: 0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11)
+        version: 0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319)
     devDependencies:
       '@eslint/compat':
         specifier: ^1.3.2
@@ -460,7 +463,7 @@ importers:
     dependencies:
       uniffi-bindgen-react-native:
         specifier: 0.31.0-2
-        version: 0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11)
+        version: 0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319)
 
   tools/tsconfig: {}
 
@@ -16613,7 +16616,7 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
-  uniffi-bindgen-react-native@0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11): {}
+  uniffi-bindgen-react-native@0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319): {}
 
   universalify@2.0.1: {}
 
