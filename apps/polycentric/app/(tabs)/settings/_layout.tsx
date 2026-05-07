@@ -6,7 +6,6 @@ export const unstable_settings = {
 };
 
 export default function SettingsTabStackLayout() {
-
   return (
     <Stack
       screenOptions={{
