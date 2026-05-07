@@ -17,6 +17,10 @@ rn-android-build:
   extends: .rn-sdk-workflow
   image: $RUST_IMAGE
   stage: build
+  rules:
+    - !reference [.rn-sdk-workflow, rules]
+    - !reference [.rs-core-workflow, rules]
+    - !reference [.app-workflow, rules]
   cache:
     - key:
         files:
@@ -42,6 +46,10 @@ rn-android-build:
 .rn-sdk-ios-build:
   extends: .rn-sdk-workflow
   stage: build
+  rules:
+    - !reference [.rn-sdk-workflow, rules]
+    - !reference [.rs-core-workflow, rules]
+    - !reference [.app-workflow, rules]
   tags:
     - macscript
   variables:
