@@ -4,4 +4,4 @@
 # Pin wasm-bindgen
 [dependencies]
 polycentric-core = { default-features = false }
-wasm-bindgen = "=0.2.108"
+wasm-bindgen = "=0.2.113"
