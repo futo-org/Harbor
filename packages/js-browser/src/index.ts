@@ -1,12 +1,3 @@
-// wasm bridge
-export {
-  BrowserWasmBridge,
-  __killWasmInstance,
-  type ModuleOrPath,
-} from './wasm-bridge';
-
-export type { PolycentricWasm } from '@polycentric/rs-core-wasm-browser';
-
 // crypto implementations
 export { ED25519KeyManager } from './crypto/ed25519-key-manager';
 export { BrowserCryptoManager } from './crypto/browser-crypto-manager';

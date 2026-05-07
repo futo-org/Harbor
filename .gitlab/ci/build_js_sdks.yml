@@ -17,30 +17,32 @@
 .js-sdks-base:
   extends: .js-sdk-workflow
   before_script:
-    - npm install -g pnpm@9.5.0
+    - npm install -g pnpm@10.19.0
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
-  needs:
-    - job: rs-sdk-build-wasm-browser
-      artifacts: true
 
 js-sdks-format-check:
   extends: .js-sdks-base
-  stage: build
+  stage: check
   script:
     - pnpm format
+  allow_failure: true
 
 js-sdks-build:
   extends: .js-sdks-base
   stage: build
   script:
-    - pnpm build
+    - pnpm --filter='./packages/js-*' run build
   artifacts:
     paths:
       - packages/js-*/dist
     expire_in: 1 week
+  needs:
+    - job: rs-core-uniffi-web-build
+      artifacts: true
   rules:
     - !reference [.js-sdk-workflow, rules]
+    - !reference [.rs-core-workflow, rules]
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
 

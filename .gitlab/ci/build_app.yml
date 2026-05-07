@@ -23,7 +23,7 @@
       artifacts: true
     - job: js-sdks-build
       artifacts: true
-    - job: rs-sdk-build-wasm-browser
+    - job: rs-core-uniffi-web-build
       artifacts: true
 
 app-web-image:
@@ -50,7 +50,7 @@ app-web-image:
   stage: build
   image: node:24-slim
   before_script:
-    - npm install -g pnpm@9.5.0
+    - npm install -g pnpm@10.19.0
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
     - apt-get update && apt-get install -y --no-install-recommends git
