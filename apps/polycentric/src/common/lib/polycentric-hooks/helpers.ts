@@ -27,6 +27,7 @@ export interface EventKeyRef {
 }
 
 export type PostData = {
+  /** Hex of the event key */
   id: string;
 
   identity: v2.EventKey['identity'];
@@ -48,7 +49,7 @@ export type PostData = {
   signedEvent: v2.SignedEvent;
 };
 
-function eventKeyToRef(key: v2.EventKey | undefined): EventKeyRef | undefined {
+function decodeEventKey(key: v2.EventKey | undefined): EventKeyRef | undefined {
   if (!key) return undefined;
   return {
     collection: key.collection,
@@ -58,24 +59,17 @@ function eventKeyToRef(key: v2.EventKey | undefined): EventKeyRef | undefined {
   };
 }
 
-/** Canonical event key: author:process:logicalClock */
-export function eventKey(
-  authorKey: Uint8Array,
-  process: Uint8Array,
-  logicalClock: number,
-): string {
-  return `${bytesToHex(authorKey)}:${bytesToHex(process)}:${logicalClock}`;
-}
-
-/** Extract the sequence number (logicalClock) from an internal eventKey postId. */
-export function postIdToSequence(postId: string): string | null {
-  const parts = postId.split(':');
-  if (parts.length !== 3) return null;
-  return parts[2];
+// A key fingerprint is the first 16 characters of the hex bytes of the key contents
+// It does not include the key type.
+export function getKeyFingerprint(key?: v2.PublicKey): string | undefined {
+  if (!key) {
+    return undefined;
+  }
+  return key.key.toHex().substring(0, 16);
 }
 
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
-export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
+export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
   try {
     if (!bundle.signedEvent) return null;
     const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
@@ -88,15 +82,13 @@ export function decodeV2PostBundle(bundle: v2.EventBundle): PostData | null {
     );
     if (content.contentBody.oneofKind !== 'post') return null;
 
-    const authorKey = key.signedBy.key;
-    const identityBytes = new TextEncoder().encode(key.identity);
-    const id = eventKey(authorKey, identityBytes, Number(key.sequence));
+    const id = v2.EventKey.toBinary(key).toHex();
 
     const post = content.contentBody.post;
     const reply = post.reply
       ? {
-          root: eventKeyToRef(post.reply.root),
-          parent: eventKeyToRef(post.reply.parent),
+          root: decodeEventKey(post.reply.root),
+          parent: decodeEventKey(post.reply.parent),
         }
       : undefined;
 

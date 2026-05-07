@@ -95,6 +95,8 @@ pub struct PolycentricCore {
 impl PolycentricCore {
     #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
+        #[cfg(target_arch = "wasm32")]
+        console_error_panic_hook::set_once();
         Arc::new(Self {
             client: Mutex::new(PolycentricClient::new()),
         })

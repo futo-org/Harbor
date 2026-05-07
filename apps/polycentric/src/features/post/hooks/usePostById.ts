@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { COLLECTION, v2 } from '@polycentric/react-native';
 import {
+  bytesToHex,
   decodeV2PostBundle,
+  hexToBytes,
   usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 
 /**
  * Load a single post by its (identity, sequence) route params.
@@ -15,7 +18,8 @@ import {
  */
 export function usePostById(
   identityId: string | undefined,
-  sequence: string | undefined,
+  keyFingerprint: string | undefined,
+  sequence: BigInt | undefined,
 ): { post: PostData | null; isLoading: boolean; error: Error | null } {
   const { client } = usePolycentricContext();
   const [post, setPost] = useState<PostData | null>(null);
@@ -23,8 +27,7 @@ export function usePostById(
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const seqNum = sequence ? Number(sequence) : NaN;
-    if (!identityId || !Number.isFinite(seqNum)) {
+    if (!keyFingerprint || !identityId || !sequence) {
       setPost(null);
       return;
     }
@@ -38,8 +41,8 @@ export function usePostById(
         const bundles = await client.listEvents({
           identity: identityId,
           collection: COLLECTION.FEED,
-          sequenceGt: seqNum - 1,
-          sequenceLt: seqNum + 1,
+          sequenceGt: Number(sequence) - 1,
+          sequenceLt: Number(sequence) + 1,
         });
         if (cancelled) return;
 
@@ -47,7 +50,11 @@ export function usePostById(
           if (!b.signedEvent) return false;
           try {
             const ev = v2.Event.fromBinary(b.signedEvent.eventBytes);
-            return Number(ev.key?.sequence) === seqNum;
+            if (!ev.vectorClock) return false;
+            return (
+              getKeyFingerprint(ev.key?.signedBy) === keyFingerprint &&
+              ev.key?.sequence === sequence
+            );
           } catch {
             return false;
           }
@@ -66,7 +73,7 @@ export function usePostById(
     return () => {
       cancelled = true;
     };
-  }, [client, identityId, sequence]);
+  }, [client, identityId, keyFingerprint, sequence]);
 
   return { post, isLoading, error };
 }

@@ -54,7 +54,7 @@ export function ComposeSheetInner({
   const client = usePolycentric();
   const { identityKey: currentIdentityKey, identity: currentIdentity } =
     useCurrentIdentity();
-  const username = useUsername(currentIdentityKey);
+
   const { theme } = useTheme();
 
   const onPostCreatedRef = useRef(onPostCreated);
@@ -171,7 +171,7 @@ export function ComposeSheetInner({
       const event = await client.buildEvent(content);
 
       const signedEvent = await client.signEvent(event);
-
+      console.log(signedEvent);
       // `commitEvent` persists the event locally and, when content is
       // passed, seeds the core's content store + emits contentCreated
       // with both signedEvent and content so feeds can decode directly.
@@ -185,6 +185,7 @@ export function ComposeSheetInner({
       // TODO
       // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
+      console.error(err);
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
     } finally {

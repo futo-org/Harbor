@@ -305,11 +305,13 @@ export class PolycentricClient {
             new Uint8Array(bytes),
             this.currentKeyPair.keyType,
           );
-          return signature.buffer as ArrayBuffer;
+          return signature.buffer.slice(
+            signature.byteOffset,
+            signature.byteOffset + signature.byteLength,
+          ) as ArrayBuffer;
         },
       },
     );
-
     return Proto.SignedEvent.fromBinary(new Uint8Array(signedEventBytes));
   }
 

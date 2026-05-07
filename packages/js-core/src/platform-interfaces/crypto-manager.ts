@@ -29,7 +29,7 @@ export interface ICryptoManager {
   /**
    * Sign a message with a private key
    *
-   * @param privateType - The private key bytes
+   * @param privateKey - The private key bytes
    * @param message - The message to sign
    * @param keyType - The type of key (e.g., KEY_TYPE.ED25519)
    * @returns Promise that resolves to the signature bytes

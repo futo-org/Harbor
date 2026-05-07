@@ -8,12 +8,21 @@ import { useCallback } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function FeedPostScreen() {
-  const { identityId, postId: sequenceParam } = useLocalSearchParams<{
+  const {
+    identityId,
+    keyFingerprint,
+    sequence = '',
+  } = useLocalSearchParams<{
     identityId: string;
-    postId: string;
+    keyFingerprint: string;
+    sequence: string;
   }>();
 
-  const { post, isLoading } = usePostById(identityId, sequenceParam);
+  const { post, isLoading } = usePostById(
+    identityId,
+    keyFingerprint,
+    BigInt(sequence),
+  );
 
   const handleBack = useCallback(() => {
     router.back();

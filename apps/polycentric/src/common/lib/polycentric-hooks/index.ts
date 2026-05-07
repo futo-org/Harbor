@@ -25,15 +25,13 @@ export {
 
 // Helpers
 export {
-  decodeV2PostBundle,
+  decodePostBundle as decodeV2PostBundle,
   pubkeyStr,
   identiconUrl,
   pickImageVariant,
   timeAgo,
   bytesToHex,
   hexToBytes,
-  eventKey,
-  postIdToSequence,
   truncateName,
   publicKeyToString,
   stringToPublicKey,

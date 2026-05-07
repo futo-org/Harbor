@@ -1,18 +1,25 @@
 import { SheetMenu } from '@/src/common/lib/sheet';
 import { Routes } from '@/src/common/constants';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
-import { types } from '@polycentric/react-native';
+import { types, v2 } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ComposeSheetInner } from './ComposeSheetInner';
+import { hexToBytes } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 
 export default function ComposeScreen() {
   const params = useLocalSearchParams<{ replyTo?: string; attach?: string }>();
 
-  // replyTo is an `identityId/sequence` path — the same identifier pair
-  // `Routes.tabs.post` uses.
-  const [replyToIdentity, replyToSequence] = params.replyTo?.split('/') ?? [];
-  const { post: replyTo } = usePostById(replyToIdentity, replyToSequence);
+  const replyToEventKey = params.replyTo
+    ? v2.EventKey.fromBinary(hexToBytes(params.replyTo))
+    : undefined;
+
+  const { post: replyTo } = usePostById(
+    replyToEventKey?.identity,
+    getKeyFingerprint(replyToEventKey?.signedBy),
+    replyToEventKey?.sequence,
+  );
 
   const attachOnMount = params.attach === '1';
 

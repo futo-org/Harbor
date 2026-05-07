@@ -6,15 +6,13 @@ import {
   View,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import {
-  postIdToSequence,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
+import { type PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
 import { usePostById } from './hooks/usePostById';
 import { useThreadReplies } from './hooks/useThreadReplies';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 
 interface ConversationViewProps {
   post: PostData;
@@ -26,11 +24,13 @@ export function ConversationView({ post }: ConversationViewProps) {
 
   const { post: rootPost } = usePostById(
     post.reply?.root?.identity,
-    post.reply?.root?.sequence,
+    getKeyFingerprint(post.reply?.root?.signedBy),
+    BigInt(post.reply?.root?.sequence || ''),
   );
   const { post: parentPost } = usePostById(
     post.reply?.parent?.identity,
-    post.reply?.parent?.sequence,
+    getKeyFingerprint(post.reply?.parent?.signedBy),
+    BigInt(post.reply?.parent?.sequence || ''),
   );
   const { replies } = useThreadReplies(post);
 
@@ -49,13 +49,6 @@ export function ConversationView({ post }: ConversationViewProps) {
     setTimeout(() => setRefreshing(false), 0);
   }, []);
 
-  const replyTo = useMemo(() => {
-    if (!post.identity) return undefined;
-    const sequence = postIdToSequence(post.id);
-    if (!sequence) return undefined;
-    return { identityId: post.identity, sequence };
-  }, [post.id, post.identity]);
-
   return (
     <FlashList
       data={items}
@@ -72,7 +65,7 @@ export function ConversationView({ post }: ConversationViewProps) {
             }
             hideBottomBorder={index < items.length - 1 && !!post.reply?.parent}
           />
-          {item.id === post.id ? <ComposerInput replyTo={replyTo} /> : null}
+          {item.id === post.id ? <ComposerInput replyTo={post.id} /> : null}
         </View>
       )}
       ListFooterComponent={<View style={{ height: windowHeight }} />}

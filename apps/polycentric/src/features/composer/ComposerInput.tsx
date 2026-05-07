@@ -1,6 +1,9 @@
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
-import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import {
+  PostData,
+  useCurrentIdentity,
+} from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +11,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 interface ComposerInputProps {
   /** When set, opens the composer pre-filled to reply to this post. */
-  replyTo?: { identityId: string; sequence: string };
+  replyTo?: PostData['id'];
 }
 
 /**

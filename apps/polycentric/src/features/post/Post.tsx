@@ -5,7 +5,6 @@ import {
 } from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  postIdToSequence,
   timeAgo,
   truncateName,
   type PostData,
@@ -18,6 +17,7 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -44,7 +44,6 @@ export const Post = memo(function Post({
   hideBottomBorder = false,
 }: PostProps) {
   const { theme } = useTheme();
-  const postId = post.id;
 
   const authorIdentity = post.identity ?? null;
 
@@ -54,9 +53,9 @@ export const Post = memo(function Post({
   const rawContent = post.content ?? '';
   const [contentExpanded, setContentExpanded] = useState(false);
 
-  useEffect(() => {
-    setContentExpanded(false);
-  }, [postId]);
+  // useEffect(() => {
+  //   setContentExpanded(false);
+  // }, [postId]);
 
   const { displayContent, isTruncatedPreview, showContentExpandToggle } =
     useMemo(() => {
@@ -85,11 +84,14 @@ export const Post = memo(function Post({
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    if (!authorIdentity) return;
-    const sequence = postIdToSequence(postId);
-    if (!sequence) return;
-    router.push(Routes.tabs.post(authorIdentity, sequence));
-  }, [disablePress, authorIdentity, postId]);
+    router.push(
+      Routes.tabs.post(
+        post.identity,
+        getKeyFingerprint(post.signedBy)!,
+        post.sequence,
+      ),
+    );
+  }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
     if (!authorIdentity) return;
@@ -97,11 +99,11 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const handleReply = useCallback(() => {
-    if (!authorIdentity) return;
-    const sequence = postIdToSequence(postId);
-    if (!sequence) return;
-    openCompose({ replyTo: { identityId: authorIdentity, sequence } });
-  }, [authorIdentity, postId]);
+    // if (!authorIdentity) return;
+    // const sequence = postIdToSequence(postId);
+    // if (!sequence) return;
+    // openCompose({ replyTo: { identityId: authorIdentity, sequence } });
+  }, [authorIdentity, post]);
 
   const handleLike = useCallback(() => {}, []);
 
