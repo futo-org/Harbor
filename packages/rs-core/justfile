@@ -7,11 +7,6 @@ _ensure-protos:
         exit 1; \
     fi
 
-_ensure-ffi: _ensure-protos
-    @if ! command -v llvm-strip > /dev/null; then \
-        echo "llvm-strip not found, skipping."; \
-    fi
-
 # Run all tests
 test: _ensure-protos
     @echo "Running tests..."
@@ -50,63 +45,8 @@ open-docs:
     @echo "Opening documentation..."
     @open target/doc/polycentric_core/index.html
 
-# Build, strip, and deploy FFI static lib for a given target
-_build-ffi target dest: _ensure-ffi
-    #!/usr/bin/env bash
-    # Skip Apple targets on non-macOS
-    if [[ "{{target}}" == *apple* ]] && [[ "$(uname)" != "Darwin" ]]; then
-        echo "Skipping {{target}} (requires macOS)"
-        exit 0
-    fi
-    if ! rustup target list --installed | grep -q '^{{target}}$'; then
-        echo "Skipping {{target}} (not installed — run 'rustup target add {{target}}' to enable)"
-        exit 0
-    fi
-    if ! cargo rustc --profile release-rs-core --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
-        echo "FAILED: {{target}}"
-        exit 1
-    fi
-    lib="../../target/{{target}}/release-rs-core/libpolycentric_core.a"
-    if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
-    mkdir -p "{{dest}}"
-    cp "$lib" "{{dest}}/libpolycentric_core.a"
-    size=$(du -sh "{{dest}}/libpolycentric_core.a" | cut -f1 | xargs)
-    printf "%-30s %s\n" "{{target}}" "$size"
-
-ios-libs := "../react-native/ios/libs"
-android-libs := "../react-native/android/libs"
-
-# Build FFI for real iOS devices (ARM64)
-build-ffi-ios: (_build-ffi "aarch64-apple-ios" (ios-libs / "aarch64-apple-ios"))
-# Build FFI for iOS simulator on Apple Silicon Macs
-build-ffi-ios-sim: (_build-ffi "aarch64-apple-ios-sim" (ios-libs / "aarch64-apple-ios-sim"))
-# Build FFI for iOS simulator on Intel Macs
-build-ffi-ios-sim-x86: (_build-ffi "x86_64-apple-ios" (ios-libs / "x86_64-apple-ios"))
-# Build FFI for Android ARM64
-build-ffi-android-arm64: (_build-ffi "aarch64-linux-android" (android-libs / "arm64-v8a"))
-# Build FFI for Android ARMv7
-build-ffi-android-armv7: (_build-ffi "armv7-linux-androideabi" (android-libs / "armeabi-v7a"))
-# Build FFI for Android x86
-build-ffi-android-x86: (_build-ffi "i686-linux-android" (android-libs / "x86"))
-# Build FFI for Android x86_64
-build-ffi-android-x86_64: (_build-ffi "x86_64-linux-android" (android-libs / "x86_64"))
-
-_clean-react-native-libs:
-    @rm -rf {{ios-libs}} {{android-libs}}
-# Build all Android targets
-build-ffi-android-all: build-ffi-android-arm64 build-ffi-android-armv7 build-ffi-android-x86 build-ffi-android-x86_64
-
-# Build everything (sim + android), deploy to react-native
-build-all: _clean-react-native-libs build-ffi-ios-sim build-ffi-android-all
-
-# Build everything (device + android), deploy to react-native
-build-all-device: _clean-react-native-libs build-ffi-ios build-ffi-android-all
-
-
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
     @cargo clean
-    @if [ -d pkg-web ]; then rm -rf pkg-web; echo "Removed pkg-web directory."; fi
-    @if [ -d pkg-node ]; then rm -rf pkg-node; echo "Removed pkg-node directory."; fi
     @echo "Build artifacts have been removed."
