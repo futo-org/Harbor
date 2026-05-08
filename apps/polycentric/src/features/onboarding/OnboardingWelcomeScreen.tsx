@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { Image } from 'expo-image';
-import WEB_LOGO from '../../common/assets/images/WebLogo.png';
+import WEB_LOGO from '../../common/assets/images/PolycentricLogoTransparent256.png';
 
 export default function OnboardingWelcomeScreen() {
   return (
