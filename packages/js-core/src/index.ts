@@ -27,12 +27,6 @@ export type * from './platform-interfaces';
 export { StorageHandle } from './storage';
 export type { Repositories } from './storage';
 
-export {
-  DrizzleStorageDriver,
-  migrate as migrateSqlite,
-} from './storage/sqlite';
-export type { SqliteDb } from './storage/sqlite';
-
 export { PolycentricClient } from './polycentric-client';
 export { IdentityManager } from './client-internal/identity-manager';
 export { PairingSessionManager } from './client-internal/pairing-session-manager';

@@ -1,7 +1,9 @@
 import { sql } from 'drizzle-orm';
-import type { IKeysRepository } from '../../../platform-interfaces';
-import type { PrivateKey } from '../../../polycentric-client';
-import { PublicKey } from '../../../proto/v2';
+import {
+  PublicKey,
+  type IKeysRepository,
+  type PrivateKey,
+} from '@polycentric/js-core';
 import type { SqliteDb } from '../database';
 
 interface KeysRow {

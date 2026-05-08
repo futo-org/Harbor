@@ -2,6 +2,12 @@ import { sql } from 'drizzle-orm';
 import type { SqliteDb } from './database';
 import { migrations } from './migrations';
 
+/**
+ * Custom migrations.
+ * `drizzle kit` migrations aren't a great fit
+ * due to awkward compatibility between
+ * Node.js and React Native environments.
+ */
 export async function migrate(db: SqliteDb): Promise<void> {
   await db.run(sql`
     CREATE TABLE IF NOT EXISTS __migrations (

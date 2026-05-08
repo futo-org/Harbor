@@ -2,9 +2,9 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import {
   DrizzleStorageDriver,
-  migrateSqlite,
+  migrate as migrateSqlite,
   type SqliteDb,
-} from '@polycentric/js-core';
+} from '@polycentric/js-storage-sqlite';
 
 export interface NodeStorage {
   driver: DrizzleStorageDriver;

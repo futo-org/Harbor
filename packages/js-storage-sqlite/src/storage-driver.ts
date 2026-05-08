@@ -1,8 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type {
-  IEventAckRepository,
-  IStorageDriver,
-} from '../../platform-interfaces';
+import type { IEventAckRepository, IStorageDriver } from '@polycentric/js-core';
 import type { SqliteDb } from './database';
 import { ContentRepository } from './repositories/content.repository';
 import { EventRepository } from './repositories/event.repository';

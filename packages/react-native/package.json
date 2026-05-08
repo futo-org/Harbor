@@ -123,6 +123,7 @@
     "@noble/curves": "^1.9.0",
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-uniffi-web": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "fast-text-encoding": "^1.0.6",

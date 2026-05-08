@@ -2,9 +2,9 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 import {
   DrizzleStorageDriver,
-  migrateSqlite,
+  migrate as migrateSqlite,
   type SqliteDb,
-} from '@polycentric/js-core';
+} from '@polycentric/js-storage-sqlite';
 
 export async function createReactNativeStorageDriver(
   databaseName: string

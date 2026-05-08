@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { IContentRepository } from '../../../platform-interfaces';
-import * as Proto from '../../../proto/v2';
+import { v2 as Proto, type IContentRepository } from '@polycentric/js-core';
 import type { SqliteDb } from '../database';
 
 interface ContentRow {
