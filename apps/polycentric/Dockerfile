@@ -19,6 +19,11 @@ ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 # and fall through to a full workspace build.
 ARG SKIP_WORKSPACE_BUILD=
 
+# Switches expo web export between SSR (`server`, default) and static SPA
+# (`single`) modes. Set to `single` for static hosts like Cloudflare Pages.
+ARG EXPO_WEB_OUTPUT=
+ENV EXPO_WEB_OUTPUT=$EXPO_WEB_OUTPUT
+
 COPY .npmrc turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY apps apps
@@ -30,7 +35,11 @@ RUN cd apps/polycentric && npx expo export --platform web
 # Non symlinked packages and node_modules
 RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy
 
-# Stage 3: Run
+# Stage 3: Export. Emits just the static web bundle for CI deploys.
+FROM scratch AS export
+COPY --from=build /app/apps/polycentric/dist /
+
+# Stage 4: Run
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production

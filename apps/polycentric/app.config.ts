@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './src/common/assets/images/PolycentricLogoWhite1024.png',
   scheme: 'polycentric',
   web: {
-    output: 'server',
+    output: process.env.EXPO_WEB_OUTPUT === 'single' ? 'single' : 'server',
   },
   userInterfaceStyle: 'automatic',
   ios: {

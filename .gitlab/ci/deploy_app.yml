@@ -63,3 +63,41 @@ app-deploy-manifest-production:
     ENVIRONMENT: production
   needs:
     - app-deploy-image-production
+
+###############################
+# Cloudflare Pages deploy     #
+###############################
+
+.app-web-cf-pages:
+  extends: .app-build-expo
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - apps/polycentric/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+  variables:
+    EXPO_WEB_OUTPUT: single
+    CF_PAGES_PROJECT: fusmi26
+  script:
+    - npx expo export --platform web
+    - npm install -g wrangler
+    - |
+      if ! wrangler pages project list | grep -q "$CF_PAGES_PROJECT"; then
+        wrangler pages project create $CF_PAGES_PROJECT --production-branch production
+      fi
+    - wrangler pages deploy ./dist --project-name=$CF_PAGES_PROJECT --branch=$ENVIRONMENT
+
+app-web-cf-pages-staging:
+  extends: .app-web-cf-pages
+  variables:
+    ENVIRONMENT: staging
+    EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS: https://staging-server.polycentric.dev
+
+app-web-cf-pages-production:
+  extends: .app-web-cf-pages
+  when: manual
+  variables:
+    ENVIRONMENT: production
+    EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS: https://server.polycentric.dev
