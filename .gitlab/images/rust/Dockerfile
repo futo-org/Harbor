@@ -11,9 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Rust deps
 RUN rustup set profile default && rustup component add clippy rustfmt
-RUN cargo install just cargo-ndk \
-    && cargo install wasm-bindgen-cli --version 0.2.113 \
-    && rm -rf /usr/local/cargo/registry
+RUN cargo install just wasm-bindgen-cli cargo-ndk && rm -rf /usr/local/cargo/registry
 
 # Android NDK
 RUN curl -L -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip" \

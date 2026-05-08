@@ -5,7 +5,10 @@ packages:
   - tools/*
 
 catalog:
-  typescript: ^5.9.3
   '@noble/hashes': ^1.8.0
+  typescript: ^5.9.3
 
 linkWorkspacePackages: true
+
+patchedDependencies:
+  uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch

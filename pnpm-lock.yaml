@@ -13,6 +13,11 @@ catalogs:
       specifier: ^5.9.3
       version: 5.9.3
 
+patchedDependencies:
+  uniffi-bindgen-react-native@0.31.0-2:
+    hash: 41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11
+    path: patches/uniffi-bindgen-react-native@0.31.0-2.patch
+
 importers:
 
   .:
@@ -341,7 +346,7 @@ importers:
         version: 1.11.0(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))
       uniffi-bindgen-react-native:
         specifier: 0.31.0-2
-        version: 0.31.0-2
+        version: 0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11)
     devDependencies:
       '@eslint/compat':
         specifier: ^1.3.2
@@ -399,7 +404,7 @@ importers:
     dependencies:
       uniffi-bindgen-react-native:
         specifier: 0.31.0-2
-        version: 0.31.0-2
+        version: 0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11)
 
   packages/rs-core-wasm-browser: {}
 
@@ -15902,7 +15907,7 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
-  uniffi-bindgen-react-native@0.31.0-2: {}
+  uniffi-bindgen-react-native@0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11): {}
 
   universalify@2.0.1: {}
 
