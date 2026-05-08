@@ -78,14 +78,9 @@ export interface GetPostThreadRequest {
  */
 export interface GetPostThreadResponse {
     /**
-     * @generated from protobuf field: polycentric.v2.EventBundle parent = 1
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle thread = 1
      */
-    parent?: EventBundle;
-    /**
-     * @generated from protobuf field: repeated polycentric.v2.EventBundle replies = 2
-     */
-    replies: EventBundle[]; // string next_token = 3;
-    // string previous_token = 4;
+    thread: EventBundle[];
 }
 /**
  * @generated from protobuf enum polycentric.v2.FeedAlgorithm
@@ -300,13 +295,12 @@ export const GetPostThreadRequest = new GetPostThreadRequest$Type();
 class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
     constructor() {
         super("polycentric.v2.GetPostThreadResponse", [
-            { no: 1, name: "parent", kind: "message", T: () => EventBundle },
-            { no: 2, name: "replies", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+            { no: 1, name: "thread", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
         ]);
     }
     create(value?: PartialMessage<GetPostThreadResponse>): GetPostThreadResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.replies = [];
+        message.thread = [];
         if (value !== undefined)
             reflectionMergePartial<GetPostThreadResponse>(this, message, value);
         return message;
@@ -316,11 +310,8 @@ class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* polycentric.v2.EventBundle parent */ 1:
-                    message.parent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.parent);
-                    break;
-                case /* repeated polycentric.v2.EventBundle replies */ 2:
-                    message.replies.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated polycentric.v2.EventBundle thread */ 1:
+                    message.thread.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -334,12 +325,9 @@ class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
         return message;
     }
     internalBinaryWrite(message: GetPostThreadResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.EventBundle parent = 1; */
-        if (message.parent)
-            EventBundle.internalBinaryWrite(message.parent, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* repeated polycentric.v2.EventBundle replies = 2; */
-        for (let i = 0; i < message.replies.length; i++)
-            EventBundle.internalBinaryWrite(message.replies[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventBundle thread = 1; */
+        for (let i = 0; i < message.thread.length; i++)
+            EventBundle.internalBinaryWrite(message.thread[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -80,14 +80,15 @@ impl FeedsService for FeedsServiceImpl {
         Ok(Response::new(reply))
     }
 
-    // Return a parent post and its direct replies.
+    // Return the thread for the subject post: ancestors (root → direct
+    // parent), the subject itself, then descendants (direct replies for now).
     async fn get_post_thread(
         &self,
         request: Request<GetPostThreadRequest>,
     ) -> Result<Response<GetPostThreadResponse>, Status> {
         let inner_req = request.into_inner();
 
-        let limit = if inner_req.limit <= 0 {
+        let descendants_limit = if inner_req.limit <= 0 {
             200
         } else {
             inner_req.limit.min(200) as u64
@@ -114,39 +115,101 @@ impl FeedsService for FeedsServiceImpl {
             Status::invalid_argument("event_key.sequence out of range")
         })?;
 
-        let parent_row = FeedsRepository::Query::find_event_by_key(
+        let subject_row = FeedsRepository::Query::find_event_by_key(
             &self.db,
             collection,
             &event_key.identity,
             public_key_type,
-            signed_by.key.clone(),
+            signed_by.key,
             sequence,
         )
         .await
         .map_err(map_db_err)?
-        .ok_or_else(|| Status::not_found("parent event not found"))?;
+        .ok_or_else(|| Status::not_found("event not found"))?;
+        let subject_id = subject_row.0.id;
 
-        let reply_rows =
-            FeedsRepository::Query::list_replies_by_parent_event_key(
-                &self.db,
-                collection,
-                &event_key.identity,
-                public_key_type,
-                signed_by.key,
-                sequence,
-                limit,
-            )
-            .await
-            .map_err(map_db_err)?;
+        const PARENT_HEIGHT_LIMIT: i32 = 50;
+        const DESCENDANT_DEPTH_LIMIT: i32 = 50;
 
-        let parent_bundle =
-            rows_to_bundles(vec![parent_row]).into_iter().next();
+        let ancestor_refs = FeedsRepository::Query::list_ancestor_refs(
+            &self.db,
+            subject_id,
+            PARENT_HEIGHT_LIMIT,
+        )
+        .await
+        .map_err(map_db_err)?;
 
-        let reply = GetPostThreadResponse {
-            parent: parent_bundle,
-            replies: rows_to_bundles(reply_rows),
-        };
-        Ok(Response::new(reply))
+        let descendant_refs = FeedsRepository::Query::list_descendant_refs(
+            &self.db,
+            subject_id,
+            DESCENDANT_DEPTH_LIMIT,
+            descendants_limit,
+        )
+        .await
+        .map_err(map_db_err)?;
+
+        // Build parent → [children, newest-first]. Order is (depth ASC, created_at DESC),
+        // so per-parent order is newest first
+        let mut children_by_parent: std::collections::HashMap<i64, Vec<i64>> =
+            std::collections::HashMap::new();
+        for r in &descendant_refs {
+            children_by_parent
+                .entry(r.parent_event_id)
+                .or_default()
+                .push(r.event_id);
+        }
+
+        // Only allow one 'branch' per thread
+        // We pick the newest of the last thread item.
+        const BRANCHING_FACTOR: usize = 1;
+        let mut descendant_order: Vec<i64> = Vec::new();
+        let mut stack: Vec<(i64, bool)> = Vec::new();
+        if let Some(direct) = children_by_parent.get(&subject_id) {
+            // Push reversed so the first direct reply is popped first.
+            for &id in direct.iter().rev() {
+                stack.push((id, false));
+            }
+        }
+        while let Some((id, _)) = stack.pop() {
+            descendant_order.push(id);
+            if let Some(kids) = children_by_parent.get(&id) {
+                let take = kids.len().min(BRANCHING_FACTOR);
+                for &kid in kids.iter().take(take).rev() {
+                    stack.push((kid, true));
+                }
+            }
+        }
+
+        let mut all_ids: Vec<i64> =
+            Vec::with_capacity(ancestor_refs.len() + descendant_order.len());
+        all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
+        all_ids.extend(descendant_order.iter().copied());
+        let mut by_id: std::collections::HashMap<i64, FeedRow> =
+            FeedsRepository::Query::list_events_by_ids(&self.db, all_ids)
+                .await
+                .map_err(map_db_err)?
+                .into_iter()
+                .map(|row| (row.0.id, row))
+                .collect();
+
+        let mut thread: Vec<FeedRow> = Vec::with_capacity(
+            ancestor_refs.len() + 1 + descendant_order.len(),
+        );
+        for r in &ancestor_refs {
+            if let Some(row) = by_id.remove(&r.event_id) {
+                thread.push(row);
+            }
+        }
+        thread.push(subject_row);
+        for id in &descendant_order {
+            if let Some(row) = by_id.remove(id) {
+                thread.push(row);
+            }
+        }
+
+        Ok(Response::new(GetPostThreadResponse {
+            thread: rows_to_bundles(thread),
+        }))
     }
 }
 

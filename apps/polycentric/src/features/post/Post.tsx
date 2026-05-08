@@ -99,10 +99,7 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const handleReply = useCallback(() => {
-    // if (!authorIdentity) return;
-    // const sequence = postIdToSequence(postId);
-    // if (!sequence) return;
-    // openCompose({ replyTo: { identityId: authorIdentity, sequence } });
+    openCompose({ replyTo: post.id });
   }, [authorIdentity, post]);
 
   const handleLike = useCallback(() => {}, []);

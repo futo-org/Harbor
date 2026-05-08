@@ -6,6 +6,7 @@ import {
   TextArea,
 } from '@/src/common/components/primitives';
 import {
+  hexToBytes,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
@@ -66,6 +67,12 @@ export function ComposeSheetInner({
     signedBy: replyTo?.signedBy,
     sequence: BigInt(replyTo?.sequence ?? 0),
   });
+
+  // If replyTo is itself a reply, inherit its root.
+  // Otherwise, replyTo *is* the root.
+  const replyRootEventKey = replyTo?.reply?.rootId
+    ? v2.EventKey.fromBinary(hexToBytes(replyTo.reply.rootId))
+    : replyToEventKey;
 
   const replyAuthorName = useUsername(replyTo?.identity ?? null);
   const replyContent = replyTo?.content ?? '';
@@ -156,7 +163,7 @@ export function ComposeSheetInner({
 
       if (isReply) {
         post.reply = {
-          root: replyToEventKey,
+          root: replyRootEventKey,
           parent: replyToEventKey,
         };
       }
@@ -199,6 +206,7 @@ export function ComposeSheetInner({
     dismissSheet,
     isReply,
     replyToEventKey,
+    replyRootEventKey,
     resetComposer,
     setSubmitting,
     setError,

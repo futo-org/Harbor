@@ -1,7 +1,7 @@
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
-use ::entity::content_post_model as ContentPostModel;
 use ::entity::event_model as EventModel;
+use sea_orm::FromQueryResult;
 use sea_orm::sea_query::{Expr, IntoCondition};
 use sea_orm::*;
 
@@ -106,38 +106,128 @@ impl Query {
             .await
     }
 
-    /// Return Feed events that are direct replies to the given parent
-    /// EventKey, newest first.
-    pub async fn list_replies_by_parent_event_key(
+    /// Bulk-fetch event rows by primary key, joining content. Order of the
+    /// returned Vec is unspecified — caller reorders against the input list.
+    pub async fn list_events_by_ids(
         db: &DbConn,
-        collection: i16,
-        identity: &str,
-        public_key_type: i16,
-        public_key: Vec<u8>,
-        sequence: i16,
-        limit: u64,
+        ids: Vec<i64>,
     ) -> Result<Vec<FeedRow>, DbErr> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
         EventModel::Entity::find()
             .select_also(ContentModel::Entity)
             .join(JoinType::LeftJoin, content_join())
-            .join(JoinType::InnerJoin, content_post_join())
-            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(
-                ContentPostModel::Column::ReplyParentCollection.eq(collection),
-            )
-            .filter(ContentPostModel::Column::ReplyParentIdentity.eq(identity))
-            .filter(
-                ContentPostModel::Column::ReplyParentPublicKeyType
-                    .eq(public_key_type),
-            )
-            .filter(
-                ContentPostModel::Column::ReplyParentPublicKey.eq(public_key),
-            )
-            .filter(ContentPostModel::Column::ReplyParentSequence.eq(sequence))
-            .order_by_desc(EventModel::Column::CreatedAt)
-            .limit(limit)
+            .filter(EventModel::Column::Id.is_in(ids))
             .all(db)
             .await
+    }
+
+    /// Return ids (and height) of ancestors
+    pub async fn list_ancestor_refs(
+        db: &DbConn,
+        subject_event_id: i64,
+        max_height: i32,
+    ) -> Result<Vec<AncestorRef>, DbErr> {
+        let stmt = Statement::from_sql_and_values(
+            db.get_database_backend(),
+            r#"
+            WITH RECURSIVE ancestor(event_id, height) AS (
+                SELECT pe.id, 1
+                FROM events sub_e
+                INNER JOIN content sub_c
+                    ON sub_c.digest_type = sub_e.content_digest_type
+                    AND sub_c.digest_bytes = sub_e.content_digest_bytes
+                INNER JOIN content_post sub_cp
+                    ON sub_cp.content_id = sub_c.id
+                INNER JOIN events pe
+                    ON pe.collection = sub_cp.reply_parent_collection
+                    AND pe.identity = sub_cp.reply_parent_identity
+                    AND pe.public_key_type = sub_cp.reply_parent_public_key_type
+                    AND pe.public_key = sub_cp.reply_parent_public_key
+                    AND pe.sequence = sub_cp.reply_parent_sequence
+                WHERE sub_e.id = $1
+
+                UNION ALL
+
+                SELECT npe.id, a.height + 1
+                FROM ancestor a
+                INNER JOIN events ae ON ae.id = a.event_id
+                INNER JOIN content ac
+                    ON ac.digest_type = ae.content_digest_type
+                    AND ac.digest_bytes = ae.content_digest_bytes
+                INNER JOIN content_post acp
+                    ON acp.content_id = ac.id
+                INNER JOIN events npe
+                    ON npe.collection = acp.reply_parent_collection
+                    AND npe.identity = acp.reply_parent_identity
+                    AND npe.public_key_type = acp.reply_parent_public_key_type
+                    AND npe.public_key = acp.reply_parent_public_key
+                    AND npe.sequence = acp.reply_parent_sequence
+                WHERE a.height < $2
+            )
+            SELECT event_id, height FROM ancestor ORDER BY height DESC
+            "#,
+            vec![subject_event_id.into(), max_height.into()],
+        );
+        AncestorRef::find_by_statement(stmt).all(db).await
+    }
+
+    /// Return every descendant of the subject as `(event_id, parent_event_id,
+    /// depth)`, ordered (depth ASC, created_at DESC) so per-parent groupings
+    /// come newest-first. Caller applies branching/sort/flatten.
+    pub async fn list_descendant_refs(
+        db: &DbConn,
+        subject_event_id: i64,
+        max_depth: i32,
+        limit: u64,
+    ) -> Result<Vec<DescendantRef>, DbErr> {
+        let stmt = Statement::from_sql_and_values(
+            db.get_database_backend(),
+            r#"
+            WITH RECURSIVE descendant(event_id, parent_event_id, depth, sort_at) AS (
+                SELECT reply_e.id, sub_e.id, 1, reply_e.created_at
+                FROM events sub_e
+                INNER JOIN content_post cp
+                    ON cp.reply_parent_collection = sub_e.collection
+                    AND cp.reply_parent_identity = sub_e.identity
+                    AND cp.reply_parent_public_key_type = sub_e.public_key_type
+                    AND cp.reply_parent_public_key = sub_e.public_key
+                    AND cp.reply_parent_sequence = sub_e.sequence
+                INNER JOIN content c ON c.id = cp.content_id
+                INNER JOIN events reply_e
+                    ON reply_e.content_digest_type = c.digest_type
+                    AND reply_e.content_digest_bytes = c.digest_bytes
+                WHERE sub_e.id = $1
+
+                UNION ALL
+
+                SELECT reply_e.id, de.id, d.depth + 1, reply_e.created_at
+                FROM descendant d
+                INNER JOIN events de ON de.id = d.event_id
+                INNER JOIN content_post cp
+                    ON cp.reply_parent_collection = de.collection
+                    AND cp.reply_parent_identity = de.identity
+                    AND cp.reply_parent_public_key_type = de.public_key_type
+                    AND cp.reply_parent_public_key = de.public_key
+                    AND cp.reply_parent_sequence = de.sequence
+                INNER JOIN content c ON c.id = cp.content_id
+                INNER JOIN events reply_e
+                    ON reply_e.content_digest_type = c.digest_type
+                    AND reply_e.content_digest_bytes = c.digest_bytes
+                WHERE d.depth < $2
+            )
+            SELECT event_id, parent_event_id, depth FROM descendant
+            ORDER BY depth ASC, sort_at DESC
+            LIMIT $3
+            "#,
+            vec![
+                subject_event_id.into(),
+                max_depth.into(),
+                (limit as i64).into(),
+            ],
+        );
+        DescendantRef::find_by_statement(stmt).all(db).await
     }
 }
 
@@ -154,10 +244,13 @@ fn content_join() -> RelationDef {
         .into()
 }
 
-/// Relation joining a content row to its content_post row on content id.
-fn content_post_join() -> RelationDef {
-    ContentModel::Entity::belongs_to(ContentPostModel::Entity)
-        .from(ContentModel::Column::Id)
-        .to(ContentPostModel::Column::ContentId)
-        .into()
+#[derive(Debug, FromQueryResult)]
+pub struct AncestorRef {
+    pub event_id: i64,
+}
+
+#[derive(Debug, FromQueryResult)]
+pub struct DescendantRef {
+    pub event_id: i64,
+    pub parent_event_id: i64,
 }

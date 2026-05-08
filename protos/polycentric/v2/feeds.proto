@@ -33,10 +33,7 @@ message GetPostThreadRequest {
 }
 
 message GetPostThreadResponse {
-  EventBundle parent = 1;
-  repeated EventBundle replies = 2;
-  // string next_token = 3;
-  // string previous_token = 4;
+  repeated EventBundle thread = 1;
 }
 
 /**

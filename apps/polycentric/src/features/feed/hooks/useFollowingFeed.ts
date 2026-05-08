@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
+  useLocalPostInjection,
   usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
@@ -48,31 +49,13 @@ export function useFollowingFeed(options?: {
     if (enabled) fetchFeed();
   }, [enabled, fetchFeed]);
 
-  // Add locally-committed posts to the top of the feed as soon as
-  // they're committed — before the server round-trip.
-  useEffect(() => {
-    const listener = ({
-      signedEvent,
-      content,
-    }: {
-      signedEvent: v2.SignedEvent;
-      content?: v2.Content;
-    }) => {
-      if (!content) return;
-      const decoded = decodeV2PostBundle(
-        v2.EventBundle.create({
-          signedEvent,
-          serializedContent: { contentBytes: v2.Content.toBinary(content) },
-        }),
-      );
-      if (!decoded) return;
+  useLocalPostInjection({
+    match: () => true,
+    insert: (decoded) =>
       setItems((prev) =>
         prev.some((p) => p.id === decoded.id) ? prev : [decoded, ...prev],
-      );
-    };
-    client.events.onContentCreated(listener);
-    return () => client.events.offContentCreated(listener);
-  }, [client]);
+      ),
+  });
 
   return {
     items,

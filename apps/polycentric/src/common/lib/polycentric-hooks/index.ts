@@ -23,6 +23,9 @@ export {
   type ProfileEditState,
 } from '../../../features/profile/hooks/useProfileEdit';
 
+// Local post injection (composer → live feeds)
+export { useLocalPosts as useLocalPostInjection } from '../../../features/post/hooks/useLocalPosts';
+
 // Helpers
 export {
   decodePostBundle as decodeV2PostBundle,
@@ -45,4 +48,4 @@ export {
   toBase64,
   fromBase64,
 } from './helpers';
-export type { EventKeyRef, PostData } from './helpers';
+export type { PostData } from './helpers';

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { EventKeyRef, PostData } from '../lib/polycentric-hooks';
+import { PostData } from '../lib/polycentric-hooks';
 
 export type OpenComposeOptions = {
   replyTo?: PostData['id'];

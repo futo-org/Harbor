@@ -29,6 +29,7 @@ export function useExploreFeed(options?: {
       }
       setItems(posts);
     } catch (e) {
+      console.warn('[useExploreFeed] fetch failed', e);
       setError(e instanceof Error ? e : new Error(String(e)));
     } finally {
       setIsLoading(false);
