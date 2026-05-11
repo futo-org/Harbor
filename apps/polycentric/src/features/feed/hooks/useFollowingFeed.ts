@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   useLocalPostInjection,
@@ -28,14 +27,15 @@ export function useFollowingFeed(options?: {
     setIsLoading(true);
     setError(null);
     try {
-      const bundles = await client.getFeed({
-        algorithm: v2.FeedAlgorithm.FOLLOWING,
+      const responses = await client.getFollowingFeed({
         limit: options?.limit ?? null,
       });
       const posts: PostData[] = [];
-      for (const bundle of bundles) {
-        const decoded = decodeV2PostBundle(bundle);
-        if (decoded) posts.push(decoded);
+      for (const response of responses) {
+        for (const bundle of response.eventBundles) {
+          const decoded = decodeV2PostBundle(bundle);
+          if (decoded) posts.push(decoded);
+        }
       }
       setItems(posts);
     } catch (e) {

@@ -21,11 +21,16 @@ export function useExploreFeed(options?: {
     setIsLoading(true);
     setError(null);
     try {
-      const bundles = await client.listEvents();
+      const responses = await client.getExploreFeed({
+        identity: client.activeIdentityKey,
+        limit: options?.perServerLimit ?? null,
+      });
       const posts: PostData[] = [];
-      for (const bundle of bundles) {
-        const decoded = decodeV2PostBundle(bundle);
-        if (decoded) posts.push(decoded);
+      for (const response of responses) {
+        for (const bundle of response.eventBundles) {
+          const decoded = decodeV2PostBundle(bundle);
+          if (decoded) posts.push(decoded);
+        }
       }
       setItems(posts);
     } catch (e) {
@@ -34,7 +39,7 @@ export function useExploreFeed(options?: {
     } finally {
       setIsLoading(false);
     }
-  }, [client]);
+  }, [client, options?.perServerLimit]);
 
   useEffect(() => {
     if (enabled) fetchFeed();

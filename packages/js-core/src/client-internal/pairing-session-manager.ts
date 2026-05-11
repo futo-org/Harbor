@@ -1,8 +1,3 @@
-import {
-  createPairingSession,
-  getPairingSession,
-  joinPairingSession,
-} from '../grpc/transport';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesToHex } from '../utils/hex';
@@ -69,8 +64,13 @@ export class PairingSessionManager {
     );
     const signedMessage = await this.signMessage(pairingSessionBytes);
 
-    // send the gRPC request
-    const session = await createPairingSession(server, signedMessage);
+    const sessionBytes = await this.client.core.createPairingSession(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+    const session = Proto.PairingSession.fromBinary(
+      new Uint8Array(sessionBytes),
+    );
     const initialSession = session.initialSession!;
 
     return {
@@ -91,9 +91,12 @@ export class PairingSessionManager {
     const targetServer = server ?? this.client.servers[0];
     if (!targetServer) throw new Error('No servers configured');
 
-    const session = await getPairingSession(
+    const sessionBytes = await this.client.core.getPairingSession(
       targetServer,
       pairingSessionSignature,
+    );
+    const session = Proto.PairingSession.fromBinary(
+      new Uint8Array(sessionBytes),
     );
     const initialSession = session.initialSession!;
     return {
@@ -120,7 +123,13 @@ export class PairingSessionManager {
     );
     const signedMessage = await this.signMessage(bodyBytes);
 
-    const session = await joinPairingSession(server, signedMessage);
+    const sessionBytes = await this.client.core.joinPairingSession(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+    const session = Proto.PairingSession.fromBinary(
+      new Uint8Array(sessionBytes),
+    );
     const initialSession = session.initialSession!;
     return {
       session,

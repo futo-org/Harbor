@@ -429,13 +429,58 @@ export interface PolycentricCoreLike {
    */
   copyEvents(signedEvents: Array<ArrayBuffer>) /*throws*/ : void;
   /**
-   * Fetch a curated feed. Returns serialized `GetFeedResponse` bytes.
+   * Create a pairing session on the server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping an `InitialPairingSession`.
+   * Returns serialized `PairingSession` proto bytes.
    */
-  getFeed(
+  createPairingSession(
     serverUrl: string,
-    algorithm: /*i32*/ number,
-    limit: /*i32*/ number | undefined,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
+   * Fetch the server-curated explore feed of posts relevant to `identity`.
+   */
+  getExploreFeed(
+    serverUrl: string,
     identity: string | undefined,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
+   * Fetch the feed of posts from identities the caller follows. When
+   * `follower_identity` is `None` the server uses the authenticated
+   * caller's follow graph.
+   */
+  getFollowingFeed(
+    serverUrl: string,
+    followerIdentity: string | undefined,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
+   * Fetch the feed of posts authored by `identity`. Returns serialized
+   * `GetFeedResponse` proto bytes.
+   */
+  getIdentityFeed(
+    serverUrl: string,
+    identity: string,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
+   * Fetch a pairing session by its signature. Returns serialized
+   * `PairingSession` proto bytes.
+   */
+  getPairingSession(
+    serverUrl: string,
+    pairingSessionSignature: string,
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -453,6 +498,16 @@ export interface PolycentricCoreLike {
    */
   getServerInfo(
     serverUrl: string,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
+   * Join an existing pairing session. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
+   * Returns serialized `PairingSession` proto bytes.
+   */
+  joinPairingSession(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -630,13 +685,13 @@ export class PolycentricCore
   }
 
   /**
-   * Fetch a curated feed. Returns serialized `GetFeedResponse` bytes.
+   * Create a pairing session on the server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping an `InitialPairingSession`.
+   * Returns serialized `PairingSession` proto bytes.
    */
-  async getFeed(
+  async createPairingSession(
     serverUrl: string,
-    algorithm: /*i32*/ number,
-    limit: /*i32*/ number | undefined,
-    identity: string | undefined,
+    signedMessageBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal }
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -644,12 +699,208 @@ export class PolycentricCore
       return await uniffiRustCallAsync(
         /*rustCaller:*/ uniffiCaller,
         /*rustFutureFunc:*/ () => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_feed(
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_create_pairing_session(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(serverUrl),
-            FfiConverterInt32.lower(algorithm),
+            FfiConverterArrayBuffer.lower(signedMessageBytes)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift,
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Fetch the server-curated explore feed of posts relevant to `identity`.
+   */
+  async getExploreFeed(
+    serverUrl: string,
+    identity: string | undefined,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(serverUrl),
+            FfiConverterOptionalString.lower(identity),
             FfiConverterOptionalInt32.lower(limit),
-            FfiConverterOptionalString.lower(identity)
+            FfiConverterOptionalString.lower(beforeToken),
+            FfiConverterOptionalString.lower(afterToken)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift,
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Fetch the feed of posts from identities the caller follows. When
+   * `follower_identity` is `None` the server uses the authenticated
+   * caller's follow graph.
+   */
+  async getFollowingFeed(
+    serverUrl: string,
+    followerIdentity: string | undefined,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(serverUrl),
+            FfiConverterOptionalString.lower(followerIdentity),
+            FfiConverterOptionalInt32.lower(limit),
+            FfiConverterOptionalString.lower(beforeToken),
+            FfiConverterOptionalString.lower(afterToken)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift,
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Fetch the feed of posts authored by `identity`. Returns serialized
+   * `GetFeedResponse` proto bytes.
+   */
+  async getIdentityFeed(
+    serverUrl: string,
+    identity: string,
+    limit: /*i32*/ number | undefined,
+    beforeToken: string | undefined,
+    afterToken: string | undefined,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(serverUrl),
+            FfiConverterString.lower(identity),
+            FfiConverterOptionalInt32.lower(limit),
+            FfiConverterOptionalString.lower(beforeToken),
+            FfiConverterOptionalString.lower(afterToken)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift,
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Fetch a pairing session by its signature. Returns serialized
+   * `PairingSession` proto bytes.
+   */
+  async getPairingSession(
+    serverUrl: string,
+    pairingSessionSignature: string,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(serverUrl),
+            FfiConverterString.lower(pairingSessionSignature)
           );
         },
         /*pollFunc:*/ nativeModule()
@@ -738,6 +989,52 @@ export class PolycentricCore
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(serverUrl)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift,
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Join an existing pairing session. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
+   * Returns serialized `PairingSession` proto bytes.
+   */
+  async joinPairingSession(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(serverUrl),
+            FfiConverterArrayBuffer.lower(signedMessageBytes)
           );
         },
         /*pollFunc:*/ nativeModule()
@@ -1470,11 +1767,43 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_feed() !==
-    6465
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session() !==
+    41985
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_feed'
+      'uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed() !==
+    1684
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed() !==
+    48083
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed() !==
+    40769
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !==
+    24179
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session'
     );
   }
   if (
@@ -1491,6 +1820,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session() !==
+    15965
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session'
     );
   }
   if (

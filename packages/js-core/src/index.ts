@@ -41,7 +41,6 @@ export type {
 export * from './errors';
 export * as Errors from './errors';
 export * from './utils';
-export * from './grpc';
 
 export { KEY_TYPE, COLLECTION, HydrationStrategy } from './constants';
 

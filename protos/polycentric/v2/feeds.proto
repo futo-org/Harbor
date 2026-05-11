@@ -10,20 +10,33 @@ enum FeedAlgorithm {
   FEED_ALGORITHM_SUGGESTED = 2;
 }
 
-message GetFeedRequest {
-  FeedAlgorithm algorithm = 1;
-  optional int32 limit = 2;
-  optional string before_token = 3;
-  optional string after_token = 4;
-  // Identity of the caller, required when algorithm depends on the caller's
-  // social graph (e.g. FEED_ALGORITHM_FOLLOWING).
-  optional string identity = 5;
+message FeedPageParams {
+  optional int32 limit = 1;
+  optional string before_token = 2;
+  optional string after_token = 3;
+}
+
+message GetIdentityFeedRequest {
+  // Identity to return the posts of
+  string identity = 1;
+  optional FeedPageParams page_params = 2;
+}
+
+message GetFollowingFeedRequest {
+  // Identity of the follower to return the feed for
+  optional string follower_identity = 1;
+  optional FeedPageParams page_params = 2;
+}
+
+message GetExploreFeedRequest {
+  // Identity of the caller to return relevant posts fort
+  optional string identity = 1;
+  optional FeedPageParams page_params = 2;
 }
 
 message GetFeedResponse {
   repeated EventBundle event_bundles = 1;
-  string next_token = 2;
-  string previous_token = 3;
+  repeated EventHint event_hints = 2;
 }
 
 message GetPostThreadRequest {
@@ -40,8 +53,12 @@ message GetPostThreadResponse {
  * Curated feeds provided by servers
  */
 service FeedsService {
-  // Returns a curated feed base on the rwquest inputs
-  rpc GetFeed(GetFeedRequest) returns (GetFeedResponse);
+  // Posts that belong to an identity
+  rpc GetIdentityFeed(GetIdentityFeedRequest) returns (GetFeedResponse);
+  //
+  rpc GetFollowingFeed(GetFollowingFeedRequest) returns (GetFeedResponse);
+  //
+  rpc GetExploreFeed(GetExploreFeedRequest) returns (GetFeedResponse);
   // Replies to a post
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
 }

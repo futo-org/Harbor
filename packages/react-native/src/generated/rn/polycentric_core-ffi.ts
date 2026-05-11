@@ -57,12 +57,39 @@ interface NativeModuleInterface {
     signedEvents: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): void;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_feed(
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_create_pairing_session(
     ptr: bigint,
     serverUrl: Uint8Array,
-    algorithm: number,
+    signedMessageBytes: Uint8Array
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
+    ptr: bigint,
+    serverUrl: Uint8Array,
+    identity: Uint8Array,
     limit: Uint8Array,
-    identity: Uint8Array
+    beforeToken: Uint8Array,
+    afterToken: Uint8Array
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
+    ptr: bigint,
+    serverUrl: Uint8Array,
+    followerIdentity: Uint8Array,
+    limit: Uint8Array,
+    beforeToken: Uint8Array,
+    afterToken: Uint8Array
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
+    ptr: bigint,
+    serverUrl: Uint8Array,
+    identity: Uint8Array,
+    limit: Uint8Array,
+    beforeToken: Uint8Array,
+    afterToken: Uint8Array
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
+    ptr: bigint,
+    serverUrl: Uint8Array,
+    pairingSessionSignature: Uint8Array
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_post_thread(
     ptr: bigint,
@@ -72,6 +99,11 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(
     ptr: bigint,
     serverUrl: Uint8Array
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
+    ptr: bigint,
+    serverUrl: Uint8Array,
+    signedMessageBytes: Uint8Array
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
     ptr: bigint,
@@ -281,9 +313,14 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_feed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;

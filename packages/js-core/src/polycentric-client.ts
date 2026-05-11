@@ -418,54 +418,100 @@ export class PolycentricClient {
   }
 
   /**
-   * Fetch a curated feed from every configured server and return the
-   * aggregated events. Does not persist — callers decide what to do with
-   * the response.
-   *
-   * For `FeedAlgorithm.FOLLOWING` the caller must be authenticated locally
-   * (an active identity) so that the server can scope the feed to their
-   * follow graph.
+   * Fetch posts authored by `identity` from every configured server and
+   * return the per-server responses. Does not persist — callers decide
+   * what to do with the response.
    */
-  async getFeed(options?: {
-    algorithm?: Proto.FeedAlgorithm;
+  async getIdentityFeed(options: {
+    identity: string;
     limit?: number | null;
-    identity?: string | null;
-  }): Promise<Proto.EventBundle[]> {
-    const algorithm = options?.algorithm ?? Proto.FeedAlgorithm.UNSPECIFIED;
-    const identity =
-      options?.identity ??
-      (algorithm === Proto.FeedAlgorithm.FOLLOWING
-        ? this.activeIdentityKey
-        : null);
+    beforeToken?: string | null;
+    afterToken?: string | null;
+  }): Promise<Proto.GetFeedResponse[]> {
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core.getIdentityFeed(
+          server,
+          options.identity,
+          options.limit ?? undefined,
+          options.beforeToken ?? undefined,
+          options.afterToken ?? undefined,
+        ),
+      ),
+    );
+    return this.collectFeedResponses(results, 'getIdentityFeed');
+  }
 
-    if (algorithm === Proto.FeedAlgorithm.FOLLOWING && !identity) {
-      throw new Error('getFeed(FOLLOWING) requires an active identity');
+  /**
+   * Fetch the feed of posts from identities the caller follows. Defaults
+   * to the active identity's follow graph when `followerIdentity` is
+   * omitted.
+   */
+  async getFollowingFeed(options?: {
+    followerIdentity?: string | null;
+    limit?: number | null;
+    beforeToken?: string | null;
+    afterToken?: string | null;
+  }): Promise<Proto.GetFeedResponse[]> {
+    const followerIdentity =
+      options?.followerIdentity ?? this.activeIdentityKey;
+
+    if (!followerIdentity) {
+      throw new Error('getFollowingFeed requires an active identity');
     }
 
     const results = await Promise.allSettled(
       this.servers.map((server) =>
-        this.core.getFeed(
+        this.core.getFollowingFeed(
           server,
-          algorithm,
+          followerIdentity,
           options?.limit ?? undefined,
-          identity ?? undefined,
+          options?.beforeToken ?? undefined,
+          options?.afterToken ?? undefined,
         ),
       ),
     );
+    return this.collectFeedResponses(results, 'getFollowingFeed');
+  }
 
-    const bundles: Proto.EventBundle[] = [];
+  /**
+   * Fetch the server-curated explore feed of posts relevant to `identity`.
+   */
+  async getExploreFeed(options?: {
+    identity?: string | null;
+    limit?: number | null;
+    beforeToken?: string | null;
+    afterToken?: string | null;
+  }): Promise<Proto.GetFeedResponse[]> {
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core.getExploreFeed(
+          server,
+          options?.identity ?? undefined,
+          options?.limit ?? undefined,
+          options?.beforeToken ?? undefined,
+          options?.afterToken ?? undefined,
+        ),
+      ),
+    );
+    return this.collectFeedResponses(results, 'getExploreFeed');
+  }
+
+  private collectFeedResponses(
+    results: PromiseSettledResult<ArrayBuffer>[],
+    label: string,
+  ): Proto.GetFeedResponse[] {
+    const responses: Proto.GetFeedResponse[] = [];
     for (const result of results) {
       if (result.status === 'rejected') {
-        console.error('getFeed failed for a server:', result.reason);
+        console.error(`${label} failed for a server:`, result.reason);
         continue;
       }
-      const response = Proto.GetFeedResponse.fromBinary(
-        new Uint8Array(result.value),
+      responses.push(
+        Proto.GetFeedResponse.fromBinary(new Uint8Array(result.value)),
       );
-      bundles.push(...response.eventBundles);
     }
-
-    return bundles;
+    return responses;
   }
 
   /**

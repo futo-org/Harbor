@@ -12,34 +12,69 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventKey } from "./event_key";
+import { EventHint } from "./events";
 import { EventBundle } from "./events";
 /**
- * @generated from protobuf message polycentric.v2.GetFeedRequest
+ * @generated from protobuf message polycentric.v2.FeedPageParams
  */
-export interface GetFeedRequest {
+export interface FeedPageParams {
     /**
-     * @generated from protobuf field: polycentric.v2.FeedAlgorithm algorithm = 1
-     */
-    algorithm: FeedAlgorithm;
-    /**
-     * @generated from protobuf field: optional int32 limit = 2
+     * @generated from protobuf field: optional int32 limit = 1
      */
     limit?: number;
     /**
-     * @generated from protobuf field: optional string before_token = 3
+     * @generated from protobuf field: optional string before_token = 2
      */
     beforeToken?: string;
     /**
-     * @generated from protobuf field: optional string after_token = 4
+     * @generated from protobuf field: optional string after_token = 3
      */
     afterToken?: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetIdentityFeedRequest
+ */
+export interface GetIdentityFeedRequest {
     /**
-     * Identity of the caller, required when algorithm depends on the caller's
-     * social graph (e.g. FEED_ALGORITHM_FOLLOWING).
+     * Identity to return the posts of
      *
-     * @generated from protobuf field: optional string identity = 5
+     * @generated from protobuf field: string identity = 1
+     */
+    identity: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     */
+    pageParams?: FeedPageParams;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetFollowingFeedRequest
+ */
+export interface GetFollowingFeedRequest {
+    /**
+     * Identity of the follower to return the feed for
+     *
+     * @generated from protobuf field: optional string follower_identity = 1
+     */
+    followerIdentity?: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     */
+    pageParams?: FeedPageParams;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetExploreFeedRequest
+ */
+export interface GetExploreFeedRequest {
+    /**
+     * Identity of the caller to return relevant posts fort
+     *
+     * @generated from protobuf field: optional string identity = 1
      */
     identity?: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     */
+    pageParams?: FeedPageParams;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFeedResponse
@@ -50,13 +85,9 @@ export interface GetFeedResponse {
      */
     eventBundles: EventBundle[];
     /**
-     * @generated from protobuf field: string next_token = 2
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
-    nextToken: string;
-    /**
-     * @generated from protobuf field: string previous_token = 3
-     */
-    previousToken: string;
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf message polycentric.v2.GetPostThreadRequest
@@ -100,42 +131,33 @@ export enum FeedAlgorithm {
     SUGGESTED = 2
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
+class FeedPageParams$Type extends MessageType<FeedPageParams> {
     constructor() {
-        super("polycentric.v2.GetFeedRequest", [
-            { no: 1, name: "algorithm", kind: "enum", T: () => ["polycentric.v2.FeedAlgorithm", FeedAlgorithm, "FEED_ALGORITHM_"] },
-            { no: 2, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "before_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "after_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        super("polycentric.v2.FeedPageParams", [
+            { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "before_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "after_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<GetFeedRequest>): GetFeedRequest {
+    create(value?: PartialMessage<FeedPageParams>): FeedPageParams {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.algorithm = 0;
         if (value !== undefined)
-            reflectionMergePartial<GetFeedRequest>(this, message, value);
+            reflectionMergePartial<FeedPageParams>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetFeedRequest): GetFeedRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FeedPageParams): FeedPageParams {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* polycentric.v2.FeedAlgorithm algorithm */ 1:
-                    message.algorithm = reader.int32();
-                    break;
-                case /* optional int32 limit */ 2:
+                case /* optional int32 limit */ 1:
                     message.limit = reader.int32();
                     break;
-                case /* optional string before_token */ 3:
+                case /* optional string before_token */ 2:
                     message.beforeToken = reader.string();
                     break;
-                case /* optional string after_token */ 4:
+                case /* optional string after_token */ 3:
                     message.afterToken = reader.string();
-                    break;
-                case /* optional string identity */ 5:
-                    message.identity = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -148,22 +170,16 @@ class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: GetFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.FeedAlgorithm algorithm = 1; */
-        if (message.algorithm !== 0)
-            writer.tag(1, WireType.Varint).int32(message.algorithm);
-        /* optional int32 limit = 2; */
+    internalBinaryWrite(message: FeedPageParams, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional int32 limit = 1; */
         if (message.limit !== undefined)
-            writer.tag(2, WireType.Varint).int32(message.limit);
-        /* optional string before_token = 3; */
+            writer.tag(1, WireType.Varint).int32(message.limit);
+        /* optional string before_token = 2; */
         if (message.beforeToken !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.beforeToken);
-        /* optional string after_token = 4; */
+            writer.tag(2, WireType.LengthDelimited).string(message.beforeToken);
+        /* optional string after_token = 3; */
         if (message.afterToken !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.afterToken);
-        /* optional string identity = 5; */
-        if (message.identity !== undefined)
-            writer.tag(5, WireType.LengthDelimited).string(message.identity);
+            writer.tag(3, WireType.LengthDelimited).string(message.afterToken);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -171,23 +187,181 @@ class GetFeedRequest$Type extends MessageType<GetFeedRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.GetFeedRequest
+ * @generated MessageType for protobuf message polycentric.v2.FeedPageParams
  */
-export const GetFeedRequest = new GetFeedRequest$Type();
+export const FeedPageParams = new FeedPageParams$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetIdentityFeedRequest$Type extends MessageType<GetIdentityFeedRequest> {
+    constructor() {
+        super("polycentric.v2.GetIdentityFeedRequest", [
+            { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+        ]);
+    }
+    create(value?: PartialMessage<GetIdentityFeedRequest>): GetIdentityFeedRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = "";
+        if (value !== undefined)
+            reflectionMergePartial<GetIdentityFeedRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetIdentityFeedRequest): GetIdentityFeedRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
+                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetIdentityFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string identity = 1; */
+        if (message.identity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        if (message.pageParams)
+            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetIdentityFeedRequest
+ */
+export const GetIdentityFeedRequest = new GetIdentityFeedRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> {
+    constructor() {
+        super("polycentric.v2.GetFollowingFeedRequest", [
+            { no: 1, name: "follower_identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+        ]);
+    }
+    create(value?: PartialMessage<GetFollowingFeedRequest>): GetFollowingFeedRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetFollowingFeedRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetFollowingFeedRequest): GetFollowingFeedRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional string follower_identity */ 1:
+                    message.followerIdentity = reader.string();
+                    break;
+                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
+                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetFollowingFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string follower_identity = 1; */
+        if (message.followerIdentity !== undefined)
+            writer.tag(1, WireType.LengthDelimited).string(message.followerIdentity);
+        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        if (message.pageParams)
+            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetFollowingFeedRequest
+ */
+export const GetFollowingFeedRequest = new GetFollowingFeedRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
+    constructor() {
+        super("polycentric.v2.GetExploreFeedRequest", [
+            { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+        ]);
+    }
+    create(value?: PartialMessage<GetExploreFeedRequest>): GetExploreFeedRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetExploreFeedRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetExploreFeedRequest): GetExploreFeedRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
+                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetExploreFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string identity = 1; */
+        if (message.identity !== undefined)
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        if (message.pageParams)
+            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetExploreFeedRequest
+ */
+export const GetExploreFeedRequest = new GetExploreFeedRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
     constructor() {
         super("polycentric.v2.GetFeedResponse", [
             { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
-            { no: 2, name: "next_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "previous_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<GetFeedResponse>): GetFeedResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.eventBundles = [];
-        message.nextToken = "";
-        message.previousToken = "";
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<GetFeedResponse>(this, message, value);
         return message;
@@ -200,11 +374,8 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
                 case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
                     message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
                     break;
-                case /* string next_token */ 2:
-                    message.nextToken = reader.string();
-                    break;
-                case /* string previous_token */ 3:
-                    message.previousToken = reader.string();
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -221,12 +392,9 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
         /* repeated polycentric.v2.EventBundle event_bundles = 1; */
         for (let i = 0; i < message.eventBundles.length; i++)
             EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* string next_token = 2; */
-        if (message.nextToken !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.nextToken);
-        /* string previous_token = 3; */
-        if (message.previousToken !== "")
-            writer.tag(3, WireType.LengthDelimited).string(message.previousToken);
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -342,6 +510,8 @@ export const GetPostThreadResponse = new GetPostThreadResponse$Type();
  * @generated ServiceType for protobuf service polycentric.v2.FeedsService
  */
 export const FeedsService = new ServiceType("polycentric.v2.FeedsService", [
-    { name: "GetFeed", options: {}, I: GetFeedRequest, O: GetFeedResponse },
+    { name: "GetIdentityFeed", options: {}, I: GetIdentityFeedRequest, O: GetFeedResponse },
+    { name: "GetFollowingFeed", options: {}, I: GetFollowingFeedRequest, O: GetFeedResponse },
+    { name: "GetExploreFeed", options: {}, I: GetExploreFeedRequest, O: GetFeedResponse },
     { name: "GetPostThread", options: {}, I: GetPostThreadRequest, O: GetPostThreadResponse }
 ]);

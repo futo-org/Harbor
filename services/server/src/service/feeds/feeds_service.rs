@@ -3,9 +3,9 @@ use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    EventBundle, FeedAlgorithm, GetFeedRequest, GetFeedResponse,
-    GetPostThreadRequest, GetPostThreadResponse, SerializedContent,
-    SignedEvent,
+    EventBundle, FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse, SerializedContent, SignedEvent,
 };
 use tonic::{Request, Response, Status};
 
@@ -14,70 +14,95 @@ pub struct FeedsServiceImpl {
     db: sea_orm::DatabaseConnection,
 }
 
+fn page_limit(page_params: &Option<FeedPageParams>) -> u64 {
+    page_params
+        .as_ref()
+        .and_then(|p| p.limit)
+        .unwrap_or(50)
+        .clamp(1, 200) as u64
+}
+
 /// Implementation of the FeedsService
 #[tonic::async_trait]
 impl FeedsService for FeedsServiceImpl {
-    // Return a curated feed based on the request inputs
-    async fn get_feed(
+    /// Posts authored by a specific identity, newest first.
+    async fn get_identity_feed(
         &self,
-        request: Request<GetFeedRequest>,
+        request: Request<GetIdentityFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
         let inner_req = request.into_inner();
-        let limit = inner_req.limit.unwrap_or(50).clamp(1, 200) as u64;
-        let algorithm = FeedAlgorithm::try_from(inner_req.algorithm)
-            .unwrap_or(FeedAlgorithm::Unspecified);
+        let limit = page_limit(&inner_req.page_params);
 
-        let rows = match algorithm {
-            FeedAlgorithm::Following => {
-                let caller = inner_req.identity.ok_or_else(|| {
-                    Status::invalid_argument(
-                        "identity is required for FEED_ALGORITHM_FOLLOWING",
-                    )
-                })?;
+        if inner_req.identity.is_empty() {
+            return Err(Status::invalid_argument("identity is required"));
+        }
 
-                let mut identities =
-                    FeedsRepository::Query::list_followed_identities(
-                        &self.db, &caller,
-                    )
-                    .await
-                    .map_err(map_db_err)?;
+        let rows = FeedsRepository::Query::list_feed_events_by_identities(
+            &self.db,
+            vec![inner_req.identity],
+            limit,
+        )
+        .await
+        .map_err(map_db_err)?;
 
-                // Include the caller's own posts in the feed.
-                if !identities.iter().any(|a| a == &caller) {
-                    identities.push(caller.clone());
-                }
-
-                eprintln!(
-                    "get_feed FOLLOWING: caller={caller} identities={}",
-                    identities.len()
-                );
-                for a in &identities {
-                    eprintln!("  author -> {a}");
-                }
-
-                let rows =
-                    FeedsRepository::Query::list_feed_events_by_identities(
-                        &self.db, identities, limit,
-                    )
-                    .await
-                    .map_err(map_db_err)?;
-
-                eprintln!("get_feed FOLLOWING: returning {} posts", rows.len());
-                rows
-            }
-            // SUGGESTED / UNSPECIFIED: recent Feed events across all
-            // identities.  Ranking is not yet implemented.
-            _ => FeedsRepository::Query::list_feed_events(&self.db, limit)
-                .await
-                .map_err(map_db_err)?,
-        };
-
-        let reply = GetFeedResponse {
+        Ok(Response::new(GetFeedResponse {
             event_bundles: rows_to_bundles(rows),
-            next_token: String::new(),
-            previous_token: String::new(),
-        };
-        Ok(Response::new(reply))
+            event_hints: Vec::new(),
+        }))
+    }
+
+    /// Posts from identities the caller follows, newest first. Falls back
+    /// to an empty feed when the caller has not followed anyone yet.
+    async fn get_following_feed(
+        &self,
+        request: Request<GetFollowingFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        let inner_req = request.into_inner();
+        let limit = page_limit(&inner_req.page_params);
+
+        let caller = inner_req.follower_identity.ok_or_else(|| {
+            Status::invalid_argument("follower_identity is required")
+        })?;
+
+        let mut identities =
+            FeedsRepository::Query::list_followed_identities(&self.db, &caller)
+                .await
+                .map_err(map_db_err)?;
+
+        // Include the caller's own posts in their following feed.
+        if !identities.iter().any(|a| a == &caller) {
+            identities.push(caller.clone());
+        }
+
+        let rows = FeedsRepository::Query::list_feed_events_by_identities(
+            &self.db, identities, limit,
+        )
+        .await
+        .map_err(map_db_err)?;
+
+        Ok(Response::new(GetFeedResponse {
+            event_bundles: rows_to_bundles(rows),
+            event_hints: Vec::new(),
+        }))
+    }
+
+    /// Server-curated explore feed: recent Feed events across all
+    /// identities. Ranking is not yet implemented.
+    async fn get_explore_feed(
+        &self,
+        request: Request<GetExploreFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        let inner_req = request.into_inner();
+        let limit = page_limit(&inner_req.page_params);
+
+        let rows = FeedsRepository::Query::list_feed_events(&self.db, limit)
+            .await
+            .map_err(map_db_err)?;
+
+        Ok(Response::new(GetFeedResponse {
+            event_bundles: rows_to_bundles(rows),
+            event_hints: Vec::new(),
+        }))
     }
 
     // Return the thread for the subject post: ancestors (root → direct
@@ -228,7 +253,7 @@ fn rows_to_bundles(rows: Vec<FeedRow>) -> Vec<EventBundle> {
 }
 
 fn map_db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("get_feed db error: {e}");
+    eprintln!("feeds_service db error: {e}");
     Status::internal("internal server error")
 }
 

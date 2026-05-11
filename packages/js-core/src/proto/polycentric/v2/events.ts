@@ -106,6 +106,20 @@ export interface EventBundle {
     serializedContent?: SerializedContent;
 }
 /**
+ * Hints are additional events that the server provides that may be
+ * useful to the client and avoid additional network requests.
+ * For example, a reply to post event could return the root/parent posts along with the
+ * most recent profile event
+ *
+ * @generated from protobuf message polycentric.v2.EventHint
+ */
+export interface EventHint {
+    /**
+     * @generated from protobuf field: polycentric.v2.EventBundle event_bundle = 1
+     */
+    eventBundle?: EventBundle;
+}
+/**
  * @generated from protobuf message polycentric.v2.ListEventsFilters
  */
 export interface ListEventsFilters {
@@ -435,6 +449,52 @@ class EventBundle$Type extends MessageType<EventBundle> {
  * @generated MessageType for protobuf message polycentric.v2.EventBundle
  */
 export const EventBundle = new EventBundle$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EventHint$Type extends MessageType<EventHint> {
+    constructor() {
+        super("polycentric.v2.EventHint", [
+            { no: 1, name: "event_bundle", kind: "message", T: () => EventBundle }
+        ]);
+    }
+    create(value?: PartialMessage<EventHint>): EventHint {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<EventHint>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EventHint): EventHint {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventBundle event_bundle */ 1:
+                    message.eventBundle = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.eventBundle);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: EventHint, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventBundle event_bundle = 1; */
+        if (message.eventBundle)
+            EventBundle.internalBinaryWrite(message.eventBundle, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.EventHint
+ */
+export const EventHint = new EventHint$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
     constructor() {

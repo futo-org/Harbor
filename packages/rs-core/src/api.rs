@@ -4,8 +4,10 @@ use polycentric_common::models::protos_v2::{
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
     notification_service_client::NotificationServiceClient,
-    server_service_client::ServerServiceClient, ContentDigest, Event, FeedAlgorithm,
-    GetFeedRequest, GetPostThreadRequest, GetServerInfoRequest, ListEventsFilters,
+    pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
+    ContentDigest, CreatePairingSessionRequest, Event, FeedPageParams, GetExploreFeedRequest,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPairingSessionRequest,
+    GetPostThreadRequest, GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters,
     ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage,
     UploadBlobRequest,
 };
@@ -294,27 +296,78 @@ impl PolycentricCore {
         Ok(())
     }
 
-    /// Fetch a curated feed. Returns serialized `GetFeedResponse` bytes.
-    pub async fn get_feed(
+    /// Fetch the feed of posts authored by `identity`. Returns serialized
+    /// `GetFeedResponse` proto bytes.
+    pub async fn get_identity_feed(
         &self,
         server_url: String,
-        algorithm: i32,
+        identity: String,
         limit: Option<i32>,
-        identity: Option<String>,
+        before_token: Option<String>,
+        after_token: Option<String>,
     ) -> Result<Vec<u8>, CoreError> {
         let mut client = FeedsServiceClient::new(channel(&server_url)?);
         let response = client
-            .get_feed(GetFeedRequest {
-                algorithm: FeedAlgorithm::try_from(algorithm)
-                    .unwrap_or(FeedAlgorithm::Unspecified)
-                    .into(),
-                limit,
-                before_token: None,
-                after_token: None,
+            .get_identity_feed(GetIdentityFeedRequest {
                 identity,
+                page_params: Some(FeedPageParams {
+                    limit,
+                    before_token,
+                    after_token,
+                }),
             })
             .await
-            .map_err(|e| CoreError::Network(format!("get_feed: {e}")))?;
+            .map_err(|e| CoreError::Network(format!("get_identity_feed: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the feed of posts from identities the caller follows. When
+    /// `follower_identity` is `None` the server uses the authenticated
+    /// caller's follow graph.
+    pub async fn get_following_feed(
+        &self,
+        server_url: String,
+        follower_identity: Option<String>,
+        limit: Option<i32>,
+        before_token: Option<String>,
+        after_token: Option<String>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let mut client = FeedsServiceClient::new(channel(&server_url)?);
+        let response = client
+            .get_following_feed(GetFollowingFeedRequest {
+                follower_identity,
+                page_params: Some(FeedPageParams {
+                    limit,
+                    before_token,
+                    after_token,
+                }),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("get_following_feed: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the server-curated explore feed of posts relevant to `identity`.
+    pub async fn get_explore_feed(
+        &self,
+        server_url: String,
+        identity: Option<String>,
+        limit: Option<i32>,
+        before_token: Option<String>,
+        after_token: Option<String>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let mut client = FeedsServiceClient::new(channel(&server_url)?);
+        let response = client
+            .get_explore_feed(GetExploreFeedRequest {
+                identity,
+                page_params: Some(FeedPageParams {
+                    limit,
+                    before_token,
+                    after_token,
+                }),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("get_explore_feed: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
@@ -362,6 +415,75 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("upload_blob: {e}")))?;
         Ok(())
+    }
+
+    /// Create a pairing session on the server. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping an `InitialPairingSession`.
+    /// Returns serialized `PairingSession` proto bytes.
+    pub async fn create_pairing_session(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .create_pairing_session(CreatePairingSessionRequest {
+                signed_message: Some(signed),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("create_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("create_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
+    }
+
+    /// Fetch a pairing session by its signature. Returns serialized
+    /// `PairingSession` proto bytes.
+    pub async fn get_pairing_session(
+        &self,
+        server_url: String,
+        pairing_session_signature: String,
+    ) -> Result<Vec<u8>, CoreError> {
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .get_pairing_session(GetPairingSessionRequest {
+                pairing_session_signature,
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("get_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("get_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
+    }
+
+    /// Join an existing pairing session. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
+    /// Returns serialized `PairingSession` proto bytes.
+    pub async fn join_pairing_session(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .join_pairing_session(JoinPairingSessionRequest {
+                signed_message: Some(signed),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("join_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("join_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
     }
 
     /// Register a push notification token. `signed_message_bytes` is a

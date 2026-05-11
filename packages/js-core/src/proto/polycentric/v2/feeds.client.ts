@@ -6,9 +6,11 @@ import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { FeedsService } from "./feeds";
 import type { GetPostThreadResponse } from "./feeds";
 import type { GetPostThreadRequest } from "./feeds";
+import type { GetExploreFeedRequest } from "./feeds";
+import type { GetFollowingFeedRequest } from "./feeds";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { GetFeedResponse } from "./feeds";
-import type { GetFeedRequest } from "./feeds";
+import type { GetIdentityFeedRequest } from "./feeds";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
@@ -19,11 +21,19 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface IFeedsServiceClient {
     /**
-     * Returns a curated feed base on the rwquest inputs
+     * Posts that belong to an identity
      *
-     * @generated from protobuf rpc: GetFeed
+     * @generated from protobuf rpc: GetIdentityFeed
      */
-    getFeed(input: GetFeedRequest, options?: RpcOptions): UnaryCall<GetFeedRequest, GetFeedResponse>;
+    getIdentityFeed(input: GetIdentityFeedRequest, options?: RpcOptions): UnaryCall<GetIdentityFeedRequest, GetFeedResponse>;
+    /**
+     * @generated from protobuf rpc: GetFollowingFeed
+     */
+    getFollowingFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse>;
+    /**
+     * @generated from protobuf rpc: GetExploreFeed
+     */
+    getExploreFeed(input: GetExploreFeedRequest, options?: RpcOptions): UnaryCall<GetExploreFeedRequest, GetFeedResponse>;
     /**
      * Replies to a post
      *
@@ -44,13 +54,27 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * Returns a curated feed base on the rwquest inputs
+     * Posts that belong to an identity
      *
-     * @generated from protobuf rpc: GetFeed
+     * @generated from protobuf rpc: GetIdentityFeed
      */
-    getFeed(input: GetFeedRequest, options?: RpcOptions): UnaryCall<GetFeedRequest, GetFeedResponse> {
+    getIdentityFeed(input: GetIdentityFeedRequest, options?: RpcOptions): UnaryCall<GetIdentityFeedRequest, GetFeedResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        return stackIntercept<GetFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<GetIdentityFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetFollowingFeed
+     */
+    getFollowingFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetFollowingFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetExploreFeed
+     */
+    getExploreFeed(input: GetExploreFeedRequest, options?: RpcOptions): UnaryCall<GetExploreFeedRequest, GetFeedResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetExploreFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * Replies to a post
@@ -58,7 +82,7 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetPostThread
      */
     getPostThread(input: GetPostThreadRequest, options?: RpcOptions): UnaryCall<GetPostThreadRequest, GetPostThreadResponse> {
-        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetPostThreadRequest, GetPostThreadResponse>("unary", this._transport, method, opt, input);
     }
 }
