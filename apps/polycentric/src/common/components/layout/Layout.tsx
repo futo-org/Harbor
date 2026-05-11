@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import { Ionicons } from '@expo/vector-icons';
-import WEB_LOGO from '../../assets/images/WebLogo.png';
+import WEB_LOGO from '../../assets/images/PolycentricLogoTransparent256.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
