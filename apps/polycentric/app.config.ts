@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'polycentric',
   version: '0.0.1',
   orientation: 'portrait',
-  icon: './src/common/assets/images/AppIcon.png',
+  icon: './src/common/assets/images/PolycentricLogoWhite1024.png',
   scheme: 'polycentric',
   web: {
     output: 'server',
@@ -29,8 +29,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './src/common/assets/images/AppIcon.png',
-      backgroundColor: '#ffffff',
+      foregroundImage: './src/common/assets/images/PolycentricLogoTransparent1024.png',
+      backgroundColor: '#F2F5F9',
     },
     edgeToEdgeEnabled: true,
     package: ID,
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './src/common/assets/images/AppIcon.png',
+        image: './src/common/assets/images/PolycentricLogoTransparent1024.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#F2F5F9',
