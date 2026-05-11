@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use super::events_repository as EventsRepository;
 use crate::service::content::content_repository as ContentRepository;
+use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
@@ -24,9 +27,9 @@ use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::TransactionTrait;
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
 pub struct EventSyncServiceImpl {
     db: sea_orm::DatabaseConnection,
+    notification_manager: Arc<NotificationManager>,
 }
 
 /// Implementation of the EventsService
@@ -160,6 +163,20 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
+                // Capture the recipient of a reply notification (if any)
+                // before `content` is moved into `save_content_child`.
+                // Self-replies are filtered out.
+                let reply_target: Option<String> = match &content.content_body
+                {
+                    Some(ContentBody::Post(post)) => post
+                        .reply
+                        .as_ref()
+                        .and_then(|r| r.parent.as_ref())
+                        .map(|k| k.identity.clone())
+                        .filter(|target| target != &key.identity),
+                    _ => None,
+                };
+
                 // Save content parent + child in a transaction
                 let txn = self.db.begin().await.map_err(|e| {
                     eprintln!("sync_events txn begin error: {e}");
@@ -181,6 +198,7 @@ impl EventSyncService for EventSyncServiceImpl {
                 )
                 .await;
 
+                let mut content_was_new = false;
                 match content_result {
                     Ok(content_row) => {
                         save_content_child(
@@ -190,6 +208,7 @@ impl EventSyncService for EventSyncServiceImpl {
                             &key.identity,
                         )
                         .await?;
+                        content_was_new = true;
                     }
                     Err(ref e) if Self::is_unique_violation(e) => {
                         // Content already exists, skip
@@ -204,6 +223,23 @@ impl EventSyncService for EventSyncServiceImpl {
                     eprintln!("sync_events txn commit error: {e}");
                     Status::internal("internal server error")
                 })?;
+
+                // Fire reply notification only when the content was newly
+                // persisted; failures here must not surface to the caller.
+                if content_was_new
+                    && let Some(recipient) = reply_target
+                    && let Err(e) = self
+                        .notification_manager
+                        .send(
+                            &self.db,
+                            &recipient,
+                            "New reply".to_string(),
+                            "Someone replied to your post.".to_string(),
+                        )
+                        .await
+                {
+                    eprintln!("reply notification send error: {e}");
+                }
             }
 
             // Build the Model that we will save to the database
@@ -438,6 +474,10 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 
 pub fn build_events_service(
     db: sea_orm::DatabaseConnection,
+    notification_manager: Arc<NotificationManager>,
 ) -> EventSyncServiceServer<EventSyncServiceImpl> {
-    EventSyncServiceServer::new(EventSyncServiceImpl { db })
+    EventSyncServiceServer::new(EventSyncServiceImpl {
+        db,
+        notification_manager,
+    })
 }

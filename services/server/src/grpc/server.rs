@@ -36,7 +36,10 @@ pub fn build_grpc_router(
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
     let events_service =
-        service::events::events_service::build_events_service(db.clone());
+        service::events::events_service::build_events_service(
+            db.clone(),
+            notification_manager.clone(),
+        );
     let feeds_service =
         service::feeds::feeds_service::build_feeds_service(db.clone());
     let content_service =
