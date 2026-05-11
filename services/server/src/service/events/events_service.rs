@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::events_repository as EventsRepository;
 use crate::service::content::content_repository as ContentRepository;
+use crate::service::identity::identity_repository;
 use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::event_sync_service_server::{
@@ -163,17 +164,25 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
-                // Capture the recipient of a reply notification (if any)
-                // before `content` is moved into `save_content_child`.
-                // Self-replies are filtered out.
-                let reply_target: Option<String> = match &content.content_body
-                {
-                    Some(ContentBody::Post(post)) => post
-                        .reply
-                        .as_ref()
-                        .and_then(|r| r.parent.as_ref())
-                        .map(|k| k.identity.clone())
-                        .filter(|target| target != &key.identity),
+                // Capture the recipient and body of a reply notification
+                // (if any) before `content` is moved into
+                // `save_content_child`. Self-replies are filtered out.
+                let reply_recipient: Option<String> =
+                    match &content.content_body {
+                        Some(ContentBody::Post(post)) => post
+                            .reply
+                            .as_ref()
+                            .and_then(|r| r.parent.as_ref())
+                            .map(|k| k.identity.clone())
+                            .filter(|target| target != &key.identity),
+                        _ => None,
+                    };
+                let reply_body: Option<String> = match &content.content_body {
+                    Some(ContentBody::Post(post))
+                        if reply_recipient.is_some() =>
+                    {
+                        Some(post.text.clone())
+                    }
                     _ => None,
                 };
 
@@ -227,18 +236,26 @@ impl EventSyncService for EventSyncServiceImpl {
                 // Fire reply notification only when the content was newly
                 // persisted; failures here must not surface to the caller.
                 if content_was_new
-                    && let Some(recipient) = reply_target
-                    && let Err(e) = self
-                        .notification_manager
-                        .send(
-                            &self.db,
-                            &recipient,
-                            "New reply".to_string(),
-                            "Someone replied to your post.".to_string(),
-                        )
-                        .await
+                    && let Some(recipient) = reply_recipient
+                    && let Some(body) = reply_body
                 {
-                    eprintln!("reply notification send error: {e}");
+                    let title = match identity_repository::Query::display_name(
+                        &self.db,
+                        &key.identity,
+                    )
+                    .await
+                    {
+                        Ok(Some(name)) => format!("New reply from {name}"),
+                        _ => "New reply".to_string(),
+                    };
+
+                    if let Err(e) = self
+                        .notification_manager
+                        .send(&self.db, &recipient, title, body)
+                        .await
+                    {
+                        eprintln!("reply notification send error: {e}");
+                    }
                 }
             }
 

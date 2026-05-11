@@ -111,9 +111,74 @@ impl Query {
             .iter()
             .any(|k| k.is_rotation_key && k.key.key.as_slice() == public_key))
     }
+
+    /// Returns the display name from the latest `content_profile_update` for
+    /// this identity, or `None` if no profile update with a name has been
+    /// persisted yet. Absence is not an error.
+    pub async fn display_name(
+        db: &DbConn,
+        identity: &str,
+    ) -> Result<Option<String>, DbErr> {
+        let profile = Alias::new("profile");
+        let content = Alias::new("content");
+        let event = Alias::new("event");
+
+        // events (filtered by identity, latest sequence)
+        //   → content (joined on digest)
+        //   → content_profile_update (joined on content_id)
+        let mut query = SeaQuery::select();
+        query
+            .expr_as(
+                Expr::col((profile.clone(), Alias::new("name"))),
+                Alias::new("name"),
+            )
+            .from_as(Alias::new("events"), event.clone())
+            .and_where(
+                Expr::col((event.clone(), Alias::new("identity"))).eq(identity),
+            )
+            .join_as(
+                JoinType::InnerJoin,
+                Alias::new("content"),
+                content.clone(),
+                sea_orm::sea_query::Condition::all()
+                    .add(
+                        Expr::col((content.clone(), Alias::new("digest_type")))
+                            .equals((
+                                event.clone(),
+                                Alias::new("content_digest_type"),
+                            )),
+                    )
+                    .add(
+                        Expr::col((content.clone(), Alias::new("digest_bytes")))
+                            .equals((
+                                event.clone(),
+                                Alias::new("content_digest_bytes"),
+                            )),
+                    ),
+            )
+            .join_as(
+                JoinType::InnerJoin,
+                Alias::new("content_profile_update"),
+                profile.clone(),
+                Expr::col((profile.clone(), Alias::new("content_id")))
+                    .equals((content.clone(), Alias::new("id"))),
+            )
+            .order_by((event, Alias::new("sequence")), Order::Desc)
+            .limit(1);
+
+        let stmt = db.get_database_backend().build(&query);
+        let rows = DisplayNameRow::find_by_statement(stmt).all(db).await?;
+
+        Ok(rows.into_iter().next().and_then(|r| r.name))
+    }
 }
 
 #[derive(Debug, FromQueryResult)]
 struct IdentityBytesRow {
     pub identity_bytes: Vec<u8>,
+}
+
+#[derive(Debug, FromQueryResult)]
+struct DisplayNameRow {
+    pub name: Option<String>,
 }
