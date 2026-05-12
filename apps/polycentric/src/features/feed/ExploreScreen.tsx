@@ -38,6 +38,7 @@ export default function ExploreScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedViewer
+          keyExtractor={(item) => item.id}
           data={feed.items}
           ListHeaderComponent={!isWeb ? Screen.Topbar : undefined}
           ListEmptyComponent={

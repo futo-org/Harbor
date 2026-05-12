@@ -149,12 +149,6 @@ export class PolycentricClient {
 
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
-
-      this.core.testObservable().subscribe({
-        next: (value) => console.log('[testObservable] next:', value),
-        error: (message) => console.warn('[testObservable] error:', message),
-        complete: () => console.log('[testObservable] complete'),
-      });
     } catch (error) {
       this.setError(error instanceof Error ? error : new Error(String(error)));
       throw error;

@@ -46,6 +46,7 @@ export default function FeedScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedViewer
+          keyExtractor={(item) => item.id}
           data={feed.items}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={

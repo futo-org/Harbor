@@ -64,19 +64,19 @@ interface NativeModuleInterface {
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
     ptr: bigint,
-    serverUrl: Uint8Array,
     identity: Uint8Array,
     limit: Uint8Array,
     beforeToken: Uint8Array,
-    afterToken: Uint8Array
+    afterToken: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
     ptr: bigint,
-    serverUrl: Uint8Array,
     followerIdentity: Uint8Array,
     limit: Uint8Array,
     beforeToken: Uint8Array,
-    afterToken: Uint8Array
+    afterToken: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
     ptr: bigint,
@@ -215,7 +215,7 @@ interface NativeModuleInterface {
   ): void;
   ubrn_uniffi_polycentric_core_fn_method_feedobserver_next(
     ptr: bigint,
-    responseBytes: Uint8Array,
+    result: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): void;
   ubrn_uniffi_polycentric_core_fn_method_feedobserver_error(
@@ -605,7 +605,7 @@ type UniffiCallbackInterfaceSignEventCallbackMethod0 = (
 ) => UniffiForeignFutureDroppedCallbackStruct;
 type UniffiCallbackInterfaceFeedObserverMethod0 = (
   uniffiHandle: bigint,
-  responseBytes: Uint8Array
+  result: Uint8Array
 ) => UniffiResult<void>;
 type UniffiCallbackInterfaceFeedObserverMethod1 = (
   uniffiHandle: bigint,

@@ -140,7 +140,7 @@ extern "C" {
     typedef void
     (*UniffiCallbackInterfaceFeedObserverMethod0)(
     uint64_t uniffi_handle, 
-    RustBuffer response_bytes, 
+    RustBuffer result, 
     void * uniffi_out_return, RustCallStatus* rust_call_status
     );
     typedef void
@@ -223,19 +223,19 @@ extern "C" {
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
         /*handle*/ uint64_t ptr, 
-        RustBuffer server_url, 
         RustBuffer identity, 
         RustBuffer limit, 
         RustBuffer before_token, 
-        RustBuffer after_token
+        RustBuffer after_token, 
+        RustCallStatus *uniffi_out_err
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
         /*handle*/ uint64_t ptr, 
-        RustBuffer server_url, 
         RustBuffer follower_identity, 
         RustBuffer limit, 
         RustBuffer before_token, 
-        RustBuffer after_token
+        RustBuffer after_token, 
+        RustCallStatus *uniffi_out_err
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
         /*handle*/ uint64_t ptr, 
@@ -374,7 +374,7 @@ extern "C" {
     );
     void uniffi_polycentric_core_fn_method_feedobserver_next(
         /*handle*/ uint64_t ptr, 
-        RustBuffer response_bytes, 
+        RustBuffer result, 
         RustCallStatus *uniffi_out_err
     );
     void uniffi_polycentric_core_fn_method_feedobserver_error(
@@ -2888,13 +2888,13 @@ namespace uniffi::polycentric_core::cb::callbackinterfacefeedobservermethod0::vt
                      std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
                      std::shared_ptr<jsi::Value> callbackValue
             ,uint64_t rs_uniffiHandle
-            ,RustBuffer rs_responseBytes
+            ,RustBuffer rs_result
             ,void * rs_uniffiOutReturn, RustCallStatus* uniffi_call_status) {
 
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
-        auto js_responseBytes = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_responseBytes);
+        auto js_result = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_result);
 
         // Now we are ready to call the callback.
         // We are already on the JS thread, because this `body` function was
@@ -2902,7 +2902,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacefeedobservermethod0::vt
         try {
             // Getting the callback function
             auto cb = callbackValue->asObject(rt).asFunction(rt);
-            auto uniffiResult = cb.call(rt, js_uniffiHandle, js_responseBytes
+            auto uniffiResult = cb.call(rt, js_uniffiHandle, js_result
             );
 
             // Now copy the result back from JS into the RustCallStatus object.
@@ -2921,7 +2921,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacefeedobservermethod0::vt
         }
     }
 
-    static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_responseBytes, void * rs_uniffiOutReturn, RustCallStatus* uniffi_call_status) {
+    static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_result, void * rs_uniffiOutReturn, RustCallStatus* uniffi_call_status) {
         // If the runtime has shutdown, then there is no point in trying to
         // call into Javascript. BUT how do we tell if the runtime has shutdown?
         //
@@ -2939,7 +2939,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacefeedobservermethod0::vt
         // are all in the lambda.
         rsLambda(
             rs_uniffiHandle, 
-            rs_responseBytes, 
+            rs_result, 
             rs_uniffiOutReturn, uniffi_call_status);
     }
 
@@ -2962,18 +2962,18 @@ namespace uniffi::polycentric_core::cb::callbackinterfacefeedobservermethod0::vt
         }
         auto callbackFunction = value.asObject(rt).asFunction(rt);
         auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
-        rsLambda = [&rt, callInvoker, callbackValue](uint64_t rs_uniffiHandle, RustBuffer rs_responseBytes, void * rs_uniffiOutReturn, RustCallStatus* uniffi_call_status) {
+        rsLambda = [&rt, callInvoker, callbackValue](uint64_t rs_uniffiHandle, RustBuffer rs_result, void * rs_uniffiOutReturn, RustCallStatus* uniffi_call_status) {
                 // We immediately make a lambda which will do the work of transforming the
                 // arguments into JSI values and calling the callback.
                 uniffi_runtime::UniffiCallFunc jsLambda = [
                     callInvoker,
                     callbackValue
                     , rs_uniffiHandle
-                    , rs_responseBytes
+                    , rs_result
                     , rs_uniffiOutReturn, uniffi_call_status](jsi::Runtime &rt) mutable {
                     body(rt, callInvoker, callbackValue
                         , rs_uniffiHandle
-                        , rs_responseBytes
+                        , rs_result
                         , rs_uniffiOutReturn, uniffi_call_status);
                 };
                 // We'll then call that lambda from the callInvoker which will
@@ -3960,7 +3960,7 @@ NativePolycentricCore::NativePolycentricCore(
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed"),
-        6,
+        5,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(rt, thisVal, args, count);
         }
@@ -3968,7 +3968,7 @@ NativePolycentricCore::NativePolycentricCore(
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed"),
-        6,
+        5,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(rt, thisVal, args, count);
         }
@@ -5242,15 +5242,21 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5])
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), 
+            &status
         );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
 
         
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5])
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), 
+            &status
         );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
 
         
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);

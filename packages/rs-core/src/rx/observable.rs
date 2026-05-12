@@ -8,7 +8,6 @@ pub trait Observer: Send + Sync {
     fn complete(&self);
 }
 
-
 pub struct Subscriber<T> {
     next: Box<dyn Fn(T) + Send + Sync>,
     error: Box<dyn Fn(String) + Send + Sync>,
@@ -43,13 +42,11 @@ impl<T> Subscriber<T> {
     }
 }
 
-
 pub struct Observable<T> {
     subscribe: Box<dyn Fn(Subscriber<T>) + Send + Sync>,
 }
 
 impl<T: 'static> Observable<T> {
-
     pub fn new(subscribe: impl Fn(Subscriber<T>) + Send + Sync + 'static) -> Self {
         Self {
             subscribe: Box::new(subscribe),

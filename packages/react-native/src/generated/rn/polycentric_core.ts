@@ -128,6 +128,54 @@ const FfiConverterTypeContentEntry = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * FFI-friendly mirror of `QueryResult<Vec<u8>>` for the feed RPCs.
+ */
+export type FeedQueryResult = {
+  data?: ArrayBuffer;
+  status: QueryStatus;
+};
+
+/**
+ * Generated factory for {@link FeedQueryResult} record objects.
+ */
+export const FeedQueryResult = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<FeedQueryResult, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<FeedQueryResult>,
+  });
+})();
+
+const FfiConverterTypeFeedQueryResult = (() => {
+  type TypeName = FeedQueryResult;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        data: FfiConverterOptionalArrayBuffer.read(from),
+        status: FfiConverterTypeQueryStatus.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterOptionalArrayBuffer.write(value.data, into);
+      FfiConverterTypeQueryStatus.write(value.status, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalArrayBuffer.allocationSize(value.data) +
+        FfiConverterTypeQueryStatus.allocationSize(value.status)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 const stringConverter = {
   stringToBytes: (s: string) =>
     uniffiCaller.rustCall((status) =>
@@ -411,23 +459,60 @@ const FfiConverterTypeCoreError = (() => {
   return new FfiConverter();
 })();
 
+export enum QueryStatus {
+  Loading,
+  Success,
+  Error,
+}
+
+const FfiConverterTypeQueryStatus = (() => {
+  const ordinalConverter = FfiConverterInt32;
+  type TypeName = QueryStatus;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      switch (ordinalConverter.read(from)) {
+        case 1:
+          return QueryStatus.Loading;
+        case 2:
+          return QueryStatus.Success;
+        case 3:
+          return QueryStatus.Error;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      switch (value) {
+        case QueryStatus.Loading:
+          return ordinalConverter.write(1, into);
+        case QueryStatus.Success:
+          return ordinalConverter.write(2, into);
+        case QueryStatus.Error:
+          return ordinalConverter.write(3, into);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return ordinalConverter.allocationSize(0);
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
- * Foreign-implemented observer for `FeedQueryObservable`. The
- * producer pushes serialized `GetFeedResponse` bytes to `next`, an
- * error message to `error`, and fires `complete` once the stream
- * finishes (success or failure).
+ * Foreign-implemented observer for `FeedQueryObservable`. `next`
+ * receives the full `FeedQueryResult` so the consumer sees both the
+ * merged response bytes and the current loading status.
  */
 export interface FeedObserver {
-  next(responseBytes: ArrayBuffer): void;
+  next(result: FeedQueryResult): void;
   error(message: string): void;
   complete(): void;
 }
 
 /**
- * Foreign-implemented observer for `FeedQueryObservable`. The
- * producer pushes serialized `GetFeedResponse` bytes to `next`, an
- * error message to `error`, and fires `complete` once the stream
- * finishes (success or failure).
+ * Foreign-implemented observer for `FeedQueryObservable`. `next`
+ * receives the full `FeedQueryResult` so the consumer sees both the
+ * merged response bytes and the current loading status.
  */
 export class FeedObserverImpl
   extends UniffiAbstractObject
@@ -444,12 +529,12 @@ export class FeedObserverImpl
       uniffiTypeFeedObserverImplObjectFactory.bless(pointer);
   }
 
-  next(responseBytes: ArrayBuffer): void {
+  next(result: FeedQueryResult): void {
     uniffiCaller.rustCall(
       /*caller:*/ (callStatus) => {
         nativeModule().ubrn_uniffi_polycentric_core_fn_method_feedobserver_next(
           uniffiTypeFeedObserverImplObjectFactory.clonePointer(this),
-          FfiConverterArrayBuffer.lower(responseBytes),
+          FfiConverterTypeFeedQueryResult.lower(result),
           callStatus
         );
       },
@@ -579,10 +664,10 @@ const uniffiCallbackInterfaceFeedObserver: {
   // Create the VTable using a series of closures.
   // ts automatically converts these into C callback functions.
   vtable: {
-    next: (uniffiHandle: bigint, responseBytes: Uint8Array) => {
+    next: (uniffiHandle: bigint, result: Uint8Array) => {
       const uniffiMakeCall = (): void => {
         const jsCallback = FfiConverterTypeFeedObserver.lift(uniffiHandle);
-        return jsCallback.next(FfiConverterArrayBuffer.lift(responseBytes));
+        return jsCallback.next(FfiConverterTypeFeedQueryResult.lift(result));
       };
       const uniffiResult = UniffiResult.ready<void>();
       const uniffiHandleSuccess = (obj: any) => {};
@@ -649,8 +734,8 @@ const uniffiCallbackInterfaceFeedObserver: {
 };
 
 /**
- * Uniffi-exposed observable for feed queries — adapts the foreign
- * `FeedObserver` into the generic `Observable<Vec<u8>>` underneath.
+ * FFI wrapper around the generic `Observable<QueryResult<Vec<u8>>>`
+ * returned by `Query::query` for feed RPCs.
  */
 export interface FeedQueryObservableLike {
   subscribe(observer: FeedObserver): SubscriptionLike;
@@ -661,8 +746,8 @@ export interface FeedQueryObservableLike {
 export type FeedQueryObservableInterface = FeedQueryObservableLike;
 
 /**
- * Uniffi-exposed observable for feed queries — adapts the foreign
- * `FeedObserver` into the generic `Observable<Vec<u8>>` underneath.
+ * FFI wrapper around the generic `Observable<QueryResult<Vec<u8>>>`
+ * returned by `Query::query` for feed RPCs.
  */
 export class FeedQueryObservable
   extends UniffiAbstractObject
@@ -1034,29 +1119,25 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Fetch the server-curated explore feed of posts relevant to `identity`.
+   * Fetch the server-curated explore feed as an observable.
    */
   getExploreFeed(
-    serverUrl: string,
     identity: string | undefined,
     limit: /*i32*/ number | undefined,
     beforeToken: string | undefined,
-    afterToken: string | undefined,
-    asyncOpts_?: { signal: AbortSignal }
-  ) /*throws*/ : Promise<ArrayBuffer>;
+    afterToken: string | undefined
+  ): FeedQueryObservableLike;
   /**
    * Fetch the feed of posts from identities the caller follows. When
    * `follower_identity` is `None` the server uses the authenticated
    * caller's follow graph.
    */
   getFollowingFeed(
-    serverUrl: string,
-    followerIdentity: string | undefined,
+    followerIdentity: string,
     limit: /*i32*/ number | undefined,
     beforeToken: string | undefined,
-    afterToken: string | undefined,
-    asyncOpts_?: { signal: AbortSignal }
-  ) /*throws*/ : Promise<ArrayBuffer>;
+    afterToken: string | undefined
+  ): FeedQueryObservableLike;
   /**
    * Fetch the feed of posts authored by `identity` as an
    * observable. Fans out to every configured server (see
@@ -1337,53 +1418,29 @@ export class PolycentricCore
   }
 
   /**
-   * Fetch the server-curated explore feed of posts relevant to `identity`.
+   * Fetch the server-curated explore feed as an observable.
    */
-  async getExploreFeed(
-    serverUrl: string,
+  getExploreFeed(
     identity: string | undefined,
     limit: /*i32*/ number | undefined,
     beforeToken: string | undefined,
-    afterToken: string | undefined,
-    asyncOpts_?: { signal: AbortSignal }
-  ): Promise<ArrayBuffer> /*throws*/ {
-    const __stack = uniffiIsDebug ? new Error().stack : undefined;
-    try {
-      return await uniffiRustCallAsync(
-        /*rustCaller:*/ uniffiCaller,
-        /*rustFutureFunc:*/ () => {
+    afterToken: string | undefined
+  ): FeedQueryObservableLike {
+    return FfiConverterTypeFeedQueryObservable.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(serverUrl),
             FfiConverterOptionalString.lower(identity),
             FfiConverterOptionalInt32.lower(limit),
             FfiConverterOptionalString.lower(beforeToken),
-            FfiConverterOptionalString.lower(afterToken)
+            FfiConverterOptionalString.lower(afterToken),
+            callStatus
           );
         },
-        /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
-        /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
-        /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
-        /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
-        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
-          FfiConverterArrayBuffer
-        ),
-        /*liftString:*/ FfiConverterString.lift,
-        /*asyncOpts:*/ asyncOpts_,
-        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-          FfiConverterTypeCoreError
-        )
-      );
-    } catch (__error: any) {
-      if (uniffiIsDebug && __error instanceof Error) {
-        __error.stack = __stack;
-      }
-      throw __error;
-    }
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
   }
 
   /**
@@ -1391,51 +1448,27 @@ export class PolycentricCore
    * `follower_identity` is `None` the server uses the authenticated
    * caller's follow graph.
    */
-  async getFollowingFeed(
-    serverUrl: string,
-    followerIdentity: string | undefined,
+  getFollowingFeed(
+    followerIdentity: string,
     limit: /*i32*/ number | undefined,
     beforeToken: string | undefined,
-    afterToken: string | undefined,
-    asyncOpts_?: { signal: AbortSignal }
-  ): Promise<ArrayBuffer> /*throws*/ {
-    const __stack = uniffiIsDebug ? new Error().stack : undefined;
-    try {
-      return await uniffiRustCallAsync(
-        /*rustCaller:*/ uniffiCaller,
-        /*rustFutureFunc:*/ () => {
+    afterToken: string | undefined
+  ): FeedQueryObservableLike {
+    return FfiConverterTypeFeedQueryObservable.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(serverUrl),
-            FfiConverterOptionalString.lower(followerIdentity),
+            FfiConverterString.lower(followerIdentity),
             FfiConverterOptionalInt32.lower(limit),
             FfiConverterOptionalString.lower(beforeToken),
-            FfiConverterOptionalString.lower(afterToken)
+            FfiConverterOptionalString.lower(afterToken),
+            callStatus
           );
         },
-        /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
-        /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
-        /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
-        /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
-        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
-          FfiConverterArrayBuffer
-        ),
-        /*liftString:*/ FfiConverterString.lift,
-        /*asyncOpts:*/ asyncOpts_,
-        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-          FfiConverterTypeCoreError
-        )
-      );
-    } catch (__error: any) {
-      if (uniffiIsDebug && __error instanceof Error) {
-        __error.stack = __stack;
-      }
-      throw __error;
-    }
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
   }
 
   /**
@@ -2682,7 +2715,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed() !==
-    1684
+    28599
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed'
@@ -2690,7 +2723,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed() !==
-    48083
+    29660
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed'
@@ -2850,7 +2883,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_feedobserver_next() !==
-    34611
+    33368
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_feedobserver_next'
@@ -2941,8 +2974,10 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeFeedObserver,
     FfiConverterTypeFeedQueryObservable,
+    FfiConverterTypeFeedQueryResult,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
+    FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
     FfiConverterTypeSubscription,
     FfiConverterTypeTestObservable,

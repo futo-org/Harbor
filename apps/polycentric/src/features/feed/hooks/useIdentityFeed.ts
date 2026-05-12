@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { v2 } from '@polycentric/react-native';
+import { QueryStatus, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   useLocalPostInjection,
@@ -38,7 +38,9 @@ export function useIdentityFeed(
     setError(null);
     setIsLoading(true);
 
-    const seen = new Set<string>();
+    // Rust-side merge_fn already dedupes by EventKey — each next()
+    // carries the full merged feed plus a status. `Loading` stays in
+    // effect until the last per-server response arrives.
     const observable = client.core.getIdentityFeed(
       identityId,
       undefined,
@@ -46,20 +48,19 @@ export function useIdentityFeed(
       undefined,
     );
     subscriptionRef.current = observable.subscribe({
-      next: (bytes: ArrayBuffer) => {
-        const response = v2.GetFeedResponse.fromBinary(new Uint8Array(bytes));
-        const fresh: PostData[] = [];
-        for (const bundle of response.eventBundles) {
-          const decoded = decodeV2PostBundle(bundle);
-          if (!decoded) continue;
-          if (seen.has(decoded.id)) continue;
-          seen.add(decoded.id);
-          fresh.push(decoded);
+      next: (result) => {
+        if (result.data) {
+          const response = v2.GetFeedResponse.fromBinary(
+            new Uint8Array(result.data),
+          );
+          const posts: PostData[] = [];
+          for (const bundle of response.eventBundles) {
+            const decoded = decodeV2PostBundle(bundle);
+            if (decoded) posts.push(decoded);
+          }
+          setItems(posts);
         }
-        if (fresh.length > 0) {
-          // New array reference so React notices.
-          setItems((prev) => [...prev, ...fresh]);
-        }
+        setIsLoading(result.status === QueryStatus.Loading);
       },
       error: (message: string) => {
         console.warn('useIdentityFeed error:', message);
