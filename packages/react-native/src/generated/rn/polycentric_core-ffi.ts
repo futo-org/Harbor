@@ -64,27 +64,27 @@ interface NativeModuleInterface {
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
     ptr: bigint,
-    serverUrl: Uint8Array,
     identity: Uint8Array,
     limit: Uint8Array,
     beforeToken: Uint8Array,
-    afterToken: Uint8Array
+    afterToken: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
     ptr: bigint,
-    serverUrl: Uint8Array,
     followerIdentity: Uint8Array,
     limit: Uint8Array,
     beforeToken: Uint8Array,
-    afterToken: Uint8Array
+    afterToken: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
     ptr: bigint,
-    serverUrl: Uint8Array,
     identity: Uint8Array,
     limit: Uint8Array,
     beforeToken: Uint8Array,
-    afterToken: Uint8Array
+    afterToken: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
     ptr: bigint,
@@ -100,6 +100,10 @@ interface NativeModuleInterface {
     ptr: bigint,
     serverUrl: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_servers(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): Uint8Array;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
     ptr: bigint,
     serverUrl: Uint8Array,
@@ -146,10 +150,19 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
+    ptr: bigint,
+    servers: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_sign_event(
     ptr: bigint,
     eventBytes: Uint8Array,
     callback: bigint
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_test_observable(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(
     ptr: bigint,
@@ -176,6 +189,98 @@ interface NativeModuleInterface {
     ptr: bigint,
     eventBytes: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_clone_testobservable(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_testobservable(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_testobservable_subscribe(
+    ptr: bigint,
+    observer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_clone_feedobserver(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_feedobserver(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_feedobserver(
+    vtable: UniffiVTableCallbackInterfaceFeedObserver
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_feedobserver_next(
+    ptr: bigint,
+    result: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_feedobserver_error(
+    ptr: bigint,
+    message: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_feedobserver_complete(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_clone_feedqueryobservable(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_feedqueryobservable(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_feedqueryobservable_subscribe(
+    ptr: bigint,
+    observer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_clone_observer(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_observer(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_observer(
+    vtable: UniffiVTableCallbackInterfaceObserver
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_next(
+    ptr: bigint,
+    value: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_error(
+    ptr: bigint,
+    message: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_complete(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_clone_subscription(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_subscription(
+    handle: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
+  ubrn_uniffi_polycentric_core_fn_method_subscription_is_closed(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): number;
+  ubrn_uniffi_polycentric_core_fn_method_subscription_unsubscribe(
+    ptr: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
   ubrn_ffi_polycentric_core_rust_future_poll_u8(
     handle: bigint,
     callback: UniffiRustFutureContinuationCallback,
@@ -320,6 +425,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
@@ -327,10 +433,22 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_test_observable(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_testobservable_subscribe(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_feedobserver_next(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_feedobserver_error(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_feedobserver_complete(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_feedqueryobservable_subscribe(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_observer_next(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_observer_error(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_observer_complete(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_subscription_is_closed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_subscription_unsubscribe(): number;
   ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new(): number;
   ubrn_ffi_polycentric_core_uniffi_contract_version(): number;
   ubrn_uniffi_internal_fn_method_polycentriccore_ffi__bless_pointer(
@@ -338,6 +456,26 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus
   ): UniffiGcObject;
   ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(
+    pointer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_testobservable_ffi__bless_pointer(
+    pointer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_feedobserver_ffi__bless_pointer(
+    pointer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_feedqueryobservable_ffi__bless_pointer(
+    pointer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_observer_ffi__bless_pointer(
+    pointer: bigint,
+    uniffi_out_err: UniffiRustCallStatus
+  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_subscription_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus
   ): UniffiGcObject;
@@ -465,10 +603,46 @@ type UniffiCallbackInterfaceSignEventCallbackMethod0 = (
   uniffiFutureCallback: UniffiForeignFutureCompleteRustBuffer,
   uniffiCallbackData: bigint
 ) => UniffiForeignFutureDroppedCallbackStruct;
+type UniffiCallbackInterfaceFeedObserverMethod0 = (
+  uniffiHandle: bigint,
+  result: Uint8Array
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceFeedObserverMethod1 = (
+  uniffiHandle: bigint,
+  message: Uint8Array
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceFeedObserverMethod2 = (
+  uniffiHandle: bigint
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceObserverMethod0 = (
+  uniffiHandle: bigint,
+  value: Uint8Array
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceObserverMethod1 = (
+  uniffiHandle: bigint,
+  message: Uint8Array
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceObserverMethod2 = (
+  uniffiHandle: bigint
+) => UniffiResult<void>;
 export type UniffiVTableCallbackInterfaceSignEventCallback = {
   uniffiFree: UniffiCallbackInterfaceFree;
   uniffiClone: UniffiCallbackInterfaceClone;
   sign: UniffiCallbackInterfaceSignEventCallbackMethod0;
+};
+export type UniffiVTableCallbackInterfaceFeedObserver = {
+  uniffiFree: UniffiCallbackInterfaceFree;
+  uniffiClone: UniffiCallbackInterfaceClone;
+  next: UniffiCallbackInterfaceFeedObserverMethod0;
+  error: UniffiCallbackInterfaceFeedObserverMethod1;
+  complete: UniffiCallbackInterfaceFeedObserverMethod2;
+};
+export type UniffiVTableCallbackInterfaceObserver = {
+  uniffiFree: UniffiCallbackInterfaceFree;
+  uniffiClone: UniffiCallbackInterfaceClone;
+  next: UniffiCallbackInterfaceObserverMethod0;
+  error: UniffiCallbackInterfaceObserverMethod1;
+  complete: UniffiCallbackInterfaceObserverMethod2;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

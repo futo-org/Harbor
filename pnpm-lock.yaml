@@ -406,10 +406,6 @@ importers:
         specifier: 0.31.0-2
         version: 0.31.0-2(patch_hash=41d8daccd301f9f25c2bc19e45945c2ce4d188467c7661ea2d24043c47032a11)
 
-  packages/rs-core-wasm-browser: {}
-
-  packages/rs-core-wasm-node: {}
-
   tools/tsconfig: {}
 
 packages:

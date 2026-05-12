@@ -10,19 +10,20 @@ import { EMPTY_POSTS, NOOP, type FeedHookResult } from './types';
 
 type Sub = { unsubscribe: () => void };
 
-export function useFollowingFeed(options?: {
-  limit?: number;
-  enabled?: boolean;
-}): FeedHookResult {
-  const { client } = usePolycentricContext();
+export function useIdentityFeed(
+  identityId: string | null | undefined,
+  _limit?: number,
+  options?: { getIsAborted?: () => boolean; enabled?: boolean },
+): FeedHookResult {
   const enabled = options?.enabled ?? true;
+  const { client } = usePolycentricContext();
   const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   // Hold the live subscription so we can cancel on unmount / refresh /
   // identity change. The rust core fans out to every configured server
-  // and emits each merged response as it arrives.
+  // and pushes one `next` per server, then a single `complete`.
   const subscriptionRef = useRef<Sub | null>(null);
 
   const cleanup = useCallback(() => {
@@ -31,20 +32,18 @@ export function useFollowingFeed(options?: {
   }, []);
 
   const fetchFeed = useCallback(() => {
-    const followerIdentity = client.activeIdentityKey;
-    if (!followerIdentity) {
-      cleanup();
-      setItems(EMPTY_POSTS);
-      return;
-    }
+    if (!identityId) return;
 
     cleanup();
     setItems(EMPTY_POSTS);
     setError(null);
     setIsLoading(true);
 
-    const observable = client.core.getFollowingFeed(
-      followerIdentity,
+    // Rust-side merge_fn already dedupes by EventKey — each next()
+    // carries the full merged feed plus a status. `Loading` stays in
+    // effect until the last per-server response arrives.
+    const observable = client.core.getIdentityFeed(
+      identityId,
       undefined,
       undefined,
       undefined,
@@ -55,25 +54,24 @@ export function useFollowingFeed(options?: {
           const response = v2.GetFeedResponse.fromBinary(
             new Uint8Array(result.data),
           );
-
-          const decoded = response.eventBundles
-            .map((bundle) => decodeV2PostBundle(bundle))
-            .filter((post) => !!post);
-
-          setItems(decoded);
+          const posts: PostData[] = [];
+          for (const bundle of response.eventBundles) {
+            const decoded = decodeV2PostBundle(bundle);
+            if (decoded) posts.push(decoded);
+          }
+          setItems(posts);
         }
-
         setIsLoading(result.status === QueryStatus.Loading);
       },
       error: (message: string) => {
-        console.warn('useFollowingFeed error:', message);
+        console.warn('useIdentityFeed error:', message);
         setError(new Error(message));
       },
       complete: () => {
         setIsLoading(false);
       },
     });
-  }, [client, cleanup]);
+  }, [client, identityId, cleanup]);
 
   useEffect(() => {
     if (enabled) fetchFeed();
@@ -81,7 +79,8 @@ export function useFollowingFeed(options?: {
   }, [enabled, fetchFeed, cleanup]);
 
   useLocalPostInjection({
-    match: () => true,
+    enabled: !!identityId,
+    match: (p) => p.identity === identityId,
     insert: (decoded) =>
       setItems((prev) =>
         prev.some((p) => p.id === decoded.id) ? prev : [decoded, ...prev],

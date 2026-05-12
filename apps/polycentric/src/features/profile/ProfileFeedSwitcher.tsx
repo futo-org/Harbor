@@ -51,6 +51,7 @@ export function ProfileFeedSwitcher({
   return (
     <FeedViewer
       key={active.key}
+      keyExtractor={(item) => item.id}
       data={feed.items}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={

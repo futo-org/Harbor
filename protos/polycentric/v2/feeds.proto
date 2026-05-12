@@ -24,7 +24,7 @@ message GetIdentityFeedRequest {
 
 message GetFollowingFeedRequest {
   // Identity of the follower to return the feed for
-  optional string follower_identity = 1;
+  string follower_identity = 1;
   optional FeedPageParams page_params = 2;
 }
 
