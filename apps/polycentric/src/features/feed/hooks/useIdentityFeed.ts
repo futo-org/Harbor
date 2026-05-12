@@ -13,8 +13,9 @@ type Sub = { unsubscribe: () => void };
 export function useIdentityFeed(
   identityId: string | null | undefined,
   _limit?: number,
-  _options?: { getIsAborted?: () => boolean },
+  options?: { getIsAborted?: () => boolean; enabled?: boolean },
 ): FeedHookResult {
+  const enabled = options?.enabled ?? true;
   const { client } = usePolycentricContext();
   const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,9 +74,9 @@ export function useIdentityFeed(
   }, [client, identityId, cleanup]);
 
   useEffect(() => {
-    fetchFeed();
+    if (enabled) fetchFeed();
     return cleanup;
-  }, [fetchFeed, cleanup]);
+  }, [enabled, fetchFeed, cleanup]);
 
   useLocalPostInjection({
     enabled: !!identityId,

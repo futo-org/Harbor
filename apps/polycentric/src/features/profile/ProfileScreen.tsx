@@ -2,7 +2,12 @@ import { Screen } from '@/src/common/components/layout';
 import { useTheme } from '@/src/common/theme';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useIsFocused,
+  useLocalSearchParams,
+} from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
@@ -22,6 +27,8 @@ function ProfileScreenContent() {
   const { theme } = useTheme();
   const { identityKey, isSelf, activeFeed } = useProfileContext();
 
+  const isFocused = useIsFocused();
+
   const isAbortedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -32,11 +39,12 @@ function ProfileScreenContent() {
     }, []),
   );
 
-  const authorFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
+  const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
+    enabled: isFocused,
     getIsAborted: () => isAbortedRef.current,
   });
   const likesFeed = useLikesFeed({
-    enabled: isSelf,
+    enabled: isSelf && isFocused,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -46,10 +54,10 @@ function ProfileScreenContent() {
 
   const tabs = isSelf
     ? [
-        { key: 'posts', feed: authorFeed, bottomPadding: 40 },
+        { key: 'posts', feed: identityFeed, bottomPadding: 40 },
         { key: 'likes', feed: likesFeed, bottomPadding: 40 },
       ]
-    : [{ key: 'posts', feed: authorFeed, bottomPadding: 40 }];
+    : [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }];
 
   return (
     <Screen>

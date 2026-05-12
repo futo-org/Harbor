@@ -14,7 +14,6 @@ export function useFollowingFeed(options?: {
   limit?: number;
   enabled?: boolean;
 }): FeedHookResult {
-  console.log(1);
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
   const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
