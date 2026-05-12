@@ -160,10 +160,6 @@ interface NativeModuleInterface {
     eventBytes: Uint8Array,
     callback: bigint
   ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_test_observable(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(
     ptr: bigint,
     serverUrl: Uint8Array,
@@ -188,19 +184,6 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign(
     ptr: bigint,
     eventBytes: Uint8Array
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_clone_testobservable(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_testobservable(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_testobservable_subscribe(
-    ptr: bigint,
-    observer: bigint,
-    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_clone_feedobserver(
     handle: bigint,
@@ -435,11 +418,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_test_observable(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_testobservable_subscribe(): number;
   ubrn_uniffi_polycentric_core_checksum_method_feedobserver_next(): number;
   ubrn_uniffi_polycentric_core_checksum_method_feedobserver_error(): number;
   ubrn_uniffi_polycentric_core_checksum_method_feedobserver_complete(): number;
@@ -456,10 +437,6 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus
   ): UniffiGcObject;
   ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_testobservable_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus
   ): UniffiGcObject;

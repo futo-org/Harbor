@@ -1259,7 +1259,6 @@ export interface PolycentricCoreLike {
     callback: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
-  testObservable(): TestObservableLike;
   /**
    * Upload a blob body to a server. The server verifies that `body`
    * matches the declared `Blob.digest`.
@@ -1976,20 +1975,6 @@ export class PolycentricCore
     }
   }
 
-  testObservable(): TestObservableLike {
-    return FfiConverterTypeTestObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_test_observable(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
   /**
    * Upload a blob body to a server. The server verifies that `body`
    * matches the declared `Blob.digest`.
@@ -2499,139 +2484,6 @@ const FfiConverterTypeSubscription = new FfiConverterObject(
   uniffiTypeSubscriptionObjectFactory
 );
 
-/**
- * Uniffi-friendly wrapper that holds a generic `Observable<String>`
- * and exposes a foreign-callable `subscribe`.
- */
-export interface TestObservableLike {
-  subscribe(observer: Observer): SubscriptionLike;
-}
-/**
- * @deprecated Use `TestObservableLike` instead.
- */
-export type TestObservableInterface = TestObservableLike;
-
-/**
- * Uniffi-friendly wrapper that holds a generic `Observable<String>`
- * and exposes a foreign-callable `subscribe`.
- */
-export class TestObservable
-  extends UniffiAbstractObject
-  implements TestObservableLike
-{
-  readonly [uniffiTypeNameSymbol] = 'TestObservable';
-  readonly [destructorGuardSymbol]: UniffiGcObject;
-  readonly [pointerLiteralSymbol]: UniffiHandle;
-  // No primary constructor declared for this class.
-  private constructor(pointer: UniffiHandle) {
-    super();
-    this[pointerLiteralSymbol] = pointer;
-    this[destructorGuardSymbol] =
-      uniffiTypeTestObservableObjectFactory.bless(pointer);
-  }
-
-  subscribe(observer: Observer): SubscriptionLike {
-    return FfiConverterTypeSubscription.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_testobservable_subscribe(
-            uniffiTypeTestObservableObjectFactory.clonePointer(this),
-            FfiConverterTypeObserver.lower(observer),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * {@inheritDoc uniffi-bindgen-react-native#UniffiAbstractObject.uniffiDestroy}
-   */
-  uniffiDestroy(): void {
-    const ptr = (this as any)[destructorGuardSymbol];
-    if (ptr !== undefined) {
-      const pointer = uniffiTypeTestObservableObjectFactory.pointer(this);
-      uniffiTypeTestObservableObjectFactory.freePointer(pointer);
-      uniffiTypeTestObservableObjectFactory.unbless(ptr);
-      delete (this as any)[destructorGuardSymbol];
-    }
-  }
-
-  static instanceOf(obj: any): obj is TestObservable {
-    return uniffiTypeTestObservableObjectFactory.isConcreteType(obj);
-  }
-}
-
-const uniffiTypeTestObservableObjectFactory: UniffiObjectFactory<TestObservableLike> =
-  (() => {
-    return {
-      create(pointer: UniffiHandle): TestObservableLike {
-        const instance = Object.create(TestObservable.prototype);
-        instance[pointerLiteralSymbol] = pointer;
-        instance[destructorGuardSymbol] = this.bless(pointer);
-        instance[uniffiTypeNameSymbol] = 'TestObservable';
-        return instance;
-      },
-
-      bless(p: UniffiHandle): UniffiGcObject {
-        return uniffiCaller.rustCall(
-          /*caller:*/ (status) =>
-            nativeModule().ubrn_uniffi_internal_fn_method_testobservable_ffi__bless_pointer(
-              p,
-              status
-            ),
-          /*liftString:*/ FfiConverterString.lift
-        );
-      },
-
-      unbless(ptr: UniffiGcObject) {
-        ptr.markDestroyed();
-      },
-
-      pointer(obj: TestObservableLike): UniffiHandle {
-        if ((obj as any)[destructorGuardSymbol] === undefined) {
-          throw new UniffiInternalError.UnexpectedNullPointer();
-        }
-        return (obj as any)[pointerLiteralSymbol];
-      },
-
-      clonePointer(obj: TestObservableLike): UniffiHandle {
-        const pointer = this.pointer(obj);
-        return uniffiCaller.rustCall(
-          /*caller:*/ (callStatus) =>
-            nativeModule().ubrn_uniffi_polycentric_core_fn_clone_testobservable(
-              pointer,
-              callStatus
-            ),
-          /*liftString:*/ FfiConverterString.lift
-        );
-      },
-
-      freePointer(pointer: UniffiHandle): void {
-        uniffiCaller.rustCall(
-          /*caller:*/ (callStatus) =>
-            nativeModule().ubrn_uniffi_polycentric_core_fn_free_testobservable(
-              pointer,
-              callStatus
-            ),
-          /*liftString:*/ FfiConverterString.lift
-        );
-      },
-
-      isConcreteType(obj: any): obj is TestObservableLike {
-        return (
-          obj[destructorGuardSymbol] &&
-          obj[uniffiTypeNameSymbol] === 'TestObservable'
-        );
-      },
-    };
-  })();
-// FfiConverter for TestObservableLike
-const FfiConverterTypeTestObservable = new FfiConverterObject(
-  uniffiTypeTestObservableObjectFactory
-);
-
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalArrayBuffer = new FfiConverterOptional(
   FfiConverterArrayBuffer
@@ -2842,14 +2694,6 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_test_observable() !==
-    12344
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_test_observable'
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob() !==
     61645
   ) {
@@ -2871,14 +2715,6 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_signeventcallback_sign'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_testobservable_subscribe() !==
-    2487
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_testobservable_subscribe'
     );
   }
   if (
@@ -2980,6 +2816,5 @@ export default Object.freeze({
     FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
     FfiConverterTypeSubscription,
-    FfiConverterTypeTestObservable,
   },
 });

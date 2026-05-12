@@ -29,7 +29,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './src/common/assets/images/PolycentricLogoTransparent1024.png',
+      foregroundImage:
+        './src/common/assets/images/PolycentricLogoTransparent1024.png',
       backgroundColor: '#F2F5F9',
     },
     edgeToEdgeEnabled: true,
