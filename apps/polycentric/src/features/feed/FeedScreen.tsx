@@ -9,6 +9,8 @@ import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { useFocusEffect, useIsFocused } from 'expo-router';
+import { useState } from 'react';
 
 const ListHeader = () => (
   <>
@@ -21,7 +23,12 @@ export default function FeedScreen() {
   const { theme } = useTheme();
   const showComposeFab = !isWeb;
 
-  const feed = useFollowingFeed({ enabled: true });
+  const [enabled, setEnabled] = useState<boolean>(false);
+  const feed = useFollowingFeed({ enabled });
+
+  useFocusEffect(() => {
+    setEnabled(true);
+  });
 
   if (feed.error) {
     return (
@@ -46,6 +53,7 @@ export default function FeedScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedViewer
+          keyExtractor={(item) => item.id}
           data={feed.items}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={

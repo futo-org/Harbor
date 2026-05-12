@@ -142,6 +142,11 @@ export class PolycentricClient {
       // still work without a CDN, they just can't fetch blob bodies.
       await this.fetchServerInfo();
 
+      // Push the JS-side server list into the rust core so that
+      // observables that fan out to every configured server (e.g.
+      // `getIdentityFeed`) actually have somewhere to call.
+      this.core.setServers(this.servers);
+
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
     } catch (error) {
@@ -415,103 +420,6 @@ export class PolycentricClient {
     }
 
     return bundles;
-  }
-
-  /**
-   * Fetch posts authored by `identity` from every configured server and
-   * return the per-server responses. Does not persist — callers decide
-   * what to do with the response.
-   */
-  async getIdentityFeed(options: {
-    identity: string;
-    limit?: number | null;
-    beforeToken?: string | null;
-    afterToken?: string | null;
-  }): Promise<Proto.GetFeedResponse[]> {
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.getIdentityFeed(
-          server,
-          options.identity,
-          options.limit ?? undefined,
-          options.beforeToken ?? undefined,
-          options.afterToken ?? undefined,
-        ),
-      ),
-    );
-    return this.collectFeedResponses(results, 'getIdentityFeed');
-  }
-
-  /**
-   * Fetch the feed of posts from identities the caller follows. Defaults
-   * to the active identity's follow graph when `followerIdentity` is
-   * omitted.
-   */
-  async getFollowingFeed(options?: {
-    followerIdentity?: string | null;
-    limit?: number | null;
-    beforeToken?: string | null;
-    afterToken?: string | null;
-  }): Promise<Proto.GetFeedResponse[]> {
-    const followerIdentity =
-      options?.followerIdentity ?? this.activeIdentityKey;
-
-    if (!followerIdentity) {
-      throw new Error('getFollowingFeed requires an active identity');
-    }
-
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.getFollowingFeed(
-          server,
-          followerIdentity,
-          options?.limit ?? undefined,
-          options?.beforeToken ?? undefined,
-          options?.afterToken ?? undefined,
-        ),
-      ),
-    );
-    return this.collectFeedResponses(results, 'getFollowingFeed');
-  }
-
-  /**
-   * Fetch the server-curated explore feed of posts relevant to `identity`.
-   */
-  async getExploreFeed(options?: {
-    identity?: string | null;
-    limit?: number | null;
-    beforeToken?: string | null;
-    afterToken?: string | null;
-  }): Promise<Proto.GetFeedResponse[]> {
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.getExploreFeed(
-          server,
-          options?.identity ?? undefined,
-          options?.limit ?? undefined,
-          options?.beforeToken ?? undefined,
-          options?.afterToken ?? undefined,
-        ),
-      ),
-    );
-    return this.collectFeedResponses(results, 'getExploreFeed');
-  }
-
-  private collectFeedResponses(
-    results: PromiseSettledResult<ArrayBuffer>[],
-    label: string,
-  ): Proto.GetFeedResponse[] {
-    const responses: Proto.GetFeedResponse[] = [];
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error(`${label} failed for a server:`, result.reason);
-        continue;
-      }
-      responses.push(
-        Proto.GetFeedResponse.fromBinary(new Uint8Array(result.value)),
-      );
-    }
-    return responses;
   }
 
   /**

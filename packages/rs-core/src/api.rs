@@ -5,8 +5,7 @@ use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
-    ContentDigest, CreatePairingSessionRequest, Event, FeedPageParams, GetExploreFeedRequest,
-    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPairingSessionRequest,
+    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
     GetPostThreadRequest, GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters,
     ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage,
     UploadBlobRequest,
@@ -89,7 +88,8 @@ pub trait SignEventCallback: Send + Sync {
 
 #[derive(uniffi::Object)]
 pub struct PolycentricCore {
-    client: Mutex<PolycentricClient>,
+    client: Arc<Mutex<PolycentricClient>>,
+    query: crate::query::Query<Vec<u8>>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), uniffi::export(async_runtime = "tokio"))]
@@ -99,9 +99,23 @@ impl PolycentricCore {
     pub fn new() -> Arc<Self> {
         #[cfg(target_arch = "wasm32")]
         console_error_panic_hook::set_once();
+
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
         Arc::new(Self {
-            client: Mutex::new(PolycentricClient::new()),
+            query: crate::query::Query::new(client.clone()),
+            client,
         })
+    }
+
+    /// Replace the list of gRPC servers the core's `Observable`-returning
+    /// methods will fan out to.
+    pub fn set_servers(&self, servers: Vec<String>) {
+        self.client.lock().unwrap().set_servers(servers);
+    }
+
+    /// Return a snapshot of the currently configured servers.
+    pub fn get_servers(&self) -> Vec<String> {
+        self.client.lock().unwrap().servers()
     }
 
     pub fn next_sequence(&self, identity: String, collection: i32) -> u64 {
@@ -296,79 +310,49 @@ impl PolycentricCore {
         Ok(())
     }
 
-    /// Fetch the feed of posts authored by `identity`. Returns serialized
-    /// `GetFeedResponse` proto bytes.
-    pub async fn get_identity_feed(
+    /// Fetch the feed of posts authored by `identity` as an
+    /// observable. Fans out to every configured server (see
+    /// `set_servers`); each server's response is emitted to the
+    /// foreign `FeedObserver` and `complete` fires after the last
+    /// server has reported.
+    pub fn get_identity_feed(
         &self,
-        server_url: String,
         identity: String,
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let mut client = FeedsServiceClient::new(channel(&server_url)?);
-        let response = client
-            .get_identity_feed(GetIdentityFeedRequest {
-                identity,
-                page_params: Some(FeedPageParams {
-                    limit,
-                    before_token,
-                    after_token,
-                }),
-            })
-            .await
-            .map_err(|e| CoreError::Network(format!("get_identity_feed: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
+    ) -> Arc<crate::feed::FeedQueryObservable> {
+        crate::feed::get_identity_feed(&self.query, identity, limit, before_token, after_token)
     }
 
     /// Fetch the feed of posts from identities the caller follows. When
     /// `follower_identity` is `None` the server uses the authenticated
     /// caller's follow graph.
-    pub async fn get_following_feed(
+    pub fn get_following_feed(
         &self,
-        server_url: String,
-        follower_identity: Option<String>,
+        follower_identity: String,
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let mut client = FeedsServiceClient::new(channel(&server_url)?);
-        let response = client
-            .get_following_feed(GetFollowingFeedRequest {
-                follower_identity,
-                page_params: Some(FeedPageParams {
-                    limit,
-                    before_token,
-                    after_token,
-                }),
-            })
-            .await
-            .map_err(|e| CoreError::Network(format!("get_following_feed: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
+    ) -> Arc<crate::feed::FeedQueryObservable> {
+        crate::feed::get_following_feed(
+            &self.query,
+            follower_identity,
+            limit,
+            before_token,
+            after_token,
+        )
     }
 
-    /// Fetch the server-curated explore feed of posts relevant to `identity`.
-    pub async fn get_explore_feed(
+    /// Fetch the server-curated explore feed as an observable.
+    pub fn get_explore_feed(
         &self,
-        server_url: String,
         identity: Option<String>,
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let mut client = FeedsServiceClient::new(channel(&server_url)?);
-        let response = client
-            .get_explore_feed(GetExploreFeedRequest {
-                identity,
-                page_params: Some(FeedPageParams {
-                    limit,
-                    before_token,
-                    after_token,
-                }),
-            })
-            .await
-            .map_err(|e| CoreError::Network(format!("get_explore_feed: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
+    ) -> Arc<crate::feed::FeedQueryObservable> {
+        crate::feed::get_explore_feed(&self.query, identity, limit, before_token, after_token)
     }
 
     /// Fetch a parent post and its direct replies. Returns serialized

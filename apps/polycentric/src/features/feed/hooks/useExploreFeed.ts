@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { QueryStatus, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { EMPTY_POSTS, NOOP, type FeedHookResult } from './types';
+
+type Sub = { unsubscribe: () => void };
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -16,34 +19,60 @@ export function useExploreFeed(options?: {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchFeed = useCallback(async () => {
-    if (client.servers.length === 0) return;
-    setIsLoading(true);
+  // Hold the live subscription so we can cancel on unmount / refresh.
+  // The rust core fans out to every configured server and emits each
+  // merged response as it arrives.
+  const subscriptionRef = useRef<Sub | null>(null);
+
+  const cleanup = useCallback(() => {
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = null;
+  }, []);
+
+  const fetchFeed = useCallback(() => {
+    cleanup();
+    setItems(EMPTY_POSTS);
     setError(null);
-    try {
-      const responses = await client.getExploreFeed({
-        identity: client.activeIdentityKey,
-        limit: options?.perServerLimit ?? null,
-      });
-      const posts: PostData[] = [];
-      for (const response of responses) {
-        for (const bundle of response.eventBundles) {
-          const decoded = decodeV2PostBundle(bundle);
-          if (decoded) posts.push(decoded);
+    setIsLoading(true);
+
+    // Rust-side merge_fn already dedupes by EventKey — each next()
+    // carries the full merged feed plus a status. `Loading` stays in
+    // effect until the last per-server response arrives.
+    const observable = client.core.getExploreFeed(
+      client.activeIdentityKey ?? undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+    subscriptionRef.current = observable.subscribe({
+      next: (result) => {
+        if (result.data) {
+          const response = v2.GetFeedResponse.fromBinary(
+            new Uint8Array(result.data),
+          );
+          const posts: PostData[] = [];
+          for (const bundle of response.eventBundles) {
+            const decoded = decodeV2PostBundle(bundle);
+            if (decoded) posts.push(decoded);
+          }
+          setItems(posts);
         }
-      }
-      setItems(posts);
-    } catch (e) {
-      console.warn('[useExploreFeed] fetch failed', e);
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [client, options?.perServerLimit]);
+        setIsLoading(result.status === QueryStatus.Loading);
+      },
+      error: (message: string) => {
+        console.warn('useExploreFeed error:', message);
+        setError(new Error(message));
+      },
+      complete: () => {
+        setIsLoading(false);
+      },
+    });
+  }, [client, cleanup]);
 
   useEffect(() => {
     if (enabled) fetchFeed();
-  }, [enabled, fetchFeed]);
+    return cleanup;
+  }, [enabled, fetchFeed, cleanup]);
 
   return {
     items,
