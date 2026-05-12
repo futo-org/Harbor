@@ -244,3 +244,143 @@ pub fn get_explore_feed(
 
     FeedQueryObservable::new(query.query(cache_key, query_fn, merge_feed_responses))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polycentric_common::models::protos_v2::{
+        Event, EventBundle, EventHint, EventKey, GetFeedResponse, PublicKey, SignedEvent,
+    };
+
+    fn make_bundle(
+        collection: i32,
+        identity: &str,
+        key_type: i32,
+        key: Vec<u8>,
+        sequence: u64,
+    ) -> EventBundle {
+        let event = Event {
+            key: Some(EventKey {
+                collection,
+                identity: identity.to_string(),
+                signed_by: Some(PublicKey { key_type, key }),
+                sequence,
+            }),
+            ..Default::default()
+        };
+        EventBundle {
+            signed_event: Some(SignedEvent {
+                signature: Vec::new(),
+                event_bytes: event.encode_to_vec(),
+            }),
+            serialized_content: None,
+        }
+    }
+
+    fn encode_response(bundles: Vec<EventBundle>, hints: Vec<EventBundle>) -> Vec<u8> {
+        GetFeedResponse {
+            event_bundles: bundles,
+            event_hints: hints
+                .into_iter()
+                .map(|b| EventHint {
+                    event_bundle: Some(b),
+                })
+                .collect(),
+        }
+        .encode_to_vec()
+    }
+
+    #[test]
+    fn event_dedup_key_extracts_tuple() {
+        let bundle = make_bundle(2, "id-a", 1, vec![0xAA], 5);
+        let key = event_dedup_key(&bundle).expect("key");
+        assert_eq!(key, (2, "id-a".to_string(), 1, vec![0xAA], 5));
+    }
+
+    #[test]
+    fn event_dedup_key_returns_none_for_missing_signed_event() {
+        let bundle = EventBundle {
+            signed_event: None,
+            serialized_content: None,
+        };
+        assert!(event_dedup_key(&bundle).is_none());
+    }
+
+    #[test]
+    fn event_dedup_key_returns_none_for_invalid_event_bytes() {
+        let bundle = EventBundle {
+            signed_event: Some(SignedEvent {
+                signature: Vec::new(),
+                event_bytes: vec![0xFF, 0xFF, 0xFF],
+            }),
+            serialized_content: None,
+        };
+        assert!(event_dedup_key(&bundle).is_none());
+    }
+
+    #[test]
+    fn merge_concatenates_when_no_overlap() {
+        let prev = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
+        let new = encode_response(vec![make_bundle(2, "b", 1, vec![2], 1)], vec![]);
+
+        let merged = merge_feed_responses(Some(prev), new);
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_bundles.len(), 2);
+    }
+
+    #[test]
+    fn merge_dedupes_event_bundles_by_event_key() {
+        let dup = make_bundle(2, "a", 1, vec![1], 1);
+        let prev = encode_response(vec![dup.clone()], vec![]);
+        let new = encode_response(
+            vec![dup.clone(), make_bundle(2, "a", 1, vec![1], 2)],
+            vec![],
+        );
+
+        let merged = merge_feed_responses(Some(prev), new);
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_bundles.len(), 2);
+        let seqs: Vec<u64> = decoded
+            .event_bundles
+            .iter()
+            .filter_map(|b| event_dedup_key(b).map(|k| k.4))
+            .collect();
+        assert_eq!(seqs, vec![1, 2]);
+    }
+
+    #[test]
+    fn merge_dedupes_hints_by_event_key() {
+        let dup = make_bundle(2, "a", 1, vec![9], 7);
+        let prev = encode_response(vec![], vec![dup.clone()]);
+        let new = encode_response(vec![], vec![dup.clone()]);
+
+        let merged = merge_feed_responses(Some(prev), new);
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_hints.len(), 1);
+    }
+
+    #[test]
+    fn merge_handles_no_prior_value() {
+        let new = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
+        let merged = merge_feed_responses(None, new);
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_bundles.len(), 1);
+    }
+
+    #[test]
+    fn merge_retains_unparseable_bundles_without_dedup() {
+        let parseable = make_bundle(2, "a", 1, vec![1], 1);
+        let unparseable = EventBundle {
+            signed_event: Some(SignedEvent {
+                signature: Vec::new(),
+                event_bytes: vec![0xFF, 0xFF, 0xFF],
+            }),
+            serialized_content: None,
+        };
+        let new = encode_response(vec![parseable, unparseable.clone(), unparseable], vec![]);
+        let merged = merge_feed_responses(None, new);
+        // Parseable + both unparseables retained (no dedup key to compare).
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_bundles.len(), 3);
+    }
+}

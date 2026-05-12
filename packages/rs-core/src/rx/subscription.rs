@@ -24,3 +24,29 @@ impl Subscription {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_subscription_is_open() {
+        let sub = Subscription::new();
+        assert!(!sub.is_closed());
+    }
+
+    #[test]
+    fn unsubscribe_marks_closed() {
+        let sub = Subscription::new();
+        sub.unsubscribe();
+        assert!(sub.is_closed());
+    }
+
+    #[test]
+    fn unsubscribe_is_idempotent() {
+        let sub = Subscription::new();
+        sub.unsubscribe();
+        sub.unsubscribe();
+        assert!(sub.is_closed());
+    }
+}
