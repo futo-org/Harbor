@@ -178,7 +178,6 @@ export function ComposeSheetInner({
       const event = await client.buildEvent(content);
 
       const signedEvent = await client.signEvent(event);
-      console.log(signedEvent);
       // `commitEvent` persists the event locally and, when content is
       // passed, seeds the core's content store + emits contentCreated
       // with both signedEvent and content so feeds can decode directly.
