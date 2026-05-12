@@ -29,6 +29,8 @@ getrandom = "0.2"
 sha2 = "0.10"
 image = "0.25.10"
 async-trait = "0.1"
+futures = "0.3"
+futures-timer = { version = "3", features = ["wasm-bindgen"] }
 tonic = { version = "0.14", default-features = false, features = ["codegen"] }
 ed25519-dalek = "2.2.0"
 hmac-sha256 = "1.1.12"
@@ -40,6 +42,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"], optio
 getrandom = { version = "0.2", features = ["js"] }
 tonic-web-wasm-client = "0.9"
 console_error_panic_hook = "0.1"
+wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
 uniffi = { workspace = true, features = ["build"] }

@@ -142,8 +142,19 @@ export class PolycentricClient {
       // still work without a CDN, they just can't fetch blob bodies.
       await this.fetchServerInfo();
 
+      // Push the JS-side server list into the rust core so that
+      // observables that fan out to every configured server (e.g.
+      // `getIdentityFeed`) actually have somewhere to call.
+      this.core.setServers(this.servers);
+
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
+
+      this.core.testObservable().subscribe({
+        next: (value) => console.log('[testObservable] next:', value),
+        error: (message) => console.warn('[testObservable] error:', message),
+        complete: () => console.log('[testObservable] complete'),
+      });
     } catch (error) {
       this.setError(error instanceof Error ? error : new Error(String(error)));
       throw error;
@@ -415,31 +426,6 @@ export class PolycentricClient {
     }
 
     return bundles;
-  }
-
-  /**
-   * Fetch posts authored by `identity` from every configured server and
-   * return the per-server responses. Does not persist — callers decide
-   * what to do with the response.
-   */
-  async getIdentityFeed(options: {
-    identity: string;
-    limit?: number | null;
-    beforeToken?: string | null;
-    afterToken?: string | null;
-  }): Promise<Proto.GetFeedResponse[]> {
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.getIdentityFeed(
-          server,
-          options.identity,
-          options.limit ?? undefined,
-          options.beforeToken ?? undefined,
-          options.afterToken ?? undefined,
-        ),
-      ),
-    );
-    return this.collectFeedResponses(results, 'getIdentityFeed');
   }
 
   /**

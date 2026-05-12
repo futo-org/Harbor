@@ -1,6 +1,6 @@
 import { Screen } from '@/src/common/components/layout';
 import { useTheme } from '@/src/common/theme';
-import { useAuthorFeed } from '@/src/features/feed/hooks/useAuthorFeed';
+import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -32,7 +32,7 @@ function ProfileScreenContent() {
     }, []),
   );
 
-  const authorFeed = useAuthorFeed(identityKey ?? undefined, undefined, {
+  const authorFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
     getIsAborted: () => isAbortedRef.current,
   });
   const likesFeed = useLikesFeed({

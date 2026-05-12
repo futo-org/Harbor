@@ -9,11 +9,13 @@ use polycentric_common::{
 use crate::store::{content_store::ContentStore, event_store::EventStore, keys::EventKey};
 use prost::Message;
 use std::collections::HashSet;
+use std::sync::Mutex;
 
 const IDENTITY_COLLECTION: i32 = 1;
 
 #[derive(Default)]
 pub struct PolycentricClient {
+    servers: Mutex<Vec<String>>,
     event_store: EventStore,
     content_store: ContentStore,
 }
@@ -21,6 +23,16 @@ pub struct PolycentricClient {
 impl PolycentricClient {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Replace the list of gRPC servers this client knows about.
+    pub fn set_servers(&self, servers: Vec<String>) {
+        *self.servers.lock().unwrap() = servers;
+    }
+
+    /// Return a snapshot of the configured servers.
+    pub fn servers(&self) -> Vec<String> {
+        self.servers.lock().unwrap().clone()
     }
 
     /// Copy a signed event into the event store.
