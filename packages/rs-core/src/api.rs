@@ -17,27 +17,8 @@ use std::sync::{Arc, Mutex};
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
 compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
 
-#[cfg(target_arch = "wasm32")]
-type GrpcChannel = tonic_web_wasm_client::Client;
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-type GrpcChannel = tonic::transport::Channel;
-
-#[cfg(target_arch = "wasm32")]
-fn channel(server_url: &str) -> Result<GrpcChannel, CoreError> {
-    Ok(tonic_web_wasm_client::Client::new(server_url.to_string()))
-}
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-fn channel(server_url: &str) -> Result<GrpcChannel, CoreError> {
-    let mut endpoint = tonic::transport::Channel::from_shared(server_url.to_string())
-        .map_err(|e| CoreError::Network(format!("Invalid server url: {e}")))?;
-    if server_url.starts_with("https://") {
-        let tls = tonic::transport::ClientTlsConfig::new().with_webpki_roots();
-        endpoint = endpoint
-            .tls_config(tls)
-            .map_err(|e| CoreError::Network(format!("TLS config: {e}")))?;
-    }
-    Ok(endpoint.connect_lazy())
+fn channel(server_url: &str) -> Result<crate::transport::GrpcChannel, CoreError> {
+    crate::transport::channel(server_url).map_err(CoreError::Network)
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -321,8 +302,16 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
-        crate::feed::get_identity_feed(&self.query, identity, limit, before_token, after_token)
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_identity_feed(
+            &self.query,
+            identity,
+            limit,
+            before_token,
+            after_token,
+            fetch_mode,
+        )
     }
 
     /// Fetch the feed of posts from identities the caller follows. When
@@ -334,13 +323,15 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
         crate::feed::get_following_feed(
             &self.query,
             follower_identity,
             limit,
             before_token,
             after_token,
+            fetch_mode,
         )
     }
 
@@ -351,8 +342,16 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
-        crate::feed::get_explore_feed(&self.query, identity, limit, before_token, after_token)
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_explore_feed(
+            &self.query,
+            identity,
+            limit,
+            before_token,
+            after_token,
+            fetch_mode,
+        )
     }
 
     /// Fetch a parent post and its direct replies. Returns serialized
@@ -371,6 +370,15 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("get_post_thread: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch `identity`'s profile events as an observable.
+    pub fn get_profile(
+        &self,
+        identity: String,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::profile::get_profile(&self.query, identity, fetch_mode)
     }
 
     /// Fetch a server's public info. Returns serialized

@@ -6,8 +6,18 @@ import './uniffi-init';
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';
 
-export { PolycentricCore, QueryStatus } from './generated/rn/polycentric_core';
-export type { FeedQueryResult } from './generated/rn/polycentric_core';
+export {
+  FetchMode,
+  PolycentricCore,
+  QueryStatus,
+  setLogger,
+} from './generated/rn/polycentric_core';
+export type {
+  Logger,
+  QueryObservable,
+  QueryObserver,
+  QueryResultFfi,
+} from './generated/rn/polycentric_core';
 
 export {
   createPolycentricClient,

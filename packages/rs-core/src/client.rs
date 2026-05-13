@@ -50,6 +50,30 @@ impl PolycentricClient {
         self.content_store.insert(digest, content_bytes);
     }
 
+    /// Verify each bundle's signature and copy its event + content
+    /// into the local stores. Per-bundle failures are dropped so one
+    /// bad event doesn't poison the rest of the batch.
+    pub fn copy_bundles(&mut self, bundles: &[EventBundle]) {
+        for bundle in bundles {
+            let Some(signed_event) = bundle.signed_event.as_ref() else {
+                continue;
+            };
+            if signed_event.verify_signature().is_err() {
+                continue;
+            }
+            let Ok(event) = Event::decode(signed_event.event_bytes.as_slice()) else {
+                continue;
+            };
+            if let (Some(digest), Some(serialized)) = (
+                event.content_digest.as_ref(),
+                bundle.serialized_content.as_ref(),
+            ) {
+                self.copy_content(digest, serialized.content_bytes.clone());
+            }
+            let _ = self.copy_event(signed_event.clone());
+        }
+    }
+
     /// Return the next sequence number for a given collection:
     /// max(sequence) + 1 across all events in the collection for an identity,
     /// or 1 if no events exist for that collection.

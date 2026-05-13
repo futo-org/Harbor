@@ -1,105 +1,18 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    feeds_service_client::FeedsServiceClient, Event, EventBundle, FeedPageParams,
+    feeds_service_client::FeedsServiceClient, EventBundle, EventHint, FeedPageParams,
     GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
 };
 use prost::Message;
 
-use crate::query::{Query, QueryResult, QueryStatus};
-use crate::rx::observable::Observable;
-use crate::rx::subscription::Subscription;
-
-#[cfg(target_arch = "wasm32")]
-type GrpcChannel = tonic_web_wasm_client::Client;
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-type GrpcChannel = tonic::transport::Channel;
-
-#[cfg(target_arch = "wasm32")]
-fn make_channel(server_url: &str) -> Result<GrpcChannel, String> {
-    Ok(tonic_web_wasm_client::Client::new(server_url.to_string()))
-}
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-fn make_channel(server_url: &str) -> Result<GrpcChannel, String> {
-    let mut endpoint = tonic::transport::Channel::from_shared(server_url.to_string())
-        .map_err(|e| format!("Invalid server url: {e}"))?;
-    if server_url.starts_with("https://") {
-        let tls = tonic::transport::ClientTlsConfig::new().with_webpki_roots();
-        endpoint = endpoint
-            .tls_config(tls)
-            .map_err(|e| format!("TLS config: {e}"))?;
-    }
-    Ok(endpoint.connect_lazy())
-}
-
-/// FFI-friendly mirror of `QueryResult<Vec<u8>>` for the feed RPCs.
-#[derive(uniffi::Record)]
-pub struct FeedQueryResult {
-    pub data: Option<Vec<u8>>,
-    pub status: QueryStatus,
-}
-
-/// Foreign-implemented observer for `FeedQueryObservable`. `next`
-/// receives the full `FeedQueryResult` so the consumer sees both the
-/// merged response bytes and the current loading status.
-#[uniffi::export(with_foreign)]
-pub trait FeedObserver: Send + Sync {
-    fn next(&self, result: FeedQueryResult);
-    fn error(&self, message: String);
-    fn complete(&self);
-}
-
-/// FFI wrapper around the generic `Observable<QueryResult<Vec<u8>>>`
-/// returned by `Query::query` for feed RPCs.
-#[derive(uniffi::Object)]
-pub struct FeedQueryObservable {
-    inner: Observable<QueryResult<Vec<u8>>>,
-}
-
-#[uniffi::export]
-impl FeedQueryObservable {
-    pub fn subscribe(&self, observer: Arc<dyn FeedObserver>) -> Arc<Subscription> {
-        let next = observer.clone();
-        let error = observer.clone();
-        let complete = observer;
-        self.inner.subscribe(
-            move |result: QueryResult<Vec<u8>>| {
-                next.next(FeedQueryResult {
-                    data: result.data,
-                    status: result.status,
-                });
-            },
-            move |message| error.error(message),
-            move || complete.complete(),
-        )
-    }
-}
-
-impl FeedQueryObservable {
-    pub fn new(inner: Observable<QueryResult<Vec<u8>>>) -> Arc<Self> {
-        Arc::new(Self { inner })
-    }
-}
-
-type EventDedupKey = (i32, String, i32, Vec<u8>, u64);
-
-fn event_dedup_key(bundle: &EventBundle) -> Option<EventDedupKey> {
-    let signed = bundle.signed_event.as_ref()?;
-    let event = Event::decode(signed.event_bytes.as_slice()).ok()?;
-    let key = event.key?;
-    let signed_by = key.signed_by?;
-    Some((
-        key.collection,
-        key.identity,
-        signed_by.key_type,
-        signed_by.key,
-        key.sequence,
-    ))
-}
+use crate::client::PolycentricClient;
+use crate::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::{FetchMode, Query, QueryObservable};
+use crate::transport::channel;
 
 /// Merge function for every feed-RPC observable. Concatenates `event_bundles` +
 /// `event_hints`, then dedupes each list by `EventKey` so the cached
@@ -134,6 +47,20 @@ fn merge_feed_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
     merged.encode_to_vec()
 }
 
+/// Pull bundles out of each `EventHint` and copy them into the local
+/// client stores. Hints are useful side-information the server
+/// volunteers (e.g. the profile of a post's author) — caching them
+/// avoids extra round-trips when the UI later asks for that data.
+fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: &[EventHint]) {
+    let bundles: Vec<EventBundle> = hints
+        .iter()
+        .filter_map(|h| h.event_bundle.clone())
+        .collect();
+    if !bundles.is_empty() {
+        client.lock().unwrap().copy_bundles(&bundles);
+    }
+}
+
 /// Return posts for an identity.
 pub fn get_identity_feed(
     query: &Query<Vec<u8>>,
@@ -141,18 +68,20 @@ pub fn get_identity_feed(
     limit: Option<i32>,
     before_token: Option<String>,
     after_token: Option<String>,
-) -> Arc<FeedQueryObservable> {
+    fetch_mode: Option<FetchMode>,
+) -> Arc<dyn QueryObservable> {
     let cache_key = format!(
         "identity_feed:{identity}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
     );
+    let client = query.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
         let before_token = before_token.clone();
         let after_token = after_token.clone();
+        let client = client.clone();
         async move {
-            let channel = make_channel(&server_url)?;
-            let response = FeedsServiceClient::new(channel)
+            let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_identity_feed(GetIdentityFeedRequest {
                     identity,
                     page_params: Some(FeedPageParams {
@@ -164,11 +93,12 @@ pub fn get_identity_feed(
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
                 .into_inner();
+            copy_hints(&client, &response.event_hints);
             Ok(response.encode_to_vec())
         }
     };
 
-    FeedQueryObservable::new(query.query(cache_key, query_fn, merge_feed_responses))
+    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
 }
 
 /// Returns posts an identity is following
@@ -178,18 +108,20 @@ pub fn get_following_feed(
     limit: Option<i32>,
     before_token: Option<String>,
     after_token: Option<String>,
-) -> Arc<FeedQueryObservable> {
+    fetch_mode: Option<FetchMode>,
+) -> Arc<dyn QueryObservable> {
     let cache_key = format!(
         "following_feed:{follower_identity}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
     );
+    let client = query.client().clone();
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
         let before_token: Option<String> = before_token.clone();
         let after_token = after_token.clone();
+        let client = client.clone();
         async move {
-            let channel = make_channel(&server_url)?;
-            let response = FeedsServiceClient::new(channel)
+            let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_following_feed(GetFollowingFeedRequest {
                     follower_identity,
                     page_params: Some(FeedPageParams {
@@ -201,11 +133,12 @@ pub fn get_following_feed(
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
                 .into_inner();
+            copy_hints(&client, &response.event_hints);
             Ok(response.encode_to_vec())
         }
     };
 
-    FeedQueryObservable::new(query.query(cache_key, query_fn, merge_feed_responses))
+    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
@@ -215,18 +148,20 @@ pub fn get_explore_feed(
     limit: Option<i32>,
     before_token: Option<String>,
     after_token: Option<String>,
-) -> Arc<FeedQueryObservable> {
+    fetch_mode: Option<FetchMode>,
+) -> Arc<dyn QueryObservable> {
     let cache_key = format!(
         "explore_feed:{identity:?}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
     );
+    let client = query.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
         let before_token = before_token.clone();
         let after_token = after_token.clone();
+        let client = client.clone();
         async move {
-            let channel = make_channel(&server_url)?;
-            let response = FeedsServiceClient::new(channel)
+            let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_explore_feed(GetExploreFeedRequest {
                     identity,
                     page_params: Some(FeedPageParams {
@@ -238,11 +173,12 @@ pub fn get_explore_feed(
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?
                 .into_inner();
+            copy_hints(&client, &response.event_hints);
             Ok(response.encode_to_vec())
         }
     };
 
-    FeedQueryObservable::new(query.query(cache_key, query_fn, merge_feed_responses))
+    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
 }
 
 #[cfg(test)]
