@@ -60,6 +60,6 @@ app-deploy-manifest-staging:
 app-deploy-manifest-production:
   extends: .app-deploy-manifest
   variables:
-    ENVIRONMENT: production
+    ENVIRONMENT: polycentric # not production!
   needs:
     - app-deploy-image-production

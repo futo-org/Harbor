@@ -60,6 +60,6 @@ server-deploy-manifest-staging:
 server-deploy-manifest-production:
   extends: .server-deploy-manifest
   variables:
-    ENVIRONMENT: production
+    ENVIRONMENT: polycentric # not production!
   needs:
     - server-deploy-image-production
