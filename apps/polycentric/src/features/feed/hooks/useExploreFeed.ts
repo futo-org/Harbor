@@ -43,6 +43,7 @@ export function useExploreFeed(options?: {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
     subscriptionRef.current = observable.subscribe({
       next: (result) => {

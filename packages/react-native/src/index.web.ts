@@ -5,10 +5,11 @@ import 'fast-text-encoding';
 // wasm module).
 export {
   uniffiInitAsync,
+  FetchMode,
   PolycentricCore,
   QueryStatus,
 } from '@polycentric/rs-core-uniffi-web';
-export type { FeedQueryResult } from '@polycentric/rs-core-uniffi-web';
+export type { EventKey, QueryResultFfi } from '@polycentric/rs-core-uniffi-web';
 
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';

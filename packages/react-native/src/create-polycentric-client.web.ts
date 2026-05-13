@@ -5,6 +5,7 @@ import {
 } from '@polycentric/js-browser';
 import {
   PolycentricCore,
+  setLogger,
   uniffiInitAsync,
 } from '@polycentric/rs-core-uniffi-web';
 import {
@@ -13,6 +14,17 @@ import {
   type CreatePolycentricClientConfig,
 } from './create-polycentric-client.shared';
 
+let loggerInstalled = false;
+function installConsoleLogger() {
+  if (loggerInstalled) return;
+  loggerInstalled = true;
+  setLogger({
+    log: (message: string) => {
+      console.log(message);
+    },
+  });
+}
+
 export async function createPolycentricClient(
   config: CreatePolycentricClientConfig = {}
 ): Promise<PolycentricClient> {
@@ -20,6 +32,7 @@ export async function createPolycentricClient(
 
   // Load + initialize the wasm module before constructing the core.
   await uniffiInitAsync();
+  installConsoleLogger();
 
   return PolycentricClient.create({
     core: new PolycentricCore(),

@@ -17,19 +17,19 @@ impl EventStore {
         Self::default()
     }
 
-    pub fn insert(&mut self, signed_event: SignedEvent) -> Result<EventKey, CoreError> {
+    pub fn insert(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
         let event = Proto::Event::decode(signed_event.event_bytes.as_slice())
             .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
 
-        let event_key = EventKey::from_event(&event)?;
+        let event_key = EventKey::from_event(event)?;
 
         if self.events.contains_key(&event_key) {
-            return Ok(event_key);
+            return Ok(());
         }
 
-        self.events.insert(event_key.clone(), signed_event);
+        self.events.insert(event_key, signed_event);
 
-        Ok(event_key)
+        Ok(())
     }
 
     /// Point lookup by EventKey.

@@ -163,7 +163,7 @@ export class IdentityManager {
     // This is specifically intended for polling while pairing to an identity.
     const response = Proto.ListEventsResponse.fromBinary(
       new Uint8Array(
-        await this.client.core.listEvents(
+        await this.client.core.listEventsForServer(
           targetServer,
           1,
           identityKey,

@@ -13,6 +13,7 @@ import {
 } from '@/src/common/lib/sheet';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { FetchMode } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
@@ -25,7 +26,7 @@ function EditProfileSheet({
   dismissSheet: DismissSheet;
 }) {
   const fallbackUsername = useUsername(identityKey);
-  const profile = useProfile(identityKey);
+  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
   const edit = useProfileEdit(username, profile);
 

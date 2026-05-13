@@ -14,6 +14,7 @@ import {
 import { Atoms } from '@/src/common/theme';
 import { FeedChip } from '@/src/features/post/FeedChip';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { View } from 'react-native';
@@ -32,7 +33,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
     useProfileContext();
 
   const fallbackUsername = useUsername(identityKey);
-  const profile = useProfile(identityKey);
+  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
 
   const short = identityKey ? shortenIdentityId(identityKey) : '...';

@@ -372,8 +372,9 @@ export class PolycentricClient {
   }
 
   /**
-   * Generic query wrapper around `core.list_events`. Fans the query out to
-   * every configured server and returns the aggregated event bundles.
+   * Generic query wrapper around `core.listEvents`. Subscribes to the
+   * fan-out observable, accumulates `event_bundles` from each
+   * per-server emission, and resolves once the observable completes.
    * Does not persist — callers decide what to do with the response.
    */
   async listEvents(options?: {
@@ -391,71 +392,46 @@ export class PolycentricClient {
     const sequenceLt =
       options?.sequenceLt != null ? BigInt(options.sequenceLt) : undefined;
 
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.listEvents(
-          server,
-          options?.limit ?? undefined,
-          options?.identity ?? undefined,
-          options?.collection ?? undefined,
-          (options?.signedBy?.key.buffer as ArrayBuffer | undefined) ??
-            undefined,
-          options?.signedBy?.keyType ?? undefined,
-          sequenceGt,
-          sequenceLt,
-        ),
-      ),
-    );
+    // `signedBy.key` is a Uint8Array view into the wire-decoded
+    // message buffer (protobuf-ts uses subarray). `.buffer` would be
+    // the whole message buffer, not just the key bytes — copy through
+    // `.slice()` so the FFI receives exactly the public-key bytes.
+    const signedBy = options?.signedBy
+      ? {
+          keyType: options.signedBy.keyType,
+          key: options.signedBy.key.slice().buffer as ArrayBuffer,
+        }
+      : undefined;
 
-    const bundles: Proto.EventBundle[] = [];
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('listEvents failed for a server:', result.reason);
-        continue;
-      }
-      const response = Proto.ListEventsResponse.fromBinary(
-        new Uint8Array(result.value),
+    return new Promise<Proto.EventBundle[]>((resolve, reject) => {
+      const observable = this.core.listEvents(
+        options?.limit ?? undefined,
+        options?.identity ?? undefined,
+        options?.collection ?? undefined,
+        signedBy,
+        sequenceGt,
+        sequenceLt,
+        undefined,
       );
-      bundles.push(...response.eventBundles);
-    }
 
-    return bundles;
-  }
-
-  /**
-   * Fetch a parent post and its direct replies for a given EventKey.
-   * Queries every configured server and returns the first successful
-   * response. Does not persist — callers decide what to do with the
-   * response.
-   */
-  async getPostThread(options: {
-    eventKey: Proto.EventKey;
-    limit?: number | null;
-  }): Promise<Proto.GetPostThreadResponse | null> {
-    const requestBytes = Proto.GetPostThreadRequest.toBinary(
-      Proto.GetPostThreadRequest.create({
-        eventKey: options.eventKey,
-        limit: options.limit ?? 0,
-      }),
-    );
-
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.getPostThread(server, requestBytes.buffer as ArrayBuffer),
-      ),
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('getPostThread failed for a server:', result.reason);
-        continue;
-      }
-      return Proto.GetPostThreadResponse.fromBinary(
-        new Uint8Array(result.value),
-      );
-    }
-
-    return null;
+      let latest: Proto.EventBundle[] = [];
+      const subscription = observable.subscribe({
+        next: (result) => {
+          if (!result.data) return;
+          const response = Proto.ListEventsResponse.fromBinary(
+            new Uint8Array(result.data),
+          );
+          latest = response.eventBundles;
+        },
+        error: (message: string) => {
+          subscription.unsubscribe();
+          reject(new Error(message));
+        },
+        complete: () => {
+          resolve(latest);
+        },
+      });
+    });
   }
 
   /**

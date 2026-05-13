@@ -36,18 +36,64 @@ impl PolycentricClient {
     }
 
     /// Copy a signed event into the event store.
-    pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<EventKey, CoreError> {
-        Event::decode(signed_event.event_bytes.as_slice())
-            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
-
-        let event_key = self.event_store.insert(signed_event.clone())?;
-
-        Ok(event_key)
+    pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
+        self.event_store.insert(signed_event)
     }
 
     /// Copy content bytes into the content store, keyed by digest.
     pub fn copy_content(&mut self, digest: &ContentDigest, content_bytes: Vec<u8>) {
         self.content_store.insert(digest, content_bytes);
+    }
+
+    /// Find an `EventBundle` in the local stores by (identity,
+    /// collection, sequence). Returns the first match — when multiple
+    /// signers share the same sequence the choice is arbitrary, so
+    /// callers that care about a specific signer should verify the
+    /// returned bundle's `event.key.signed_by`. The bundle's
+    /// `serialized_content` is populated when the matching content is
+    /// also in the content store; otherwise it's left `None`.
+    pub fn find_event_bundle_by_sequence(
+        &self,
+        identity: &str,
+        collection: i32,
+        sequence: u64,
+    ) -> Option<EventBundle> {
+        let (_, signed_event) = self
+            .event_store
+            .by_identity_and_collection(identity, collection)
+            .find(|(k, _)| k.sequence == sequence)?;
+        let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
+        let content_bytes = event
+            .content_digest
+            .as_ref()
+            .and_then(|d| self.content_store.get(d))
+            .map(|b| b.to_vec());
+        Some(EventBundle {
+            signed_event: Some(signed_event.clone()),
+            serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
+        })
+    }
+
+    /// Verify each bundle's signature and copy its event + content
+    /// into the local stores.
+    pub fn copy_bundles(&mut self, bundles: Vec<EventBundle>) {
+        for bundle in bundles {
+            let Some(signed_event) = bundle.signed_event else {
+                continue;
+            };
+            if signed_event.verify_signature().is_err() {
+                continue;
+            }
+            let Ok(event) = Event::decode(signed_event.event_bytes.as_slice()) else {
+                continue;
+            };
+            if let (Some(digest), Some(serialized)) =
+                (event.content_digest, bundle.serialized_content)
+            {
+                self.copy_content(&digest, serialized.content_bytes);
+            }
+            let _ = self.copy_event(signed_event);
+        }
     }
 
     /// Return the next sequence number for a given collection:

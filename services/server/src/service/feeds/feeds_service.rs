@@ -3,9 +3,10 @@ use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    EventBundle, FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
-    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
-    GetPostThreadResponse, SerializedContent, SignedEvent,
+    EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest,
+    GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
+    GetPostThreadRequest, GetPostThreadResponse, SerializedContent,
+    SignedEvent,
 };
 use tonic::{Request, Response, Status};
 
@@ -45,9 +46,11 @@ impl FeedsService for FeedsServiceImpl {
         .await
         .map_err(map_db_err)?;
 
+        let event_hints = build_profile_hints(&self.db, &rows).await?;
+
         Ok(Response::new(GetFeedResponse {
             event_bundles: rows_to_bundles(rows),
-            event_hints: Vec::new(),
+            event_hints,
         }))
     }
 
@@ -83,9 +86,11 @@ impl FeedsService for FeedsServiceImpl {
         .await
         .map_err(map_db_err)?;
 
+        let event_hints = build_profile_hints(&self.db, &rows).await?;
+
         Ok(Response::new(GetFeedResponse {
             event_bundles: rows_to_bundles(rows),
-            event_hints: Vec::new(),
+            event_hints,
         }))
     }
 
@@ -102,9 +107,11 @@ impl FeedsService for FeedsServiceImpl {
             .await
             .map_err(map_db_err)?;
 
+        let event_hints = build_profile_hints(&self.db, &rows).await?;
+
         Ok(Response::new(GetFeedResponse {
             event_bundles: rows_to_bundles(rows),
-            event_hints: Vec::new(),
+            event_hints,
         }))
     }
 
@@ -235,10 +242,43 @@ impl FeedsService for FeedsServiceImpl {
             }
         }
 
+        let event_hints = build_profile_hints(&self.db, &thread).await?;
+
         Ok(Response::new(GetPostThreadResponse {
             thread: rows_to_bundles(thread),
+            event_hints,
         }))
     }
+}
+
+/// Build the `event_hints` for a feed/thread response: collect the
+/// unique author identities from `rows`, fetch the latest PROFILE
+/// event for each, and wrap them in `EventHint`s. Returned as a
+/// `Status` error if the DB lookup fails.
+async fn build_profile_hints(
+    db: &sea_orm::DatabaseConnection,
+    rows: &[FeedRow],
+) -> Result<Vec<EventHint>, Status> {
+    let identities: Vec<String> = rows
+        .iter()
+        .map(|(event, _)| event.identity.clone())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    let profile_rows =
+        FeedsRepository::Query::list_latest_profiles_for_identities(
+            db, identities,
+        )
+        .await
+        .map_err(map_db_err)?;
+
+    Ok(rows_to_bundles(profile_rows)
+        .into_iter()
+        .map(|b| EventHint {
+            event_bundle: Some(b),
+        })
+        .collect())
 }
 
 fn rows_to_bundles(rows: Vec<FeedRow>) -> Vec<EventBundle> {

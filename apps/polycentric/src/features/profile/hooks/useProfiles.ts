@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
-  COLLECTION,
+  FetchMode,
+  QueryStatus,
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
@@ -31,11 +32,62 @@ type ProfilesState = {
   fetchProfile: (
     client: PolycentricClient,
     identityKey: string,
-    force?: boolean,
-  ) => Promise<void>;
+    fetchMode?: FetchMode,
+  ) => void;
 };
 
-const inflight = new Map<string, Promise<void>>();
+function mergeProfile(
+  identifier: string,
+  bytes: ArrayBuffer | Uint8Array,
+): Pick<
+  ProfileData,
+  'identifier' | 'name' | 'description' | 'avatar' | 'banner'
+> {
+  const response = v2.ListEventsResponse.fromBinary(
+    bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+  );
+
+  const updates: { sequence: bigint; update: v2.ProfileUpdate }[] = [];
+  for (const bundle of response.eventBundles) {
+    if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes)
+      continue;
+    try {
+      const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+      if (!event.key) continue;
+      const content = v2.Content.fromBinary(
+        bundle.serializedContent.contentBytes,
+      );
+      if (content.contentBody.oneofKind !== 'profileUpdate') continue;
+      updates.push({
+        sequence: event.key.sequence,
+        update: content.contentBody.profileUpdate,
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  updates.sort((a, b) =>
+    a.sequence < b.sequence ? -1 : a.sequence > b.sequence ? 1 : 0,
+  );
+
+  const merged = emptyProfile(identifier);
+  for (const { update } of updates) {
+    if (update.name !== undefined) merged.name = update.name;
+    if (update.description !== undefined)
+      merged.description = update.description;
+    if (update.avatar !== undefined) merged.avatar = update.avatar;
+    if (update.banner !== undefined) merged.banner = update.banner;
+  }
+
+  return {
+    identifier: merged.identifier,
+    name: merged.name,
+    description: merged.description,
+    avatar: merged.avatar,
+    banner: merged.banner,
+  };
+}
 
 const useProfiles = create<ProfilesState>((set, get) => ({
   profiles: new Map(),
@@ -46,74 +98,58 @@ const useProfiles = create<ProfilesState>((set, get) => ({
     set({ profiles });
   },
 
-  fetchProfile(client, identityKey, force = false) {
-    if (!identityKey) return Promise.resolve();
-    if (client.servers.length === 0) return Promise.resolve();
+  fetchProfile(client, identityKey, fetchMode = FetchMode.OfflineOnly) {
+    if (!identityKey) return;
 
-    const existing = get().profiles.get(identityKey);
-    if (!force && existing && !existing.error) return Promise.resolve();
+    // OfflineOnly: short-circuit on the React state. If we already
+    // have an entry for this identity, that's whatever the rust local
+    // event store last yielded — no point asking again. Other modes
+    // always go through to rust so cached/network values can refresh.
+    if (
+      fetchMode === FetchMode.OfflineOnly &&
+      get().profiles.has(identityKey)
+    ) {
+      return;
+    }
 
-    const pending = inflight.get(identityKey);
-    if (pending) return pending;
-
-    const prev = existing ?? emptyProfile(identityKey);
+    const prev = get().profiles.get(identityKey) ?? emptyProfile(identityKey);
     get().setProfile({ ...prev, isLoading: true, error: null });
 
-    const promise = (async () => {
-      try {
-        const bundles = await client.listEvents({
-          identity: identityKey,
-          collection: COLLECTION.PROFILE,
-        });
+    const observable = client.core.getProfile(identityKey, fetchMode);
 
-        const updates: { sequence: bigint; update: v2.ProfileUpdate }[] = [];
-        for (const bundle of bundles) {
-          if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-            continue;
-          }
-          try {
-            const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-            if (!event.key) continue;
-            const content = v2.Content.fromBinary(
-              bundle.serializedContent.contentBytes,
-            );
-            if (content.contentBody.oneofKind !== 'profileUpdate') continue;
-            updates.push({
-              sequence: event.key.sequence,
-              update: content.contentBody.profileUpdate,
-            });
-          } catch {
-            continue;
-          }
-        }
-
-        updates.sort((a, b) =>
-          a.sequence < b.sequence ? -1 : a.sequence > b.sequence ? 1 : 0,
-        );
-
-        const merged = emptyProfile(identityKey);
-        for (const { update } of updates) {
-          if (update.name !== undefined) merged.name = update.name;
-          if (update.description !== undefined) {
-            merged.description = update.description;
-          }
-          if (update.avatar !== undefined) merged.avatar = update.avatar;
-          if (update.banner !== undefined) merged.banner = update.banner;
-        }
-
-        get().setProfile({ ...merged, isLoading: false, error: null });
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+    observable.subscribe({
+      next: (result) => {
         const cur =
           get().profiles.get(identityKey) ?? emptyProfile(identityKey);
-        get().setProfile({ ...cur, isLoading: false, error });
-      } finally {
-        inflight.delete(identityKey);
-      }
-    })();
-
-    inflight.set(identityKey, promise);
-    return promise;
+        if (result.data) {
+          const merged = mergeProfile(identityKey, result.data);
+          get().setProfile({
+            ...merged,
+            isLoading: result.status === QueryStatus.Loading,
+            error: null,
+          });
+        } else {
+          get().setProfile({
+            ...cur,
+            isLoading: result.status === QueryStatus.Loading,
+          });
+        }
+      },
+      error: (message: string) => {
+        const cur =
+          get().profiles.get(identityKey) ?? emptyProfile(identityKey);
+        get().setProfile({
+          ...cur,
+          isLoading: false,
+          error: new Error(message),
+        });
+      },
+      complete: () => {
+        const cur =
+          get().profiles.get(identityKey) ?? emptyProfile(identityKey);
+        get().setProfile({ ...cur, isLoading: false });
+      },
+    });
   },
 }));
 

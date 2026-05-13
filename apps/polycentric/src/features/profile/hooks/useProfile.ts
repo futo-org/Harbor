@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { v2 } from '@polycentric/react-native';
+import { FetchMode, v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import useProfiles, { emptyProfile } from './useProfiles';
 
@@ -13,22 +13,31 @@ export interface ProfileHookResult {
   refresh: () => void;
 }
 
+export interface UseProfileOptions {
+  /**
+   * Defaults to  `OfflineOnly` (will not fetch unless its found in caches)
+   */
+  fetchMode?: FetchMode;
+}
+
 export function useProfile(
   identityKey: string | null | undefined,
+  options?: UseProfileOptions,
 ): ProfileHookResult {
   const client = usePolycentric();
+  const fetchMode = options?.fetchMode ?? FetchMode.OfflineOnly;
   const profile = useProfiles((s) =>
     identityKey ? s.profiles.get(identityKey) : undefined,
   );
 
   useEffect(() => {
     if (!identityKey) return;
-    void useProfiles.getState().fetchProfile(client, identityKey);
-  }, [client, identityKey]);
+    useProfiles.getState().fetchProfile(client, identityKey, fetchMode);
+  }, [client, identityKey, fetchMode]);
 
   const refresh = useCallback(() => {
     if (!identityKey) return;
-    void useProfiles.getState().fetchProfile(client, identityKey, true);
+    useProfiles.getState().fetchProfile(client, identityKey, FetchMode.Default);
   }, [client, identityKey]);
 
   const data = profile ?? emptyProfile(identityKey ?? '');
