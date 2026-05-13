@@ -51,13 +51,10 @@ fn merge_feed_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
 /// client stores. Hints are useful side-information the server
 /// volunteers (e.g. the profile of a post's author) — caching them
 /// avoids extra round-trips when the UI later asks for that data.
-fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: &[EventHint]) {
-    let bundles: Vec<EventBundle> = hints
-        .iter()
-        .filter_map(|h| h.event_bundle.clone())
-        .collect();
+fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
+    let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
     if !bundles.is_empty() {
-        client.lock().unwrap().copy_bundles(&bundles);
+        client.lock().unwrap().copy_bundles(bundles);
     }
 }
 
@@ -93,8 +90,9 @@ pub fn get_identity_feed(
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
                 .into_inner();
-            copy_hints(&client, &response.event_hints);
-            Ok(response.encode_to_vec())
+            let bytes = response.encode_to_vec();
+            copy_hints(&client, response.event_hints);
+            Ok(bytes)
         }
     };
 
@@ -133,8 +131,9 @@ pub fn get_following_feed(
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
                 .into_inner();
-            copy_hints(&client, &response.event_hints);
-            Ok(response.encode_to_vec())
+            let bytes = response.encode_to_vec();
+            copy_hints(&client, response.event_hints);
+            Ok(bytes)
         }
     };
 
@@ -173,8 +172,9 @@ pub fn get_explore_feed(
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?
                 .into_inner();
-            copy_hints(&client, &response.event_hints);
-            Ok(response.encode_to_vec())
+            let bytes = response.encode_to_vec();
+            copy_hints(&client, response.event_hints);
+            Ok(bytes)
         }
     };
 

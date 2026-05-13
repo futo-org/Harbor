@@ -36,13 +36,8 @@ impl PolycentricClient {
     }
 
     /// Copy a signed event into the event store.
-    pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<EventKey, CoreError> {
-        Event::decode(signed_event.event_bytes.as_slice())
-            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
-
-        let event_key = self.event_store.insert(signed_event.clone())?;
-
-        Ok(event_key)
+    pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
+        self.event_store.insert(signed_event)
     }
 
     /// Copy content bytes into the content store, keyed by digest.
@@ -51,11 +46,10 @@ impl PolycentricClient {
     }
 
     /// Verify each bundle's signature and copy its event + content
-    /// into the local stores. Per-bundle failures are dropped so one
-    /// bad event doesn't poison the rest of the batch.
-    pub fn copy_bundles(&mut self, bundles: &[EventBundle]) {
+    /// into the local stores.
+    pub fn copy_bundles(&mut self, bundles: Vec<EventBundle>) {
         for bundle in bundles {
-            let Some(signed_event) = bundle.signed_event.as_ref() else {
+            let Some(signed_event) = bundle.signed_event else {
                 continue;
             };
             if signed_event.verify_signature().is_err() {
@@ -64,13 +58,12 @@ impl PolycentricClient {
             let Ok(event) = Event::decode(signed_event.event_bytes.as_slice()) else {
                 continue;
             };
-            if let (Some(digest), Some(serialized)) = (
-                event.content_digest.as_ref(),
-                bundle.serialized_content.as_ref(),
-            ) {
-                self.copy_content(digest, serialized.content_bytes.clone());
+            if let (Some(digest), Some(serialized)) =
+                (event.content_digest, bundle.serialized_content)
+            {
+                self.copy_content(&digest, serialized.content_bytes);
             }
-            let _ = self.copy_event(signed_event.clone());
+            let _ = self.copy_event(signed_event);
         }
     }
 

@@ -70,14 +70,13 @@ pub fn get_profile(
             }
             .encode_to_vec();
 
-            let observable: Observable<QueryResult<Vec<u8>>> =
-                Observable::new(move |subscriber| {
-                    subscriber.next(QueryResult {
-                        data: Some(bytes.clone()),
-                        status: QueryStatus::Success,
-                    });
-                    subscriber.complete();
+            let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
+                subscriber.next(QueryResult {
+                    data: Some(bytes.clone()),
+                    status: QueryStatus::Success,
                 });
+                subscriber.complete();
+            });
             return Arc::new(observable);
         }
     }
@@ -98,7 +97,7 @@ pub fn get_profile(
                 .list_events(ListEventsRequest {
                     filters: Some(ListEventsFilters {
                         collection: Some(PROFILE_COLLECTION),
-                        identity: Some(identity.clone()),
+                        identity: Some(identity),
                         signed_by: None,
                         sequence_gt: None,
                         sequence_lt: None,
@@ -110,13 +109,19 @@ pub fn get_profile(
                 .into_inner();
 
             crate::logging::log_msg(format!(
-                "[get_profile] received {n} bundles from server={server_url} identity={identity}",
+                "[get_profile] received {n} bundles from server={server_url}",
                 n = response.event_bundles.len()
             ));
-            client.lock().unwrap().copy_bundles(&response.event_bundles);
-            Ok(response.encode_to_vec())
+            let bytes = response.encode_to_vec();
+            client.lock().unwrap().copy_bundles(response.event_bundles);
+            Ok(bytes)
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_profile_responses), fetch_mode))
+    Arc::new(query.query(
+        cache_key,
+        query_fn,
+        Some(merge_profile_responses),
+        fetch_mode,
+    ))
 }
