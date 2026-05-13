@@ -47,6 +47,7 @@ export function useIdentityFeed(
       undefined,
       undefined,
       undefined,
+      undefined,
     );
     subscriptionRef.current = observable.subscribe({
       next: (result) => {

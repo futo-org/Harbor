@@ -48,6 +48,7 @@ export function useFollowingFeed(options?: {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
     subscriptionRef.current = observable.subscribe({
       next: (result) => {

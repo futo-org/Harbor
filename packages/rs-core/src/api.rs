@@ -2,13 +2,12 @@ use crate::client::PolycentricClient;
 use crate::media::process_image;
 use polycentric_common::models::protos_v2::{
     content_service_client::ContentServiceClient,
-    event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
+    event_sync_service_client::EventSyncServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetPostThreadRequest, GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters,
-    ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage,
-    UploadBlobRequest,
+    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters, ListEventsRequest,
+    ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -17,27 +16,8 @@ use std::sync::{Arc, Mutex};
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
 compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
 
-#[cfg(target_arch = "wasm32")]
-type GrpcChannel = tonic_web_wasm_client::Client;
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-type GrpcChannel = tonic::transport::Channel;
-
-#[cfg(target_arch = "wasm32")]
-fn channel(server_url: &str) -> Result<GrpcChannel, CoreError> {
-    Ok(tonic_web_wasm_client::Client::new(server_url.to_string()))
-}
-
-#[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-fn channel(server_url: &str) -> Result<GrpcChannel, CoreError> {
-    let mut endpoint = tonic::transport::Channel::from_shared(server_url.to_string())
-        .map_err(|e| CoreError::Network(format!("Invalid server url: {e}")))?;
-    if server_url.starts_with("https://") {
-        let tls = tonic::transport::ClientTlsConfig::new().with_webpki_roots();
-        endpoint = endpoint
-            .tls_config(tls)
-            .map_err(|e| CoreError::Network(format!("TLS config: {e}")))?;
-    }
-    Ok(endpoint.connect_lazy())
+fn channel(server_url: &str) -> Result<crate::transport::GrpcChannel, CoreError> {
+    crate::transport::channel(server_url).map_err(CoreError::Network)
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -256,10 +236,12 @@ impl PolycentricCore {
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
-    /// Fetch events from a server. Returns serialized
-    /// `ListEventsResponse` proto bytes.
+    /// Single-server `ListEvents` primitive. Kept distinct from the
+    /// observable `list_events` because pairing flows need to poll a
+    /// specific target server rather than fan out across the
+    /// configured set.
     #[allow(clippy::too_many_arguments)]
-    pub async fn list_events(
+    pub async fn list_events_for_server(
         &self,
         server_url: String,
         size: Option<i32>,
@@ -289,9 +271,51 @@ impl PolycentricCore {
                 size,
             })
             .await
-            .map_err(|e| CoreError::Network(format!("list_events: {e}")))?;
+            .map_err(|e| CoreError::Network(format!("list_events_for_server: {e}")))?;
 
         Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch a single event by (identity, collection, sequence).
+    /// Checks the local store first; on a miss, falls back to a
+    /// fan-out `ListEvents` pinned to this exact sequence. Emits
+    /// serialized `EventBundle` proto bytes (empty `Vec` when the
+    /// event isn't found anywhere).
+    pub fn get_event(
+        &self,
+        identity: String,
+        collection: i32,
+        sequence: u64,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::event::get_event(&self.query, identity, collection, sequence, fetch_mode)
+    }
+
+    /// Fan out `ListEvents` to every configured server as an
+    /// observable. Each emission carries the merged
+    /// `ListEventsResponse` bytes with `event_bundles` deduped by
+    /// `EventKey`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn list_events(
+        &self,
+        size: Option<i32>,
+        identity: Option<String>,
+        collection: Option<i32>,
+        signed_by: Option<crate::event::key::PublicKey>,
+        sequence_gt: Option<i64>,
+        sequence_lt: Option<i64>,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::event::list_events(
+            &self.query,
+            size,
+            identity,
+            collection,
+            signed_by,
+            sequence_gt,
+            sequence_lt,
+            fetch_mode,
+        )
     }
 
     /// Push event bundles to a server.
@@ -321,8 +345,16 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
-        crate::feed::get_identity_feed(&self.query, identity, limit, before_token, after_token)
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_identity_feed(
+            &self.query,
+            identity,
+            limit,
+            before_token,
+            after_token,
+            fetch_mode,
+        )
     }
 
     /// Fetch the feed of posts from identities the caller follows. When
@@ -334,13 +366,15 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
         crate::feed::get_following_feed(
             &self.query,
             follower_identity,
             limit,
             before_token,
             after_token,
+            fetch_mode,
         )
     }
 
@@ -351,26 +385,35 @@ impl PolycentricCore {
         limit: Option<i32>,
         before_token: Option<String>,
         after_token: Option<String>,
-    ) -> Arc<crate::feed::FeedQueryObservable> {
-        crate::feed::get_explore_feed(&self.query, identity, limit, before_token, after_token)
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_explore_feed(
+            &self.query,
+            identity,
+            limit,
+            before_token,
+            after_token,
+            fetch_mode,
+        )
     }
 
-    /// Fetch a parent post and its direct replies. Returns serialized
-    /// `GetPostThreadResponse` proto bytes.
-    pub async fn get_post_thread(
+    /// Fetch a parent post and its direct replies as an observable.
+    pub fn get_post_thread(
         &self,
-        server_url: String,
-        request_bytes: Vec<u8>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let request = GetPostThreadRequest::decode(request_bytes.as_slice()).map_err(|e| {
-            CoreError::Decode(format!("Failed to decode GetPostThreadRequest: {e}"))
-        })?;
-        let mut client = FeedsServiceClient::new(channel(&server_url)?);
-        let response = client
-            .get_post_thread(request)
-            .await
-            .map_err(|e| CoreError::Network(format!("get_post_thread: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
+        event_key: crate::event::key::EventKey,
+        limit: i32,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_post_thread(&self.query, event_key, limit, fetch_mode)
+    }
+
+    /// Fetch `identity`'s profile events as an observable.
+    pub fn get_profile(
+        &self,
+        identity: String,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::profile::get_profile(&self.query, identity, fetch_mode)
     }
 
     /// Fetch a server's public info. Returns serialized

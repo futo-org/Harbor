@@ -7,6 +7,7 @@ use sea_orm::*;
 
 // Collection numbers shared with the client (see js-core/src/constants.ts).
 const FEED_COLLECTION: i16 = 2;
+const PROFILE_COLLECTION: i16 = 3;
 const GRAPH_COLLECTION: i16 = 5;
 
 pub struct Query;
@@ -104,6 +105,38 @@ impl Query {
             .filter(EventModel::Column::Sequence.eq(sequence))
             .one(db)
             .await
+    }
+
+    /// Return the latest PROFILE event (highest `sequence`) per
+    /// identity for each of `identities`. Used as `event_hints` on
+    /// feed/thread responses so clients can populate author profiles
+    /// without a follow-up round-trip.
+    pub async fn list_latest_profiles_for_identities(
+        db: &DbConn,
+        identities: Vec<String>,
+    ) -> Result<Vec<FeedRow>, DbErr> {
+        if identities.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows = EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .filter(EventModel::Column::Collection.eq(PROFILE_COLLECTION))
+            .filter(EventModel::Column::Identity.is_in(identities))
+            .order_by_desc(EventModel::Column::Sequence)
+            .all(db)
+            .await?;
+
+        // Keep the first (highest-sequence) row per identity.
+        let mut seen: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
+        let mut deduped = Vec::with_capacity(rows.len());
+        for row in rows {
+            if seen.insert(row.0.identity.clone()) {
+                deduped.push(row);
+            }
+        }
+        Ok(deduped)
     }
 
     /// Bulk-fetch event rows by primary key, joining content. Order of the
