@@ -5,89 +5,61 @@
         - services/server/**/*
         - .gitlab/ci/build_server.yml
         - .gitlab/ci/deploy_server.yml
+
+########################################
+# Tag the image with environment label #
+########################################
+
+.server-deploy-image:
+  extends: .server-deploy-workflow
+  stage: deploy
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: ['']
+  script:
+    - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+    - crane tag $CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA $ENVIRONMENT
   needs:
     - job: server-image
       artifacts: false
 
-variables:
-  MANIFEST_GIT_REPO: https://gitlab.futo.org/devops/manifest-inventory.git
-  MANIFEST_GIT_USER_EMAIL: $GITLAB_USER_EMAIL
-  MANIFEST_GIT_USER_NAME: $GITLAB_USER_NAME
-
-#################################################################
-# Prepare the manifest changes as .patch files so we can review #
-#################################################################
-
-.server-deploy-prepare:
-  extends: .server-deploy-workflow
-  stage: deploy
-  image:
-    name: alpine/git:latest
-    entrypoint: ['']
-  before_script:
-    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-    - chmod +x /usr/local/bin/yq
-  script:
-    # Pull in the manifest repository
-    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
-    - cd manifest-inventory
-    # Use 'yq' to change the yaml value to the current commit
-    - yq -i ".image.version.$ENVIRONMENT = strenv(CI_COMMIT_SHA)" inventory/polycentric-2026/server.yml
-    # Commit the change in the manifest repo
-    - git config user.email "$MANIFEST_GIT_USER_EMAIL"
-    - git config user.name "$MANIFEST_GIT_USER_NAME"
-    - git add inventory/polycentric-2026/server.yml
-    - 'git commit -m "polycentric-2026 $ENVIRONMENT: bump server to $CI_COMMIT_SHA"'
-    # Export the commit as a patch artifact
-    - git format-patch -1 -o "$CI_PROJECT_DIR/deploy-patches/"
-    # Print the patch in the job log for review
-    - cat "$CI_PROJECT_DIR/deploy-patches/"*.patch
-  artifacts:
-    paths:
-      - deploy-patches/
-    expire_in: 1 week
-
-server-deploy-prepare-staging:
-  extends: .server-deploy-prepare
+server-deploy-image-staging:
+  extends: .server-deploy-image
   variables:
     ENVIRONMENT: staging
 
-server-deploy-prepare-production:
-  extends: .server-deploy-prepare
+server-deploy-image-production:
+  extends: .server-deploy-image
+  when: manual
   variables:
-    ENVIRONMENT: polycentric
+    ENVIRONMENT: production
 
 ###############################
-# Deploy the manifest changes #
+# Rolling restart on Manifest #
 ###############################
 
-.server-deploy-apply:
+.server-deploy-manifest:
   extends: .server-deploy-workflow
   stage: deploy
-  image:
-    name: alpine/git:latest
-    entrypoint: ['']
-  when: manual
-  script:
-    # Pull in the manifest repository
-    - git clone "https://gitlab-ci-token:${MANIFEST_GIT_TOKEN}@${MANIFEST_GIT_REPO#https://}" manifest-inventory
-    - cd manifest-inventory
-    # Show the patch we are about to apply
-    - cat "$CI_PROJECT_DIR/deploy-patches/"*.patch
-    # Apply the patch and push it to the manifest repo
-    - git config user.email "$MANIFEST_GIT_USER_EMAIL"
-    - git config user.name "$MANIFEST_GIT_USER_NAME"
-    - git am "$CI_PROJECT_DIR/deploy-patches/"*.patch
-    - git push origin HEAD
+  trigger:
+    project: devops/manifest
+    branch: master
+    strategy: depend
+  variables:
+    MANIFEST_SETUP_COMMAND: quick
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:$ENVIRONMENT
+    MANIFEST_STAGGER_TIME: '10'
 
-server-deploy-apply-staging:
-  extends: .server-deploy-apply
+server-deploy-manifest-staging:
+  extends: .server-deploy-manifest
+  variables:
+    ENVIRONMENT: staging
   needs:
-    - job: server-deploy-prepare-staging
-      artifacts: true
+    - server-deploy-image-staging
 
-server-deploy-apply-production:
-  extends: .server-deploy-apply
+server-deploy-manifest-production:
+  extends: .server-deploy-manifest
+  variables:
+    ENVIRONMENT: production
   needs:
-    - job: server-deploy-prepare-production
-      artifacts: true
+    - server-deploy-image-production

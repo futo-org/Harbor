@@ -60,9 +60,12 @@ impl FeedsService for FeedsServiceImpl {
         let inner_req = request.into_inner();
         let limit = page_limit(&inner_req.page_params);
 
-        let caller = inner_req.follower_identity.ok_or_else(|| {
-            Status::invalid_argument("follower_identity is required")
-        })?;
+        if inner_req.follower_identity.is_empty() {
+            return Err(Status::invalid_argument(
+                "follower_identity is required",
+            ));
+        }
+        let caller = inner_req.follower_identity;
 
         let mut identities =
             FeedsRepository::Query::list_followed_identities(&self.db, &caller)
