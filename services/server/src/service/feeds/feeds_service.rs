@@ -266,11 +266,12 @@ async fn build_profile_hints(
         .into_iter()
         .collect();
 
-    let profile_rows = FeedsRepository::Query::list_latest_profiles_for_identities(
-        db, identities,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let profile_rows =
+        FeedsRepository::Query::list_latest_profiles_for_identities(
+            db, identities,
+        )
+        .await
+        .map_err(map_db_err)?;
 
     Ok(rows_to_bundles(profile_rows)
         .into_iter()

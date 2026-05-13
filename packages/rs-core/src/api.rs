@@ -236,10 +236,12 @@ impl PolycentricCore {
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
-    /// Fetch events from a server. Returns serialized
-    /// `ListEventsResponse` proto bytes.
+    /// Single-server `ListEvents` primitive. Kept distinct from the
+    /// observable `list_events` because pairing flows need to poll a
+    /// specific target server rather than fan out across the
+    /// configured set.
     #[allow(clippy::too_many_arguments)]
-    pub async fn list_events(
+    pub async fn list_events_for_server(
         &self,
         server_url: String,
         size: Option<i32>,
@@ -269,9 +271,51 @@ impl PolycentricCore {
                 size,
             })
             .await
-            .map_err(|e| CoreError::Network(format!("list_events: {e}")))?;
+            .map_err(|e| CoreError::Network(format!("list_events_for_server: {e}")))?;
 
         Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch a single event by (identity, collection, sequence).
+    /// Checks the local store first; on a miss, falls back to a
+    /// fan-out `ListEvents` pinned to this exact sequence. Emits
+    /// serialized `EventBundle` proto bytes (empty `Vec` when the
+    /// event isn't found anywhere).
+    pub fn get_event(
+        &self,
+        identity: String,
+        collection: i32,
+        sequence: u64,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::event::get_event(&self.query, identity, collection, sequence, fetch_mode)
+    }
+
+    /// Fan out `ListEvents` to every configured server as an
+    /// observable. Each emission carries the merged
+    /// `ListEventsResponse` bytes with `event_bundles` deduped by
+    /// `EventKey`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn list_events(
+        &self,
+        size: Option<i32>,
+        identity: Option<String>,
+        collection: Option<i32>,
+        signed_by: Option<crate::event::key::PublicKey>,
+        sequence_gt: Option<i64>,
+        sequence_lt: Option<i64>,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::event::list_events(
+            &self.query,
+            size,
+            identity,
+            collection,
+            signed_by,
+            sequence_gt,
+            sequence_lt,
+            fetch_mode,
+        )
     }
 
     /// Push event bundles to a server.

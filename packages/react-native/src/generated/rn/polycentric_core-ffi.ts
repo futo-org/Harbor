@@ -62,6 +62,14 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event(
+    ptr: bigint,
+    identity: Uint8Array,
+    collection: number,
+    sequence: bigint,
+    fetchMode: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
     ptr: bigint,
     identity: Uint8Array,
@@ -121,6 +129,17 @@ interface NativeModuleInterface {
     signedMessageBytes: Uint8Array
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
+    ptr: bigint,
+    size: Uint8Array,
+    identity: Uint8Array,
+    collection: Uint8Array,
+    signedBy: Uint8Array,
+    sequenceGt: Uint8Array,
+    sequenceLt: Uint8Array,
+    fetchMode: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(
     ptr: bigint,
     serverUrl: Uint8Array,
     size: Uint8Array,
@@ -434,6 +453,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed(): number;
@@ -444,6 +464,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(): number;

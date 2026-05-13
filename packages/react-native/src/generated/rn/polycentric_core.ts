@@ -1078,6 +1078,19 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
+   * Fetch a single event by (identity, collection, sequence).
+   * Checks the local store first; on a miss, falls back to a
+   * fan-out `ListEvents` pinned to this exact sequence. Emits
+   * serialized `EventBundle` proto bytes (empty `Vec` when the
+   * event isn't found anywhere).
+   */
+  getEvent(
+    identity: string,
+    collection: /*i32*/ number,
+    sequence: /*u64*/ bigint,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable;
+  /**
    * Fetch the server-curated explore feed as an observable.
    */
   getExploreFeed(
@@ -1160,10 +1173,27 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Fetch events from a server. Returns serialized
-   * `ListEventsResponse` proto bytes.
+   * Fan out `ListEvents` to every configured server as an
+   * observable. Each emission carries the merged
+   * `ListEventsResponse` bytes with `event_bundles` deduped by
+   * `EventKey`.
    */
   listEvents(
+    size: /*i32*/ number | undefined,
+    identity: string | undefined,
+    collection: /*i32*/ number | undefined,
+    signedBy: PublicKey | undefined,
+    sequenceGt: /*i64*/ bigint | undefined,
+    sequenceLt: /*i64*/ bigint | undefined,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable;
+  /**
+   * Single-server `ListEvents` primitive. Kept distinct from the
+   * observable `list_events` because pairing flows need to poll a
+   * specific target server rather than fan out across the
+   * configured set.
+   */
+  listEventsForServer(
     serverUrl: string,
     size: /*i32*/ number | undefined,
     identity: string | undefined,
@@ -1382,6 +1412,36 @@ export class PolycentricCore
       }
       throw __error;
     }
+  }
+
+  /**
+   * Fetch a single event by (identity, collection, sequence).
+   * Checks the local store first; on a miss, falls back to a
+   * fan-out `ListEvents` pinned to this exact sequence. Emits
+   * serialized `EventBundle` proto bytes (empty `Vec` when the
+   * event isn't found anywhere).
+   */
+  getEvent(
+    identity: string,
+    collection: /*i32*/ number,
+    sequence: /*u64*/ bigint,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable {
+    return FfiConverterTypeQueryObservable.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            FfiConverterUInt64.lower(sequence),
+            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
   }
 
   /**
@@ -1672,10 +1732,47 @@ export class PolycentricCore
   }
 
   /**
-   * Fetch events from a server. Returns serialized
-   * `ListEventsResponse` proto bytes.
+   * Fan out `ListEvents` to every configured server as an
+   * observable. Each emission carries the merged
+   * `ListEventsResponse` bytes with `event_bundles` deduped by
+   * `EventKey`.
    */
-  async listEvents(
+  listEvents(
+    size: /*i32*/ number | undefined,
+    identity: string | undefined,
+    collection: /*i32*/ number | undefined,
+    signedBy: PublicKey | undefined,
+    sequenceGt: /*i64*/ bigint | undefined,
+    sequenceLt: /*i64*/ bigint | undefined,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable {
+    return FfiConverterTypeQueryObservable.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterOptionalInt32.lower(size),
+            FfiConverterOptionalString.lower(identity),
+            FfiConverterOptionalInt32.lower(collection),
+            FfiConverterOptionalTypePublicKey.lower(signedBy),
+            FfiConverterOptionalInt64.lower(sequenceGt),
+            FfiConverterOptionalInt64.lower(sequenceLt),
+            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Single-server `ListEvents` primitive. Kept distinct from the
+   * observable `list_events` because pairing flows need to poll a
+   * specific target server rather than fan out across the
+   * configured set.
+   */
+  async listEventsForServer(
     serverUrl: string,
     size: /*i32*/ number | undefined,
     identity: string | undefined,
@@ -1691,7 +1788,7 @@ export class PolycentricCore
       return await uniffiRustCallAsync(
         /*rustCaller:*/ uniffiCaller,
         /*rustFutureFunc:*/ () => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(serverUrl),
             FfiConverterOptionalInt32.lower(size),
@@ -2838,6 +2935,11 @@ const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 // FfiConverter for /*i64*/bigint | undefined
 const FfiConverterOptionalInt64 = new FfiConverterOptional(FfiConverterInt64);
 
+// FfiConverter for PublicKey | undefined
+const FfiConverterOptionalTypePublicKey = new FfiConverterOptional(
+  FfiConverterTypePublicKey
+);
+
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
@@ -2922,6 +3024,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event() !==
+    60482
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_event'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed() !==
     62394
   ) {
@@ -2995,10 +3105,18 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events() !==
-    14921
+    46934
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_list_events'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server() !==
+    43829
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server'
     );
   }
   if (

@@ -259,7 +259,12 @@ pub fn get_post_thread(
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_thread_responses), fetch_mode))
+    Arc::new(query.query(
+        cache_key,
+        query_fn,
+        Some(merge_thread_responses),
+        fetch_mode,
+    ))
 }
 
 #[cfg(test)]

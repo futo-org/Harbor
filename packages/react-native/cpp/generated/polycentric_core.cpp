@@ -241,6 +241,14 @@ extern "C" {
         RustBuffer server_url, 
         RustBuffer signed_message_bytes
     );
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_event(
+        /*handle*/ uint64_t ptr, 
+        RustBuffer identity, 
+        int32_t collection, 
+        uint64_t sequence, 
+        RustBuffer fetch_mode, 
+        RustCallStatus *uniffi_out_err
+    );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
         /*handle*/ uint64_t ptr, 
         RustBuffer identity, 
@@ -300,6 +308,17 @@ extern "C" {
         RustBuffer signed_message_bytes
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_list_events(
+        /*handle*/ uint64_t ptr, 
+        RustBuffer size, 
+        RustBuffer identity, 
+        RustBuffer collection, 
+        RustBuffer signed_by, 
+        RustBuffer sequence_gt, 
+        RustBuffer sequence_lt, 
+        RustBuffer fetch_mode, 
+        RustCallStatus *uniffi_out_err
+    );
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(
         /*handle*/ uint64_t ptr, 
         RustBuffer server_url, 
         RustBuffer size, 
@@ -681,6 +700,8 @@ extern "C" {
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(
     );
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_event(
+    );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed(
@@ -700,6 +721,8 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_list_events(
+    );
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(
     );
@@ -4817,6 +4840,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_create_pairing_session(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event"),
+        5,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_event(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed"),
@@ -4892,9 +4923,17 @@ NativePolycentricCore::NativePolycentricCore(
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events"),
-        9,
+        8,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_list_events(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server"),
+        9,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events"] = jsi::Function::createFromHostFunction(
@@ -5617,6 +5656,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_event(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed"),
@@ -5695,6 +5742,14 @@ NativePolycentricCore::NativePolycentricCore(
         0,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events"] = jsi::Function::createFromHostFunction(
@@ -6129,6 +6184,16 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
         
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_event(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging<int32_t>::fromJs(rt, callInvoker, args[2]), uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5]), 
@@ -6211,7 +6276,17 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_list_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_list_events(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[6]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[7]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[8])
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_list_events(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[6]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[7]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[6]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[7]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[8])
         );
 
         
@@ -7007,6 +7082,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
         
         return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_get_event(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(
         );
@@ -7072,6 +7154,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_list_events(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(
         );
 
         

@@ -258,10 +258,13 @@ where
                                     data: Some(merged),
                                     status,
                                 });
+                                if remaining == 0 {
+                                    subscriber.complete();
+                                }
                             }
                         }
                         Err(message) => {
-                            pending.fetch_sub(1, Ordering::AcqRel);
+                            let remaining = pending.fetch_sub(1, Ordering::AcqRel) - 1;
                             let last = cache.lock().unwrap().get(&cache_key).cloned();
                             if !subscriber.is_closed() {
                                 subscriber.next(QueryResult {
@@ -269,6 +272,9 @@ where
                                     status: QueryStatus::Error,
                                 });
                                 subscriber.error(message);
+                                if remaining == 0 {
+                                    subscriber.complete();
+                                }
                             }
                         }
                     }
