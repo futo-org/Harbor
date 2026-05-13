@@ -13,7 +13,9 @@ export {
   setLogger,
 } from './generated/rn/polycentric_core';
 export type {
+  EventKey,
   Logger,
+  PublicKey,
   QueryObservable,
   QueryObserver,
   QueryResultFfi,

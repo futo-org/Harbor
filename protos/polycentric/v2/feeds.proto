@@ -47,6 +47,7 @@ message GetPostThreadRequest {
 
 message GetPostThreadResponse {
   repeated EventBundle thread = 1;
+  repeated EventHint event_hints = 2;
 }
 
 /**

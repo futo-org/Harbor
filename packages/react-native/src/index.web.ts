@@ -9,7 +9,7 @@ export {
   PolycentricCore,
   QueryStatus,
 } from '@polycentric/rs-core-uniffi-web';
-export type { QueryResultFfi } from '@polycentric/rs-core-uniffi-web';
+export type { EventKey, QueryResultFfi } from '@polycentric/rs-core-uniffi-web';
 
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';

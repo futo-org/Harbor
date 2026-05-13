@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  COLLECTION,
+  QueryStatus,
+  v2,
+  type EventKey,
+} from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   useLocalPostInjection,
   usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
+
+type Sub = { unsubscribe: () => void };
 
 /**
  * Load the thread for a given post via the server's `GetPostThread` RPC.
@@ -24,48 +31,76 @@ export function useThread(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Hold the live subscription so we can cancel on unmount / refresh /
+  // post change. The rust core fans out to every configured server
+  // and pushes one `next` per server, then a single `complete`.
+  const subscriptionRef = useRef<Sub | null>(null);
+
+  const cleanup = useCallback(() => {
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = null;
+  }, []);
+
   useEffect(() => {
+    cleanup();
     if (!post) {
       setThread([]);
+      setIsLoading(false);
+      setError(null);
       return;
     }
 
-    let cancelled = false;
-    setIsLoading(true);
+    setThread([]);
     setError(null);
+    setIsLoading(true);
 
-    (async () => {
-      try {
-        const response = await client.getPostThread({
-          eventKey: v2.EventKey.create({
-            collection: COLLECTION.FEED,
-            identity: post.identity,
-            signedBy: post.signedBy,
-            sequence: BigInt(post.sequence),
-          }),
-          limit: options?.limit ?? null,
-        });
-        if (cancelled) return;
-
-        const decoded: PostData[] = [];
-        for (const bundle of response?.thread ?? []) {
-          const d = decodeV2PostBundle(bundle);
-          if (d) decoded.push(d);
-        }
-        setThread(decoded);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e : new Error(String(e)));
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+    // `post.signedBy.key` is a Uint8Array view into the wire-decoded
+    // message buffer (protobuf-ts uses subarray). `.buffer` would be
+    // the whole message buffer, not just the key bytes — copy through
+    // `.slice()` so the FFI receives exactly the public-key bytes.
+    const keyBytes = post.signedBy.key.slice().buffer as ArrayBuffer;
+    const eventKey: EventKey = {
+      collection: COLLECTION.FEED,
+      identity: post.identity,
+      signedBy: {
+        keyType: post.signedBy.keyType,
+        key: keyBytes,
+      },
+      sequence: BigInt(post.sequence),
     };
-  }, [client, post, options?.limit]);
+
+    const observable = client.core.getPostThread(
+      eventKey,
+      options?.limit ?? 0,
+      undefined,
+    );
+
+    subscriptionRef.current = observable.subscribe({
+      next: (result) => {
+        if (result.data) {
+          const response = v2.GetPostThreadResponse.fromBinary(
+            new Uint8Array(result.data),
+          );
+          const decoded: PostData[] = [];
+          for (const bundle of response.thread) {
+            const d = decodeV2PostBundle(bundle);
+            if (d) decoded.push(d);
+          }
+          setThread(decoded);
+        }
+        setIsLoading(result.status === QueryStatus.Loading);
+      },
+      error: (message: string) => {
+        setError(new Error(message));
+        setIsLoading(false);
+      },
+      complete: () => {
+        setIsLoading(false);
+      },
+    });
+
+    return cleanup;
+  }, [client, post, options?.limit, cleanup]);
 
   useLocalPostInjection({
     enabled: !!post,

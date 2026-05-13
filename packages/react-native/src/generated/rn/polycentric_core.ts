@@ -145,6 +145,100 @@ const FfiConverterTypeContentEntry = (() => {
   return new FFIConverter();
 })();
 
+export type EventKey = {
+  collection: /*i32*/ number;
+  identity: string;
+  signedBy: PublicKey;
+  sequence: /*u64*/ bigint;
+};
+
+/**
+ * Generated factory for {@link EventKey} record objects.
+ */
+export const EventKey = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<EventKey, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<EventKey>,
+  });
+})();
+
+const FfiConverterTypeEventKey = (() => {
+  type TypeName = EventKey;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        collection: FfiConverterInt32.read(from),
+        identity: FfiConverterString.read(from),
+        signedBy: FfiConverterTypePublicKey.read(from),
+        sequence: FfiConverterUInt64.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterInt32.write(value.collection, into);
+      FfiConverterString.write(value.identity, into);
+      FfiConverterTypePublicKey.write(value.signedBy, into);
+      FfiConverterUInt64.write(value.sequence, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterInt32.allocationSize(value.collection) +
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterTypePublicKey.allocationSize(value.signedBy) +
+        FfiConverterUInt64.allocationSize(value.sequence)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type PublicKey = {
+  keyType: /*i32*/ number;
+  key: ArrayBuffer;
+};
+
+/**
+ * Generated factory for {@link PublicKey} record objects.
+ */
+export const PublicKey = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<PublicKey, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<PublicKey>,
+  });
+})();
+
+const FfiConverterTypePublicKey = (() => {
+  type TypeName = PublicKey;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        keyType: FfiConverterInt32.read(from),
+        key: FfiConverterArrayBuffer.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterInt32.write(value.keyType, into);
+      FfiConverterArrayBuffer.write(value.key, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterInt32.allocationSize(value.keyType) +
+        FfiConverterArrayBuffer.allocationSize(value.key)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * FFI-friendly mirror of `QueryResult<T>` after `T` has been converted
  * to bytes. Carried on every `QueryObservable` emission.
@@ -1029,14 +1123,13 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Fetch a parent post and its direct replies. Returns serialized
-   * `GetPostThreadResponse` proto bytes.
+   * Fetch a parent post and its direct replies as an observable.
    */
   getPostThread(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal }
-  ) /*throws*/ : Promise<ArrayBuffer>;
+    eventKey: EventKey,
+    limit: /*i32*/ number,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable;
   /**
    * Fetch `identity`'s profile events as an observable.
    */
@@ -1427,48 +1520,27 @@ export class PolycentricCore
   }
 
   /**
-   * Fetch a parent post and its direct replies. Returns serialized
-   * `GetPostThreadResponse` proto bytes.
+   * Fetch a parent post and its direct replies as an observable.
    */
-  async getPostThread(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal }
-  ): Promise<ArrayBuffer> /*throws*/ {
-    const __stack = uniffiIsDebug ? new Error().stack : undefined;
-    try {
-      return await uniffiRustCallAsync(
-        /*rustCaller:*/ uniffiCaller,
-        /*rustFutureFunc:*/ () => {
+  getPostThread(
+    eventKey: EventKey,
+    limit: /*i32*/ number,
+    fetchMode: FetchMode | undefined
+  ): QueryObservable {
+    return FfiConverterTypeQueryObservable.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_post_thread(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(serverUrl),
-            FfiConverterArrayBuffer.lower(requestBytes)
+            FfiConverterTypeEventKey.lower(eventKey),
+            FfiConverterInt32.lower(limit),
+            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
+            callStatus
           );
         },
-        /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
-        /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
-        /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
-        /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
-        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
-          FfiConverterArrayBuffer
-        ),
-        /*liftString:*/ FfiConverterString.lift,
-        /*asyncOpts:*/ asyncOpts_,
-        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-          FfiConverterTypeCoreError
-        )
-      );
-    } catch (__error: any) {
-      if (uniffiIsDebug && __error instanceof Error) {
-        __error.stack = __stack;
-      }
-      throw __error;
-    }
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
   }
 
   /**
@@ -2883,7 +2955,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread() !==
-    24580
+    54943
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread'
@@ -3109,10 +3181,12 @@ export default Object.freeze({
   converters: {
     FfiConverterTypeContentEntry,
     FfiConverterTypeCoreError,
+    FfiConverterTypeEventKey,
     FfiConverterTypeFetchMode,
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
+    FfiConverterTypePublicKey,
     FfiConverterTypeQueryObservable,
     FfiConverterTypeQueryObserver,
     FfiConverterTypeQueryResultFfi,

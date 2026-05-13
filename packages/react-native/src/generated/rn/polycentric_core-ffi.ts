@@ -96,8 +96,10 @@ interface NativeModuleInterface {
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_post_thread(
     ptr: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array
+    eventKey: Uint8Array,
+    limit: number,
+    fetchMode: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_profile(
     ptr: bigint,

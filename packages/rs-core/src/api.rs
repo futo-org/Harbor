@@ -2,13 +2,12 @@ use crate::client::PolycentricClient;
 use crate::media::process_image;
 use polycentric_common::models::protos_v2::{
     content_service_client::ContentServiceClient,
-    event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
+    event_sync_service_client::EventSyncServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetPostThreadRequest, GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters,
-    ListEventsRequest, ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage,
-    UploadBlobRequest,
+    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters, ListEventsRequest,
+    ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -354,22 +353,14 @@ impl PolycentricCore {
         )
     }
 
-    /// Fetch a parent post and its direct replies. Returns serialized
-    /// `GetPostThreadResponse` proto bytes.
-    pub async fn get_post_thread(
+    /// Fetch a parent post and its direct replies as an observable.
+    pub fn get_post_thread(
         &self,
-        server_url: String,
-        request_bytes: Vec<u8>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let request = GetPostThreadRequest::decode(request_bytes.as_slice()).map_err(|e| {
-            CoreError::Decode(format!("Failed to decode GetPostThreadRequest: {e}"))
-        })?;
-        let mut client = FeedsServiceClient::new(channel(&server_url)?);
-        let response = client
-            .get_post_thread(request)
-            .await
-            .map_err(|e| CoreError::Network(format!("get_post_thread: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
+        event_key: crate::event::key::EventKey,
+        limit: i32,
+        fetch_mode: Option<crate::query::FetchMode>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        crate::feed::get_post_thread(&self.query, event_key, limit, fetch_mode)
     }
 
     /// Fetch `identity`'s profile events as an observable.

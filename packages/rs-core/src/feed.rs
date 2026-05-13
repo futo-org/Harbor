@@ -6,11 +6,13 @@ use std::sync::{Arc, Mutex};
 use polycentric_common::models::protos_v2::{
     feeds_service_client::FeedsServiceClient, EventBundle, EventHint, FeedPageParams,
     GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
+    GetPostThreadRequest, GetPostThreadResponse,
 };
 use prost::Message;
 
 use crate::client::PolycentricClient;
 use crate::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::event::key::EventKey;
 use crate::query::{FetchMode, Query, QueryObservable};
 use crate::transport::channel;
 
@@ -179,6 +181,85 @@ pub fn get_explore_feed(
     };
 
     Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
+}
+
+/// Merge function for the post-thread observable. Concatenates the
+/// `thread` and `event_hints` lists from each per-server response and
+/// dedupes each by `EventKey` so duplicate posts/hints coming back
+/// from multiple servers only appear once.
+fn merge_thread_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
+    let mut merged = prev
+        .as_deref()
+        .and_then(|b| GetPostThreadResponse::decode(b).ok())
+        .unwrap_or_default();
+    if let Ok(incoming) = GetPostThreadResponse::decode(new.as_slice()) {
+        merged.thread.extend(incoming.thread);
+        merged.event_hints.extend(incoming.event_hints);
+    }
+
+    let mut seen_thread: HashSet<EventDedupKey> = HashSet::new();
+    merged
+        .thread
+        .retain(|bundle| match event_dedup_key(bundle) {
+            Some(k) => seen_thread.insert(k),
+            None => true,
+        });
+
+    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
+    merged.event_hints.retain(
+        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
+            Some(k) => seen_hints.insert(k),
+            None => true,
+        },
+    );
+
+    merged.encode_to_vec()
+}
+
+/// Fetch a parent post and its direct replies. `event_key` identifies
+/// the parent post. Fans out to every configured server and emits the
+/// merged `GetPostThreadResponse` progressively; each response's
+/// `event_hints` are persisted to the local store so author profiles
+/// don't need to be re-fetched later.
+pub fn get_post_thread(
+    query: &Query<Vec<u8>>,
+    event_key: EventKey,
+    limit: i32,
+    fetch_mode: Option<FetchMode>,
+) -> Arc<dyn QueryObservable> {
+    let cache_key = format!(
+        "post_thread:{}:{}:{}:{:?}:{}:{}",
+        event_key.collection,
+        event_key.identity,
+        event_key.signed_by.key_type,
+        event_key.signed_by.key,
+        event_key.sequence,
+        limit,
+    );
+
+    let request = GetPostThreadRequest {
+        event_key: Some(event_key.into()),
+        limit,
+    };
+
+    let client = query.client().clone();
+
+    let query_fn = move |server_url: String| {
+        let request = request.clone();
+        let client = client.clone();
+        async move {
+            let response = FeedsServiceClient::new(channel(&server_url)?)
+                .get_post_thread(request)
+                .await
+                .map_err(|e| format!("get_post_thread [{server_url}]: {e}"))?
+                .into_inner();
+            let bytes = response.encode_to_vec();
+            copy_hints(&client, response.event_hints);
+            Ok(bytes)
+        }
+    };
+
+    Arc::new(query.query(cache_key, query_fn, Some(merge_thread_responses), fetch_mode))
 }
 
 #[cfg(test)]
