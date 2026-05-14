@@ -1,6 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
 import { v2 as Proto, type IEventRepository } from '@polycentric/js-core';
-import type { SqliteDb } from '../database';
+import type { SqliteDb } from '../database.js';
 
 interface EventRow {
   signature: Uint8Array;

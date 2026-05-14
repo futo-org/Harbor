@@ -4,7 +4,7 @@ import {
   type IKeysRepository,
   type PrivateKey,
 } from '@polycentric/js-core';
-import type { SqliteDb } from '../database';
+import type { SqliteDb } from '../database.js';
 
 interface KeysRow {
   key_type: number;

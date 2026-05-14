@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { SqliteDb } from '../database';
+import type { SqliteDb } from '../database.js';
 
 export const name = 'm20260506_000001_initial';
 

@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import type { SqliteDb } from './database';
-import { migrations } from './migrations';
+import type { SqliteDb } from './database.js';
+import { migrations } from './migrations/index.js';
 
 /**
  * Custom migrations.

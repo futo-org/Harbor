@@ -1,3 +1,3 @@
-export { DrizzleStorageDriver } from './storage-driver';
-export { migrate } from './migrate';
-export type { SqliteDb } from './database';
+export { DrizzleStorageDriver } from './storage-driver.js';
+export { migrate } from './migrate.js';
+export type { SqliteDb } from './database.js';

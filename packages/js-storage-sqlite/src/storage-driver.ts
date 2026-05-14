@@ -1,9 +1,9 @@
 import { sql } from 'drizzle-orm';
 import type { IEventAckRepository, IStorageDriver } from '@polycentric/js-core';
-import type { SqliteDb } from './database';
-import { ContentRepository } from './repositories/content.repository';
-import { EventRepository } from './repositories/event.repository';
-import { KeysRepository } from './repositories/keys.repository';
+import type { SqliteDb } from './database.js';
+import { ContentRepository } from './repositories/content.repository.js';
+import { EventRepository } from './repositories/event.repository.js';
+import { KeysRepository } from './repositories/keys.repository.js';
 
 // TODO EventAcks aren't currently used
 class EventAckRepository implements IEventAckRepository {

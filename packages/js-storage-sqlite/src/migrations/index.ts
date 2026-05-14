@@ -1,5 +1,5 @@
-import type { SqliteDb } from '../database';
-import * as m20260506_000001_initial from './m20260506_000001_initial';
+import type { SqliteDb } from '../database.js';
+import * as m20260506_000001_initial from './m20260506_000001_initial.js';
 
 export interface Migration {
   name: string;
