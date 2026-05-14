@@ -1,13 +1,15 @@
 use super::feeds_repository::{self as FeedsRepository, FeedRow};
+use crate::service::proto::content::ContentBody;
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest,
+    Content, EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest,
     GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
     GetPostThreadRequest, GetPostThreadResponse, SerializedContent,
     SignedEvent,
 };
+use prost::Message;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
@@ -252,19 +254,25 @@ impl FeedsService for FeedsServiceImpl {
 }
 
 /// Build the `event_hints` for a feed/thread response: collect the
-/// unique author identities from `rows`, fetch the latest PROFILE
-/// event for each, and wrap them in `EventHint`s. Returned as a
-/// `Status` error if the DB lookup fails.
+/// unique author identities from `rows` — plus the identities of any
+/// reply-parent posts decoded from each row's serialized Content —
+/// fetch the latest PROFILE event for each, and wrap them in
+/// `EventHint`s. Returned as a `Status` error if the DB lookup fails.
 async fn build_profile_hints(
     db: &sea_orm::DatabaseConnection,
     rows: &[FeedRow],
 ) -> Result<Vec<EventHint>, Status> {
-    let identities: Vec<String> = rows
-        .iter()
-        .map(|(event, _)| event.identity.clone())
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
-        .collect();
+    let mut identity_set: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
+    for (event, content) in rows {
+        identity_set.insert(event.identity.clone());
+        if let Some(parent_identity) =
+            content.as_ref().and_then(reply_parent_identity)
+        {
+            identity_set.insert(parent_identity);
+        }
+    }
+    let identities: Vec<String> = identity_set.into_iter().collect();
 
     let profile_rows =
         FeedsRepository::Query::list_latest_profiles_for_identities(
@@ -279,6 +287,18 @@ async fn build_profile_hints(
             event_bundle: Some(b),
         })
         .collect())
+}
+
+fn reply_parent_identity(
+    content: &::entity::content_model::Model,
+) -> Option<String> {
+    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
+    match decoded.content_body? {
+        ContentBody::Post(post) => {
+            Some(post.reply?.parent?.identity).filter(|s| !s.is_empty())
+        }
+        _ => None,
+    }
 }
 
 fn rows_to_bundles(rows: Vec<FeedRow>) -> Vec<EventBundle> {

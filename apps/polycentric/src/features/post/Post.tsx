@@ -14,10 +14,14 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import { PostImages } from './PostImages';
 import { PostToolbar } from './PostToolbar';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  getKeyFingerprint,
+  hexToBytes,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -37,7 +41,7 @@ interface PostProps {
 
 export const Post = memo(function Post({
   post,
-  hideReplyingTo: _hideReplyingTo = false,
+  hideReplyingTo = false,
   disablePress = false,
   showThreadLineAbove = false,
   showThreadLineBelow = false,
@@ -231,6 +235,10 @@ export const Post = memo(function Post({
             ) : null}
           </View>
 
+          {!hideReplyingTo && post.reply?.parentId ? (
+            <ReplyingToSubheader parentId={post.reply.parentId} />
+          ) : null}
+
           {displayContent ? (
             <Text variant="secondary" style={[Atoms.mt_xs]}>
               {displayContent}
@@ -271,6 +279,40 @@ export const Post = memo(function Post({
     </Pressable>
   );
 });
+
+function ReplyingToSubheader({ parentId }: { parentId: string }) {
+  const parentIdentity = useMemo(() => {
+    try {
+      return v2.EventKey.fromBinary(hexToBytes(parentId)).identity;
+    } catch {
+      return null;
+    }
+  }, [parentId]);
+
+  const parentProfile = useProfile(parentIdentity);
+  const parentName = parentProfile.name ?? '';
+
+  const handlePress = useCallback(() => {
+    if (!parentIdentity) return;
+    router.push(Routes.tabs.profile(parentIdentity));
+  }, [parentIdentity]);
+
+  if (!parentIdentity) return null;
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={[Atoms.flex_row, Atoms.mt_xs, { alignItems: 'baseline' }]}
+    >
+      <Text variant="small" color="neutral_500" fontWeight="regular">
+        Reply to{' '}
+      </Text>
+      <Text variant="small" color="primary_500">
+        {truncateName(parentName || '…', 24)}
+      </Text>
+    </Pressable>
+  );
+}
 
 function PostAuthorName({
   name,
