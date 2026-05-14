@@ -7,6 +7,7 @@ export {
   uniffiInitAsync,
   FetchMode,
   PolycentricCore,
+  Query,
   QueryStatus,
 } from '@polycentric/rs-core-uniffi-web';
 export type { EventKey, QueryResultFfi } from '@polycentric/rs-core-uniffi-web';

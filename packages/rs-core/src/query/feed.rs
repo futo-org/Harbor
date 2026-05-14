@@ -11,23 +11,48 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::event::dedup::{event_dedup_key, EventDedupKey};
-use crate::event::key::EventKey;
-use crate::query::{FetchMode, Query, QueryObservable};
-use crate::transport::channel;
+use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::event::key::EventKey;
+use crate::query::{channel, QueryClient, QueryKey, QueryObservable, QueryOpts};
 
-/// Merge function for every feed-RPC observable. Concatenates `event_bundles` +
-/// `event_hints`, then dedupes each list by `EventKey` so the cached
-/// value never contains the same event twice (e.g. when multiple
-/// servers return the same post).
-fn merge_feed_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
-    let mut merged = prev
-        .as_deref()
-        .and_then(|b| GetFeedResponse::decode(b).ok())
-        .unwrap_or_default();
-    if let Ok(incoming) = GetFeedResponse::decode(new.as_slice()) {
-        merged.event_bundles.extend(incoming.event_bundles);
-        merged.event_hints.extend(incoming.event_hints);
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetIdentityFeedArgs {
+    pub identity: String,
+    pub limit: Option<i32>,
+    pub before_token: Option<String>,
+    pub after_token: Option<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetFollowingFeedArgs {
+    pub follower_identity: String,
+    pub limit: Option<i32>,
+    pub before_token: Option<String>,
+    pub after_token: Option<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetExploreFeedArgs {
+    pub identity: Option<String>,
+    pub limit: Option<i32>,
+    pub before_token: Option<String>,
+    pub after_token: Option<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetPostThreadArgs {
+    pub event_key: EventKey,
+    pub limit: i32,
+}
+
+/// Merge function for every feed-RPC observable.
+fn merge_feed_responses(values: &[Vec<u8>]) -> Vec<u8> {
+    let mut merged = GetFeedResponse::default();
+    for v in values {
+        if let Ok(incoming) = GetFeedResponse::decode(v.as_slice()) {
+            merged.event_bundles.extend(incoming.event_bundles);
+            merged.event_hints.extend(incoming.event_hints);
+        }
     }
 
     let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
@@ -62,17 +87,18 @@ fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
 
 /// Return posts for an identity.
 pub fn get_identity_feed(
-    query: &Query<Vec<u8>>,
-    identity: String,
-    limit: Option<i32>,
-    before_token: Option<String>,
-    after_token: Option<String>,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: GetIdentityFeedArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let cache_key = format!(
-        "identity_feed:{identity}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
-    );
-    let client = query.client().clone();
+    let GetIdentityFeedArgs {
+        identity,
+        limit,
+        before_token,
+        after_token,
+    } = args;
+    let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
@@ -98,22 +124,23 @@ pub fn get_identity_feed(
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
 }
 
 /// Returns posts an identity is following
 pub fn get_following_feed(
-    query: &Query<Vec<u8>>,
-    follower_identity: String,
-    limit: Option<i32>,
-    before_token: Option<String>,
-    after_token: Option<String>,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: GetFollowingFeedArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let cache_key = format!(
-        "following_feed:{follower_identity}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
-    );
-    let client = query.client().clone();
+    let GetFollowingFeedArgs {
+        follower_identity,
+        limit,
+        before_token,
+        after_token,
+    } = args;
+    let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
@@ -139,22 +166,23 @@ pub fn get_following_feed(
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
 pub fn get_explore_feed(
-    query: &Query<Vec<u8>>,
-    identity: Option<String>,
-    limit: Option<i32>,
-    before_token: Option<String>,
-    after_token: Option<String>,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: GetExploreFeedArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let cache_key = format!(
-        "explore_feed:{identity:?}:limit={limit:?}:before={before_token:?}:after={after_token:?}"
-    );
-    let client = query.client().clone();
+    let GetExploreFeedArgs {
+        identity,
+        limit,
+        before_token,
+        after_token,
+    } = args;
+    let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
@@ -180,21 +208,20 @@ pub fn get_explore_feed(
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_feed_responses), fetch_mode))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
 }
 
 /// Merge function for the post-thread observable. Concatenates the
 /// `thread` and `event_hints` lists from each per-server response and
 /// dedupes each by `EventKey` so duplicate posts/hints coming back
 /// from multiple servers only appear once.
-fn merge_thread_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
-    let mut merged = prev
-        .as_deref()
-        .and_then(|b| GetPostThreadResponse::decode(b).ok())
-        .unwrap_or_default();
-    if let Ok(incoming) = GetPostThreadResponse::decode(new.as_slice()) {
-        merged.thread.extend(incoming.thread);
-        merged.event_hints.extend(incoming.event_hints);
+fn merge_thread_responses(values: &[Vec<u8>]) -> Vec<u8> {
+    let mut merged = GetPostThreadResponse::default();
+    for v in values {
+        if let Ok(incoming) = GetPostThreadResponse::decode(v.as_slice()) {
+            merged.thread.extend(incoming.thread);
+            merged.event_hints.extend(incoming.event_hints);
+        }
     }
 
     let mut seen_thread: HashSet<EventDedupKey> = HashSet::new();
@@ -222,27 +249,18 @@ fn merge_thread_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
 /// `event_hints` are persisted to the local store so author profiles
 /// don't need to be re-fetched later.
 pub fn get_post_thread(
-    query: &Query<Vec<u8>>,
-    event_key: EventKey,
-    limit: i32,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: GetPostThreadArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let cache_key = format!(
-        "post_thread:{}:{}:{}:{:?}:{}:{}",
-        event_key.collection,
-        event_key.identity,
-        event_key.signed_by.key_type,
-        event_key.signed_by.key,
-        event_key.sequence,
-        limit,
-    );
-
+    let GetPostThreadArgs { event_key, limit } = args;
     let request = GetPostThreadRequest {
         event_key: Some(event_key.into()),
         limit,
     };
 
-    let client = query.client().clone();
+    let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let request = request.clone();
@@ -259,12 +277,7 @@ pub fn get_post_thread(
         }
     };
 
-    Arc::new(query.query(
-        cache_key,
-        query_fn,
-        Some(merge_thread_responses),
-        fetch_mode,
-    ))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_thread_responses, opts))
 }
 
 #[cfg(test)]
@@ -345,7 +358,7 @@ mod tests {
         let prev = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
         let new = encode_response(vec![make_bundle(2, "b", 1, vec![2], 1)], vec![]);
 
-        let merged = merge_feed_responses(Some(prev), new);
+        let merged = merge_feed_responses(&[prev, new]);
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
     }
@@ -359,7 +372,7 @@ mod tests {
             vec![],
         );
 
-        let merged = merge_feed_responses(Some(prev), new);
+        let merged = merge_feed_responses(&[prev, new]);
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
         let seqs: Vec<u64> = decoded
@@ -376,7 +389,7 @@ mod tests {
         let prev = encode_response(vec![], vec![dup.clone()]);
         let new = encode_response(vec![], vec![dup.clone()]);
 
-        let merged = merge_feed_responses(Some(prev), new);
+        let merged = merge_feed_responses(&[prev, new]);
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_hints.len(), 1);
     }
@@ -384,7 +397,7 @@ mod tests {
     #[test]
     fn merge_handles_no_prior_value() {
         let new = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
-        let merged = merge_feed_responses(None, new);
+        let merged = merge_feed_responses(&[new]);
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 1);
     }
@@ -400,7 +413,7 @@ mod tests {
             serialized_content: None,
         };
         let new = encode_response(vec![parseable, unparseable.clone(), unparseable], vec![]);
-        let merged = merge_feed_responses(None, new);
+        let merged = merge_feed_responses(&[new]);
         // Parseable + both unparseables retained (no dedup key to compare).
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 3);

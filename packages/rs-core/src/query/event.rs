@@ -1,11 +1,3 @@
-//! Event-related primitives:
-//! - `dedup` — `EventBundle` deduplication helper used by every merge
-//!   function.
-//! - `key` — FFI-friendly mirrors of the proto `EventKey` /
-//!   `PublicKey` messages.
-//! - `list_events` — `EventSyncService.ListEvents` surfaced as an
-//!   observable via `Query`.
-
 pub mod dedup;
 pub mod key;
 
@@ -18,19 +10,36 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
-use crate::event::dedup::{event_dedup_key, EventDedupKey};
-use crate::event::key::PublicKey;
-use crate::query::{FetchMode, Query, QueryObservable, QueryResult, QueryStatus};
+use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::event::key::PublicKey;
+use crate::query::{
+    channel, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus,
+};
 use crate::rx::observable::Observable;
-use crate::transport::channel;
 
-fn merge_list_events_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
-    let mut merged = prev
-        .as_deref()
-        .and_then(|b| ListEventsResponse::decode(b).ok())
-        .unwrap_or_default();
-    if let Ok(incoming) = ListEventsResponse::decode(new.as_slice()) {
-        merged.event_bundles.extend(incoming.event_bundles);
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ListEventsArgs {
+    pub size: Option<i32>,
+    pub identity: Option<String>,
+    pub collection: Option<i32>,
+    pub signed_by: Option<PublicKey>,
+    pub sequence_gt: Option<i64>,
+    pub sequence_lt: Option<i64>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetEventArgs {
+    pub identity: String,
+    pub collection: i32,
+    pub sequence: u64,
+}
+
+fn merge_list_events_responses(values: &[Vec<u8>]) -> Vec<u8> {
+    let mut merged = ListEventsResponse::default();
+    for v in values {
+        if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
+            merged.event_bundles.extend(incoming.event_bundles);
+        }
     }
 
     let mut seen: HashSet<EventDedupKey> = HashSet::new();
@@ -44,28 +53,26 @@ fn merge_list_events_responses(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
     merged.encode_to_vec()
 }
 
-/// Fan out `ListEvents` to every configured server. Returns serialized
-/// `ListEventsResponse` proto bytes on each emission with
+/// Returns serialized `ListEventsResponse` proto bytes on each emission with
 /// `event_bundles` deduped by `EventKey`.
-#[allow(clippy::too_many_arguments)]
 pub fn list_events(
-    query: &Query<Vec<u8>>,
-    size: Option<i32>,
-    identity: Option<String>,
-    collection: Option<i32>,
-    signed_by: Option<PublicKey>,
-    sequence_gt: Option<i64>,
-    sequence_lt: Option<i64>,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: ListEventsArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
+    let ListEventsArgs {
+        size,
+        identity,
+        collection,
+        signed_by,
+        sequence_gt,
+        sequence_lt,
+    } = args;
+    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
     crate::logging::log_msg(format!(
         "[list_events] called identity={identity:?} collection={collection:?} size={size:?} fetch_mode={fetch_mode:?}"
     ));
-
-    let cache_key = format!(
-        "list_events:size={size:?}:identity={identity:?}:collection={collection:?}:signed_by={:?}:gt={sequence_gt:?}:lt={sequence_lt:?}",
-        signed_by.as_ref().map(|k| (k.key_type, k.key.clone())),
-    );
 
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
@@ -95,44 +102,38 @@ pub fn list_events(
         }
     };
 
-    Arc::new(query.query(
-        cache_key,
-        query_fn,
-        Some(merge_list_events_responses),
-        fetch_mode,
-    ))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_list_events_responses, opts))
 }
 
-/// Merge function for `get_event`. Each emission is the bytes of a
-/// single `EventBundle` (or empty when the server returned nothing).
-/// Prefer the most recent non-empty value.
-fn merge_event(prev: Option<Vec<u8>>, new: Vec<u8>) -> Vec<u8> {
-    if new.is_empty() {
-        prev.unwrap_or_default()
-    } else {
-        new
-    }
+/// Merge function for `get_event`. Each per-server slot stores the
+/// bytes of a single `EventBundle` (or empty when that server had
+/// nothing). Picks the first non-empty value.
+fn merge_event(values: &[Vec<u8>]) -> Vec<u8> {
+    values
+        .iter()
+        .find(|v| !v.is_empty())
+        .cloned()
+        .unwrap_or_default()
 }
 
-/// Fetch a single event by (identity, collection, sequence). Checks
-/// the local store first — if a bundle matching that sequence is
-/// present, emits it and completes without touching the network.
-/// Otherwise fans out a `ListEvents` query pinned to this exact
-/// sequence (`sequence_gt = seq - 1`, `sequence_lt = seq + 1`),
-/// persists what it finds, and emits the first matching bundle as
-/// serialized `EventBundle` proto bytes.
+/// Return a single event based on its key (or partial key)
 pub fn get_event(
-    query: &Query<Vec<u8>>,
-    identity: String,
-    collection: i32,
-    sequence: u64,
-    fetch_mode: Option<FetchMode>,
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: QueryKey,
+    args: GetEventArgs,
+    opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
+    let GetEventArgs {
+        identity,
+        collection,
+        sequence,
+    } = args;
+    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
     crate::logging::log_msg(format!(
         "[get_event] called identity={identity} collection={collection} sequence={sequence} fetch_mode={fetch_mode:?}"
     ));
 
-    if let Some(bundle) = query
+    if let Some(bundle) = query_client
         .client()
         .lock()
         .unwrap()
@@ -152,8 +153,6 @@ pub fn get_event(
         return Arc::new(observable);
     }
 
-    let cache_key = format!("event:{collection}:{identity}:{sequence}");
-
     let sequence_i64 = sequence as i64;
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
@@ -166,7 +165,7 @@ pub fn get_event(
         size: Some(1),
     };
 
-    let client = query.client().clone();
+    let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let request = request.clone();
@@ -188,5 +187,5 @@ pub fn get_event(
         }
     };
 
-    Arc::new(query.query(cache_key, query_fn, Some(merge_event), fetch_mode))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_event, opts))
 }

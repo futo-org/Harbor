@@ -32,12 +32,12 @@ export function useProfile(
 
   useEffect(() => {
     if (!identityKey) return;
-    useProfiles.getState().fetchProfile(client, identityKey, fetchMode);
+    useProfiles.getState().fetch(client, identityKey, fetchMode);
   }, [client, identityKey, fetchMode]);
 
   const refresh = useCallback(() => {
     if (!identityKey) return;
-    useProfiles.getState().fetchProfile(client, identityKey, FetchMode.Default);
+    useProfiles.getState().refresh(client, identityKey);
   }, [client, identityKey]);
 
   const data = profile ?? emptyProfile(identityKey ?? '');

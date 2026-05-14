@@ -16,6 +16,11 @@ import { StorageHandle } from './storage/storage-handle';
 import { bytesToHex } from './utils/hex';
 
 import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
+// `./generated` is the pure-JS bindings subpath; it exposes the Query
+// class and QueryStatus enum without dragging in the wasm asset. The
+// uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
+// externalised in webpack.config.js so consumers resolve it at runtime.
+import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 
 type CoreType = PolycentricCoreLike;
 
@@ -403,33 +408,53 @@ export class PolycentricClient {
         }
       : undefined;
 
+    const queryKey = [
+      'list_events',
+      String(options?.limit ?? ''),
+      options?.identity ?? '',
+      String(options?.collection ?? ''),
+      options?.signedBy
+        ? `${options.signedBy.keyType}:${bytesToHex(options.signedBy.key)}`
+        : '',
+      String(sequenceGt ?? ''),
+      String(sequenceLt ?? ''),
+    ];
+
     return new Promise<Proto.EventBundle[]>((resolve, reject) => {
-      const observable = this.core.listEvents(
-        options?.limit ?? undefined,
-        options?.identity ?? undefined,
-        options?.collection ?? undefined,
-        signedBy,
-        sequenceGt,
-        sequenceLt,
+      const observable = this.core.fetchQuery(
+        queryKey,
+        new Query.ListEvents({
+          size: options?.limit ?? undefined,
+          identity: options?.identity ?? undefined,
+          collection: options?.collection ?? undefined,
+          signedBy,
+          sequenceGt,
+          sequenceLt,
+        }),
         undefined,
       );
 
       let latest: Proto.EventBundle[] = [];
+      // Observable never `complete()`s — resolve on the Loading→Success
+      // transition once every server slot has reported.
       const subscription = observable.subscribe({
         next: (result) => {
-          if (!result.data) return;
-          const response = Proto.ListEventsResponse.fromBinary(
-            new Uint8Array(result.data),
-          );
-          latest = response.eventBundles;
+          if (result.data) {
+            const response = Proto.ListEventsResponse.fromBinary(
+              new Uint8Array(result.data),
+            );
+            latest = response.eventBundles;
+          }
+          if (result.status === QueryStatus.Success) {
+            subscription.unsubscribe();
+            resolve(latest);
+          }
         },
         error: (message: string) => {
           subscription.unsubscribe();
           reject(new Error(message));
         },
-        complete: () => {
-          resolve(latest);
-        },
+        complete: () => {},
       });
     });
   }

@@ -185,9 +185,20 @@ export function ComposeSheetInner({
 
       resetComposer();
       await dismissSheet(DismissReason.PostSubmitted);
-      void client.sync().catch((err) => {
-        console.warn('compose sync failed:', err);
-      });
+      void client
+        .sync()
+        .then(() => {
+          // Force the feed observables to re-fetch from servers so the
+          // newly-synced post appears alongside whatever else changed.
+          // The local-post injection already showed it optimistically.
+          const identity = currentIdentityKey ?? '';
+          client.core.invalidateQuery(['following_feed', identity]);
+          client.core.invalidateQuery(['identity_feed', identity]);
+          client.core.invalidateQuery(['explore_feed', identity]);
+        })
+        .catch((err) => {
+          console.warn('compose sync failed:', err);
+        });
       // TODO
       // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
@@ -202,6 +213,7 @@ export function ComposeSheetInner({
     attachments,
     submitting,
     client,
+    currentIdentityKey,
     dismissSheet,
     isReply,
     replyToEventKey,

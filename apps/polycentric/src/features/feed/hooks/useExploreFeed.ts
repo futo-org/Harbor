@@ -1,13 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { QueryStatus, v2 } from '@polycentric/react-native';
-import {
-  decodeV2PostBundle,
-  usePolycentricContext,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
-import { EMPTY_POSTS, NOOP, type FeedHookResult } from './types';
-
-type Sub = { unsubscribe: () => void };
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Query } from '@polycentric/react-native';
+import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import { type FeedHookResult, NOOP } from './types';
+import { EMPTY_FEED, useFeedsStore } from './useFeeds';
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -15,72 +10,46 @@ export function useExploreFeed(options?: {
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
-  const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
-  // Hold the live subscription so we can cancel on unmount / refresh.
-  // The rust core fans out to every configured server and emits each
-  // merged response as it arrives.
-  const subscriptionRef = useRef<Sub | null>(null);
+  const identity = client.activeIdentityKey ?? '';
+  const feedKey = `explore:${identity}`;
+  const queryKey = useMemo(() => ['explore_feed', identity], [identity]);
+  const query = useMemo(
+    () =>
+      new Query.GetExploreFeed({
+        identity: identity === '' ? undefined : identity,
+      }),
+    [identity],
+  );
 
-  const cleanup = useCallback(() => {
-    subscriptionRef.current?.unsubscribe();
-    subscriptionRef.current = null;
-  }, []);
+  const feed = useFeedsStore((s) => s.feeds.get(feedKey) ?? EMPTY_FEED);
+  const subscribe = useFeedsStore((s) => s.subscribe);
 
-  const fetchFeed = useCallback(() => {
-    cleanup();
-    setItems(EMPTY_POSTS);
-    setError(null);
-    setIsLoading(true);
-
-    // Rust-side merge_fn already dedupes by EventKey — each next()
-    // carries the full merged feed plus a status. `Loading` stays in
-    // effect until the last per-server response arrives.
-    const observable = client.core.getExploreFeed(
-      client.activeIdentityKey ?? undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    );
-    subscriptionRef.current = observable.subscribe({
-      next: (result) => {
-        if (result.data) {
-          const response = v2.GetFeedResponse.fromBinary(
-            new Uint8Array(result.data),
-          );
-          const posts: PostData[] = [];
-          for (const bundle of response.eventBundles) {
-            const decoded = decodeV2PostBundle(bundle);
-            if (decoded) posts.push(decoded);
-          }
-          setItems(posts);
-        }
-        setIsLoading(result.status === QueryStatus.Loading);
-      },
-      error: (message: string) => {
-        console.warn('useExploreFeed error:', message);
-        setError(new Error(message));
-      },
-      complete: () => {
-        setIsLoading(false);
-      },
-    });
-  }, [client, cleanup]);
+  // Re-subscribe on every mount so the rust observable re-emits cached
+  // state (instant) and `FetchMode::Default` triggers a fresh fan-out.
+  // State persists in the store across mount/unmount.
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (enabled) fetchFeed();
-    return cleanup;
-  }, [enabled, fetchFeed, cleanup]);
+    if (!enabled) return;
+    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
+    return () => {
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+    };
+  }, [enabled, subscribe, client, feedKey, queryKey, query]);
+
+  const refresh = useCallback(() => {
+    unsubscribeRef.current?.();
+    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
+  }, [subscribe, client, feedKey, queryKey, query]);
 
   return {
-    items,
-    isLoading,
-    error,
+    items: feed.items,
+    isLoading: feed.isLoading,
+    error: feed.error,
     loadMore: NOOP,
     hasMore: false,
-    refresh: fetchFeed,
+    refresh,
   };
 }

@@ -8,7 +8,7 @@ import {
   useIsFocused,
   useLocalSearchParams,
 } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
@@ -52,12 +52,30 @@ function ProfileScreenContent() {
     router.back();
   }, []);
 
-  const tabs = isSelf
-    ? [
-        { key: 'posts', feed: identityFeed, bottomPadding: 40 },
-        { key: 'likes', feed: likesFeed, bottomPadding: 40 },
-      ]
-    : [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }];
+  // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
+  // array reference on every render defeats the memoisation.
+  const bannerColors = useMemo<[string, string]>(
+    () => [
+      theme.palette.background_secondary,
+      theme.palette.background_primary,
+    ],
+    [theme.palette.background_secondary, theme.palette.background_primary],
+  );
+  const profileHeader = useMemo(
+    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
+    [bannerColors, handleBack],
+  );
+
+  const tabs = useMemo(
+    () =>
+      isSelf
+        ? [
+            { key: 'posts', feed: identityFeed, bottomPadding: 40 },
+            { key: 'likes', feed: likesFeed, bottomPadding: 40 },
+          ]
+        : [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
+    [isSelf, identityFeed, likesFeed],
+  );
 
   return (
     <Screen>
@@ -65,15 +83,7 @@ function ProfileScreenContent() {
         <ProfileFeedSwitcher
           tabs={tabs}
           activeKey={activeFeed}
-          ListHeaderComponent={
-            <ProfileHeader
-              bannerColors={[
-                theme.palette.background_secondary,
-                theme.palette.background_primary,
-              ]}
-              onBack={handleBack}
-            />
-          }
+          ListHeaderComponent={profileHeader}
         />
       </Screen.PrimaryColumn>
     </Screen>

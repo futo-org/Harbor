@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   COLLECTION,
+  Query,
   QueryStatus,
   v2,
   type EventKey,
@@ -69,9 +70,12 @@ export function useThread(
       sequence: BigInt(post.sequence),
     };
 
-    const observable = client.core.getPostThread(
-      eventKey,
-      options?.limit ?? 0,
+    const observable = client.core.fetchQuery(
+      ['post_thread', post.id, String(options?.limit ?? 0)],
+      new Query.GetPostThread({
+        eventKey,
+        limit: options?.limit ?? 0,
+      }),
       undefined,
     );
 

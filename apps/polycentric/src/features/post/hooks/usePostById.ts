@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { COLLECTION, QueryStatus, v2 } from '@polycentric/react-native';
+import { COLLECTION, Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   usePolycentricContext,
@@ -49,10 +49,13 @@ export function usePostById(
     setError(null);
     setIsLoading(true);
 
-    const observable = client.core.getEvent(
-      identityId,
-      COLLECTION.FEED,
-      sequence,
+    const observable = client.core.fetchQuery(
+      ['event', String(COLLECTION.FEED), identityId, sequence.toString()],
+      new Query.GetEvent({
+        identity: identityId,
+        collection: COLLECTION.FEED,
+        sequence,
+      }),
       undefined,
     );
 

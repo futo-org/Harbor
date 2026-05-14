@@ -42,7 +42,11 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
-  if (profile.isLoading) return <></>;
+  // Only hide the header when we have nothing to show. As soon as the
+  // rust observable emits its first value (cached local-store data or
+  // a server response) we render — even if `isLoading` is still true,
+  // because that just means a background refresh is in flight.
+  if (profile.isLoading && !profile.name && !profile.avatar) return <></>;
 
   return (
     <>

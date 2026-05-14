@@ -62,58 +62,17 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array
   ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event(
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(
     ptr: bigint,
-    identity: Uint8Array,
-    collection: number,
-    sequence: bigint,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
-    ptr: bigint,
-    identity: Uint8Array,
-    limit: Uint8Array,
-    beforeToken: Uint8Array,
-    afterToken: Uint8Array,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
-    ptr: bigint,
-    followerIdentity: Uint8Array,
-    limit: Uint8Array,
-    beforeToken: Uint8Array,
-    afterToken: Uint8Array,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
-    ptr: bigint,
-    identity: Uint8Array,
-    limit: Uint8Array,
-    beforeToken: Uint8Array,
-    afterToken: Uint8Array,
-    fetchMode: Uint8Array,
+    queryKey: Uint8Array,
+    query: Uint8Array,
+    opts: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
     ptr: bigint,
     serverUrl: Uint8Array,
     pairingSessionSignature: Uint8Array
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_post_thread(
-    ptr: bigint,
-    eventKey: Uint8Array,
-    limit: number,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_profile(
-    ptr: bigint,
-    identity: Uint8Array,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(
     ptr: bigint,
@@ -123,32 +82,15 @@ interface NativeModuleInterface {
     ptr: bigint,
     uniffi_out_err: UniffiRustCallStatus
   ): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_query(
+    ptr: bigint,
+    queryKey: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): void;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
     ptr: bigint,
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
-    ptr: bigint,
-    size: Uint8Array,
-    identity: Uint8Array,
-    collection: Uint8Array,
-    signedBy: Uint8Array,
-    sequenceGt: Uint8Array,
-    sequenceLt: Uint8Array,
-    fetchMode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(
-    ptr: bigint,
-    serverUrl: Uint8Array,
-    size: Uint8Array,
-    identity: Uint8Array,
-    collection: Uint8Array,
-    signedBy: Uint8Array,
-    signedByKeyType: Uint8Array,
-    sequenceGt: Uint8Array,
-    sequenceLt: Uint8Array
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events(
     ptr: bigint,
@@ -453,18 +395,12 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_profile(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(): number;

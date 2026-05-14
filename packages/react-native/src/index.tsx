@@ -9,6 +9,7 @@ export * as types from '@polycentric/js-core';
 export {
   FetchMode,
   PolycentricCore,
+  Query,
   QueryStatus,
   setLogger,
 } from './generated/rn/polycentric_core';

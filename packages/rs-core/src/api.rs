@@ -6,8 +6,8 @@ use polycentric_common::models::protos_v2::{
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsFilters, ListEventsRequest,
-    ListEventsResponse, PublicKey, PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -16,8 +16,8 @@ use std::sync::{Arc, Mutex};
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
 compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
 
-fn channel(server_url: &str) -> Result<crate::transport::GrpcChannel, CoreError> {
-    crate::transport::channel(server_url).map_err(CoreError::Network)
+fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreError> {
+    crate::query::channel(server_url).map_err(CoreError::Network)
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -60,6 +60,21 @@ pub struct ContentEntry {
     pub content_bytes: Vec<u8>,
 }
 
+/// Discriminated union over every observable RPC. `fetch_query`
+/// matches on a variant and dispatches to the corresponding helper.
+/// Adding a new observable RPC means adding a variant here and a
+/// match arm in `fetch_query` — no new FFI method required.
+#[derive(uniffi::Enum)]
+pub enum Query {
+    GetProfile(crate::query::profile::GetProfileArgs),
+    GetEvent(crate::query::event::GetEventArgs),
+    GetPostThread(crate::query::feed::GetPostThreadArgs),
+    GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
+    GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
+    GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
+    ListEvents(crate::query::event::ListEventsArgs),
+}
+
 #[uniffi::export(with_foreign)]
 #[async_trait::async_trait]
 pub trait SignEventCallback: Send + Sync {
@@ -69,7 +84,7 @@ pub trait SignEventCallback: Send + Sync {
 #[derive(uniffi::Object)]
 pub struct PolycentricCore {
     client: Arc<Mutex<PolycentricClient>>,
-    query: crate::query::Query<Vec<u8>>,
+    query_client: crate::query::QueryClient<Vec<u8>>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), uniffi::export(async_runtime = "tokio"))]
@@ -82,7 +97,7 @@ impl PolycentricCore {
 
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
         Arc::new(Self {
-            query: crate::query::Query::new(client.clone()),
+            query_client: crate::query::QueryClient::new(client.clone()),
             client,
         })
     }
@@ -236,86 +251,47 @@ impl PolycentricCore {
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
-    /// Single-server `ListEvents` primitive. Kept distinct from the
-    /// observable `list_events` because pairing flows need to poll a
-    /// specific target server rather than fan out across the
-    /// configured set.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn list_events_for_server(
+    /// Unified entry point for every observable RPC. `query` selects
+    /// which RPC to run and supplies its parameters; `query_key` is
+    /// the cache key shared across subscribers; `opts` carries the
+    /// optional fetch mode and per-call servers override. Always
+    /// returns a `QueryObservable` regardless of variant.
+    pub fn fetch_query(
         &self,
-        server_url: String,
-        size: Option<i32>,
-        identity: Option<String>,
-        collection: Option<i32>,
-        signed_by: Option<Vec<u8>>,
-        signed_by_key_type: Option<i32>,
-        sequence_gt: Option<i64>,
-        sequence_lt: Option<i64>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
-
-        let filters = ListEventsFilters {
-            collection,
-            identity,
-            signed_by: signed_by.map(|key| PublicKey {
-                key_type: signed_by_key_type.unwrap_or(1),
-                key,
-            }),
-            sequence_gt,
-            sequence_lt,
-        };
-
-        let response = client
-            .list_events(ListEventsRequest {
-                filters: Some(filters),
-                size,
-            })
-            .await
-            .map_err(|e| CoreError::Network(format!("list_events_for_server: {e}")))?;
-
-        Ok(response.into_inner().encode_to_vec())
+        query_key: crate::query::QueryKey,
+        query: Query,
+        opts: Option<crate::query::QueryOpts>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        match query {
+            Query::GetProfile(args) => {
+                crate::query::profile::get_profile(&self.query_client, query_key, args, opts)
+            }
+            Query::GetEvent(args) => {
+                crate::query::event::get_event(&self.query_client, query_key, args, opts)
+            }
+            Query::GetPostThread(args) => {
+                crate::query::feed::get_post_thread(&self.query_client, query_key, args, opts)
+            }
+            Query::GetIdentityFeed(args) => {
+                crate::query::feed::get_identity_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::GetFollowingFeed(args) => {
+                crate::query::feed::get_following_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::GetExploreFeed(args) => {
+                crate::query::feed::get_explore_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::ListEvents(args) => {
+                crate::query::event::list_events(&self.query_client, query_key, args, opts)
+            }
+        }
     }
 
-    /// Fetch a single event by (identity, collection, sequence).
-    /// Checks the local store first; on a miss, falls back to a
-    /// fan-out `ListEvents` pinned to this exact sequence. Emits
-    /// serialized `EventBundle` proto bytes (empty `Vec` when the
-    /// event isn't found anywhere).
-    pub fn get_event(
-        &self,
-        identity: String,
-        collection: i32,
-        sequence: u64,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::event::get_event(&self.query, identity, collection, sequence, fetch_mode)
-    }
-
-    /// Fan out `ListEvents` to every configured server as an
-    /// observable. Each emission carries the merged
-    /// `ListEventsResponse` bytes with `event_bundles` deduped by
-    /// `EventKey`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn list_events(
-        &self,
-        size: Option<i32>,
-        identity: Option<String>,
-        collection: Option<i32>,
-        signed_by: Option<crate::event::key::PublicKey>,
-        sequence_gt: Option<i64>,
-        sequence_lt: Option<i64>,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::event::list_events(
-            &self.query,
-            size,
-            identity,
-            collection,
-            signed_by,
-            sequence_gt,
-            sequence_lt,
-            fetch_mode,
-        )
+    /// Clear the per-server cache for `query_key`, notify live
+    /// subscribers with `Loading(None)`, then trigger a fresh fan-out.
+    /// No-op when the key has never been queried.
+    pub fn invalidate_query(&self, query_key: crate::query::QueryKey) {
+        self.query_client.invalidate(&query_key);
     }
 
     /// Push event bundles to a server.
@@ -332,88 +308,6 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("put_events: {e}")))?;
         Ok(())
-    }
-
-    /// Fetch the feed of posts authored by `identity` as an
-    /// observable. Fans out to every configured server (see
-    /// `set_servers`); each server's response is emitted to the
-    /// foreign `FeedObserver` and `complete` fires after the last
-    /// server has reported.
-    pub fn get_identity_feed(
-        &self,
-        identity: String,
-        limit: Option<i32>,
-        before_token: Option<String>,
-        after_token: Option<String>,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::feed::get_identity_feed(
-            &self.query,
-            identity,
-            limit,
-            before_token,
-            after_token,
-            fetch_mode,
-        )
-    }
-
-    /// Fetch the feed of posts from identities the caller follows. When
-    /// `follower_identity` is `None` the server uses the authenticated
-    /// caller's follow graph.
-    pub fn get_following_feed(
-        &self,
-        follower_identity: String,
-        limit: Option<i32>,
-        before_token: Option<String>,
-        after_token: Option<String>,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::feed::get_following_feed(
-            &self.query,
-            follower_identity,
-            limit,
-            before_token,
-            after_token,
-            fetch_mode,
-        )
-    }
-
-    /// Fetch the server-curated explore feed as an observable.
-    pub fn get_explore_feed(
-        &self,
-        identity: Option<String>,
-        limit: Option<i32>,
-        before_token: Option<String>,
-        after_token: Option<String>,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::feed::get_explore_feed(
-            &self.query,
-            identity,
-            limit,
-            before_token,
-            after_token,
-            fetch_mode,
-        )
-    }
-
-    /// Fetch a parent post and its direct replies as an observable.
-    pub fn get_post_thread(
-        &self,
-        event_key: crate::event::key::EventKey,
-        limit: i32,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::feed::get_post_thread(&self.query, event_key, limit, fetch_mode)
-    }
-
-    /// Fetch `identity`'s profile events as an observable.
-    pub fn get_profile(
-        &self,
-        identity: String,
-        fetch_mode: Option<crate::query::FetchMode>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
-        crate::profile::get_profile(&self.query, identity, fetch_mode)
     }
 
     /// Fetch a server's public info. Returns serialized

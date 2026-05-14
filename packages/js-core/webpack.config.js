@@ -1,5 +1,17 @@
 import path from 'path';
 
+// `@polycentric/rs-core-uniffi-web` is the wasm-backed bindings
+// package; pulling it into js-core's bundle would also drag in its
+// uniffi runtime (whose CJS index has relative requires that don't
+// survive webpack cleanly) and the wasm asset. Externalising it
+// leaves a clean bare import in the dist — consumers (apps' Metro /
+// vite bundler) resolve the workspace package at runtime.
+const externals = {
+  '@polycentric/rs-core-uniffi-web': '@polycentric/rs-core-uniffi-web',
+  '@polycentric/rs-core-uniffi-web/generated':
+    '@polycentric/rs-core-uniffi-web/generated',
+};
+
 export default [
   {
     entry: './src/index.ts',
@@ -21,6 +33,8 @@ export default [
     experiments: {
       outputModule: true,
     },
+    externalsType: 'module',
+    externals,
     output: {
       filename: 'index.es.js',
       path: path.join(import.meta.dirname, 'dist'),
@@ -47,6 +61,8 @@ export default [
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
     },
+    externalsType: 'commonjs',
+    externals,
     output: {
       filename: 'index.cjs.js',
       path: path.join(import.meta.dirname, 'dist'),

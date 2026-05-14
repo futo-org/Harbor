@@ -59,6 +59,7 @@ import {
   FfiConverterUInt64,
   RustBuffer,
   UniffiAbstractObject,
+  UniffiEnum,
   UniffiError,
   UniffiInternalError,
   UniffiResult,
@@ -196,6 +197,360 @@ const FfiConverterTypeEventKey = (() => {
   return new FFIConverter();
 })();
 
+export type GetEventArgs = {
+  identity: string;
+  collection: /*i32*/ number;
+  sequence: /*u64*/ bigint;
+};
+
+/**
+ * Generated factory for {@link GetEventArgs} record objects.
+ */
+export const GetEventArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GetEventArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetEventArgs>,
+  });
+})();
+
+const FfiConverterTypeGetEventArgs = (() => {
+  type TypeName = GetEventArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        collection: FfiConverterInt32.read(from),
+        sequence: FfiConverterUInt64.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterInt32.write(value.collection, into);
+      FfiConverterUInt64.write(value.sequence, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterInt32.allocationSize(value.collection) +
+        FfiConverterUInt64.allocationSize(value.sequence)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type GetExploreFeedArgs = {
+  identity?: string;
+  limit?: /*i32*/ number;
+  beforeToken?: string;
+  afterToken?: string;
+};
+
+/**
+ * Generated factory for {@link GetExploreFeedArgs} record objects.
+ */
+export const GetExploreFeedArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GetExploreFeedArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetExploreFeedArgs>,
+  });
+})();
+
+const FfiConverterTypeGetExploreFeedArgs = (() => {
+  type TypeName = GetExploreFeedArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterOptionalString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        beforeToken: FfiConverterOptionalString.read(from),
+        afterToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterOptionalString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.beforeToken, into);
+      FfiConverterOptionalString.write(value.afterToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.beforeToken) +
+        FfiConverterOptionalString.allocationSize(value.afterToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type GetFollowingFeedArgs = {
+  followerIdentity: string;
+  limit?: /*i32*/ number;
+  beforeToken?: string;
+  afterToken?: string;
+};
+
+/**
+ * Generated factory for {@link GetFollowingFeedArgs} record objects.
+ */
+export const GetFollowingFeedArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      GetFollowingFeedArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetFollowingFeedArgs>,
+  });
+})();
+
+const FfiConverterTypeGetFollowingFeedArgs = (() => {
+  type TypeName = GetFollowingFeedArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        followerIdentity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        beforeToken: FfiConverterOptionalString.read(from),
+        afterToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.followerIdentity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.beforeToken, into);
+      FfiConverterOptionalString.write(value.afterToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.followerIdentity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.beforeToken) +
+        FfiConverterOptionalString.allocationSize(value.afterToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type GetIdentityFeedArgs = {
+  identity: string;
+  limit?: /*i32*/ number;
+  beforeToken?: string;
+  afterToken?: string;
+};
+
+/**
+ * Generated factory for {@link GetIdentityFeedArgs} record objects.
+ */
+export const GetIdentityFeedArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GetIdentityFeedArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetIdentityFeedArgs>,
+  });
+})();
+
+const FfiConverterTypeGetIdentityFeedArgs = (() => {
+  type TypeName = GetIdentityFeedArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        beforeToken: FfiConverterOptionalString.read(from),
+        afterToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.beforeToken, into);
+      FfiConverterOptionalString.write(value.afterToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.beforeToken) +
+        FfiConverterOptionalString.allocationSize(value.afterToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type GetPostThreadArgs = {
+  eventKey: EventKey;
+  limit: /*i32*/ number;
+};
+
+/**
+ * Generated factory for {@link GetPostThreadArgs} record objects.
+ */
+export const GetPostThreadArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GetPostThreadArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetPostThreadArgs>,
+  });
+})();
+
+const FfiConverterTypeGetPostThreadArgs = (() => {
+  type TypeName = GetPostThreadArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        eventKey: FfiConverterTypeEventKey.read(from),
+        limit: FfiConverterInt32.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterTypeEventKey.write(value.eventKey, into);
+      FfiConverterInt32.write(value.limit, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeEventKey.allocationSize(value.eventKey) +
+        FfiConverterInt32.allocationSize(value.limit)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type GetProfileArgs = {
+  identity: string;
+};
+
+/**
+ * Generated factory for {@link GetProfileArgs} record objects.
+ */
+export const GetProfileArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<GetProfileArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<GetProfileArgs>,
+  });
+})();
+
+const FfiConverterTypeGetProfileArgs = (() => {
+  type TypeName = GetProfileArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterString.allocationSize(value.identity);
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListEventsArgs = {
+  size?: /*i32*/ number;
+  identity?: string;
+  collection?: /*i32*/ number;
+  signedBy?: PublicKey;
+  sequenceGt?: /*i64*/ bigint;
+  sequenceLt?: /*i64*/ bigint;
+};
+
+/**
+ * Generated factory for {@link ListEventsArgs} record objects.
+ */
+export const ListEventsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListEventsArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListEventsArgs>,
+  });
+})();
+
+const FfiConverterTypeListEventsArgs = (() => {
+  type TypeName = ListEventsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        size: FfiConverterOptionalInt32.read(from),
+        identity: FfiConverterOptionalString.read(from),
+        collection: FfiConverterOptionalInt32.read(from),
+        signedBy: FfiConverterOptionalTypePublicKey.read(from),
+        sequenceGt: FfiConverterOptionalInt64.read(from),
+        sequenceLt: FfiConverterOptionalInt64.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterOptionalInt32.write(value.size, into);
+      FfiConverterOptionalString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.collection, into);
+      FfiConverterOptionalTypePublicKey.write(value.signedBy, into);
+      FfiConverterOptionalInt64.write(value.sequenceGt, into);
+      FfiConverterOptionalInt64.write(value.sequenceLt, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalInt32.allocationSize(value.size) +
+        FfiConverterOptionalString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.collection) +
+        FfiConverterOptionalTypePublicKey.allocationSize(value.signedBy) +
+        FfiConverterOptionalInt64.allocationSize(value.sequenceGt) +
+        FfiConverterOptionalInt64.allocationSize(value.sequenceLt)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type PublicKey = {
   keyType: /*i32*/ number;
   key: ArrayBuffer;
@@ -240,9 +595,55 @@ const FfiConverterTypePublicKey = (() => {
 })();
 
 /**
- * FFI-friendly mirror of `QueryResult<T>` after `T` has been converted
- * to bytes. Carried on every `QueryObservable` emission.
+ * Options for the query such as the fetch mode or a list of servers
  */
+export type QueryOpts = {
+  fetchMode?: FetchMode;
+  /**
+   * Optional list of servers the query should call. `None` uses
+   * `client.servers()`.
+   */
+  servers?: Array<string>;
+};
+
+/**
+ * Generated factory for {@link QueryOpts} record objects.
+ */
+export const QueryOpts = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<QueryOpts, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<QueryOpts>,
+  });
+})();
+
+const FfiConverterTypeQueryOpts = (() => {
+  type TypeName = QueryOpts;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        fetchMode: FfiConverterOptionalTypeFetchMode.read(from),
+        servers: FfiConverterOptionalArrayString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterOptionalTypeFetchMode.write(value.fetchMode, into);
+      FfiConverterOptionalArrayString.write(value.servers, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalTypeFetchMode.allocationSize(value.fetchMode) +
+        FfiConverterOptionalArrayString.allocationSize(value.servers)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type QueryResultFfi = {
   data?: ArrayBuffer;
   status: QueryStatus;
@@ -572,26 +973,20 @@ const FfiConverterTypeCoreError = (() => {
 })();
 
 /**
- * How `Query::query` should reconcile its in-memory merged-response
- * cache with the network. Generic across every RPC built on `Query`.
+ * Fetch method for the query
  */
 export enum FetchMode {
   /**
-   * Emit the cached value (if any) as `Loading`, fan out to every
-   * configured server, and emit progressively as responses arrive.
-   * Completes once every server has reported.
+   * Initially return from cache and then query each server in parallel.
    */
   Default,
   /**
-   * If a cached value exists for this cache key, emit it once as
-   * `Success` and complete without touching the network. Falls back
-   * to `Default` when nothing is cached.
+   * If cached data is found then it will not attempt to call servers.
+   * If nothing in the cache is returned then it calls each of the servers in parallel.
    */
   OfflineFirst,
   /**
-   * Emit whatever's locally available — cached value or `None` —
-   * as `Success` and complete. Never goes to the network even when
-   * nothing is cached.
+   * Will only ever read from the cached data.
    */
   OfflineOnly,
 }
@@ -629,6 +1024,390 @@ const FfiConverterTypeFetchMode = (() => {
   return new FFIConverter();
 })();
 
+// Enum: Query
+export enum Query_Tags {
+  GetProfile = 'GetProfile',
+  GetEvent = 'GetEvent',
+  GetPostThread = 'GetPostThread',
+  GetIdentityFeed = 'GetIdentityFeed',
+  GetFollowingFeed = 'GetFollowingFeed',
+  GetExploreFeed = 'GetExploreFeed',
+  ListEvents = 'ListEvents',
+}
+/**
+ * Discriminated union over every observable RPC. `fetch_query`
+ * matches on a variant and dispatches to the corresponding helper.
+ * Adding a new observable RPC means adding a variant here and a
+ * match arm in `fetch_query` — no new FFI method required.
+ */
+export const Query = (() => {
+  type GetProfile__interface = {
+    tag: Query_Tags.GetProfile;
+    inner: Readonly<[GetProfileArgs]>;
+  };
+
+  class GetProfile_ extends UniffiEnum implements GetProfile__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetProfile;
+    readonly inner: Readonly<[GetProfileArgs]>;
+    constructor(v0: GetProfileArgs) {
+      super('Query', 'GetProfile');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetProfileArgs): GetProfile_ {
+      return new GetProfile_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetProfile_ {
+      return obj.tag === Query_Tags.GetProfile;
+    }
+  }
+
+  type GetEvent__interface = {
+    tag: Query_Tags.GetEvent;
+    inner: Readonly<[GetEventArgs]>;
+  };
+
+  class GetEvent_ extends UniffiEnum implements GetEvent__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetEvent;
+    readonly inner: Readonly<[GetEventArgs]>;
+    constructor(v0: GetEventArgs) {
+      super('Query', 'GetEvent');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetEventArgs): GetEvent_ {
+      return new GetEvent_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetEvent_ {
+      return obj.tag === Query_Tags.GetEvent;
+    }
+  }
+
+  type GetPostThread__interface = {
+    tag: Query_Tags.GetPostThread;
+    inner: Readonly<[GetPostThreadArgs]>;
+  };
+
+  class GetPostThread_ extends UniffiEnum implements GetPostThread__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetPostThread;
+    readonly inner: Readonly<[GetPostThreadArgs]>;
+    constructor(v0: GetPostThreadArgs) {
+      super('Query', 'GetPostThread');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetPostThreadArgs): GetPostThread_ {
+      return new GetPostThread_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetPostThread_ {
+      return obj.tag === Query_Tags.GetPostThread;
+    }
+  }
+
+  type GetIdentityFeed__interface = {
+    tag: Query_Tags.GetIdentityFeed;
+    inner: Readonly<[GetIdentityFeedArgs]>;
+  };
+
+  class GetIdentityFeed_
+    extends UniffiEnum
+    implements GetIdentityFeed__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetIdentityFeed;
+    readonly inner: Readonly<[GetIdentityFeedArgs]>;
+    constructor(v0: GetIdentityFeedArgs) {
+      super('Query', 'GetIdentityFeed');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetIdentityFeedArgs): GetIdentityFeed_ {
+      return new GetIdentityFeed_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetIdentityFeed_ {
+      return obj.tag === Query_Tags.GetIdentityFeed;
+    }
+  }
+
+  type GetFollowingFeed__interface = {
+    tag: Query_Tags.GetFollowingFeed;
+    inner: Readonly<[GetFollowingFeedArgs]>;
+  };
+
+  class GetFollowingFeed_
+    extends UniffiEnum
+    implements GetFollowingFeed__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetFollowingFeed;
+    readonly inner: Readonly<[GetFollowingFeedArgs]>;
+    constructor(v0: GetFollowingFeedArgs) {
+      super('Query', 'GetFollowingFeed');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetFollowingFeedArgs): GetFollowingFeed_ {
+      return new GetFollowingFeed_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetFollowingFeed_ {
+      return obj.tag === Query_Tags.GetFollowingFeed;
+    }
+  }
+
+  type GetExploreFeed__interface = {
+    tag: Query_Tags.GetExploreFeed;
+    inner: Readonly<[GetExploreFeedArgs]>;
+  };
+
+  class GetExploreFeed_
+    extends UniffiEnum
+    implements GetExploreFeed__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.GetExploreFeed;
+    readonly inner: Readonly<[GetExploreFeedArgs]>;
+    constructor(v0: GetExploreFeedArgs) {
+      super('Query', 'GetExploreFeed');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: GetExploreFeedArgs): GetExploreFeed_ {
+      return new GetExploreFeed_(v0);
+    }
+
+    static instanceOf(obj: any): obj is GetExploreFeed_ {
+      return obj.tag === Query_Tags.GetExploreFeed;
+    }
+  }
+
+  type ListEvents__interface = {
+    tag: Query_Tags.ListEvents;
+    inner: Readonly<[ListEventsArgs]>;
+  };
+
+  class ListEvents_ extends UniffiEnum implements ListEvents__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListEvents;
+    readonly inner: Readonly<[ListEventsArgs]>;
+    constructor(v0: ListEventsArgs) {
+      super('Query', 'ListEvents');
+      this.inner = Object.freeze([v0]);
+    }
+
+    static new(v0: ListEventsArgs): ListEvents_ {
+      return new ListEvents_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListEvents_ {
+      return obj.tag === Query_Tags.ListEvents;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Query {
+    return obj[uniffiTypeNameSymbol] === 'Query';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    GetProfile: GetProfile_,
+    GetEvent: GetEvent_,
+    GetPostThread: GetPostThread_,
+    GetIdentityFeed: GetIdentityFeed_,
+    GetFollowingFeed: GetFollowingFeed_,
+    GetExploreFeed: GetExploreFeed_,
+    ListEvents: ListEvents_,
+  });
+})();
+
+/**
+ * Discriminated union over every observable RPC. `fetch_query`
+ * matches on a variant and dispatches to the corresponding helper.
+ * Adding a new observable RPC means adding a variant here and a
+ * match arm in `fetch_query` — no new FFI method required.
+ */
+
+export type Query = InstanceType<
+  (typeof Query)[keyof Omit<typeof Query, 'instanceOf'>]
+>;
+
+// FfiConverter for enum Query
+const FfiConverterTypeQuery = (() => {
+  const ordinalConverter = FfiConverterInt32;
+  type TypeName = Query;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      switch (ordinalConverter.read(from)) {
+        case 1:
+          return new Query.GetProfile(
+            FfiConverterTypeGetProfileArgs.read(from)
+          );
+        case 2:
+          return new Query.GetEvent(FfiConverterTypeGetEventArgs.read(from));
+        case 3:
+          return new Query.GetPostThread(
+            FfiConverterTypeGetPostThreadArgs.read(from)
+          );
+        case 4:
+          return new Query.GetIdentityFeed(
+            FfiConverterTypeGetIdentityFeedArgs.read(from)
+          );
+        case 5:
+          return new Query.GetFollowingFeed(
+            FfiConverterTypeGetFollowingFeedArgs.read(from)
+          );
+        case 6:
+          return new Query.GetExploreFeed(
+            FfiConverterTypeGetExploreFeedArgs.read(from)
+          );
+        case 7:
+          return new Query.ListEvents(
+            FfiConverterTypeListEventsArgs.read(from)
+          );
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      switch (value.tag) {
+        case Query_Tags.GetProfile: {
+          ordinalConverter.write(1, into);
+          const inner = value.inner;
+          FfiConverterTypeGetProfileArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.GetEvent: {
+          ordinalConverter.write(2, into);
+          const inner = value.inner;
+          FfiConverterTypeGetEventArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.GetPostThread: {
+          ordinalConverter.write(3, into);
+          const inner = value.inner;
+          FfiConverterTypeGetPostThreadArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.GetIdentityFeed: {
+          ordinalConverter.write(4, into);
+          const inner = value.inner;
+          FfiConverterTypeGetIdentityFeedArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.GetFollowingFeed: {
+          ordinalConverter.write(5, into);
+          const inner = value.inner;
+          FfiConverterTypeGetFollowingFeedArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.GetExploreFeed: {
+          ordinalConverter.write(6, into);
+          const inner = value.inner;
+          FfiConverterTypeGetExploreFeedArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListEvents: {
+          ordinalConverter.write(7, into);
+          const inner = value.inner;
+          FfiConverterTypeListEventsArgs.write(inner[0], into);
+          return;
+        }
+        default:
+          // Throwing from here means that Query_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Query_Tags.GetProfile: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(1);
+          size += FfiConverterTypeGetProfileArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.GetEvent: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(2);
+          size += FfiConverterTypeGetEventArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.GetPostThread: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(3);
+          size += FfiConverterTypeGetPostThreadArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.GetIdentityFeed: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(4);
+          size += FfiConverterTypeGetIdentityFeedArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.GetFollowingFeed: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(5);
+          size += FfiConverterTypeGetFollowingFeedArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.GetExploreFeed: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(6);
+          size += FfiConverterTypeGetExploreFeedArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.ListEvents: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(7);
+          size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * State the query is in.
+ * Success is when all queries have completed.
+ */
 export enum QueryStatus {
   Loading,
   Success,
@@ -1078,53 +1857,16 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Fetch a single event by (identity, collection, sequence).
-   * Checks the local store first; on a miss, falls back to a
-   * fan-out `ListEvents` pinned to this exact sequence. Emits
-   * serialized `EventBundle` proto bytes (empty `Vec` when the
-   * event isn't found anywhere).
+   * Unified entry point for every observable RPC. `query` selects
+   * which RPC to run and supplies its parameters; `query_key` is
+   * the cache key shared across subscribers; `opts` carries the
+   * optional fetch mode and per-call servers override. Always
+   * returns a `QueryObservable` regardless of variant.
    */
-  getEvent(
-    identity: string,
-    collection: /*i32*/ number,
-    sequence: /*u64*/ bigint,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
-  /**
-   * Fetch the server-curated explore feed as an observable.
-   */
-  getExploreFeed(
-    identity: string | undefined,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
-  /**
-   * Fetch the feed of posts from identities the caller follows. When
-   * `follower_identity` is `None` the server uses the authenticated
-   * caller's follow graph.
-   */
-  getFollowingFeed(
-    followerIdentity: string,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
-  /**
-   * Fetch the feed of posts authored by `identity` as an
-   * observable. Fans out to every configured server (see
-   * `set_servers`); each server's response is emitted to the
-   * foreign `FeedObserver` and `complete` fires after the last
-   * server has reported.
-   */
-  getIdentityFeed(
-    identity: string,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
+  fetchQuery(
+    queryKey: Array<string>,
+    query: Query,
+    opts: QueryOpts | undefined
   ): QueryObservable;
   /**
    * Fetch a pairing session by its signature. Returns serialized
@@ -1135,21 +1877,6 @@ export interface PolycentricCoreLike {
     pairingSessionSignature: string,
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Fetch a parent post and its direct replies as an observable.
-   */
-  getPostThread(
-    eventKey: EventKey,
-    limit: /*i32*/ number,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
-  /**
-   * Fetch `identity`'s profile events as an observable.
-   */
-  getProfile(
-    identity: string,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
   /**
    * Fetch a server's public info. Returns serialized
    * `GetServerInfoResponse` proto bytes.
@@ -1163,6 +1890,12 @@ export interface PolycentricCoreLike {
    */
   getServers(): Array<string>;
   /**
+   * Clear the per-server cache for `query_key`, notify live
+   * subscribers with `Loading(None)`, then trigger a fresh fan-out.
+   * No-op when the key has never been queried.
+   */
+  invalidateQuery(queryKey: Array<string>): void;
+  /**
    * Join an existing pairing session. `signed_message_bytes` is a
    * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
    * Returns serialized `PairingSession` proto bytes.
@@ -1170,38 +1903,6 @@ export interface PolycentricCoreLike {
   joinPairingSession(
     serverUrl: string,
     signedMessageBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal }
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Fan out `ListEvents` to every configured server as an
-   * observable. Each emission carries the merged
-   * `ListEventsResponse` bytes with `event_bundles` deduped by
-   * `EventKey`.
-   */
-  listEvents(
-    size: /*i32*/ number | undefined,
-    identity: string | undefined,
-    collection: /*i32*/ number | undefined,
-    signedBy: PublicKey | undefined,
-    sequenceGt: /*i64*/ bigint | undefined,
-    sequenceLt: /*i64*/ bigint | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable;
-  /**
-   * Single-server `ListEvents` primitive. Kept distinct from the
-   * observable `list_events` because pairing flows need to poll a
-   * specific target server rather than fan out across the
-   * configured set.
-   */
-  listEventsForServer(
-    serverUrl: string,
-    size: /*i32*/ number | undefined,
-    identity: string | undefined,
-    collection: /*i32*/ number | undefined,
-    signedBy: ArrayBuffer | undefined,
-    signedByKeyType: /*i32*/ number | undefined,
-    sequenceGt: /*i64*/ bigint | undefined,
-    sequenceLt: /*i64*/ bigint | undefined,
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -1415,117 +2116,25 @@ export class PolycentricCore
   }
 
   /**
-   * Fetch a single event by (identity, collection, sequence).
-   * Checks the local store first; on a miss, falls back to a
-   * fan-out `ListEvents` pinned to this exact sequence. Emits
-   * serialized `EventBundle` proto bytes (empty `Vec` when the
-   * event isn't found anywhere).
+   * Unified entry point for every observable RPC. `query` selects
+   * which RPC to run and supplies its parameters; `query_key` is
+   * the cache key shared across subscribers; `opts` carries the
+   * optional fetch mode and per-call servers override. Always
+   * returns a `QueryObservable` regardless of variant.
    */
-  getEvent(
-    identity: string,
-    collection: /*i32*/ number,
-    sequence: /*u64*/ bigint,
-    fetchMode: FetchMode | undefined
+  fetchQuery(
+    queryKey: Array<string>,
+    query: Query,
+    opts: QueryOpts | undefined
   ): QueryObservable {
     return FfiConverterTypeQueryObservable.lift(
       uniffiCaller.rustCall(
         /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_event(
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(identity),
-            FfiConverterInt32.lower(collection),
-            FfiConverterUInt64.lower(sequence),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * Fetch the server-curated explore feed as an observable.
-   */
-  getExploreFeed(
-    identity: string | undefined,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_explore_feed(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterOptionalString.lower(identity),
-            FfiConverterOptionalInt32.lower(limit),
-            FfiConverterOptionalString.lower(beforeToken),
-            FfiConverterOptionalString.lower(afterToken),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * Fetch the feed of posts from identities the caller follows. When
-   * `follower_identity` is `None` the server uses the authenticated
-   * caller's follow graph.
-   */
-  getFollowingFeed(
-    followerIdentity: string,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_following_feed(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(followerIdentity),
-            FfiConverterOptionalInt32.lower(limit),
-            FfiConverterOptionalString.lower(beforeToken),
-            FfiConverterOptionalString.lower(afterToken),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * Fetch the feed of posts authored by `identity` as an
-   * observable. Fans out to every configured server (see
-   * `set_servers`); each server's response is emitted to the
-   * foreign `FeedObserver` and `complete` fires after the last
-   * server has reported.
-   */
-  getIdentityFeed(
-    identity: string,
-    limit: /*i32*/ number | undefined,
-    beforeToken: string | undefined,
-    afterToken: string | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_feed(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(identity),
-            FfiConverterOptionalInt32.lower(limit),
-            FfiConverterOptionalString.lower(beforeToken),
-            FfiConverterOptionalString.lower(afterToken),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
+            FfiConverterArrayString.lower(queryKey),
+            FfiConverterTypeQuery.lower(query),
+            FfiConverterOptionalTypeQueryOpts.lower(opts),
             callStatus
           );
         },
@@ -1577,52 +2186,6 @@ export class PolycentricCore
       }
       throw __error;
     }
-  }
-
-  /**
-   * Fetch a parent post and its direct replies as an observable.
-   */
-  getPostThread(
-    eventKey: EventKey,
-    limit: /*i32*/ number,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_post_thread(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterTypeEventKey.lower(eventKey),
-            FfiConverterInt32.lower(limit),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * Fetch `identity`'s profile events as an observable.
-   */
-  getProfile(
-    identity: string,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_profile(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(identity),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
   }
 
   /**
@@ -1686,6 +2249,24 @@ export class PolycentricCore
   }
 
   /**
+   * Clear the per-server cache for `query_key`, notify live
+   * subscribers with `Loading(None)`, then trigger a fresh fan-out.
+   * No-op when the key has never been queried.
+   */
+  invalidateQuery(queryKey: Array<string>): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ (callStatus) => {
+        nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_query(
+          uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+          FfiConverterArrayString.lower(queryKey),
+          callStatus
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift
+    );
+  }
+
+  /**
    * Join an existing pairing session. `signed_message_bytes` is a
    * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
    * Returns serialized `PairingSession` proto bytes.
@@ -1704,100 +2285,6 @@ export class PolycentricCore
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(serverUrl),
             FfiConverterArrayBuffer.lower(signedMessageBytes)
-          );
-        },
-        /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
-        /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
-        /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
-        /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
-        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
-          FfiConverterArrayBuffer
-        ),
-        /*liftString:*/ FfiConverterString.lift,
-        /*asyncOpts:*/ asyncOpts_,
-        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-          FfiConverterTypeCoreError
-        )
-      );
-    } catch (__error: any) {
-      if (uniffiIsDebug && __error instanceof Error) {
-        __error.stack = __stack;
-      }
-      throw __error;
-    }
-  }
-
-  /**
-   * Fan out `ListEvents` to every configured server as an
-   * observable. Each emission carries the merged
-   * `ListEventsResponse` bytes with `event_bundles` deduped by
-   * `EventKey`.
-   */
-  listEvents(
-    size: /*i32*/ number | undefined,
-    identity: string | undefined,
-    collection: /*i32*/ number | undefined,
-    signedBy: PublicKey | undefined,
-    sequenceGt: /*i64*/ bigint | undefined,
-    sequenceLt: /*i64*/ bigint | undefined,
-    fetchMode: FetchMode | undefined
-  ): QueryObservable {
-    return FfiConverterTypeQueryObservable.lift(
-      uniffiCaller.rustCall(
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterOptionalInt32.lower(size),
-            FfiConverterOptionalString.lower(identity),
-            FfiConverterOptionalInt32.lower(collection),
-            FfiConverterOptionalTypePublicKey.lower(signedBy),
-            FfiConverterOptionalInt64.lower(sequenceGt),
-            FfiConverterOptionalInt64.lower(sequenceLt),
-            FfiConverterOptionalTypeFetchMode.lower(fetchMode),
-            callStatus
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift
-      )
-    );
-  }
-
-  /**
-   * Single-server `ListEvents` primitive. Kept distinct from the
-   * observable `list_events` because pairing flows need to poll a
-   * specific target server rather than fan out across the
-   * configured set.
-   */
-  async listEventsForServer(
-    serverUrl: string,
-    size: /*i32*/ number | undefined,
-    identity: string | undefined,
-    collection: /*i32*/ number | undefined,
-    signedBy: ArrayBuffer | undefined,
-    signedByKeyType: /*i32*/ number | undefined,
-    sequenceGt: /*i64*/ bigint | undefined,
-    sequenceLt: /*i64*/ bigint | undefined,
-    asyncOpts_?: { signal: AbortSignal }
-  ): Promise<ArrayBuffer> /*throws*/ {
-    const __stack = uniffiIsDebug ? new Error().stack : undefined;
-    try {
-      return await uniffiRustCallAsync(
-        /*rustCaller:*/ uniffiCaller,
-        /*rustFutureFunc:*/ () => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_events_for_server(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(serverUrl),
-            FfiConverterOptionalInt32.lower(size),
-            FfiConverterOptionalString.lower(identity),
-            FfiConverterOptionalInt32.lower(collection),
-            FfiConverterOptionalArrayBuffer.lower(signedBy),
-            FfiConverterOptionalInt32.lower(signedByKeyType),
-            FfiConverterOptionalInt64.lower(sequenceGt),
-            FfiConverterOptionalInt64.lower(sequenceLt)
           );
         },
         /*pollFunc:*/ nativeModule()
@@ -2198,12 +2685,6 @@ const FfiConverterTypePolycentricCore = new FfiConverterObject(
   uniffiTypePolycentricCoreObjectFactory
 );
 
-/**
- * FFI-exposed trait. Every `Observable<QueryResult<T>>` whose `T:
- * ToFfiBytes` implements this via the blanket impl below — so any
- * RPC built on `Query::query` can be returned as `Arc<dyn
- * QueryObservable>` without a per-RPC wrapper type.
- */
 export interface QueryObservable {
   subscribe(observer: QueryObserver): SubscriptionLike;
 }
@@ -2212,12 +2693,6 @@ export interface QueryObservable {
  */
 export type QueryObservableInterface = QueryObservable;
 
-/**
- * FFI-exposed trait. Every `Observable<QueryResult<T>>` whose `T:
- * ToFfiBytes` implements this via the blanket impl below — so any
- * RPC built on `Query::query` can be returned as `Arc<dyn
- * QueryObservable>` without a per-RPC wrapper type.
- */
 export class QueryObservableImpl
   extends UniffiAbstractObject
   implements QueryObservable
@@ -2335,18 +2810,12 @@ const FfiConverterTypeQueryObservable = new FfiConverterObject(
   uniffiTypeQueryObservableImplObjectFactory
 );
 
-/**
- * Foreign-implemented observer for `QueryObservable`.
- */
 export interface QueryObserver {
   next(result: QueryResultFfi): void;
   error(message: string): void;
   complete(): void;
 }
 
-/**
- * Foreign-implemented observer for `QueryObservable`.
- */
 export class QueryObserverImpl
   extends UniffiAbstractObject
   implements QueryObserver
@@ -2940,6 +3409,11 @@ const FfiConverterOptionalTypePublicKey = new FfiConverterOptional(
   FfiConverterTypePublicKey
 );
 
+// FfiConverter for QueryOpts | undefined
+const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(
+  FfiConverterTypeQueryOpts
+);
+
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
@@ -2959,6 +3433,11 @@ const FfiConverterArrayString = new FfiConverterArray(FfiConverterString);
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
+);
+
+// FfiConverter for Array<string> | undefined
+const FfiConverterOptionalArrayString = new FfiConverterOptional(
+  FfiConverterArrayString
 );
 
 /**
@@ -3024,35 +3503,11 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_event() !==
-    60482
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !==
+    49260
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_event'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed() !==
-    62394
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_explore_feed'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed() !==
-    64563
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_following_feed'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed() !==
-    50298
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_feed'
+      'uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query'
     );
   }
   if (
@@ -3061,22 +3516,6 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread() !==
-    54943
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_post_thread'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_profile() !==
-    31652
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_get_profile'
     );
   }
   if (
@@ -3096,27 +3535,19 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query() !==
+    34463
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session() !==
     15965
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events() !==
-    46934
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_list_events'
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server() !==
-    43829
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_polycentric_core_checksum_method_polycentriccore_list_events_for_server'
     );
   }
   if (
@@ -3209,7 +3640,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobservable_subscribe() !==
-    38452
+    41978
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_queryobservable_subscribe'
@@ -3217,7 +3648,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next() !==
-    1446
+    32990
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_queryobserver_next'
@@ -3225,7 +3656,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_error() !==
-    9883
+    15141
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_queryobserver_error'
@@ -3233,7 +3664,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_complete() !==
-    39829
+    39586
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_queryobserver_complete'
@@ -3301,12 +3732,21 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeEventKey,
     FfiConverterTypeFetchMode,
+    FfiConverterTypeGetEventArgs,
+    FfiConverterTypeGetExploreFeedArgs,
+    FfiConverterTypeGetFollowingFeedArgs,
+    FfiConverterTypeGetIdentityFeedArgs,
+    FfiConverterTypeGetPostThreadArgs,
+    FfiConverterTypeGetProfileArgs,
+    FfiConverterTypeListEventsArgs,
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
     FfiConverterTypePublicKey,
+    FfiConverterTypeQuery,
     FfiConverterTypeQueryObservable,
     FfiConverterTypeQueryObserver,
+    FfiConverterTypeQueryOpts,
     FfiConverterTypeQueryResultFfi,
     FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
