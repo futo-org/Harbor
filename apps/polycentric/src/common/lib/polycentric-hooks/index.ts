@@ -11,11 +11,8 @@ export {
 export { useUsername } from './PolycentricProvider';
 
 // Action hooks
-export {
-  useCurrentIdentity,
-  useIdentities,
-  useIdentityKeyFor,
-} from './PolycentricProvider';
+export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
+export { useIdentityKeyFor } from './useIdentityKeyFor';
 
 // Store
 export { useStore } from './store';
