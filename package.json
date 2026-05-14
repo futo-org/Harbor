@@ -26,13 +26,5 @@
   },
   "dependencies": {
     "expo": "^55.0.15"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ],
-    "patchedDependencies": {
-      "uniffi-bindgen-react-native@0.31.0-2": "patches/uniffi-bindgen-react-native@0.31.0-2.patch"
-    }
   }
 }
