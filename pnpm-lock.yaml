@@ -419,6 +419,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(@types/better-sqlite3@7.6.13)(better-sqlite3@12.6.2)(expo-sqlite@55.0.15(expo@55.0.19)(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))
+      expo-file-system:
+        specifier: '>=18.0.0'
+        version: 55.0.17(expo@55.0.19)(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))
       expo-sqlite:
         specifier: '>=14.0.0'
         version: 55.0.15(expo@55.0.19)(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)

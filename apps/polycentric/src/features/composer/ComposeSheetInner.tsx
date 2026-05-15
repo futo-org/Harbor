@@ -152,44 +152,20 @@ export function ComposeSheetInner({
                 processAndUploadImage(client, a.uri, {
                   mode: 'fit',
                   sizes: POST_VARIANT_SIZES,
-                  sourceWidth: a.width,
-                  sourceHeight: a.height,
                 }),
               ),
             )
           : [];
 
-      const post: types.v2.Post = {
+      const newBundle = await client.contentManager.commitPost({
         text: text.trim(),
         images: imageSets,
-      };
-
-      if (isReply) {
-        post.reply = {
-          root: replyRootEventKey,
-          parent: replyToEventKey,
-        };
-      }
-
-      if (!!quote) {
-        post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
-      }
-
-      const content = client.contentManager.build({
-        oneofKind: 'post',
-        post,
+        reply: isReply
+          ? { root: replyRootEventKey, parent: replyToEventKey }
+          : undefined,
+        quote: quote ? v2.EventKey.fromBinary(hexToBytes(quote.id)) : undefined,
       });
 
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content);
-
-      const signedEvent = await client.signEvent(event);
-
-      const newBundle = v2.EventBundle.create({
-        signedEvent,
-        serializedContent: { contentBytes: v2.Content.toBinary(content) },
-      });
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to the below query
@@ -199,9 +175,6 @@ export function ComposeSheetInner({
       injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
-
-      // `commitEvent` persists the event locally
-      await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
       await dismissSheet(DismissReason.PostSubmitted);

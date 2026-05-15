@@ -1,6 +1,7 @@
 import { PolycentricClient } from '@polycentric/js-core';
 import {
   BrowserCryptoManager,
+  IndexedDBFileStoreDriver,
   IndexedDBStorageDriver,
 } from '@polycentric/js-browser';
 import {
@@ -29,6 +30,7 @@ export async function createPolycentricClient(
   config: CreatePolycentricClientConfig = {}
 ): Promise<PolycentricClient> {
   const databaseName = normalizeDatabaseName(config.databaseName);
+  const cryptoManager = new BrowserCryptoManager();
 
   // Load + initialize the wasm module before constructing the core.
   await uniffiInitAsync();
@@ -37,7 +39,10 @@ export async function createPolycentricClient(
   return PolycentricClient.create({
     core: new PolycentricCore(),
     storageDriver: await IndexedDBStorageDriver.create(databaseName),
-    cryptoManager: new BrowserCryptoManager(),
+    fileStoreDriver: await IndexedDBFileStoreDriver.create(
+      `${databaseName}-blobs`
+    ),
+    cryptoManager,
     seedServers: config.seedServers,
   });
 }

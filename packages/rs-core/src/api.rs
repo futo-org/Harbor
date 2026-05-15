@@ -273,7 +273,7 @@ impl PolycentricCore {
         width: u32,
         height: u32,
         mode: String,
-    ) -> Result<Vec<u8>, CoreError> {
+    ) -> Result<process_image::ProcessedImage, CoreError> {
         let mode = match mode.as_str() {
             "fit" => process_image::ResizeMode::Fit,
             _ => process_image::ResizeMode::Fill,

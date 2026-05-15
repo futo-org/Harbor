@@ -1,4 +1,8 @@
-export { createNodeStorageDriver } from './storage/better-sqlite3/index.js';
+export { createNodeStorageDriver } from './datastore/better-sqlite3/index.js';
+export {
+  NodeFileStoreDriver,
+  createNodeFileStoreDriver,
+} from './filestore/fs/index.js';
 export { NodeCryptoManager } from './crypto/node-crypto-manager.js';
 export {
   createPolycentricNodeClient,
