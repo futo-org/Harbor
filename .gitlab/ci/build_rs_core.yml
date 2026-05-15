@@ -91,7 +91,7 @@ rs-core-uniffi-web-build:
       rustup target add \
         wasm32-unknown-unknown
     - pnpm i
-    - pnpm ubrn --release
+    - pnpm build --release
   artifacts:
     paths:
       - packages/rs-core-uniffi-web/dist
