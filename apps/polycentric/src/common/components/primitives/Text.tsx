@@ -77,6 +77,6 @@ const VARIANT_CONFIG: Record<
   title: { size: 'xl', defaultWeight: 'bold' },
   subtitle: { size: 'lg', defaultWeight: 'semibold' },
   body: { size: 'md', defaultWeight: 'regular' },
-  secondary: { size: 'sm', defaultWeight: 'regular' },
+  secondary: { size: 'md', defaultWeight: 'regular' },
   small: { size: 'xs', defaultWeight: 'semibold' },
 } as const;

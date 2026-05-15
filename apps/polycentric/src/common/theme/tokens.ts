@@ -2,6 +2,7 @@ import { StyleSheet, TextStyle } from 'react-native';
 
 export const Spacing = {
   '0': 0,
+  '2xs': 2,
   xs: 4,
   sm: 8,
   md: 12,
@@ -31,7 +32,7 @@ export const typography = {
   fontSize: {
     xs: 12,
     sm: 14,
-    md: 17,
+    md: 15,
     lg: 20,
     xl: 24,
   } as const,
@@ -43,7 +44,7 @@ export const typography = {
   lineHeight: {
     xs: 16,
     sm: 20,
-    md: 24,
+    md: 20,
     lg: 28,
     xl: 32,
   } as const,
@@ -249,6 +250,9 @@ export const Atoms = StyleSheet.create({
 
   gap_0: {
     gap: Spacing['0'],
+  },
+  gap_2xs: {
+    gap: Spacing['2xs'],
   },
   gap_xs: {
     gap: Spacing.xs,

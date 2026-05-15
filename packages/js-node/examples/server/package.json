@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "examples": "tsx src/index.ts"
   },
   "dependencies": {
     "@polycentric/js-node": "workspace:*",

@@ -40,7 +40,7 @@ export function ConversationView({ post }: ConversationViewProps) {
           <View style={[Atoms.w_full]}>
             <Post
               post={item}
-              hideReplyingTo={false}
+              hideReplyingTo={true}
               disablePress={item.id === post.id}
               showThreadLineAbove={lineAbove}
               showThreadLineBelow={lineBelow}

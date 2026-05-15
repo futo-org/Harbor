@@ -136,7 +136,7 @@ export const Post = memo(function Post({
       disabled={disablePress}
     >
       {/* Top padding bar */}
-      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
+      <View style={[Atoms.flex_row, Atoms.gap_md]}>
         <View
           style={[
             Atoms.align_center,
@@ -167,7 +167,7 @@ export const Post = memo(function Post({
       </View>
 
       {/* Main post body */}
-      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
+      <View style={[Atoms.flex_row, Atoms.gap_md]}>
         {/* Left side (avatar and thread line) */}
         <View style={[Atoms.align_center]}>
           {authorIdentity ? (
@@ -195,21 +195,15 @@ export const Post = memo(function Post({
         </View>
 
         {/* Main post content */}
-        <View style={[Atoms.flex_1, Atoms.pb_md]}>
+        <View style={[Atoms.flex_1, Atoms.pb_md, Atoms.gap_2xs]}>
           {/* Author name and other topbar items */}
-          <View
-            style={[
-              Atoms.flex_row,
-              Atoms.justify_between,
-              { alignItems: 'baseline', marginTop: -1 },
-            ]}
-          >
+          <View style={[Atoms.flex_row, Atoms.align_center]}>
             <View
               style={[
                 Atoms.flex_1,
                 Atoms.flex_row,
                 Atoms.gap_xs,
-                { alignItems: 'baseline' },
+                Atoms.align_center,
               ]}
             >
               <PostAuthorName
@@ -217,22 +211,24 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <IdentityTag
-                  identity={authorIdentity}
-                  style={{ transform: [{ translateY: 1 }] }}
-                />
+                <IdentityTag identity={authorIdentity} />
+              ) : null}
+
+              {time ? (
+                <>
+                  <Text
+                    variant="secondary"
+                    color="neutral_500"
+                    fontWeight="bold"
+                  >
+                    ·
+                  </Text>
+                  <Text variant="secondary" color="neutral_500">
+                    {time}
+                  </Text>
+                </>
               ) : null}
             </View>
-
-            {time ? (
-              <Text
-                variant="small"
-                color="neutral_500"
-                style={{ lineHeight: 18, marginLeft: 8 }}
-              >
-                {time}
-              </Text>
-            ) : null}
           </View>
 
           {!hideReplyingTo && post.reply?.parentId ? (
@@ -240,7 +236,7 @@ export const Post = memo(function Post({
           ) : null}
 
           {displayContent ? (
-            <Text variant="secondary" style={[Atoms.mt_xs]}>
+            <Text variant="secondary">
               {displayContent}
               {isTruncatedPreview ? '...' : ''}
             </Text>
@@ -251,7 +247,7 @@ export const Post = memo(function Post({
               onPress={toggleContentExpanded}
               onHoverIn={onExpandHoverIn}
               onHoverOut={onExpandHoverOut}
-              style={{ marginTop: 2, alignSelf: 'flex-start' }}
+              style={[Atoms.self_start]}
             >
               <Text
                 variant="small"
@@ -272,7 +268,7 @@ export const Post = memo(function Post({
             onDislike={handleDislike}
             liked={liked}
             disliked={disliked}
-            style={{ marginTop: 8 }}
+            style={[Atoms.mt_sm]}
           />
         </View>
       </View>
@@ -302,12 +298,12 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
   return (
     <Pressable
       onPress={handlePress}
-      style={[Atoms.flex_row, Atoms.mt_xs, { alignItems: 'baseline' }]}
+      style={[Atoms.flex_row, Atoms.align_center]}
     >
-      <Text variant="small" color="neutral_500" fontWeight="regular">
-        Reply to{' '}
+      <Text variant="secondary" color="neutral_500" fontWeight="regular">
+        Replying to{' '}
       </Text>
-      <Text variant="small" color="primary_500">
+      <Text variant="secondary" color="primary_500">
         {truncateName(parentName || '…', 24)}
       </Text>
     </Pressable>
@@ -328,10 +324,7 @@ function PostAuthorName({
       <Text
         variant="secondary"
         fontWeight="bold"
-        style={[
-          { lineHeight: 18 },
-          hovered && { textDecorationLine: 'underline' },
-        ]}
+        style={[hovered && { textDecorationLine: 'underline' }]}
       >
         {truncateName(name, 16)}
       </Text>
