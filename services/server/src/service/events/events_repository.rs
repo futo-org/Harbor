@@ -61,11 +61,11 @@ impl Query {
         }
 
         if let Some(gt) = sequence_gt {
-            query = query.filter(EventModel::Column::Sequence.gt(gt as i16));
+            query = query.filter(EventModel::Column::Sequence.gt(gt));
         }
 
         if let Some(lt) = sequence_lt {
-            query = query.filter(EventModel::Column::Sequence.lt(lt as i16));
+            query = query.filter(EventModel::Column::Sequence.lt(lt));
         }
 
         query
