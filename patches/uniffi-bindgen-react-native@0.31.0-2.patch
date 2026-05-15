@@ -60,3 +60,24 @@ index f21884f978b3457cc67d1ba7122816dbf8b796b2..f0913aea2df850dcacf4ac6ff81c45e3
                  quote! { #mod_ident::#callback_fn_ident }
              }
              FfiType::Reference(_) | FfiType::MutReference(_) => {
+Set "type": "commonjs" in upstream package.json. Upstream declares "module"
+but ships CJS (tsconfig compiles with module: commonjs), so Node ESM consumers
+(e.g. js-node) hit "exports is not defined in ES module scope" / "does not
+provide an export named X" when importing from this package. RN/Metro ignores
+the field, so changing it is safe across targets.
+
+Tracking: https://github.com/jhugman/uniffi-bindgen-react-native/issues/370
+
+diff --git a/package.json b/package.json
+index 0000000..0000000 100644
+--- a/package.json
++++ b/package.json
+@@ -10,7 +10,7 @@
+     "name": "James Hugman",
+     "email": "james@hugman.tv"
+   },
+-  "type": "module",
++  "type": "commonjs",
+   "main": "./typescript/dist/index.js",
+   "types": "./typescript/dist/index.d.ts",
+   "bin": {

@@ -82,14 +82,9 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "@op-engineering/op-sqlite": "*",
+    "expo-sqlite": ">=14.0.0",
     "react": ">=19.0.0",
     "react-native": ">=0.83.0"
-  },
-  "peerDependenciesMeta": {
-    "@op-engineering/op-sqlite": {
-      "optional": true
-    }
   },
   "react-native-builder-bob": {
     "source": "src",
@@ -128,7 +123,9 @@
     "@noble/curves": "^1.9.0",
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-uniffi-web": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "fast-text-encoding": "^1.0.6",
     "react-native-get-random-values": "^1.11.0",
     "uniffi-bindgen-react-native": "0.31.0-2"

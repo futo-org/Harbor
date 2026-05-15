@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
   - packages/js-browser/examples/*
+  - packages/js-node/examples/*
   - tools/*
 
 catalog:
@@ -9,6 +10,9 @@ catalog:
   typescript: ^5.9.3
 
 linkWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - better-sqlite3
 
 patchedDependencies:
   uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch
