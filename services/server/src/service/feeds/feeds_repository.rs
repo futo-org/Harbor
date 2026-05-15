@@ -93,7 +93,7 @@ impl Query {
         identity: &str,
         public_key_type: i16,
         public_key: Vec<u8>,
-        sequence: i16,
+        sequence: i64,
     ) -> Result<Option<FeedRow>, DbErr> {
         EventModel::Entity::find()
             .select_also(ContentModel::Entity)

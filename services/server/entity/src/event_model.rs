@@ -22,7 +22,7 @@ pub struct Model {
     #[sea_orm(unique_key = "event_key")]
     pub public_key: Vec<u8>,
     #[sea_orm(unique_key = "event_key")]
-    pub sequence: i16,
+    pub sequence: i64,
     ////
     // End: Event Key
     ////
