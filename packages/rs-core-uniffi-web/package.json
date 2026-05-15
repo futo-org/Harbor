@@ -21,7 +21,7 @@
     "ubrn-wasm-patch.toml"
   ],
   "scripts": {
-    "ubrn": "ubrn build web",
+    "build": "ubrn build web",
     "clean": "rm -rfv dist/ rust_modules/"
   },
   "dependencies": {
