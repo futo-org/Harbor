@@ -1,0 +1,4 @@
+polycentric.db
+polycentric.db-journal
+polycentric.db-wal
+polycentric.db-shm

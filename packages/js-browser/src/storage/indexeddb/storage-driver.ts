@@ -41,10 +41,10 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     return new IndexedDBEventAckRepository(this.database);
   }
 
-  saveActiveIdentityKey(
+  async saveActiveIdentityKey(
     publicKey: Uint8Array,
     identityKey: string | null,
-  ): void {
+  ): Promise<void> {
     try {
       const key = IndexedDBStorageDriver.activeIdentityKey(publicKey);
       if (identityKey) {
@@ -55,7 +55,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     } catch {}
   }
 
-  loadActiveIdentityKey(publicKey: Uint8Array): string | null {
+  async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
     try {
       return localStorage.getItem(
         IndexedDBStorageDriver.activeIdentityKey(publicKey),

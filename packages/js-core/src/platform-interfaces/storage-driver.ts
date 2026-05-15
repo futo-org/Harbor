@@ -12,6 +12,6 @@ export interface IStorageDriver {
   saveActiveIdentityKey: (
     publicKey: Uint8Array,
     identityKey: string | null,
-  ) => void;
-  loadActiveIdentityKey: (publicKey: Uint8Array) => string | null;
+  ) => Promise<void>;
+  loadActiveIdentityKey: (publicKey: Uint8Array) => Promise<string | null>;
 }
