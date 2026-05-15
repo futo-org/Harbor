@@ -20,6 +20,7 @@ export type {
   QueryObservable,
   QueryObserver,
   QueryResultFfi,
+  QueryOpts,
 } from './generated/rn/polycentric_core';
 
 export {

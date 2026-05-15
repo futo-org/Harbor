@@ -30,6 +30,7 @@ import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { useComposerStore } from './hooks/useComposerStore';
 import { Routes } from '@/src/common/constants';
 import { router } from 'expo-router';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 
 const MAX_ATTACHMENTS = 4;
 const THUMBNAIL_SIZE = 72;
@@ -190,11 +191,10 @@ export function ComposeSheetInner({
         .then(() => {
           // Force the feed observables to re-fetch from servers so the
           // newly-synced post appears alongside whatever else changed.
-          // The local-post injection already showed it optimistically.
           const identity = currentIdentityKey ?? '';
-          client.core.invalidateQuery(['following_feed', identity]);
-          client.core.invalidateQuery(['identity_feed', identity]);
-          client.core.invalidateQuery(['explore_feed', identity]);
+          invalidateQuery(client, ['following_feed']);
+          invalidateQuery(client, ['identity_feed', identity]);
+          invalidateQuery(client, ['explore_feed', identity]);
         })
         .catch((err) => {
           console.warn('compose sync failed:', err);

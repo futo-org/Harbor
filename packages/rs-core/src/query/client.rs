@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::client::PolycentricClient;
@@ -74,8 +75,7 @@ pub type QueryFutureBox<T> = Pin<Box<dyn Future<Output = Result<T, String>> + Se
 #[cfg(target_arch = "wasm32")]
 pub type QueryFutureBox<T> = Pin<Box<dyn Future<Output = Result<T, String>> + 'static>>;
 
-/// Type-erased per-server `query_fn`. Stored on `QueryState` so
-/// `retry()` / `invalidate()` can re-spawn the fan-out.
+/// Type-erased per-server `query_fn`.
 pub type QueryFnBox<T> = Arc<dyn Fn(String) -> QueryFutureBox<T> + Send + Sync + 'static>;
 
 /// Type-erased `merge_fn`. Receives every server's most-recent
@@ -85,76 +85,37 @@ pub type MergeFn<T> = Arc<dyn Fn(&[T]) -> T + Send + Sync + 'static>;
 /// Query keys are an array of strings and assist with caching, retry strategies etc.
 pub type QueryKey = Vec<String>;
 
-/// Shared, lockable handle to a single `QueryState`. Multiple
-/// subscribers and the fan-out tasks all clone the same `Arc` so
-/// they observe the same per-key state.
+/// Shared, lockable handle to a single `QueryState`. The data cache
+/// is shared across fetches with the same key; fan-out state
+/// (subscriber, pending count) is local to each subscribe call.
 pub type QueryStateHandle<T> = Arc<Mutex<QueryState<T>>>;
 
-/// Query state per QueryKey
+/// Per-key cache of each server's most-recent successful response.
 pub struct QueryState<T> {
     /// Each server's most-recent successful response, keyed by
-    /// `server_url`. The emitted `data` is `merge_fn(values())` over
-    /// this map.
+    /// `server_url`.
     pub data: HashMap<String, T>,
-    pub status: QueryStatus,
-    pub subscribers: Vec<Arc<Subscriber<QueryResult<T>>>>,
-    /// Per-server tasks still in flight for the current fan-out.
-    /// `0` means no fetch is currently running.
-    pub pending: usize,
-    pub query_fn: QueryFnBox<T>,
-    pub merge_fn: MergeFn<T>,
-    /// Overrides the fan-out target list. `None` means "use whatever
-    /// `client.servers()` returns at fetch time"; `Some(list)` pins
-    /// the fan-out to those exact servers (single-server polls land
-    /// here with `vec![server_url]`).
-    pub servers: Option<Vec<String>>,
 }
 
 impl<T> QueryState<T> {
-    fn new(query_fn: QueryFnBox<T>, merge_fn: MergeFn<T>, servers: Option<Vec<String>>) -> Self {
+    fn new() -> Self {
         Self {
             data: HashMap::new(),
-            status: QueryStatus::Loading,
-            subscribers: Vec::new(),
-            pending: 0,
-            query_fn,
-            merge_fn,
-            servers,
         }
     }
 }
 
 /// Reduce the per-server cache into a single emitted value via
 /// `merge_fn`. Returns `None` when no server has responded yet.
-fn compute_merged<T: Clone>(s: &QueryState<T>) -> Option<T> {
-    if s.data.is_empty() {
+fn compute_merged<T: Clone>(data: &HashMap<String, T>, merge_fn: &MergeFn<T>) -> Option<T> {
+    if data.is_empty() {
         return None;
     }
-    let values: Vec<T> = s.data.values().cloned().collect();
-    Some((s.merge_fn)(&values))
+    let values: Vec<T> = data.values().cloned().collect();
+    Some(merge_fn(&values))
 }
 
-/// Snapshot the live subscribers (pruning closed entries) and emit
-/// `result` to each. If `error_msg` is set, also fire `error` after
-/// the `next`.
-fn emit<T: Clone>(state: &Mutex<QueryState<T>>, result: QueryResult<T>, error_msg: Option<String>) {
-    let subscribers: Vec<Arc<Subscriber<QueryResult<T>>>> = {
-        let mut s = state.lock().unwrap();
-        s.subscribers.retain(|sub| !sub.is_closed());
-        s.subscribers.clone()
-    };
-    for sub in &subscribers {
-        if sub.is_closed() {
-            continue;
-        }
-        sub.next(result.clone());
-        if let Some(ref msg) = error_msg {
-            sub.error(msg.clone());
-        }
-    }
-}
-
-/// Client to fetch, retry, invalidate etc queries.
+/// Client to fetch and invalidate queries.
 pub struct QueryClient<T> {
     client: Arc<Mutex<PolycentricClient>>,
     queries: Arc<Mutex<HashMap<QueryKey, QueryStateHandle<T>>>>,
@@ -178,8 +139,13 @@ where
 
     /// Performs a fetch query.
     ///
-    /// The returned `Observable` never calls `complete()`; subscribers
-    /// stay registered until they explicitly `unsubscribe()`.
+    /// Subscribing to the returned Observable runs an independent fan-out
+    /// over the resolved server list — there is no shared subscriber
+    /// multiplexing. The subscriber receives:
+    /// - `next(cached, Loading|Success)` immediately
+    /// - `next(merged, Loading|Success|Error)` after each server response
+    /// - `error(msg)` for each server that fails to respond
+    /// - `complete()` once every server in the fan-out has finished
     pub fn fetch<F, Fut, M>(
         &self,
         query_key: QueryKey,
@@ -208,158 +174,116 @@ where
             }
             let subscriber = Arc::new(subscriber);
 
-            // Get-or-create the per-key state; overwrite the stored
-            // query_fn / merge_fn / servers so the latest caller wins.
-            let state = upsert_state(&queries, &query_key, &query_fn, &merge_fn, &servers);
+            let state = get_or_create_state(&queries, &query_key);
 
-            // Snapshot current state.
-            let (cached, in_flight) = {
+            let cached = {
                 let s = state.lock().unwrap();
-                (compute_merged(&s), s.pending > 0)
+                compute_merged(&s.data, &merge_fn)
             };
 
-            // Decide whether this subscribe call should initiate a
-            // fan-out. Subscribers always register regardless.
-            let needs_fetch = !in_flight
-                && match fetch_mode {
-                    FetchMode::OfflineOnly => false,
-                    FetchMode::OfflineFirst => cached.is_none(),
-                    FetchMode::Default => true,
-                };
+            let needs_fetch = match fetch_mode {
+                FetchMode::OfflineOnly => false,
+                FetchMode::OfflineFirst => cached.is_none(),
+                FetchMode::Default => true,
+            };
 
             let target_servers = if needs_fetch {
-                resolve_servers(&state, &client)
+                resolve_servers(servers.as_deref(), &client)
             } else {
                 Vec::new()
             };
             let will_fetch = needs_fetch && !target_servers.is_empty();
 
-            subscriber.next(QueryResult {
-                data: cached,
-                status: if will_fetch || in_flight {
-                    QueryStatus::Loading
-                } else {
-                    QueryStatus::Success
-                },
-            });
-
-            // Register for future emissions.
-            {
-                let mut s = state.lock().unwrap();
-                s.subscribers.retain(|sub| !sub.is_closed());
-                s.subscribers.push(subscriber.clone());
+            if cached.is_some() {
+                subscriber.next(QueryResult {
+                    data: cached,
+                    status: if will_fetch {
+                        QueryStatus::Loading
+                    } else {
+                        QueryStatus::Success
+                    },
+                });
             }
 
-            if will_fetch {
-                spawn_fanout(state, target_servers);
+            if !will_fetch {
+                subscriber.complete();
+                return;
             }
+
+            spawn_fanout(
+                state,
+                target_servers,
+                query_fn.clone(),
+                merge_fn.clone(),
+                subscriber,
+            );
         })
     }
 
-    /// Retry a query based on its query key
-    pub fn retry(&self, query_key: &QueryKey) {
-        self.refresh(query_key, false);
-    }
-
-    /// Invalidate the cache of a query
+    /// Clear the per-key data cache. No subscribers are notified —
+    /// orchestration of in-flight observables lives outside the core.
     pub fn invalidate(&self, query_key: &QueryKey) {
-        self.refresh(query_key, true);
-    }
-
-    /// Refresh a query
-    fn refresh(&self, query_key: &QueryKey, clear: bool) {
-        let Some(state) = self.queries.lock().unwrap().get(query_key).cloned() else {
-            return;
-        };
-
-        let snapshot = {
-            let mut s = state.lock().unwrap();
-            if clear {
-                s.data.clear();
-            }
-            s.status = QueryStatus::Loading;
-            QueryResult {
-                data: compute_merged(&s),
-                status: QueryStatus::Loading,
-            }
-        };
-        emit(&state, snapshot, None);
-
-        if state.lock().unwrap().pending > 0 {
-            return;
+        if let Some(state) = self.queries.lock().unwrap().get(query_key).cloned() {
+            state.lock().unwrap().data.clear();
         }
-        let target_servers = resolve_servers(&state, &self.client);
-        if target_servers.is_empty() {
-            return;
-        }
-        spawn_fanout(state, target_servers);
     }
 }
 
-/// Resolve the target server list for a fan-out: state's override
-/// when set, otherwise the client's configured list.
-fn resolve_servers<T>(
-    state: &Mutex<QueryState<T>>,
+/// Resolve the target server list for a fan-out: the caller's
+/// override when set, otherwise the client's configured list.
+fn resolve_servers(
+    override_servers: Option<&[String]>,
     client: &Mutex<PolycentricClient>,
 ) -> Vec<String> {
-    if let Some(ref override_list) = state.lock().unwrap().servers {
-        return override_list.clone();
+    if let Some(list) = override_servers {
+        return list.to_vec();
     }
     client.lock().unwrap().servers()
 }
 
-fn upsert_state<T>(
+fn get_or_create_state<T>(
     queries: &Mutex<HashMap<QueryKey, QueryStateHandle<T>>>,
     query_key: &QueryKey,
-    query_fn: &QueryFnBox<T>,
-    merge_fn: &MergeFn<T>,
-    servers: &Option<Vec<String>>,
 ) -> QueryStateHandle<T>
 where
-    T: Clone + Send + Sync + 'static,
+    T: Send + Sync + 'static,
 {
-    let mut map = queries.lock().unwrap();
-    let state = map
+    queries
+        .lock()
+        .unwrap()
         .entry(query_key.clone())
-        .or_insert_with(|| {
-            Arc::new(Mutex::new(QueryState::new(
-                query_fn.clone(),
-                merge_fn.clone(),
-                servers.clone(),
-            )))
-        })
-        .clone();
-    {
-        let mut s = state.lock().unwrap();
-        s.query_fn = query_fn.clone();
-        s.merge_fn = merge_fn.clone();
-        s.servers = servers.clone();
-    }
-    state
+        .or_insert_with(|| Arc::new(Mutex::new(QueryState::new())))
+        .clone()
 }
 
-/// Calls each server asynchronously
-fn spawn_fanout<T>(state: QueryStateHandle<T>, servers: Vec<String>)
-where
+/// Calls each server in parallel and emits onto `subscriber` as
+/// responses land. `pending` is local to this fan-out so concurrent
+/// subscribes don't interfere with each other.
+fn spawn_fanout<T>(
+    state: QueryStateHandle<T>,
+    servers: Vec<String>,
+    query_fn: QueryFnBox<T>,
+    merge_fn: MergeFn<T>,
+    subscriber: Arc<Subscriber<QueryResult<T>>>,
+) where
     T: Clone + Send + Sync + 'static,
 {
-    let query_fn = {
-        let mut s = state.lock().unwrap();
-        s.pending = servers.len();
-        s.status = QueryStatus::Loading;
-        s.query_fn.clone()
-    };
+    let pending = Arc::new(AtomicUsize::new(servers.len()));
 
     for server_url in servers {
         let state = state.clone();
         let query_fn = query_fn.clone();
+        let merge_fn = merge_fn.clone();
+        let pending = pending.clone();
+        let subscriber = subscriber.clone();
 
         spawn(async move {
             let result = query_fn(server_url.clone()).await;
 
-            let (snapshot, error_msg) = {
+            let (snapshot, error_msg, is_last) = {
                 let mut s = state.lock().unwrap();
-                s.pending = s.pending.saturating_sub(1);
+                let remaining = pending.fetch_sub(1, Ordering::SeqCst) - 1;
+                let is_last = remaining == 0;
 
                 let error_msg = match result {
                     Ok(value) => {
@@ -369,7 +293,7 @@ where
                     Err(msg) => Some(msg),
                 };
 
-                s.status = if s.pending == 0 {
+                let status = if is_last {
                     if s.data.is_empty() {
                         QueryStatus::Error
                     } else {
@@ -381,14 +305,24 @@ where
 
                 (
                     QueryResult {
-                        data: compute_merged(&s),
-                        status: s.status,
+                        data: compute_merged(&s.data, &merge_fn),
+                        status,
                     },
                     error_msg,
+                    is_last,
                 )
             };
 
-            emit(&state, snapshot, error_msg);
+            if subscriber.is_closed() {
+                return;
+            }
+            subscriber.next(snapshot);
+            if let Some(msg) = error_msg {
+                subscriber.error(msg);
+            }
+            if is_last {
+                subscriber.complete();
+            }
         });
     }
 }

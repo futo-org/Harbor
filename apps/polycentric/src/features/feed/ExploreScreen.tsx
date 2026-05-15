@@ -8,8 +8,9 @@ import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
-import { useFocusEffect, useIsFocused } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useState } from 'react';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 
 export default function ExploreScreen() {
   const { theme } = useTheme();
@@ -21,6 +22,8 @@ export default function ExploreScreen() {
   useFocusEffect(() => {
     setEnabled(true);
   });
+
+  useFocusedRefresh(feed.refresh);
 
   if (feed.error) {
     return (

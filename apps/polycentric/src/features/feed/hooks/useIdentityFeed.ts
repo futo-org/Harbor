@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Query } from '@polycentric/react-native';
+import { useMemo } from 'react';
+import { Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
-  useLocalPostInjection,
-  usePolycentricContext,
+  decodeV2PostBundle,
+  PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
-import { EMPTY_FEED, useFeedsStore } from './useFeeds';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
@@ -13,52 +13,33 @@ export function useIdentityFeed(
   options?: { getIsAborted?: () => boolean; enabled?: boolean },
 ): FeedHookResult {
   const enabled = options?.enabled ?? true;
-  const { client } = usePolycentricContext();
+  const identity = identityId ?? '';
 
-  const feedKey = `identity:${identityId ?? ''}`;
-  const queryKey = useMemo(
-    () => ['identity_feed', identityId ?? ''],
-    [identityId],
-  );
-  const query = useMemo(
-    () =>
-      identityId ? new Query.GetIdentityFeed({ identity: identityId }) : null,
-    [identityId],
+  const query = useQuery(
+    ['identity_feed', identity],
+    new Query.GetIdentityFeed({ identity }),
   );
 
-  const feed = useFeedsStore((s) => s.feeds.get(feedKey) ?? EMPTY_FEED);
-  const subscribe = useFeedsStore((s) => s.subscribe);
-  const insertLocal = useFeedsStore((s) => s.insertLocal);
+  const items = useMemo(() => {
+    if (!query.data) {
+      return [];
+    }
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+    const items: PostData[] = [];
+    for (const bundle of response.eventBundles) {
+      const decoded = decodeV2PostBundle(bundle);
+      if (decoded) items.push(decoded);
+    }
 
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!enabled || !query) return;
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-    return () => {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    };
-  }, [enabled, subscribe, client, feedKey, queryKey, query]);
-
-  useLocalPostInjection({
-    enabled: enabled && !!identityId,
-    match: (p) => p.identity === identityId,
-    insert: (decoded) => insertLocal(feedKey, decoded),
-  });
-
-  const refresh = useCallback(() => {
-    if (!query) return;
-    unsubscribeRef.current?.();
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-  }, [subscribe, client, feedKey, queryKey, query]);
+    return items;
+  }, [query.data]);
 
   return {
-    items: feed.items,
-    isLoading: feed.isLoading,
-    error: feed.error,
+    items,
+    isLoading: query.status === QueryStatus.Loading,
+    error: query.error ? new Error(query.error) : null,
     loadMore: NOOP,
     hasMore: false,
-    refresh,
+    refresh: query.refresh,
   };
 }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Query } from '@polycentric/react-native';
+import { Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
-  useLocalPostInjection,
+  decodeV2PostBundle,
+  PostData,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
-import { EMPTY_FEED, useFeedsStore } from './useFeeds';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 export function useFollowingFeed(options?: {
   limit?: number;
@@ -13,54 +14,33 @@ export function useFollowingFeed(options?: {
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
-  const followerIdentity = client.activeIdentityKey;
+  const followerIdentity = client.activeIdentityKey || '';
 
-  const feedKey = `following:${followerIdentity ?? ''}`;
-  const queryKey = useMemo(
-    () => ['following_feed', followerIdentity ?? ''],
-    [followerIdentity],
-  );
-  const query = useMemo(
-    () =>
-      followerIdentity
-        ? new Query.GetFollowingFeed({ followerIdentity })
-        : null,
-    [followerIdentity],
+  const query = useQuery(
+    ['following_feed'],
+    new Query.GetFollowingFeed({ followerIdentity }),
   );
 
-  const feed = useFeedsStore((s) => s.feeds.get(feedKey) ?? EMPTY_FEED);
-  const subscribe = useFeedsStore((s) => s.subscribe);
-  const insertLocal = useFeedsStore((s) => s.insertLocal);
+  const items = useMemo(() => {
+    if (!query.data) {
+      return [];
+    }
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+    const items: PostData[] = [];
+    for (const bundle of response.eventBundles) {
+      const decoded = decodeV2PostBundle(bundle);
+      if (decoded) items.push(decoded);
+    }
 
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!enabled || !query) return;
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-    return () => {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    };
-  }, [enabled, subscribe, client, feedKey, queryKey, query]);
-
-  useLocalPostInjection({
-    enabled: enabled && !!followerIdentity,
-    match: () => true,
-    insert: (decoded) => insertLocal(feedKey, decoded),
-  });
-
-  const refresh = useCallback(() => {
-    if (!query) return;
-    unsubscribeRef.current?.();
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-  }, [subscribe, client, feedKey, queryKey, query]);
+    return items;
+  }, [query.data]);
 
   return {
-    items: feed.items,
-    isLoading: feed.isLoading,
-    error: feed.error,
+    items,
+    isLoading: query.status === QueryStatus.Loading,
+    error: query.error ? new Error(query.error) : null,
     loadMore: NOOP,
     hasMore: false,
-    refresh,
+    refresh: query.refresh,
   };
 }

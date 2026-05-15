@@ -12,6 +12,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
@@ -51,6 +52,12 @@ function ProfileScreenContent() {
   const handleBack = useCallback(() => {
     router.back();
   }, []);
+
+  const refresh = useCallback(() => {
+    identityFeed.refresh();
+    likesFeed.refresh();
+  }, [identityFeed.refresh, likesFeed.refresh]);
+  useFocusedRefresh(refresh);
 
   // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
   // array reference on every render defeats the memoisation.

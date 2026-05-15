@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { COLLECTION, Query, QueryStatus, v2 } from '@polycentric/react-native';
+import { useMemo } from 'react';
+import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
-  usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-
-type Sub = { unsubscribe: () => void };
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 /**
  * Load a single post by its (identity, sequence) route params.
@@ -24,83 +22,48 @@ export function usePostById(
   keyFingerprint: string | undefined,
   sequence: bigint | undefined,
 ): { post: PostData | null; isLoading: boolean; error: Error | null } {
-  const { client } = usePolycentricContext();
-  const [post, setPost] = useState<PostData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const enabled = !!identityId && sequence != null && !!keyFingerprint;
 
-  // Hold the live subscription so we can cancel on unmount / param change.
-  const subscriptionRef = useRef<Sub | null>(null);
-  const cleanup = useCallback(() => {
-    subscriptionRef.current?.unsubscribe();
-    subscriptionRef.current = null;
-  }, []);
+  const query = useQuery(
+    [
+      'event',
+      String(COLLECTION.FEED),
+      identityId ?? '',
+      sequence?.toString() ?? '',
+    ],
+    new Query.GetEvent({
+      identity: identityId ?? '',
+      collection: COLLECTION.FEED,
+      sequence: sequence ?? 0n,
+    }),
+    undefined,
+    enabled,
+  );
 
-  useEffect(() => {
-    cleanup();
-    if (!identityId || sequence == null || !keyFingerprint) {
-      setPost(null);
-      setIsLoading(false);
-      setError(null);
-      return;
+  const post = useMemo<PostData | null>(() => {
+    if (!enabled) return null;
+    if (!query.data || query.data.byteLength === 0) return null;
+    try {
+      const bundle = v2.EventBundle.fromBinary(new Uint8Array(query.data));
+      if (!bundle.signedEvent) return null;
+      const ev = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+      // Verify the signer fingerprint matches the URL so a sequence
+      // collision across signers doesn't render the wrong post.
+      if (
+        getKeyFingerprint(ev.key?.signedBy) !== keyFingerprint ||
+        ev.key?.sequence !== sequence
+      ) {
+        return null;
+      }
+      return decodeV2PostBundle(bundle);
+    } catch {
+      return null;
     }
+  }, [enabled, query.data, keyFingerprint, sequence]);
 
-    setPost(null);
-    setError(null);
-    setIsLoading(true);
-
-    const observable = client.core.fetchQuery(
-      ['event', String(COLLECTION.FEED), identityId, sequence.toString()],
-      new Query.GetEvent({
-        identity: identityId,
-        collection: COLLECTION.FEED,
-        sequence,
-      }),
-      undefined,
-    );
-
-    subscriptionRef.current = observable.subscribe({
-      next: (result) => {
-        if (result.data && result.data.byteLength > 0) {
-          try {
-            const bundle = v2.EventBundle.fromBinary(
-              new Uint8Array(result.data),
-            );
-            // Verify the signer fingerprint matches the URL so a
-            // sequence collision across signers doesn't render the
-            // wrong post.
-            if (bundle.signedEvent) {
-              const ev = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-              if (
-                getKeyFingerprint(ev.key?.signedBy) === keyFingerprint &&
-                ev.key?.sequence === sequence
-              ) {
-                setPost(decodeV2PostBundle(bundle));
-              } else if (result.status === QueryStatus.Success) {
-                setPost(null);
-              }
-            } else if (result.status === QueryStatus.Success) {
-              setPost(null);
-            }
-          } catch {
-            // Ignore malformed bundle, wait for next emission or completion.
-          }
-        } else if (result.status === QueryStatus.Success) {
-          setPost(null);
-        }
-        setIsLoading(result.status === QueryStatus.Loading);
-      },
-      error: (message: string) => {
-        setError(new Error(message));
-        setIsLoading(false);
-      },
-      complete: () => {
-        setIsLoading(false);
-      },
-    });
-
-    return cleanup;
-  }, [client, identityId, keyFingerprint, sequence, cleanup]);
-
-  return { post, isLoading, error };
+  return {
+    post,
+    isLoading: query.isLoading,
+    error: query.error ? new Error(query.error) : null,
+  };
 }

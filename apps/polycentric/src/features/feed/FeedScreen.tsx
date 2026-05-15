@@ -9,8 +9,9 @@ import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
-import { useFocusEffect, useIsFocused } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 
 const ListHeader = () => (
   <>
@@ -26,9 +27,13 @@ export default function FeedScreen() {
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useFollowingFeed({ enabled });
 
-  useFocusEffect(() => {
-    setEnabled(true);
-  });
+  useFocusEffect(
+    useCallback(() => {
+      setEnabled(true);
+    }, [setEnabled]),
+  );
+
+  useFocusedRefresh(feed.refresh);
 
   if (feed.error) {
     return (

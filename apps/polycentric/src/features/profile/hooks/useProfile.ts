@@ -1,7 +1,7 @@
-import { useCallback, useEffect } from 'react';
-import { FetchMode, v2 } from '@polycentric/react-native';
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import useProfiles, { emptyProfile } from './useProfiles';
+import { useMemo } from 'react';
+import { FetchMode, Query, v2 } from '@polycentric/react-native';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { decodeProfile } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
   name: string | null;
@@ -15,40 +15,47 @@ export interface ProfileHookResult {
 
 export interface UseProfileOptions {
   /**
-   * Defaults to  `OfflineOnly` (will not fetch unless its found in caches)
+   * Defaults to `OfflineOnly` (will not fetch unless its found in caches)
    */
   fetchMode?: FetchMode;
 }
+
+const EMPTY_PROFILE: Omit<
+  ProfileHookResult,
+  'isLoading' | 'error' | 'refresh'
+> = {
+  name: null,
+  description: null,
+  avatar: null,
+  banner: null,
+};
 
 export function useProfile(
   identityKey: string | null | undefined,
   options?: UseProfileOptions,
 ): ProfileHookResult {
-  const client = usePolycentric();
   const fetchMode = options?.fetchMode ?? FetchMode.OfflineOnly;
-  const profile = useProfiles((s) =>
-    identityKey ? s.profiles.get(identityKey) : undefined,
+
+  const query = useQuery(
+    ['profile', identityKey ?? '', fetchMode.toString()],
+    new Query.GetProfile({ identity: identityKey ?? '' }),
+    { fetchMode },
+    !!identityKey,
   );
 
-  useEffect(() => {
-    if (!identityKey) return;
-    useProfiles.getState().fetch(client, identityKey, fetchMode);
-  }, [client, identityKey, fetchMode]);
-
-  const refresh = useCallback(() => {
-    if (!identityKey) return;
-    useProfiles.getState().refresh(client, identityKey);
-  }, [client, identityKey]);
-
-  const data = profile ?? emptyProfile(identityKey ?? '');
+  const decoded = useMemo(() => {
+    if (!query.data) return EMPTY_PROFILE;
+    return decodeProfile(query.data);
+  }, [query.data]);
 
   return {
-    name: data.name,
-    description: data.description,
-    avatar: data.avatar,
-    banner: data.banner,
-    isLoading: data.isLoading,
-    error: data.error,
-    refresh,
+    name: decoded.name,
+    description: decoded.description,
+    avatar: decoded.avatar,
+    banner: decoded.banner,
+    isLoading: query.isLoading,
+    error: query.error ? new Error(query.error) : null,
+    // Force a network re-fetch regardless of the original `fetchMode`.
+    refresh: () => query.invalidate({ fetchMode: FetchMode.Default }),
   };
 }

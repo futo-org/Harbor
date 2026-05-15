@@ -298,7 +298,7 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
   return (
     <Pressable
       onPress={handlePress}
-      style={[Atoms.flex_row, Atoms.align_center]}
+      style={[Atoms.flex_row, Atoms.align_center, Atoms.self_start]}
     >
       <Text variant="secondary" color="neutral_500" fontWeight="regular">
         Replying to{' '}

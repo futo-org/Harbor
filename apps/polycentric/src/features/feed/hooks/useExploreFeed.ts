@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Query } from '@polycentric/react-native';
-import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import { useMemo } from 'react';
+import { Query, QueryStatus, v2 } from '@polycentric/react-native';
+import {
+  decodeV2PostBundle,
+  PostData,
+  usePolycentricContext,
+} from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
-import { EMPTY_FEED, useFeedsStore } from './useFeeds';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -10,46 +14,35 @@ export function useExploreFeed(options?: {
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
-
   const identity = client.activeIdentityKey ?? '';
-  const feedKey = `explore:${identity}`;
-  const queryKey = useMemo(() => ['explore_feed', identity], [identity]);
-  const query = useMemo(
-    () =>
-      new Query.GetExploreFeed({
-        identity: identity === '' ? undefined : identity,
-      }),
-    [identity],
+
+  const query = useQuery(
+    ['explore_feed', identity],
+    new Query.GetExploreFeed({
+      identity: identity === '' ? undefined : identity,
+    }),
   );
 
-  const feed = useFeedsStore((s) => s.feeds.get(feedKey) ?? EMPTY_FEED);
-  const subscribe = useFeedsStore((s) => s.subscribe);
+  const items = useMemo(() => {
+    if (!query.data) {
+      return [];
+    }
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+    const items: PostData[] = [];
+    for (const bundle of response.eventBundles) {
+      const decoded = decodeV2PostBundle(bundle);
+      if (decoded) items.push(decoded);
+    }
 
-  // Re-subscribe on every mount so the rust observable re-emits cached
-  // state (instant) and `FetchMode::Default` triggers a fresh fan-out.
-  // State persists in the store across mount/unmount.
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!enabled) return;
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-    return () => {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    };
-  }, [enabled, subscribe, client, feedKey, queryKey, query]);
-
-  const refresh = useCallback(() => {
-    unsubscribeRef.current?.();
-    unsubscribeRef.current = subscribe(client, feedKey, queryKey, query);
-  }, [subscribe, client, feedKey, queryKey, query]);
+    return items;
+  }, [query.data]);
 
   return {
-    items: feed.items,
-    isLoading: feed.isLoading,
-    error: feed.error,
+    items,
+    isLoading: query.status === QueryStatus.Loading,
+    error: query.error ? new Error(query.error) : null,
     loadMore: NOOP,
     hasMore: false,
-    refresh,
+    refresh: query.refresh,
   };
 }

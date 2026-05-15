@@ -159,9 +159,8 @@ pub fn get_profile(
         let error_subscriber = subscriber.clone();
         let complete_subscriber = subscriber;
         // We deliberately drop the underlying subscription handle —
-        // it's only a closed flag; the underlying QueryState retains
-        // the subscriber until pruning. Wasted emissions to the
-        // closed wrapper are no-ops on the subscriber side.
+        // the fan-out completes on its own once every server has
+        // responded.
         let _ = underlying.subscribe(
             move |r: QueryResult<Vec<u8>>| {
                 let data = r.data.or_else(|| Some(local_bytes.clone()));

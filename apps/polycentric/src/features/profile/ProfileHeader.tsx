@@ -15,7 +15,7 @@ import { Atoms } from '@/src/common/theme';
 import { FeedChip } from '@/src/features/post/FeedChip';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { View } from 'react-native';
 import { useProfileContext } from './ProfileContext';
@@ -41,12 +41,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
-
-  // Only hide the header when we have nothing to show. As soon as the
-  // rust observable emits its first value (cached local-store data or
-  // a server response) we render — even if `isLoading` is still true,
-  // because that just means a background refresh is in flight.
-  if (profile.isLoading && !profile.name && !profile.avatar) return <></>;
 
   return (
     <>
