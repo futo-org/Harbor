@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     icon: {
       dark: './src/common/assets/images/app-icons/ios-icon-dark.png',
-      light: './src/common/assets/images/app-icons/ios-icon-light.png',
+      light: './src/common/assets/images/app-icons/ios-icon-default.png',
       tinted: './src/common/assets/images/app-icons/ios-icon-monochrome.png',
     },
     supportsTablet: true,
