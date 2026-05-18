@@ -48,7 +48,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './src/common/assets/images/PolycentricLogoTransparent1024.png',
+        image:
+          './src/common/assets/images/app-icons/android-icon-foreground.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#F2F5F9',
