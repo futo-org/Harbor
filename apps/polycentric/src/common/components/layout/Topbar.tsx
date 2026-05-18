@@ -43,6 +43,7 @@ function Topbar({ title, center, right }: TopbarProps) {
         Atoms.py_sm,
         Atoms.gap_md,
         { height: 60 },
+        { backgroundColor: theme.palette.neutral_0 },
         {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),

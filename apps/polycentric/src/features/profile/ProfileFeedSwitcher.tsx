@@ -1,9 +1,9 @@
 import { Text } from '@/src/common/components/primitives';
 import type { FeedHookResult } from '@/src/features/feed/hooks/types';
-import { FeedViewer, type FlashListProps } from '@/src/features/post';
-import { Atoms, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import type { FlashListProps } from '@/src/features/post';
+import FeedList from '@/src/features/feed/FeedList';
+import { Atoms } from '@/src/common/theme';
+import { View } from 'react-native';
 
 type ProfileFeedTab = {
   key: string;
@@ -27,7 +27,6 @@ export function ProfileFeedSwitcher({
   activeKey: string;
   ListHeaderComponent?: ListHeader;
 }) {
-  const { theme } = useTheme();
   const active = tabs.find((t) => t.key === activeKey) ?? tabs[0];
   if (!active) return null;
 
@@ -49,50 +48,13 @@ export function ProfileFeedSwitcher({
   }
 
   return (
-    <FeedViewer
+    <FeedList
       key={active.key}
-      keyExtractor={(item) => item.id}
-      data={feed.items}
+      feed={feed}
       ListHeaderComponent={ListHeaderComponent}
-      ListEmptyComponent={
-        !feed.isLoading ? (
-          <View
-            style={[
-              Atoms.flex_1,
-              Atoms.items_center,
-              Atoms.justify_center,
-              Atoms.p_lg,
-            ]}
-          >
-            <Text color="neutral_500">No posts yet</Text>
-          </View>
-        ) : null
-      }
-      ListFooterComponent={
-        feed.hasMore && feed.items.length > 0 ? (
-          <View style={[Atoms.items_center, Atoms.p_lg]}>
-            <ActivityIndicator
-              size="small"
-              color={theme.palette.neutral_500}
-              accessibilityLabel="Loading more posts"
-            />
-          </View>
-        ) : null
-      }
-      onEndReached={feed.hasMore ? feed.loadMore : undefined}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        !isWeb ? (
-          <RefreshControl
-            refreshing={feed.isLoading}
-            onRefresh={feed.refresh}
-          />
-        ) : undefined
-      }
       contentContainerStyle={
         bottomPadding ? { paddingBottom: bottomPadding } : undefined
       }
-      showsVerticalScrollIndicator={false}
     />
   );
 }

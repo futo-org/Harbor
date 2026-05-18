@@ -141,6 +141,7 @@ function Screen({
       style={[
         Atoms.flex_row,
         Atoms.flex_1,
+        { backgroundColor: theme.palette.neutral_0 },
         { paddingTop: insets.top },
         !isWeb && {
           borderBottomWidth: 1,
@@ -151,6 +152,27 @@ function Screen({
     >
       {showLeftSidebar && <LeftSidebar />}
       <Main>{body}</Main>
+      {!isWeb && insets.top > 0 ? (
+        // Opaque cap that sits on top of all descendants and visually
+        // masks any content that overflows into the status-bar zone
+        // (FlashList items scrolling past `paddingTop`, sliding sticky
+        // headers, animation glitches, etc.). Avoids `overflow: hidden`
+        // on Screen so shadows / scroll bounces aren't clipped.
+        <View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: insets.top,
+              backgroundColor: theme.palette.neutral_0,
+              zIndex: 1,
+            },
+          ]}
+        />
+      ) : null}
     </View>
   );
 }

@@ -2,12 +2,13 @@ import { Button, Screen, Text } from '@/src/common/components';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 import { Image } from 'expo-image';
-import WEB_LOGO from '../../common/assets/images/PolycentricLogoTransparent256.png';
+import WEB_LOGO from '../../common/assets/images/polycentric-logo-with-text.png';
 
 export default function OnboardingWelcomeScreen() {
+  const dimensions = useWindowDimensions();
   return (
     <Screen>
       <Screen.PrimaryColumn>
@@ -23,16 +24,11 @@ export default function OnboardingWelcomeScreen() {
             <Image
               source={WEB_LOGO}
               contentFit="contain"
-              style={{ width: 50, height: 50 }}
+              style={{
+                width: dimensions.width - 100,
+                height: dimensions.width,
+              }}
             />
-            <View style={Atoms.items_center}>
-              <Text variant="title" color="neutral_1000">
-                Polycentric
-              </Text>
-              {/* <Text variant="body" color="neutral_500">
-                Law without governance
-              </Text> */}
-            </View>
           </View>
           <View style={[Atoms.gap_md, Atoms.w_full, Atoms.mt_auto]}>
             <Button

@@ -6,70 +6,111 @@ import {
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import { isValidElement, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
-import { Post } from './Post';
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 
-// Initial page size for the web list. FlashList virtualises on native;
-// the web fallback (`WebFeedViewer`) renders every item synchronously,
-// so a long feed blows up the first paint. We cap the initial render
-// and grow the visible window when the sentinel comes into view.
+// A reanimated-compatible FlashList.
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
+
 const WEB_INITIAL_VISIBLE = 12;
 const WEB_PAGE_SIZE = 12;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
-// `renderItem` is required by FlashList but FeedViewer defaults it to a
-// `Post` renderer for `PostData`, so consumers can omit it.
-export type FeedViewerProps<T = PostData> = Omit<
-  FlashListProps<T>,
-  'renderItem'
-> & {
-  renderItem?: FlashListProps<T>['renderItem'];
-};
+export type ListProps<T> = FlashListProps<T>;
 
-const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
-  <Post post={item} />
-);
-
-const defaultKeyExtractor = (item: PostData, index: number) =>
-  `${item.id}:${index}`;
-
-export function FeedViewer<T extends PostData = PostData>(
-  props: FeedViewerProps<T>,
-) {
-  const renderItem =
-    (props.renderItem as ListRenderItem<T>) ??
-    (defaultRenderItem as unknown as ListRenderItem<T>);
-  const keyExtractor =
-    props.keyExtractor ??
-    (defaultKeyExtractor as unknown as FlashListProps<T>['keyExtractor']);
-
+export function List<T extends PostData = PostData>(props: ListProps<T>) {
   if (isWeb) {
-    return (
-      <WebFeedViewer<T>
-        {...props}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-      />
-    );
+    return <WebFeedViewer<T> {...props} />;
   }
 
+  return <NativeList<T> {...props} />;
+}
+
+function NativeList<T>({
+  ListHeaderComponent,
+  contentContainerStyle,
+  refreshControl,
+  onScroll: _ignoredOnScroll,
+  ...rest
+}: FlashListProps<T>) {
+  const lastScrollY = useSharedValue(0);
+  const headerTranslate = useSharedValue(0);
+  const headerHeightShared = useSharedValue(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  const onScroll = useAnimatedScrollHandler((event) => {
+    const currentY = event.contentOffset.y;
+    const h = headerHeightShared.value;
+
+    const delta = currentY - lastScrollY.value;
+    const next = headerTranslate.value - delta;
+    headerTranslate.value = Math.min(0, Math.max(-h, next));
+    lastScrollY.value = currentY;
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslate.value }],
+  }));
+
+  const onHeaderLayout = (event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.height;
+    headerHeightShared.value = next;
+    if (next !== headerHeight) setHeaderHeight(next);
+  };
+
+  const renderedHeader = renderNode(ListHeaderComponent);
+
+  // Show below the sticky header
+  const adjustedRefreshControl = (
+    isValidElement(refreshControl)
+      ? cloneElement(
+          refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
+          {
+            progressViewOffset: headerHeight,
+          },
+        )
+      : refreshControl
+  ) as FlashListProps<T>['refreshControl'];
+
   return (
-    <FlashList<T>
-      {...props}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-    />
+    <View style={styles.container}>
+      {renderedHeader ? (
+        <Animated.View
+          onLayout={onHeaderLayout}
+          style={[styles.stickyHeader, headerAnimatedStyle]}
+        >
+          {renderedHeader}
+        </Animated.View>
+      ) : null}
+      <AnimatedFlashList
+        {...(rest as FlashListProps<unknown>)}
+        refreshControl={adjustedRefreshControl}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: headerHeight,
+          ...(typeof contentContainerStyle === 'object' &&
+          contentContainerStyle !== null
+            ? contentContainerStyle
+            : {}),
+        }}
+      />
+    </View>
   );
 }
 
-// Renders the FlashList contract inline so the page-level scroll on web
-// is preserved (the Stack content area already has `overflow: auto`).
-// Only the props the feed actually uses are honored. Caps the first
-// paint at `WEB_INITIAL_VISIBLE` items and expands the window in
-// `WEB_PAGE_SIZE` chunks when the sentinel scrolls into view, so a
-// long feed doesn't block navigation.
 function WebFeedViewer<T>({
   data,
   renderItem,
@@ -155,3 +196,16 @@ function renderNode(node: ReactNodeOrComponent) {
   const Component = node as React.ComponentType;
   return <Component />;
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+});

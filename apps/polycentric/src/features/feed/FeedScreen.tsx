@@ -2,32 +2,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
 import { Text } from '@/src/common/components/primitives';
-import { FeedViewer } from '@/src/features/post';
 import { ComposerInput } from '@/src/features/composer';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
-import { openCompose, Routes } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
-import { Atoms, useTheme } from '@/src/common/theme';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  View,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { Atoms } from '@/src/common/theme';
+import { View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
+import FeedList from './FeedList';
 
-const ListHeader = () => (
-  <>
-    {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
-    {isWeb && <ComposerInput />}
-  </>
-);
+const ListHeader = () => {
+  return (
+    <>
+      {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
+      {isWeb && <ComposerInput />}
+    </>
+  );
+};
 
 export default function FeedScreen() {
-  const { theme } = useTheme();
   const showComposeFab = !isWeb;
 
   const [enabled, setEnabled] = useState<boolean>(false);
@@ -63,50 +59,9 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedViewer
-          keyExtractor={(item) => item.id}
-          data={feed.items}
-          ListHeaderComponent={ListHeader}
-          ListEmptyComponent={
-            !feed.isLoading ? (
-              <View
-                style={[
-                  Atoms.flex_1,
-                  Atoms.items_center,
-                  Atoms.justify_center,
-                  Atoms.p_lg,
-                ]}
-              >
-                <Text color="neutral_500">No posts yet</Text>
-              </View>
-            ) : null
-          }
-          ListFooterComponent={
-            feed.hasMore && feed.items.length > 0 ? (
-              <View style={[Atoms.items_center, Atoms.p_lg]}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.neutral_500}
-                  accessibilityLabel="Loading more posts"
-                />
-              </View>
-            ) : null
-          }
-          onEndReached={feed.hasMore ? feed.loadMore : undefined}
-          onEndReachedThreshold={0.5}
-          refreshControl={
-            !isWeb ? (
-              <RefreshControl
-                refreshing={feed.isLoading}
-                onRefresh={feed.refresh}
-              />
-            ) : undefined
-          }
-          showsVerticalScrollIndicator={false}
-        />
+        <FeedList feed={feed} ListHeaderComponent={ListHeader} />
         {showComposeFab ? (
           <Fab
-            //title="New Post"
             onPress={openCompose}
             icon={() => <Ionicons name="add" size={32} color="white" />}
           />
