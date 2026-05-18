@@ -5,18 +5,24 @@ import { Text } from '@/src/common/components/primitives';
 import { FeedViewer } from '@/src/features/post';
 import { ComposerInput } from '@/src/features/composer';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
-import { openCompose } from '@/src/common/constants';
+import { openCompose, Routes } from '@/src/common/constants';
 import { isWeb } from '@/src/common/util/platform';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  View,
+} from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
 
 const ListHeader = () => (
   <>
-    {!isWeb ? <Screen.Topbar /> : null}
-    <ComposerInput />
+    {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
+    {isWeb && <ComposerInput />}
   </>
 );
 
@@ -100,9 +106,9 @@ export default function FeedScreen() {
         />
         {showComposeFab ? (
           <Fab
-            title="New Post"
+            //title="New Post"
             onPress={openCompose}
-            icon={() => <Ionicons name="add-circle" size={22} color="white" />}
+            icon={() => <Ionicons name="add" size={32} color="white" />}
           />
         ) : null}
       </Screen.PrimaryColumn>

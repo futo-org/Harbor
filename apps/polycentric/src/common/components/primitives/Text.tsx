@@ -58,7 +58,7 @@ export function Text({
       style={[
         {
           fontFamily,
-          color: color ? theme.palette[color] : theme.palette.neutral_1000,
+          color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           fontWeight: resolvedFontWeight,
           lineHeight: resolvedLineHeight,
@@ -74,7 +74,7 @@ const VARIANT_CONFIG: Record<
   TextVariant,
   { size: FontSizeToken; defaultWeight: FontWeightToken }
 > = {
-  title: { size: 'xl', defaultWeight: 'bold' },
+  title: { size: 'lg', defaultWeight: 'bold' },
   subtitle: { size: 'lg', defaultWeight: 'semibold' },
   body: { size: 'md', defaultWeight: 'regular' },
   secondary: { size: 'md', defaultWeight: 'regular' },

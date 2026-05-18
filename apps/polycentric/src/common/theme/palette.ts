@@ -116,7 +116,7 @@ export const lightPalette = {
   primary_200: '#9DD8F4',
   primary_300: '#6BC4EF',
   primary_400: '#55BBEC',
-  primary_500: '#1EA3E5',
+  primary_500: '#4F91DC',
   primary_600: '#1883BC',
   primary_700: '#126394',
   primary_800: '#0C436C',

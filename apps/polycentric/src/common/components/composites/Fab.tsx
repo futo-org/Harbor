@@ -43,11 +43,6 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
         size="md"
         icon={icon}
         style={[
-          {
-            zIndex: 1000,
-            paddingVertical: 9,
-            paddingHorizontal: 14,
-          },
           shadow,
           isLight && {
             borderWidth: 0,

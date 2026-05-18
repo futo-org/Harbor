@@ -5,10 +5,12 @@ import {
   ImageProps,
   ImageSourcePropType,
   Pressable,
+  PressableProps,
   StyleSheet,
   View,
   type ViewProps,
 } from 'react-native';
+import { opacity } from 'react-native-reanimated/lib/typescript/Colors';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -47,7 +49,8 @@ export function Avatar({
   const showHoverDim = !!onPress && hovered;
 
   const radius = size / 2;
-  const circleStyle = [
+  const circleStyle: PressableProps['style'] = ({ pressed }) => [
+    pressed && { opacity: 0.5 },
     styles.clip,
     {
       width: size,

@@ -79,6 +79,7 @@ function WebFeedViewer<T>({
   ListEmptyComponent,
   onEndReached,
   contentContainerStyle,
+  stickyHeaderIndices,
 }: FlashListProps<T>) {
   const sentinelRef = useRef<View>(null);
   const items = (data as readonly T[] | null | undefined) ?? [];

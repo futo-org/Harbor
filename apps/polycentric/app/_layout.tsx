@@ -45,14 +45,7 @@ function RootStack() {
             contentStyle: { backgroundColor: 'transparent' },
           }}
         />
-        <Stack.Screen
-          name="settings"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'none',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        />
+        <Stack.Screen name="settings" />
         <Stack.Screen
           name="[identityId]/edit"
           options={{

@@ -123,7 +123,7 @@ export const Post = memo(function Post({
       role="article"
       style={({ pressed }) => [
         Atoms.w_full,
-        Atoms.px_lg,
+        Atoms.px_md,
         !hideBottomBorder && {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
