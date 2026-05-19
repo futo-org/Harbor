@@ -90,7 +90,6 @@ impl NotificationManager {
     /// Sends a push notification to every authorized key of an identity that
     /// has a registered token. Tokens reported as invalid by the push service
     /// are unregistered as part of the send.
-    #[allow(dead_code)] // TODO remove this once the notification manager is used
     pub async fn send(
         &self,
         db: &DbConn,
