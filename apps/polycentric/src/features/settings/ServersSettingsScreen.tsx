@@ -83,10 +83,7 @@ export function ServersSettings({
   return (
     <View>
       {/* TODO: restore the Edit button once servers are part of the Identity document. */}
-      <SheetHeaderBlock
-        title="Servers"
-        onClose={() => void dismissSheet()}
-      />
+      <SheetHeaderBlock title="Servers" onClose={() => void dismissSheet()} />
       <View style={[Atoms.p_lg, Atoms.gap_lg]}>
         {servers.length === 0 ? (
           <Text variant="secondary" color="neutral_500">
