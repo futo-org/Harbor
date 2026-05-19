@@ -1,9 +1,14 @@
-import type { ExpoConfig, ConfigContext } from 'expo/config';
+import type { ConfigContext, ExpoConfig } from 'expo/config';
+import fs from 'fs';
 
 const IS_DEV = process.env.APP_VARIANT === 'dev';
 
 const NAME = IS_DEV ? 'Polycentric Dev' : 'Polycentric';
 const ID = IS_DEV ? 'org.futo.polycentric.dev' : 'org.futo.polycentric';
+
+const GOOGLE_SERVICES_FILE =
+  process.env.GOOGLE_SERVICES_JSON ?? './google-services.json';
+const HAS_GOOGLE_SERVICES = fs.existsSync(GOOGLE_SERVICES_FILE);
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -35,6 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgeToEdgeEnabled: true,
     package: ID,
     permissions: ['android.permission.CAMERA'],
+    ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
   },
   plugins: [
     'expo-router',
@@ -67,6 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         android: {
           buildArchs: ['arm64-v8a'],
+          usesCleartextTraffic: true,
         },
       },
     ],
