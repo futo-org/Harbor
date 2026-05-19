@@ -82,21 +82,10 @@ export function ServersSettings({
 
   return (
     <View>
+      {/* TODO: restore the Edit button once servers are part of the Identity document. */}
       <SheetHeaderBlock
         title="Servers"
         onClose={() => void dismissSheet()}
-        trailing={
-          <View style={{ minWidth: 72, alignItems: 'flex-end' }}>
-            <LinkButton
-              title={isEditing ? 'Done' : 'Edit'}
-              underlineOnHover
-              onPress={() => {
-                setIsEditing((v) => !v);
-                setNewServerUrl('');
-              }}
-            />
-          </View>
-        }
       />
       <View style={[Atoms.p_lg, Atoms.gap_lg]}>
         {servers.length === 0 ? (
