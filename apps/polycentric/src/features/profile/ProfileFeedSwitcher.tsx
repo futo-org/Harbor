@@ -21,11 +21,11 @@ type ListHeader = FlashListProps<unknown>['ListHeaderComponent'];
 export function ProfileFeedSwitcher({
   tabs,
   activeKey,
-  ListHeaderComponent,
+  HeaderComponent: HeaderComponent,
 }: {
   tabs: ProfileFeedTab[];
   activeKey: string;
-  ListHeaderComponent?: ListHeader;
+  HeaderComponent?: ListHeader;
 }) {
   const active = tabs.find((t) => t.key === activeKey) ?? tabs[0];
   if (!active) return null;
@@ -51,7 +51,7 @@ export function ProfileFeedSwitcher({
     <FeedList
       key={active.key}
       feed={feed}
-      ListHeaderComponent={ListHeaderComponent}
+      HeaderComponent={HeaderComponent}
       contentContainerStyle={
         bottomPadding ? { paddingBottom: bottomPadding } : undefined
       }

@@ -100,7 +100,7 @@ export default function ExploreScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList feed={feed} ListHeaderComponent={ListHeader} />
+        <FeedList feed={feed} HeaderComponent={ListHeader} />
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

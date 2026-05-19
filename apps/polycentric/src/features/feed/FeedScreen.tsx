@@ -59,7 +59,7 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList feed={feed} ListHeaderComponent={ListHeader} />
+        <FeedList feed={feed} HeaderComponent={ListHeader} />
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

@@ -4,15 +4,16 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { Atoms } from '@/src/common/theme';
 import { FlashList } from '@shopify/flash-list';
 import { View } from 'react-native';
+import { List } from '@/src/common/components/List/List';
 
 export default function ActivityScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FlashList
+        <List
           data={[]}
           renderItem={() => <></>}
-          ListHeaderComponent={<Topbar title="Activity" />}
+          HeaderComponent={<Topbar title="Activity" />}
           ListEmptyComponent={() => (
             <View
               style={[

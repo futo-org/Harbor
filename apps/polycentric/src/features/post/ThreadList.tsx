@@ -21,6 +21,8 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
   // Fall back to rendering just the subject until the server response lands.
   const items = thread.length > 0 ? thread : [post];
 
+  const subjectIndex = items.findIndex((p) => p.id === post.id);
+
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 0);
@@ -30,6 +32,7 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
     <List
       {...rest}
       data={items}
+      initialScrollIndex={subjectIndex > 0 ? subjectIndex : undefined}
       keyExtractor={(p) => p.id}
       renderItem={({ item, index }) => {
         const above = index > 0 ? items[index - 1] : null;

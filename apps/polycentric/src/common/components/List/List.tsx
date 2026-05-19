@@ -2,11 +2,12 @@ import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import {
   FlashList,
+  FlashListRef,
   type FlashListProps,
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import {
+import React, {
   cloneElement,
   isValidElement,
   useEffect,
@@ -19,6 +20,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { Atoms } from '../../theme';
 
 // A reanimated-compatible FlashList.
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
@@ -32,7 +34,14 @@ const HEADER_HIDE_THRESHOLD = 50;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
-export type ListProps<T> = FlashListProps<T>;
+export type ListProps<T> = FlashListProps<T> & {
+  HeaderComponent?:
+    | React.ComponentType<any>
+    | React.ReactElement<unknown, string | React.JSXElementConstructor<any>>
+    | React.ExoticComponent<any>
+    | null
+    | undefined;
+};
 
 export function List<T extends PostData = PostData>(props: ListProps<T>) {
   if (isWeb) {
@@ -43,36 +52,55 @@ export function List<T extends PostData = PostData>(props: ListProps<T>) {
 }
 
 function NativeList<T>({
-  ListHeaderComponent,
+  HeaderComponent,
   contentContainerStyle,
   refreshControl,
   onScroll: _ignoredOnScroll,
   ...rest
-}: FlashListProps<T>) {
+}: ListProps<T>) {
+  const ref = useRef<FlashListRef<T>>(null);
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
   const headerHeightShared = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+  const isMomentum = useSharedValue(false);
   const [headerHeight, setHeaderHeight] = useState(0);
 
-  const onScroll = useAnimatedScrollHandler((event) => {
-    const currentY = event.contentOffset.y;
-    const h = headerHeightShared.value;
+  const onScroll = useAnimatedScrollHandler({
+    onBeginDrag: () => {
+      isDragging.value = true;
+    },
+    onEndDrag: () => {
+      isDragging.value = false;
+    },
+    onMomentumBegin: () => {
+      isMomentum.value = true;
+    },
+    onMomentumEnd: () => {
+      isMomentum.value = false;
+    },
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const h = headerHeightShared.value;
 
-    if (currentY <= HEADER_HIDE_THRESHOLD) {
-      headerTranslate.value = 0;
-    } else {
-      // Compute delta relative to the threshold so movement past it
-      // starts the hide from translate 0 instead of snapping.
-      const lastEffective = Math.max(
-        0,
-        lastScrollY.value - HEADER_HIDE_THRESHOLD,
-      );
-      const currentEffective = currentY - HEADER_HIDE_THRESHOLD;
-      const delta = currentEffective - lastEffective;
-      const next = headerTranslate.value - delta;
-      headerTranslate.value = Math.min(0, Math.max(-h, next));
-    }
-    lastScrollY.value = currentY;
+      if (currentY <= HEADER_HIDE_THRESHOLD) {
+        headerTranslate.value = 0;
+      } else if (isDragging.value || isMomentum.value) {
+        // Compute delta relative to the threshold so movement past it
+        // starts the hide from translate 0 instead of snapping.
+        const lastEffective = Math.max(
+          0,
+          lastScrollY.value - HEADER_HIDE_THRESHOLD,
+        );
+        const currentEffective = currentY - HEADER_HIDE_THRESHOLD;
+        const delta = currentEffective - lastEffective;
+        const next = headerTranslate.value - delta;
+        headerTranslate.value = Math.min(0, Math.max(-h, next));
+      }
+      // Always update so the next user-driven event computes the
+      // correct delta — even if we skipped animating this tick.
+      lastScrollY.value = currentY;
+    },
   });
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
@@ -85,7 +113,7 @@ function NativeList<T>({
     if (next !== headerHeight) setHeaderHeight(next);
   };
 
-  const renderedHeader = renderNode(ListHeaderComponent);
+  const renderedHeader = renderNode(HeaderComponent);
 
   // Show below the sticky header
   const adjustedRefreshControl = (
@@ -100,15 +128,16 @@ function NativeList<T>({
   ) as FlashListProps<T>['refreshControl'];
 
   return (
-    <View style={styles.container}>
+    <View style={[Atoms.flex_1]}>
       {renderedHeader ? (
         <Animated.View
           onLayout={onHeaderLayout}
-          style={[styles.stickyHeader, headerAnimatedStyle]}
+          style={[Atoms.absolute, styles.stickyHeader, headerAnimatedStyle]}
         >
           {renderedHeader}
         </Animated.View>
       ) : null}
+
       <AnimatedFlashList
         {...(rest as FlashListProps<unknown>)}
         refreshControl={adjustedRefreshControl}
@@ -213,11 +242,7 @@ function renderNode(node: ReactNodeOrComponent) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   stickyHeader: {
-    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,

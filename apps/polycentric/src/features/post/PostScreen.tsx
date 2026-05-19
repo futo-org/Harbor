@@ -28,7 +28,7 @@ export default function FeedPostScreen() {
     router.back();
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !post) {
     return (
       <Screen>
         <Screen.PrimaryColumn>
@@ -64,7 +64,7 @@ export default function FeedPostScreen() {
         <View style={[Atoms.flex_1, Atoms.mt_md]}>
           <ThreadList
             post={post}
-            ListHeaderComponent={<Screen.Topbar title="Post" />}
+            HeaderComponent={<Screen.Topbar title="Post" />}
           />
         </View>
       </Screen.PrimaryColumn>

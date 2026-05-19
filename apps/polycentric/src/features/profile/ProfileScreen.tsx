@@ -90,7 +90,7 @@ function ProfileScreenContent() {
         <ProfileFeedSwitcher
           tabs={tabs}
           activeKey={activeFeed}
-          ListHeaderComponent={profileHeader}
+          HeaderComponent={profileHeader}
         />
       </Screen.PrimaryColumn>
     </Screen>
