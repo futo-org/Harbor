@@ -15,7 +15,11 @@ export function TopbarSettingsButton() {
       ]}
       hitSlop={Spacing['lg']}
     >
-      <Ionicons name="settings-outline" size={20} />
+      <Ionicons
+        name="settings-outline"
+        size={20}
+        color={theme.palette.neutral_800}
+      />
     </Pressable>
   );
 }

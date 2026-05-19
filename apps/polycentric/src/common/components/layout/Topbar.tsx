@@ -3,7 +3,8 @@ import { Pressable, View } from 'react-native';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import WEB_LOGO from '../../assets/images/PolycentricLogoTransparent256.png';
+import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
+import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
 import { ProfileAvatar, Text } from '../primitives';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { memo, useState, type ReactNode } from 'react';
@@ -102,7 +103,7 @@ function Topbar({ title, center, right }: TopbarProps) {
           ) : (
             <Link href={{ pathname: '/' }}>
               <Image
-                source={WEB_LOGO}
+                source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
                 contentFit="contain"
                 style={[{ width: 36, height: 36 }, Atoms.self_center]}
               />

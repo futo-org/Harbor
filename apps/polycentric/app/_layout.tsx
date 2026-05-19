@@ -69,6 +69,7 @@ export default function RootLayout() {
     if (!ready) {
       return;
     }
+    console.log('app is ready?');
     void SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
 

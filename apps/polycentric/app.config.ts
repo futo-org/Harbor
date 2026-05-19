@@ -38,6 +38,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         './src/common/assets/images/app-icons/android-icon-foreground.png',
       monochromeImage:
         './src/common/assets/images/app-icons/android-icon-monochrome.png',
+      backgroundImage:
+        './src/common/assets/images/app-icons/android-icon-background.png',
       backgroundColor: '#F2F5F9',
     },
     package: ID,
@@ -48,8 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image:
-          './src/common/assets/images/app-icons/android-icon-foreground.png',
+        image: './src/common/assets/images/app-icons/ios-icon-default.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#F2F5F9',
