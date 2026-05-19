@@ -17,10 +17,12 @@ export type QueryRef = {
 
 type QueryArgs = {
   client: PolycentricClient;
-  queryKey: string[];
+  queryKey: QueryKey;
   query: Query;
   opts: QueryOpts | undefined;
 };
+
+type QueryKey = string[];
 
 type SubscriptionRef = {
   refCount: number;
@@ -137,14 +139,6 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       const sub = get().subscriptions.get(key);
       const target = args ?? sub?.args;
       if (target) target.client.core.invalidateQuery(target.queryKey);
-      if (sub && target) {
-        sub.dispose();
-        sub.args = target;
-        // Keep stale `data` visible — `fetch` flips status to
-        // Loading and the new fan-out's `next` emissions will
-        // overwrite as fresh results arrive.
-        sub.dispose = fetch(key, target);
-      }
     },
   };
 });
@@ -170,10 +164,41 @@ export type UseQueryResult = QueryRef & {
  */
 export function invalidateQuery(
   client: PolycentricClient,
-  queryKey: string[],
+  queryKey: QueryKey,
 ): void {
   client.core.invalidateQuery(queryKey);
   useQueryStore.getState().refresh(queryKey.join('\0'));
+}
+
+/**
+ * Returns the current cache for a query key
+ */
+export function getQueryCache(queryKey: QueryKey): QueryRef | undefined {
+  return useQueryStore.getState().queries.get(queryKey.join('\0'));
+}
+
+/**
+ * Updates the local cache state for a query key
+ */
+export function setQueryCache(
+  queryKey: QueryKey,
+  value: Partial<QueryRef>,
+): void {
+  const cacheKey = queryKey.join('\0');
+  useQueryStore.setState((state) => {
+    const prev = state.queries.get(cacheKey) ?? EMPTY_ENTRY;
+    const merged = { ...prev, ...value };
+    if (
+      merged.data === prev.data &&
+      merged.status === prev.status &&
+      merged.error === prev.error
+    ) {
+      return {};
+    }
+    const next = new Map(state.queries);
+    next.set(cacheKey, merged);
+    return { queries: next };
+  });
 }
 
 /**
@@ -185,7 +210,7 @@ export function invalidateQuery(
  * subscription entirely (the hook still returns cached state if any).
  */
 export function useQuery(
-  queryKey: string[],
+  queryKey: QueryKey,
   query: Query,
   opts: QueryOpts = { fetchMode: FetchMode.Default },
   enabled = true,

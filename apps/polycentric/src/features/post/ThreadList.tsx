@@ -1,17 +1,18 @@
 import { useCallback, useState } from 'react';
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { type PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
 import { useThread } from './hooks/useThread';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
+import { List, ListProps } from '@/src/common/components/List/List';
+import Topbar from '@/src/common/components/layout/Topbar';
 
-interface ConversationViewProps {
+type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   post: PostData;
-}
+};
 
-export function ConversationView({ post }: ConversationViewProps) {
+export function ThreadList({ post, ...rest }: ThreadListProps) {
   const [refreshing, setRefreshing] = useState(false);
   const { height: windowHeight } = useWindowDimensions();
 
@@ -26,7 +27,8 @@ export function ConversationView({ post }: ConversationViewProps) {
   }, []);
 
   return (
-    <FlashList
+    <List
+      {...rest}
       data={items}
       keyExtractor={(p) => p.id}
       renderItem={({ item, index }) => {

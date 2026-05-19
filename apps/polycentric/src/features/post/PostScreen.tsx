@@ -1,7 +1,7 @@
 import { BackButton, Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import { Atoms } from '@/src/common/theme';
-import { ConversationView } from '@/src/features/post/ConversationView';
+import { ThreadList } from '@/src/features/post/ThreadList';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
@@ -61,11 +61,11 @@ export default function FeedPostScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.mx_lg, Atoms.mt_lg]}>
-          <BackButton onPress={handleBack} />
-        </View>
         <View style={[Atoms.flex_1, Atoms.mt_md]}>
-          <ConversationView post={post} />
+          <ThreadList
+            post={post}
+            ListHeaderComponent={<Screen.Topbar title="Post" />}
+          />
         </View>
       </Screen.PrimaryColumn>
     </Screen>

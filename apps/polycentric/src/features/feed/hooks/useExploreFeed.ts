@@ -7,6 +7,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from './feedCache';
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -17,7 +18,7 @@ export function useExploreFeed(options?: {
   const identity = client.activeIdentityKey ?? '';
 
   const query = useQuery(
-    ['explore_feed', identity],
+    feedQueryKeys.explore(identity),
     new Query.GetExploreFeed({
       identity: identity === '' ? undefined : identity,
     }),

@@ -26,6 +26,10 @@ const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
 const WEB_INITIAL_VISIBLE = 12;
 const WEB_PAGE_SIZE = 12;
 
+// Keep the sticky header fully visible until the user has scrolled past
+// this distance; only then does scroll-driven hiding kick in.
+const HEADER_HIDE_THRESHOLD = 50;
+
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
 export type ListProps<T> = FlashListProps<T>;
@@ -54,9 +58,20 @@ function NativeList<T>({
     const currentY = event.contentOffset.y;
     const h = headerHeightShared.value;
 
-    const delta = currentY - lastScrollY.value;
-    const next = headerTranslate.value - delta;
-    headerTranslate.value = Math.min(0, Math.max(-h, next));
+    if (currentY <= HEADER_HIDE_THRESHOLD) {
+      headerTranslate.value = 0;
+    } else {
+      // Compute delta relative to the threshold so movement past it
+      // starts the hide from translate 0 instead of snapping.
+      const lastEffective = Math.max(
+        0,
+        lastScrollY.value - HEADER_HIDE_THRESHOLD,
+      );
+      const currentEffective = currentY - HEADER_HIDE_THRESHOLD;
+      const delta = currentEffective - lastEffective;
+      const next = headerTranslate.value - delta;
+      headerTranslate.value = Math.min(0, Math.max(-h, next));
+    }
     lastScrollY.value = currentY;
   });
 

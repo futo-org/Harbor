@@ -6,6 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from './feedCache';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
@@ -16,7 +17,7 @@ export function useIdentityFeed(
   const identity = identityId ?? '';
 
   const query = useQuery(
-    ['identity_feed', identity],
+    feedQueryKeys.identity(identity),
     new Query.GetIdentityFeed({ identity }),
   );
 

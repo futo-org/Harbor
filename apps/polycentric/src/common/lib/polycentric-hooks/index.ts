@@ -24,9 +24,6 @@ export {
   type ProfileEditState,
 } from '../../../features/profile/hooks/useProfileEdit';
 
-// Local post injection (composer → live feeds)
-export { useLocalPosts as useLocalPostInjection } from '../../../features/post/hooks/useLocalPosts';
-
 // Helpers
 export {
   decodePostBundle as decodeV2PostBundle,
@@ -35,6 +32,7 @@ export {
   pickImageVariant,
   timeAgo,
   bytesToHex,
+  bundleEventId,
   hexToBytes,
   truncateName,
   publicKeyToString,

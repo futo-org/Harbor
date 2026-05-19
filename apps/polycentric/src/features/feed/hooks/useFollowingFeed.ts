@@ -7,6 +7,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from './feedCache';
 
 export function useFollowingFeed(options?: {
   limit?: number;
@@ -17,7 +18,7 @@ export function useFollowingFeed(options?: {
   const followerIdentity = client.activeIdentityKey || '';
 
   const query = useQuery(
-    ['following_feed'],
+    feedQueryKeys.following(),
     new Query.GetFollowingFeed({ followerIdentity }),
   );
 

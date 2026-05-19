@@ -31,6 +31,11 @@ import { useComposerStore } from './hooks/useComposerStore';
 import { Routes } from '@/src/common/constants';
 import { router } from 'expo-router';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
+import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
+import {
+  feedQueryKeys,
+  injectPostIntoFeedCache,
+} from '@/src/features/feed/hooks/feedCache';
 
 const MAX_ATTACHMENTS = 4;
 const THUMBNAIL_SIZE = 72;
@@ -179,28 +184,39 @@ export function ComposeSheetInner({
       const event = await client.buildEvent(content);
 
       const signedEvent = await client.signEvent(event);
-      // `commitEvent` persists the event locally and, when content is
-      // passed, seeds the core's content store + emits contentCreated
-      // with both signedEvent and content so feeds can decode directly.
+
+      const newBundle = v2.EventBundle.create({
+        signedEvent,
+        serializedContent: { contentBytes: v2.Content.toBinary(content) },
+      });
+      const identity = currentIdentityKey ?? '';
+
+      // Optimistically add the new event to the below query
+      if (isReply && replyTo) {
+        injectReplyIntoThreadCache(replyTo.id, newBundle);
+      }
+      injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
+      injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
+      injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
+
+      // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
 
-      resetComposer();
+      setSubmitting(false);
       await dismissSheet(DismissReason.PostSubmitted);
+      resetComposer();
+
       void client
         .sync()
         .then(() => {
-          // Force the feed observables to re-fetch from servers so the
-          // newly-synced post appears alongside whatever else changed.
-          const identity = currentIdentityKey ?? '';
-          invalidateQuery(client, ['following_feed']);
-          invalidateQuery(client, ['identity_feed', identity]);
-          invalidateQuery(client, ['explore_feed', identity]);
+          // Invalidate all the caches now the post has been successfully submitted
+          invalidateQuery(client, feedQueryKeys.following());
+          invalidateQuery(client, feedQueryKeys.identity(identity));
+          invalidateQuery(client, feedQueryKeys.explore(identity));
         })
         .catch((err) => {
           console.warn('compose sync failed:', err);
         });
-      // TODO
-      // await onPostCreatedRef.current(signedEvent);
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : String(err);
@@ -232,7 +248,7 @@ export function ComposeSheetInner({
       <SheetHeaderBlock
         title={title}
         onClose={handleClose}
-        closeDisabled={submitting}
+        //closeDisabled={submitting}
         trailing={
           isWeb ? (
             <View style={{ minWidth: 80 }} />
@@ -251,7 +267,7 @@ export function ComposeSheetInner({
                 />
               ) : (
                 <Button
-                  title="Post"
+                  title={'Post'}
                   onPress={handlePost}
                   variant="primary"
                   disabled={!canPost}
@@ -341,7 +357,7 @@ export function ComposeSheetInner({
               autoFocus
               value={text}
               onChangeText={setText}
-              disabled={submitting}
+              // disabled={submitting}
               maxLength={2000}
               style={[
                 Atoms.px_0,

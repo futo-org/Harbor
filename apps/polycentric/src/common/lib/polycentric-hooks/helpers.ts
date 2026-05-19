@@ -143,6 +143,19 @@ export function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
+/** Hex of the event key for a bundle — matches `PostData.id` encoding.
+ *  Returns `null` if the bundle isn't a well-formed signed event. */
+export function bundleEventId(bundle: v2.EventBundle): string | null {
+  if (!bundle.signedEvent) return null;
+  try {
+    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    if (!event.key) return null;
+    return bytesToHex(v2.EventKey.toBinary(event.key));
+  } catch {
+    return null;
+  }
+}
+
 export function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
