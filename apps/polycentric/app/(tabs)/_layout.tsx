@@ -33,11 +33,6 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
       </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="settings">
-        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
-      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

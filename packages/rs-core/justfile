@@ -7,21 +7,6 @@ _ensure-protos:
         exit 1; \
     fi
 
-_ensure-ffi: _ensure-protos
-    @if ! command -v llvm-strip > /dev/null; then \
-        echo "llvm-strip not found, skipping."; \
-    fi
-
-_ensure-wasm: _ensure-protos
-    @if ! command -v wasm-pack > /dev/null; then \
-        echo "Error: 'wasm-pack' not found. Install with: cargo install wasm-pack"; \
-        exit 1; \
-    fi
-    @if ! command -v node > /dev/null; then \
-        echo "Error: 'node' not found. Please install Node.js."; \
-        exit 1; \
-    fi
-
 # Run all tests
 test: _ensure-protos
     @echo "Running tests..."
@@ -60,89 +45,8 @@ open-docs:
     @echo "Opening documentation..."
     @open target/doc/polycentric_core/index.html
 
-# Build, strip, and deploy FFI static lib for a given target
-_build-ffi target dest: _ensure-ffi
-    #!/usr/bin/env bash
-    # Skip Apple targets on non-macOS
-    if [[ "{{target}}" == *apple* ]] && [[ "$(uname)" != "Darwin" ]]; then
-        echo "Skipping {{target}} (requires macOS)"
-        exit 0
-    fi
-    if ! rustup target list --installed | grep -q '^{{target}}$'; then
-        echo "Skipping {{target}} (not installed — run 'rustup target add {{target}}' to enable)"
-        exit 0
-    fi
-    if ! cargo rustc --profile release-rs-core --target {{target}} --features ffi --no-default-features --crate-type staticlib 2>&1; then
-        echo "FAILED: {{target}}"
-        exit 1
-    fi
-    lib="../../target/{{target}}/release-rs-core/libpolycentric_core.a"
-    if command -v llvm-strip > /dev/null; then llvm-strip --strip-debug "$lib"; fi
-    mkdir -p "{{dest}}"
-    cp "$lib" "{{dest}}/libpolycentric_core.a"
-    size=$(du -sh "{{dest}}/libpolycentric_core.a" | cut -f1 | xargs)
-    printf "%-30s %s\n" "{{target}}" "$size"
-
-ios-libs := "../react-native/ios/libs"
-android-libs := "../react-native/android/libs"
-
-# Build FFI for real iOS devices (ARM64)
-build-ffi-ios: (_build-ffi "aarch64-apple-ios" (ios-libs / "aarch64-apple-ios"))
-# Build FFI for iOS simulator on Apple Silicon Macs
-build-ffi-ios-sim: (_build-ffi "aarch64-apple-ios-sim" (ios-libs / "aarch64-apple-ios-sim"))
-# Build FFI for iOS simulator on Intel Macs
-build-ffi-ios-sim-x86: (_build-ffi "x86_64-apple-ios" (ios-libs / "x86_64-apple-ios"))
-# Build FFI for Android ARM64
-build-ffi-android-arm64: (_build-ffi "aarch64-linux-android" (android-libs / "arm64-v8a"))
-# Build FFI for Android ARMv7
-build-ffi-android-armv7: (_build-ffi "armv7-linux-androideabi" (android-libs / "armeabi-v7a"))
-# Build FFI for Android x86
-build-ffi-android-x86: (_build-ffi "i686-linux-android" (android-libs / "x86"))
-# Build FFI for Android x86_64
-build-ffi-android-x86_64: (_build-ffi "x86_64-linux-android" (android-libs / "x86_64"))
-
-_clean-react-native-libs:
-    @rm -rf {{ios-libs}} {{android-libs}}
-# Build all Android targets
-build-ffi-android-all: build-ffi-android-arm64 build-ffi-android-armv7 build-ffi-android-x86 build-ffi-android-x86_64
-
-# Build everything (sim + android + wasm), deploy to react-native
-build-all: _clean-react-native-libs build-ffi-ios-sim build-ffi-android-all build-wasm-all
-
-# Build everything (device + android + wasm), deploy to react-native
-build-all-device: _clean-react-native-libs build-ffi-ios build-ffi-android-all build-wasm-all
-
-# Rename the package name in a wasm-pack generated package.json
-_rename-wasm-package out-dir pkg-name:
-    @node -e "\
-        const p = JSON.parse(require('fs').readFileSync('{{out-dir}}/package.json', 'utf8')); \
-        p.name = '{{pkg-name}}'; \
-        require('fs').writeFileSync('{{out-dir}}/package.json', JSON.stringify(p, null, 2)); \
-        "
-
-# Build WASM package for a given target
-_build-wasm wasm-target out-dir pkg-name: _ensure-wasm
-    #!/usr/bin/env bash
-    if ! wasm-pack build --target {{wasm-target}} --scope lib-polycentric --out-dir {{out-dir}} 2>&1; then
-        echo "FAILED: wasm-{{wasm-target}}"
-        exit 1
-    fi
-    just _rename-wasm-package "{{out-dir}}" "{{pkg-name}}"
-    size=$(du -sh {{out-dir}} | cut -f1 | xargs)
-    printf "%-30s %s\n" "wasm-{{wasm-target}}" "$size"
-
-# Build WASM for web/browser
-build-wasm-web: (_build-wasm "web" "../rs-core-wasm-browser" "@polycentric/rs-core-wasm-browser")
-# Build WASM for nodejs
-build-wasm-node: (_build-wasm "nodejs" "../rs-core-wasm-node" "@polycentric/rs-core-wasm-node")
-# Build all WASM targets
-build-wasm-all: build-wasm-web build-wasm-node
-
-
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
     @cargo clean
-    @if [ -d pkg-web ]; then rm -rf pkg-web; echo "Removed pkg-web directory."; fi
-    @if [ -d pkg-node ]; then rm -rf pkg-node; echo "Removed pkg-node directory."; fi
     @echo "Build artifacts have been removed."

@@ -12,6 +12,7 @@ import {
   pubkeyStr,
   useCurrentIdentity,
   useIdentities,
+  useIdentityKeyFor,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
@@ -169,9 +170,9 @@ function IdentityListItemContent({
 }) {
   const { theme } = useTheme();
   const { isEditing } = useIdentitySwitcher();
-  const { isCurrentIdentity, client } = useCurrentIdentity();
+  const { isCurrentIdentity } = useCurrentIdentity();
 
-  const identityKey = client.getIdentityKeyFor(item);
+  const identityKey = useIdentityKeyFor(item);
   const isCurrent = isCurrentIdentity(identityKey);
 
   const hoverSurface =
@@ -224,11 +225,11 @@ function IdentityListItemContent({
 }
 
 function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
-  const { isCurrentIdentity, switchIdentity, client } = useCurrentIdentity();
+  const { isCurrentIdentity, switchIdentity } = useCurrentIdentity();
   const { dismiss } = useIdentitySwitcher();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const identityKey = client.getIdentityKeyFor(item);
+  const identityKey = useIdentityKeyFor(item);
   const isCurrent = isCurrentIdentity(identityKey);
 
   const handleSwitchIdentity = async () => {

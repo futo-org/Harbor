@@ -20,6 +20,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Linking, ScrollView, View } from 'react-native';
+import Topbar from '@/src/common/components/layout/Topbar';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -53,52 +54,53 @@ export default function SettingsTabScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.px_lg, Atoms.flex_1]}>
-          <ScreenHeader title="Settings" />
+        <View style={[Atoms.flex_1]}>
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              Atoms.gap_xl,
-              { paddingBottom: TAB_BAR_HEIGHT + 16 },
-            ]}
+            contentContainerStyle={[{ paddingBottom: TAB_BAR_HEIGHT + 16 }]}
           >
-            <ListItemWrapper
-              onPress={() => router.push(Routes.tabs.settings.identity)}
-            >
-              <>
-                {identityKey && (
-                  <CurrentIdentityBadge identityKey={identityKey} />
-                )}
-              </>
-            </ListItemWrapper>
-
-            <ListItemGroup label="Appearance">
-              <AppearanceSettingRow />
-            </ListItemGroup>
-
-            <ListItemGroup label="Identity">
+            <Topbar title="Settings" />
+            <View style={[Atoms.p_lg, Atoms.gap_xl]}>
               <ListItemWrapper
-                onPress={() => router.push(Routes.tabs.settings.pairIdentity)}
+                onPress={() => router.push(Routes.tabs.settings.identity)}
               >
-                <Text variant="body">Pair Identity</Text>
+                <>
+                  {identityKey && (
+                    <CurrentIdentityBadge identityKey={identityKey} />
+                  )}
+                </>
               </ListItemWrapper>
-            </ListItemGroup>
 
-            <ListItemGroup label="Servers">
-              <ListItemWrapper
-                onPress={() => router.push(Routes.tabs.settings.servers)}
-              >
-                <Text variant="body">Polycentric servers</Text>
-              </ListItemWrapper>
-            </ListItemGroup>
+              <ListItemGroup label="Appearance">
+                <AppearanceSettingRow />
+              </ListItemGroup>
 
-            <ListItemGroup>
-              <ListItemWrapper onPress={() => Linking.openURL(REPORT_BUG_URL)}>
-                <Text variant="body">Report a bug</Text>
-              </ListItemWrapper>
-            </ListItemGroup>
+              <ListItemGroup label="Identity">
+                <ListItemWrapper
+                  onPress={() => router.push(Routes.tabs.settings.pairIdentity)}
+                >
+                  <Text variant="body">Pair Identity</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
 
-            <SourceCodeItem />
+              <ListItemGroup label="Servers">
+                <ListItemWrapper
+                  onPress={() => router.push(Routes.tabs.settings.servers)}
+                >
+                  <Text variant="body">Polycentric servers</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
+
+              <ListItemGroup>
+                <ListItemWrapper
+                  onPress={() => Linking.openURL(REPORT_BUG_URL)}
+                >
+                  <Text variant="body">Report a bug</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
+
+              <SourceCodeItem />
+            </View>
           </ScrollView>
         </View>
       </Screen.PrimaryColumn>

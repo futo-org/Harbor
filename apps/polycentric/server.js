@@ -22,6 +22,7 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.map': 'application/json',
+  '.wasm': 'application/wasm',
 };
 
 function serveStatic(req, res, next) {

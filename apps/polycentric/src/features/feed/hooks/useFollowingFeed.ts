@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { v2 } from '@polycentric/react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
+  PostData,
   usePolycentricContext,
-  type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import { EMPTY_POSTS, NOOP, type FeedHookResult } from './types';
+import { type FeedHookResult, NOOP } from './types';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from './feedCache';
 
 export function useFollowingFeed(options?: {
   limit?: number;
@@ -13,73 +15,33 @@ export function useFollowingFeed(options?: {
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
-  const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const followerIdentity = client.activeIdentityKey || '';
 
-  const fetchFeed = useCallback(async () => {
-    if (client.servers.length === 0) return;
-    if (!client.activeIdentityKey) {
-      setItems(EMPTY_POSTS);
-      return;
+  const query = useQuery(
+    feedQueryKeys.following(),
+    new Query.GetFollowingFeed({ followerIdentity }),
+  );
+
+  const items = useMemo(() => {
+    if (!query.data) {
+      return [];
+    }
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+    const items: PostData[] = [];
+    for (const bundle of response.eventBundles) {
+      const decoded = decodeV2PostBundle(bundle);
+      if (decoded) items.push(decoded);
     }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const bundles = await client.getFeed({
-        algorithm: v2.FeedAlgorithm.FOLLOWING,
-        limit: options?.limit ?? null,
-      });
-      const posts: PostData[] = [];
-      for (const bundle of bundles) {
-        const decoded = decodeV2PostBundle(bundle);
-        if (decoded) posts.push(decoded);
-      }
-      setItems(posts);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [client, options?.limit]);
-
-  useEffect(() => {
-    if (enabled) fetchFeed();
-  }, [enabled, fetchFeed]);
-
-  // Add locally-committed posts to the top of the feed as soon as
-  // they're committed — before the server round-trip.
-  useEffect(() => {
-    const listener = ({
-      signedEvent,
-      content,
-    }: {
-      signedEvent: v2.SignedEvent;
-      content?: v2.Content;
-    }) => {
-      if (!content) return;
-      const decoded = decodeV2PostBundle(
-        v2.EventBundle.create({
-          signedEvent,
-          serializedContent: { contentBytes: v2.Content.toBinary(content) },
-        }),
-      );
-      if (!decoded) return;
-      setItems((prev) =>
-        prev.some((p) => p.id === decoded.id) ? prev : [decoded, ...prev],
-      );
-    };
-    client.events.onContentCreated(listener);
-    return () => client.events.offContentCreated(listener);
-  }, [client]);
+    return items;
+  }, [query.data]);
 
   return {
     items,
-    isLoading,
-    error,
+    isLoading: query.status === QueryStatus.Loading,
+    error: query.error ? new Error(query.error) : null,
     loadMore: NOOP,
     hasMore: false,
-    refresh: fetchFeed,
+    refresh: query.refresh,
   };
 }

@@ -1,0 +1,20 @@
+{
+  "name": "@polycentric/js-node-example-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "examples": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@polycentric/js-node": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "ejs": "^3.1.10"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.20.0",
+    "typescript": "catalog:"
+  }
+}

@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 export default function SetDisplayNameScreen() {
-  const { data, setDisplayName, close, goToNextStep } = useSignup();
+  const { data, setDisplayName, close, finish } = useSignup();
   const [error, setError] = useState<string | null>(null);
 
   const canContinue = data.displayName.trim().length > 0;
@@ -28,7 +28,7 @@ export default function SetDisplayNameScreen() {
       setError('Display name is required');
       return;
     }
-    goToNextStep();
+    finish();
   };
 
   return (

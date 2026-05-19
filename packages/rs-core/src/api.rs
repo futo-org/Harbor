@@ -1,0 +1,427 @@
+use crate::client::PolycentricClient;
+use crate::media::process_image;
+use polycentric_common::models::protos_v2::{
+    content_service_client::ContentServiceClient,
+    event_sync_service_client::EventSyncServiceClient,
+    notification_service_client::NotificationServiceClient,
+    pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
+    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
+    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+};
+use polycentric_common::models::traits::Serializable;
+use prost::Message;
+use std::sync::{Arc, Mutex};
+
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
+compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
+
+fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreError> {
+    crate::query::channel(server_url).map_err(CoreError::Network)
+}
+
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+#[uniffi(flat_error)]
+pub enum CoreError {
+    #[error("Decode: {0}")]
+    Decode(String),
+
+    #[error("Encode: {0}")]
+    Encode(String),
+
+    #[error("Crypto: {0}")]
+    Crypto(String),
+
+    #[error("Store: {0}")]
+    Store(String),
+
+    #[error("Image: {0}")]
+    Image(String),
+
+    #[error("Network: {0}")]
+    Network(String),
+
+    #[error("Callback: {0}")]
+    Callback(String),
+
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+}
+
+impl From<uniffi::UnexpectedUniFFICallbackError> for CoreError {
+    fn from(e: uniffi::UnexpectedUniFFICallbackError) -> Self {
+        CoreError::Callback(e.reason)
+    }
+}
+
+#[derive(uniffi::Record)]
+pub struct ContentEntry {
+    pub digest_bytes: Vec<u8>,
+    pub content_bytes: Vec<u8>,
+}
+
+/// Discriminated union over every observable RPC. `fetch_query`
+/// matches on a variant and dispatches to the corresponding helper.
+/// Adding a new observable RPC means adding a variant here and a
+/// match arm in `fetch_query` — no new FFI method required.
+#[derive(uniffi::Enum)]
+pub enum Query {
+    GetProfile(crate::query::profile::GetProfileArgs),
+    GetEvent(crate::query::event::GetEventArgs),
+    GetPostThread(crate::query::feed::GetPostThreadArgs),
+    GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
+    GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
+    GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
+    ListEvents(crate::query::event::ListEventsArgs),
+}
+
+#[uniffi::export(with_foreign)]
+#[async_trait::async_trait]
+pub trait SignEventCallback: Send + Sync {
+    async fn sign(&self, event_bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
+}
+
+#[derive(uniffi::Object)]
+pub struct PolycentricCore {
+    client: Arc<Mutex<PolycentricClient>>,
+    query_client: crate::query::QueryClient<Vec<u8>>,
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), uniffi::export(async_runtime = "tokio"))]
+#[cfg_attr(target_arch = "wasm32", uniffi::export)]
+impl PolycentricCore {
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        #[cfg(target_arch = "wasm32")]
+        console_error_panic_hook::set_once();
+
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        Arc::new(Self {
+            query_client: crate::query::QueryClient::new(client.clone()),
+            client,
+        })
+    }
+
+    /// Replace the list of gRPC servers the core's `Observable`-returning
+    /// methods will fan out to.
+    pub fn set_servers(&self, servers: Vec<String>) {
+        self.client.lock().unwrap().set_servers(servers);
+    }
+
+    /// Return a snapshot of the currently configured servers.
+    pub fn get_servers(&self) -> Vec<String> {
+        self.client.lock().unwrap().servers()
+    }
+
+    pub fn next_sequence(&self, identity: String, collection: i32) -> u64 {
+        self.client
+            .lock()
+            .unwrap()
+            .next_sequence(&identity, collection)
+    }
+
+    /// Verify each `SignedEvent` (decoding implicitly verifies the
+    /// signature) and copy it into the local event store.
+    pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
+        let mut client = self.client.lock().unwrap();
+        for bytes in signed_events {
+            let signed_event = SignedEvent::from_bytes(&bytes)
+                .map_err(|e| CoreError::Decode(format!("Invalid signed event: {e:?}")))?;
+            client
+                .copy_event(signed_event)
+                .map_err(|e| CoreError::Store(format!("Failed to copy event: {e:?}")))?;
+        }
+        Ok(())
+    }
+
+    /// Insert each (digest, content) pair into the content store.
+    pub fn copy_contents(&self, contents: Vec<ContentEntry>) -> Result<(), CoreError> {
+        let mut client = self.client.lock().unwrap();
+        for entry in contents {
+            let digest = ContentDigest::decode(entry.digest_bytes.as_slice())
+                .map_err(|e| CoreError::Decode(format!("Failed to decode ContentDigest: {e}")))?;
+            client.copy_content(&digest, entry.content_bytes);
+        }
+        Ok(())
+    }
+
+    /// Build a vector clock (returns serialized `VectorClock` proto bytes).
+    pub fn build_vector_clock(
+        &self,
+        identity: String,
+        collection: i32,
+        identity_sequence: u64,
+        signed_by: Vec<u8>,
+        current_sequence: u64,
+    ) -> Result<Vec<u8>, CoreError> {
+        let pk = PublicKey::decode(signed_by.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode signed_by: {e}")))?;
+        let clock = self
+            .client
+            .lock()
+            .unwrap()
+            .build_vector_clock(
+                &identity,
+                collection,
+                identity_sequence,
+                &pk,
+                current_sequence,
+            )
+            .map_err(|e| CoreError::Store(format!("build_vector_clock: {e}")))?;
+        Ok(clock.encode_to_vec())
+    }
+
+    /// Decode + verify a `SignedEvent`, returning its canonical bytes.
+    pub fn verify_signed_event(&self, signed_event: Vec<u8>) -> Result<Vec<u8>, CoreError> {
+        let signed_event = SignedEvent::from_bytes(&signed_event)
+            .map_err(|e| CoreError::Crypto(format!("Failed to verify signed event: {e}")))?;
+        signed_event
+            .to_bytes()
+            .map_err(|e| CoreError::Encode(format!("Failed to encode signed event: {e}")))
+    }
+
+    /// Sign event bytes via a foreign callback. Validates the inner
+    /// `Event`, calls the callback to produce signature bytes, assembles
+    /// a `SignedEvent`, and re-verifies before returning the canonical
+    /// `SignedEvent` bytes.
+    pub async fn sign_event(
+        &self,
+        event_bytes: Vec<u8>,
+        callback: Arc<dyn SignEventCallback>,
+    ) -> Result<Vec<u8>, CoreError> {
+        Event::decode(event_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Invalid event bytes: {e}")))?;
+
+        let signature = callback.sign(event_bytes.clone()).await?;
+
+        let signed_event = SignedEvent {
+            signature,
+            event_bytes,
+        };
+
+        let signed_event_bytes = signed_event
+            .to_bytes()
+            .map_err(|e| CoreError::Encode(format!("Failed to encode signed event: {e}")))?;
+
+        SignedEvent::from_bytes(&signed_event_bytes)
+            .map_err(|e| CoreError::Crypto(format!("Event signature invalid: {e:?}")))?;
+
+        Ok(signed_event_bytes)
+    }
+
+    /// Returns serialized `ListEventsResponse` proto bytes for the
+    /// non-tombstoned events on (identity, collection).
+    pub fn list_valid_events(
+        &self,
+        identity: String,
+        collection: i32,
+    ) -> Result<Vec<u8>, CoreError> {
+        let event_bundles = self
+            .client
+            .lock()
+            .unwrap()
+            .list_valid_events(&identity, collection)
+            .map_err(|e| CoreError::Store(format!("list_valid_events: {e}")))?;
+
+        let response = ListEventsResponse {
+            event_bundles,
+            previous_token: String::new(),
+            next_token: String::new(),
+        };
+
+        Ok(response.encode_to_vec())
+    }
+
+    /// Decode `image`, resize to `width`x`height` per `mode` ("fill" or
+    /// "fit"), encode as JPEG.
+    pub fn process_image_to_jpeg(
+        &self,
+        image: Vec<u8>,
+        width: u32,
+        height: u32,
+        mode: String,
+    ) -> Result<Vec<u8>, CoreError> {
+        let mode = match mode.as_str() {
+            "fit" => process_image::ResizeMode::Fit,
+            _ => process_image::ResizeMode::Fill,
+        };
+        process_image::process_image(&image, width, height, mode)
+            .map_err(|e| CoreError::Image(format!("process_image failed: {e}")))
+    }
+
+    // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
+
+    /// Unified entry point for every observable RPC. `query` selects
+    /// which RPC to run and supplies its parameters; `query_key` is
+    /// the cache key shared across subscribers; `opts` carries the
+    /// optional fetch mode and per-call servers override. Always
+    /// returns a `QueryObservable` regardless of variant.
+    pub fn fetch_query(
+        &self,
+        query_key: crate::query::QueryKey,
+        query: Query,
+        opts: Option<crate::query::QueryOpts>,
+    ) -> Arc<dyn crate::query::QueryObservable> {
+        match query {
+            Query::GetProfile(args) => {
+                crate::query::profile::get_profile(&self.query_client, query_key, args, opts)
+            }
+            Query::GetEvent(args) => {
+                crate::query::event::get_event(&self.query_client, query_key, args, opts)
+            }
+            Query::GetPostThread(args) => {
+                crate::query::feed::get_post_thread(&self.query_client, query_key, args, opts)
+            }
+            Query::GetIdentityFeed(args) => {
+                crate::query::feed::get_identity_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::GetFollowingFeed(args) => {
+                crate::query::feed::get_following_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::GetExploreFeed(args) => {
+                crate::query::feed::get_explore_feed(&self.query_client, query_key, args, opts)
+            }
+            Query::ListEvents(args) => {
+                crate::query::event::list_events(&self.query_client, query_key, args, opts)
+            }
+        }
+    }
+
+    /// Clear the per-server cache for `query_key`, notify live
+    /// subscribers with `Loading(None)`, then trigger a fresh fan-out.
+    /// No-op when the key has never been queried.
+    pub fn invalidate_query(&self, query_key: crate::query::QueryKey) {
+        self.query_client.invalidate(&query_key);
+    }
+
+    /// Push event bundles to a server.
+    pub async fn put_events(
+        &self,
+        server_url: String,
+        event_bundles_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        let request = PutEventsRequest::decode(event_bundles_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode PutEventsRequest: {e}")))?;
+        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
+        client
+            .put_events(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("put_events: {e}")))?;
+        Ok(())
+    }
+
+    /// Fetch a server's public info. Returns serialized
+    /// `GetServerInfoResponse` proto bytes.
+    pub async fn get_server_info(&self, server_url: String) -> Result<Vec<u8>, CoreError> {
+        let mut client = ServerServiceClient::new(channel(&server_url)?);
+        let response = client
+            .get_info(GetServerInfoRequest {})
+            .await
+            .map_err(|e| CoreError::Network(format!("get_server_info: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Upload a blob body to a server. The server verifies that `body`
+    /// matches the declared `Blob.digest`.
+    pub async fn upload_blob(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        let request = UploadBlobRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode UploadBlobRequest: {e}")))?;
+        let mut client = ContentServiceClient::new(channel(&server_url)?);
+        client
+            .upload_blob(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("upload_blob: {e}")))?;
+        Ok(())
+    }
+
+    /// Create a pairing session on the server. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping an `InitialPairingSession`.
+    /// Returns serialized `PairingSession` proto bytes.
+    pub async fn create_pairing_session(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .create_pairing_session(CreatePairingSessionRequest {
+                signed_message: Some(signed),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("create_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("create_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
+    }
+
+    /// Fetch a pairing session by its signature. Returns serialized
+    /// `PairingSession` proto bytes.
+    pub async fn get_pairing_session(
+        &self,
+        server_url: String,
+        pairing_session_signature: String,
+    ) -> Result<Vec<u8>, CoreError> {
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .get_pairing_session(GetPairingSessionRequest {
+                pairing_session_signature,
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("get_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("get_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
+    }
+
+    /// Join an existing pairing session. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
+    /// Returns serialized `PairingSession` proto bytes.
+    pub async fn join_pairing_session(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let response = client
+            .join_pairing_session(JoinPairingSessionRequest {
+                signed_message: Some(signed),
+            })
+            .await
+            .map_err(|e| CoreError::Network(format!("join_pairing_session: {e}")))?;
+        let session = response
+            .into_inner()
+            .session
+            .ok_or_else(|| CoreError::Network("join_pairing_session: missing session".into()))?;
+        Ok(session.encode_to_vec())
+    }
+
+    /// Register a push notification token. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping a
+    /// `RegisterPushNotificationRequest`.
+    pub async fn register_push_notifications(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = NotificationServiceClient::new(channel(&server_url)?);
+        client
+            .register_push_notifications(signed)
+            .await
+            .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
+        Ok(())
+    }
+}

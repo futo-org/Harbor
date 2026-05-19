@@ -16,13 +16,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'polycentric',
   version: '0.0.1',
   orientation: 'portrait',
-  icon: './src/common/assets/images/AppIcon.png',
+  icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
   scheme: 'polycentric',
   web: {
     output: 'server',
   },
   userInterfaceStyle: 'automatic',
   ios: {
+    icon: {
+      dark: './src/common/assets/images/app-icons/ios-icon-dark.png',
+      light: './src/common/assets/images/app-icons/ios-icon-default.png',
+      tinted: './src/common/assets/images/app-icons/ios-icon-monochrome.png',
+    },
     supportsTablet: true,
     bundleIdentifier: ID,
     infoPlist: {
@@ -34,10 +39,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './src/common/assets/images/AppIcon.png',
-      backgroundColor: '#ffffff',
+      foregroundImage:
+        './src/common/assets/images/app-icons/android-icon-foreground.png',
+      monochromeImage:
+        './src/common/assets/images/app-icons/android-icon-monochrome.png',
+      backgroundImage:
+        './src/common/assets/images/app-icons/android-icon-background.png',
+      backgroundColor: '#F2F5F9',
     },
-    edgeToEdgeEnabled: true,
     package: ID,
     permissions: ['android.permission.CAMERA'],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
@@ -47,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './src/common/assets/images/AppIcon.png',
+        image: './src/common/assets/images/app-icons/ios-icon-default.png',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#F2F5F9',

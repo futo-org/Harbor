@@ -1,3 +1,1 @@
-export default function Activity() {
-  return null;
-}
+export { default } from '@/src/features/activity/ActivityScreen';

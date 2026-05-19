@@ -1,4 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2';
+import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 import { COLLECTION } from '../constants';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
@@ -111,7 +112,7 @@ export class IdentityManager {
 
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
-    this.client.setActiveIdentityKey(resolvedIdentityKey);
+    await this.client.setActiveIdentityKey(resolvedIdentityKey);
 
     let event: Proto.Event;
     if (isBootstrap) {
@@ -158,24 +159,34 @@ export class IdentityManager {
   ): Promise<IdentityState> {
     const targetServer = server ?? this.client.servers[0];
     if (!targetServer) throw new Error('No servers configured');
-    if (!this.client.core) {
-      throw new Error('Core not initialized');
-    }
 
     // Ask targetServer for the latest identity event for the identity.
     // This is specifically intended for polling while pairing to an identity.
-    const response = Proto.ListEventsResponse.fromBinary(
-      await this.client.core.list_events(
-        targetServer,
-        1,
-        identityKey,
-        COLLECTION.IDENTITY,
-        null,
-        null,
-        null,
-        null,
-      ),
-    );
+    const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const observable = this.client.core.fetchQuery(
+        ['list_events_for_server', targetServer, identityKey],
+        new Query.ListEvents({
+          size: 1,
+          identity: identityKey,
+          collection: COLLECTION.IDENTITY,
+        }),
+        { servers: [targetServer] },
+      );
+      const subscription = observable.subscribe({
+        next: (result) => {
+          if (result.status === QueryStatus.Success) {
+            subscription.unsubscribe();
+            resolve(new Uint8Array(result.data ?? new ArrayBuffer(0)));
+          }
+        },
+        error: (message: string) => {
+          subscription.unsubscribe();
+          reject(new Error(message));
+        },
+        complete: () => {},
+      });
+    });
+    const response = Proto.ListEventsResponse.fromBinary(bytes);
     const bundle = response.eventBundles[0];
 
     if (!bundle?.signedEvent || !bundle.serializedContent) {
@@ -186,8 +197,8 @@ export class IdentityManager {
     const serializedContent = bundle.serializedContent;
 
     // Verify signature against event.key.signed_by via core.
-    this.client.core.verify_signed_event(
-      Proto.SignedEvent.toBinary(signedEvent),
+    this.client.core.verifySignedEvent(
+      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
     );
 
     const event = Proto.Event.fromBinary(signedEvent.eventBytes);
@@ -240,7 +251,7 @@ export class IdentityManager {
       throw new Error('Current key is not authorized for this identity');
     }
 
-    this.client.setActiveIdentityKey(identityKey);
+    await this.client.setActiveIdentityKey(identityKey);
     await this.client.pull();
 
     // Re-publish the same identity document signed by our own key,

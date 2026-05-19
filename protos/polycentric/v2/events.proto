@@ -48,6 +48,14 @@ message EventBundle {
   optional SerializedContent serialized_content = 2;
 }
 
+// Hints are additional events that the server provides that may be
+// useful to the client and avoid additional network requests.
+// For example, a reply to post event could return the root/parent posts along with the
+// most recent profile event
+message EventHint {
+  EventBundle event_bundle = 1;
+}
+
 message ListEventsFilters {
   // Collection to filter events by
   optional int32 collection = 1;

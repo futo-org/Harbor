@@ -1,1 +1,0 @@
-export const DEFAULT_SERVER = 'https://serv1.polycentric.io';

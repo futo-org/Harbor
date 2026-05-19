@@ -1,0 +1,36 @@
+{
+  "name": "@polycentric/js-node",
+  "version": "0.0.0",
+  "description": "Polycentric SDK for Node.js applications",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsc -p . --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.0",
+    "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-storage-sqlite": "workspace:*",
+    "@polycentric/rs-core-uniffi-web": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@polycentric/tsconfig": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "typescript": "catalog:"
+  }
+}

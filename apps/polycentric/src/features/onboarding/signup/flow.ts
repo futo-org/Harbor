@@ -2,9 +2,9 @@ import { Routes } from '@/src/common/constants/routes';
 
 export const SIGNUP_STEPS = [
   Routes.onboarding.signup.setDisplayName,
-  Routes.onboarding.signup.setAbout,
-  Routes.onboarding.signup.setAvatar,
-  Routes.onboarding.signup.setModeration,
+  // Routes.onboarding.signup.setAbout,
+  // Routes.onboarding.signup.setAvatar,
+  // Routes.onboarding.signup.setModeration,
 ] as const;
 
 export type SignupRoute = (typeof SIGNUP_STEPS)[number];

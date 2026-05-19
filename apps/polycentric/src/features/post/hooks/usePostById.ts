@@ -1,72 +1,69 @@
-import { useEffect, useState } from 'react';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { useMemo } from 'react';
+import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
-  usePolycentricContext,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 /**
  * Load a single post by its (identity, sequence) route params.
  *
- * Uses `listEvents` with `sequenceGt = seq - 1` / `sequenceLt = seq + 1` to
- * pin the query to exactly one sequence number server-side. No local cache —
- * the detail screen re-queries when it mounts.
+ * Subscribes to `core.getEvent`, which checks the local store first
+ * and falls back to a `ListEvents` query with `sequenceGt = seq - 1`
+ * / `sequenceLt = seq + 1` to pin the network query to exactly one
+ * sequence. `keyFingerprint` is used only to verify the returned
+ * bundle matches the expected signer; the rust side picks the first
+ * local-store hit at that sequence.
  */
 export function usePostById(
   identityId: string | undefined,
-  sequence: string | undefined,
+  keyFingerprint: string | undefined,
+  sequence: bigint | undefined,
 ): { post: PostData | null; isLoading: boolean; error: Error | null } {
-  const { client } = usePolycentricContext();
-  const [post, setPost] = useState<PostData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const enabled = !!identityId && sequence != null && !!keyFingerprint;
 
-  useEffect(() => {
-    const seqNum = sequence ? Number(sequence) : NaN;
-    if (!identityId || !Number.isFinite(seqNum)) {
-      setPost(null);
-      return;
-    }
+  const query = useQuery(
+    [
+      'event',
+      String(COLLECTION.FEED),
+      identityId ?? '',
+      sequence?.toString() ?? '',
+    ],
+    new Query.GetEvent({
+      identity: identityId ?? '',
+      collection: COLLECTION.FEED,
+      sequence: sequence ?? 0n,
+    }),
+    undefined,
+    enabled,
+  );
 
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-
-    (async () => {
-      try {
-        const bundles = await client.listEvents({
-          identity: identityId,
-          collection: COLLECTION.FEED,
-          sequenceGt: seqNum - 1,
-          sequenceLt: seqNum + 1,
-        });
-        if (cancelled) return;
-
-        const match = bundles.find((b) => {
-          if (!b.signedEvent) return false;
-          try {
-            const ev = v2.Event.fromBinary(b.signedEvent.eventBytes);
-            return Number(ev.key?.sequence) === seqNum;
-          } catch {
-            return false;
-          }
-        });
-
-        setPost(match ? decodeV2PostBundle(match) : null);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e : new Error(String(e)));
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
+  const post = useMemo<PostData | null>(() => {
+    if (!enabled) return null;
+    if (!query.data || query.data.byteLength === 0) return null;
+    try {
+      const bundle = v2.EventBundle.fromBinary(new Uint8Array(query.data));
+      if (!bundle.signedEvent) return null;
+      const ev = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+      // Verify the signer fingerprint matches the URL so a sequence
+      // collision across signers doesn't render the wrong post.
+      if (
+        getKeyFingerprint(ev.key?.signedBy) !== keyFingerprint ||
+        ev.key?.sequence !== sequence
+      ) {
+        return null;
       }
-    })();
+      return decodeV2PostBundle(bundle);
+    } catch {
+      return null;
+    }
+  }, [enabled, query.data, keyFingerprint, sequence]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [client, identityId, sequence]);
-
-  return { post, isLoading, error };
+  return {
+    post,
+    isLoading: query.isLoading,
+    error: query.error ? new Error(query.error) : null,
+  };
 }

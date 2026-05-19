@@ -20,6 +20,7 @@ ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 ARG SKIP_WORKSPACE_BUILD=
 
 COPY .npmrc turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY patches patches
 COPY apps apps
 COPY packages packages
 COPY tools tools

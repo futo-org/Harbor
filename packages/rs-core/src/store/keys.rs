@@ -16,21 +16,19 @@ pub struct EventKey {
 }
 
 impl EventKey {
-    pub fn from_event(event: &Event) -> Result<Self, CoreError> {
+    pub fn from_event(event: Event) -> Result<Self, CoreError> {
         let key = event
             .key
-            .as_ref()
             .ok_or_else(|| CoreError::InvalidEvent("Missing key".to_string()))?;
         let signed_by = key
             .signed_by
-            .as_ref()
             .ok_or_else(|| CoreError::InvalidEvent("Missing signed_by".to_string()))?;
 
         Ok(EventKey {
-            identity: key.identity.clone(),
+            identity: key.identity,
             collection: key.collection,
             signed_by_key_type: signed_by.key_type,
-            signed_by_key: signed_by.key.clone(),
+            signed_by_key: signed_by.key,
             sequence: key.sequence,
         })
     }
@@ -38,6 +36,6 @@ impl EventKey {
     pub fn from_signed_event(signed_event: &SignedEvent) -> Result<Self, CoreError> {
         let event = Event::decode(signed_event.event_bytes.as_slice())
             .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
-        Self::from_event(&event)
+        Self::from_event(event)
     }
 }

@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
+  PostData,
   usePolycentricContext,
-  type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import { EMPTY_POSTS, NOOP, type FeedHookResult } from './types';
+import { type FeedHookResult, NOOP } from './types';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from './feedCache';
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -12,39 +15,35 @@ export function useExploreFeed(options?: {
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
-  const [items, setItems] = useState<PostData[]>(EMPTY_POSTS);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const identity = client.activeIdentityKey ?? '';
 
-  const fetchFeed = useCallback(async () => {
-    if (client.servers.length === 0) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const bundles = await client.listEvents();
-      const posts: PostData[] = [];
-      for (const bundle of bundles) {
-        const decoded = decodeV2PostBundle(bundle);
-        if (decoded) posts.push(decoded);
-      }
-      setItems(posts);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
+  const query = useQuery(
+    feedQueryKeys.explore(identity),
+    new Query.GetExploreFeed({
+      identity: identity === '' ? undefined : identity,
+    }),
+  );
+
+  const items = useMemo(() => {
+    if (!query.data) {
+      return [];
     }
-  }, [client]);
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+    const items: PostData[] = [];
+    for (const bundle of response.eventBundles) {
+      const decoded = decodeV2PostBundle(bundle);
+      if (decoded) items.push(decoded);
+    }
 
-  useEffect(() => {
-    if (enabled) fetchFeed();
-  }, [enabled, fetchFeed]);
+    return items;
+  }, [query.data]);
 
   return {
     items,
-    isLoading,
-    error,
+    isLoading: query.status === QueryStatus.Loading,
+    error: query.error ? new Error(query.error) : null,
     loadMore: NOOP,
     hasMore: false,
-    refresh: fetchFeed,
+    refresh: query.refresh,
   };
 }

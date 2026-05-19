@@ -6,6 +6,7 @@ import {
   TextArea,
 } from '@/src/common/components/primitives';
 import {
+  hexToBytes,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
@@ -29,6 +30,12 @@ import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { useComposerStore } from './hooks/useComposerStore';
 import { Routes } from '@/src/common/constants';
 import { router } from 'expo-router';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
+import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
+import {
+  feedQueryKeys,
+  injectPostIntoFeedCache,
+} from '@/src/features/feed/hooks/feedCache';
 
 const MAX_ATTACHMENTS = 4;
 const THUMBNAIL_SIZE = 72;
@@ -54,7 +61,7 @@ export function ComposeSheetInner({
   const client = usePolycentric();
   const { identityKey: currentIdentityKey, identity: currentIdentity } =
     useCurrentIdentity();
-  const username = useUsername(currentIdentityKey);
+
   const { theme } = useTheme();
 
   const onPostCreatedRef = useRef(onPostCreated);
@@ -66,6 +73,12 @@ export function ComposeSheetInner({
     signedBy: replyTo?.signedBy,
     sequence: BigInt(replyTo?.sequence ?? 0),
   });
+
+  // If replyTo is itself a reply, inherit its root.
+  // Otherwise, replyTo *is* the root.
+  const replyRootEventKey = replyTo?.reply?.rootId
+    ? v2.EventKey.fromBinary(hexToBytes(replyTo.reply.rootId))
+    : replyToEventKey;
 
   const replyAuthorName = useUsername(replyTo?.identity ?? null);
   const replyContent = replyTo?.content ?? '';
@@ -156,7 +169,7 @@ export function ComposeSheetInner({
 
       if (isReply) {
         post.reply = {
-          root: replyToEventKey,
+          root: replyRootEventKey,
           parent: replyToEventKey,
         };
       }
@@ -172,19 +185,40 @@ export function ComposeSheetInner({
 
       const signedEvent = await client.signEvent(event);
 
-      // `commitEvent` persists the event locally and, when content is
-      // passed, seeds the core's content store + emits contentCreated
-      // with both signedEvent and content so feeds can decode directly.
+      const newBundle = v2.EventBundle.create({
+        signedEvent,
+        serializedContent: { contentBytes: v2.Content.toBinary(content) },
+      });
+      const identity = currentIdentityKey ?? '';
+
+      // Optimistically add the new event to the below query
+      if (isReply && replyTo) {
+        injectReplyIntoThreadCache(replyTo.id, newBundle);
+      }
+      injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
+      injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
+      injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
+
+      // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
 
-      resetComposer();
+      setSubmitting(false);
       await dismissSheet(DismissReason.PostSubmitted);
-      void client.sync().catch((err) => {
-        console.warn('compose sync failed:', err);
-      });
-      // TODO
-      // await onPostCreatedRef.current(signedEvent);
+      resetComposer();
+
+      void client
+        .sync()
+        .then(() => {
+          // Invalidate all the caches now the post has been successfully submitted
+          invalidateQuery(client, feedQueryKeys.following());
+          invalidateQuery(client, feedQueryKeys.identity(identity));
+          invalidateQuery(client, feedQueryKeys.explore(identity));
+        })
+        .catch((err) => {
+          console.warn('compose sync failed:', err);
+        });
     } catch (err) {
+      console.error(err);
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
     } finally {
@@ -195,9 +229,11 @@ export function ComposeSheetInner({
     attachments,
     submitting,
     client,
+    currentIdentityKey,
     dismissSheet,
     isReply,
     replyToEventKey,
+    replyRootEventKey,
     resetComposer,
     setSubmitting,
     setError,
@@ -212,7 +248,7 @@ export function ComposeSheetInner({
       <SheetHeaderBlock
         title={title}
         onClose={handleClose}
-        closeDisabled={submitting}
+        //closeDisabled={submitting}
         trailing={
           isWeb ? (
             <View style={{ minWidth: 80 }} />
@@ -231,7 +267,7 @@ export function ComposeSheetInner({
                 />
               ) : (
                 <Button
-                  title="Post"
+                  title={'Post'}
                   onPress={handlePost}
                   variant="primary"
                   disabled={!canPost}
@@ -321,7 +357,7 @@ export function ComposeSheetInner({
               autoFocus
               value={text}
               onChangeText={setText}
-              disabled={submitting}
+              // disabled={submitting}
               maxLength={2000}
               style={[
                 Atoms.px_0,

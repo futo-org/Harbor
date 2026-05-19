@@ -1,41 +1,20 @@
-build_ios_device_task:
-  name: buildRsCoreIOSDevice
+build_ios_task:
+  name: buildReactNativeIOS
   macos_instance:
     image: ghcr.io/cirruslabs/macos-sequoia-xcode:26.2
-  buildRsCoreIOSDevice_script:
+  build_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source "$HOME/.cargo/env"
-    - cd packages/rs-core
-    - brew install just protobuf llvm
-    - just build-ffi-ios
-    - cp ../../target/aarch64-apple-ios/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-device.a
+    - brew install just protobuf cmake ninja clang-format pnpm
+    - cd packages/react-native
+    - |
+      rustup target add \
+        aarch64-apple-ios \
+        aarch64-apple-ios-sim \
+        x86_64-apple-ios
+    - pnpm i
+    - pnpm ubrn:ios
   binary_artifacts:
-    path: 'libpolycentric_core-ios-device.a'
-
-build_ios_sim_arm64_task:
-  name: buildRsCoreIOSSimArm64
-  macos_instance:
-    image: ghcr.io/cirruslabs/macos-sequoia-xcode:26.2
-  buildRsCoreIOSSimArm64_script:
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - source "$HOME/.cargo/env"
-    - cd packages/rs-core
-    - brew install just protobuf llvm
-    - just build-ffi-ios-sim
-    - cp ../../target/aarch64-apple-ios-sim/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-sim-arm64.a
-  binary_artifacts:
-    path: 'libpolycentric_core-ios-sim-arm64.a'
-
-build_ios_sim_x86_task:
-  name: buildRsCoreIOSSimX86
-  macos_instance:
-    image: ghcr.io/cirruslabs/macos-sequoia-xcode:26.2
-  buildRsCoreIOSSimX86_script:
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - source "$HOME/.cargo/env"
-    - cd packages/rs-core
-    - brew install just protobuf llvm
-    - just build-ffi-ios-sim-x86
-    - cp ../../target/x86_64-apple-ios/release-rs-core/libpolycentric_core.a ../../libpolycentric_core-ios-sim-x86_64.a
-  binary_artifacts:
-    path: 'libpolycentric_core-ios-sim-x86_64.a'
+    path: 'packages/react-native/ios/**/*'
+  xcframework_artifacts:
+    path: 'packages/react-native/PolycentricReactNativeFramework.xcframework/**/*'

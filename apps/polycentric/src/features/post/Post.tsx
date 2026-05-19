@@ -5,7 +5,6 @@ import {
 } from '@/src/common/components/primitives';
 import { openCompose, Routes } from '@/src/common/constants';
 import {
-  postIdToSequence,
   timeAgo,
   truncateName,
   type PostData,
@@ -15,9 +14,14 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import { PostImages } from './PostImages';
 import { PostToolbar } from './PostToolbar';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import {
+  getKeyFingerprint,
+  hexToBytes,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -37,14 +41,13 @@ interface PostProps {
 
 export const Post = memo(function Post({
   post,
-  hideReplyingTo: _hideReplyingTo = false,
+  hideReplyingTo = false,
   disablePress = false,
   showThreadLineAbove = false,
   showThreadLineBelow = false,
   hideBottomBorder = false,
 }: PostProps) {
   const { theme } = useTheme();
-  const postId = post.id;
 
   const authorIdentity = post.identity ?? null;
 
@@ -54,9 +57,9 @@ export const Post = memo(function Post({
   const rawContent = post.content ?? '';
   const [contentExpanded, setContentExpanded] = useState(false);
 
-  useEffect(() => {
-    setContentExpanded(false);
-  }, [postId]);
+  // useEffect(() => {
+  //   setContentExpanded(false);
+  // }, [postId]);
 
   const { displayContent, isTruncatedPreview, showContentExpandToggle } =
     useMemo(() => {
@@ -85,11 +88,14 @@ export const Post = memo(function Post({
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    if (!authorIdentity) return;
-    const sequence = postIdToSequence(postId);
-    if (!sequence) return;
-    router.push(Routes.tabs.post(authorIdentity, sequence));
-  }, [disablePress, authorIdentity, postId]);
+    router.push(
+      Routes.tabs.post(
+        post.identity,
+        getKeyFingerprint(post.signedBy)!,
+        post.sequence,
+      ),
+    );
+  }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
     if (!authorIdentity) return;
@@ -97,11 +103,8 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const handleReply = useCallback(() => {
-    if (!authorIdentity) return;
-    const sequence = postIdToSequence(postId);
-    if (!sequence) return;
-    openCompose({ replyTo: { identityId: authorIdentity, sequence } });
-  }, [authorIdentity, postId]);
+    openCompose({ replyTo: post.id });
+  }, [authorIdentity, post]);
 
   const handleLike = useCallback(() => {}, []);
 
@@ -120,7 +123,7 @@ export const Post = memo(function Post({
       role="article"
       style={({ pressed }) => [
         Atoms.w_full,
-        Atoms.px_lg,
+        Atoms.px_md,
         !hideBottomBorder && {
           borderBottomWidth: 1,
           borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
@@ -133,7 +136,7 @@ export const Post = memo(function Post({
       disabled={disablePress}
     >
       {/* Top padding bar */}
-      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
+      <View style={[Atoms.flex_row, Atoms.gap_md]}>
         <View
           style={[
             Atoms.align_center,
@@ -164,7 +167,7 @@ export const Post = memo(function Post({
       </View>
 
       {/* Main post body */}
-      <View style={[Atoms.flex_row, Atoms.gap_lg]}>
+      <View style={[Atoms.flex_row, Atoms.gap_md]}>
         {/* Left side (avatar and thread line) */}
         <View style={[Atoms.align_center]}>
           {authorIdentity ? (
@@ -192,21 +195,15 @@ export const Post = memo(function Post({
         </View>
 
         {/* Main post content */}
-        <View style={[Atoms.flex_1, Atoms.pb_md]}>
+        <View style={[Atoms.flex_1, Atoms.pb_md, Atoms.gap_2xs]}>
           {/* Author name and other topbar items */}
-          <View
-            style={[
-              Atoms.flex_row,
-              Atoms.justify_between,
-              { alignItems: 'baseline', marginTop: -1 },
-            ]}
-          >
+          <View style={[Atoms.flex_row, Atoms.align_center]}>
             <View
               style={[
                 Atoms.flex_1,
                 Atoms.flex_row,
                 Atoms.gap_xs,
-                { alignItems: 'baseline' },
+                Atoms.align_center,
               ]}
             >
               <PostAuthorName
@@ -214,26 +211,32 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <IdentityTag
-                  identity={authorIdentity}
-                  style={{ transform: [{ translateY: 1 }] }}
-                />
+                <IdentityTag identity={authorIdentity} />
+              ) : null}
+
+              {time ? (
+                <>
+                  <Text
+                    variant="secondary"
+                    color="neutral_500"
+                    fontWeight="bold"
+                  >
+                    ·
+                  </Text>
+                  <Text variant="secondary" color="neutral_500">
+                    {time}
+                  </Text>
+                </>
               ) : null}
             </View>
-
-            {time ? (
-              <Text
-                variant="small"
-                color="neutral_500"
-                style={{ lineHeight: 18, marginLeft: 8 }}
-              >
-                {time}
-              </Text>
-            ) : null}
           </View>
 
+          {!hideReplyingTo && post.reply?.parentId ? (
+            <ReplyingToSubheader parentId={post.reply.parentId} />
+          ) : null}
+
           {displayContent ? (
-            <Text variant="secondary" style={[Atoms.mt_xs]}>
+            <Text variant="secondary">
               {displayContent}
               {isTruncatedPreview ? '...' : ''}
             </Text>
@@ -244,7 +247,7 @@ export const Post = memo(function Post({
               onPress={toggleContentExpanded}
               onHoverIn={onExpandHoverIn}
               onHoverOut={onExpandHoverOut}
-              style={{ marginTop: 2, alignSelf: 'flex-start' }}
+              style={[Atoms.self_start]}
             >
               <Text
                 variant="small"
@@ -265,13 +268,47 @@ export const Post = memo(function Post({
             onDislike={handleDislike}
             liked={liked}
             disliked={disliked}
-            style={{ marginTop: 8 }}
+            style={[Atoms.mt_sm]}
           />
         </View>
       </View>
     </Pressable>
   );
 });
+
+function ReplyingToSubheader({ parentId }: { parentId: string }) {
+  const parentIdentity = useMemo(() => {
+    try {
+      return v2.EventKey.fromBinary(hexToBytes(parentId)).identity;
+    } catch {
+      return null;
+    }
+  }, [parentId]);
+
+  const parentProfile = useProfile(parentIdentity);
+  const parentName = parentProfile.name ?? '';
+
+  const handlePress = useCallback(() => {
+    if (!parentIdentity) return;
+    router.push(Routes.tabs.profile(parentIdentity));
+  }, [parentIdentity]);
+
+  if (!parentIdentity) return null;
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={[Atoms.flex_row, Atoms.align_center, Atoms.self_start]}
+    >
+      <Text variant="secondary" color="neutral_500" fontWeight="regular">
+        Replying to{' '}
+      </Text>
+      <Text variant="secondary" color="primary_500">
+        {truncateName(parentName || '…', 24)}
+      </Text>
+    </Pressable>
+  );
+}
 
 function PostAuthorName({
   name,
@@ -287,10 +324,7 @@ function PostAuthorName({
       <Text
         variant="secondary"
         fontWeight="bold"
-        style={[
-          { lineHeight: 18 },
-          hovered && { textDecorationLine: 'underline' },
-        ]}
+        style={[hovered && { textDecorationLine: 'underline' }]}
       >
         {truncateName(name, 16)}
       </Text>

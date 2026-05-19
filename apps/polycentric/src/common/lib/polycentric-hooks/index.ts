@@ -12,6 +12,7 @@ export { useUsername } from './PolycentricProvider';
 
 // Action hooks
 export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
+export { useIdentityKeyFor } from './useIdentityKeyFor';
 
 // Store
 export { useStore } from './store';
@@ -25,15 +26,14 @@ export {
 
 // Helpers
 export {
-  decodeV2PostBundle,
+  decodePostBundle as decodeV2PostBundle,
   pubkeyStr,
   identiconUrl,
   pickImageVariant,
   timeAgo,
   bytesToHex,
+  bundleEventId,
   hexToBytes,
-  eventKey,
-  postIdToSequence,
   truncateName,
   publicKeyToString,
   stringToPublicKey,
@@ -47,4 +47,4 @@ export {
   toBase64,
   fromBase64,
 } from './helpers';
-export type { EventKeyRef, PostData } from './helpers';
+export type { PostData } from './helpers';

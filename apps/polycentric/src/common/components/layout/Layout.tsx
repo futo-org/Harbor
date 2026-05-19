@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import { Ionicons } from '@expo/vector-icons';
-import WEB_LOGO from '../../assets/images/WebLogo.png';
+import WEB_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
@@ -141,6 +141,7 @@ function Screen({
       style={[
         Atoms.flex_row,
         Atoms.flex_1,
+        { backgroundColor: theme.palette.neutral_0 },
         { paddingTop: insets.top },
         !isWeb && {
           borderBottomWidth: 1,
@@ -151,6 +152,27 @@ function Screen({
     >
       {showLeftSidebar && <LeftSidebar />}
       <Main>{body}</Main>
+      {!isWeb && insets.top > 0 ? (
+        // Opaque cap that sits on top of all descendants and visually
+        // masks any content that overflows into the status-bar zone
+        // (FlashList items scrolling past `paddingTop`, sliding sticky
+        // headers, animation glitches, etc.). Avoids `overflow: hidden`
+        // on Screen so shadows / scroll bounces aren't clipped.
+        <View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: insets.top,
+              backgroundColor: theme.palette.neutral_0,
+              zIndex: 1,
+            },
+          ]}
+        />
+      ) : null}
     </View>
   );
 }

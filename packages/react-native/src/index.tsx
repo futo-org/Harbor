@@ -1,9 +1,30 @@
 import 'fast-text-encoding';
 
+// Side-effect: ubrn-generated TurboModule install + uniffi version check.
+import './uniffi-init';
+
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';
+
+export {
+  FetchMode,
+  PolycentricCore,
+  Query,
+  QueryStatus,
+  setLogger,
+} from './generated/rn/polycentric_core';
+export type {
+  EventKey,
+  Logger,
+  PublicKey,
+  QueryObservable,
+  QueryObserver,
+  QueryResultFfi,
+  QueryOpts,
+} from './generated/rn/polycentric_core';
 
 export {
   createPolycentricClient,
   createIdentity,
 } from './create-polycentric-client';
+export type { CreatePolycentricClientConfig } from './create-polycentric-client';

@@ -1,25 +1,34 @@
 import { BackButton, Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import { Atoms } from '@/src/common/theme';
-import { ConversationView } from '@/src/features/post/ConversationView';
+import { ThreadList } from '@/src/features/post/ThreadList';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function FeedPostScreen() {
-  const { identityId, postId: sequenceParam } = useLocalSearchParams<{
+  const {
+    identityId,
+    keyFingerprint,
+    sequence = '',
+  } = useLocalSearchParams<{
     identityId: string;
-    postId: string;
+    keyFingerprint: string;
+    sequence: string;
   }>();
 
-  const { post, isLoading } = usePostById(identityId, sequenceParam);
+  const { post, isLoading } = usePostById(
+    identityId,
+    keyFingerprint,
+    BigInt(sequence),
+  );
 
   const handleBack = useCallback(() => {
     router.back();
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !post) {
     return (
       <Screen>
         <Screen.PrimaryColumn>
@@ -52,11 +61,11 @@ export default function FeedPostScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.mx_lg, Atoms.mt_lg]}>
-          <BackButton onPress={handleBack} />
-        </View>
         <View style={[Atoms.flex_1, Atoms.mt_md]}>
-          <ConversationView post={post} />
+          <ThreadList
+            post={post}
+            HeaderComponent={<Screen.Topbar title="Post" />}
+          />
         </View>
       </Screen.PrimaryColumn>
     </Screen>

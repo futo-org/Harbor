@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
+import { PostData } from '../lib/polycentric-hooks';
 
 export type OpenComposeOptions = {
-  replyTo?: { identityId: string; sequence: string };
+  replyTo?: PostData['id'];
   /** Immediately launch the image picker once the composer mounts. */
   attachImage?: boolean;
 };
@@ -10,7 +11,7 @@ export function openCompose(options: OpenComposeOptions = {}) {
   const { replyTo, attachImage } = options;
   const params = new URLSearchParams();
   if (replyTo) {
-    params.set('replyTo', `${replyTo.identityId}/${replyTo.sequence}`);
+    params.set('replyTo', replyTo);
   }
   if (attachImage) params.set('attach', '1');
   const qs = params.toString();
@@ -30,8 +31,8 @@ export const Routes = {
     identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,
     editProfile: (identityId: string) => `/${identityId}/edit` as const,
-    post: (identityId: string, postId: string) =>
-      `/${identityId}/post/${postId}` as const,
+    post: (identityId: string, keyFingerprint: string, sequence: string) =>
+      `/${identityId}/post/${keyFingerprint}/${sequence}` as const,
     settings: {
       index: '/settings',
       identity: '/settings/identity',

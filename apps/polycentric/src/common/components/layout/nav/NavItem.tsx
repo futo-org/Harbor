@@ -1,4 +1,5 @@
-import { Link, LinkProps, usePathname, useRouter } from 'expo-router';
+import { Link, LinkProps, router, usePathname, useRouter } from 'expo-router';
+import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import {
   cloneElement,
   isValidElement,
@@ -78,6 +79,11 @@ export function NavItem({ href, icon, label, ...props }: NavItemProps) {
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       href={href!}
+      onPress={(e) => {
+        e.preventDefault();
+        if (isActive) emitFocusedRefresh();
+        router.navigate(href!);
+      }}
       style={[
         linkContainerStyle,
         Atoms.py_md,

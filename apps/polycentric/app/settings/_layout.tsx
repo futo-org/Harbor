@@ -1,5 +1,18 @@
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 
-export default function SettingsOverlayLayout() {
-  return <Slot />;
+const sheetScreenOptions = {
+  presentation: 'transparentModal',
+  animation: 'none',
+  contentStyle: { backgroundColor: 'transparent' },
+} as const;
+
+export default function SettingsLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="identity" options={sheetScreenOptions} />
+      <Stack.Screen name="pair-identity" options={sheetScreenOptions} />
+      <Stack.Screen name="servers" options={sheetScreenOptions} />
+    </Stack>
+  );
 }

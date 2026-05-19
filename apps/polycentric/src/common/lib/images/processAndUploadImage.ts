@@ -1,5 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2';
 import { v2, type PolycentricClient } from '@polycentric/react-native';
+import { File } from 'expo-file-system';
+import { isWeb } from '@/src/common/util/platform';
 
 /** Default variant edge lengths. */
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
@@ -28,8 +30,14 @@ export async function processAndUploadImage(
   const sizes = options.sizes ?? DEFAULT_IMAGE_VARIANT_SIZES;
   const mode = options.mode ?? 'fill';
 
-  const response = await fetch(uri);
-  const raw = new Uint8Array(await response.arrayBuffer());
+  // RN's `fetch` can't read `file://` URIs on Android (and is
+  // unreliable on iOS), so go through `expo-file-system` on
+  // native. Web stays on `fetch` to handle `blob:` / `data:` URIs
+  // from `<input type="file">`.
+  const buffer = isWeb
+    ? await (await fetch(uri)).arrayBuffer()
+    : await new File(uri).arrayBuffer();
+  const raw = new Uint8Array(buffer);
 
   const variants = await Promise.all(
     sizes.map(async (size) => {

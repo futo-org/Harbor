@@ -1,12 +1,18 @@
 import { Screen } from '@/src/common/components/layout';
 import { useTheme } from '@/src/common/theme';
-import { useAuthorFeed } from '@/src/features/feed/hooks/useAuthorFeed';
+import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import {
+  router,
+  useFocusEffect,
+  useIsFocused,
+  useLocalSearchParams,
+} from 'expo-router';
+import { useCallback, useMemo, useRef } from 'react';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
@@ -22,6 +28,8 @@ function ProfileScreenContent() {
   const { theme } = useTheme();
   const { identityKey, isSelf, activeFeed } = useProfileContext();
 
+  const isFocused = useIsFocused();
+
   const isAbortedRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -32,11 +40,12 @@ function ProfileScreenContent() {
     }, []),
   );
 
-  const authorFeed = useAuthorFeed(identityKey ?? undefined, undefined, {
+  const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
+    enabled: isFocused,
     getIsAborted: () => isAbortedRef.current,
   });
   const likesFeed = useLikesFeed({
-    enabled: isSelf,
+    enabled: isSelf && isFocused,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -44,12 +53,36 @@ function ProfileScreenContent() {
     router.back();
   }, []);
 
-  const tabs = isSelf
-    ? [
-        { key: 'posts', feed: authorFeed, bottomPadding: 40 },
-        { key: 'likes', feed: likesFeed, bottomPadding: 40 },
-      ]
-    : [{ key: 'posts', feed: authorFeed, bottomPadding: 40 }];
+  const refresh = useCallback(() => {
+    identityFeed.refresh();
+    likesFeed.refresh();
+  }, [identityFeed.refresh, likesFeed.refresh]);
+  useFocusedRefresh(refresh);
+
+  // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
+  // array reference on every render defeats the memoisation.
+  const bannerColors = useMemo<[string, string]>(
+    () => [
+      theme.palette.background_secondary,
+      theme.palette.background_primary,
+    ],
+    [theme.palette.background_secondary, theme.palette.background_primary],
+  );
+  const profileHeader = useMemo(
+    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
+    [bannerColors, handleBack],
+  );
+
+  const tabs = useMemo(
+    () =>
+      isSelf
+        ? [
+            { key: 'posts', feed: identityFeed, bottomPadding: 40 },
+            { key: 'likes', feed: likesFeed, bottomPadding: 40 },
+          ]
+        : [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
+    [isSelf, identityFeed, likesFeed],
+  );
 
   return (
     <Screen>
@@ -57,15 +90,7 @@ function ProfileScreenContent() {
         <ProfileFeedSwitcher
           tabs={tabs}
           activeKey={activeFeed}
-          ListHeaderComponent={
-            <ProfileHeader
-              bannerColors={[
-                theme.palette.background_secondary,
-                theme.palette.background_primary,
-              ]}
-              onBack={handleBack}
-            />
-          }
+          HeaderComponent={profileHeader}
         />
       </Screen.PrimaryColumn>
     </Screen>

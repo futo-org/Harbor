@@ -1,6 +1,0 @@
-# Suppress all clangd diagnostics for this directory.
-# These files are boilerplate FFI bridge code and don't need active linting.
-# RN headers exist at compile time.
-
-Diagnostics:
-  Suppress: '*'
