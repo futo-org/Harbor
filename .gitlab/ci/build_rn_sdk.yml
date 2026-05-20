@@ -24,10 +24,19 @@ rn-android-build:
   cache:
     - key:
         files:
-          - pnpm-lock.yaml
-        prefix: ubrn-target
+          - packages/rs-core/Cargo.lock
+        prefix: rs-core-cargo-deps
       paths:
-        - node_modules/.pnpm/uniffi-bindgen-react-native@*/node_modules/uniffi-bindgen-react-native/target
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+    - key:
+        files:
+          - packages/rs-core/Cargo.lock
+          - pnpm-lock.yaml
+        prefix: rs-core-target-${CI_JOB_NAME}
+      paths:
+        - target
   script:
     - cd packages/react-native
     - |
