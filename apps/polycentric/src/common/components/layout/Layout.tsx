@@ -13,7 +13,7 @@ import {
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  // Pressable,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -21,7 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import { Ionicons } from '@expo/vector-icons';
-import WEB_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
+import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
+import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
@@ -183,6 +184,7 @@ export const LeftSidebar = memo(function LeftSidebar({
   ...props
 }: LeftSidebarProps) {
   const { width: deviceWidth } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const { identity } = useCurrentIdentity();
 
@@ -237,7 +239,7 @@ export const LeftSidebar = memo(function LeftSidebar({
                 ]}
               >
                 <Image
-                  source={WEB_LOGO}
+                  source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
                   contentFit="contain"
                   style={{ width: 30, height: 30 }}
                 />
