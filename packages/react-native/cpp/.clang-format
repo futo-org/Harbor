@@ -1,0 +1,3 @@
+# Normalize ubrn output to be unformatted
+DisableFormat: true
+SortIncludes: Never

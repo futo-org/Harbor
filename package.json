@@ -15,7 +15,8 @@
     "run:web": "pnpm -C apps/polycentric run web",
     "ubrn:android": "pnpm -C packages/react-native ubrn:android",
     "ubrn:ios": "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then pnpm -C packages/react-native ubrn:ios; else echo Skipping ubrn:ios: macOS-only build; fi'",
-    "ubrn": "pnpm ubrn:android && pnpm ubrn:ios"
+    "ubrn": "pnpm ubrn:android && pnpm ubrn:ios",
+    "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-uniffi-web clean"
   },
   "devDependencies": {
     "@types/react": "~19.2.10",

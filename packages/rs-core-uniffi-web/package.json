@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "build": "ubrn build web",
-    "clean": "rm -rfv dist/"
+    "clean": "rm -rfv dist/ rust_modules/"
   },
   "dependencies": {
     "uniffi-bindgen-react-native": "0.31.0-2"
