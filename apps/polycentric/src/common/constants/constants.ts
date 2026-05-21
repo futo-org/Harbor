@@ -6,5 +6,6 @@ export const DEFAULT_IDENTITY_NAME = 'Anon';
 export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 80 : 56;
 
 export const FUTO_URL = 'https://futo.tech';
-export const SOURCE_CODE_URL = 'https://gitlab.futo.org/polycentric';
-export const REPORT_BUG_URL = 'https://www.futo.org';
+export const SOURCE_CODE_URL =
+  'https://gitlab.futo.org/polycentric/polycentric';
+export const REPORT_BUG_URL = 'https://chat.futo.org/login/';

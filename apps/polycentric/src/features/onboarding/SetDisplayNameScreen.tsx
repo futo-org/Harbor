@@ -55,7 +55,7 @@ export default function SetDisplayNameScreen() {
             </View>
           </View>
           <Button
-            style={Atoms.mt_auto}
+            style={[Atoms.mt_auto, Atoms.mb_md]}
             title="Continue"
             variant="primary"
             disabled={!canContinue}
