@@ -79,8 +79,11 @@ pub type QueryFutureBox<T> = Pin<Box<dyn Future<Output = Result<T, String>> + 's
 pub type QueryFnBox<T> = Arc<dyn Fn(String) -> QueryFutureBox<T> + Send + Sync + 'static>;
 
 /// Type-erased `merge_fn`. Receives every server's most-recent
-/// response and reduces them to a single emitted value.
-pub type MergeFn<T> = Arc<dyn Fn(&[T]) -> T + Send + Sync + 'static>;
+/// response plus a handle to the local `PolycentricClient` (so
+/// validating merges can call `validate_event` without capturing a
+/// clone in a closure) and reduces them to a single emitted value.
+pub type MergeFn<T> =
+    Arc<dyn Fn(&[T], &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static>;
 
 /// Query keys are an array of strings and assist with caching, retry strategies etc.
 pub type QueryKey = Vec<String>;
@@ -107,12 +110,16 @@ impl<T> QueryState<T> {
 
 /// Reduce the per-server cache into a single emitted value via
 /// `merge_fn`. Returns `None` when no server has responded yet.
-fn compute_merged<T: Clone>(data: &HashMap<String, T>, merge_fn: &MergeFn<T>) -> Option<T> {
+fn compute_merged<T: Clone>(
+    data: &HashMap<String, T>,
+    merge_fn: &MergeFn<T>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Option<T> {
     if data.is_empty() {
         return None;
     }
     let values: Vec<T> = data.values().cloned().collect();
-    Some(merge_fn(&values))
+    Some(merge_fn(&values, client))
 }
 
 /// Client to fetch and invalidate queries.
@@ -156,7 +163,7 @@ where
     where
         F: Fn(String) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<T, String>> + MaybeSend + 'static,
-        M: Fn(&[T]) -> T + Send + Sync + 'static,
+        M: Fn(&[T], &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static,
     {
         let queries = self.queries.clone();
         let client = self.client.clone();
@@ -178,7 +185,7 @@ where
 
             let cached = {
                 let s = state.lock().unwrap();
-                compute_merged(&s.data, &merge_fn)
+                compute_merged(&s.data, &merge_fn, &client)
             };
 
             let needs_fetch = match fetch_mode {
@@ -215,6 +222,7 @@ where
                 target_servers,
                 query_fn.clone(),
                 merge_fn.clone(),
+                client.clone(),
                 subscriber,
             );
         })
@@ -264,6 +272,7 @@ fn spawn_fanout<T>(
     servers: Vec<String>,
     query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
+    client: Arc<Mutex<PolycentricClient>>,
     subscriber: Arc<Subscriber<QueryResult<T>>>,
 ) where
     T: Clone + Send + Sync + 'static,
@@ -274,6 +283,7 @@ fn spawn_fanout<T>(
         let state = state.clone();
         let query_fn = query_fn.clone();
         let merge_fn = merge_fn.clone();
+        let client = client.clone();
         let pending = pending.clone();
         let subscriber = subscriber.clone();
 
@@ -305,7 +315,7 @@ fn spawn_fanout<T>(
 
                 (
                     QueryResult {
-                        data: compute_merged(&s.data, &merge_fn),
+                        data: compute_merged(&s.data, &merge_fn, &client),
                         status,
                     },
                     error_msg,

@@ -1,6 +1,5 @@
 use crate::error::{CoreError, Error, Result};
-use crate::models::protos_v2::Event;
-use crate::models::protos_v2::SignedEvent;
+use crate::models::protos_v2::{ContentDigest, Event, SignedEvent};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
 use prost::Message;
@@ -51,6 +50,15 @@ impl SignedEvent {
             .map_err(|e| CoreError::SignatureError(format!("Invalid signature {:?}", e)))?;
 
         Ok(())
+    }
+
+    pub fn content_digest(&self) -> std::result::Result<ContentDigest, CoreError> {
+        let event = Event::decode(self.event_bytes.as_slice()).map_err(|e| {
+            CoreError::DeserializationError(format!("Failed to decode event: {}", e))
+        })?;
+        event
+            .content_digest
+            .ok_or_else(|| CoreError::InvalidEvent("Event missing content_digest".into()))
     }
 }
 

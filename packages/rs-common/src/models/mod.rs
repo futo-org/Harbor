@@ -13,14 +13,18 @@ pub mod protos_v2 {
 
 pub mod traits;
 
+pub mod collections;
+pub mod content;
 pub mod digest;
 pub mod event;
 pub mod event_array;
+pub mod identity;
 pub mod moderation_tag;
 pub mod pointer;
 pub mod public_key;
 pub mod query_engine_stats;
 pub mod signed_event;
+pub mod vector_clock;
 
 pub use traits::Serializable;
 

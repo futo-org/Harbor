@@ -2,13 +2,12 @@ import { Button, Screen, Text } from '@/src/common/components';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Image } from 'expo-image';
 import WEB_LOGO from '../../common/assets/images/polycentric-logo-with-text.png';
 
 export default function OnboardingWelcomeScreen() {
-  const dimensions = useWindowDimensions();
   return (
     <Screen>
       <Screen.PrimaryColumn>
@@ -19,14 +18,15 @@ export default function OnboardingWelcomeScreen() {
               Atoms.justify_center,
               Atoms.items_center,
               Atoms.gap_2xl,
+              Atoms.p_3xl,
             ]}
           >
             <Image
               source={WEB_LOGO}
               contentFit="contain"
               style={{
-                width: dimensions.width - 100,
-                height: dimensions.width,
+                width: '100%',
+                aspectRatio: 1,
               }}
             />
           </View>

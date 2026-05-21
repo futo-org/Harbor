@@ -120,6 +120,33 @@ impl PolycentricCore {
             .next_sequence(&identity, collection)
     }
 
+    /// Merkle root over the canonically-ordered signatures in
+    /// `(identity, collection)`. Empty when no events exist.
+    pub fn previous_root(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_root(&identity, collection)
+    }
+
+    /// Signature of the canonically-latest event in `(identity, collection)`.
+    /// Empty when no events exist.
+    pub fn previous_signature(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_signature(&identity, collection)
+    }
+
+    /// Canonical leaf count in `(identity, collection)` — the leaf index
+    /// a newly-appended event would occupy.
+    pub fn leaf_count(&self, identity: String, collection: i32) -> u64 {
+        self.client
+            .lock()
+            .unwrap()
+            .leaf_count(&identity, collection)
+    }
+
     /// Verify each `SignedEvent` (decoding implicitly verifies the
     /// signature) and copy it into the local event store.
     pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
@@ -225,8 +252,7 @@ impl PolycentricCore {
 
         let response = ListEventsResponse {
             event_bundles,
-            previous_token: String::new(),
-            next_token: String::new(),
+            event_hints: Vec::new(),
         };
 
         Ok(response.encode_to_vec())

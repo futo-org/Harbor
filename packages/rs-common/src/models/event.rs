@@ -12,6 +12,7 @@ impl Event {
         identity_sequence: u64,
         vector_clock: Option<VectorClock>,
         previous_signature: Vec<u8>,
+        previous_root: Vec<u8>,
         content_digest: Option<ContentDigest>,
         created_at: u64,
     ) -> Self {
@@ -20,6 +21,7 @@ impl Event {
             identity_sequence,
             vector_clock,
             previous_signature,
+            previous_root,
             content_digest,
             created_at,
         }

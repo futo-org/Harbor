@@ -1,14 +1,17 @@
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
+use polycentric_common::models::collections;
 use sea_orm::FromQueryResult;
 use sea_orm::sea_query::{Expr, IntoCondition};
 use sea_orm::*;
 
-// Collection numbers shared with the client (see js-core/src/constants.ts).
-const FEED_COLLECTION: i16 = 2;
-const PROFILE_COLLECTION: i16 = 3;
-const GRAPH_COLLECTION: i16 = 5;
+// Local i16 aliases for the shared protocol collection IDs — sea-orm
+// queries against `EventModel::Column::Collection` use i16 while the
+// canonical constants in rs-common are i32.
+const FEED_COLLECTION: i16 = collections::FEED as i16;
+const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
+const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
 
 pub struct Query;
 
@@ -265,7 +268,7 @@ impl Query {
 }
 
 /// Relation joining an event to its content row on (digest_type, digest_bytes).
-fn content_join() -> RelationDef {
+pub(crate) fn content_join() -> RelationDef {
     EventModel::Entity::belongs_to(ContentModel::Entity)
         .from(EventModel::Column::ContentDigestType)
         .to(ContentModel::Column::DigestType)

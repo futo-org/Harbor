@@ -45,8 +45,10 @@ pub struct GetPostThreadArgs {
     pub limit: i32,
 }
 
-/// Merge function for every feed-RPC observable.
-fn merge_feed_responses(values: &[Vec<u8>]) -> Vec<u8> {
+/// Pure merge for every feed-RPC observable. Combines per-server
+/// responses and dedupes. The `_client` parameter is unused here —
+/// validation happens via [`validated_feed_merge`].
+fn merge_feed_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let mut merged = GetFeedResponse::default();
     for v in values {
         if let Ok(incoming) = GetFeedResponse::decode(v.as_slice()) {
@@ -85,6 +87,68 @@ fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
     }
 }
 
+/// Retain only bundles that aren't definitively invalid. Uses
+/// `is_event_acceptable` so events from identities we haven't fetched
+/// locally pass through (unverifiable, not invalid); only definitive
+/// forgeries (post-revocation, bad VC, etc.) are dropped.
+fn retain_validated_bundles(client: &PolycentricClient, bundles: &mut Vec<EventBundle>) {
+    bundles.retain(|b| match b.signed_event.as_ref() {
+        Some(se) => match client.validate_event(se, &b.event_proofs) {
+            Ok(()) => true,
+            Err(e) => {
+                crate::logging::log_msg(format!("[merge] dropping bundle: {e:?}"));
+                false
+            }
+        },
+        None => false,
+    });
+}
+
+/// Retain only hints that aren't definitively invalid.
+fn retain_validated_hints(client: &PolycentricClient, hints: &mut Vec<EventHint>) {
+    hints.retain(|h| match h.event_bundle.as_ref() {
+        Some(b) => match b.signed_event.as_ref() {
+            Some(se) => match client.validate_event(se, &b.event_proofs) {
+                Ok(()) => true,
+                Err(e) => {
+                    crate::logging::log_msg(format!("[merge] dropping hint: {e:?}"));
+                    false
+                }
+            },
+            None => false,
+        },
+        None => false,
+    });
+}
+
+/// Validating merge for feed-RPC observables. Combines the per-server
+/// responses via `merge_feed_responses`, then drops any bundles or
+/// hints whose signed event doesn't pass `validate_event`. Used as the
+/// `merge_fn` argument to every feed observable's `fetch`.
+fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    let merged = merge_feed_responses(values, client);
+    let Ok(mut response) = GetFeedResponse::decode(merged.as_slice()) else {
+        return merged;
+    };
+    let c = client.lock().unwrap();
+    retain_validated_bundles(&c, &mut response.event_bundles);
+    retain_validated_hints(&c, &mut response.event_hints);
+    response.encode_to_vec()
+}
+
+/// Validating merge for the post-thread observable — same gate as
+/// `validated_feed_merge` but applied to `thread` and `event_hints`.
+fn validated_thread_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    let merged = merge_thread_responses(values, client);
+    let Ok(mut response) = GetPostThreadResponse::decode(merged.as_slice()) else {
+        return merged;
+    };
+    let c = client.lock().unwrap();
+    retain_validated_bundles(&c, &mut response.thread);
+    retain_validated_hints(&c, &mut response.event_hints);
+    response.encode_to_vec()
+}
+
 /// Return posts for an identity.
 pub fn get_identity_feed(
     query_client: &QueryClient<Vec<u8>>,
@@ -120,11 +184,12 @@ pub fn get_identity_feed(
                 .into_inner();
             let bytes = response.encode_to_vec();
             copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
 }
 
 /// Returns posts an identity is following
@@ -162,11 +227,12 @@ pub fn get_following_feed(
                 .into_inner();
             let bytes = response.encode_to_vec();
             copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
@@ -204,18 +270,19 @@ pub fn get_explore_feed(
                 .into_inner();
             let bytes = response.encode_to_vec();
             copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_feed_responses, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
 }
 
 /// Merge function for the post-thread observable. Concatenates the
 /// `thread` and `event_hints` lists from each per-server response and
 /// dedupes each by `EventKey` so duplicate posts/hints coming back
 /// from multiple servers only appear once.
-fn merge_thread_responses(values: &[Vec<u8>]) -> Vec<u8> {
+fn merge_thread_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let mut merged = GetPostThreadResponse::default();
     for v in values {
         if let Ok(incoming) = GetPostThreadResponse::decode(v.as_slice()) {
@@ -273,11 +340,12 @@ pub fn get_post_thread(
                 .into_inner();
             let bytes = response.encode_to_vec();
             copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.thread);
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_thread_responses, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_thread_merge, opts))
 }
 
 #[cfg(test)]
@@ -309,7 +377,12 @@ mod tests {
                 event_bytes: event.encode_to_vec(),
             }),
             serialized_content: None,
+            event_proofs: Vec::new(),
         }
+    }
+
+    fn test_client() -> Arc<Mutex<PolycentricClient>> {
+        Arc::new(Mutex::new(PolycentricClient::new()))
     }
 
     fn encode_response(bundles: Vec<EventBundle>, hints: Vec<EventBundle>) -> Vec<u8> {
@@ -337,6 +410,7 @@ mod tests {
         let bundle = EventBundle {
             signed_event: None,
             serialized_content: None,
+            event_proofs: Vec::new(),
         };
         assert!(event_dedup_key(&bundle).is_none());
     }
@@ -349,6 +423,7 @@ mod tests {
                 event_bytes: vec![0xFF, 0xFF, 0xFF],
             }),
             serialized_content: None,
+            event_proofs: Vec::new(),
         };
         assert!(event_dedup_key(&bundle).is_none());
     }
@@ -358,7 +433,7 @@ mod tests {
         let prev = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
         let new = encode_response(vec![make_bundle(2, "b", 1, vec![2], 1)], vec![]);
 
-        let merged = merge_feed_responses(&[prev, new]);
+        let merged = merge_feed_responses(&[prev, new], &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
     }
@@ -372,7 +447,7 @@ mod tests {
             vec![],
         );
 
-        let merged = merge_feed_responses(&[prev, new]);
+        let merged = merge_feed_responses(&[prev, new], &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
         let seqs: Vec<u64> = decoded
@@ -389,7 +464,7 @@ mod tests {
         let prev = encode_response(vec![], vec![dup.clone()]);
         let new = encode_response(vec![], vec![dup.clone()]);
 
-        let merged = merge_feed_responses(&[prev, new]);
+        let merged = merge_feed_responses(&[prev, new], &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_hints.len(), 1);
     }
@@ -397,7 +472,7 @@ mod tests {
     #[test]
     fn merge_handles_no_prior_value() {
         let new = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
-        let merged = merge_feed_responses(&[new]);
+        let merged = merge_feed_responses(&[new], &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 1);
     }
@@ -411,9 +486,10 @@ mod tests {
                 event_bytes: vec![0xFF, 0xFF, 0xFF],
             }),
             serialized_content: None,
+            event_proofs: Vec::new(),
         };
         let new = encode_response(vec![parseable, unparseable.clone(), unparseable], vec![]);
-        let merged = merge_feed_responses(&[new]);
+        let merged = merge_feed_responses(&[new], &test_client());
         // Parseable + both unparseables retained (no dedup key to compare).
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 3);

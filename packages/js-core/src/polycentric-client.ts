@@ -279,6 +279,13 @@ export class PolycentricClient {
     const identitySequence =
       this.core.nextSequence(this.activeIdentityKey, COLLECTION.IDENTITY) - 1n;
 
+    const previousSignature = new Uint8Array(
+      this.core.previousSignature(this.activeIdentityKey, collection),
+    );
+    const previousRoot = new Uint8Array(
+      this.core.previousRoot(this.activeIdentityKey, collection),
+    );
+
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
         collection,
@@ -287,7 +294,8 @@ export class PolycentricClient {
         sequence,
       }),
       identitySequence,
-      previousSignature: new Uint8Array(0),
+      previousSignature,
+      previousRoot,
       contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
     });

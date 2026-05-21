@@ -35,6 +35,10 @@ pub struct Model {
     pub signature: Vec<u8>,
     pub previous_signature: Vec<u8>,
 
+    // Merkle root over this signer's canonical (identity, collection) history
+    // as known at sign time. Denormalized from event_bytes for proof lookups.
+    pub previous_root: Vec<u8>,
+
     // We need to store the raw event due to non-deterministic serialization
     pub event_bytes: Vec<u8>,
 

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient, ListEventsFilters, ListEventsRequest,
     ListEventsResponse,
@@ -13,14 +14,15 @@ use crate::query::{
 };
 use crate::rx::observable::Observable;
 
-const PROFILE_COLLECTION: i32 = 3;
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetProfileArgs {
     pub identity: String,
 }
 
-fn merge_profile_responses(values: &[Vec<u8>]) -> Vec<u8> {
+fn merge_profile_responses(
+    values: &[Vec<u8>],
+    _client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
+) -> Vec<u8> {
     let mut merged = ListEventsResponse::default();
     for v in values {
         if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
@@ -47,7 +49,7 @@ fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> O
         .client()
         .lock()
         .unwrap()
-        .list_valid_events(identity, PROFILE_COLLECTION)
+        .list_valid_events(identity, collections::PROFILE)
         .unwrap_or_default();
     if bundles.is_empty() {
         return None;
@@ -55,8 +57,7 @@ fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> O
     Some(
         ListEventsResponse {
             event_bundles: bundles,
-            previous_token: String::new(),
-            next_token: String::new(),
+            event_hints: Vec::new(),
         }
         .encode_to_vec(),
     )
@@ -79,9 +80,6 @@ pub fn get_profile(
 ) -> Arc<dyn QueryObservable> {
     let GetProfileArgs { identity } = args;
     let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
-    crate::logging::log_msg(format!(
-        "[get_profile] called identity={identity} fetch_mode={fetch_mode:?}"
-    ));
 
     let local_bytes = local_profile_bytes(query_client, &identity);
 
@@ -92,8 +90,7 @@ pub fn get_profile(
         let bytes = local_bytes.unwrap_or_else(|| {
             ListEventsResponse {
                 event_bundles: Vec::new(),
-                previous_token: String::new(),
-                next_token: String::new(),
+                event_hints: Vec::new(),
             }
             .encode_to_vec()
         });
@@ -113,13 +110,10 @@ pub fn get_profile(
         let identity = identity.clone();
         let client = client.clone();
         async move {
-            crate::logging::log_msg(format!(
-                "[get_profile] fetching from server={server_url} identity={identity}"
-            ));
             let response: ListEventsResponse = EventSyncServiceClient::new(channel(&server_url)?)
                 .list_events(ListEventsRequest {
                     filters: Some(ListEventsFilters {
-                        collection: Some(PROFILE_COLLECTION),
+                        collection: Some(collections::PROFILE),
                         identity: Some(identity),
                         signed_by: None,
                         sequence_gt: None,
@@ -131,12 +125,17 @@ pub fn get_profile(
                 .map_err(|e| format!("get_profile list_events [{server_url}]: {e}"))?
                 .into_inner();
 
-            crate::logging::log_msg(format!(
-                "[get_profile] received {n} bundles from server={server_url}",
-                n = response.event_bundles.len()
-            ));
             let bytes = response.encode_to_vec();
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(response.event_bundles);
+            }
             Ok(bytes)
         }
     };
