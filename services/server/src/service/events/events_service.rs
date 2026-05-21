@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::events_repository as EventsRepository;
 use crate::service::content::content_repository as ContentRepository;
+use crate::service::feeds::feeds_repository as FeedsRepository;
 use crate::service::identity::identity_repository;
 use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::proto::content::ContentBody;
@@ -164,9 +165,14 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
-                // Capture the recipient and body of a reply notification
-                // (if any) before `content` is moved into
-                // `save_content_child`. Self-replies are filtered out.
+                // Capture the post body and (optional) reply recipient
+                // before `content` is moved into `save_content_child`.
+                // Self-replies are filtered out so a user replying to
+                // themselves does not get a reply notification.
+                let post_body: Option<String> = match &content.content_body {
+                    Some(ContentBody::Post(post)) => Some(post.text.clone()),
+                    _ => None,
+                };
                 let reply_recipient: Option<String> =
                     match &content.content_body {
                         Some(ContentBody::Post(post)) => post
@@ -177,14 +183,6 @@ impl EventSyncService for EventSyncServiceImpl {
                             .filter(|target| target != &key.identity),
                         _ => None,
                     };
-                let reply_body: Option<String> = match &content.content_body {
-                    Some(ContentBody::Post(post))
-                        if reply_recipient.is_some() =>
-                    {
-                        Some(post.text.clone())
-                    }
-                    _ => None,
-                };
 
                 // Save content parent + child in a transaction
                 let txn = self.db.begin().await.map_err(|e| {
@@ -233,28 +231,87 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::internal("internal server error")
                 })?;
 
-                // Fire reply notification only when the content was newly
-                // persisted; failures here must not surface to the caller.
+                // Fire post-related notifications only when the content
+                // was newly persisted; failures here must not surface to
+                // the caller.
                 if content_was_new
-                    && let Some(recipient) = reply_recipient
-                    && let Some(body) = reply_body
+                    && let Some(body) = post_body
                 {
-                    let title = match identity_repository::Query::display_name(
+                    let author_name =
+                        identity_repository::Query::display_name(
+                            &self.db,
+                            &key.identity,
+                        )
+                        .await
+                        .ok()
+                        .flatten();
+
+                    // Reply notification to the parent post's author.
+                    if let Some(recipient) = reply_recipient.as_ref() {
+                        let title = match &author_name {
+                            Some(name) => format!("New reply from {name}"),
+                            None => "New reply".to_string(),
+                        };
+
+                        if let Err(e) = self
+                            .notification_manager
+                            .send(
+                                &self.db,
+                                recipient,
+                                title,
+                                body.clone(),
+                            )
+                            .await
+                        {
+                            eprintln!("reply notification send error: {e}");
+                        }
+                    }
+
+                    // Fan out a "new post" notification to every follower
+                    // of the author. The reply recipient (if any) is
+                    // skipped to avoid double-notifying them about the
+                    // same post.
+                    match FeedsRepository::Query::list_followers(
                         &self.db,
                         &key.identity,
                     )
                     .await
                     {
-                        Ok(Some(name)) => format!("New reply from {name}"),
-                        _ => "New reply".to_string(),
-                    };
+                        Ok(followers) => {
+                            let title = match &author_name {
+                                Some(name) => format!("New post from {name}"),
+                                None => "New post".to_string(),
+                            };
 
-                    if let Err(e) = self
-                        .notification_manager
-                        .send(&self.db, &recipient, title, body)
-                        .await
-                    {
-                        eprintln!("reply notification send error: {e}");
+                            for follower in followers {
+                                if follower == key.identity {
+                                    continue;
+                                }
+                                if reply_recipient.as_deref()
+                                    == Some(follower.as_str())
+                                {
+                                    continue;
+                                }
+
+                                if let Err(e) = self
+                                    .notification_manager
+                                    .send(
+                                        &self.db,
+                                        &follower,
+                                        title.clone(),
+                                        body.clone(),
+                                    )
+                                    .await
+                                {
+                                    eprintln!(
+                                        "follower notification send error for {follower}: {e}"
+                                    );
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("list_followers error: {e}");
+                        }
                     }
                 }
             }

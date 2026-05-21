@@ -63,6 +63,38 @@ impl Query {
         Ok(rows)
     }
 
+    /// Return the list of identities that follow `target` (as recorded
+    /// by Follow events in the GRAPH collection authored by each follower).
+    ///
+    /// Unfollow (Delete) tombstones are not yet applied server-side, so a
+    /// follower who later unfollowed still appears here.
+    pub async fn list_followers(
+        db: &DbConn,
+        target: &str,
+    ) -> Result<Vec<String>, DbErr> {
+        // Deduplicate because a single follower may have produced multiple
+        // Follow events targeting `target` (e.g. follow → unfollow → follow).
+        let rows = EventModel::Entity::find()
+            .select_only()
+            .column(EventModel::Column::Identity)
+            .distinct()
+            .join(JoinType::InnerJoin, content_join())
+            .join(
+                JoinType::InnerJoin,
+                ContentModel::Entity::belongs_to(ContentFollowModel::Entity)
+                    .from(ContentModel::Column::Id)
+                    .to(ContentFollowModel::Column::ContentId)
+                    .into(),
+            )
+            .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+            .filter(ContentFollowModel::Column::IdentityId.eq(target))
+            .into_tuple::<String>()
+            .all(db)
+            .await?;
+
+        Ok(rows)
+    }
+
     /// Return recent Feed events (with joined content) authored by any of
     /// `identities`, newest first. Short-circuits with an empty Vec when
     /// the identity list is empty.
