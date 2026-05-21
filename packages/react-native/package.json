@@ -38,7 +38,7 @@
   "scripts": {
     "ubrn:ios": "ubrn build ios --and-generate",
     "ubrn:android": "ubrn build android --and-generate",
-    "ubrn:clean": "rm -rfv cpp/ android/CMakeLists.txt android/src/main/java android/*.cpp ios/ src/Native* src/index.*ts* src/generated/rn",
+    "ubrn:clean": "rm -rfv cpp/ android/CMakeLists.txt android/src/main/java android/*.cpp ios/ src/Native* src/uniffi-init.tsx src/generated/rn",
     "dev": "bob build --watch",
     "clean": "del-cli android/build lib",
     "build": "bob build",

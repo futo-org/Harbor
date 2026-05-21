@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "package.json",
+        "ubrn.config.yaml",
+        "ubrn-wasm-patch.toml",
+        "$TURBO_ROOT$/packages/rs-core/src/**",
+        "$TURBO_ROOT$/packages/rs-core/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-core/build.rs",
+        "$TURBO_ROOT$/packages/rs-common/src/**",
+        "$TURBO_ROOT$/packages/rs-common/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-common/build.rs",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock"
+      ],
+      "outputs": ["dist/**", "rust_modules/**"]
+    }
+  }
+}
