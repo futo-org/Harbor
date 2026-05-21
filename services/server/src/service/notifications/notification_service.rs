@@ -144,6 +144,7 @@ mod tests {
                 public_key: public_key_bytes.clone(),
                 service: PushService::Expo.as_ref().to_string(),
                 token: "ExponentPushToken[abc123]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
             }]])
             .into_connection();
 
