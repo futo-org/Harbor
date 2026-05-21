@@ -9,6 +9,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
     channel, FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus,
 };
@@ -21,22 +22,35 @@ pub struct GetProfileArgs {
 
 fn merge_profile_responses(
     values: &[Vec<u8>],
-    _client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
+    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged = ListEventsResponse::default();
     for v in values {
         if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
             merged.event_bundles.extend(incoming.event_bundles);
+            merged.event_hints.extend(incoming.event_hints);
         }
     }
 
-    let mut seen: HashSet<EventDedupKey> = HashSet::new();
+    let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
     merged
         .event_bundles
         .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen.insert(k),
+            Some(k) => seen_bundles.insert(k),
             None => true,
         });
+    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
+    merged.event_hints.retain(
+        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
+            Some(k) => seen_hints.insert(k),
+            None => true,
+        },
+    );
+
+    let c = client.lock().unwrap();
+    retain_validated_bundles(&c, &mut merged.event_bundles);
+    retain_validated_hints(&c, &mut merged.event_hints);
+    drop(c);
 
     merged.encode_to_vec()
 }

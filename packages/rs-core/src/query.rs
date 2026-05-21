@@ -10,6 +10,7 @@ pub mod feed;
 pub mod profile;
 pub mod query_observable;
 pub mod transport;
+pub(crate) mod validation;
 
 pub use client::{
     FetchMode, MaybeSend, MergeFn, QueryClient, QueryFnBox, QueryFutureBox, QueryKey, QueryOpts,

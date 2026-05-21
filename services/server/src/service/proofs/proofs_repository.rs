@@ -1,12 +1,12 @@
 //! Database access for EventProof generation.
 
 use ::entity::event_model as EventModel;
-use polycentric_common::models::protos_v2::Event;
-use prost::Message;
+use polycentric_common::merkle;
 use sea_orm::*;
 
-/// Canonically-ordered signatures in `(identity, collection)`. Sorted by
-/// `sum(vector_clock)`, then `created_at`, then signature.
+/// Canonically-ordered signatures in `(identity, collection)`. Delegates
+/// to [`polycentric_common::merkle::canonical_signatures`] so client and
+/// server agree on the ordering.
 pub async fn canonical_signatures(
     db: &DbConn,
     identity: &str,
@@ -17,22 +17,7 @@ pub async fn canonical_signatures(
         .filter(EventModel::Column::Identity.eq(identity))
         .all(db)
         .await?;
-    let mut decoded: Vec<(u64, u64, Vec<u8>)> = rows
-        .into_iter()
-        .filter_map(|row| {
-            let inner = Event::decode(row.event_bytes.as_slice()).ok()?;
-            let vc_sum: u64 = inner
-                .vector_clock
-                .as_ref()
-                .map(|vc| vc.sequence.iter().sum())
-                .unwrap_or(0);
-            Some((vc_sum, inner.created_at, row.signature))
-        })
-        .collect();
-    decoded.sort_by(|a, b| {
-        a.0.cmp(&b.0)
-            .then_with(|| a.1.cmp(&b.1))
-            .then_with(|| a.2.cmp(&b.2))
-    });
-    Ok(decoded.into_iter().map(|(_, _, s)| s).collect())
+    Ok(merkle::canonical_signatures(rows.iter().map(|r| {
+        (r.event_bytes.as_slice(), r.signature.as_slice())
+    })))
 }

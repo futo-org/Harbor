@@ -13,6 +13,7 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
 use crate::query::event::key::EventKey;
+use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{channel, QueryClient, QueryKey, QueryObservable, QueryOpts};
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -45,9 +46,7 @@ pub struct GetPostThreadArgs {
     pub limit: i32,
 }
 
-/// Pure merge for every feed-RPC observable. Combines per-server
-/// responses and dedupes. The `_client` parameter is unused here —
-/// validation happens via [`validated_feed_merge`].
+/// Merge function for every feed-RPC observable.
 fn merge_feed_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let mut merged = GetFeedResponse::default();
     for v in values {
@@ -78,8 +77,7 @@ fn merge_feed_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClien
 
 /// Pull bundles out of each `EventHint` and copy them into the local
 /// client stores. Hints are useful side-information the server
-/// volunteers (e.g. the profile of a post's author) — caching them
-/// avoids extra round-trips when the UI later asks for that data.
+/// provides (e.g. the profile of a post's author).
 fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
     let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
     if !bundles.is_empty() {
@@ -87,44 +85,7 @@ fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
     }
 }
 
-/// Retain only bundles that aren't definitively invalid. Uses
-/// `is_event_acceptable` so events from identities we haven't fetched
-/// locally pass through (unverifiable, not invalid); only definitive
-/// forgeries (post-revocation, bad VC, etc.) are dropped.
-fn retain_validated_bundles(client: &PolycentricClient, bundles: &mut Vec<EventBundle>) {
-    bundles.retain(|b| match b.signed_event.as_ref() {
-        Some(se) => match client.validate_event(se, &b.event_proofs) {
-            Ok(()) => true,
-            Err(e) => {
-                crate::logging::log_msg(format!("[merge] dropping bundle: {e:?}"));
-                false
-            }
-        },
-        None => false,
-    });
-}
-
-/// Retain only hints that aren't definitively invalid.
-fn retain_validated_hints(client: &PolycentricClient, hints: &mut Vec<EventHint>) {
-    hints.retain(|h| match h.event_bundle.as_ref() {
-        Some(b) => match b.signed_event.as_ref() {
-            Some(se) => match client.validate_event(se, &b.event_proofs) {
-                Ok(()) => true,
-                Err(e) => {
-                    crate::logging::log_msg(format!("[merge] dropping hint: {e:?}"));
-                    false
-                }
-            },
-            None => false,
-        },
-        None => false,
-    });
-}
-
-/// Validating merge for feed-RPC observables. Combines the per-server
-/// responses via `merge_feed_responses`, then drops any bundles or
-/// hints whose signed event doesn't pass `validate_event`. Used as the
-/// `merge_fn` argument to every feed observable's `fetch`.
+/// Validates events feed-RPC observables.
 fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let merged = merge_feed_responses(values, client);
     let Ok(mut response) = GetFeedResponse::decode(merged.as_slice()) else {
@@ -136,8 +97,7 @@ fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient
     response.encode_to_vec()
 }
 
-/// Validating merge for the post-thread observable — same gate as
-/// `validated_feed_merge` but applied to `thread` and `event_hints`.
+/// Validating merge for the post-thread observable. Same as validated_feed_merge above.
 fn validated_thread_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let merged = merge_thread_responses(values, client);
     let Ok(mut response) = GetPostThreadResponse::decode(merged.as_slice()) else {

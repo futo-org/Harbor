@@ -11,7 +11,10 @@ use polycentric_common::{
 };
 
 use crate::identity::{DecodedIdentityEvent, IdentityDirectory};
-use crate::store::{content_store::ContentStore, event_store::EventStore, keys::EventKey};
+use crate::store::{
+    content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
+    keys::EventKey,
+};
 use prost::Message;
 use std::collections::HashSet;
 use std::sync::Mutex;
@@ -24,6 +27,7 @@ fn hex_short(bytes: &[u8]) -> String {
 pub struct PolycentricClient {
     servers: Mutex<Vec<String>>,
     event_store: EventStore,
+    event_proofs_store: EventProofsStore,
     content_store: ContentStore,
 }
 
@@ -62,8 +66,9 @@ impl PolycentricClient {
         self.event_store
             .by_identity_and_collection(identity, collection)
             .filter(|(k, _)| k.sequence == sequence)
-            .find_map(|(_, signed_event)| {
-                self.validate_event(signed_event, &[]).ok()?;
+            .find_map(|(k, signed_event)| {
+                let proofs = self.event_proofs_store.get(k);
+                self.validate_event(signed_event, proofs).ok()?;
                 let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
                 let content_bytes = event
                     .content_digest
@@ -74,16 +79,23 @@ impl PolycentricClient {
                     signed_event: Some(signed_event.clone()),
                     serialized_content: content_bytes
                         .map(|c| SerializedContent { content_bytes: c }),
-                    event_proofs: Vec::new(),
+                    event_proofs: proofs.to_vec(),
                 })
             })
     }
 
     /// Sig-check and insert each bundle. Identity events go first (by
-    /// sequence) so downstream validation can find the genesis.
-    /// Storage only — `validate_event` runs at read time.
+    /// sequence) so downstream validation can find the genesis. Any
+    /// `event_proofs` travelling with a bundle are persisted in the
+    /// proofs side-store so read-side validation can re-verify revoked
+    /// signers later.
     pub fn copy_bundles(&mut self, bundles: Vec<EventBundle>) {
-        let mut prepared: Vec<(SignedEvent, Event, Option<SerializedContent>)> = bundles
+        let mut prepared: Vec<(
+            SignedEvent,
+            Event,
+            Option<SerializedContent>,
+            Vec<EventProof>,
+        )> = bundles
             .into_iter()
             .filter_map(|bundle| {
                 let signed_event = bundle.signed_event?;
@@ -91,10 +103,15 @@ impl PolycentricClient {
                     return None;
                 }
                 let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
-                Some((signed_event, event, bundle.serialized_content))
+                Some((
+                    signed_event,
+                    event,
+                    bundle.serialized_content,
+                    bundle.event_proofs,
+                ))
             })
             .collect();
-        prepared.sort_by_key(|(_, event, _)| {
+        prepared.sort_by_key(|(_, event, _, _)| {
             let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(i32::MAX);
             let identity_first = if collection == collections::IDENTITY {
                 0
@@ -105,9 +122,14 @@ impl PolycentricClient {
             (identity_first, sequence)
         });
 
-        for (signed_event, event, serialized) in prepared {
+        for (signed_event, event, serialized, proofs) in prepared {
             if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized) {
                 self.copy_content(digest, content.content_bytes);
+            }
+            if !proofs.is_empty() {
+                if let Ok(key) = EventKey::from_event(event) {
+                    self.event_proofs_store.insert(key, proofs);
+                }
             }
             let _ = self.copy_event(signed_event);
         }
@@ -118,7 +140,10 @@ impl PolycentricClient {
     pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {
         self.event_store
             .by_identity_and_collection(identity, collection)
-            .filter(|(_, signed)| self.validate_event(signed, &[]).is_ok())
+            .filter(|(k, signed)| {
+                self.validate_event(signed, self.event_proofs_store.get(k))
+                    .is_ok()
+            })
             .map(|(k, _)| k.sequence)
             .max()
             .map(|s| s + 1)
@@ -126,31 +151,14 @@ impl PolycentricClient {
     }
 
     /// Canonically-ordered signatures in `(identity, collection)`.
-    ///
-    /// Sorted by `sum(vector_clock)` then `created_at` then signature.
-    /// Sum is a linear extension of happens-before: if A → B then
-    /// `VC_A ≤ VC_B` componentwise with a strict component, so
-    /// `sum(VC_A) < sum(VC_B)`. Equal sums imply concurrency.
+    /// Delegates to [`polycentric_common::merkle::canonical_signatures`]
+    /// so client and server agree on the ordering.
     fn canonical_signatures(&self, identity: &str, collection: i32) -> Vec<Vec<u8>> {
-        let mut rows: Vec<(u64, u64, Vec<u8>)> = self
-            .event_store
-            .by_identity_and_collection(identity, collection)
-            .filter_map(|(_, signed)| {
-                let inner = Event::decode(signed.event_bytes.as_slice()).ok()?;
-                let vc_sum: u64 = inner
-                    .vector_clock
-                    .as_ref()
-                    .map(|vc| vc.sequence.iter().sum())
-                    .unwrap_or(0);
-                Some((vc_sum, inner.created_at, signed.signature.clone()))
-            })
-            .collect();
-        rows.sort_by(|a, b| {
-            a.0.cmp(&b.0)
-                .then_with(|| a.1.cmp(&b.1))
-                .then_with(|| a.2.cmp(&b.2))
-        });
-        rows.into_iter().map(|(_, _, sig)| sig).collect()
+        polycentric_common::merkle::canonical_signatures(
+            self.event_store
+                .by_identity_and_collection(identity, collection)
+                .map(|(_, se)| (se.event_bytes.as_slice(), se.signature.as_slice())),
+        )
     }
 
     /// Merkle root over canonically-ordered signatures in `(identity, collection)`.
@@ -167,20 +175,6 @@ impl PolycentricClient {
         self.canonical_signatures(identity, collection)
             .pop()
             .unwrap_or_default()
-    }
-
-    /// Canonical leaf index of `signature`, or `None` if absent.
-    pub fn leaf_index_of(&self, identity: &str, collection: i32, signature: &[u8]) -> Option<u64> {
-        self.canonical_signatures(identity, collection)
-            .into_iter()
-            .position(|s| s == signature)
-            .map(|p| p as u64)
-    }
-
-    /// Number of canonical leaves currently in `(identity, collection)`.
-    /// Equal to the leaf index a newly-appended event would occupy.
-    pub fn leaf_count(&self, identity: &str, collection: i32) -> u64 {
-        self.canonical_signatures(identity, collection).len() as u64
     }
 
     /// Build a vector clock for a single collection within an identity.
@@ -215,7 +209,10 @@ impl PolycentricClient {
                     self.event_store
                         .by_identity_collection_signer(identity, collection, pk.key_type, &pk.key)
                         .rev()
-                        .find(|(_, signed)| self.validate_event(signed, &[]).is_ok())
+                        .find(|(k, signed)| {
+                            self.validate_event(signed, self.event_proofs_store.get(k))
+                                .is_ok()
+                        })
                         .map(|(k, _)| k.sequence)
                         .unwrap_or(0)
                 }
@@ -239,7 +236,8 @@ impl PolycentricClient {
             .event_store
             .by_identity_and_collection(identity, collection)
         {
-            if self.validate_event(signed_event, &[]).is_err() {
+            let proofs = self.event_proofs_store.get(event_key);
+            if self.validate_event(signed_event, proofs).is_err() {
                 continue;
             }
             let event = Event::decode(signed_event.event_bytes.as_slice())
@@ -272,7 +270,7 @@ impl PolycentricClient {
             let bundle = EventBundle {
                 signed_event: Some(signed_event.clone()),
                 serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
-                event_proofs: Vec::new(),
+                event_proofs: proofs.to_vec(),
             };
             bundles.push((event_key.clone(), bundle));
         }
@@ -628,7 +626,10 @@ mod tests {
                             let inner = Event::decode(signed.event_bytes.as_slice())
                                 .expect("head event decodes");
                             let leaf_count = client
-                                .leaf_index_of(&id_string, collection, &signed.signature)
+                                .canonical_signatures(&id_string, collection)
+                                .into_iter()
+                                .position(|s| s == signed.signature)
+                                .map(|p| p as u64)
                                 .unwrap_or(0);
                             EventProofTarget {
                                 collection,

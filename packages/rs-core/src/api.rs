@@ -138,15 +138,6 @@ impl PolycentricCore {
             .previous_signature(&identity, collection)
     }
 
-    /// Canonical leaf count in `(identity, collection)` — the leaf index
-    /// a newly-appended event would occupy.
-    pub fn leaf_count(&self, identity: String, collection: i32) -> u64 {
-        self.client
-            .lock()
-            .unwrap()
-            .leaf_count(&identity, collection)
-    }
-
     /// Verify each `SignedEvent` (decoding implicitly verifies the
     /// signature) and copy it into the local event store.
     pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
