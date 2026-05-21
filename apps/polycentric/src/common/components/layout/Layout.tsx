@@ -128,7 +128,7 @@ function Screen({
     <KeyboardAvoidingView
       style={[Atoms.flex_1, Atoms.flex_row, Atoms.w_full, Atoms.min_w_0]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.bottom}
+      keyboardVerticalOffset={insets.top}
     >
       {children}
     </KeyboardAvoidingView>

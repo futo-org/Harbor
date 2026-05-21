@@ -5,7 +5,6 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
@@ -13,6 +12,7 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -67,7 +67,8 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     >
       {avatar}
       <Pressable
-        onPress={() => router.push(Routes.tabs.identitySwitch)}
+        // TODO  Route to identitySwitch when that is implemented
+        onPress={() => router.push(Routes.tabs.settings.identity)}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         hitSlop={10}
