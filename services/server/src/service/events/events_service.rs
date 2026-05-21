@@ -1,13 +1,17 @@
 use super::events_repository as EventsRepository;
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::ServiceContext;
-use crate::service::identity::identity_service::{build_identity_hints, rows_to_bundles};
+use crate::service::identity::identity_service::{
+    build_identity_hints, rows_to_bundles,
+};
 use crate::service::proofs::proofs_service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
-use crate::service::proto::{Content, Event, PutEventsRequest, PutEventsResponse};
+use crate::service::proto::{
+    Content, Event, PutEventsRequest, PutEventsResponse,
+};
 use crate::service::proto::{ListEventsRequest, ListEventsResponse};
 use crate::util;
 use ::entity::{
@@ -211,8 +215,11 @@ impl EventSyncService for EventSyncServiceImpl {
             };
 
             // Add the event to the database, skipping duplicates
-            match EventsRepository::Mutation::add_event(&self.ctx.db, active_model)
-                .await
+            match EventsRepository::Mutation::add_event(
+                &self.ctx.db,
+                active_model,
+            )
+            .await
             {
                 Ok(_) => {
                     self.ctx

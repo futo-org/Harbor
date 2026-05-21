@@ -39,7 +39,8 @@ pub fn build_grpc_router(
     let ctx = ServiceContext::new(db.clone());
     let feeds_service =
         service::feeds::feeds_service::build_feeds_service(ctx.clone());
-    let events_service = service::events::events_service::build_events_service(ctx);
+    let events_service =
+        service::events::events_service::build_events_service(ctx);
     let content_service =
         service::content::content_service::build_content_service(
             db.clone(),

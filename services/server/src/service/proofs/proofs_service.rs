@@ -32,12 +32,15 @@ pub async fn build_proof_against(
     }
     let leaves: Vec<Vec<u8>> = canonical[..leaf_count].to_vec();
 
-    let Some(leaf_index) = leaves.iter().position(|s| s == leaf_signature) else {
+    let Some(leaf_index) = leaves.iter().position(|s| s == leaf_signature)
+    else {
         return Ok(None);
     };
 
     match merkle::merkle_tree_hash(&leaves) {
-        Some(root) if target.root.len() == 32 && root.as_slice() == target.root.as_slice() => {}
+        Some(root)
+            if target.root.len() == 32
+                && root.as_slice() == target.root.as_slice() => {}
         _ => return Ok(None),
     }
 
@@ -65,11 +68,13 @@ pub async fn build_revocation_proof(
     let Some(content) = ctx.proof_cache.identity_content(identity).await else {
         return Ok(None);
     };
-    let Some(target) = find_revocation_target(&content, signer, collection) else {
+    let Some(target) = find_revocation_target(&content, signer, collection)
+    else {
         return Ok(None);
     };
     let target = target.clone();
-    build_proof_against(ctx, identity, collection, &target, leaf_signature).await
+    build_proof_against(ctx, identity, collection, &target, leaf_signature)
+        .await
 }
 
 /// `EventProofTarget` recorded for `(signer, collection)` in

@@ -1,13 +1,16 @@
 use super::feeds_repository::{self as FeedsRepository, FeedRow};
 use crate::service::context::ServiceContext;
-use crate::service::identity::identity_service::{build_identity_hints, rows_to_bundles};
+use crate::service::identity::identity_service::{
+    build_identity_hints, rows_to_bundles,
+};
 use crate::service::proofs::proofs_service::attach_proofs;
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    FeedPageParams, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
+    FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -73,10 +76,12 @@ impl FeedsService for FeedsServiceImpl {
         }
         let caller = inner_req.follower_identity;
 
-        let mut identities =
-            FeedsRepository::Query::list_followed_identities(&self.ctx.db, &caller)
-                .await
-                .map_err(map_db_err)?;
+        let mut identities = FeedsRepository::Query::list_followed_identities(
+            &self.ctx.db,
+            &caller,
+        )
+        .await
+        .map_err(map_db_err)?;
 
         // Include the caller's own posts in their following feed.
         if !identities.iter().any(|a| a == &caller) {
@@ -84,7 +89,9 @@ impl FeedsService for FeedsServiceImpl {
         }
 
         let rows = FeedsRepository::Query::list_feed_events_by_identities(
-            &self.ctx.db, identities, limit,
+            &self.ctx.db,
+            identities,
+            limit,
         )
         .await
         .map_err(map_db_err)?;
@@ -108,9 +115,10 @@ impl FeedsService for FeedsServiceImpl {
         let inner_req = request.into_inner();
         let limit = page_limit(&inner_req.page_params);
 
-        let rows = FeedsRepository::Query::list_feed_events(&self.ctx.db, limit)
-            .await
-            .map_err(map_db_err)?;
+        let rows =
+            FeedsRepository::Query::list_feed_events(&self.ctx.db, limit)
+                .await
+                .map_err(map_db_err)?;
 
         let event_hints = build_identity_hints(&self.ctx, &rows).await?;
         let mut event_bundles = rows_to_bundles(rows);

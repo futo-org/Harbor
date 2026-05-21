@@ -52,10 +52,7 @@ impl IdentityDirectory {
 
     /// Raw entries at `sequence`. May contain forgeries — prefer
     /// [`ValidatedChain::at_sequence`].
-    pub fn raw_at_sequence(
-        &self,
-        sequence: u64,
-    ) -> impl Iterator<Item = &DecodedIdentityEvent> {
+    pub fn raw_at_sequence(&self, sequence: u64) -> impl Iterator<Item = &DecodedIdentityEvent> {
         self.events.iter().filter(move |e| e.sequence == sequence)
     }
 
@@ -66,10 +63,7 @@ impl IdentityDirectory {
     /// Walk from genesis forward. At each step take the rotation-authorized
     /// candidate whose VC verifies; ties broken by smallest signer key. Stops
     /// where no candidate passes. Errors only if genesis itself fails.
-    pub fn validate<'a>(
-        &'a self,
-        store: &EventStore,
-    ) -> Result<ValidatedChain<'a>, CoreError> {
+    pub fn validate<'a>(&'a self, store: &EventStore) -> Result<ValidatedChain<'a>, CoreError> {
         let genesis = self.genesis()?;
         let mut chain: Vec<&DecodedIdentityEvent> = vec![genesis];
         let mut current = genesis;
@@ -152,9 +146,7 @@ impl<'a> ValidatedChain<'a> {
         for window in self.events.windows(2) {
             let prev = window[0];
             let curr = window[1];
-            if prev.content.authorizes_signer(signer)
-                && !curr.content.authorizes_signer(signer)
-            {
+            if prev.content.authorizes_signer(signer) && !curr.content.authorizes_signer(signer) {
                 latest_revocation = Some(curr);
             }
         }
@@ -183,5 +175,9 @@ fn identity_matches_content(identity: &str, content: &Identity) -> bool {
 fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect()
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect()
 }

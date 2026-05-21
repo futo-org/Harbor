@@ -13,12 +13,16 @@ use tokio::sync::RwLock;
 
 use super::proofs_repository;
 
+/// One entry per `(identity, collection)` — the canonical-ordered
+/// signatures used to rebuild trees for proof generation.
+type CanonicalSignatures = HashMap<(String, i32), Vec<Vec<u8>>>;
+
 #[derive(Default)]
 pub struct ProofCache {
     /// identity → latest `Identity` content.
     identity: RwLock<HashMap<String, Identity>>,
     /// (identity, collection) → canonical leaf signatures.
-    canonical: RwLock<HashMap<(String, i32), Vec<Vec<u8>>>>,
+    canonical: RwLock<CanonicalSignatures>,
 }
 
 impl ProofCache {
@@ -43,13 +47,19 @@ impl ProofCache {
         if let Some(cached) = self.canonical.read().await.get(&key).cloned() {
             return Ok(cached);
         }
-        let fetched = proofs_repository::canonical_signatures(db, identity, collection).await?;
+        let fetched =
+            proofs_repository::canonical_signatures(db, identity, collection)
+                .await?;
         self.canonical.write().await.insert(key, fetched.clone());
         Ok(fetched)
     }
 
     /// Insert pre-decoded identity content into the cache.
-    pub async fn warm_identity_content(&self, identity: &str, content: Identity) {
+    pub async fn warm_identity_content(
+        &self,
+        identity: &str,
+        content: Identity,
+    ) {
         self.identity
             .write()
             .await

@@ -2,7 +2,9 @@
 //! feed/list/thread responses.
 
 use crate::service::context::ServiceContext;
-use crate::service::feeds::feeds_repository::{self as FeedsRepository, FeedRow};
+use crate::service::feeds::feeds_repository::{
+    self as FeedsRepository, FeedRow,
+};
 use crate::service::identity::identity_repository::Query as IdentityRepo;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
@@ -17,7 +19,8 @@ pub async fn build_identity_hints(
     ctx: &ServiceContext,
     rows: &[FeedRow],
 ) -> Result<Vec<EventHint>, Status> {
-    let mut identities: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut identities: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
     for (event, content) in rows {
         identities.insert(event.identity.clone());
         if let Some(parent_identity) =
@@ -29,28 +32,35 @@ pub async fn build_identity_hints(
     let identities: Vec<String> = identities.into_iter().collect();
 
     // Fetch the identity events: TODO. We can cache these aggressively
-    let identity_rows =
-        IdentityRepo::list_identity_events_for_identities(&ctx.db, identities.clone())
-            .await
-            .map_err(map_db_err)?;
+    let identity_rows = IdentityRepo::list_identity_events_for_identities(
+        &ctx.db,
+        identities.clone(),
+    )
+    .await
+    .map_err(map_db_err)?;
 
     // Warm up the identity cache (helps proofs)
     warm_identity_cache(ctx, &identity_rows).await;
 
     // Fetch the profile events: TODO. We can cache these even more aggressively!
-    let profile_rows = FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.db, identities,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let profile_rows =
+        FeedsRepository::Query::list_latest_profiles_for_identities(
+            &ctx.db, identities,
+        )
+        .await
+        .map_err(map_db_err)?;
 
     let mut hints: Vec<EventHint> =
         Vec::with_capacity(identity_rows.len() + profile_rows.len());
-    hints.extend(rows_to_bundles(identity_rows).into_iter().map(|b| EventHint {
-        event_bundle: Some(b),
+    hints.extend(rows_to_bundles(identity_rows).into_iter().map(|b| {
+        EventHint {
+            event_bundle: Some(b),
+        }
     }));
-    hints.extend(rows_to_bundles(profile_rows).into_iter().map(|b| EventHint {
-        event_bundle: Some(b),
+    hints.extend(rows_to_bundles(profile_rows).into_iter().map(|b| {
+        EventHint {
+            event_bundle: Some(b),
+        }
     }));
     Ok(hints)
 }

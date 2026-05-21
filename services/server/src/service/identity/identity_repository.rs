@@ -24,7 +24,8 @@ impl Query {
         db: &DbConn,
         identity: &str,
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
-        let Some(content) = Self::latest_valid_identity_content(db, identity).await?
+        let Some(content) =
+            Self::latest_valid_identity_content(db, identity).await?
         else {
             return Ok(vec![]);
         };
@@ -66,7 +67,8 @@ impl Query {
                     key: event.public_key,
                 };
                 let content_msg =
-                    Content::decode(content_row.serialized_bytes.as_slice()).ok()?;
+                    Content::decode(content_row.serialized_bytes.as_slice())
+                        .ok()?;
                 let identity_content = match content_msg.content_body? {
                     ContentBody::Identity(i) => i,
                     _ => return None,
@@ -96,7 +98,10 @@ impl Query {
             let next_seq = head_seq + 1;
             let next = decoded
                 .iter()
-                .filter(|r| r.sequence == next_seq && authorizes_rotation(&head, &r.signer))
+                .filter(|r| {
+                    r.sequence == next_seq
+                        && authorizes_rotation(&head, &r.signer)
+                })
                 .min_by(|a, b| a.signer.key.cmp(&b.signer.key));
             match next {
                 Some(e) => {
@@ -153,7 +158,8 @@ struct DecodedIdentityRow {
 fn identity_matches_content(identity: &str, content: &Identity) -> bool {
     let mut h = Sha256::new();
     h.update(content.encode_to_vec());
-    let hex: String = h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
+    let hex: String =
+        h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
     hex == identity
 }
 
