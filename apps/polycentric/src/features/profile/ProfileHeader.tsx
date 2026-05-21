@@ -34,7 +34,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  console.log('get profile full ' + identityKey, profile);
+
   const username = profile.name ?? fallbackUsername;
 
   const short = identityKey ? shortenIdentityId(identityKey) : '...';

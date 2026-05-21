@@ -1915,6 +1915,16 @@ export interface PolycentricCoreLike {
   ) /*throws*/ : ArrayBuffer;
   nextSequence(identity: string, collection: /*i32*/ number): /*u64*/ bigint;
   /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer;
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer;
+  /**
    * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
    * "fit"), encode as JPEG.
    */
@@ -2343,6 +2353,46 @@ export class PolycentricCore
       uniffiCaller.rustCall(
         /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_next_sequence(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(identity),
             FfiConverterInt32.lower(collection),
@@ -3564,6 +3614,22 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root() !==
+    20406
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_root'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !==
+    18222
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature'
     );
   }
   if (

@@ -16,7 +16,7 @@ pub fn verify_vector_clock(
     signer: &PublicKey,
     expected_self_sequence: u64,
 ) -> Result<(), CoreError> {
-    let self_position = vc.check_structure(doc, signer, expected_self_sequence)?;
+    let self_position = vc.get_signer_position(doc, signer, expected_self_sequence)?;
     let dedup = doc.deduplicated_keys();
     for (pos, &observed) in vc.sequence.iter().enumerate() {
         if pos == self_position || observed == 0 {
