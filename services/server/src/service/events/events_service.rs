@@ -149,7 +149,7 @@ impl EventSyncService for EventSyncServiceImpl {
                 })?;
 
                 // Try to insert content; skip if it already exists
-                let content_result = ContentRepository::Mutation::add_content(
+                let content_row = ContentRepository::Mutation::add_content(
                     &txn,
                     ContentModel::ActiveModel {
                         id: NotSet,
@@ -161,25 +161,20 @@ impl EventSyncService for EventSyncServiceImpl {
                         synced_at: Set(synced_at),
                     },
                 )
-                .await;
+                .await
+                .map_err(|e| {
+                    eprintln!("sync_events content db error: {e}");
+                    Status::internal("internal server error")
+                })?;
 
-                match content_result {
-                    Ok(content_row) => {
-                        save_content_child(
-                            &txn,
-                            content_row.id,
-                            content,
-                            &key.identity,
-                        )
-                        .await?;
-                    }
-                    Err(ref e) if Self::is_unique_violation(e) => {
-                        // Content already exists, skip
-                    }
-                    Err(e) => {
-                        eprintln!("sync_events content db error: {e}");
-                        return Err(Status::internal("internal server error"));
-                    }
+                if let Some(content_row) = content_row {
+                    save_content_child(
+                        &txn,
+                        content_row.id,
+                        content,
+                        &key.identity,
+                    )
+                    .await?;
                 }
 
                 txn.commit().await.map_err(|e| {

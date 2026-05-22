@@ -1869,6 +1869,14 @@ export interface PolycentricCoreLike {
     opts: QueryOpts | undefined
   ): QueryObservable;
   /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ) /*throws*/ : /*u64*/ bigint | undefined;
+  /**
    * Fetch a pairing session by its signature. Returns serialized
    * `PairingSession` proto bytes.
    */
@@ -2145,6 +2153,32 @@ export class PolycentricCore
             FfiConverterArrayString.lower(queryKey),
             FfiConverterTypeQuery.lower(query),
             FfiConverterOptionalTypeQueryOpts.lower(opts),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ): /*u64*/ bigint | undefined /*throws*/ {
+    return FfiConverterOptionalUInt64.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterArrayBuffer.lower(signer),
             callStatus
           );
         },
@@ -3467,6 +3501,9 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
+// FfiConverter for /*u64*/bigint | undefined
+const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
+
 // FfiConverter for Array<ArrayBuffer>
 const FfiConverterArrayArrayBuffer = new FfiConverterArray(
   FfiConverterArrayBuffer
@@ -3558,6 +3595,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !==
+    8615
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence'
     );
   }
   if (

@@ -135,6 +135,24 @@ impl PolycentricClient {
         }
     }
 
+    /// Max `sequence` of identity events signed by `signer` for `identity`,
+    /// or `None` if this signer has no identity events.
+    pub fn get_identity_sequence(
+        &self,
+        identity: &str,
+        signer: &protos_v2::PublicKey,
+    ) -> Option<u64> {
+        self.event_store
+            .by_identity_collection_signer(
+                identity,
+                collections::IDENTITY,
+                signer.key_type,
+                &signer.key,
+            )
+            .next_back()
+            .map(|(k, _)| k.sequence)
+    }
+
     /// `max(sequence) + 1` over validated events in `(identity, collection)`,
     /// or 1 if none exist.
     pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {

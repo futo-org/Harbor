@@ -3,8 +3,8 @@ use ::entity::{
     content_blob_model as ContentBlobModel, content_model as ContentModel,
 };
 use prost::Message;
-use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::OnConflict;
 use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 use sha2::{Digest, Sha256};
 
@@ -31,8 +31,26 @@ impl Mutation {
     pub async fn add_content<C: ConnectionTrait>(
         db: &C,
         active_model: ContentModel::ActiveModel,
-    ) -> Result<ContentModel::Model, DbErr> {
-        active_model.insert(db).await
+    ) -> Result<Option<ContentModel::Model>, DbErr> {
+        let result = ContentModel::Entity::insert(active_model)
+            .on_conflict(
+                OnConflict::columns([
+                    ContentModel::Column::DigestType,
+                    ContentModel::Column::DigestBytes,
+                ])
+                .do_nothing()
+                .to_owned(),
+            )
+            .exec_with_returning(db)
+            .await;
+
+        match result {
+            Ok(model) => Ok(Some(model)),
+            Err(DbErr::RecordNotInserted | DbErr::RecordNotFound(_)) => {
+                Ok(None)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn save_blob<C: ConnectionTrait>(
@@ -48,7 +66,7 @@ impl Mutation {
         let blob_bytes = blob.encode_to_vec();
         let content_digest_bytes = Sha256::digest(&blob_bytes).to_vec();
 
-        let content_result = Self::add_content(
+        let content_row = Self::add_content(
             db,
             ContentModel::ActiveModel {
                 id: NotSet,
@@ -58,45 +76,36 @@ impl Mutation {
                 synced_at: Set(synced_at),
             },
         )
-        .await;
+        .await?;
 
-        match content_result {
-            Ok(content_row) => {
-                let blob_insert = ContentBlobModel::ActiveModel {
-                    content_id: Set(content_row.id),
-                    digest_type: Set(digest.r#type as i16),
-                    digest_bytes: Set(digest.value.clone()),
-                    mime_type: Set(blob.mime_type.clone()),
-                    size: Set(blob.size),
-                }
-                .insert(db)
-                .await;
+        let Some(content_row) = content_row else {
+            // Content with this digest already tracked — the blob child row
+            // would have been written then; nothing to do.
+            return Ok(());
+        };
 
-                if let Err(e) = blob_insert
-                    && !is_unique_violation(&e)
-                {
-                    return Err(e);
-                }
-            }
-            Err(ref e) if is_unique_violation(e) => {
-                // Already tracked, nothing to do.
-            }
-            Err(e) => return Err(e),
+        let blob_insert =
+            ContentBlobModel::Entity::insert(ContentBlobModel::ActiveModel {
+                content_id: Set(content_row.id),
+                digest_type: Set(digest.r#type as i16),
+                digest_bytes: Set(digest.value.clone()),
+                mime_type: Set(blob.mime_type.clone()),
+                size: Set(blob.size),
+            })
+            .on_conflict(
+                OnConflict::columns([
+                    ContentBlobModel::Column::DigestType,
+                    ContentBlobModel::Column::DigestBytes,
+                ])
+                .do_nothing()
+                .to_owned(),
+            )
+            .exec(db)
+            .await;
+
+        match blob_insert {
+            Ok(_) | Err(DbErr::RecordNotInserted) => Ok(()),
+            Err(e) => Err(e),
         }
-
-        Ok(())
     }
-}
-
-fn is_unique_violation(err: &DbErr) -> bool {
-    let runtime_err = match err {
-        DbErr::Query(e) | DbErr::Exec(e) => Some(e),
-        _ => None,
-    };
-    if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err
-        && let Some(db_err) = arc_err.as_database_error()
-    {
-        return db_err.is_unique_violation();
-    }
-    false
 }

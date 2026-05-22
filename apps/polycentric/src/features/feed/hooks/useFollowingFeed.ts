@@ -20,6 +20,8 @@ export function useFollowingFeed(options?: {
   const query = useQuery(
     feedQueryKeys.following(),
     new Query.GetFollowingFeed({ followerIdentity }),
+    undefined,
+    enabled,
   );
 
   const items = useMemo(() => {
