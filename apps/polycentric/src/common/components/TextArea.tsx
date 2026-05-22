@@ -5,7 +5,7 @@ import {
   useRef,
 } from 'react';
 import { Platform, TextInput as RNTextInput } from 'react-native';
-import { TextInput, type TextInputProps } from '../primitives/TextInput';
+import { TextInput, type TextInputProps } from './primitives/TextInput';
 
 export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
   /** Minimum height in pixels. Defaults to 40. */

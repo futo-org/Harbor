@@ -16,12 +16,13 @@ import { PostToolbar } from './PostToolbar';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import {
   getKeyFingerprint,
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
+import PostMenu from './PostMenu';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -56,10 +57,6 @@ export const Post = memo(function Post({
 
   const rawContent = post.content ?? '';
   const [contentExpanded, setContentExpanded] = useState(false);
-
-  // useEffect(() => {
-  //   setContentExpanded(false);
-  // }, [postId]);
 
   const { displayContent, isTruncatedPreview, showContentExpandToggle } =
     useMemo(() => {
@@ -229,6 +226,9 @@ export const Post = memo(function Post({
                 </>
               ) : null}
             </View>
+
+            {/* Menu */}
+            <PostMenu post={post} />
           </View>
 
           {!hideReplyingTo && post.reply?.parentId ? (

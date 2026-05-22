@@ -20,7 +20,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { Atoms } from '../../theme';
+import { Atoms } from '../theme';
 
 // A reanimated-compatible FlashList.
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
