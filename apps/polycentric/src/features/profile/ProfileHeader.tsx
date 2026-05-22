@@ -34,6 +34,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
+
   const username = profile.name ?? fallbackUsername;
 
   const short = identityKey ? shortenIdentityId(identityKey) : '...';
@@ -41,6 +42,8 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
+
+  if (profile.isLoading && !profile.name) return undefined;
 
   return (
     <>

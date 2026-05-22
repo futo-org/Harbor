@@ -19,7 +19,7 @@ message Event {
   // Reference to the sequence, of the Identity Collection (1), that holds the identity document
   uint64 identity_sequence = 2;
 
-  // Vector clock 
+  // Vector clock
   VectorClock vector_clock = 3;
 
   // Signature of the previous event signed by the same key. Assists in creating
@@ -31,6 +31,11 @@ message Event {
 
   // Timestamp, in milliseconds, of when the event was created
   uint64 created_at = 7;
+
+  // RFC 6962 Merkle root over this signer's prior signatures in this collection
+  // (leaf_count = key.sequence - 1). Lets later events attest to the writer's
+  // history; consumed by EventProof for membership verification.
+  bytes previous_root = 8;
 }
 
 message SignedEvent {
@@ -46,6 +51,18 @@ message SignedEvent {
 message EventBundle {
   SignedEvent signed_event = 1;
   optional SerializedContent serialized_content = 2;
+  repeated EventProof event_proofs = 3;
+}
+
+// Merkle inclusion proof: the SignedEvent in this bundle is the leaf at
+// `leaf_index` in the tree rooted at the `EventProofTarget` identified by
+// `target_signature`.
+message EventProof {
+  bytes target_signature = 1;
+  // Canonical position of this event in the target's tree.
+  uint64 leaf_index = 2;
+  // RFC 6962 audit path: sibling hashes from leaf toward root.
+  repeated bytes audit_path = 3;
 }
 
 // Hints are additional events that the server provides that may be
@@ -78,8 +95,7 @@ message ListEventsRequest {
 
 message ListEventsResponse {
   repeated EventBundle event_bundles = 1;
-  string previous_token = 2;
-  string next_token = 3;
+  repeated EventHint event_hints = 2;
 }
 
 message PutEventsRequest {

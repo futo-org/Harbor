@@ -1,6 +1,5 @@
 use crate::error::{CoreError, Error, Result};
-use crate::models::protos_v2::Event;
-use crate::models::protos_v2::SignedEvent;
+use crate::models::protos_v2::{Event, SignedEvent};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
 use prost::Message;

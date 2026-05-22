@@ -20,13 +20,17 @@ export default function OnboardingWelcomeScreen() {
               Atoms.inset_0,
               Atoms.justify_center,
               Atoms.items_center,
-              Atoms.p_2xl,
+              Atoms.gap_2xl,
+              Atoms.p_3xl,
             ]}
           >
             <Image
               source={LOGO_WITH_TEXT}
               contentFit="contain"
-              style={{ width: '100%', height: '100%' }}
+              style={{
+                width: '100%',
+                aspectRatio: 1,
+              }}
             />
           </View>
           <View style={[Atoms.gap_md, Atoms.w_full, Atoms.mt_auto]}>

@@ -1869,6 +1869,14 @@ export interface PolycentricCoreLike {
     opts: QueryOpts | undefined
   ): QueryObservable;
   /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ) /*throws*/ : /*u64*/ bigint | undefined;
+  /**
    * Fetch a pairing session by its signature. Returns serialized
    * `PairingSession` proto bytes.
    */
@@ -1914,6 +1922,16 @@ export interface PolycentricCoreLike {
     collection: /*i32*/ number
   ) /*throws*/ : ArrayBuffer;
   nextSequence(identity: string, collection: /*i32*/ number): /*u64*/ bigint;
+  /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer;
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer;
   /**
    * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
    * "fit"), encode as JPEG.
@@ -2144,6 +2162,32 @@ export class PolycentricCore
   }
 
   /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ): /*u64*/ bigint | undefined /*throws*/ {
+    return FfiConverterOptionalUInt64.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterArrayBuffer.lower(signer),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
    * Fetch a pairing session by its signature. Returns serialized
    * `PairingSession` proto bytes.
    */
@@ -2343,6 +2387,46 @@ export class PolycentricCore
       uniffiCaller.rustCall(
         /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_next_sequence(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(identity),
             FfiConverterInt32.lower(collection),
@@ -3417,6 +3501,9 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
+// FfiConverter for /*u64*/bigint | undefined
+const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
+
 // FfiConverter for Array<ArrayBuffer>
 const FfiConverterArrayArrayBuffer = new FfiConverterArray(
   FfiConverterArrayBuffer
@@ -3511,6 +3598,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !==
+    8615
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !==
     24179
   ) {
@@ -3564,6 +3659,22 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root() !==
+    20406
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_root'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !==
+    18222
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature'
     );
   }
   if (

@@ -1,22 +1,33 @@
 use polycentric_common::{
     error::CoreError,
-    models::protos_v2::{
-        content::ContentBody, Content, ContentDigest, Event, EventBundle, PublicKey,
-        SerializedContent, SignedEvent, VectorClock,
+    models::{
+        collections,
+        protos_v2::{
+            self, content::ContentBody, Content, ContentDigest, Event, EventBundle, EventProof,
+            PublicKey, SerializedContent, SignedEvent, VectorClock,
+        },
+        Serializable,
     },
 };
 
-use crate::store::{content_store::ContentStore, event_store::EventStore, keys::EventKey};
+use crate::identity::{DecodedIdentityEvent, IdentityDirectory};
+use crate::store::{
+    content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
+    keys::EventKey,
+};
 use prost::Message;
 use std::collections::HashSet;
 use std::sync::Mutex;
 
-const IDENTITY_COLLECTION: i32 = 1;
+fn hex_short(bytes: &[u8]) -> String {
+    bytes.iter().take(4).map(|b| format!("{:02x}", b)).collect()
+}
 
 #[derive(Default)]
 pub struct PolycentricClient {
     servers: Mutex<Vec<String>>,
     event_store: EventStore,
+    event_proofs_store: EventProofsStore,
     content_store: ContentStore,
 }
 
@@ -45,67 +56,143 @@ impl PolycentricClient {
         self.content_store.insert(digest, content_bytes);
     }
 
-    /// Find an `EventBundle` in the local stores by (identity,
-    /// collection, sequence). Returns the first match — when multiple
-    /// signers share the same sequence the choice is arbitrary, so
-    /// callers that care about a specific signer should verify the
-    /// returned bundle's `event.key.signed_by`. The bundle's
-    /// `serialized_content` is populated when the matching content is
-    /// also in the content store; otherwise it's left `None`.
+    /// First locally-valid bundle at `(identity, collection, sequence)`.
     pub fn find_event_bundle_by_sequence(
         &self,
         identity: &str,
         collection: i32,
         sequence: u64,
     ) -> Option<EventBundle> {
-        let (_, signed_event) = self
-            .event_store
+        self.event_store
             .by_identity_and_collection(identity, collection)
-            .find(|(k, _)| k.sequence == sequence)?;
-        let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
-        let content_bytes = event
-            .content_digest
-            .as_ref()
-            .and_then(|d| self.content_store.get(d))
-            .map(|b| b.to_vec());
-        Some(EventBundle {
-            signed_event: Some(signed_event.clone()),
-            serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
-        })
+            .filter(|(k, _)| k.sequence == sequence)
+            .find_map(|(k, signed_event)| {
+                let proofs = self.event_proofs_store.get(k);
+                self.validate_event(signed_event, proofs).ok()?;
+                let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
+                let content_bytes = event
+                    .content_digest
+                    .as_ref()
+                    .and_then(|d| self.content_store.get(d))
+                    .map(|b| b.to_vec());
+                Some(EventBundle {
+                    signed_event: Some(signed_event.clone()),
+                    serialized_content: content_bytes
+                        .map(|c| SerializedContent { content_bytes: c }),
+                    event_proofs: proofs.to_vec(),
+                })
+            })
     }
 
-    /// Verify each bundle's signature and copy its event + content
-    /// into the local stores.
+    /// Sig-check and insert each bundle. Identity events go first (by
+    /// sequence) so downstream validation can find the genesis. Any
+    /// `event_proofs` travelling with a bundle are persisted in the
+    /// proofs side-store so read-side validation can re-verify revoked
+    /// signers later.
     pub fn copy_bundles(&mut self, bundles: Vec<EventBundle>) {
-        for bundle in bundles {
-            let Some(signed_event) = bundle.signed_event else {
-                continue;
+        let mut prepared: Vec<(
+            SignedEvent,
+            Event,
+            Option<SerializedContent>,
+            Vec<EventProof>,
+        )> = bundles
+            .into_iter()
+            .filter_map(|bundle| {
+                let signed_event = bundle.signed_event?;
+                if signed_event.verify_signature().is_err() {
+                    return None;
+                }
+                let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
+                Some((
+                    signed_event,
+                    event,
+                    bundle.serialized_content,
+                    bundle.event_proofs,
+                ))
+            })
+            .collect();
+        prepared.sort_by_key(|(_, event, _, _)| {
+            let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(i32::MAX);
+            let identity_first = if collection == collections::IDENTITY {
+                0
+            } else {
+                1
             };
-            if signed_event.verify_signature().is_err() {
-                continue;
+            let sequence = event.key.as_ref().map(|k| k.sequence).unwrap_or(0);
+            (identity_first, sequence)
+        });
+
+        for (signed_event, event, serialized, proofs) in prepared {
+            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized) {
+                self.copy_content(digest, content.content_bytes);
             }
-            let Ok(event) = Event::decode(signed_event.event_bytes.as_slice()) else {
-                continue;
-            };
-            if let (Some(digest), Some(serialized)) =
-                (event.content_digest, bundle.serialized_content)
-            {
-                self.copy_content(&digest, serialized.content_bytes);
+            if !proofs.is_empty() {
+                if let Ok(key) = EventKey::from_event(event) {
+                    self.event_proofs_store.insert(key, proofs);
+                }
             }
             let _ = self.copy_event(signed_event);
         }
     }
 
-    /// Return the next sequence number for a given collection:
-    /// max(sequence) + 1 across all events in the collection for an identity,
-    /// or 1 if no events exist for that collection.
+    /// Max `sequence` of identity events signed by `signer` for `identity`,
+    /// or `None` if this signer has no identity events.
+    pub fn get_identity_sequence(
+        &self,
+        identity: &str,
+        signer: &protos_v2::PublicKey,
+    ) -> Option<u64> {
+        self.event_store
+            .by_identity_collection_signer(
+                identity,
+                collections::IDENTITY,
+                signer.key_type,
+                &signer.key,
+            )
+            .next_back()
+            .map(|(k, _)| k.sequence)
+    }
+
+    /// `max(sequence) + 1` over validated events in `(identity, collection)`,
+    /// or 1 if none exist.
     pub fn next_sequence(&self, identity: &str, collection: i32) -> u64 {
         self.event_store
             .by_identity_and_collection(identity, collection)
+            .filter(|(k, signed)| {
+                self.validate_event(signed, self.event_proofs_store.get(k))
+                    .is_ok()
+            })
             .map(|(k, _)| k.sequence)
             .max()
             .map(|s| s + 1)
             .unwrap_or(1)
+    }
+
+    /// Canonically-ordered signatures in `(identity, collection)`.
+    /// Delegates to [`polycentric_common::merkle::canonical_signatures`]
+    /// so client and server agree on the ordering.
+    fn canonical_signatures(&self, identity: &str, collection: i32) -> Vec<Vec<u8>> {
+        polycentric_common::merkle::canonical_signatures(
+            self.event_store
+                .by_identity_and_collection(identity, collection)
+                .map(|(_, se)| (se.event_bytes.as_slice(), se.signature.as_slice())),
+        )
+    }
+
+    /// Merkle root over canonically-ordered signatures in `(identity, collection)`.
+    pub fn previous_root(&self, identity: &str, collection: i32) -> Vec<u8> {
+        let leaves = self.canonical_signatures(identity, collection);
+        polycentric_common::merkle::merkle_tree_hash(&leaves)
+            .map(|h| h.to_vec())
+            .unwrap_or_default()
+    }
+
+    /// Signature of the canonically-latest event in `(identity, collection)`,
+    /// or empty if none.
+    pub fn previous_signature(&self, identity: &str, collection: i32) -> Vec<u8> {
+        self.canonical_signatures(identity, collection)
+            .pop()
+            .unwrap_or_default()
     }
 
     /// Build a vector clock for a single collection within an identity.
@@ -117,81 +204,44 @@ impl PolycentricClient {
         current_signer: &PublicKey,
         current_sequence: u64,
     ) -> Result<VectorClock, CoreError> {
-        // Retrieve referenced identity event for this signer.
-        let identity_signed_event = self
-            .event_store
-            .by_identity_and_collection(identity, IDENTITY_COLLECTION)
-            .find(|(k, _)| k.sequence == identity_sequence)
-            .map(|(_, e)| e)
+        let directory = self.identity_directory(identity)?;
+        let chain = directory.validate(&self.event_store)?;
+        let identity_content = chain
+            .content_at_sequence(identity_sequence)
             .ok_or_else(|| {
                 CoreError::InvalidEvent(format!(
-                    "No identity event found at sequence {}",
+                    "No validated identity event at sequence {}",
                     identity_sequence
                 ))
             })?;
 
-        let identity_event =
-            Event::decode(identity_signed_event.event_bytes.as_slice()).map_err(|e| {
-                CoreError::InvalidEvent(format!("Failed to decode identity event: {}", e))
-            })?;
-        let digest = identity_event.content_digest.ok_or_else(|| {
-            CoreError::InvalidEvent("Identity event missing content_digest".into())
-        })?;
-
-        // Decode the identity content
-        let content = self
-            .content_store
-            .get_decoded(&digest)
-            .ok_or_else(|| CoreError::InvalidEvent("Identity content not in store".into()))?;
-        let identity_doc = match content.content_body {
-            Some(ContentBody::Identity(i)) => i,
-            _ => {
-                return Err(CoreError::InvalidEvent(
-                    "Referenced content is not an Identity".into(),
-                ))
-            }
-        };
-
-        // Iterate rotation_keys + signing_keys (deduped, first-wins)
-        //    and collect max observed sequence per signer, overlaying the
-        //    caller's current sequence for their own key.
-        let current_id = (current_signer.key_type, current_signer.key.as_slice());
-        let mut seen = HashSet::new();
-        let mut sequence = Vec::new();
-
-        for pk in identity_doc
-            .rotation_keys
-            .iter()
-            .chain(identity_doc.signing_keys.iter())
-        {
-            let id = (pk.key_type, pk.key.as_slice());
-            if !seen.insert(id) {
-                continue;
-            }
-
-            let height = if id == current_id {
-                current_sequence
-            } else {
-                self.event_store
-                    .by_identity_collection_signer(identity, collection, pk.key_type, &pk.key)
-                    .next_back()
-                    .map(|(k, _)| k.sequence)
-                    .unwrap_or(0)
-            };
-            sequence.push(height);
-        }
+        // One entry per dedup key: self → current_sequence, others →
+        // max validated sequence observed in this collection.
+        let sequence = identity_content
+            .deduplicated_keys()
+            .into_iter()
+            .map(|pk| {
+                if pk.key_type == current_signer.key_type && pk.key == current_signer.key {
+                    current_sequence
+                } else {
+                    self.event_store
+                        .by_identity_collection_signer(identity, collection, pk.key_type, &pk.key)
+                        .rev()
+                        .find(|(k, signed)| {
+                            self.validate_event(signed, self.event_proofs_store.get(k))
+                                .is_ok()
+                        })
+                        .map(|(k, _)| k.sequence)
+                        .unwrap_or(0)
+                }
+            })
+            .collect();
 
         Ok(VectorClock { sequence })
     }
 
-    /// Return the bundles (SignedEvent + SerializedContent) for an
-    /// (identity, collection) stream, applying CRDT tombstone semantics:
-    /// any event whose `EventKey` is targeted by a `Delete` content within
-    /// the same collection is excluded.
-    ///
-    /// Content-type filtering (e.g. "just Follow events") is intentionally
-    /// left to the caller — this method only understands `Delete` so it
-    /// stays generic across collections.
+    /// Valid bundles for `(identity, collection)`, excluding any tombstoned
+    /// by a `Delete` event in the same collection.
     pub fn list_valid_events(
         &self,
         identity: &str,
@@ -204,6 +254,10 @@ impl PolycentricClient {
             .event_store
             .by_identity_and_collection(identity, collection)
         {
+            let proofs = self.event_proofs_store.get(event_key);
+            if self.validate_event(signed_event, proofs).is_err() {
+                continue;
+            }
             let event = Event::decode(signed_event.event_bytes.as_slice())
                 .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
 
@@ -234,6 +288,7 @@ impl PolycentricClient {
             let bundle = EventBundle {
                 signed_event: Some(signed_event.clone()),
                 serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
+                event_proofs: proofs.to_vec(),
             };
             bundles.push((event_key.clone(), bundle));
         }
@@ -243,5 +298,791 @@ impl PolycentricClient {
             .filter(|(k, _)| !tombstoned.contains(k))
             .map(|(_, b)| b)
             .collect())
+    }
+
+    /// Decoded identity events for `identity`. Malformed entries are skipped.
+    pub fn identity_directory(&self, identity: &str) -> Result<IdentityDirectory, CoreError> {
+        let mut events = Vec::new();
+        for (k, signed) in self
+            .event_store
+            .by_identity_and_collection(identity, collections::IDENTITY)
+        {
+            let Ok(inner) = Event::decode(signed.event_bytes.as_slice()) else {
+                continue;
+            };
+            let Some(digest) = inner.content_digest else {
+                continue;
+            };
+            let Some(decoded_content) = self.content_store.get_decoded(&digest) else {
+                continue;
+            };
+            let Ok(content) = decoded_content.as_identity().cloned() else {
+                continue;
+            };
+            events.push(DecodedIdentityEvent {
+                sequence: k.sequence,
+                signer: PublicKey {
+                    key_type: k.signed_by_key_type,
+                    key: k.signed_by_key.clone(),
+                },
+                digest,
+                content,
+                vc: inner.vector_clock,
+            });
+        }
+        Ok(IdentityDirectory::new(identity.to_string(), events))
+    }
+
+    /// Validate an event against its identity chain, identity content,
+    /// revocation status, and vector clock.
+    pub fn validate_event(
+        &self,
+        signed_event: &SignedEvent,
+        proofs: &[EventProof],
+    ) -> Result<(), CoreError> {
+        let event = protos_v2::Event::from_bytes(&signed_event.event_bytes)
+            .map_err(|e| CoreError::DeserializationError(e.to_string()))?;
+
+        let key = event.key.ok_or_else(|| {
+            CoreError::DeserializationError("Deserialized event has no key".to_owned())
+        })?;
+        let signer = key.signed_by.ok_or_else(|| {
+            CoreError::DeserializationError("Event key has no signed_by".to_owned())
+        })?;
+
+        let directory = self.identity_directory(&key.identity)?;
+        let chain = directory.validate(&self.event_store)?;
+        let head = chain.head();
+
+        // Identity events: in-chain means validated, else forgery.
+        if key.collection == collections::IDENTITY {
+            let in_chain = chain.iter().any(|e| {
+                e.sequence == key.sequence
+                    && e.signer.key_type == signer.key_type
+                    && e.signer.key == signer.key
+            });
+            if in_chain {
+                return Ok(());
+            }
+            return Err(CoreError::InvalidEvent(format!(
+                "Identity event at sequence {} for {} (signer {}) is not part of the validated chain (head at {})",
+                key.sequence,
+                key.identity,
+                hex_short(&signer.key),
+                head.sequence
+            )));
+        }
+
+        let vc = event
+            .vector_clock
+            .as_ref()
+            .ok_or_else(|| CoreError::InvalidEvent("Event missing vector_clock".into()))?;
+
+        let signer_identity_content =
+            chain.content_at_sequence(event.identity_sequence).ok_or_else(|| {
+                CoreError::InvalidEvent(format!(
+                    "Event references identity_sequence {} for identity {} but that is outside the validated chain (head at sequence {})",
+                    event.identity_sequence, key.identity, head.sequence
+                ))
+            })?;
+
+        if !signer_identity_content.authorizes_signer(&signer) {
+            return Err(CoreError::InvalidEvent(format!(
+                "Signer {} is not authorized by the identity content at sequence {} for identity {}",
+                hex_short(&signer.key),
+                event.identity_sequence,
+                key.identity
+            )));
+        }
+
+        // Revoked signer: must be the head named by the target, or have an
+        // EventProof against it.
+        if !head.content.authorizes_signer(&signer) {
+            let target = chain
+                .revocation_target(&signer, key.collection)
+                .ok_or_else(|| {
+                    CoreError::InvalidEvent(format!(
+                        "Signer {} was revoked from identity {} but no target was recorded for collection {} (post-revocation forgery)",
+                        hex_short(&signer.key),
+                        key.identity,
+                        key.collection,
+                    ))
+                })?;
+            if signed_event.signature != target.signature {
+                let proof = proofs
+                    .iter()
+                    .find(|p| p.target_signature == target.signature)
+                    .ok_or_else(|| {
+                        CoreError::InvalidEvent(format!(
+                            "Signer {} was revoked from identity {}; missing EventProof against target for collection {} at seq:{} (post-revocation forgery)",
+                            hex_short(&signer.key),
+                            key.identity,
+                            key.collection,
+                            key.sequence,
+                        ))
+                    })?;
+                polycentric_common::merkle::verify_proof(
+                    &signed_event.signature,
+                    proof.leaf_index,
+                    target,
+                    &proof.audit_path,
+                )?;
+            }
+        }
+
+        crate::vector_clock::verify_vector_clock(
+            &self.event_store,
+            vc,
+            signer_identity_content,
+            &key.identity,
+            key.collection,
+            &signer,
+            key.sequence,
+        )?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::{Signer, SigningKey};
+    use polycentric_common::models::protos_v2::{
+        content::ContentBody as Body, ContentDigestType, EventKey as ProtoEventKey,
+        EventProofTarget, Identity, KeyType, Post, RevocationBound,
+    };
+    use sha2::{Digest as ShaDigest, Sha256};
+    use std::collections::HashMap;
+
+    struct Keypair {
+        signing: SigningKey,
+        public: PublicKey,
+    }
+
+    fn keypair(seed: u8) -> Keypair {
+        let signing = SigningKey::from_bytes(&[seed; 32]);
+        let public = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: signing.verifying_key().to_bytes().to_vec(),
+        };
+        Keypair { signing, public }
+    }
+
+    fn sha256_digest(bytes: &[u8]) -> ContentDigest {
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        ContentDigest {
+            r#type: ContentDigestType::Sha256 as i32,
+            value: hasher.finalize().to_vec(),
+        }
+    }
+
+    fn identity_content(
+        rotation: Vec<PublicKey>,
+        signing: Vec<PublicKey>,
+        revocation_bounds: Vec<RevocationBound>,
+    ) -> (Vec<u8>, ContentDigest) {
+        let content = Content {
+            content_body: Some(Body::Identity(Identity {
+                rotation_keys: rotation,
+                signing_keys: signing,
+                revocation_bounds,
+            })),
+        };
+        let bytes = content.encode_to_vec();
+        let digest = sha256_digest(&bytes);
+        (bytes, digest)
+    }
+
+    /// Identity string = lowercase hex of SHA256 over the encoded
+    /// `Identity` message (NOT the outer `Content` wrapper). Matches the
+    /// production convention enforced by `IdentityDirectory::genesis`.
+    fn identity_string_of(identity: &Identity) -> String {
+        let bytes = identity.encode_to_vec();
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect()
+    }
+
+    fn sign_event(
+        signer: &Keypair,
+        identity: &str,
+        collection: i32,
+        sequence: u64,
+        identity_sequence: u64,
+        vector_clock: Vec<u64>,
+        content_digest: ContentDigest,
+    ) -> SignedEvent {
+        sign_event_raw(
+            signer,
+            identity,
+            collection,
+            sequence,
+            identity_sequence,
+            Some(VectorClock {
+                sequence: vector_clock,
+            }),
+            content_digest,
+        )
+    }
+
+    fn sign_event_raw(
+        signer: &Keypair,
+        identity: &str,
+        collection: i32,
+        sequence: u64,
+        identity_sequence: u64,
+        vector_clock: Option<VectorClock>,
+        content_digest: ContentDigest,
+    ) -> SignedEvent {
+        let event = Event {
+            key: Some(ProtoEventKey {
+                collection,
+                identity: identity.to_string(),
+                signed_by: Some(signer.public.clone()),
+                sequence,
+            }),
+            identity_sequence,
+            vector_clock,
+            previous_signature: Vec::new(),
+            previous_root: Vec::new(),
+            content_digest: Some(content_digest),
+            created_at: 0,
+        };
+        let event_bytes = event.encode_to_vec();
+        let signature = signer.signing.sign(&event_bytes).to_bytes().to_vec();
+        SignedEvent {
+            signature,
+            event_bytes,
+        }
+    }
+
+    /// Insert an identity event at `sequence` signed by `signer`, with content
+    /// listing `rotation` and `signing` keys. Returns the identity string —
+    /// derived from the genesis content if `identity` is None, otherwise the
+    /// provided identity is reused (chain extension).
+    ///
+    /// Builds a valid VC: indexed against the signers content (the prior content
+    /// for rotations, the new content itself for genesis), with self entry
+    /// equal to `sequence` and other entries equal to each co-signer's
+    /// max identity-event sequence already in the directory.
+    fn add_identity_event(
+        client: &mut PolycentricClient,
+        signer: &Keypair,
+        identity: Option<&str>,
+        sequence: u64,
+        rotation: Vec<PublicKey>,
+        signing: Vec<PublicKey>,
+    ) -> String {
+        // Genesis identity strings are derived from SHA256 of the inner
+        // Identity message (not the outer Content wrapper digest).
+        let provisional_identity = Identity {
+            rotation_keys: rotation.clone(),
+            signing_keys: signing.clone(),
+            revocation_bounds: Vec::new(),
+        };
+        let id_string = identity
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| identity_string_of(&provisional_identity));
+
+        // identity_sequence: 1 for genesis (self-reference); N-1 for rotations.
+        let identity_sequence = if sequence == 1 { 1 } else { sequence - 1 };
+
+        // For rotations: compute revocation_bounds — keys present in the
+        // prior content but absent from the new content, with their max observed
+        // sequence per collection at this point in time.
+        let revocation_bounds: Vec<RevocationBound> = if sequence == 1 {
+            Vec::new()
+        } else {
+            let prior_directory = client
+                .identity_directory(&id_string)
+                .expect("identity_directory");
+            let prior_chain = prior_directory
+                .validate(&client.event_store)
+                .expect("prior chain validates");
+            let prior = prior_chain
+                .at_sequence(sequence - 1)
+                .expect("prior identity event must exist for a rotation");
+            let new_keys: Vec<&PublicKey> = rotation.iter().chain(signing.iter()).collect();
+            let removed: Vec<&PublicKey> = prior
+                .content
+                .deduplicated_keys()
+                .into_iter()
+                .filter(|pk| {
+                    !new_keys
+                        .iter()
+                        .any(|nk| nk.key_type == pk.key_type && nk.key == pk.key)
+                })
+                .collect();
+            removed
+                .into_iter()
+                .map(|pk| {
+                    // Per collection: build a target naming the revoked key's
+                    // head event (max-sequence) with its root + sequence.
+                    let mut heads: HashMap<i32, (u64, &SignedEvent)> = HashMap::new();
+                    for (k, signed) in client.event_store.by_identity(&id_string) {
+                        if k.signed_by_key_type == pk.key_type && k.signed_by_key == pk.key {
+                            heads
+                                .entry(k.collection)
+                                .and_modify(|(seq, head)| {
+                                    if k.sequence >= *seq {
+                                        *seq = k.sequence;
+                                        *head = signed;
+                                    }
+                                })
+                                .or_insert((k.sequence, signed));
+                        }
+                    }
+                    let targets: Vec<EventProofTarget> = heads
+                        .into_iter()
+                        .map(|(collection, (_, signed))| {
+                            let inner = Event::decode(signed.event_bytes.as_slice())
+                                .expect("head event decodes");
+                            let leaf_count = client
+                                .canonical_signatures(&id_string, collection)
+                                .into_iter()
+                                .position(|s| s == signed.signature)
+                                .map(|p| p as u64)
+                                .unwrap_or(0);
+                            EventProofTarget {
+                                collection,
+                                signature: signed.signature.clone(),
+                                root: inner.previous_root,
+                                leaf_count,
+                            }
+                        })
+                        .collect();
+                    RevocationBound {
+                        revoked_key: Some(pk.clone()),
+                        targets,
+                    }
+                })
+                .collect()
+        };
+
+        // Build the actual content (with computed bounds) and its digest.
+        let (content_bytes, digest) =
+            identity_content(rotation.clone(), signing.clone(), revocation_bounds);
+
+        // content the VC is indexed against.
+        let signer_identity_content = if sequence == 1 {
+            Identity {
+                rotation_keys: rotation,
+                signing_keys: signing,
+                revocation_bounds: Vec::new(),
+            }
+        } else {
+            let dir = client
+                .identity_directory(&id_string)
+                .expect("identity_directory");
+            dir.validate(&client.event_store)
+                .expect("chain validates")
+                .at_sequence(sequence - 1)
+                .expect("prior identity event must exist for a rotation")
+                .content
+                .clone()
+        };
+
+        let dedup = signer_identity_content.deduplicated_keys();
+        let self_pos = dedup
+            .iter()
+            .position(|pk| pk.key_type == signer.public.key_type && pk.key == signer.public.key)
+            .expect("signer must be present in signer_identity_content");
+        let mut vc = vec![0u64; dedup.len()];
+        vc[self_pos] = sequence;
+        if sequence > 1 {
+            let directory = client
+                .identity_directory(&id_string)
+                .expect("identity_directory");
+            for (pos, key) in dedup.iter().enumerate() {
+                if pos == self_pos {
+                    continue;
+                }
+                let max = directory
+                    .iter()
+                    .filter(|e| e.signer.key_type == key.key_type && e.signer.key == key.key)
+                    .map(|e| e.sequence)
+                    .max()
+                    .unwrap_or(0);
+                vc[pos] = max;
+            }
+        }
+
+        client.copy_content(&digest, content_bytes);
+        let signed = sign_event(
+            signer,
+            &id_string,
+            collections::IDENTITY,
+            sequence,
+            identity_sequence,
+            vc,
+            digest,
+        );
+        client.copy_event(signed).unwrap();
+        id_string
+    }
+
+    fn dummy_post_digest() -> ContentDigest {
+        let bytes = Content {
+            content_body: Some(Body::Post(Post::default())),
+        }
+        .encode_to_vec();
+        sha256_digest(&bytes)
+    }
+
+    fn assert_invalid_contains(result: Result<(), CoreError>, needle: &str) {
+        let err = result.expect_err("expected validation to fail");
+        match &err {
+            CoreError::InvalidEvent(m) => assert!(
+                m.contains(needle),
+                "expected substring {:?}, got: {:?}",
+                needle,
+                m
+            ),
+            _ => panic!("expected InvalidEvent, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn validates_event_signed_by_key_in_content() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        // Genesis dedup ordering: [A_rot, B_signing].
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // B signs in collection 2 at seq=1, referencing the genesis content.
+        // VC indexed by [A, B]: A has no prior events, B's self entry = 1.
+        let event = sign_event(&b, &identity, 2, 1, 1, vec![0, 1], dummy_post_digest());
+        client
+            .validate_event(&event, &[])
+            .expect("event should validate");
+    }
+
+    #[test]
+    fn rejects_event_signed_by_unlisted_key() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let stranger = keypair(99);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+
+        // Stranger fails at head auth — VC is not reached.
+        let event = sign_event(&stranger, &identity, 2, 1, 1, vec![1], dummy_post_digest());
+        assert_invalid_contains(client.validate_event(&event, &[]), "not authorized");
+    }
+
+    #[test]
+    fn rotation_key_can_add_new_rotation_key() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let c = keypair(3);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+
+        // A rotates and adds C as a new rotation key. Dedup at seq=2: [A, C].
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone(), c.public.clone()],
+            vec![],
+        );
+
+        // Head advances to seq=2; C is in the head content. VC indexed by [A, C].
+        let event = sign_event(&c, &identity, 2, 1, 2, vec![0, 1], dummy_post_digest());
+        client
+            .validate_event(&event, &[])
+            .expect("event should validate");
+    }
+
+    #[test]
+    fn signing_key_cannot_extend_identity_chain() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2); // signing key only — must not be able to rotate
+        let c = keypair(3);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // B (signing only) attempts to extend the chain. Head stays at seq=1.
+        add_identity_event(
+            &mut client,
+            &b,
+            Some(&identity),
+            2,
+            vec![a.public.clone(), c.public.clone()],
+            vec![],
+        );
+
+        // C references identity_sequence=2, but the chain didn't extend
+        // because B's "rotation" wasn't rotation-authorized. So id_seq=2
+        // is outside the validated chain.
+        let event = sign_event(&c, &identity, 2, 1, 2, vec![0, 1], dummy_post_digest());
+        assert_invalid_contains(
+            client.validate_event(&event, &[]),
+            "outside the validated chain",
+        );
+
+        // A and B are still valid signers under the content at seq=1 = [A, B].
+        client
+            .validate_event(
+                &sign_event(&a, &identity, 2, 1, 1, vec![1, 0], dummy_post_digest()),
+                &[],
+            )
+            .expect("A still signs under content at seq=1");
+        client
+            .validate_event(
+                &sign_event(&b, &identity, 2, 2, 1, vec![0, 2], dummy_post_digest()),
+                &[],
+            )
+            .expect("B still signs under content at seq=1");
+    }
+
+    #[test]
+    fn revoked_key_cannot_sign_against_new_identity_content() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // A rotates and drops B. Head is now at seq=2 with content=[A].
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone()],
+            vec![],
+        );
+
+        // B claims identity_sequence=2 (the post-revocation content, which omits
+        // B). Rejected because B isn't authorized by that content.
+        assert_invalid_contains(
+            client.validate_event(
+                &sign_event(&b, &identity, 2, 1, 2, vec![1], dummy_post_digest()),
+                &[],
+            ),
+            "not authorized",
+        );
+
+        // A is still valid under the new content at seq=2.
+        client
+            .validate_event(
+                &sign_event(&a, &identity, 2, 1, 2, vec![1], dummy_post_digest()),
+                &[],
+            )
+            .expect("A still signs under content at seq=2");
+    }
+
+    #[test]
+    fn revoked_key_prior_events_remain_valid() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // B writes an event under the genesis content and propagates it; A
+        // observes it (we model this by inserting into the shared store
+        // before the rotation).
+        let b_prior = sign_event(&b, &identity, 2, 1, 1, vec![0, 1], dummy_post_digest());
+        client
+            .validate_event(&b_prior, &[])
+            .expect("B's event is valid under genesis");
+        client
+            .copy_event(b_prior.clone())
+            .expect("B's prior event inserts");
+
+        // A now rotates and removes B. The rotation event captures the
+        // rotator's bound for B in collection 2 = 1 (B's latest observed
+        // event at the time A wrote the rotation).
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone()],
+            vec![],
+        );
+
+        // B's prior event references the genesis content (where B was authorized),
+        // and its sequence (1) is within the rotator's recorded bound for B
+        // in collection 2. So it remains valid after revocation.
+        client
+            .validate_event(&b_prior, &[])
+            .expect("B's prior event remains valid after revocation");
+    }
+
+    #[test]
+    fn revoked_key_cannot_forge_new_prior_claiming_event() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // Before rotation: B legitimately writes one event in collection 2.
+        let b_legit = sign_event(&b, &identity, 2, 1, 1, vec![0, 1], dummy_post_digest());
+        client
+            .copy_event(b_legit)
+            .expect("legitimate prior event inserts");
+
+        // A rotates and revokes B. The rotation event records B's bound in
+        // collection 2 as 1 (B's max observed sequence at that time).
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone()],
+            vec![],
+        );
+
+        // B forges a new event at seq=2 — off the chain ending at the
+        // recorded head, so it's rejected.
+        let b_forgery = sign_event(&b, &identity, 2, 2, 1, vec![0, 2], dummy_post_digest());
+        let err = client
+            .validate_event(&b_forgery, &[])
+            .expect_err("forgery must be rejected");
+        match &err {
+            CoreError::InvalidEvent(m) => {
+                assert!(
+                    m.contains("post-revocation forgery"),
+                    "expected post-revocation forgery error, got: {}",
+                    m
+                );
+                assert!(m.contains("target for collection"));
+            }
+            _ => panic!("expected InvalidEvent, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn rejects_event_missing_vector_clock() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+
+        let event = sign_event_raw(&a, &identity, 2, 1, 1, None, dummy_post_digest());
+        assert_invalid_contains(client.validate_event(&event, &[]), "missing vector_clock");
+    }
+
+    #[test]
+    fn rejects_event_with_wrong_vc_length() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // content has 2 keys but VC has 3 entries.
+        let event = sign_event(&b, &identity, 2, 1, 1, vec![0, 1, 0], dummy_post_digest());
+        assert_invalid_contains(client.validate_event(&event, &[]), "vector_clock has 3");
+    }
+
+    #[test]
+    fn rejects_event_with_wrong_self_position_value() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // B's event is at sequence=1 but VC[self=1] claims 5 — inconsistent.
+        let event = sign_event(&b, &identity, 2, 1, 1, vec![0, 5], dummy_post_digest());
+        assert_invalid_contains(client.validate_event(&event, &[]), "self entry");
+    }
+
+    #[test]
+    fn rejects_event_referencing_unseen_co_signer_event() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // B claims to have observed A at seq=7 in collection 2 — we have none.
+        let event = sign_event(&b, &identity, 2, 1, 1, vec![7, 1], dummy_post_digest());
+        assert_invalid_contains(client.validate_event(&event, &[]), "unseen event");
+    }
+
+    #[test]
+    fn validates_event_with_observed_co_signer_event_present() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        // A writes an event at seq=1 in collection 2 (no prior B observations).
+        let a_event = sign_event(&a, &identity, 2, 1, 1, vec![1, 0], dummy_post_digest());
+        client.copy_event(a_event).expect("a's event should insert");
+
+        // B now writes an event referencing A's seq=1 — prerequisite present.
+        let b_event = sign_event(&b, &identity, 2, 1, 1, vec![1, 1], dummy_post_digest());
+        client
+            .validate_event(&b_event, &[])
+            .expect("event with satisfied causal prerequisite should validate");
     }
 }

@@ -276,8 +276,29 @@ export class PolycentricClient {
 
     const sequence = this.core.nextSequence(this.activeIdentityKey, collection);
 
+    // identity_sequence must reference an identity event signed by the
+    // current keypair.
     const identitySequence =
-      this.core.nextSequence(this.activeIdentityKey, COLLECTION.IDENTITY) - 1n;
+      collection === COLLECTION.IDENTITY
+        ? sequence
+        : this.core.getIdentitySequence(
+            this.activeIdentityKey,
+            Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
+              .buffer as ArrayBuffer,
+          );
+
+    if (!identitySequence) {
+      throw new Error(
+        'Cannot build event: current keypair has no identity event for the active identity (broken pairing?)',
+      );
+    }
+
+    const previousSignature = new Uint8Array(
+      this.core.previousSignature(this.activeIdentityKey, collection),
+    );
+    const previousRoot = new Uint8Array(
+      this.core.previousRoot(this.activeIdentityKey, collection),
+    );
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -287,7 +308,8 @@ export class PolycentricClient {
         sequence,
       }),
       identitySequence,
-      previousSignature: new Uint8Array(0),
+      previousSignature,
+      previousRoot,
       contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
     });
@@ -575,18 +597,17 @@ export class PolycentricClient {
    */
   async push(): Promise<void> {
     if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
 
     const localEvents = await this.storage.events.getAll();
-    const publicKey = this.currentKeyPair.publicKey.key;
 
-    // Build event bundles with content for events matching the active key
+    // Build event bundles with content for events matching the active identity
     const bundles: Proto.EventBundle[] = [];
     for (const signedEvent of localEvents) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
 
-      // Only push events signed by the active key
-      const signedBy = event.key?.signedBy;
-      if (!signedBy || !this.bytesEqual(signedBy.key, publicKey)) continue;
+      // Only push events belonging to the active identity
+      if (event.key?.identity !== this.activeIdentityKey) continue;
 
       // Look up content by digest
       let serializedContent: Proto.SerializedContent | undefined;
@@ -744,14 +765,6 @@ export class PolycentricClient {
     this.error = error;
     this.events.emitStateChanged(this.state);
     this.events.emitError(error);
-  }
-
-  private bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
   }
 
   get currentSystem(): Proto.PublicKey {

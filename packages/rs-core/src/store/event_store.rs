@@ -37,6 +37,11 @@ impl EventStore {
         self.events.get(key)
     }
 
+    /// Remove an event by its key, returning it if present.
+    pub fn remove(&mut self, key: &EventKey) -> Option<SignedEvent> {
+        self.events.remove(key)
+    }
+
     /// Helper function to return the start of the key
     fn prefix_start(
         identity: &str,

@@ -22,6 +22,8 @@ export function useExploreFeed(options?: {
     new Query.GetExploreFeed({
       identity: identity === '' ? undefined : identity,
     }),
+    undefined,
+    enabled,
   );
 
   const items = useMemo(() => {

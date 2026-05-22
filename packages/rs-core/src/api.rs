@@ -120,6 +120,40 @@ impl PolycentricCore {
             .next_sequence(&identity, collection)
     }
 
+    /// Max sequence of identity events signed by `signer` for `identity`,
+    /// or `None` if this signer has no identity events.
+    pub fn get_identity_sequence(
+        &self,
+        identity: String,
+        signer: Vec<u8>,
+    ) -> Result<Option<u64>, CoreError> {
+        let pk = PublicKey::decode(signer.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode signer: {e}")))?;
+        Ok(self
+            .client
+            .lock()
+            .unwrap()
+            .get_identity_sequence(&identity, &pk))
+    }
+
+    /// Merkle root over the canonically-ordered signatures in
+    /// `(identity, collection)`. Empty when no events exist.
+    pub fn previous_root(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_root(&identity, collection)
+    }
+
+    /// Signature of the canonically-latest event in `(identity, collection)`.
+    /// Empty when no events exist.
+    pub fn previous_signature(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_signature(&identity, collection)
+    }
+
     /// Verify each `SignedEvent` (decoding implicitly verifies the
     /// signature) and copy it into the local event store.
     pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
@@ -225,8 +259,7 @@ impl PolycentricCore {
 
         let response = ListEventsResponse {
             event_bundles,
-            previous_token: String::new(),
-            next_token: String::new(),
+            event_hints: Vec::new(),
         };
 
         Ok(response.encode_to_vec())

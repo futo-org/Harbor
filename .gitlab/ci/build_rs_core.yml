@@ -48,6 +48,30 @@ rs-core-clippy:
     - cd packages/rs-core
     - just clippy
 
+rs-core-tests:
+  extends: .rust-check
+  script:
+    - cd packages/rs-core
+    - just test
+
+rs-common-format-check:
+  extends: .rust-check
+  script:
+    - cd packages/rs-core
+    - cargo fmt --check
+
+rs-common-clippy:
+  extends: .rust-check
+  script:
+    - cd packages/rs-common
+    - cargo clippy
+
+rs-common-tests:
+  extends: .rust-check
+  script:
+    - cd packages/rs-common
+    - cargo test
+
 # rs-core-build:
 #   extends: .rs-core-workflow
 #   stage: build

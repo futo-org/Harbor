@@ -69,6 +69,12 @@ interface NativeModuleInterface {
     opts: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
+    ptr: bigint,
+    identity: Uint8Array,
+    signer: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus
+  ): Uint8Array;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
     ptr: bigint,
     serverUrl: Uint8Array,
@@ -104,6 +110,18 @@ interface NativeModuleInterface {
     collection: number,
     uniffi_out_err: UniffiRustCallStatus
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
+    ptr: bigint,
+    identity: Uint8Array,
+    collection: number,
+    uniffi_out_err: UniffiRustCallStatus
+  ): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
+    ptr: bigint,
+    identity: Uint8Array,
+    collection: number,
+    uniffi_out_err: UniffiRustCallStatus
+  ): Uint8Array;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(
     ptr: bigint,
     image: Uint8Array,
@@ -396,6 +414,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
@@ -403,6 +422,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
