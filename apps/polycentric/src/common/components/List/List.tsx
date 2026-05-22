@@ -159,13 +159,14 @@ function WebFeedViewer<T>({
   data,
   renderItem,
   keyExtractor,
+  HeaderComponent,
   ListHeaderComponent,
   ListFooterComponent,
   ListEmptyComponent,
   onEndReached,
   contentContainerStyle,
   stickyHeaderIndices,
-}: FlashListProps<T>) {
+}: ListProps<T>) {
   const sentinelRef = useRef<View>(null);
   const items = (data as readonly T[] | null | undefined) ?? [];
   const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
@@ -203,6 +204,7 @@ function WebFeedViewer<T>({
 
   return (
     <View style={contentContainerStyle}>
+      {renderNode(HeaderComponent)}
       {renderNode(ListHeaderComponent)}
       {isEmpty
         ? renderNode(ListEmptyComponent)

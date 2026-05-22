@@ -53,9 +53,9 @@ export interface GetFollowingFeedRequest {
     /**
      * Identity of the follower to return the feed for
      *
-     * @generated from protobuf field: optional string follower_identity = 1
+     * @generated from protobuf field: string follower_identity = 1
      */
-    followerIdentity?: string;
+    followerIdentity: string;
     /**
      * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
      */
@@ -112,6 +112,10 @@ export interface GetPostThreadResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventBundle thread = 1
      */
     thread: EventBundle[];
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf enum polycentric.v2.FeedAlgorithm
@@ -248,12 +252,13 @@ export const GetIdentityFeedRequest = new GetIdentityFeedRequest$Type();
 class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> {
     constructor() {
         super("polycentric.v2.GetFollowingFeedRequest", [
-            { no: 1, name: "follower_identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 1, name: "follower_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
         ]);
     }
     create(value?: PartialMessage<GetFollowingFeedRequest>): GetFollowingFeedRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.followerIdentity = "";
         if (value !== undefined)
             reflectionMergePartial<GetFollowingFeedRequest>(this, message, value);
         return message;
@@ -263,7 +268,7 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* optional string follower_identity */ 1:
+                case /* string follower_identity */ 1:
                     message.followerIdentity = reader.string();
                     break;
                 case /* optional polycentric.v2.FeedPageParams page_params */ 2:
@@ -281,8 +286,8 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         return message;
     }
     internalBinaryWrite(message: GetFollowingFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* optional string follower_identity = 1; */
-        if (message.followerIdentity !== undefined)
+        /* string follower_identity = 1; */
+        if (message.followerIdentity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.followerIdentity);
         /* optional polycentric.v2.FeedPageParams page_params = 2; */
         if (message.pageParams)
@@ -463,12 +468,14 @@ export const GetPostThreadRequest = new GetPostThreadRequest$Type();
 class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
     constructor() {
         super("polycentric.v2.GetPostThreadResponse", [
-            { no: 1, name: "thread", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+            { no: 1, name: "thread", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<GetPostThreadResponse>): GetPostThreadResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.thread = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<GetPostThreadResponse>(this, message, value);
         return message;
@@ -480,6 +487,9 @@ class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
             switch (fieldNo) {
                 case /* repeated polycentric.v2.EventBundle thread */ 1:
                     message.thread.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -496,6 +506,9 @@ class GetPostThreadResponse$Type extends MessageType<GetPostThreadResponse> {
         /* repeated polycentric.v2.EventBundle thread = 1; */
         for (let i = 0; i < message.thread.length; i++)
             EventBundle.internalBinaryWrite(message.thread[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

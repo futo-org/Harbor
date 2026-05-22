@@ -12,6 +12,7 @@ use prost::Message;
 
 use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
 use crate::query::event::key::PublicKey;
+use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
     channel, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus,
 };
@@ -34,21 +35,37 @@ pub struct GetEventArgs {
     pub sequence: u64,
 }
 
-fn merge_list_events_responses(values: &[Vec<u8>]) -> Vec<u8> {
+fn merge_list_events_responses(
+    values: &[Vec<u8>],
+    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
+) -> Vec<u8> {
     let mut merged = ListEventsResponse::default();
     for v in values {
         if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
             merged.event_bundles.extend(incoming.event_bundles);
+            merged.event_hints.extend(incoming.event_hints);
         }
     }
 
-    let mut seen: HashSet<EventDedupKey> = HashSet::new();
+    let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
     merged
         .event_bundles
         .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen.insert(k),
+            Some(k) => seen_bundles.insert(k),
             None => true,
         });
+    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
+    merged.event_hints.retain(
+        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
+            Some(k) => seen_hints.insert(k),
+            None => true,
+        },
+    );
+
+    let c = client.lock().unwrap();
+    retain_validated_bundles(&c, &mut merged.event_bundles);
+    retain_validated_hints(&c, &mut merged.event_hints);
+    drop(c);
 
     merged.encode_to_vec()
 }
@@ -69,10 +86,6 @@ pub fn list_events(
         sequence_gt,
         sequence_lt,
     } = args;
-    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
-    crate::logging::log_msg(format!(
-        "[list_events] called identity={identity:?} collection={collection:?} size={size:?} fetch_mode={fetch_mode:?}"
-    ));
 
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
@@ -85,20 +98,28 @@ pub fn list_events(
         size,
     };
 
+    let client = query_client.client().clone();
     let query_fn = move |server_url: String| {
         let request = request.clone();
+        let client = client.clone();
         async move {
-            crate::logging::log_msg(format!("[list_events] fetching from server={server_url}"));
             let response = EventSyncServiceClient::new(channel(&server_url)?)
                 .list_events(request)
                 .await
                 .map_err(|e| format!("list_events [{server_url}]: {e}"))?
                 .into_inner();
-            crate::logging::log_msg(format!(
-                "[list_events] received {n} bundles from server={server_url}",
-                n = response.event_bundles.len()
-            ));
-            Ok(response.encode_to_vec())
+            let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(response.event_bundles);
+            }
+            Ok(bytes)
         }
     };
 
@@ -107,13 +128,31 @@ pub fn list_events(
 
 /// Merge function for `get_event`. Each per-server slot stores the
 /// bytes of a single `EventBundle` (or empty when that server had
-/// nothing). Picks the first non-empty value.
-fn merge_event(values: &[Vec<u8>]) -> Vec<u8> {
-    values
-        .iter()
-        .find(|v| !v.is_empty())
-        .cloned()
-        .unwrap_or_default()
+/// nothing). Picks the first non-empty value whose bundle validates;
+/// returns empty bytes if none do.
+fn merge_event(
+    values: &[Vec<u8>],
+    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
+) -> Vec<u8> {
+    let c = client.lock().unwrap();
+    for v in values {
+        if v.is_empty() {
+            continue;
+        }
+        let Ok(bundle) = EventBundle::decode(v.as_slice()) else {
+            continue;
+        };
+        let Some(signed) = bundle.signed_event.as_ref() else {
+            continue;
+        };
+        match c.validate_event(signed, &bundle.event_proofs) {
+            Ok(()) => return v.clone(),
+            Err(e) => {
+                crate::logging::log_msg(format!("[merge_event] dropping bundle: {e:?}"));
+            }
+        }
+    }
+    Vec::new()
 }
 
 /// Return a single event based on its key (or partial key)
@@ -128,10 +167,6 @@ pub fn get_event(
         collection,
         sequence,
     } = args;
-    let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
-    crate::logging::log_msg(format!(
-        "[get_event] called identity={identity} collection={collection} sequence={sequence} fetch_mode={fetch_mode:?}"
-    ));
 
     if let Some(bundle) = query_client
         .client()
@@ -139,9 +174,6 @@ pub fn get_event(
         .unwrap()
         .find_event_bundle_by_sequence(&identity, collection, sequence)
     {
-        crate::logging::log_msg(format!(
-            "[get_event] local-store hit identity={identity} sequence={sequence}"
-        ));
         let bytes = bundle.encode_to_vec();
         let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
             subscriber.next(QueryResult {
@@ -171,18 +203,26 @@ pub fn get_event(
         let request = request.clone();
         let client = client.clone();
         async move {
-            crate::logging::log_msg(format!("[get_event] fetching from server={server_url}"));
             let response = EventSyncServiceClient::new(channel(&server_url)?)
                 .list_events(request)
                 .await
                 .map_err(|e| format!("get_event [{server_url}]: {e}"))?
                 .into_inner();
-            let bundles = response.event_bundles;
-            let bytes = bundles
+            let bytes = response
+                .event_bundles
                 .first()
                 .map(EventBundle::encode_to_vec)
                 .unwrap_or_default();
-            client.lock().unwrap().copy_bundles(bundles);
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(response.event_bundles);
+            }
             Ok(bytes)
         }
     };

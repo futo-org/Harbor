@@ -17,6 +17,7 @@ tonic = { version = "*", default-features = false, features = ["codegen"] }
 tonic-prost = "*"
 ed25519-dalek = "2.2.0"
 hmac-sha256 = "1.1.12"
+sha2 = "0.10"
 
 [build-dependencies]
 prost-build = "0.14"

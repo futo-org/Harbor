@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::context::ServiceContext;
 use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::server::server_service::ServerConfig;
 use axum::Router;
@@ -35,10 +36,11 @@ pub fn build_grpc_router(
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let events_service =
-        service::events::events_service::build_events_service(db.clone());
+    let ctx = ServiceContext::new(db.clone());
     let feeds_service =
-        service::feeds::feeds_service::build_feeds_service(db.clone());
+        service::feeds::feeds_service::build_feeds_service(ctx.clone());
+    let events_service =
+        service::events::events_service::build_events_service(ctx);
     let content_service =
         service::content::content_service::build_content_service(
             db.clone(),

@@ -1,7 +1,13 @@
-use crate::service::proto::{Identity, PublicKey};
+use crate::service::feeds::feeds_repository::{FeedRow, content_join};
+use crate::service::proto::content::ContentBody;
+use crate::service::proto::{Content, Identity, PublicKey};
+use ::entity::{content_model as ContentModel, event_model as EventModel};
+use polycentric_common::models::collections;
 use prost::Message;
-use sea_orm::sea_query::{Alias, Expr, Query as SeaQuery};
 use sea_orm::*;
+use sha2::{Digest, Sha256};
+
+const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
 
 #[derive(Debug, Clone)]
 pub struct AuthorizedKey {
@@ -12,95 +18,103 @@ pub struct AuthorizedKey {
 pub struct Query;
 
 impl Query {
-    /// Returns all authorized public keys for an identity.
-    ///
-    /// Queries the latest `content_identity` row for the given identity string,
-    /// decodes the Identity proto, and returns the rotation_keys and signing_keys.
+    /// Authorized keys for `identity`'s validated chain head. Walks the IDENTITY-collection events
+    /// from genesis
     pub async fn authorized_keys(
         db: &DbConn,
         identity: &str,
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
-        let ci = Alias::new("ci");
-        let ce = Alias::new("ce");
-
-        // Find the latest content_identity for this identity by joining
-        // to the events table and ordering by sequence descending.
-        let mut query = SeaQuery::select();
-        query
-            .expr_as(
-                Expr::col((ci.clone(), Alias::new("identity_bytes"))),
-                Alias::new("identity_bytes"),
-            )
-            .from_as(Alias::new("content_identity"), ci.clone())
-            .and_where(
-                Expr::col((ci.clone(), Alias::new("identity"))).eq(identity),
-            )
-            // Join to content then events to order by sequence
-            .join_as(
-                JoinType::InnerJoin,
-                Alias::new("content"),
-                Alias::new("c"),
-                Expr::col((ci.clone(), Alias::new("content_id")))
-                    .equals((Alias::new("c"), Alias::new("id"))),
-            )
-            .join_as(
-                JoinType::InnerJoin,
-                Alias::new("events"),
-                ce.clone(),
-                sea_orm::sea_query::Condition::all()
-                    .add(
-                        Expr::col((Alias::new("c"), Alias::new("digest_type")))
-                            .equals((
-                                ce.clone(),
-                                Alias::new("content_digest_type"),
-                            )),
-                    )
-                    .add(
-                        Expr::col((
-                            Alias::new("c"),
-                            Alias::new("digest_bytes"),
-                        ))
-                        .equals((
-                            ce.clone(),
-                            Alias::new("content_digest_bytes"),
-                        )),
-                    ),
-            )
-            .order_by((ce, Alias::new("sequence")), Order::Desc)
-            .limit(1);
-
-        let stmt = db.get_database_backend().build(&query);
-        let rows = IdentityBytesRow::find_by_statement(stmt).all(db).await?;
-
-        let Some(row) = rows.first() else {
+        let Some(content) =
+            Self::latest_valid_identity_content(db, identity).await?
+        else {
             return Ok(vec![]);
         };
 
-        let identity_proto = Identity::decode(row.identity_bytes.as_slice())
-            .map_err(|e| {
-                DbErr::Custom(format!("Invalid Identity bytes: {e}"))
-            })?;
-
         let mut keys = Vec::new();
-
-        for pk in identity_proto.rotation_keys {
+        for pk in content.rotation_keys {
             keys.push(AuthorizedKey {
                 key: pk,
                 is_rotation_key: true,
             });
         }
-
-        for pk in identity_proto.signing_keys {
+        for pk in content.signing_keys {
             keys.push(AuthorizedKey {
                 key: pk,
                 is_rotation_key: false,
             });
         }
-
         Ok(keys)
     }
 
-    /// Returns true when `public_key` is a rotation key on the latest identity state.
+    /// Walk the identity chain from genesis and return the head's content,
+    /// or `None` when no valid genesis exists.
+    async fn latest_valid_identity_content(
+        db: &DbConn,
+        identity: &str,
+    ) -> Result<Option<Identity>, DbErr> {
+        let rows = Self::list_identity_events_for_identities(
+            db,
+            vec![identity.to_string()],
+        )
+        .await?;
+
+        let mut decoded: Vec<DecodedIdentityRow> = rows
+            .into_iter()
+            .filter_map(|(event, content)| {
+                let content_row = content?;
+                let signer = PublicKey {
+                    key_type: event.public_key_type as i32,
+                    key: event.public_key,
+                };
+                let content_msg =
+                    Content::decode(content_row.serialized_bytes.as_slice())
+                        .ok()?;
+                let identity_content = match content_msg.content_body? {
+                    ContentBody::Identity(i) => i,
+                    _ => return None,
+                };
+                Some(DecodedIdentityRow {
+                    sequence: event.sequence as u64,
+                    signer,
+                    content: identity_content,
+                })
+            })
+            .collect();
+        decoded.sort_by_key(|r| r.sequence);
+
+        // Genesis: the earliest event whose Identity content's sha256 matches
+        // the identity string.
+        let genesis = match decoded
+            .iter()
+            .find(|r| identity_matches_content(identity, &r.content))
+        {
+            Some(g) => g,
+            None => return Ok(None),
+        };
+
+        let mut head = genesis.content.clone();
+        let mut head_seq = genesis.sequence;
+        loop {
+            let next_seq = head_seq + 1;
+            let next = decoded
+                .iter()
+                .filter(|r| {
+                    r.sequence == next_seq
+                        && authorizes_rotation(&head, &r.signer)
+                })
+                .min_by(|a, b| a.signer.key.cmp(&b.signer.key));
+            match next {
+                Some(e) => {
+                    head = e.content.clone();
+                    head_seq = next_seq;
+                }
+                None => break,
+            }
+        }
+        Ok(Some(head))
+    }
+
+    /// True when `public_key` is a rotation key on the latest identity state.
     pub async fn is_rotation_key(
         db: &DbConn,
         identity_key: &str,
@@ -111,9 +125,47 @@ impl Query {
             .iter()
             .any(|k| k.is_rotation_key && k.key.key.as_slice() == public_key))
     }
+
+    /// Every IDENTITY-collection event (full chain) for each of
+    /// `identities`. Sent as hints on feed/thread/list responses so
+    /// clients can validate post authors without re-fetching the chain.
+    pub async fn list_identity_events_for_identities(
+        db: &DbConn,
+        identities: Vec<String>,
+    ) -> Result<Vec<FeedRow>, DbErr> {
+        if identities.is_empty() {
+            return Ok(Vec::new());
+        }
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .filter(EventModel::Column::Collection.eq(IDENTITY_COLLECTION))
+            .filter(EventModel::Column::Identity.is_in(identities))
+            .order_by_asc(EventModel::Column::Sequence)
+            .all(db)
+            .await
+    }
 }
 
-#[derive(Debug, FromQueryResult)]
-struct IdentityBytesRow {
-    pub identity_bytes: Vec<u8>,
+struct DecodedIdentityRow {
+    sequence: u64,
+    signer: PublicKey,
+    content: Identity,
+}
+
+/// True when `identity` is the hex sha256 of the encoded `Identity`
+/// content (the canonical genesis-identifier convention).
+fn identity_matches_content(identity: &str, content: &Identity) -> bool {
+    let mut h = Sha256::new();
+    h.update(content.encode_to_vec());
+    let hex: String =
+        h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
+    hex == identity
+}
+
+fn authorizes_rotation(content: &Identity, signer: &PublicKey) -> bool {
+    content
+        .rotation_keys
+        .iter()
+        .any(|k| k.key_type == signer.key_type && k.key == signer.key)
 }

@@ -1,20 +1,22 @@
 use super::feeds_repository::{self as FeedsRepository, FeedRow};
-use crate::service::proto::content::ContentBody;
+use crate::service::context::ServiceContext;
+use crate::service::identity::identity_service::{
+    build_identity_hints, rows_to_bundles,
+};
+use crate::service::proofs::proofs_service::attach_proofs;
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    Content, EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest,
-    GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
-    GetPostThreadRequest, GetPostThreadResponse, SerializedContent,
-    SignedEvent,
+    FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse,
 };
-use prost::Message;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
 pub struct FeedsServiceImpl {
-    db: sea_orm::DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 }
 
 fn page_limit(page_params: &Option<FeedPageParams>) -> u64 {
@@ -41,17 +43,19 @@ impl FeedsService for FeedsServiceImpl {
         }
 
         let rows = FeedsRepository::Query::list_feed_events_by_identities(
-            &self.db,
+            &self.ctx.db,
             vec![inner_req.identity],
             limit,
         )
         .await
         .map_err(map_db_err)?;
 
-        let event_hints = build_profile_hints(&self.db, &rows).await?;
+        let event_hints = build_identity_hints(&self.ctx, &rows).await?;
+        let mut event_bundles = rows_to_bundles(rows);
+        attach_proofs(&self.ctx, &mut event_bundles).await?;
 
         Ok(Response::new(GetFeedResponse {
-            event_bundles: rows_to_bundles(rows),
+            event_bundles,
             event_hints,
         }))
     }
@@ -72,10 +76,12 @@ impl FeedsService for FeedsServiceImpl {
         }
         let caller = inner_req.follower_identity;
 
-        let mut identities =
-            FeedsRepository::Query::list_followed_identities(&self.db, &caller)
-                .await
-                .map_err(map_db_err)?;
+        let mut identities = FeedsRepository::Query::list_followed_identities(
+            &self.ctx.db,
+            &caller,
+        )
+        .await
+        .map_err(map_db_err)?;
 
         // Include the caller's own posts in their following feed.
         if !identities.iter().any(|a| a == &caller) {
@@ -83,15 +89,19 @@ impl FeedsService for FeedsServiceImpl {
         }
 
         let rows = FeedsRepository::Query::list_feed_events_by_identities(
-            &self.db, identities, limit,
+            &self.ctx.db,
+            identities,
+            limit,
         )
         .await
         .map_err(map_db_err)?;
 
-        let event_hints = build_profile_hints(&self.db, &rows).await?;
+        let event_hints = build_identity_hints(&self.ctx, &rows).await?;
+        let mut event_bundles = rows_to_bundles(rows);
+        attach_proofs(&self.ctx, &mut event_bundles).await?;
 
         Ok(Response::new(GetFeedResponse {
-            event_bundles: rows_to_bundles(rows),
+            event_bundles,
             event_hints,
         }))
     }
@@ -105,14 +115,17 @@ impl FeedsService for FeedsServiceImpl {
         let inner_req = request.into_inner();
         let limit = page_limit(&inner_req.page_params);
 
-        let rows = FeedsRepository::Query::list_feed_events(&self.db, limit)
-            .await
-            .map_err(map_db_err)?;
+        let rows =
+            FeedsRepository::Query::list_feed_events(&self.ctx.db, limit)
+                .await
+                .map_err(map_db_err)?;
 
-        let event_hints = build_profile_hints(&self.db, &rows).await?;
+        let event_hints = build_identity_hints(&self.ctx, &rows).await?;
+        let mut event_bundles = rows_to_bundles(rows);
+        attach_proofs(&self.ctx, &mut event_bundles).await?;
 
         Ok(Response::new(GetFeedResponse {
-            event_bundles: rows_to_bundles(rows),
+            event_bundles,
             event_hints,
         }))
     }
@@ -153,7 +166,7 @@ impl FeedsService for FeedsServiceImpl {
         })?;
 
         let subject_row = FeedsRepository::Query::find_event_by_key(
-            &self.db,
+            &self.ctx.db,
             collection,
             &event_key.identity,
             public_key_type,
@@ -169,7 +182,7 @@ impl FeedsService for FeedsServiceImpl {
         const DESCENDANT_DEPTH_LIMIT: i32 = 50;
 
         let ancestor_refs = FeedsRepository::Query::list_ancestor_refs(
-            &self.db,
+            &self.ctx.db,
             subject_id,
             PARENT_HEIGHT_LIMIT,
         )
@@ -177,7 +190,7 @@ impl FeedsService for FeedsServiceImpl {
         .map_err(map_db_err)?;
 
         let descendant_refs = FeedsRepository::Query::list_descendant_refs(
-            &self.db,
+            &self.ctx.db,
             subject_id,
             DESCENDANT_DEPTH_LIMIT,
             descendants_limit,
@@ -222,7 +235,7 @@ impl FeedsService for FeedsServiceImpl {
         all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
         all_ids.extend(descendant_order.iter().copied());
         let mut by_id: std::collections::HashMap<i64, FeedRow> =
-            FeedsRepository::Query::list_events_by_ids(&self.db, all_ids)
+            FeedsRepository::Query::list_events_by_ids(&self.ctx.db, all_ids)
                 .await
                 .map_err(map_db_err)?
                 .into_iter()
@@ -244,75 +257,15 @@ impl FeedsService for FeedsServiceImpl {
             }
         }
 
-        let event_hints = build_profile_hints(&self.db, &thread).await?;
+        let event_hints = build_identity_hints(&self.ctx, &thread).await?;
+        let mut thread = rows_to_bundles(thread);
+        attach_proofs(&self.ctx, &mut thread).await?;
 
         Ok(Response::new(GetPostThreadResponse {
-            thread: rows_to_bundles(thread),
+            thread,
             event_hints,
         }))
     }
-}
-
-/// Build the `event_hints` for a feed/thread response: collect the
-/// unique author identities from `rows` — plus the identities of any
-/// reply-parent posts decoded from each row's serialized Content —
-/// fetch the latest PROFILE event for each, and wrap them in
-/// `EventHint`s. Returned as a `Status` error if the DB lookup fails.
-async fn build_profile_hints(
-    db: &sea_orm::DatabaseConnection,
-    rows: &[FeedRow],
-) -> Result<Vec<EventHint>, Status> {
-    let mut identity_set: std::collections::HashSet<String> =
-        std::collections::HashSet::new();
-    for (event, content) in rows {
-        identity_set.insert(event.identity.clone());
-        if let Some(parent_identity) =
-            content.as_ref().and_then(reply_parent_identity)
-        {
-            identity_set.insert(parent_identity);
-        }
-    }
-    let identities: Vec<String> = identity_set.into_iter().collect();
-
-    let profile_rows =
-        FeedsRepository::Query::list_latest_profiles_for_identities(
-            db, identities,
-        )
-        .await
-        .map_err(map_db_err)?;
-
-    Ok(rows_to_bundles(profile_rows)
-        .into_iter()
-        .map(|b| EventHint {
-            event_bundle: Some(b),
-        })
-        .collect())
-}
-
-fn reply_parent_identity(
-    content: &::entity::content_model::Model,
-) -> Option<String> {
-    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
-    match decoded.content_body? {
-        ContentBody::Post(post) => {
-            Some(post.reply?.parent?.identity).filter(|s| !s.is_empty())
-        }
-        _ => None,
-    }
-}
-
-fn rows_to_bundles(rows: Vec<FeedRow>) -> Vec<EventBundle> {
-    rows.into_iter()
-        .map(|(event, content)| EventBundle {
-            signed_event: Some(SignedEvent {
-                event_bytes: event.event_bytes,
-                signature: event.signature,
-            }),
-            serialized_content: content.map(|c| SerializedContent {
-                content_bytes: c.serialized_bytes,
-            }),
-        })
-        .collect()
 }
 
 fn map_db_err(e: sea_orm::DbErr) -> Status {
@@ -321,7 +274,7 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 }
 
 pub fn build_feeds_service(
-    db: sea_orm::DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 ) -> FeedsServiceServer<FeedsServiceImpl> {
-    FeedsServiceServer::new(FeedsServiceImpl { db })
+    FeedsServiceServer::new(FeedsServiceImpl { ctx })
 }

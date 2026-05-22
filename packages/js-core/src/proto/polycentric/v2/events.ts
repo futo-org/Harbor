@@ -70,6 +70,14 @@ export interface Event {
      * @generated from protobuf field: uint64 created_at = 7
      */
     createdAt: bigint;
+    /**
+     * RFC 6962 Merkle root over this signer's prior signatures in this collection
+     * (leaf_count = key.sequence - 1). Lets later events attest to the writer's
+     * history; consumed by EventProof for membership verification.
+     *
+     * @generated from protobuf field: bytes previous_root = 8
+     */
+    previousRoot: Uint8Array;
 }
 /**
  * @generated from protobuf message polycentric.v2.SignedEvent
@@ -104,6 +112,35 @@ export interface EventBundle {
      * @generated from protobuf field: optional polycentric.v2.SerializedContent serialized_content = 2
      */
     serializedContent?: SerializedContent;
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.EventProof event_proofs = 3
+     */
+    eventProofs: EventProof[];
+}
+/**
+ * Merkle inclusion proof: the SignedEvent in this bundle is the leaf at
+ * `leaf_index` in the tree rooted at the `EventProofTarget` identified by
+ * `target_signature`.
+ *
+ * @generated from protobuf message polycentric.v2.EventProof
+ */
+export interface EventProof {
+    /**
+     * @generated from protobuf field: bytes target_signature = 1
+     */
+    targetSignature: Uint8Array;
+    /**
+     * Canonical position of this event in the target's tree.
+     *
+     * @generated from protobuf field: uint64 leaf_index = 2
+     */
+    leafIndex: bigint;
+    /**
+     * RFC 6962 audit path: sibling hashes from leaf toward root.
+     *
+     * @generated from protobuf field: repeated bytes audit_path = 3
+     */
+    auditPath: Uint8Array[];
 }
 /**
  * Hints are additional events that the server provides that may be
@@ -180,13 +217,9 @@ export interface ListEventsResponse {
      */
     eventBundles: EventBundle[];
     /**
-     * @generated from protobuf field: string previous_token = 2
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
-    previousToken: string;
-    /**
-     * @generated from protobuf field: string next_token = 3
-     */
-    nextToken: string;
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf message polycentric.v2.PutEventsRequest
@@ -266,7 +299,8 @@ class Event$Type extends MessageType<Event> {
             { no: 3, name: "vector_clock", kind: "message", T: () => VectorClock },
             { no: 4, name: "previous_signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
             { no: 6, name: "content_digest", kind: "message", T: () => ContentDigest },
-            { no: 7, name: "created_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+            { no: 7, name: "created_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 8, name: "previous_root", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
         ]);
     }
     create(value?: PartialMessage<Event>): Event {
@@ -274,6 +308,7 @@ class Event$Type extends MessageType<Event> {
         message.identitySequence = 0n;
         message.previousSignature = new Uint8Array(0);
         message.createdAt = 0n;
+        message.previousRoot = new Uint8Array(0);
         if (value !== undefined)
             reflectionMergePartial<Event>(this, message, value);
         return message;
@@ -300,6 +335,9 @@ class Event$Type extends MessageType<Event> {
                     break;
                 case /* uint64 created_at */ 7:
                     message.createdAt = reader.uint64().toBigInt();
+                    break;
+                case /* bytes previous_root */ 8:
+                    message.previousRoot = reader.bytes();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -331,6 +369,9 @@ class Event$Type extends MessageType<Event> {
         /* uint64 created_at = 7; */
         if (message.createdAt !== 0n)
             writer.tag(7, WireType.Varint).uint64(message.createdAt);
+        /* bytes previous_root = 8; */
+        if (message.previousRoot.length)
+            writer.tag(8, WireType.LengthDelimited).bytes(message.previousRoot);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -401,11 +442,13 @@ class EventBundle$Type extends MessageType<EventBundle> {
     constructor() {
         super("polycentric.v2.EventBundle", [
             { no: 1, name: "signed_event", kind: "message", T: () => SignedEvent },
-            { no: 2, name: "serialized_content", kind: "message", T: () => SerializedContent }
+            { no: 2, name: "serialized_content", kind: "message", T: () => SerializedContent },
+            { no: 3, name: "event_proofs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventProof }
         ]);
     }
     create(value?: PartialMessage<EventBundle>): EventBundle {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventProofs = [];
         if (value !== undefined)
             reflectionMergePartial<EventBundle>(this, message, value);
         return message;
@@ -420,6 +463,9 @@ class EventBundle$Type extends MessageType<EventBundle> {
                     break;
                 case /* optional polycentric.v2.SerializedContent serialized_content */ 2:
                     message.serializedContent = SerializedContent.internalBinaryRead(reader, reader.uint32(), options, message.serializedContent);
+                    break;
+                case /* repeated polycentric.v2.EventProof event_proofs */ 3:
+                    message.eventProofs.push(EventProof.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -439,6 +485,9 @@ class EventBundle$Type extends MessageType<EventBundle> {
         /* optional polycentric.v2.SerializedContent serialized_content = 2; */
         if (message.serializedContent)
             SerializedContent.internalBinaryWrite(message.serializedContent, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventProof event_proofs = 3; */
+        for (let i = 0; i < message.eventProofs.length; i++)
+            EventProof.internalBinaryWrite(message.eventProofs[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -449,6 +498,69 @@ class EventBundle$Type extends MessageType<EventBundle> {
  * @generated MessageType for protobuf message polycentric.v2.EventBundle
  */
 export const EventBundle = new EventBundle$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EventProof$Type extends MessageType<EventProof> {
+    constructor() {
+        super("polycentric.v2.EventProof", [
+            { no: 1, name: "target_signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 2, name: "leaf_index", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "audit_path", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+    create(value?: PartialMessage<EventProof>): EventProof {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.targetSignature = new Uint8Array(0);
+        message.leafIndex = 0n;
+        message.auditPath = [];
+        if (value !== undefined)
+            reflectionMergePartial<EventProof>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EventProof): EventProof {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bytes target_signature */ 1:
+                    message.targetSignature = reader.bytes();
+                    break;
+                case /* uint64 leaf_index */ 2:
+                    message.leafIndex = reader.uint64().toBigInt();
+                    break;
+                case /* repeated bytes audit_path */ 3:
+                    message.auditPath.push(reader.bytes());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: EventProof, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bytes target_signature = 1; */
+        if (message.targetSignature.length)
+            writer.tag(1, WireType.LengthDelimited).bytes(message.targetSignature);
+        /* uint64 leaf_index = 2; */
+        if (message.leafIndex !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.leafIndex);
+        /* repeated bytes audit_path = 3; */
+        for (let i = 0; i < message.auditPath.length; i++)
+            writer.tag(3, WireType.LengthDelimited).bytes(message.auditPath[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.EventProof
+ */
+export const EventProof = new EventProof$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class EventHint$Type extends MessageType<EventHint> {
     constructor() {
@@ -627,15 +739,13 @@ class ListEventsResponse$Type extends MessageType<ListEventsResponse> {
     constructor() {
         super("polycentric.v2.ListEventsResponse", [
             { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
-            { no: 2, name: "previous_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "next_token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListEventsResponse>): ListEventsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.eventBundles = [];
-        message.previousToken = "";
-        message.nextToken = "";
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListEventsResponse>(this, message, value);
         return message;
@@ -648,11 +758,8 @@ class ListEventsResponse$Type extends MessageType<ListEventsResponse> {
                 case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
                     message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
                     break;
-                case /* string previous_token */ 2:
-                    message.previousToken = reader.string();
-                    break;
-                case /* string next_token */ 3:
-                    message.nextToken = reader.string();
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -669,12 +776,9 @@ class ListEventsResponse$Type extends MessageType<ListEventsResponse> {
         /* repeated polycentric.v2.EventBundle event_bundles = 1; */
         for (let i = 0; i < message.eventBundles.length; i++)
             EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* string previous_token = 2; */
-        if (message.previousToken !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.previousToken);
-        /* string next_token = 3; */
-        if (message.nextToken !== "")
-            writer.tag(3, WireType.LengthDelimited).string(message.nextToken);
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

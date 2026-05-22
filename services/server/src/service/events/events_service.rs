@@ -1,12 +1,16 @@
 use super::events_repository as EventsRepository;
 use crate::service::content::content_repository as ContentRepository;
+use crate::service::context::ServiceContext;
+use crate::service::identity::identity_service::{
+    build_identity_hints, rows_to_bundles,
+};
+use crate::service::proofs::proofs_service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
 use crate::service::proto::{
-    Content, Event, EventBundle, PutEventsRequest, PutEventsResponse,
-    SerializedContent, SignedEvent,
+    Content, Event, PutEventsRequest, PutEventsResponse,
 };
 use crate::service::proto::{ListEventsRequest, ListEventsResponse};
 use crate::util;
@@ -18,15 +22,16 @@ use ::entity::{
     content_model as ContentModel, content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
+use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::TransactionTrait;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
 pub struct EventSyncServiceImpl {
-    db: sea_orm::DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 }
 
 /// Implementation of the EventsService
@@ -42,7 +47,7 @@ impl EventSyncService for EventSyncServiceImpl {
         let filters = inner_req.filters.unwrap_or_default();
 
         let events = EventsRepository::Query::list_events(
-            &self.db,
+            &self.ctx.db,
             Some(size),
             filters.collection,
             filters.identity,
@@ -56,37 +61,14 @@ impl EventSyncService for EventSyncServiceImpl {
             Status::internal("internal server error")
         })?;
 
-        // Turn the events into event bundles
-        let mut event_bundles: Vec<EventBundle> = vec![];
+        let event_hints = build_identity_hints(&self.ctx, &events).await?;
+        let mut event_bundles = rows_to_bundles(events);
+        attach_proofs(&self.ctx, &mut event_bundles).await?;
 
-        for (event, content) in events {
-            // Reconstruct the SignedEvent with the serialized bytes and the signature
-            let signed_event = SignedEvent {
-                event_bytes: event.event_bytes,
-                signature: event.signature,
-            };
-
-            // Reconstruct SerializedContent with the serialized bytes if content exists.
-            // We do this because the checksum is constructed from already serialized bytes.
-            let serialized_content = content.map(|c| SerializedContent {
-                content_bytes: c.serialized_bytes,
-            });
-
-            // Form the bundle of the SignedEvent and Content
-            let event_bundle = EventBundle {
-                signed_event: Some(signed_event),
-                serialized_content,
-            };
-
-            event_bundles.push(event_bundle);
-        }
-
-        let reply = ListEventsResponse {
+        Ok(Response::new(ListEventsResponse {
             event_bundles,
-            previous_token: String::new(),
-            next_token: String::new(),
-        };
-        Ok(Response::new(reply))
+            event_hints,
+        }))
     }
 
     // Sync events from a client to the server
@@ -161,13 +143,13 @@ impl EventSyncService for EventSyncServiceImpl {
                 })?;
 
                 // Save content parent + child in a transaction
-                let txn = self.db.begin().await.map_err(|e| {
+                let txn = self.ctx.db.begin().await.map_err(|e| {
                     eprintln!("sync_events txn begin error: {e}");
                     Status::internal("internal server error")
                 })?;
 
                 // Try to insert content; skip if it already exists
-                let content_result = ContentRepository::Mutation::add_content(
+                let content_row = ContentRepository::Mutation::add_content(
                     &txn,
                     ContentModel::ActiveModel {
                         id: NotSet,
@@ -179,25 +161,20 @@ impl EventSyncService for EventSyncServiceImpl {
                         synced_at: Set(synced_at),
                     },
                 )
-                .await;
+                .await
+                .map_err(|e| {
+                    eprintln!("sync_events content db error: {e}");
+                    Status::internal("internal server error")
+                })?;
 
-                match content_result {
-                    Ok(content_row) => {
-                        save_content_child(
-                            &txn,
-                            content_row.id,
-                            content,
-                            &key.identity,
-                        )
-                        .await?;
-                    }
-                    Err(ref e) if Self::is_unique_violation(e) => {
-                        // Content already exists, skip
-                    }
-                    Err(e) => {
-                        eprintln!("sync_events content db error: {e}");
-                        return Err(Status::internal("internal server error"));
-                    }
+                if let Some(content_row) = content_row {
+                    save_content_child(
+                        &txn,
+                        content_row.id,
+                        content,
+                        &key.identity,
+                    )
+                    .await?;
                 }
 
                 txn.commit().await.map_err(|e| {
@@ -205,6 +182,10 @@ impl EventSyncService for EventSyncServiceImpl {
                     Status::internal("internal server error")
                 })?;
             }
+
+            // Keep these for cache invalidation after a successful write.
+            let event_identity = key.identity.clone();
+            let event_collection = key.collection;
 
             // Build the Model that we will save to the database
             let active_model = EventModel::ActiveModel {
@@ -222,16 +203,31 @@ impl EventSyncService for EventSyncServiceImpl {
                     .map(|d| d.value.clone())),
                 signature: Set(signed_event.signature),
                 previous_signature: Set(event.previous_signature),
+                previous_root: Set(event.previous_root),
                 event_bytes: Set(signed_event.event_bytes),
                 created_at: Set(created_at),
                 synced_at: Set(synced_at),
             };
 
             // Add the event to the database, skipping duplicates
-            match EventsRepository::Mutation::add_event(&self.db, active_model)
-                .await
+            match EventsRepository::Mutation::add_event(
+                &self.ctx.db,
+                active_model,
+            )
+            .await
             {
-                Ok(_) => {}
+                Ok(_) => {
+                    self.ctx
+                        .proof_cache
+                        .invalidate_canonical(&event_identity, event_collection)
+                        .await;
+                    if event_collection == collections::IDENTITY {
+                        self.ctx
+                            .proof_cache
+                            .invalidate_identity(&event_identity)
+                            .await;
+                    }
+                }
                 Err(ref e) if Self::is_unique_violation(e) => {
                     // Duplicate event, skip
                 }
@@ -437,7 +433,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
 }
 
 pub fn build_events_service(
-    db: sea_orm::DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 ) -> EventSyncServiceServer<EventSyncServiceImpl> {
-    EventSyncServiceServer::new(EventSyncServiceImpl { db })
+    EventSyncServiceServer::new(EventSyncServiceImpl { ctx })
 }

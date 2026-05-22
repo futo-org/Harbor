@@ -28,19 +28,76 @@ export interface Identity {
      * @generated from protobuf field: repeated polycentric.v2.PublicKey signing_keys = 2
      */
     signingKeys: PublicKey[];
+    /**
+     * In order to retain valid events from a revoked keypair, we store their last known
+     * signature.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.RevocationBound revocation_bounds = 3
+     */
+    revocationBounds: RevocationBound[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.RevocationBound
+ */
+export interface RevocationBound {
+    /**
+     * Key that is revoked
+     *
+     * @generated from protobuf field: polycentric.v2.PublicKey revoked_key = 1
+     */
+    revokedKey?: PublicKey;
+    /**
+     * One target per collection `revoked_key` wrote in, anchoring proof
+     * verification at that collection's head event.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventProofTarget targets = 2
+     */
+    targets: EventProofTarget[];
+}
+/**
+ * Per-collection target for verifying an EventProof.
+ *
+ * @generated from protobuf message polycentric.v2.EventProofTarget
+ */
+export interface EventProofTarget {
+    /**
+     * @generated from protobuf field: int32 collection = 1
+     */
+    collection: number;
+    /**
+     * Event's signature; matched by `EventProof.target_signature`.
+     *
+     * @generated from protobuf field: bytes signature = 2
+     */
+    signature: Uint8Array;
+    /**
+     * Event's `previous_root` — the Merkle root proofs verify against.
+     *
+     * @generated from protobuf field: bytes root = 3
+     */
+    root: Uint8Array;
+    /**
+     * Leaf count of the tree at `root` (the number of events the head's
+     * signer was aware of when they signed it).
+     *
+     * @generated from protobuf field: uint64 leaf_count = 4
+     */
+    leafCount: bigint;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Identity$Type extends MessageType<Identity> {
     constructor() {
         super("polycentric.v2.Identity", [
             { no: 1, name: "rotation_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
-            { no: 2, name: "signing_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey }
+            { no: 2, name: "signing_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
+            { no: 3, name: "revocation_bounds", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => RevocationBound }
         ]);
     }
     create(value?: PartialMessage<Identity>): Identity {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.rotationKeys = [];
         message.signingKeys = [];
+        message.revocationBounds = [];
         if (value !== undefined)
             reflectionMergePartial<Identity>(this, message, value);
         return message;
@@ -55,6 +112,9 @@ class Identity$Type extends MessageType<Identity> {
                     break;
                 case /* repeated polycentric.v2.PublicKey signing_keys */ 2:
                     message.signingKeys.push(PublicKey.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.RevocationBound revocation_bounds */ 3:
+                    message.revocationBounds.push(RevocationBound.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -74,6 +134,9 @@ class Identity$Type extends MessageType<Identity> {
         /* repeated polycentric.v2.PublicKey signing_keys = 2; */
         for (let i = 0; i < message.signingKeys.length; i++)
             PublicKey.internalBinaryWrite(message.signingKeys[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.RevocationBound revocation_bounds = 3; */
+        for (let i = 0; i < message.revocationBounds.length; i++)
+            RevocationBound.internalBinaryWrite(message.revocationBounds[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -84,3 +147,128 @@ class Identity$Type extends MessageType<Identity> {
  * @generated MessageType for protobuf message polycentric.v2.Identity
  */
 export const Identity = new Identity$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RevocationBound$Type extends MessageType<RevocationBound> {
+    constructor() {
+        super("polycentric.v2.RevocationBound", [
+            { no: 1, name: "revoked_key", kind: "message", T: () => PublicKey },
+            { no: 2, name: "targets", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventProofTarget }
+        ]);
+    }
+    create(value?: PartialMessage<RevocationBound>): RevocationBound {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.targets = [];
+        if (value !== undefined)
+            reflectionMergePartial<RevocationBound>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RevocationBound): RevocationBound {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.PublicKey revoked_key */ 1:
+                    message.revokedKey = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.revokedKey);
+                    break;
+                case /* repeated polycentric.v2.EventProofTarget targets */ 2:
+                    message.targets.push(EventProofTarget.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RevocationBound, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.PublicKey revoked_key = 1; */
+        if (message.revokedKey)
+            PublicKey.internalBinaryWrite(message.revokedKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventProofTarget targets = 2; */
+        for (let i = 0; i < message.targets.length; i++)
+            EventProofTarget.internalBinaryWrite(message.targets[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.RevocationBound
+ */
+export const RevocationBound = new RevocationBound$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EventProofTarget$Type extends MessageType<EventProofTarget> {
+    constructor() {
+        super("polycentric.v2.EventProofTarget", [
+            { no: 1, name: "collection", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 3, name: "root", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 4, name: "leaf_count", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<EventProofTarget>): EventProofTarget {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.collection = 0;
+        message.signature = new Uint8Array(0);
+        message.root = new Uint8Array(0);
+        message.leafCount = 0n;
+        if (value !== undefined)
+            reflectionMergePartial<EventProofTarget>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EventProofTarget): EventProofTarget {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int32 collection */ 1:
+                    message.collection = reader.int32();
+                    break;
+                case /* bytes signature */ 2:
+                    message.signature = reader.bytes();
+                    break;
+                case /* bytes root */ 3:
+                    message.root = reader.bytes();
+                    break;
+                case /* uint64 leaf_count */ 4:
+                    message.leafCount = reader.uint64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: EventProofTarget, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int32 collection = 1; */
+        if (message.collection !== 0)
+            writer.tag(1, WireType.Varint).int32(message.collection);
+        /* bytes signature = 2; */
+        if (message.signature.length)
+            writer.tag(2, WireType.LengthDelimited).bytes(message.signature);
+        /* bytes root = 3; */
+        if (message.root.length)
+            writer.tag(3, WireType.LengthDelimited).bytes(message.root);
+        /* uint64 leaf_count = 4; */
+        if (message.leafCount !== 0n)
+            writer.tag(4, WireType.Varint).uint64(message.leafCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.EventProofTarget
+ */
+export const EventProofTarget = new EventProofTarget$Type();

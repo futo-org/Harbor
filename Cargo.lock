@@ -3669,6 +3669,7 @@ dependencies = [
  "prost",
  "prost-build",
  "prost-types",
+ "sha2 0.10.9",
  "thiserror",
  "tonic",
  "tonic-prost",
