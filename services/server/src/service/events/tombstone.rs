@@ -41,10 +41,8 @@ impl DeleteTargetEventKey {
     }
 }
 
-/// Look up every Delete event tombstoning any of `keys`. Walks
-/// `content_delete → content → events` (joined once each, no
-/// aliasing) and groups the resulting [`EventBundle`]s by the
-/// caller-supplied target key. Empty input short-circuits.
+/// List all tombstone events
+/// WARNING: These events are unvalidated and can not be trusted
 pub async fn list_tombstones_for_event_keys(
     db: &DbConn,
     keys: &[DeleteTargetEventKey],
@@ -84,10 +82,7 @@ pub async fn list_tombstones_for_event_keys(
         .join(JoinType::InnerJoin, delete_to_content_join())
         .join(JoinType::InnerJoin, content_to_delete_event_join())
         .filter(filter)
-        // Drop tombstones whose Delete event was signed by a
-        // different identity than the target. Only self-tombstoning
-        // is allowed; pushing this into SQL avoids fetching rows
-        // we'd reject in `validate_tombstones` anyway.
+        // Exclude invalid delete events (event not belonging to an identity)
         .filter(
             Expr::col((EventModel::Entity, EventModel::Column::Identity))
                 .equals((
@@ -124,10 +119,6 @@ pub async fn list_tombstones_for_event_keys(
     Ok(by_target)
 }
 
-/// Wide row produced by [`list_tombstones_for_event_keys`]: the
-/// target EventKey from `content_delete` plus the signed Delete
-/// event and its content row, reached by single joins to `content`
-/// and `events`.
 #[derive(Debug, DerivePartialModel)]
 #[sea_orm(entity = "ContentDeleteModel::Entity")]
 struct TombstoneRow {
@@ -189,21 +180,9 @@ fn content_to_delete_event_join() -> RelationDef {
 /// Keep only tombstone bundles whose Delete event is allowed to
 /// remove its target. A tombstone is valid when:
 ///   1. The Delete event's signer identity matches the target row's
-///      identity (you can only delete your own content). Previously
-///      enforced at ingest; moved here so well-signed events are
-///      always stored and the policy lives in one place.
-///   2. The Delete event's signer is still authorized under the
-///      identity's chain — same `authorize_event_signer` rules
-///      ingest applies, re-run at read time to catch signers that
-///      have been revoked since the Delete event was first stored.
-///
-/// Tombstones that fail either check are dropped. Target keys whose
-/// tombstones are all dropped fall out of the returned map (so the
-/// caller treats them as having no valid tombstone).
-///
-/// `permission_denied` from `authorize_event_signer` means "this
-/// tombstone is no longer valid" → drop silently. Any other status
-/// (internal DB error, etc.) is propagated.
+///      identity (you can only delete your own content).
+///   2. The Delete event's signer is authorized under the
+///      identity's chain
 pub async fn validate_tombstones(
     ctx: &ServiceContext,
     deletes_by_target: HashMap<DeleteTargetEventKey, Vec<EventBundle>>,
@@ -262,5 +241,146 @@ async fn is_tombstone_authorized(
         Ok(()) => Ok(true),
         Err(status) if status.code() == Code::PermissionDenied => Ok(false),
         Err(status) => Err(status),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::{EventKey, PublicKey};
+    use sea_orm::{DbBackend, MockDatabase};
+    use std::sync::Arc;
+
+    fn mock_ctx() -> Arc<ServiceContext> {
+        ServiceContext::new(
+            MockDatabase::new(DbBackend::Postgres).into_connection(),
+        )
+    }
+
+    fn target_key(identity: &str) -> DeleteTargetEventKey {
+        DeleteTargetEventKey {
+            collection: 2,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa; 32],
+            sequence: 1,
+        }
+    }
+
+    /// Build an EventBundle whose inner Event encodes the given key.
+    /// The signature is left empty — these tests only exercise the
+    /// pre-authorization fast-fail paths, which never read it.
+    fn bundle_with_key(key: Option<EventKey>) -> EventBundle {
+        let event = Event {
+            key,
+            identity_sequence: 0,
+            vector_clock: None,
+            previous_signature: vec![],
+            content_digest: None,
+            created_at: 0,
+            previous_root: vec![],
+        };
+        EventBundle {
+            signed_event: Some(SignedEvent {
+                signature: vec![],
+                event_bytes: prost::Message::encode_to_vec(&event),
+            }),
+            serialized_content: None,
+            event_proofs: vec![],
+        }
+    }
+
+    fn key_with(
+        identity: &str,
+        signer: Option<PublicKey>,
+        collection: i32,
+    ) -> EventKey {
+        EventKey {
+            collection,
+            identity: identity.to_string(),
+            signed_by: signer,
+            sequence: 7,
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_bundle_without_signed_event() {
+        let ctx = mock_ctx();
+        let bundle = EventBundle {
+            signed_event: None,
+            serialized_content: None,
+            event_proofs: vec![],
+        };
+        let result =
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+        assert_eq!(result.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn rejects_undecodable_event_bytes() {
+        let ctx = mock_ctx();
+        let bundle = EventBundle {
+            signed_event: Some(SignedEvent {
+                signature: vec![],
+                // 0xff is a reserved wire type — never decodes as Event.
+                event_bytes: vec![0xffu8],
+            }),
+            serialized_content: None,
+            event_proofs: vec![],
+        };
+        let result =
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+        assert_eq!(result.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn rejects_event_with_no_key() {
+        let ctx = mock_ctx();
+        let bundle = bundle_with_key(None);
+        let result =
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+        assert_eq!(result.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn rejects_key_with_no_signed_by() {
+        let ctx = mock_ctx();
+        let bundle = bundle_with_key(Some(key_with("alice", None, 6)));
+        let result =
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+        assert_eq!(result.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn rejects_signer_identity_mismatch() {
+        let ctx = mock_ctx();
+        let signer = Some(PublicKey {
+            key_type: 1,
+            key: vec![0xbb; 32],
+        });
+        // Delete event was signed for "mallory" but targets "alice".
+        let bundle = bundle_with_key(Some(key_with("mallory", signer, 6)));
+        let result =
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+        assert_eq!(result.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn validate_tombstones_passes_through_empty_input() {
+        let ctx = mock_ctx();
+        let validated =
+            validate_tombstones(&ctx, HashMap::new()).await.unwrap();
+        assert!(validated.is_empty());
+    }
+
+    #[tokio::test]
+    async fn validate_tombstones_drops_target_when_all_bundles_invalid() {
+        let ctx = mock_ctx();
+        let bad = bundle_with_key(None);
+        let mut deletes: HashMap<DeleteTargetEventKey, Vec<EventBundle>> =
+            HashMap::new();
+        deletes.insert(target_key("alice"), vec![bad]);
+        let validated = validate_tombstones(&ctx, deletes).await.unwrap();
+        assert!(validated.is_empty());
     }
 }

@@ -119,12 +119,15 @@ mod tests {
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
         let public_key_bytes = signing_key.verifying_key().to_bytes().to_vec();
 
+        let now = time::OffsetDateTime::now_utc();
+        let synced_at = time::PrimitiveDateTime::new(now.date(), now.time());
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![PushTokenModel::Model {
                 public_key_type: KeyType::Ed25519 as i16,
                 public_key: public_key_bytes.clone(),
                 service: PushService::Expo.as_ref().to_string(),
                 token: "ExponentPushToken[abc123]".to_string(),
+                created_at: synced_at,
             }]])
             .into_connection();
 
