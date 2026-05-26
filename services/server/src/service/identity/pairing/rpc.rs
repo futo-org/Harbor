@@ -1,0 +1,225 @@
+//! gRPC `PairingService` impl. Each method delegates to a handler
+//! under `pairing/rpc/`.
+
+pub mod common;
+pub mod create_pairing_session;
+pub mod get_pairing_session;
+pub mod join_pairing_session;
+
+use crate::service::proto::pairing_service_server::{
+    PairingService, PairingServiceServer,
+};
+use crate::service::proto::{
+    CreatePairingSessionRequest, CreatePairingSessionResponse,
+    GetPairingSessionRequest, GetPairingSessionResponse,
+    JoinPairingSessionRequest, JoinPairingSessionResponse,
+};
+use sea_orm::DatabaseConnection;
+use tonic::{Request, Response, Status};
+
+pub struct PairingServiceImpl {
+    db: DatabaseConnection,
+}
+
+#[tonic::async_trait]
+impl PairingService for PairingServiceImpl {
+    async fn create_pairing_session(
+        &self,
+        request: Request<CreatePairingSessionRequest>,
+    ) -> Result<Response<CreatePairingSessionResponse>, Status> {
+        Ok(Response::new(
+            create_pairing_session::handle(&self.db, request.into_inner())
+                .await?,
+        ))
+    }
+
+    async fn get_pairing_session(
+        &self,
+        request: Request<GetPairingSessionRequest>,
+    ) -> Result<Response<GetPairingSessionResponse>, Status> {
+        Ok(Response::new(
+            get_pairing_session::handle(&self.db, request.into_inner()).await?,
+        ))
+    }
+
+    async fn join_pairing_session(
+        &self,
+        request: Request<JoinPairingSessionRequest>,
+    ) -> Result<Response<JoinPairingSessionResponse>, Status> {
+        Ok(Response::new(
+            join_pairing_session::handle(&self.db, request.into_inner())
+                .await?,
+        ))
+    }
+}
+
+/// Creates the gRPC service implementation for pairing sessions.
+pub fn build_pairing_service(
+    db: DatabaseConnection,
+) -> PairingServiceServer<PairingServiceImpl> {
+    PairingServiceServer::new(PairingServiceImpl { db })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::identity::pairing::rpc::common::verify_signed_message;
+    use crate::service::proto as Proto;
+    use crate::service::proto::SignedMessage;
+    use chrono::Utc;
+    use ed25519_dalek::{Signer, SigningKey};
+    use prost::Message;
+    use sea_orm::{DbBackend, MockDatabase};
+    use tonic::Code;
+
+    fn impl_for_testing() -> PairingServiceImpl {
+        PairingServiceImpl {
+            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+        }
+    }
+
+    fn make_signed_initial_session(
+        issuer_identity: &str,
+        created_at: i64,
+    ) -> SignedMessage {
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        let initial_session = Proto::InitialPairingSession {
+            issuer_identity: issuer_identity.to_string(),
+            created_at,
+        };
+        let message_bytes = Message::encode_to_vec(&initial_session);
+        let signature = signing_key.sign(&message_bytes);
+
+        SignedMessage {
+            signature: signature.to_bytes().to_vec(),
+            message_bytes,
+            public_key: Some(Proto::PublicKey {
+                key_type: Proto::KeyType::Ed25519.into(),
+                key: signing_key.verifying_key().as_bytes().to_vec(),
+            }),
+        }
+    }
+
+    #[test]
+    fn verify_signed_message_accepts_valid_signature() {
+        let created_at = Utc::now().timestamp_millis();
+        let msg = make_signed_initial_session("issuer", created_at);
+        let public_key = verify_signed_message(&msg).unwrap();
+
+        assert_eq!(
+            public_key.key,
+            SigningKey::from_bytes(&[7u8; 32])
+                .verifying_key()
+                .as_bytes()
+                .to_vec()
+        );
+        assert_eq!(public_key.key_type, Proto::KeyType::Ed25519 as i32);
+    }
+
+    #[tokio::test]
+    async fn create_pairing_session_rejects_missing_signed_message() {
+        let service = impl_for_testing();
+        let err = service
+            .create_pairing_session(Request::new(CreatePairingSessionRequest {
+                signed_message: None,
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn create_pairing_session_rejects_future_created_at() {
+        let service = impl_for_testing();
+        let msg = make_signed_initial_session(
+            "issuer",
+            Utc::now().timestamp_millis() + 60_000,
+        );
+
+        let err = service
+            .create_pairing_session(Request::new(CreatePairingSessionRequest {
+                signed_message: Some(msg),
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn create_pairing_session_rejects_invalid_signature() {
+        let service = impl_for_testing();
+        let mut msg = make_signed_initial_session(
+            "issuer",
+            Utc::now().timestamp_millis(),
+        );
+        msg.signature[0] ^= 1;
+
+        let err = service
+            .create_pairing_session(Request::new(CreatePairingSessionRequest {
+                signed_message: Some(msg),
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn join_pairing_session_rejects_missing_signed_message() {
+        let service = impl_for_testing();
+        let err = service
+            .join_pairing_session(Request::new(JoinPairingSessionRequest {
+                signed_message: None,
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn join_pairing_session_rejects_invalid_body() {
+        let service = impl_for_testing();
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        let body_bytes = vec![1, 2, 3];
+        let signature = signing_key.sign(&body_bytes);
+        let msg = SignedMessage {
+            signature: signature.to_bytes().to_vec(),
+            message_bytes: body_bytes,
+            public_key: Some(Proto::PublicKey {
+                key_type: Proto::KeyType::Ed25519.into(),
+                key: signing_key.verifying_key().as_bytes().to_vec(),
+            }),
+        };
+
+        let err = service
+            .join_pairing_session(Request::new(JoinPairingSessionRequest {
+                signed_message: Some(msg),
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn join_pairing_session_rejects_invalid_signature() {
+        let service = impl_for_testing();
+        let mut msg = make_signed_initial_session(
+            "issuer",
+            Utc::now().timestamp_millis(),
+        );
+        msg.signature[0] ^= 1;
+
+        let err = service
+            .join_pairing_session(Request::new(JoinPairingSessionRequest {
+                signed_message: Some(msg),
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::Unauthenticated);
+    }
+}

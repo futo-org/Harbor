@@ -3,7 +3,7 @@ import {
   List,
   type ListProps,
   type ListRenderItem,
-} from '../../common/components/List/List';
+} from '../../common/components/List';
 import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';

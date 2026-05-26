@@ -1,2 +1,3 @@
-pub mod events_repository;
-pub mod events_service;
+pub mod repository;
+pub mod rpc;
+pub mod tombstone;

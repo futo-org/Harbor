@@ -80,6 +80,12 @@ export interface Content {
          */
         identity: Identity;
     } | {
+        oneofKind: "repost";
+        /**
+         * @generated from protobuf field: polycentric.v2.Repost repost = 9
+         */
+        repost: Repost;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -114,6 +120,10 @@ export interface Post {
      * @generated from protobuf field: repeated polycentric.v2.ImageSet images = 3
      */
     images: ImageSet[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.EventKey quote = 4
+     */
+    quote?: EventKey;
 }
 /**
  * @generated from protobuf message polycentric.v2.PostReply
@@ -131,6 +141,15 @@ export interface PostReply {
      * @generated from protobuf field: polycentric.v2.EventKey parent = 2
      */
     parent?: EventKey;
+}
+/**
+ * @generated from protobuf message polycentric.v2.Repost
+ */
+export interface Repost {
+    /**
+     * @generated from protobuf field: optional polycentric.v2.EventKey post = 1
+     */
+    post?: EventKey;
 }
 /**
  * When processed by a server it should check if the data is referenced by any events
@@ -419,7 +438,8 @@ class Content$Type extends MessageType<Content> {
             { no: 5, name: "block", kind: "message", oneof: "contentBody", T: () => Block },
             { no: 6, name: "reaction", kind: "message", oneof: "contentBody", T: () => Reaction },
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
-            { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity }
+            { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
+            { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -476,6 +496,12 @@ class Content$Type extends MessageType<Content> {
                         identity: Identity.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).identity)
                     };
                     break;
+                case /* polycentric.v2.Repost repost */ 9:
+                    message.contentBody = {
+                        oneofKind: "repost",
+                        repost: Repost.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).repost)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -509,6 +535,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.Identity identity = 8; */
         if (message.contentBody.oneofKind === "identity")
             Identity.internalBinaryWrite(message.contentBody.identity, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.Repost repost = 9; */
+        if (message.contentBody.oneofKind === "repost")
+            Repost.internalBinaryWrite(message.contentBody.repost, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -572,7 +601,8 @@ class Post$Type extends MessageType<Post> {
         super("polycentric.v2.Post", [
             { no: 1, name: "text", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "reply", kind: "message", T: () => PostReply },
-            { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet }
+            { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet },
+            { no: 4, name: "quote", kind: "message", T: () => EventKey }
         ]);
     }
     create(value?: PartialMessage<Post>): Post {
@@ -597,6 +627,9 @@ class Post$Type extends MessageType<Post> {
                 case /* repeated polycentric.v2.ImageSet images */ 3:
                     message.images.push(ImageSet.internalBinaryRead(reader, reader.uint32(), options));
                     break;
+                case /* optional polycentric.v2.EventKey quote */ 4:
+                    message.quote = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.quote);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -618,6 +651,9 @@ class Post$Type extends MessageType<Post> {
         /* repeated polycentric.v2.ImageSet images = 3; */
         for (let i = 0; i < message.images.length; i++)
             ImageSet.internalBinaryWrite(message.images[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.EventKey quote = 4; */
+        if (message.quote)
+            EventKey.internalBinaryWrite(message.quote, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -681,6 +717,52 @@ class PostReply$Type extends MessageType<PostReply> {
  * @generated MessageType for protobuf message polycentric.v2.PostReply
  */
 export const PostReply = new PostReply$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Repost$Type extends MessageType<Repost> {
+    constructor() {
+        super("polycentric.v2.Repost", [
+            { no: 1, name: "post", kind: "message", T: () => EventKey }
+        ]);
+    }
+    create(value?: PartialMessage<Repost>): Repost {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<Repost>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Repost): Repost {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional polycentric.v2.EventKey post */ 1:
+                    message.post = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.post);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Repost, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional polycentric.v2.EventKey post = 1; */
+        if (message.post)
+            EventKey.internalBinaryWrite(message.post, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.Repost
+ */
+export const Repost = new Repost$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Delete$Type extends MessageType<Delete> {
     constructor() {

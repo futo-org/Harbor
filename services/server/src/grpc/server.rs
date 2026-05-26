@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
-use crate::service::notifications::notification_manager::NotificationManager;
-use crate::service::server::server_service::ServerConfig;
+use crate::service::notifications::manager::NotificationManager;
+use crate::service::server::rpc::ServerConfig;
 use axum::Router;
 use http::header::HeaderName;
 use sea_orm::DatabaseConnection;
@@ -37,24 +37,20 @@ pub fn build_grpc_router(
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
     let ctx = ServiceContext::new(db.clone());
-    let feeds_service =
-        service::feeds::feeds_service::build_feeds_service(ctx.clone());
-    let events_service =
-        service::events::events_service::build_events_service(ctx);
+    let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
+    let events_service = service::events::rpc::build_events_service(ctx);
     let content_service =
         service::content::content_service::build_content_service(
             db.clone(),
             filestore,
         );
     let pairing_service =
-        service::pair_identity::pairing_service::build_pairing_service(
-            db.clone(),
-        );
+        service::identity::pairing::rpc::build_pairing_service(db.clone());
     let server_info_service =
-        service::server::server_service::build_server_service(server_config);
+        service::server::rpc::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
     let notification_service =
-        service::notifications::notification_service::build_notification_service(
+        service::notifications::rpc::build_notification_service(
             db.clone(),
             notification_manager,
         );

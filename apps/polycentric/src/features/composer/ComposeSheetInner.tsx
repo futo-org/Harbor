@@ -1,10 +1,10 @@
 import {
   Button,
-  IdentityTag,
   ProfileAvatar,
   Text,
   TextArea,
 } from '@/src/common/components/primitives';
+import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
   truncateName,
@@ -18,24 +18,22 @@ import {
   SheetHeaderBlock,
   type DismissSheet,
 } from '@/src/common/lib/sheet';
-import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { COLLECTION, types, v2 } from '@polycentric/react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useRef } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
-import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
-import { useComposerStore } from './hooks/useComposerStore';
-import { Routes } from '@/src/common/constants';
-import { router } from 'expo-router';
-import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
 import {
   feedQueryKeys,
   injectPostIntoFeedCache,
 } from '@/src/features/feed/hooks/feedCache';
+import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
+import { Ionicons } from '@expo/vector-icons';
+import { COLLECTION, types, v2 } from '@polycentric/react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useCallback, useEffect, useRef } from 'react';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import ComposerPostEmbed from './ComposerPostEmbed';
+import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
+import { useComposerStore } from './hooks/useComposerStore';
 
 const MAX_ATTACHMENTS = 4;
 const THUMBNAIL_SIZE = 72;
@@ -48,6 +46,7 @@ interface ComposeSheetInnerProps {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
+  quote?: PostData | null;
   /** Open the image picker as soon as the composer mounts. */
   attachOnMount?: boolean;
 }
@@ -56,6 +55,7 @@ export function ComposeSheetInner({
   dismissSheet,
   onPostCreated,
   replyTo,
+  quote,
   attachOnMount = false,
 }: ComposeSheetInnerProps) {
   const client = usePolycentric();
@@ -81,9 +81,6 @@ export function ComposeSheetInner({
     : replyToEventKey;
 
   const replyAuthorName = useUsername(replyTo?.identity ?? null);
-  const replyContent = replyTo?.content ?? '';
-  const replyContentPreview =
-    replyContent.length > 30 ? `${replyContent.slice(0, 30)}…` : replyContent;
 
   const text = useComposerStore((s) => s.text);
   const attachments = useComposerStore((s) => s.attachments);
@@ -172,6 +169,10 @@ export function ComposeSheetInner({
           root: replyRootEventKey,
           parent: replyToEventKey,
         };
+      }
+
+      if (!!quote) {
+        post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
       }
 
       const content = client.contentManager.build({
@@ -289,38 +290,7 @@ export function ComposeSheetInner({
         ]}
       >
         {/* Reply preview */}
-        {isReply && (
-          <View
-            style={[
-              Atoms.p_md,
-              Atoms.rounded_md,
-              {
-                minHeight: 64,
-                backgroundColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '10',
-                ),
-                borderBottomWidth: 1,
-                borderBottomColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '20',
-                ),
-                marginBottom: 10,
-              },
-            ]}
-          >
-            <Text variant="small" style={theme.atoms.text_neutral_high}>
-              Replying to {truncateName(replyAuthorName, 20)}
-            </Text>
-            <Text
-              variant="secondary"
-              numberOfLines={2}
-              style={[theme.atoms.text_neutral_high, { marginTop: 2 }]}
-            >
-              {replyContentPreview}
-            </Text>
-          </View>
-        )}
+        {isReply && <ComposerPostEmbed post={replyTo} />}
 
         {/* Error displays */}
         {error && (
@@ -387,6 +357,9 @@ export function ComposeSheetInner({
             )}
           </View>
         </View>
+
+        {/* Quote preview */}
+        {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
       </View>
       {/*  Footer */}
       <ComposeSheetFooterBar

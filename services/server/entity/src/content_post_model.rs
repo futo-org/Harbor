@@ -25,6 +25,13 @@ pub struct Model {
     pub reply_parent_public_key_type: Option<i16>,
     pub reply_parent_public_key: Option<Vec<u8>>,
     pub reply_parent_sequence: Option<i64>,
+
+    // Optional quoted-post EventKey (mirrors the reply_parent_* shape).
+    pub quote_collection: Option<i16>,
+    pub quote_identity: Option<String>,
+    pub quote_public_key_type: Option<i16>,
+    pub quote_public_key: Option<Vec<u8>>,
+    pub quote_sequence: Option<i64>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
