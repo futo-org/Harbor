@@ -19,7 +19,7 @@ function DropdownMenuContent({
             { borderWidth: 1, borderColor: theme.palette.neutral_50 },
             Atoms.rounded_lg,
             { minWidth: 256 },
-            //Atoms.outline_none,
+            Atoms.outline_none,
             { backgroundColor: theme.palette.neutral_25 },
             Atoms.overflow_hidden,
             typeof style === 'function' ? style(state) : style,
@@ -41,7 +41,7 @@ function DropdownMenuItem({
 
   return (
     <DropdownMenuPrimitive.Item
-      style={{ outline: 'none' }}
+      style={Atoms.outline_none}
       onHoverIn={() => setHovering(true)}
       onHoverOut={() => setHovering(false)}
       {...props}

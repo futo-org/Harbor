@@ -210,6 +210,10 @@ export const Atoms = StyleSheet.create({
     textAlign: 'right',
   },
 
+  text_underline: {
+    textDecorationLine: 'underline',
+  },
+
   font_normal: {
     fontWeight: 400,
   },
@@ -646,5 +650,12 @@ export const Atoms = StyleSheet.create({
   },
   rounded_full: {
     borderRadius: BorderRadius.full,
+  },
+
+  /**
+   * Outline
+   */
+  outline_none: {
+    outlineWidth: 0,
   },
 });

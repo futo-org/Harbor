@@ -21,6 +21,7 @@ import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContentQuote } from './content/PostContentQuote';
+import { PostHeader } from './PostHeader';
 import { PostImages } from './PostImages';
 import PostMenu from './PostMenu';
 import { PostToolbar } from './toolbar/PostToolbar';
@@ -123,36 +124,10 @@ export const Post = memo(function Post({
       onPress={handlePress}
       disabled={disablePress}
     >
-      {/* Top padding bar */}
-      <View style={[Atoms.flex_row, Atoms.gap_md]}>
-        <View
-          style={[
-            Atoms.align_center,
-            !showThreadLineAbove && Atoms.pt_md,
-            showThreadLineAbove && Atoms.mb_xs,
-            {
-              flexBasis: 40,
-            },
-          ]}
-        >
-          {showThreadLineAbove ? (
-            <View
-              style={[
-                Atoms.flex_1,
-                {
-                  width: 2,
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '30',
-                  ),
-                },
-              ]}
-            />
-          ) : null}
-        </View>
-        {/* Empty */}
-        <View style={[Atoms.flex_1, showThreadLineAbove && Atoms.pt_md]}></View>
-      </View>
+      <PostHeader
+        repostedBy={post.repostedBy}
+        showThreadLineAbove={showThreadLineAbove}
+      />
 
       {/* Main post body */}
       <View style={[Atoms.flex_row, Atoms.gap_md]}>

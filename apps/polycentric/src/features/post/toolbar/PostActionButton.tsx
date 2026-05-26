@@ -48,7 +48,6 @@ export default function PostActionButton({
         { gap: 3, minHeight: 20 },
       ]}
       onPress={onPress}
-      disabled={!onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
     >

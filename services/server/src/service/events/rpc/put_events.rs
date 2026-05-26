@@ -17,7 +17,8 @@ use ::entity::{
     content_follow_model as ContentFollowModel,
     content_identity_model as ContentIdentityModel,
     content_model as ContentModel, content_post_model as ContentPostModel,
-    content_reaction_model as ContentReactionModel, event_model as EventModel,
+    content_reaction_model as ContentReactionModel,
+    content_repost_model as ContentRepostModel, event_model as EventModel,
 };
 use polycentric_common::models::collections;
 use prost::Message;
@@ -371,9 +372,29 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             .map_err(map_db_err)?;
         }
 
-        // Repost has no child table yet — the parent `content` row
-        // already carries the serialized bytes.
-        Some(ContentBody::Repost(_)) => {}
+        Some(ContentBody::Repost(repost)) => {
+            // A repost with no target is a no-op — the parent
+            // `content` row still carries the serialized bytes.
+            if let Some(key) = repost.post {
+                let signed_by = key.signed_by.ok_or_else(|| {
+                    Status::invalid_argument(
+                        "repost event_key missing signed_by",
+                    )
+                })?;
+
+                ContentRepostModel::ActiveModel {
+                    content_id: Set(content_id),
+                    event_key_collection: Set(key.collection as i16),
+                    event_key_identity: Set(key.identity),
+                    event_key_public_key_type: Set(signed_by.key_type as i16),
+                    event_key_public_key: Set(signed_by.key),
+                    event_key_sequence: Set(key.sequence as i64),
+                }
+                .insert(db)
+                .await
+                .map_err(map_db_err)?;
+            }
+        }
 
         None => {}
     }

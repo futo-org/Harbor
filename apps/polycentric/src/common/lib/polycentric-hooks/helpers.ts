@@ -38,6 +38,13 @@ export type PostData = {
   /** Hex of the quoted post's EventKey — same encoding as `PostData.id`. */
   quoteId?: string;
 
+  /** Identity that reposted this post, when this item represents a
+   *  repost. The rest of the fields are the *reposted* post's data. */
+  repostedBy?: string;
+  /** Hex of the repost event's own EventKey — used as the feed list
+   *  key so a repost is distinct from the original post. */
+  repostId?: string;
+
   signedEvent: v2.SignedEvent;
 };
 
@@ -100,6 +107,71 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
     console.warn('[decodePostBundle] drop: decode threw', e);
     return null;
   }
+}
+
+/** A repost event decoded into who reposted, the target post's id, and
+ *  the repost event's own id. `null` if the bundle isn't a repost. */
+function decodeRepostBundle(bundle: v2.EventBundle): {
+  repostedBy: string;
+  targetId: string;
+  repostId: string;
+} | null {
+  try {
+    if (!bundle.signedEvent) return null;
+    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    const key = event.key;
+    if (!key?.signedBy?.key) return null;
+    if (!bundle.serializedContent?.contentBytes) return null;
+    const content = v2.Content.fromBinary(
+      bundle.serializedContent.contentBytes,
+    );
+    if (content.contentBody.oneofKind !== 'repost') return null;
+    const target = content.contentBody.repost.post;
+    if (!target) return null;
+    return {
+      repostedBy: key.identity,
+      targetId: bytesToHex(v2.EventKey.toBinary(target)),
+      repostId: bytesToHex(v2.EventKey.toBinary(key)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Decode a `GetFeedResponse` into renderable posts. Plain posts decode
+ * directly; reposts resolve their target post from `event_hints` (the
+ * server ships the reposted post alongside) and surface it tagged with
+ * `repostedBy`. A repost whose target isn't in the hints is dropped.
+ */
+export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
+  const hintPosts = new Map<string, PostData>();
+  for (const hint of response.eventHints) {
+    if (!hint.eventBundle) continue;
+    const post = decodePostBundle(hint.eventBundle);
+    if (post) hintPosts.set(post.id, post);
+  }
+
+  const items: PostData[] = [];
+  for (const bundle of response.eventBundles) {
+    const post = decodePostBundle(bundle);
+    if (post) {
+      items.push(post);
+      continue;
+    }
+    const repost = decodeRepostBundle(bundle);
+    if (repost) {
+      const target = hintPosts.get(repost.targetId);
+      if (target) {
+        items.push({
+          ...target,
+          repostedBy: repost.repostedBy,
+          repostId: repost.repostId,
+        });
+      }
+    }
+  }
+  return items;
 }
 
 /**
