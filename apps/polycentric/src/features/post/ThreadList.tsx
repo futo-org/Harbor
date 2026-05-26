@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
 import { type PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
@@ -17,8 +17,18 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
 
   const { thread } = useThread(post);
 
-  // Fall back to rendering just the subject until the server response lands.
-  const items = thread.length > 0 ? thread : [post];
+  // Mount the subject by itself first.
+  // Other items may or may not be available.
+  // This is a reliable way to keep the subject at its intended scroll
+  // position via FlashList maintainVisibleContentPosition.
+  // Before this, we had issues with FlashList behaving differently with
+  // cold vs warm caches at the call site.
+  const [isFirstLayoutComplete, setIsFirstLayoutComplete] = useState(false);
+
+  const items = useMemo(() => {
+    if (!isFirstLayoutComplete) return [post];
+    return thread.length > 0 ? thread : [post];
+  }, [isFirstLayoutComplete, thread, post]);
 
   const subjectIndex = items.findIndex((p) => p.id === post.id);
 
@@ -32,6 +42,7 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
       {...rest}
       data={items}
       initialScrollIndex={subjectIndex > 0 ? subjectIndex : undefined}
+      onLoad={() => setIsFirstLayoutComplete(true)}
       keyExtractor={(p) => p.id}
       renderItem={({ item, index }) => {
         const above = index > 0 ? items[index - 1] : null;
