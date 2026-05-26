@@ -3,6 +3,7 @@ import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
+import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -79,6 +80,9 @@ export default function RootLayout() {
           <PolycentricProvider onInitialized={onInitialized}>
             <TrueSheetProvider>
               <RootStack />
+              {/* Host for @rn-primitives Portals (dropdown menus etc.) —
+                  required on native; web portals to the DOM regardless. */}
+              <PortalHost />
             </TrueSheetProvider>
           </PolycentricProvider>
         </ThemeProvider>
