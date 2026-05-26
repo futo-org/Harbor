@@ -4,7 +4,7 @@ use polycentric_common::{
         collections,
         protos_v2::{
             self, content::ContentBody, Content, ContentDigest, Event, EventBundle, EventProof,
-            PublicKey, SerializedContent, SignedEvent, VectorClock,
+            Identity, PublicKey, SerializedContent, SignedEvent, VectorClock,
         },
         Serializable,
     },
@@ -203,17 +203,21 @@ impl PolycentricClient {
         identity_sequence: u64,
         current_signer: &PublicKey,
         current_sequence: u64,
+        identity_content_override: Option<Identity>,
     ) -> Result<VectorClock, CoreError> {
         let directory = self.identity_directory(identity)?;
         let chain = directory.validate(&self.event_store)?;
-        let identity_content = chain
-            .content_at_sequence(identity_sequence)
-            .ok_or_else(|| {
-                CoreError::InvalidEvent(format!(
-                    "No validated identity event at sequence {}",
-                    identity_sequence
-                ))
-            })?;
+        let identity_content: &Identity = match identity_content_override.as_ref() {
+            Some(c) => c, // Identity content of the event being built
+            None => chain
+                .content_at_sequence(identity_sequence)
+                .ok_or_else(|| {
+                    CoreError::InvalidEvent(format!(
+                        "No validated identity event at sequence {}",
+                        identity_sequence
+                    ))
+                })?,
+        };
 
         // One entry per dedup key: self → current_sequence, others →
         // max validated sequence observed in this collection.
@@ -667,25 +671,13 @@ mod tests {
 
         // Build the actual content (with computed bounds) and its digest.
         let (content_bytes, digest) =
-            identity_content(rotation.clone(), signing.clone(), revocation_bounds);
+            identity_content(rotation.clone(), signing.clone(), revocation_bounds.clone());
 
         // content the VC is indexed against.
-        let signer_identity_content = if sequence == 1 {
-            Identity {
-                rotation_keys: rotation,
-                signing_keys: signing,
-                revocation_bounds: Vec::new(),
-            }
-        } else {
-            let dir = client
-                .identity_directory(&id_string)
-                .expect("identity_directory");
-            dir.validate(&client.event_store)
-                .expect("chain validates")
-                .at_sequence(sequence - 1)
-                .expect("prior identity event must exist for a rotation")
-                .content
-                .clone()
+        let signer_identity_content = Identity {
+            rotation_keys: rotation,
+            signing_keys: signing,
+            revocation_bounds,
         };
 
         let dedup = signer_identity_content.deduplicated_keys();
@@ -829,7 +821,7 @@ mod tests {
             Some(&identity),
             2,
             vec![a.public.clone(), c.public.clone()],
-            vec![],
+            vec![b.public.clone()],
         );
 
         // C references identity_sequence=2, but the chain didn't extend

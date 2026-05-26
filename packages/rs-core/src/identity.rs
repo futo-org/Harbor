@@ -76,7 +76,7 @@ impl IdentityDirectory {
                     Some(vc) => vector_clock::verify_vector_clock(
                         store,
                         vc,
-                        &current.content,
+                        &e.content,
                         &self.identity,
                         collections::IDENTITY,
                         &e.signer,
