@@ -1,2 +1,3 @@
-pub mod feeds_repository;
-pub mod feeds_service;
+pub mod repository;
+pub mod rpc;
+pub mod util;

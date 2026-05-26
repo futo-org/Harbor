@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use sea_orm::DatabaseConnection;
 
-use crate::service::proofs::proofs_cache::ProofCache;
+use crate::service::proofs::cache::ProofCache;
 
 pub struct ServiceContext {
     pub db: DatabaseConnection,

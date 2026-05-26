@@ -25,6 +25,7 @@ message Content {
     Reaction reaction = 6;
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
+    Repost repost = 9;
   }
 }
 
@@ -39,6 +40,7 @@ message Post {
   optional PostReply reply = 2;
   // Multiple images
   repeated ImageSet images = 3;
+  optional EventKey quote = 4;
 }
 
 message PostReply {
@@ -46,6 +48,10 @@ message PostReply {
   EventKey root = 1;
   // Post that is being replied to
   EventKey parent = 2;
+}
+
+message Repost {
+  optional EventKey post = 1;
 }
 
 // When processed by a server it should check if the data is referenced by any events

@@ -39,18 +39,12 @@ impl MigrationTrait for Migration {
         create_entity(manager, &schema, content_delete_model::Entity).await?;
         create_entity(manager, &schema, content_follow_model::Entity).await?;
         create_entity(manager, &schema, content_block_model::Entity).await?;
-        create_entity(manager, &schema, content_reaction_model::Entity)
+        create_entity(manager, &schema, content_reaction_model::Entity).await?;
+        create_entity(manager, &schema, content_profile_update_model::Entity)
             .await?;
-        create_entity(
-            manager,
-            &schema,
-            content_profile_update_model::Entity,
-        )
-        .await?;
         create_entity(manager, &schema, content_image_model::Entity).await?;
         create_entity(manager, &schema, content_blob_model::Entity).await?;
-        create_entity(manager, &schema, content_identity_model::Entity)
-            .await?;
+        create_entity(manager, &schema, content_identity_model::Entity).await?;
 
         Ok(())
     }

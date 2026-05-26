@@ -21,6 +21,7 @@
     "ubrn-wasm-patch.toml"
   ],
   "scripts": {
+    "prebuild": "cargo install wasm-bindgen-cli --version 0.2.122 --locked",
     "build": "ubrn build web",
     "clean": "rm -rfv dist/ rust_modules/"
   },
