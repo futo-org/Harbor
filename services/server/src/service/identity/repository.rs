@@ -1,4 +1,4 @@
-use crate::service::feeds::feeds_repository::{FeedRow, content_join};
+use crate::service::feeds::repository::{EventWithContentRow, content_join};
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, Identity, PublicKey};
 use ::entity::{content_model as ContentModel, event_model as EventModel};
@@ -48,7 +48,7 @@ impl Query {
 
     /// Walk the identity chain from genesis and return the head's content,
     /// or `None` when no valid genesis exists.
-    async fn latest_valid_identity_content(
+    pub async fn latest_valid_identity_content(
         db: &DbConn,
         identity: &str,
     ) -> Result<Option<Identity>, DbErr> {
@@ -132,7 +132,7 @@ impl Query {
     pub async fn list_identity_events_for_identities(
         db: &DbConn,
         identities: Vec<String>,
-    ) -> Result<Vec<FeedRow>, DbErr> {
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {
             return Ok(Vec::new());
         }

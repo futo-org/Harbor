@@ -1,13 +1,14 @@
-use std::sync::Arc;
+//! gRPC `NotificationService` impl. Each method delegates to a
+//! handler under `notifications/rpc/`.
 
-use crate::service::notifications::notification_manager::NotificationManager;
+pub mod register_push_notifications;
+
+use crate::service::notifications::manager::NotificationManager;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
 use crate::service::proto::{RegisterPushNotificationResponse, SignedMessage};
-use crate::util;
-use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
-use prost::Message;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct NotificationServiceImpl {
@@ -15,42 +16,20 @@ pub struct NotificationServiceImpl {
     notification_manager: Arc<NotificationManager>,
 }
 
-/// Implementation of the NotificationService
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
     async fn register_push_notifications(
         &self,
         request: Request<SignedMessage>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
-        let signed_message = request.into_inner();
-
-        let public_key = signed_message.public_key.ok_or_else(|| {
-            Status::invalid_argument("SignedMessage missing public_key")
-        })?;
-
-        // Validate the SignedMessage
-        util::signing::verify_signature(
-            &public_key.key,
-            &signed_message.signature[..],
-            &signed_message.message_bytes[..],
-        )
-        .map_err(|e| Status::unauthenticated(e.to_string()))?;
-
-        let request = RegisterPushNotificationRequest::decode(
-            &signed_message.message_bytes[..],
-        )
-        .map_err(|_| {
-            Status::invalid_argument(
-                "Argument is not a RegisterPushNotificationRequest",
+        Ok(Response::new(
+            register_push_notifications::handle(
+                &self.db,
+                &self.notification_manager,
+                request.into_inner(),
             )
-        })?;
-
-        self.notification_manager
-            .register(&self.db, &public_key, request.service, request.token)
-            .await
-            .map_err(|err| Status::unknown(err.to_string()))?;
-
-        Ok(RegisterPushNotificationResponse {}.into())
+            .await?,
+        ))
     }
 }
 
@@ -67,10 +46,12 @@ pub fn build_notification_service(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::notifications::notification_manager::PushService;
+    use crate::service::notifications::manager::PushService;
     use crate::service::proto::{KeyType, PublicKey};
     use ::entity::push_token_model as PushTokenModel;
     use ed25519_dalek::{Signer, SigningKey};
+    use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
+    use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 

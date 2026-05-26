@@ -17,7 +17,7 @@ pub mod collections;
 pub mod content;
 pub mod digest;
 pub mod event;
-pub mod event_array;
+pub mod event_key;
 pub mod identity;
 pub mod moderation_tag;
 pub mod pointer;

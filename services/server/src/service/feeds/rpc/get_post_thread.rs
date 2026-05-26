@@ -1,0 +1,192 @@
+//! `get_post_thread`: ancestors (root → direct parent), the subject
+//! itself, then descendants (one branch deep for now).
+
+use crate::data::hydration::HydrationState;
+use crate::data::pipeline;
+use crate::service::context::ServiceContext;
+use crate::service::events::tombstone::EventWithContentRow;
+use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::rpc::common::{
+    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+};
+use crate::service::feeds::util::map_db_err;
+use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
+use std::collections::HashMap;
+use tonic::Status;
+
+const PARENT_HEIGHT_LIMIT: i32 = 50;
+const DESCENDANT_DEPTH_LIMIT: i32 = 50;
+/// Only one branch per thread for now: at each level we keep the
+/// newest child.
+const BRANCHING_FACTOR: usize = 1;
+
+pub struct Params {
+    pub collection: i16,
+    pub identity: String,
+    pub public_key_type: i16,
+    pub public_key: Vec<u8>,
+    pub sequence: i64,
+    pub descendants_limit: u64,
+}
+
+pub async fn handle(
+    ctx: &ServiceContext,
+    req: GetPostThreadRequest,
+) -> Result<GetPostThreadResponse, Status> {
+    let descendants_limit = if req.limit <= 0 {
+        200
+    } else {
+        req.limit.min(200) as u64
+    };
+
+    let event_key = req
+        .event_key
+        .ok_or_else(|| Status::invalid_argument("event_key is required"))?;
+    let signed_by = event_key.signed_by.ok_or_else(|| {
+        Status::invalid_argument("event_key.signed_by is required")
+    })?;
+
+    let collection: i16 = event_key.collection.try_into().map_err(|_| {
+        Status::invalid_argument("event_key.collection out of range")
+    })?;
+    let public_key_type: i16 = signed_by.key_type.try_into().map_err(|_| {
+        Status::invalid_argument("event_key.signed_by.key_type out of range")
+    })?;
+    let sequence: i64 = event_key.sequence.try_into().map_err(|_| {
+        Status::invalid_argument("event_key.sequence out of range")
+    })?;
+
+    let params = Params {
+        collection,
+        identity: event_key.identity,
+        public_key_type,
+        public_key: signed_by.key,
+        sequence,
+        descendants_limit,
+    };
+
+    let result =
+        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+            .await?;
+
+    Ok(GetPostThreadResponse {
+        thread: result.event_bundles,
+        event_hints: result.event_hints,
+    })
+}
+
+async fn fetch(
+    ctx: &ServiceContext,
+    params: &Params,
+) -> Result<Vec<EventWithContentRow>, Status> {
+    let subject_row = FeedsRepository::find_event_by_key(
+        &ctx.db,
+        params.collection,
+        &params.identity,
+        params.public_key_type,
+        params.public_key.clone(),
+        params.sequence,
+    )
+    .await
+    .map_err(map_db_err)?
+    .ok_or_else(|| Status::not_found("event not found"))?;
+    let subject_id = subject_row.0.id;
+
+    let ancestor_refs = FeedsRepository::list_ancestor_refs(
+        &ctx.db,
+        subject_id,
+        PARENT_HEIGHT_LIMIT,
+    )
+    .await
+    .map_err(map_db_err)?;
+
+    let descendant_refs = FeedsRepository::list_descendant_refs(
+        &ctx.db,
+        subject_id,
+        DESCENDANT_DEPTH_LIMIT,
+        params.descendants_limit,
+    )
+    .await
+    .map_err(map_db_err)?;
+
+    // parent → [children, newest-first]. Order is (depth ASC,
+    // created_at DESC), so per-parent order is newest first.
+    let mut children_by_parent: HashMap<i64, Vec<i64>> = HashMap::new();
+    for r in &descendant_refs {
+        children_by_parent
+            .entry(r.parent_event_id)
+            .or_default()
+            .push(r.event_id);
+    }
+
+    let mut descendant_order: Vec<i64> = Vec::new();
+    let mut stack: Vec<(i64, bool)> = Vec::new();
+    if let Some(direct) = children_by_parent.get(&subject_id) {
+        for &id in direct.iter().rev() {
+            stack.push((id, false));
+        }
+    }
+    while let Some((id, _)) = stack.pop() {
+        descendant_order.push(id);
+        if let Some(kids) = children_by_parent.get(&id) {
+            let take = kids.len().min(BRANCHING_FACTOR);
+            for &kid in kids.iter().take(take).rev() {
+                stack.push((kid, true));
+            }
+        }
+    }
+
+    let mut all_ids: Vec<i64> =
+        Vec::with_capacity(ancestor_refs.len() + descendant_order.len());
+    all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
+    all_ids.extend(descendant_order.iter().copied());
+    let mut by_id: HashMap<i64, EventWithContentRow> =
+        FeedsRepository::list_events_by_ids(&ctx.db, all_ids)
+            .await
+            .map_err(map_db_err)?
+            .into_iter()
+            .map(|row| (row.0.id, row))
+            .collect();
+
+    let mut thread: Vec<EventWithContentRow> =
+        Vec::with_capacity(ancestor_refs.len() + 1 + descendant_order.len());
+    for r in &ancestor_refs {
+        if let Some(row) = by_id.remove(&r.event_id) {
+            thread.push(row);
+        }
+    }
+    thread.push(subject_row);
+    for id in &descendant_order {
+        if let Some(row) = by_id.remove(id) {
+            thread.push(row);
+        }
+    }
+    Ok(thread)
+}
+
+#[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
+async fn hydrate(
+    ctx: &ServiceContext,
+    _params: &Params,
+    rows: &Vec<EventWithContentRow>,
+) -> Result<HydrationState, Status> {
+    feeds_pipeline::hydrate(ctx, rows).await
+}
+
+async fn filter(
+    _ctx: &ServiceContext,
+    _params: &Params,
+    rows: Vec<EventWithContentRow>,
+    hydration: &HydrationState,
+) -> Result<GetFeedResponseFilter, Status> {
+    feeds_pipeline::filter(rows, hydration).await
+}
+
+async fn view(
+    ctx: &ServiceContext,
+    _params: &Params,
+    filtered: GetFeedResponseFilter,
+    hydration: HydrationState,
+) -> Result<GetFeedResponseView, Status> {
+    feeds_pipeline::view(ctx, filtered, hydration).await
+}

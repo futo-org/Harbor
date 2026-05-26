@@ -7,6 +7,7 @@ import {
 import { useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { Ionicons } from '@expo/vector-icons';
+import usePostActions from './hooks/usePostActions';
 
 type PostMenuProps = {
   post: PostData;
@@ -18,6 +19,8 @@ export default function PostMenu({ post }: PostMenuProps) {
   const { identity: currIdentity } = useCurrentIdentity();
   const isPostAuthor = currIdentity?.identityKey === post.identity;
 
+  const { deleteAsync: deleteAsync } = usePostActions(post);
+
   const onDeletePress = async () => {
     // Wait for confirm
     await new Promise((resolve, reject) => {
@@ -26,6 +29,7 @@ export default function PostMenu({ post }: PostMenuProps) {
         { text: 'Cancel', onPress: () => reject(), style: 'cancel' },
       ]);
     });
+    await deleteAsync();
   };
 
   return (

@@ -102,7 +102,22 @@ message PutEventsRequest {
   repeated EventBundle event_bundles = 1;
 }
 
-message PutEventsResponse {}
+// Per-event failure reported by PutEvents. The call as a whole still
+// succeeds — these entries are diagnostic for events the server
+// skipped.
+message PutEventError {
+  // Index of the failed entry in PutEventsRequest.event_bundles.
+  uint32 event_bundle_index = 1;
+  // Human-readable reason mirroring the gRPC Status ingest would
+  // otherwise have returned for this event in isolation.
+  string message = 2;
+}
+
+message PutEventsResponse {
+  // One entry per event the server could not store. Empty when every
+  // event in the request was accepted.
+  repeated PutEventError errors = 1;
+}
 
 // Sync between clients and servers
 service EventSyncService {

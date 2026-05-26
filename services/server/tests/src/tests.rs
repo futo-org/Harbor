@@ -1,8 +1,11 @@
-use integration_tests::proto::{Identity, ListEventsFilters, ListEventsRequest, PutEventsRequest};
+use integration_tests::proto::{
+    Identity, ListEventsFilters, ListEventsRequest, PutEventsRequest,
+};
 use integration_tests::{
-    bundle_signature, connect_event_sync, derive_identity_string, generate_signing_key, leaf_hash,
-    make_identity_bundle, make_post_bundle, make_revocation_bound, node_hash, public_key_of,
-    COLLECTION_FEED, DEFAULT_CREATED_AT, HOUR,
+    COLLECTION_FEED, DEFAULT_CREATED_AT, HOUR, bundle_signature,
+    connect_event_sync, derive_identity_string, generate_signing_key,
+    leaf_hash, make_identity_bundle, make_post_bundle, make_revocation_bound,
+    node_hash, public_key_of,
 };
 
 #[tokio::test]
@@ -73,9 +76,11 @@ async fn put_then_list_round_trip() {
 
     let bundles = response.into_inner().event_bundles;
     assert!(
-        bundles
-            .iter()
-            .any(|b| b.signed_event.as_ref().map(|se| se.signature == post_signature).unwrap_or(false)),
+        bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_signature)
+            .unwrap_or(false)),
         "expected our post in the list response",
     );
 }
@@ -235,11 +240,21 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
     // Both of B's events should still be visible.
     let bundle_1 = bundles
         .iter()
-        .find(|b| b.signed_event.as_ref().map(|se| se.signature == sig_1).unwrap_or(false))
+        .find(|b| {
+            b.signed_event
+                .as_ref()
+                .map(|se| se.signature == sig_1)
+                .unwrap_or(false)
+        })
         .expect("post_1 missing from list_events response");
     let bundle_2 = bundles
         .iter()
-        .find(|b| b.signed_event.as_ref().map(|se| se.signature == sig_2).unwrap_or(false))
+        .find(|b| {
+            b.signed_event
+                .as_ref()
+                .map(|se| se.signature == sig_2)
+                .unwrap_or(false)
+        })
         .expect("post_2 missing from list_events response");
 
     // post_2 IS the head — server should attach no proof.
@@ -257,7 +272,10 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         bundle_1.event_proofs.len(),
     );
     let proof = &bundle_1.event_proofs[0];
-    assert_eq!(proof.target_signature, sig_2, "proof's target must be the head event");
+    assert_eq!(
+        proof.target_signature, sig_2,
+        "proof's target must be the head event"
+    );
     assert_eq!(proof.leaf_index, 0, "post_1 is at leaf index 0");
     assert!(
         proof.audit_path.is_empty(),
@@ -412,7 +430,12 @@ async fn post_revocation_event_returns_without_proof() {
     // post_3 is present (server doesn't filter on revocation status).
     let bundle_3 = bundles
         .iter()
-        .find(|b| b.signed_event.as_ref().map(|se| se.signature == sig_3).unwrap_or(false))
+        .find(|b| {
+            b.signed_event
+                .as_ref()
+                .map(|se| se.signature == sig_3)
+                .unwrap_or(false)
+        })
         .expect("post_3 missing from list_events response");
 
     // …but it carries no proof — it's not in the head's committed tree.
@@ -563,7 +586,12 @@ async fn rewritten_event_invalidates_proofs() {
     // than the bound recorded (which used sig_2_original).
     let bundle_1 = bundles
         .iter()
-        .find(|b| b.signed_event.as_ref().map(|se| se.signature == sig_1).unwrap_or(false))
+        .find(|b| {
+            b.signed_event
+                .as_ref()
+                .map(|se| se.signature == sig_1)
+                .unwrap_or(false)
+        })
         .expect("post_1 missing from list_events response");
     assert!(
         bundle_1.event_proofs.is_empty(),

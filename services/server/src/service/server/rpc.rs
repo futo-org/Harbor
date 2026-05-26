@@ -1,12 +1,15 @@
+//! gRPC `ServerService` impl. Each method delegates to a handler
+//! under `server/rpc/`.
+
+pub mod get_info;
+
 use crate::service::proto::server_service_server::{
     ServerService, ServerServiceServer,
 };
-use crate::service::proto::{
-    GetServerInfoRequest, GetServerInfoResponse, ServerInfo, ServerVersion,
-};
+use crate::service::proto::{GetServerInfoRequest, GetServerInfoResponse};
 use tonic::{Request, Response, Status};
 
-/// Config served by `ServerService.GetInfo`.
+/// Config served by `ServerService.get_info`.
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
     pub version: String,
@@ -22,16 +25,11 @@ pub struct ServerServiceImpl {
 impl ServerService for ServerServiceImpl {
     async fn get_info(
         &self,
-        _request: Request<GetServerInfoRequest>,
+        request: Request<GetServerInfoRequest>,
     ) -> Result<Response<GetServerInfoResponse>, Status> {
-        Ok(Response::new(GetServerInfoResponse {
-            server_info: Some(ServerInfo {
-                version: Some(ServerVersion {
-                    version: self.config.version.clone(),
-                }),
-                cdn_url: self.config.cdn_url.clone(),
-            }),
-        }))
+        Ok(Response::new(
+            get_info::handle(&self.config, request.into_inner()).await?,
+        ))
     }
 }
 

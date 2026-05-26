@@ -1,1 +1,1 @@
-pub mod server_service;
+pub mod rpc;

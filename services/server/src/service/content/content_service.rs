@@ -1,6 +1,8 @@
+//! gRPC `ContentService` impl. Each method delegates to a dedicated
+//! handler under `content/rpc/`.
+
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::content::content_helpers::parse_upload_blob_request;
-use crate::service::content::content_repository as ContentRepository;
+use crate::service::content::rpc::{sync_content, upload_blob};
 use crate::service::proto::content_service_server::{
     ContentService, ContentServiceServer,
 };
@@ -8,7 +10,7 @@ use crate::service::proto::{
     SyncContentRequest, SyncContentResponse, UploadBlobRequest,
     UploadBlobResponse,
 };
-use sea_orm::{DatabaseConnection, TransactionTrait};
+use sea_orm::DatabaseConnection;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug)]
@@ -21,45 +23,30 @@ pub struct ContentServiceImpl {
 impl ContentService for ContentServiceImpl {
     async fn sync_content(
         &self,
-        _request: Request<SyncContentRequest>,
+        request: Request<SyncContentRequest>,
     ) -> Result<Response<SyncContentResponse>, Status> {
-        Err(Status::unimplemented("sync_content is not implemented"))
+        Ok(Response::new(
+            sync_content::handle(
+                &self.db,
+                &self.filestore,
+                request.into_inner(),
+            )
+            .await?,
+        ))
     }
 
     async fn upload_blob(
         &self,
         request: Request<UploadBlobRequest>,
     ) -> Result<Response<UploadBlobResponse>, Status> {
-        let (blob, digest, body) =
-            parse_upload_blob_request(request.into_inner())?;
-
-        let now = time::OffsetDateTime::now_utc();
-        let synced_at = time::PrimitiveDateTime::new(now.date(), now.time());
-
-        let txn = self.db.begin().await.map_err(|e| {
-            eprintln!("upload_blob txn begin error: {e}");
-            Status::internal("internal server error")
-        })?;
-        ContentRepository::Mutation::save_blob(&txn, &blob, synced_at)
-            .await
-            .map_err(|e| {
-                eprintln!("upload_blob save_blob error: {e}");
-                Status::internal("internal server error")
-            })?;
-        txn.commit().await.map_err(|e| {
-            eprintln!("upload_blob txn commit error: {e}");
-            Status::internal("internal server error")
-        })?;
-
-        self.filestore
-            .write_blob(&digest, body)
-            .await
-            .map_err(|e| {
-                eprintln!("upload_blob filestore error: {e}");
-                Status::internal("internal server error")
-            })?;
-
-        Ok(Response::new(UploadBlobResponse {}))
+        Ok(Response::new(
+            upload_blob::handle(
+                &self.db,
+                &self.filestore,
+                request.into_inner(),
+            )
+            .await?,
+        ))
     }
 }
 

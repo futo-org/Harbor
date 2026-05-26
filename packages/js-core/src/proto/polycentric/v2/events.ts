@@ -231,9 +231,38 @@ export interface PutEventsRequest {
     eventBundles: EventBundle[];
 }
 /**
+ * Per-event failure reported by PutEvents. The call as a whole still
+ * succeeds — these entries are diagnostic for events the server
+ * skipped.
+ *
+ * @generated from protobuf message polycentric.v2.PutEventError
+ */
+export interface PutEventError {
+    /**
+     * Index of the failed entry in PutEventsRequest.event_bundles.
+     *
+     * @generated from protobuf field: uint32 event_bundle_index = 1
+     */
+    eventBundleIndex: number;
+    /**
+     * Human-readable reason mirroring the gRPC Status ingest would
+     * otherwise have returned for this event in isolation.
+     *
+     * @generated from protobuf field: string message = 2
+     */
+    message: string;
+}
+/**
  * @generated from protobuf message polycentric.v2.PutEventsResponse
  */
 export interface PutEventsResponse {
+    /**
+     * One entry per event the server could not store. Empty when every
+     * event in the request was accepted.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.PutEventError errors = 1
+     */
+    errors: PutEventError[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class VectorClock$Type extends MessageType<VectorClock> {
@@ -837,12 +866,70 @@ class PutEventsRequest$Type extends MessageType<PutEventsRequest> {
  */
 export const PutEventsRequest = new PutEventsRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class PutEventError$Type extends MessageType<PutEventError> {
+    constructor() {
+        super("polycentric.v2.PutEventError", [
+            { no: 1, name: "event_bundle_index", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PutEventError>): PutEventError {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventBundleIndex = 0;
+        message.message = "";
+        if (value !== undefined)
+            reflectionMergePartial<PutEventError>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PutEventError): PutEventError {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 event_bundle_index */ 1:
+                    message.eventBundleIndex = reader.uint32();
+                    break;
+                case /* string message */ 2:
+                    message.message = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PutEventError, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 event_bundle_index = 1; */
+        if (message.eventBundleIndex !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.eventBundleIndex);
+        /* string message = 2; */
+        if (message.message !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.message);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.PutEventError
+ */
+export const PutEventError = new PutEventError$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
     constructor() {
-        super("polycentric.v2.PutEventsResponse", []);
+        super("polycentric.v2.PutEventsResponse", [
+            { no: 1, name: "errors", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError }
+        ]);
     }
     create(value?: PartialMessage<PutEventsResponse>): PutEventsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.errors = [];
         if (value !== undefined)
             reflectionMergePartial<PutEventsResponse>(this, message, value);
         return message;
@@ -852,6 +939,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
+                case /* repeated polycentric.v2.PutEventError errors */ 1:
+                    message.errors.push(PutEventError.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -864,6 +954,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
         return message;
     }
     internalBinaryWrite(message: PutEventsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.PutEventError errors = 1; */
+        for (let i = 0; i < message.errors.length; i++)
+            PutEventError.internalBinaryWrite(message.errors[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

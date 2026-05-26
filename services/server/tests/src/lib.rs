@@ -3,9 +3,9 @@ pub mod proto;
 use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::{
-    content, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-    EventProofTarget, Identity, KeyType, Post, PublicKey, RevocationBound, SerializedContent,
-    SignedEvent, VectorClock,
+    Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
+    EventProofTarget, Identity, KeyType, Post, PublicKey, RevocationBound,
+    SerializedContent, SignedEvent, VectorClock, content,
 };
 use sha2::{Digest, Sha256};
 
@@ -28,7 +28,8 @@ pub fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-pub async fn connect_event_sync() -> EventSyncServiceClient<tonic::transport::Channel> {
+pub async fn connect_event_sync()
+-> EventSyncServiceClient<tonic::transport::Channel> {
     EventSyncServiceClient::connect(GRPC_ADDR)
         .await
         .expect("failed to connect to gRPC server")
@@ -156,6 +157,7 @@ pub fn make_post_bundle(
             text: text.to_string(),
             reply: None,
             images: vec![],
+            quote: None,
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);

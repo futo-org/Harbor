@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::proofs_repository;
+use super::repository;
 
 /// One entry per `(identity, collection)` — the canonical-ordered
 /// signatures used to rebuild trees for proof generation.
@@ -48,8 +48,7 @@ impl ProofCache {
             return Ok(cached);
         }
         let fetched =
-            proofs_repository::canonical_signatures(db, identity, collection)
-                .await?;
+            repository::canonical_signatures(db, identity, collection).await?;
         self.canonical.write().await.insert(key, fetched.clone());
         Ok(fetched)
     }

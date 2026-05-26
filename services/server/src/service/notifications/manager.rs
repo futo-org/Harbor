@@ -5,8 +5,9 @@ use expo_push_notification_client::{
 };
 use sea_orm::{DbConn, DbErr, EnumIter};
 
-use super::token_repository;
-use crate::service::{identity::identity_repository, proto::PublicKey};
+use super::repository as token_repository;
+use crate::service::identity::repository as identity_repository;
+use crate::service::proto::PublicKey;
 
 #[derive(EnumIter)]
 pub enum PushService {

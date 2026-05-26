@@ -16,8 +16,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        for index in schema.create_index_from_entity(push_token_model::Entity)
-        {
+        for index in schema.create_index_from_entity(push_token_model::Entity) {
             manager.create_index(index).await?;
         }
 

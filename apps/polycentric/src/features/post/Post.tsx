@@ -3,26 +3,27 @@ import {
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
-import { openCompose, Routes } from '@/src/common/constants';
+import { Routes } from '@/src/common/constants';
 import {
   timeAgo,
   truncateName,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { useWebHover } from '@/src/common/lib/useWebHover';
-import { PostImages } from './PostImages';
-import { PostToolbar } from './PostToolbar';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { v2 } from '@polycentric/react-native';
-import { router } from 'expo-router';
-import { memo, useCallback, useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
 import {
   getKeyFingerprint,
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
+import { useWebHover } from '@/src/common/lib/useWebHover';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { v2 } from '@polycentric/react-native';
+import { router } from 'expo-router';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { Pressable, View } from 'react-native';
+import { PostContentQuote } from './content/PostContentQuote';
+import { PostImages } from './PostImages';
 import PostMenu from './PostMenu';
+import { PostToolbar } from './toolbar/PostToolbar';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -99,20 +100,10 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  const handleReply = useCallback(() => {
-    openCompose({ replyTo: post.id });
-  }, [authorIdentity, post]);
-
-  const handleLike = useCallback(() => {}, []);
-
-  const handleDislike = useCallback(() => {}, []);
-
   const toggleContentExpanded = useCallback(() => {
     setContentExpanded((v) => !v);
   }, []);
 
-  const liked = false;
-  const disliked = false;
   const time = timeAgo(Number(post.createdAt));
 
   return (
@@ -242,6 +233,7 @@ export const Post = memo(function Post({
             </Text>
           ) : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
+          {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
           {showContentExpandToggle && (
             <Pressable
               onPress={toggleContentExpanded}
@@ -262,14 +254,7 @@ export const Post = memo(function Post({
               </Text>
             </Pressable>
           )}
-          <PostToolbar
-            onReply={handleReply}
-            onLike={handleLike}
-            onDislike={handleDislike}
-            liked={liked}
-            disliked={disliked}
-            style={[Atoms.mt_sm]}
-          />
+          <PostToolbar post={post} style={[Atoms.mt_sm]} />
         </View>
       </View>
     </Pressable>

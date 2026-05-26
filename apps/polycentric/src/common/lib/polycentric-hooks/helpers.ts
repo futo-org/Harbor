@@ -35,6 +35,9 @@ export type PostData = {
     parentId?: string;
   };
 
+  /** Hex of the quoted post's EventKey — same encoding as `PostData.id`. */
+  quoteId?: string;
+
   signedEvent: v2.SignedEvent;
 };
 
@@ -74,6 +77,9 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
             : undefined,
         }
       : undefined;
+    const quoteId = post.quote
+      ? bytesToHex(v2.EventKey.toBinary(post.quote))
+      : undefined;
 
     return {
       id,
@@ -84,6 +90,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       createdAt: Number(event.createdAt ?? 0),
       images: post.images,
       reply,
+      quoteId,
       signedEvent: v2.SignedEvent.create({
         eventBytes: bundle.signedEvent.eventBytes,
         signature: bundle.signedEvent.signature,
