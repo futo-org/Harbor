@@ -37,7 +37,7 @@ export class ContentManager {
    * This is used so that blobs of an identity will eventually
    * persist on other devices in that identity.
    */
-  async backfillBlobsForContent(content: Proto.Content): Promise<void> {
+  async pullBlobs(content: Proto.Content): Promise<void> {
     const digests = this.collectBlobDigests(content);
     if (digests.length === 0) return;
 
@@ -49,7 +49,7 @@ export class ContentManager {
           if (!bytes) return;
           await this.client.filestoreDriver.put(digest, bytes);
         } catch (err) {
-          console.warn('backfillBlobsForContent failed:', err);
+          console.warn('pullBlobs failed:', err);
         }
       }),
     );

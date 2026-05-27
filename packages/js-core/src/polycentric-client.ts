@@ -757,9 +757,7 @@ export class PolycentricClient {
 
     // Catch any of our own referenced blobs so they persist locally.
     await Promise.all(
-      contents.map(({ content }) =>
-        this.contentManager.backfillBlobsForContent(content),
-      ),
+      contents.map(({ content }) => this.contentManager.pullBlobs(content)),
     );
 
     return newCount;
