@@ -16,20 +16,20 @@ List the exact steps to trigger the bug, as a numbered list. Mention whether it
 happens every time or only sometimes.
 --->
 
-### Platform information 
+### Platform information
 
 <!---
 Tell us where you saw this: web or native app, browser and version, device and OS,
 app version, and screen size if it looks layout-related.
 --->
 
-### What is the current *bug* behavior?
+### What is the current _bug_ behavior?
 
 <!---
 Describe what actually happens.
 --->
 
-### What is the expected *correct* behavior?
+### What is the expected _correct_ behavior?
 
 <!---
 Describe what you expected to happen instead.
