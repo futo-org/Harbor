@@ -41,6 +41,10 @@ services:
     ports:
       - 9000:9000
       - 9001:9001
+    environment:
+      # rustfs:latest refuses the default root credentials on a non-loopback listener. This
+      # re-enables them so that default credentials continue to work for all dependent services.
+      - RUSTFS_ALLOW_INSECURE_DEFAULT_CREDENTIALS=true
     healthcheck:
       test: ['CMD', 'curl', '-sf', 'http://localhost:9000/health']
       interval: 10s

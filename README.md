@@ -15,15 +15,39 @@
 
 > :warning: **We're working on this.**
 
-You will need [just](https://github.com/casey/just), Docker, and pnpm.
+You will need:
 
-1. **Build rs-core for all platforms:** `just packages/rs-core/build-all`
-2. **Install dependencies:** `pnpm install`
-3. **Run the app:** `pnpm:run web`, `pnpm run:ios`, or `pnpm run:android`
+- [Node.js](https://nodejs.org), version pinned in `.nvmrc`
+- [pnpm](https://pnpm.io)
+- [Rust toolchain](https://rustup.rs)
+- [`protoc`](https://github.com/protocolbuffers/protobuf)
+- [`docker compose`](https://github.com/docker/compose)
 
-## Development
+The following commands will get you up and running:
+```sh
+# Use node version manager to install the pinned version of node
+nvm install
 
-- `pnpm dev` builds all SDKs in watch mode.
+# Add the WASM target to the rust toolchain
+rustup target add wasm32-unknown-unknown
+
+# Build the frontend and core binaries
+pnpm install
+pnpm build
+
+# Start the server process
+docker compose up -d --build
+
+# Apply the database schema if it has changed
+docker compose run --rm server /app/migration fresh
+
+# Start the frontend dev server
+pnpm dev
+```
+
+If you're using Podman, ensure `docker compose` resolves to Compose v2.
+
+To run the server from source instead, see [`services/server/README.md`](services/server/README.md).
 
 ## Project Structure
 
@@ -34,10 +58,11 @@ You will need [just](https://github.com/casey/just), Docker, and pnpm.
 | `packages/js-core` | Core JavaScript library containing the main Polycentric protocol logic |
 | `packages/js-browser` | Browser SDK using SQLite WASM for local storage |
 | `packages/js-node` | Node.js SDK using sqlite3 for local storage |
+| `packages/js-storage-sqlite` | Shared SQLite (Drizzle ORM) storage layer for the JS SDKs |
 | `packages/react-native` | React Native SDK for mobile applications |
+| `packages/rs-common` | Shared Rust code used by rs-core |
 | `packages/rs-core` | Rust core library - the underlying protocol implementation |
-| `packages/rs-core-wasm-browser` | Rust core compiled to WebAssembly for browser environments |
-| `packages/rs-core-wasm-node` | Rust core compiled to WebAssembly for Node.js environments |
+| `packages/rs-core-uniffi-web` | rs-core on WASM with `uniffi-bindgen-react-native` bindings |
 
 ### Apps
 
