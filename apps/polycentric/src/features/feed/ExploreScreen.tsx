@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
 import { Text, TextInput } from '@/src/common/components/primitives';
@@ -39,7 +39,7 @@ function SearchBar() {
       ]}
       onPress={() => Alert.alert('Search is coming soon.')}
     >
-      <Ionicons name="search" size={16} color={theme.palette.neutral_500} />
+      <Icon name="search" size={16} color="neutral_500" />
       <TextInput
         variant="plain"
         placeholder="Search"
@@ -104,7 +104,7 @@ export default function ExploreScreen() {
         {showComposeFab ? (
           <Fab
             onPress={openCompose}
-            icon={() => <Ionicons name="add" size={32} color="white" />}
+            icon={() => <Icon name="add" size={32} color="white" />}
           />
         ) : null}
       </Screen.PrimaryColumn>

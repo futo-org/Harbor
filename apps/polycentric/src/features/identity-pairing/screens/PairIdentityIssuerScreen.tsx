@@ -11,7 +11,7 @@ import {
 import { Atoms, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -71,11 +71,7 @@ function CountdownTimer({
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-      <Ionicons
-        name="time-outline"
-        size={16}
-        color={theme.palette.neutral_500}
-      />
+      <Icon name="time" size={16} color="neutral_500" />
       <Text variant="small" color="neutral_500">
         Valid for{'  '}
         <Text
@@ -339,11 +335,7 @@ export default function PairIdentityIssuerScreen() {
                       }}
                     >
                       {pairAsRotationKey ? (
-                        <Ionicons
-                          name="checkmark"
-                          size={14}
-                          color={theme.palette.neutral_0}
-                        />
+                        <Icon name="checkmark" size={14} color="neutral_0" />
                       ) : null}
                     </View>
                     <View style={[Atoms.flex_1, Atoms.gap_xs]}>
@@ -448,10 +440,10 @@ export default function PairIdentityIssuerScreen() {
                       },
                     ]}
                   >
-                    <Ionicons
-                      name={justCopied ? 'checkmark' : 'copy-outline'}
+                    <Icon
+                      name={justCopied ? 'checkmark' : 'copy'}
                       size={16}
-                      color={theme.palette.primary_500}
+                      color="primary_500"
                     />
                     <Text
                       variant="small"

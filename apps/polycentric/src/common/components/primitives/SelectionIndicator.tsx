@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 
 const SIZE = 20;
 
@@ -12,10 +12,10 @@ export function SelectionIndicator() {
     <View
       style={[styles.indicator, { backgroundColor: theme.palette.primary_500 }]}
     >
-      <Ionicons
-        name="checkmark-sharp"
+      <Icon
+        name="checkmarkSharp"
         size={16}
-        color={isDark ? theme.palette.black : theme.palette.white}
+        color={isDark ? 'black' : 'white'}
       />
     </View>
   );

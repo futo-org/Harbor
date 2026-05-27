@@ -2,7 +2,7 @@ import { Link, router, useSegments } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
 import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
 import { ProfileAvatar, Text } from '../primitives';
@@ -64,11 +64,7 @@ function Topbar({ title, center, right }: TopbarProps) {
             hitSlop={Spacing['lg']}
             style={({ pressed }) => [pressed && { opacity: 0.5 }]}
           >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={theme.palette.neutral_900}
-            />
+            <Icon name="chevronBack" size={24} color="neutral_900" />
           </Pressable>
         ) : (
           <ProfileAvatar

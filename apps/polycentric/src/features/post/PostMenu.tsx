@@ -6,7 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { View } from 'react-native';
 import usePostActions from './hooks/usePostActions';
 
@@ -52,11 +52,7 @@ export default function PostMenu({ post }: PostMenuProps) {
               },
             ]}
           >
-            <Ionicons
-              name="ellipsis-horizontal"
-              color={theme.palette.neutral_500}
-              size={16}
-            />
+            <Icon name="more" color="neutral_500" size={16} />
           </View>
         )}
       </DropdownMenu.Trigger>
@@ -64,11 +60,7 @@ export default function PostMenu({ post }: PostMenuProps) {
         {/* Delete  */}
         {isPostAuthor && (
           <DropdownMenu.Item onPress={onDeletePress}>
-            <Ionicons
-              name="trash-bin"
-              color={theme.palette.negative_500}
-              size={16}
-            />
+            <Icon name="trashBin" color="negative_500" size={16} />
             <Text variant="secondary" fontWeight="bold" color="negative_500">
               Delete
             </Text>
@@ -77,11 +69,7 @@ export default function PostMenu({ post }: PostMenuProps) {
         {/* Report */}
         {!isPostAuthor && (
           <DropdownMenu.Item onPress={() => Alert.alert('Working on it')}>
-            <Ionicons
-              name="flag-outline"
-              color={theme.palette.neutral_500}
-              size={16}
-            />
+            <Icon name="flag" color="neutral_500" size={16} />
             <Text variant="secondary" fontWeight="bold">
               Report
             </Text>

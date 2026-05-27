@@ -2,7 +2,7 @@ import { Atoms } from '@/src/common/theme';
 import { ComponentProps } from 'react';
 
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { View } from 'react-native';
 import { NavItem } from './NavItem';
 
@@ -23,18 +23,18 @@ export function VerticalNav({ style }: VerticalNavProps) {
     >
       <NavItem
         label="Home"
-        icon={<Ionicons name="home-outline" size={24} />}
+        icon={<Icon name="home" size={24} />}
         href="/feed"
       />
       <NavItem
         label="Explore"
-        icon={<Ionicons name="search-outline" size={24} />}
+        icon={<Icon name="searchOutline" size={24} />}
         href="/explore"
       />
       {identity?.identityKey && (
         <NavItem
           label="Profile"
-          icon={<Ionicons name="person-outline" size={24} />}
+          icon={<Icon name="personOutline" size={24} />}
           href={{
             pathname: '/[identityId]',
             params: { identityId: identity?.identityKey },
@@ -44,7 +44,7 @@ export function VerticalNav({ style }: VerticalNavProps) {
 
       <NavItem
         label="Settings"
-        icon={<Ionicons name="settings-outline" size={24} />}
+        icon={<Icon name="settings" size={24} />}
         href="/settings"
       />
     </View>

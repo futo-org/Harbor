@@ -6,7 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 interface ComposerInputProps {
@@ -79,11 +79,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
           },
         ]}
       >
-        <Ionicons
-          name="image-outline"
-          size={22}
-          color={theme.palette.neutral_700}
-        />
+        <Icon name="image" size={22} color="neutral_700" />
       </Pressable>
       {hovered ? (
         <View

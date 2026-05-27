@@ -1,5 +1,5 @@
 import { IconButton } from '@/src/common/components/primitives';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -8,7 +8,7 @@ interface BackButtonProps {
 export function BackButton({ onPress }: BackButtonProps) {
   return (
     <IconButton
-      icon={(props) => <Ionicons name="arrow-back" {...props} />}
+      icon={(props) => <Icon name="arrowBack" {...props} />}
       onPress={onPress}
     />
   );

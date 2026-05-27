@@ -1,5 +1,5 @@
 import { IconButton } from '@/src/common/components/primitives';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 
 interface CloseButtonProps {
   onPress: () => void;
@@ -8,7 +8,7 @@ interface CloseButtonProps {
 export function CloseButton({ onPress }: CloseButtonProps) {
   return (
     <IconButton
-      icon={(props) => <Ionicons name="close" {...props} />}
+      icon={(props) => <Icon name="close" {...props} />}
       onPress={onPress}
     />
   );

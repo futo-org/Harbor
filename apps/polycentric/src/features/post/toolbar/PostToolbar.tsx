@@ -38,17 +38,17 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
   return (
     <View style={[Atoms.flex_row, Atoms.justify_between, style]}>
       <PostActionButton
-        icon="chatbubble-outline"
+        icon="reply"
         onPress={onReplyPress}
-        color={'neutral_500'}
+        color={'primary_500'}
       />
-      <RepostButton post={post} />
       <PostActionButton
-        icon={reaction ? 'heart' : 'heart-outline'}
+        icon={reaction ? 'reaction' : 'reactionOutline'}
         onPress={onReactionPress}
         color={'negative_500'}
       />
-      <PostActionButton icon="share-social-outline" onPress={onSharePress} />
+      <RepostButton post={post} />
+      <PostActionButton icon="share" onPress={onSharePress} />
     </View>
   );
 }

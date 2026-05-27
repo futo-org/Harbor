@@ -19,8 +19,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
-import { Ionicons } from '@expo/vector-icons';
 import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
 import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
 import { FUTO_URL, openCompose } from '../../constants';
@@ -261,7 +261,7 @@ export const LeftSidebar = memo(function LeftSidebar({
                     size="md"
                     fullWidth={!narrowSidebar}
                     icon={({ size, color }) => (
-                      <Ionicons name="add-circle" size={size} color={color} />
+                      <Icon name="add" size={size} color={color} />
                     )}
                     onPress={() => openCompose()}
                   />
@@ -350,10 +350,10 @@ export const RightSidebar = memo(function RightSidebar({
               onPress={toggleTheme}
               style={({ pressed }) => [pressed && { opacity: 0.65 }]}
             >
-              <Ionicons
-                name={theme.name === 'dark' ? 'moon' : 'sunny'}
+              <Icon
+                name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
                 size={typography.fontSize.sm}
-                color={theme.palette.neutral_500}
+                color="neutral_500"
               />
             </Pressable>
             {LINKS.map(({ text, href }) => (

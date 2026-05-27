@@ -1,5 +1,5 @@
 import { PillButton } from '@/src/common/components/primitives';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 
 export function EditButton() {
   return (
@@ -7,7 +7,7 @@ export function EditButton() {
       onPress={() => {}}
       title="Edit"
       variant="primary"
-      icon={(props) => <Ionicons name="settings-outline" {...props} />}
+      icon={(props) => <Icon name="settings" {...props} />}
     />
   );
 }
