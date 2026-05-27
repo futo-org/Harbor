@@ -180,7 +180,14 @@ route('POST', /^\/post$/, async (req, res) => {
     res.end();
     return;
   }
-  await client.contentManager.commitPost({ text, images: imageSets });
+  const content = client.contentManager.build({
+    oneofKind: 'post',
+    post: { text, images: imageSets },
+  });
+  await client.contentManager.save(content);
+  const event = await client.buildEvent(content);
+  const signedEvent = await client.signEvent(event);
+  await client.commitEvent(signedEvent, content);
   await client.sync();
   res.statusCode = 303;
   res.setHeader('Location', '/');

@@ -1,5 +1,4 @@
 import { sha256 } from '@noble/hashes/sha2';
-import { COLLECTION } from '../constants';
 import { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 
@@ -31,67 +30,6 @@ export class ContentManager {
   async save(content: Proto.Content): Promise<void> {
     const digest = this.buildDigest(content);
     await this.client.storage.content.save(digest, content);
-  }
-
-  /**
-   * Compose, sign, and locally commit a Post event. `images` are
-   * already-uploaded `ImageSet`s (see `processAndUploadImage`). Does
-   * not sync. The caller decides when to push.
-   */
-  async commitPost(args: {
-    text: string;
-    images?: Proto.ImageSet[];
-    reply?: Proto.PostReply;
-    quote?: Proto.EventKey;
-  }): Promise<Proto.EventBundle> {
-    const content = this.build({
-      oneofKind: 'post',
-      post: {
-        text: args.text,
-        images: args.images ?? [],
-        reply: args.reply,
-        quote: args.quote,
-      },
-    });
-    await this.save(content);
-    const event = await this.client.buildEvent(content);
-    const signedEvent = await this.client.signEvent(event);
-    // `commitEvent` persists the event locally and, when content is
-    // passed, seeds the core's content store + emits contentCreated
-    // with both signedEvent and content so feeds can decode directly.
-    await this.client.commitEvent(signedEvent, content);
-    return Proto.EventBundle.create({
-      signedEvent,
-      serializedContent: { contentBytes: Proto.Content.toBinary(content) },
-    });
-  }
-
-  /**
-   * Compose, sign, and locally commit a ProfileUpdate event. `avatar`
-   * and `banner` are already-uploaded `ImageSet`s (see
-   * `processAndUploadImage`). Does not sync. The caller decides when
-   * to push.
-   */
-  async commitProfileUpdate(args: {
-    name: string;
-    description: string;
-    avatar?: Proto.ImageSet;
-    banner?: Proto.ImageSet;
-  }): Promise<Proto.SignedEvent> {
-    const content = this.build({
-      oneofKind: 'profileUpdate',
-      profileUpdate: {
-        name: args.name,
-        description: args.description,
-        avatar: args.avatar,
-        banner: args.banner,
-      },
-    });
-    await this.save(content);
-    const event = await this.client.buildEvent(content, COLLECTION.PROFILE);
-    const signedEvent = await this.client.signEvent(event);
-    await this.client.commitEvent(signedEvent, content);
-    return signedEvent;
   }
 
   /**
