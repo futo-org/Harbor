@@ -1082,4 +1082,39 @@ mod tests {
             .validate_event(&b_event, &[])
             .expect("event with satisfied causal prerequisite should validate");
     }
+
+    #[test]
+    fn builds_vector_clock_for_new_identity_event() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+
+        let identity_content = Identity {
+            rotation_keys: vec![a.public.clone()],
+            signing_keys: vec![],
+            revocation_bounds: vec![],
+        };
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            identity_content.rotation_keys.clone(),
+            identity_content.signing_keys.clone(),
+        );
+
+        let vc = client.build_vector_clock(
+            &identity,
+            collections::IDENTITY,
+            2,
+            &a.public,
+            2,
+            Some(identity_content),
+        );
+
+        assert!(
+            vc.is_ok(),
+            "building a VC for an identity event that references its own sequence should succeed, got {:?}",
+            vc.err()
+        );
+    }
 }
