@@ -80,8 +80,6 @@ export default function RootLayout() {
           <PolycentricProvider onInitialized={onInitialized}>
             <TrueSheetProvider>
               <RootStack />
-              {/* Host for @rn-primitives Portals (dropdown menus etc.) —
-                  required on native; web portals to the DOM regardless. */}
               <PortalHost />
             </TrueSheetProvider>
           </PolycentricProvider>

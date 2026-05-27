@@ -35,7 +35,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   return (
     <View style={[Atoms.flex_1]}>
       <DropdownMenu>
-        <DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild>
           <PostActionButton
             icon="repeat"
             active={hasReposted}
