@@ -1,5 +1,5 @@
 import { PillButton } from '@/src/common/components/primitives';
-import { Ionicons } from '@expo/vector-icons';
+import Icon, { IconName } from '@/src/common/components/Icon';
 
 type SocialAction = 'follow' | 'unfollow' | 'block' | 'unblock';
 
@@ -12,18 +12,18 @@ const CONFIG: Record<
   SocialAction,
   {
     title: string;
-    icon: keyof typeof Ionicons.glyphMap;
+    icon: IconName;
     variant: 'primary' | 'secondary' | 'destructive';
   }
 > = {
   follow: {
     title: 'Follow',
-    icon: 'person-add',
+    icon: 'personAdd',
     variant: 'primary',
   },
   unfollow: {
     title: 'Unfollow',
-    icon: 'person-remove',
+    icon: 'personRemove',
     variant: 'primary',
   },
   block: {
@@ -33,7 +33,7 @@ const CONFIG: Record<
   },
   unblock: {
     title: 'Unblock',
-    icon: 'checkmark-circle',
+    icon: 'checkmarkCircle',
     variant: 'secondary',
   },
 };
@@ -46,7 +46,7 @@ export function SocialButton({ action, onPress }: SocialButtonProps) {
       onPress={onPress}
       title={title}
       variant={variant}
-      icon={(props) => <Ionicons name={icon} {...props} />}
+      icon={(props) => <Icon name={icon} {...props} />}
     />
   );
 }

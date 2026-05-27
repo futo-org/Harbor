@@ -1,6 +1,6 @@
 import { IconButton, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
@@ -39,7 +39,7 @@ export function SheetHeaderBlock({
         ]}
       >
         <IconButton
-          icon={(p) => <Ionicons name="close" {...p} />}
+          icon={(p) => <Icon name="close" {...p} />}
           onPress={onClose}
           disabled={closeDisabled}
           iconColor={closeDisabled ? 'neutral_500' : 'neutral_1000'}

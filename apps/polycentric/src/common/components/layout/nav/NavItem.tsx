@@ -10,7 +10,6 @@ import {
 
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
 import { flattenHref } from '@/src/utils/router';
 

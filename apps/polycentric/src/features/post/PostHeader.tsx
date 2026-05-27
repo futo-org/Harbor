@@ -4,7 +4,7 @@ import { truncateName } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -53,7 +53,6 @@ function ThreadHeader() {
 }
 
 function RepostHeader({ identity }: { identity: string }) {
-  const { theme } = useTheme();
   const profile = useProfile(identity);
   const name = profile.name ?? '';
 
@@ -76,7 +75,7 @@ function RepostHeader({ identity }: { identity: string }) {
       ]}
     >
       <View style={[Atoms.items_end, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
-        <Ionicons size={16} name="repeat" color={theme.palette.neutral_500} />
+        <Icon size={16} name="repost" color="neutral_500" />
       </View>
       <Text
         variant="small"

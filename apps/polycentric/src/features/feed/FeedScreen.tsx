@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
 import { Text } from '@/src/common/components/primitives';
@@ -63,7 +63,7 @@ export default function FeedScreen() {
         {showComposeFab ? (
           <Fab
             onPress={openCompose}
-            icon={() => <Ionicons name="add" size={32} color="white" />}
+            icon={() => <Icon name="add" size={32} color="white" />}
           />
         ) : null}
       </Screen.PrimaryColumn>
