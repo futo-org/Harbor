@@ -19,34 +19,14 @@ use tonic::{Code, Status};
 /// every event-returning query already produces.
 pub type EventWithContentRow = (EventModel::Model, Option<ContentModel::Model>);
 
-/// EventKey that has been 'tombstoned' (marked for deletion)
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct DeleteTargetEventKey {
-    pub collection: i16,
-    pub identity: String,
-    pub public_key_type: i16,
-    pub public_key: Vec<u8>,
-    pub sequence: i64,
-}
-
-impl DeleteTargetEventKey {
-    pub fn of(event: &EventModel::Model) -> Self {
-        Self {
-            collection: event.collection,
-            identity: event.identity.clone(),
-            public_key_type: event.public_key_type,
-            public_key: event.public_key.clone(),
-            sequence: event.sequence,
-        }
-    }
-}
+use super::TargetEventKey;
 
 /// List all tombstone events
 /// WARNING: These events are unvalidated and can not be trusted
 pub async fn list_tombstones_for_event_keys(
     db: &DbConn,
-    keys: &[DeleteTargetEventKey],
-) -> Result<HashMap<DeleteTargetEventKey, Vec<EventBundle>>, DbErr> {
+    keys: &[TargetEventKey],
+) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, DbErr> {
     if keys.is_empty() {
         return Ok(HashMap::new());
     }
@@ -94,10 +74,10 @@ pub async fn list_tombstones_for_event_keys(
         .all(db)
         .await?;
 
-    let mut by_target: HashMap<DeleteTargetEventKey, Vec<EventBundle>> =
+    let mut by_target: HashMap<TargetEventKey, Vec<EventBundle>> =
         HashMap::new();
     for row in rows {
-        let key = DeleteTargetEventKey {
+        let key = TargetEventKey {
             collection: row.event_key_collection,
             identity: row.event_key_identity,
             public_key_type: row.event_key_public_key_type,
@@ -185,9 +165,9 @@ fn content_to_delete_event_join() -> RelationDef {
 ///      identity's chain
 pub async fn validate_tombstones(
     ctx: &ServiceContext,
-    deletes_by_target: HashMap<DeleteTargetEventKey, Vec<EventBundle>>,
-) -> Result<HashMap<DeleteTargetEventKey, Vec<EventBundle>>, Status> {
-    let mut validated: HashMap<DeleteTargetEventKey, Vec<EventBundle>> =
+    deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,
+) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
+    let mut validated: HashMap<TargetEventKey, Vec<EventBundle>> =
         HashMap::with_capacity(deletes_by_target.len());
 
     for (target_key, bundles) in deletes_by_target {
@@ -207,7 +187,7 @@ pub async fn validate_tombstones(
 
 async fn is_tombstone_authorized(
     ctx: &ServiceContext,
-    target_key: &DeleteTargetEventKey,
+    target_key: &TargetEventKey,
     bundle: &EventBundle,
 ) -> Result<bool, Status> {
     let Some(signed) = bundle.signed_event.as_ref() else {
@@ -257,8 +237,8 @@ mod tests {
         )
     }
 
-    fn target_key(identity: &str) -> DeleteTargetEventKey {
-        DeleteTargetEventKey {
+    fn target_key(identity: &str) -> TargetEventKey {
+        TargetEventKey {
             collection: 2,
             identity: identity.to_string(),
             public_key_type: 1,
@@ -377,7 +357,7 @@ mod tests {
     async fn validate_tombstones_drops_target_when_all_bundles_invalid() {
         let ctx = mock_ctx();
         let bad = bundle_with_key(None);
-        let mut deletes: HashMap<DeleteTargetEventKey, Vec<EventBundle>> =
+        let mut deletes: HashMap<TargetEventKey, Vec<EventBundle>> =
             HashMap::new();
         deletes.insert(target_key("alice"), vec![bad]);
         let validated = validate_tombstones(&ctx, deletes).await.unwrap();

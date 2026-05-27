@@ -4,9 +4,10 @@ import {
   PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
-import { useTheme } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import usePostActions from './hooks/usePostActions';
 
 type PostMenuProps = {
@@ -34,12 +35,30 @@ export default function PostMenu({ post }: PostMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger>
-        <Ionicons
-          name="ellipsis-horizontal"
-          color={theme.palette.neutral_500}
-          size={16}
-        />
+      <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
+        {({ pressed, hovered }) => (
+          <View
+            style={[
+              Atoms.p_xs,
+              Atoms.rounded_full,
+              // overflow:hidden forces a rounded clip on native — without it the
+              // press background renders with square corners.
+              Atoms.overflow_hidden,
+              (hovered || pressed) && {
+                backgroundColor: withHexOpacity(
+                  theme.palette.neutral_500,
+                  '14',
+                ),
+              },
+            ]}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              color={theme.palette.neutral_500}
+              size={16}
+            />
+          </View>
+        )}
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
         {/* Delete  */}

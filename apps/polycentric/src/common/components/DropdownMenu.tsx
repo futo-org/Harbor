@@ -1,6 +1,6 @@
 import * as DropdownMenuPrimitive from '@rn-primitives/dropdown-menu';
-import React, { ReactNode, useState } from 'react';
-import { View } from 'react-native';
+import React, { ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { Atoms, useTheme } from '../theme';
 
@@ -13,17 +13,17 @@ function DropdownMenuContent({
 
   return (
     <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Overlay>
+      <DropdownMenuPrimitive.Overlay style={StyleSheet.absoluteFill}>
         <DropdownMenuPrimitive.Content
-          style={(state) => [
+          style={StyleSheet.flatten([
             { borderWidth: 1, borderColor: theme.palette.neutral_50 },
             Atoms.rounded_lg,
-            { minWidth: 256 },
-            //Atoms.outline_none,
+            { minWidth: 225 },
+            Atoms.outline_none,
             { backgroundColor: theme.palette.neutral_25 },
             Atoms.overflow_hidden,
-            typeof style === 'function' ? style(state) : style,
-          ]}
+            typeof style === 'function' ? undefined : style,
+          ])}
           {...props}
         />
       </DropdownMenuPrimitive.Overlay>
@@ -37,27 +37,27 @@ function DropdownMenuItem({
   ...props
 }: DropdownMenuPrimitive.ItemProps & { children: ReactNode }) {
   const { theme } = useTheme();
-  const [hovered, setHovering] = useState(false);
 
   return (
-    <DropdownMenuPrimitive.Item
-      style={{ outline: 'none' }}
-      onHoverIn={() => setHovering(true)}
-      onHoverOut={() => setHovering(false)}
-      {...props}
-    >
-      <View
-        style={[
-          Atoms.py_md,
-          Atoms.px_lg,
-          hovered && { backgroundColor: theme.palette.neutral_50 },
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_lg,
-        ]}
-      >
-        {children}
-      </View>
+    <DropdownMenuPrimitive.Item style={Atoms.outline_none} {...props}>
+      {({ pressed, hovered }) => (
+        <View
+          style={[
+            Atoms.py_md,
+            Atoms.px_lg,
+            // Press on native mirrors hover on web — same highlight, so items
+            // give feedback on touch devices that have no hover state.
+            (hovered || pressed) && {
+              backgroundColor: theme.palette.neutral_50,
+            },
+            Atoms.flex_row,
+            Atoms.align_center,
+            Atoms.gap_lg,
+          ]}
+        >
+          {children}
+        </View>
+      )}
     </DropdownMenuPrimitive.Item>
   );
 }

@@ -18,7 +18,7 @@ export type FeedListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   renderItem?: ListProps<PostData>['renderItem'];
 };
 
-const defaultKeyExtractor = (item: PostData) => item.id;
+const defaultKeyExtractor = (item: PostData) => item.repostId ?? item.id;
 
 const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} />

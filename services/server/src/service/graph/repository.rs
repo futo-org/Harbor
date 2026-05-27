@@ -7,9 +7,8 @@ use std::collections::HashSet;
 use tonic::Status;
 
 use crate::service::context::ServiceContext;
-use crate::service::events::tombstone::{
-    self, DeleteTargetEventKey, EventWithContentRow,
-};
+use crate::service::events::TargetEventKey;
+use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::content_join;
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
@@ -42,9 +41,9 @@ impl Query {
             .await
             .map_err(map_db_err)?;
 
-        let keys: Vec<DeleteTargetEventKey> = rows
+        let keys: Vec<TargetEventKey> = rows
             .iter()
-            .map(|(event, _)| DeleteTargetEventKey::of(event))
+            .map(|(event, _)| TargetEventKey::of(event))
             .collect();
         let raw_tombstones =
             tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
@@ -56,7 +55,7 @@ impl Query {
         let mut seen: HashSet<String> = HashSet::new();
         let mut result: Vec<String> = Vec::new();
         for (event, content) in rows {
-            let key = DeleteTargetEventKey::of(&event);
+            let key = TargetEventKey::of(&event);
             if valid_tombstones.contains_key(&key) {
                 continue;
             }

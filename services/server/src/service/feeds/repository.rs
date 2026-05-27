@@ -52,6 +52,49 @@ impl Query {
             .await
     }
 
+    /// Bulk-fetch events (with joined content) by their EventKey
+    /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
+    /// referenced posts (quote / repost targets) as `event_hints`.
+    pub async fn list_events_by_keys(
+        db: &DbConn,
+        keys: &[crate::service::proto::EventKey],
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let mut filter = Condition::any();
+        let mut any_added = false;
+        for key in keys {
+            let Some(signed_by) = key.signed_by.as_ref() else {
+                continue;
+            };
+            filter = filter.add(
+                Condition::all()
+                    .add(
+                        EventModel::Column::Collection
+                            .eq(key.collection as i16),
+                    )
+                    .add(EventModel::Column::Identity.eq(key.identity.clone()))
+                    .add(
+                        EventModel::Column::PublicKeyType
+                            .eq(signed_by.key_type as i16),
+                    )
+                    .add(
+                        EventModel::Column::PublicKey.eq(signed_by.key.clone()),
+                    )
+                    .add(EventModel::Column::Sequence.eq(key.sequence as i64)),
+            );
+            any_added = true;
+        }
+        if !any_added {
+            return Ok(Vec::new());
+        }
+
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .filter(filter)
+            .all(db)
+            .await
+    }
+
     /// Look up a single event (with joined content) by its EventKey tuple.
     pub async fn find_event_by_key(
         db: &DbConn,
