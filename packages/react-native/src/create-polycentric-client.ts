@@ -30,7 +30,7 @@ export async function createPolycentricClient(
   return PolycentricClient.create({
     core: new PolycentricCore(),
     storageDriver: await createReactNativeStorageDriver(databaseName),
-    fileStoreDriver: await createReactNativeFileStoreDriver(
+    filestoreDriver: await createReactNativeFileStoreDriver(
       `${databaseName}-blobs`
     ),
     cryptoManager,

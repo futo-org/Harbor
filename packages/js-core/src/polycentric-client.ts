@@ -54,7 +54,7 @@ export interface PolycentricClientConfig {
    */
   core: CoreType;
   storageDriver: IStorageDriver;
-  fileStoreDriver: IFileStoreDriver;
+  filestoreDriver: IFileStoreDriver;
   cryptoManager: ICryptoManager;
   /**
    * gRPC-web URLs the client should start with. Used to seed
@@ -96,13 +96,13 @@ export class PolycentricClient {
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
-  public readonly fileStoreDriver: IFileStoreDriver;
+  public readonly filestoreDriver: IFileStoreDriver;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
-    this.fileStoreDriver = config.fileStoreDriver;
+    this.filestoreDriver = config.filestoreDriver;
     if (config.seedServers && config.seedServers.length > 0) {
       this.servers = [...config.seedServers];
     }
@@ -589,7 +589,7 @@ export class PolycentricClient {
       type: Proto.ContentDigestType.SHA256,
       value: sha256(bytes),
     };
-    await this.fileStoreDriver.put(digest, bytes);
+    await this.filestoreDriver.put(digest, bytes);
     return Proto.Blob.create({
       digest,
       mimeType,

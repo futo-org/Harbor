@@ -18,11 +18,11 @@ export async function createPolycentricNodeClient(
   const core = new PolycentricCore();
   const cryptoManager = new NodeCryptoManager();
   const { driver } = await createNodeStorageDriver(config.databasePath);
-  const fileStoreDriver = await createNodeFileStoreDriver(config.blobDirectory);
+  const filestoreDriver = await createNodeFileStoreDriver(config.blobDirectory);
   return PolycentricClient.create({
     core,
     storageDriver: driver,
-    fileStoreDriver,
+    filestoreDriver,
     cryptoManager,
     seedServers: config.seedServers,
   });

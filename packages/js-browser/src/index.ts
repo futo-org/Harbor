@@ -10,4 +10,4 @@ export {
   IndexedDBDatabase,
 } from './datastore/indexeddb/database';
 export { IndexedDBStorageDriver } from './datastore/indexeddb/storage-driver';
-export { IndexedDBFileStoreDriver } from './filestore/indexeddb/file-store-driver';
+export { OpfsFileStoreDriver } from './filestore/opfs/file-store-driver';

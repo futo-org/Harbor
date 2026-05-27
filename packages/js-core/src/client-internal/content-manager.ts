@@ -44,10 +44,10 @@ export class ContentManager {
     await Promise.all(
       digests.map(async (digest) => {
         try {
-          if (await this.client.fileStoreDriver.has(digest)) return;
+          if (await this.client.filestoreDriver.has(digest)) return;
           const bytes = await this.client.fetchBlobBytes(digest);
           if (!bytes) return;
-          await this.client.fileStoreDriver.put(digest, bytes);
+          await this.client.filestoreDriver.put(digest, bytes);
         } catch (err) {
           console.warn('backfillBlobsForContent failed:', err);
         }

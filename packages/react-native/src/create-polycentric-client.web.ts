@@ -1,8 +1,8 @@
 import { PolycentricClient } from '@polycentric/js-core';
 import {
   BrowserCryptoManager,
-  IndexedDBFileStoreDriver,
   IndexedDBStorageDriver,
+  OpfsFileStoreDriver,
 } from '@polycentric/js-browser';
 import {
   PolycentricCore,
@@ -39,9 +39,7 @@ export async function createPolycentricClient(
   return PolycentricClient.create({
     core: new PolycentricCore(),
     storageDriver: await IndexedDBStorageDriver.create(databaseName),
-    fileStoreDriver: await IndexedDBFileStoreDriver.create(
-      `${databaseName}-blobs`
-    ),
+    filestoreDriver: await OpfsFileStoreDriver.create(`${databaseName}-blobs`),
     cryptoManager,
     seedServers: config.seedServers,
   });
