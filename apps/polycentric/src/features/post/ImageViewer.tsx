@@ -4,7 +4,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { v2 } from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Platform, Pressable, View } from 'react-native';
@@ -134,7 +134,7 @@ export function ImageViewer({
             },
           ]}
         >
-          <Ionicons name="close" size={24} color={theme.palette.white} />
+          <Icon name="close" size={24} color="white" />
         </Pressable>
 
         {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
@@ -177,7 +177,6 @@ function NavArrow({
   onPress: () => void;
   bg: string;
 }) {
-  const { theme } = useTheme();
   return (
     <Pressable
       onPress={(e) => {
@@ -201,10 +200,10 @@ function NavArrow({
         side === 'left' ? { left: 16 } : { right: 16 },
       ]}
     >
-      <Ionicons
-        name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
+      <Icon
+        name={side === 'left' ? 'chevronBack' : 'chevronForward'}
         size={28}
-        color={theme.palette.white}
+        color="white"
       />
     </Pressable>
   );

@@ -26,7 +26,7 @@ import {
   injectPostIntoFeedCache,
 } from '@/src/features/feed/hooks/feedCache';
 import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef } from 'react';
@@ -414,7 +414,7 @@ function AttachmentThumb({
           opacity: disabled ? 0.4 : 1,
         }}
       >
-        <Ionicons name="close" size={14} color={theme.palette.white} />
+        <Icon name="close" size={14} color="white" />
       </Pressable>
     </View>
   );

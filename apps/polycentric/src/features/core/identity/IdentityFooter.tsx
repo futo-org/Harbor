@@ -13,7 +13,7 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -103,11 +103,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             ]}
           />
         ) : null}
-        <Ionicons
-          name="chevron-down"
-          size={18}
-          color={theme.palette.neutral_1000}
-        />
+        <Icon name="chevronDown" size={18} color="neutral_1000" />
       </Pressable>
     </View>
   );

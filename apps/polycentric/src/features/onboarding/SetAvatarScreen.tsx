@@ -2,7 +2,7 @@ import { Avatar, Button, Screen, ScreenHeader } from '@/src/common/components';
 import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
 import { Atoms } from '@/src/common/theme';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -62,7 +62,7 @@ export default function SetAvatarScreen() {
               fullWidth
               onPress={takePhoto}
               icon={({ size, color }) => (
-                <Ionicons name="camera-outline" size={size} color={color} />
+                <Icon name="camera" size={size} color={color} />
               )}
             />
             <Button
@@ -71,7 +71,7 @@ export default function SetAvatarScreen() {
               fullWidth
               onPress={pickPhoto}
               icon={({ size, color }) => (
-                <Ionicons name="images-outline" size={size} color={color} />
+                <Icon name="images" size={size} color={color} />
               )}
             />
             {data.avatarUri && (
@@ -81,7 +81,7 @@ export default function SetAvatarScreen() {
                 fullWidth
                 onPress={removePhoto}
                 icon={({ size, color }) => (
-                  <Ionicons name="trash-outline" size={size} color={color} />
+                  <Icon name="trash" size={size} color={color} />
                 )}
               />
             )}

@@ -1,20 +1,19 @@
-import { DismissReason, SheetMenu } from '@/src/common/lib/sheet';
-import { router } from 'expo-router';
-import {
-  IconButton,
-  LinkButton,
-  Text,
-  TextInput,
-} from '@/src/common/components';
+import { IconButton, Text, TextInput } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
   useCurrentIdentity,
   usePolycentric,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
+import {
+  DismissReason,
+  SheetHeaderBlock,
+  SheetMenu,
+  type DismissSheet,
+} from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -120,11 +119,7 @@ export function ServersSettings({
                     variant="ghost"
                     compact
                     icon={() => (
-                      <Ionicons
-                        name="remove-circle-outline"
-                        size={22}
-                        color={theme.palette.negative_500}
-                      />
+                      <Icon name="remove" size={22} color="negative_500" />
                     )}
                     onPress={() => handleRemoveServer(server)}
                   />
@@ -152,14 +147,10 @@ export function ServersSettings({
               <IconButton
                 variant="ghost"
                 icon={() => (
-                  <Ionicons
-                    name="add-circle-outline"
+                  <Icon
+                    name="addOutline"
                     size={28}
-                    color={
-                      newServerUrl.trim()
-                        ? theme.palette.primary_500
-                        : theme.palette.neutral_500
-                    }
+                    color={newServerUrl.trim() ? 'primary_500' : 'neutral_500'}
                   />
                 )}
                 onPress={handleAddServer}

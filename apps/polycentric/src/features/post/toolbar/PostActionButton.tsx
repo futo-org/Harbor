@@ -1,15 +1,15 @@
 import { Text } from '@/src/common/components';
+import Icon, { IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
   PaletteColorToken,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, PressableProps, View } from 'react-native';
 
 type PostActionButtonProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   count?: number;
   active?: boolean;
   color?: PaletteColorToken;
@@ -52,14 +52,10 @@ export default function PostActionButton({
                   },
                 ]}
               >
-                <Ionicons
+                <Icon
                   name={icon}
                   size={16}
-                  color={
-                    active || highlighted
-                      ? theme.palette[color]
-                      : theme.palette.neutral_500
-                  }
+                  color={active || highlighted ? color : 'neutral_500'}
                 />
               </View>
               {count !== undefined ? (

@@ -1,6 +1,6 @@
 import { Button, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -38,11 +38,7 @@ export function ComposeSheetFooterBar({
         { opacity: attachDisabled ? 0.4 : 1 },
       ]}
     >
-      <Ionicons
-        name="image-outline"
-        size={22}
-        color={theme.palette.neutral_700}
-      />
+      <Icon name="image" size={22} color="neutral_700" />
     </Pressable>
   ) : null;
 

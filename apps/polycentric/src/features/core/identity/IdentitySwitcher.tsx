@@ -18,7 +18,7 @@ import {
 import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import {
   createIdentity,
   KEY_TYPE,
@@ -269,7 +269,6 @@ function DraggableIdentityListItem({
 }
 
 function DeleteButton({ keyPair }: { keyPair: IdentityKeyPair }) {
-  const { theme } = useTheme();
   const { animatedStyle } = useFadeIn({ duration: 150 });
   const { onDeleteIdentity } = useIdentitySwitcher();
 
@@ -278,13 +277,7 @@ function DeleteButton({ keyPair }: { keyPair: IdentityKeyPair }) {
       <IconButton
         variant="ghost"
         compact
-        icon={() => (
-          <Ionicons
-            name="close-sharp"
-            size={24}
-            color={theme.palette.neutral_1000}
-          />
-        )}
+        icon={() => <Icon name="closeSharp" size={24} color="neutral_1000" />}
         onPress={() => onDeleteIdentity(keyPair)}
       />
     </Animated.View>
@@ -335,11 +328,7 @@ export function Footer({
           fullWidth
           disabled={isCreating}
           icon={() => (
-            <Ionicons
-              name="person-add-outline"
-              size={20}
-              color={theme.palette.neutral_1000}
-            />
+            <Icon name="personAddOutline" size={20} color="neutral_1000" />
           )}
           onPress={handlePress}
         />

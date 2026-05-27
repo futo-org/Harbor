@@ -1,7 +1,6 @@
 import { BackButton } from '@/src/common/components/composites';
 import {
   Button,
-  HorizontalScrollGroup,
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
@@ -12,14 +11,13 @@ import {
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { FeedChip } from '@/src/features/post/FeedChip';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { View } from 'react-native';
-import { useProfileContext } from './ProfileContext';
 import FollowButton from '../follow/FollowButton';
+import { useProfileContext } from './ProfileContext';
 
 const BANNER_HEIGHT = 150;
 
