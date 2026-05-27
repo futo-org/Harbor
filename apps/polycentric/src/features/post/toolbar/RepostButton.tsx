@@ -1,7 +1,10 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import { openCompose } from '@/src/common/constants';
-import { PostData } from '@/src/common/lib/polycentric-hooks';
+import {
+  PostData,
+  useCurrentIdentity,
+} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
@@ -12,11 +15,17 @@ type RepostButtonProps = { post: PostData };
 
 export default function RepostButton({ post }: RepostButtonProps) {
   const { theme } = useTheme();
-  const { reportAsync } = usePostActions(post);
-  const reposted = false;
+  const { identityKey: currentIdentity } = useCurrentIdentity();
+  const { repostAsync, undoRepostAsync } = usePostActions(post);
+
+  const hasReposted = post.repostedBy === currentIdentity;
 
   const onRepostPress = async () => {
-    await reportAsync();
+    if (hasReposted) {
+      await undoRepostAsync();
+    } else {
+      await repostAsync();
+    }
   };
 
   const onQuotePress = () => {
@@ -26,10 +35,10 @@ export default function RepostButton({ post }: RepostButtonProps) {
   return (
     <View style={[Atoms.flex_1]}>
       <DropdownMenu>
-        <DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild>
           <PostActionButton
             icon="repeat"
-            active={reposted}
+            active={hasReposted}
             color={'positive_500'}
           />
         </DropdownMenu.Trigger>
@@ -37,10 +46,19 @@ export default function RepostButton({ post }: RepostButtonProps) {
           <DropdownMenu.Item onPress={onRepostPress}>
             <Ionicons
               name="repeat"
-              color={theme.palette.neutral_500}
+              color={
+                hasReposted
+                  ? theme.palette.negative_500
+                  : theme.palette.neutral_500
+              }
               size={16}
             />
-            <Text>Repost</Text>
+            <Text
+              fontWeight="bold"
+              color={hasReposted ? 'negative_500' : 'neutral_900'}
+            >
+              {hasReposted ? 'Undo Repost' : 'Repost'}
+            </Text>
           </DropdownMenu.Item>
           <DropdownMenu.Item onPress={onQuotePress}>
             <Ionicons
@@ -48,7 +66,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
               color={theme.palette.neutral_500}
               size={16}
             />
-            <Text>Quote</Text>
+            <Text fontWeight="bold">Quote</Text>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu>

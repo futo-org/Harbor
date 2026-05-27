@@ -1,5 +1,4 @@
 import { Text } from '@/src/common/components';
-import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
   PaletteColorToken,
@@ -7,69 +6,78 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
+import { Pressable, PressableProps, View } from 'react-native';
 
 type PostActionButtonProps = {
   icon: keyof typeof Ionicons.glyphMap;
   count?: number;
-  onPress?: () => void;
   active?: boolean;
   color?: PaletteColorToken;
-};
+} & Omit<PressableProps, 'style' | 'children'>;
 
 export default function PostActionButton({
   icon,
   count,
-  onPress,
   active = false,
   color = 'neutral_500',
+  ...props
 }: PostActionButtonProps) {
   const { theme } = useTheme();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
-
-  const iconSurface: StyleProp<ViewStyle> = [
-    Atoms.p_xs,
-    Atoms.rounded_full,
-    {
-      backgroundColor: hovered
-        ? withHexOpacity(theme.palette[color], '14')
-        : active
-          ? withHexOpacity(theme.palette[color], '28')
-          : 'transparent',
-    },
-  ];
 
   return (
     <Pressable
+      {...props}
       style={[
         Atoms.flex_1,
         Atoms.flex_row,
+        Atoms.outline_none,
         Atoms.items_center,
-        { gap: 3, minHeight: 20 },
       ]}
-      onPress={onPress}
-      disabled={!onPress}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
+      hitSlop={8}
     >
-      <View style={iconSurface}>
-        <Ionicons
-          name={icon}
-          size={16}
-          color={
-            active || hovered ? theme.palette[color] : theme.palette.neutral_500
-          }
-        />
-      </View>
-      {count !== undefined ? (
-        <Text
-          variant="small"
-          color="neutral_500"
-          style={{ minWidth: 28, lineHeight: 16 }}
-        >
-          {count ? String(count) : ' '}
-        </Text>
-      ) : null}
+      {({ pressed, hovered }) => {
+        const highlighted = hovered || pressed;
+        return (
+          <>
+            <View
+              style={[
+                Atoms.p_xs,
+                Atoms.rounded_full,
+                // overflow:hidden forces a rounded clip on native - without it a
+                // background applied on press (rather than at mount, like the
+                // active state) renders with square corners.
+                Atoms.overflow_hidden,
+                {
+                  backgroundColor: highlighted
+                    ? withHexOpacity(theme.palette[color], '14')
+                    : active
+                      ? withHexOpacity(theme.palette[color], '28')
+                      : 'transparent',
+                },
+              ]}
+            >
+              <Ionicons
+                name={icon}
+                size={16}
+                color={
+                  active || highlighted
+                    ? theme.palette[color]
+                    : theme.palette.neutral_500
+                }
+              />
+            </View>
+            {count !== undefined ? (
+              <Text
+                variant="small"
+                color="neutral_500"
+                style={{ minWidth: 28, lineHeight: 16 }}
+              >
+                {count ? String(count) : ' '}
+              </Text>
+            ) : null}
+          </>
+        );
+      }}
     </Pressable>
   );
 }

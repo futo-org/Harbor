@@ -27,6 +27,7 @@ export {
 // Helpers
 export {
   decodePostBundle as decodeV2PostBundle,
+  decodeFeedItems,
   pubkeyStr,
   identiconUrl,
   pickImageVariant,
