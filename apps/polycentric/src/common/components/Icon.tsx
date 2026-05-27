@@ -6,11 +6,6 @@ import {
 } from '@expo/vector-icons';
 import { ComponentProps, ComponentType, ReactNode } from 'react';
 
-/**
- * Bind a logical icon to a concrete (icon set + glyph). `G` is inferred from the
- * set's glyph map, so `name` is checked against that set — an invalid glyph is a
- * compile error.
- */
 function defineIcon<G extends string>(
   IconSet: ComponentType<any> & { glyphMap: Record<G, number | string> },
   name: NoInfer<G>,
@@ -23,9 +18,7 @@ function defineIcon<G extends string>(
 }
 
 /**
- * Central registry mapping our own logical icon names to a specific glyph in a
- * specific icon set. Add an entry here to expose a new `<Icon name="..." />`;
- * the icon-set choice lives only here, never at the call site.
+ * Map of icon names to their icon set definitions
  */
 export const IconsMap = {
   add: defineIcon(Ionicons, 'add-circle'),
