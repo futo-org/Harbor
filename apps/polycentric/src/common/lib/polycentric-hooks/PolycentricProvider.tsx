@@ -23,6 +23,7 @@ import {
   useStore,
   type PolycentricStoreApi,
 } from './store';
+import useReactions from '@/src/features/reaction/useReactions';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -169,13 +170,18 @@ export function PolycentricProvider({
           // Read follows from the local store immediately — don't gate
           // the UI on the network sync. The sync runs in parallel and
           // re-refreshes once new events have been pulled in.
-          await useFollows.getState().refresh(c);
+          useFollows.getState().refresh(c);
+          useReactions.getState().refresh(c);
           void c
             .sync()
-            .then(() => useFollows.getState().refresh(c))
+            .then(() => Promise.all([
+              useFollows.getState().refresh(c),
+              useReactions.getState().refresh(c)
+            ]))
             .catch((syncError) => {
               console.warn('Initial Polycentric sync failed:', syncError);
             });
+
         }
 
         setIsLoading(false);
@@ -187,11 +193,11 @@ export function PolycentricProvider({
           await useFollows.getState().refresh(c);
         });
 
-        // Identity onboarding (create / claim) publishes an Identity event,
-        // which flows through onContentCreated. Re-resolve so the gate
-        // flips from onboarding → app once the user completes signup.
-        c.events.onContentCreated(async () => {
+        // Identity onboarding (create / claim) publishes an Identity event.
+        // Set to current identity
+        c.events.onContentCreated(async ({ content }) => {
           if (cancelled) return;
+          if (content?.contentBody.oneofKind !== 'identity') return;
           setCurrentIdentity(await resolveIdentity(c));
         });
       } catch (err) {
@@ -212,7 +218,7 @@ export function PolycentricProvider({
     async (publicKey: types.PublicKey) => {
       if (!client) return;
       await client.keyPairManager.switchKeyPair(publicKey);
-      await client.sync().catch(() => {});
+      await client.sync().catch(() => { });
     },
     [client],
   );
@@ -223,7 +229,6 @@ export function PolycentricProvider({
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
-    if (!client || !store) return null;
     return {
       client,
       store,

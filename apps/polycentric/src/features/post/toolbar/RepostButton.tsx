@@ -6,7 +6,6 @@ import {
   PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import usePostActions from '../hooks/usePostActions';
 import PostActionButton from './PostActionButton';
@@ -32,7 +31,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   };
 
   return (
-    <View style={[Atoms.flex_1]}>
+    <View style={[]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
           <PostActionButton
@@ -41,7 +40,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
             color={'positive_500'}
           />
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
+        <DropdownMenu.Content align='start' side='top'>
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon
               name="repost"

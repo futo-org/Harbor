@@ -202,11 +202,11 @@ export interface Reaction {
      */
     emoji?: string;
     /**
-     * Opinion ratings
+     * Upvote = true. Downvote = false.
      *
-     * @generated from protobuf field: polycentric.v2.Opinion opinion = 3
+     * @generated from protobuf field: bool positive = 3
      */
-    opinion: Opinion;
+    positive: boolean;
 }
 /**
  * @generated from protobuf message polycentric.v2.ProfileUpdate
@@ -351,27 +351,6 @@ export enum ContentDigestType {
      * @generated from protobuf enum value: CONTENT_DIGEST_TYPE_SHA256 = 1;
      */
     SHA256 = 1
-}
-/**
- * @generated from protobuf enum polycentric.v2.Opinion
- */
-export enum Opinion {
-    /**
-     * @generated from protobuf enum value: OPINION_UNSPECIFIED = 0;
-     */
-    UNSPECIFIED = 0,
-    /**
-     * @generated from protobuf enum value: OPINION_LIKE = 1;
-     */
-    LIKE = 1,
-    /**
-     * @generated from protobuf enum value: OPINION_DISLIKE = 2;
-     */
-    DISLIKE = 2,
-    /**
-     * @generated from protobuf enum value: OPINION_NEUTRAL = 3;
-     */
-    NEUTRAL = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ContentDigest$Type extends MessageType<ContentDigest> {
@@ -909,12 +888,12 @@ class Reaction$Type extends MessageType<Reaction> {
         super("polycentric.v2.Reaction", [
             { no: 1, name: "event_key", kind: "message", T: () => EventKey },
             { no: 2, name: "emoji", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "opinion", kind: "enum", T: () => ["polycentric.v2.Opinion", Opinion, "OPINION_"] }
+            { no: 3, name: "positive", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<Reaction>): Reaction {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.opinion = 0;
+        message.positive = false;
         if (value !== undefined)
             reflectionMergePartial<Reaction>(this, message, value);
         return message;
@@ -930,8 +909,8 @@ class Reaction$Type extends MessageType<Reaction> {
                 case /* optional string emoji */ 2:
                     message.emoji = reader.string();
                     break;
-                case /* polycentric.v2.Opinion opinion */ 3:
-                    message.opinion = reader.int32();
+                case /* bool positive */ 3:
+                    message.positive = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -951,9 +930,9 @@ class Reaction$Type extends MessageType<Reaction> {
         /* optional string emoji = 2; */
         if (message.emoji !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.emoji);
-        /* polycentric.v2.Opinion opinion = 3; */
-        if (message.opinion !== 0)
-            writer.tag(3, WireType.Varint).int32(message.opinion);
+        /* bool positive = 3; */
+        if (message.positive !== false)
+            writer.tag(3, WireType.Varint).bool(message.positive);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
