@@ -4,26 +4,26 @@ import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';
 import {
   PostData,
-  useCurrentIdentity,
+  usePolycentric
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
-import usePostActions from '../hooks/usePostActions';
+import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
 
 type RepostButtonProps = { post: PostData };
 
 export default function RepostButton({ post }: RepostButtonProps) {
-  const { identityKey: currentIdentity } = useCurrentIdentity();
-  const { repostAsync, undoRepostAsync } = usePostActions(post);
-
-  const hasReposted = post.repostedBy === currentIdentity;
+  const client = usePolycentric();
+  const hasReposted = useReposts((s) => s.hasReposted(post.id));
+  const addRepost = useReposts((s) => s.addRepost);
+  const removeRepost = useReposts((s) => s.removeRepost);
 
   const onRepostPress = async () => {
     if (hasReposted) {
-      await undoRepostAsync();
+      await removeRepost(client, post.id);
     } else {
-      await repostAsync();
+      await addRepost(client, post);
     }
   };
 
