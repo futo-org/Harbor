@@ -174,10 +174,10 @@ export function PolycentricProvider({
           useReposts.getState().refresh(c);
           void c
             .sync()
-            .then(async () => {
-              useFollows.getState().refresh(c);
-              useReposts.getState().refresh(c);
-            })
+            .then(() => Promise.all([
+              useFollows.getState().refresh(c),
+              useReposts.getState().refresh(c)
+            ]))
             .catch((syncError) => {
               console.warn('Initial Polycentric sync failed:', syncError);
             });
