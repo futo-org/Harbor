@@ -3,6 +3,10 @@ import {
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
+import {
+  decodeBundle,
+  type DecodedBundle,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { create } from 'zustand';
 
 type FollowsState = {
@@ -12,27 +16,6 @@ type FollowsState = {
   removeFollow: (client: PolycentricClient, identity: string) => Promise<void>;
   refresh: (client: PolycentricClient) => Promise<void>;
 };
-
-/**
- * Decode a `Follow` content out of an EventBundle. Returns `null` if the
- * bundle doesn't carry a Follow.
- */
-function decodeFollow(
-  bundle: v2.EventBundle,
-): { event: v2.Event; identity: string } | null {
-  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return null;
-  }
-  let content: v2.Content;
-  try {
-    content = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
-  } catch {
-    return null;
-  }
-  if (content.contentBody.oneofKind !== 'follow') return null;
-  const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-  return { event, identity: content.contentBody.follow.identity };
-}
 
 const useFollows = create<FollowsState>((set, get) => ({
   follows: new Map(),
@@ -83,10 +66,10 @@ const useFollows = create<FollowsState>((set, get) => ({
     // `identity`. A single identity may have multiple follow events across
     // signing keys — delete them all.
     const targets = bundles
-      .map(decodeFollow)
+      .map((bundle) => decodeBundle(bundle, 'follow'))
       .filter(
-        (entry): entry is { event: v2.Event; identity: string } =>
-          entry !== null && entry.identity === identity,
+        (entry): entry is DecodedBundle<'follow'> =>
+          entry !== null && entry.content.identity === identity,
       );
 
     // Optimistically upate the state
@@ -132,8 +115,8 @@ const useFollows = create<FollowsState>((set, get) => ({
 
     const follows = new Map<string, boolean>();
     for (const bundle of bundles) {
-      const entry = decodeFollow(bundle);
-      if (entry) follows.set(entry.identity, true);
+      const entry = decodeBundle(bundle, 'follow');
+      if (entry) follows.set(entry.content.identity, true);
     }
 
     set({ follows });

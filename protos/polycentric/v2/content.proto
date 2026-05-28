@@ -71,20 +71,13 @@ message Block {
   string identity = 1;
 }
 
-enum Opinion {
-  OPINION_UNSPECIFIED = 0;
-  OPINION_LIKE = 1;
-  OPINION_DISLIKE = 2;
-  OPINION_NEUTRAL = 3;
-}
-
 message Reaction {
   // Key of the event being reacted to
   EventKey event_key = 1;
   // Optional emoji
   optional string emoji = 2;
-  // Opinion ratings
-  Opinion opinion = 3;
+  // Upvote = true. Downvote = false.
+  bool positive = 3;
 }
 
 message ProfileUpdate {

@@ -26,7 +26,7 @@ type RepostsState = {
  */
 function decodeRepost(
   bundle: v2.EventBundle,
-): { event: v2.Event, targetIdHex: string, repostIdHex: string } | null {
+): { event: v2.Event; targetIdHex: string; repostIdHex: string } | null {
   if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
     return null;
   }
@@ -44,7 +44,7 @@ function decodeRepost(
   return {
     event,
     targetIdHex: bytesToHex(v2.EventKey.toBinary(target)),
-    repostIdHex: bytesToHex(v2.EventKey.toBinary(event.key))
+    repostIdHex: bytesToHex(v2.EventKey.toBinary(event.key)),
   };
 }
 
@@ -108,8 +108,13 @@ const useReposts = create<RepostsState>((set, get) => ({
     // Tombstone every Repost for `targetId` (a single identity may have
     // multiple events across signing keys)
     const targets = bundles.map(decodeRepost).filter(
-      (entry): entry is { event: v2.Event, targetIdHex: string, repostIdHex: string } =>
-        entry !== null && entry.targetIdHex === targetId
+      (
+        entry,
+      ): entry is {
+        event: v2.Event;
+        targetIdHex: string;
+        repostIdHex: string;
+      } => entry !== null && entry.targetIdHex === targetId,
     );
 
     const next = new Map(reposts);

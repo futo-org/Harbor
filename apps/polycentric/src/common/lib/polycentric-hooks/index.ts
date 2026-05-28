@@ -26,6 +26,7 @@ export {
 
 // Helpers
 export {
+  decodeBundle,
   decodePostBundle as decodeV2PostBundle,
   decodeFeedItems,
   pubkeyStr,
@@ -48,4 +49,9 @@ export {
   toBase64,
   fromBase64,
 } from './helpers';
-export type { PostData } from './helpers';
+export type {
+  PostData,
+  ContentKind,
+  ContentBodyOf,
+  DecodedBundle,
+} from './helpers';

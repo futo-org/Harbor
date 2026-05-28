@@ -348,7 +348,7 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                 event_key_public_key: Set(signed_by.key),
                 event_key_sequence: Set(key.sequence as i64),
                 emoji: Set(reaction.emoji),
-                opinion: Set(reaction.opinion as i16),
+                positive: Set(reaction.positive),
             }
             .insert(db)
             .await

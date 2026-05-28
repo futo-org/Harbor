@@ -57,23 +57,76 @@ export function getKeyFingerprint(key?: v2.PublicKey): string | undefined {
   return bytesToHex(key.key).substring(0, 16);
 }
 
+/** Every `Content.contentBody` variant that carries a payload — i.e. each
+ *  `oneofKind` except the empty `undefined` case. */
+export type ContentKind = Exclude<
+  v2.Content['contentBody']['oneofKind'],
+  undefined
+>;
+
+/** The payload a given content kind carries. `ContentBodyOf<'follow'>` is
+ *  `v2.Follow`, `ContentBodyOf<'post'>` is `v2.Post`, and so on. Inferred
+ *  via a mapped type rather than `[K]` indexing, which TS rejects for a
+ *  generic key over a discriminated union. */
+export type ContentBodyOf<K extends ContentKind> =
+  Extract<v2.Content['contentBody'], { oneofKind: K }> extends {
+    [P in K]: infer T;
+  }
+    ? T
+    : never;
+
+/** A bundle decoded against a specific content kind: the parsed event, the
+ *  content narrowed to that kind's payload type, and the bundle's raw
+ *  signed event (validated to be present). */
+export type DecodedBundle<K extends ContentKind> = {
+  event: v2.Event;
+  content: ContentBodyOf<K>;
+  signedEvent: v2.SignedEvent;
+};
+
+/**
+ * Decode an `EventBundle` as a specific content kind, replacing the
+ * per-kind `decodeReaction` / `decodeFollow` / `decodePost` helpers.
+ *
+ * Returns `null` when the bundle is malformed or carries a different kind.
+ * The `kind` argument both filters and types the result: the returned
+ * `content` is narrowed to that kind's payload, so `decodeBundle(b, 'follow')`
+ * yields a `v2.Follow` and `decodeBundle(b, 'post')` a `v2.Post`.
+ */
+export function decodeBundle<K extends ContentKind>(
+  bundle: v2.EventBundle,
+  kind: K,
+): DecodedBundle<K> | null {
+  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
+    return null;
+  }
+  let parsed: v2.Content;
+  let event: v2.Event;
+  try {
+    parsed = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
+    event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+  } catch {
+    return null;
+  }
+  if (parsed.contentBody.oneofKind !== kind) return null;
+  // Safe: the oneofKind check above guarantees `kind` is the live payload
+  // key. TS can't index a discriminated union by a generic key, so cast.
+  const content = (
+    parsed.contentBody as unknown as Record<K, ContentBodyOf<K>>
+  )[kind];
+  return { event, content, signedEvent: bundle.signedEvent };
+}
+
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
 export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
+  const decoded = decodeBundle(bundle, 'post');
+  if (!decoded) return null;
   try {
-    if (!bundle.signedEvent) return null;
-    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    const { event, content: post, signedEvent } = decoded;
     const key = event.key;
     if (!key?.signedBy?.key) return null;
 
-    if (!bundle.serializedContent?.contentBytes) return null;
-    const content = v2.Content.fromBinary(
-      bundle.serializedContent.contentBytes,
-    );
-    if (content.contentBody.oneofKind !== 'post') return null;
-
     const id = bytesToHex(v2.EventKey.toBinary(key));
-
-    const post = content.contentBody.post;
     const reply = post.reply
       ? {
           rootId: post.reply.root
@@ -99,8 +152,8 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       reply,
       quoteId,
       signedEvent: v2.SignedEvent.create({
-        eventBytes: bundle.signedEvent.eventBytes,
-        signature: bundle.signedEvent.signature,
+        eventBytes: signedEvent.eventBytes,
+        signature: signedEvent.signature,
       }),
     };
   } catch (e) {
@@ -116,17 +169,12 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
   targetId: string;
   repostId: string;
 } | null {
+  const decoded = decodeBundle(bundle, 'repost');
+  if (!decoded) return null;
   try {
-    if (!bundle.signedEvent) return null;
-    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-    const key = event.key;
+    const key = decoded.event.key;
     if (!key?.signedBy?.key) return null;
-    if (!bundle.serializedContent?.contentBytes) return null;
-    const content = v2.Content.fromBinary(
-      bundle.serializedContent.contentBytes,
-    );
-    if (content.contentBody.oneofKind !== 'repost') return null;
-    const target = content.contentBody.repost.post;
+    const target = decoded.content.post;
     if (!target) return null;
     return {
       repostedBy: key.identity,

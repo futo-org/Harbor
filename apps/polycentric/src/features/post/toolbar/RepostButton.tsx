@@ -2,11 +2,7 @@ import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';
-import {
-  PostData,
-  usePolycentric
-} from '@/src/common/lib/polycentric-hooks';
-import { Atoms } from '@/src/common/theme';
+import { PostData, usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { View } from 'react-native';
 import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
@@ -32,7 +28,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   };
 
   return (
-    <View style={[Atoms.flex_1]}>
+    <View style={[]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
           <PostActionButton
@@ -41,7 +37,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
             color={'positive_500'}
           />
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
+        <DropdownMenu.Content align="start" side="top">
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon
               name="repost"

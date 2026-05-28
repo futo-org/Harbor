@@ -62,7 +62,7 @@ function DropdownMenuItem({
   );
 }
 
-function DropdownMenu({ children }: { children: ReactNode }) {
+function DropdownMenu({ children }: DropdownMenuPrimitive.RootProps) {
   return <DropdownMenuPrimitive.Root>{children}</DropdownMenuPrimitive.Root>;
 }
 DropdownMenu.Trigger = DropdownMenuPrimitive.Trigger;
