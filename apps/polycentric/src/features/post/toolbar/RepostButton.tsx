@@ -23,37 +23,24 @@ export default function RepostButton({ post }: RepostButtonProps) {
     openCompose({ quote: post.id });
   };
 
-  // When already reposted, the button directly removes the repost
-  if (hasReposted) {
-    return (
-      <View style={[Atoms.flex_1]}>
-        <PostActionButton
-          icon="repost"
-          active
-          color="positive_500"
-          onPress={() => {
-            void removeRepost(client, post.id);
-          }}
-        />
-      </View>
-    );
-  }
-
-  // Otherwise, a dropdown
   return (
     <View style={[Atoms.flex_1]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
-          <PostActionButton icon="repost" color="positive_500" />
+          <PostActionButton icon="repost" color="positive_500" active={hasReposted}/>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
           <DropdownMenu.Item
             onPress={() => {
-              void addRepost(client, post);
+              if (hasReposted) {
+                void removeRepost(client, post.id);
+              } else {
+                void addRepost(client, post);
+              }
             }}
           >
             <Icon name="repost" color="neutral_500" size={16} />
-            <Text fontWeight="bold">Repost</Text>
+            <Text fontWeight="bold">{ hasReposted ? "Remove Repost" : "Repost" }</Text>
           </DropdownMenu.Item>
           <DropdownMenu.Item onPress={onQuotePress}>
             <Icon name="quote" color="neutral_500" size={16} />
