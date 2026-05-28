@@ -2,7 +2,7 @@ import {
   bytesToHex,
   decodeBundle,
   hexToBytes,
-} from '@/src/common/lib/polycentric-hooks';
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   COLLECTION,
   v2,
@@ -25,7 +25,7 @@ type ReactionCounts = Record<string, number>;
 type ReactionsState = {
   // Active reactions made by the current identity, keyed by `targetId`.
   reactions: Map<string, ReactionEventDto>;
-  // Per-target emoji counts for all eventIds hydrated. 
+  // Per-target emoji counts for all eventIds hydrated.
   reactionCounts: Map<string, ReactionCounts>;
   // Returns the current identity's active reaction for `targetId`.
   getReaction: (targetId: string) => ReactionEventDto | undefined;
@@ -164,7 +164,10 @@ const useReactions = create<ReactionsState>((set, get) => ({
     const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
 
     // Collect the latest reaction per target.
-    const latest = new Map<string, { dto: ReactionEventDto; sequence: number }>();
+    const latest = new Map<
+      string,
+      { dto: ReactionEventDto; sequence: number }
+    >();
     for (const bundle of bundles) {
       const decoded = decodeBundle(bundle, 'reaction');
       if (!decoded) continue;

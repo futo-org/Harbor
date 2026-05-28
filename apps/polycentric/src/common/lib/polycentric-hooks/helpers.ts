@@ -68,12 +68,12 @@ export type ContentKind = Exclude<
  *  `v2.Follow`, `ContentBodyOf<'post'>` is `v2.Post`, and so on. Inferred
  *  via a mapped type rather than `[K]` indexing, which TS rejects for a
  *  generic key over a discriminated union. */
-export type ContentBodyOf<K extends ContentKind> = Extract<
-  v2.Content['contentBody'],
-  { oneofKind: K }
-> extends { [P in K]: infer T }
-  ? T
-  : never;
+export type ContentBodyOf<K extends ContentKind> =
+  Extract<v2.Content['contentBody'], { oneofKind: K }> extends {
+    [P in K]: infer T;
+  }
+    ? T
+    : never;
 
 /** A bundle decoded against a specific content kind: the parsed event, the
  *  content narrowed to that kind's payload type, and the bundle's raw
@@ -129,13 +129,13 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
     const id = bytesToHex(v2.EventKey.toBinary(key));
     const reply = post.reply
       ? {
-        rootId: post.reply.root
-          ? bytesToHex(v2.EventKey.toBinary(post.reply.root))
-          : undefined,
-        parentId: post.reply.parent
-          ? bytesToHex(v2.EventKey.toBinary(post.reply.parent))
-          : undefined,
-      }
+          rootId: post.reply.root
+            ? bytesToHex(v2.EventKey.toBinary(post.reply.root))
+            : undefined,
+          parentId: post.reply.parent
+            ? bytesToHex(v2.EventKey.toBinary(post.reply.parent))
+            : undefined,
+        }
       : undefined;
     const quoteId = post.quote
       ? bytesToHex(v2.EventKey.toBinary(post.quote))

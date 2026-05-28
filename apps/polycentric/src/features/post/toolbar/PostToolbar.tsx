@@ -22,18 +22,26 @@ export type PostToolbarProps = {
 export function PostToolbar({ post, style }: PostToolbarProps) {
   const { theme } = useTheme();
 
-  const { } = usePostActions(post);
+  const {} = usePostActions(post);
 
-  const onRepostPress = () => { };
+  const onRepostPress = () => {};
 
   const onReplyPress = () => {
     openCompose({ replyTo: post.id });
   };
 
-  const onSharePress = () => { };
+  const onSharePress = () => {};
 
   return (
-    <View style={[Atoms.flex_row, Atoms.align_center, Atoms.justify_start, Atoms.gap_md, style]}>
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.justify_start,
+        Atoms.gap_md,
+        style,
+      ]}
+    >
       <PostActionButton
         icon="reply"
         onPress={onReplyPress}

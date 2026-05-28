@@ -174,14 +174,15 @@ export function PolycentricProvider({
           useReactions.getState().refresh(c);
           void c
             .sync()
-            .then(() => Promise.all([
-              useFollows.getState().refresh(c),
-              useReactions.getState().refresh(c)
-            ]))
+            .then(() =>
+              Promise.all([
+                useFollows.getState().refresh(c),
+                useReactions.getState().refresh(c),
+              ]),
+            )
             .catch((syncError) => {
               console.warn('Initial Polycentric sync failed:', syncError);
             });
-
         }
 
         setIsLoading(false);
@@ -218,7 +219,7 @@ export function PolycentricProvider({
     async (publicKey: types.PublicKey) => {
       if (!client) return;
       await client.keyPairManager.switchKeyPair(publicKey);
-      await client.sync().catch(() => { });
+      await client.sync().catch(() => {});
     },
     [client],
   );

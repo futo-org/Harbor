@@ -6,7 +6,7 @@ import {
 import {
   decodeBundle,
   type DecodedBundle,
-} from '@/src/common/lib/polycentric-hooks';
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { create } from 'zustand';
 
 type FollowsState = {

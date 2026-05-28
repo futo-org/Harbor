@@ -40,7 +40,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
             color={'positive_500'}
           />
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content align='start' side='top'>
+        <DropdownMenu.Content align="start" side="top">
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon
               name="repost"
