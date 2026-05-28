@@ -4,7 +4,7 @@ import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';
 import {
   PostData,
-  usePolycentric,
+  usePolycentric
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
@@ -19,6 +19,14 @@ export default function RepostButton({ post }: RepostButtonProps) {
   const addRepost = useReposts((s) => s.addRepost);
   const removeRepost = useReposts((s) => s.removeRepost);
 
+  const onRepostPress = async () => {
+    if (hasReposted) {
+      await removeRepost(client, post.id);
+    } else {
+      await addRepost(client, post);
+    }
+  };
+
   const onQuotePress = () => {
     openCompose({ quote: post.id });
   };
@@ -27,20 +35,25 @@ export default function RepostButton({ post }: RepostButtonProps) {
     <View style={[Atoms.flex_1]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
-          <PostActionButton icon="repost" color="positive_500" active={hasReposted}/>
+          <PostActionButton
+            icon="repost"
+            active={hasReposted}
+            color={'positive_500'}
+          />
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
-          <DropdownMenu.Item
-            onPress={() => {
-              if (hasReposted) {
-                void removeRepost(client, post.id);
-              } else {
-                void addRepost(client, post);
-              }
-            }}
-          >
-            <Icon name="repost" color="neutral_500" size={16} />
-            <Text fontWeight="bold">{ hasReposted ? "Remove Repost" : "Repost" }</Text>
+          <DropdownMenu.Item onPress={onRepostPress}>
+            <Icon
+              name="repost"
+              color={hasReposted ? 'negative_500' : 'neutral_500'}
+              size={16}
+            />
+            <Text
+              fontWeight="bold"
+              color={hasReposted ? 'negative_500' : 'neutral_900'}
+            >
+              {hasReposted ? 'Undo Repost' : 'Repost'}
+            </Text>
           </DropdownMenu.Item>
           <DropdownMenu.Item onPress={onQuotePress}>
             <Icon name="quote" color="neutral_500" size={16} />
