@@ -53,10 +53,8 @@ pub async fn build_pairing_session(
             key_type: session.signed_by_key_type,
             key: session.signed_by_key.clone(),
         }),
-        initial_session: Some(Proto::InitialPairingSession {
-            issuer_identity: session.issuer_identity.clone(),
-            created_at: session.created_at.timestamp_millis(),
-        }),
+        issuer_identity: session.issuer_identity.clone(),
+        created_at: session.created_at.timestamp_millis(),
         expires_at: session.expires_at.timestamp_millis(),
         claimer_pubkeys,
     })
