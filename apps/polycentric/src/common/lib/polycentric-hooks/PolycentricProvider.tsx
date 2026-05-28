@@ -24,6 +24,7 @@ import {
   useStore,
   type PolycentricStoreApi,
 } from './store';
+import useReactions from '@/src/features/reaction/useReactions';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -172,15 +173,19 @@ export function PolycentricProvider({
           // re-refreshes once new events have been pulled in.
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
-          void c
-            .sync()
-            .then(() => Promise.all([
-              useFollows.getState().refresh(c),
-              useReposts.getState().refresh(c)
-            ]))
-            .catch((syncError) => {
-              console.warn('Initial Polycentric sync failed:', syncError);
-            });
+          (useReactions.getState().refresh(c),
+            void c
+              .sync()
+              .then(() =>
+                Promise.all([
+                  useFollows.getState().refresh(c),
+                  useReposts.getState().refresh(c),
+                  useReactions.getState().refresh(c),
+                ]),
+              )
+              .catch((syncError) => {
+                console.warn('Initial Polycentric sync failed:', syncError);
+              }));
         }
 
         setIsLoading(false);
@@ -189,15 +194,17 @@ export function PolycentricProvider({
           if (cancelled) return;
           setCurrentIdentity(await resolveIdentity(c));
           await s.getState().refreshIdentities();
+          // TODO: Cleanup this up
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
+          useReactions.getState().refresh(c);
         });
 
-        // Identity onboarding (create / claim) publishes an Identity event,
-        // which flows through onContentCreated. Re-resolve so the gate
-        // flips from onboarding → app once the user completes signup.
-        c.events.onContentCreated(async () => {
+        // Identity onboarding (create / claim) publishes an Identity event.
+        // Set to current identity
+        c.events.onContentCreated(async ({ content }) => {
           if (cancelled) return;
+          if (content?.contentBody.oneofKind !== 'identity') return;
           setCurrentIdentity(await resolveIdentity(c));
         });
       } catch (err) {
@@ -229,7 +236,6 @@ export function PolycentricProvider({
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
-    if (!client || !store) return null;
     return {
       client,
       store,

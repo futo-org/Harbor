@@ -18,8 +18,9 @@ pub struct Model {
 
     // Optional emoji
     pub emoji: Option<String>,
-    // Opinion (0=unspecified, 1=like, 2=dislike, 3=neutral)
-    pub opinion: i16,
+    // Upvote = true. Downvote = false. Mirrors `Reaction.positive` in the
+    // v2 content proto.
+    pub positive: bool,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

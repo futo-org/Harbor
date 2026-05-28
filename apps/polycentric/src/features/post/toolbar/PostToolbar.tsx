@@ -5,6 +5,8 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import usePostActions from '../hooks/usePostActions';
 import PostActionButton from './PostActionButton';
+import PostReactionButton from './PostReactionButton';
+import PostReactionOutput from './PostReactionOutput';
 import RepostButton from './RepostButton';
 
 export type PostToolbarProps = {
@@ -22,33 +24,34 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
 
   const {} = usePostActions(post);
 
-  const reposted = false;
-  const reaction = null;
-
   const onRepostPress = () => {};
 
   const onReplyPress = () => {
     openCompose({ replyTo: post.id });
   };
 
-  const onReactionPress = () => {};
-
   const onSharePress = () => {};
 
   return (
-    <View style={[Atoms.flex_row, Atoms.justify_between, style]}>
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.justify_start,
+        Atoms.gap_md,
+        style,
+      ]}
+    >
       <PostActionButton
         icon="reply"
         onPress={onReplyPress}
         color={'primary_500'}
       />
-      <PostActionButton
-        icon={reaction ? 'reaction' : 'reactionOutline'}
-        onPress={onReactionPress}
-        color={'negative_500'}
-      />
+      <PostReactionButton post={post} />
       <RepostButton post={post} />
       <PostActionButton icon="share" onPress={onSharePress} />
+      <View style={[Atoms.flex_1]} />
+      <PostReactionOutput post={post} />
     </View>
   );
 }
