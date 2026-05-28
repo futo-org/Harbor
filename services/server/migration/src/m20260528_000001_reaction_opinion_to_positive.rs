@@ -16,9 +16,11 @@ impl MigrationTrait for Migration {
                     .table(content_reaction_model::Entity)
                     .drop_column(Alias::new("opinion"))
                     .add_column(
-                        ColumnDef::new(content_reaction_model::Column::Positive)
-                            .boolean()
-                            .not_null(),
+                        ColumnDef::new(
+                            content_reaction_model::Column::Positive,
+                        )
+                        .boolean()
+                        .not_null(),
                     )
                     .to_owned(),
             )
