@@ -107,17 +107,15 @@ const useReposts = create<RepostsState>((set, get) => ({
 
     // Tombstone every Repost for `targetId` (a single identity may have
     // multiple events across signing keys)
-    const targets = bundles
-      .map(decodeRepost)
-      .filter(
-        (
-          entry,
-        ): entry is {
-          event: v2.Event;
-          targetIdHex: string;
-          repostIdHex: string;
-        } => entry !== null && entry.targetIdHex === targetId,
-      );
+    const targets = bundles.map(decodeRepost).filter(
+      (
+        entry,
+      ): entry is {
+        event: v2.Event;
+        targetIdHex: string;
+        repostIdHex: string;
+      } => entry !== null && entry.targetIdHex === targetId,
+    );
 
     const next = new Map(reposts);
     next.delete(targetId);
