@@ -18,17 +18,6 @@ type PostActions = {
    * Delete events act as tombstone of a referenced event.
    */
   deleteAsync: () => Promise<void>;
-  /**
-   * Creates a 'Repost'.
-   * Different to quote posts. To make a quote post, make a normal
-   * post with a 'quote' field, referencing the post you wish to quote.
-   */
-  repostAsync: () => Promise<void>;
-  /**
-   * Undo a repost by tombstoning the repost event itself (the event
-   * identified by `post.repostId`). No-op when the item isn't a repost.
-   */
-  undoRepostAsync: () => Promise<void>;
 };
 
 /**
@@ -78,33 +67,6 @@ export default function usePostActions(post: PostData): PostActions {
         router.navigate('../../');
         return;
       }
-    },
-    undoRepostAsync: async () => {
-      if (!post.repostId) return;
-      await deleteEventAtKey(post.repostId);
-      invalidateFeeds(post.repostedBy ?? post.identity);
-    },
-    repostAsync: async () => {
-      const eventKeyBytes = hexToBytes(post.id);
-
-      const eventKey = v2.EventKey.fromBinary(eventKeyBytes);
-
-      const repostContent = v2.Content.create({
-        contentBody: {
-          oneofKind: 'repost',
-          repost: { post: eventKey },
-        },
-      });
-      await client.contentManager.save(repostContent);
-      const repostEvent = await client.buildEvent(
-        repostContent,
-        COLLECTION.FEED,
-      );
-      const signedEvent = await client.signEvent(repostEvent);
-      await client.commitEvent(signedEvent, repostContent);
-
-      // TODO: do we care if push failed?
-      await client.push();
     },
   };
 }

@@ -4,56 +4,56 @@ import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';
 import {
   PostData,
-  useCurrentIdentity,
+  usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
-import usePostActions from '../hooks/usePostActions';
+import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
 
 type RepostButtonProps = { post: PostData };
 
 export default function RepostButton({ post }: RepostButtonProps) {
-  const { identityKey: currentIdentity } = useCurrentIdentity();
-  const { repostAsync, undoRepostAsync } = usePostActions(post);
-
-  const hasReposted = post.repostedBy === currentIdentity;
-
-  const onRepostPress = async () => {
-    if (hasReposted) {
-      await undoRepostAsync();
-    } else {
-      await repostAsync();
-    }
-  };
+  const client = usePolycentric();
+  const hasReposted = useReposts((s) => s.hasReposted(post.id));
+  const addRepost = useReposts((s) => s.addRepost);
+  const removeRepost = useReposts((s) => s.removeRepost);
 
   const onQuotePress = () => {
     openCompose({ quote: post.id });
   };
 
+  // When already reposted, the button directly removes the repost
+  if (hasReposted) {
+    return (
+      <View style={[Atoms.flex_1]}>
+        <PostActionButton
+          icon="repost"
+          active
+          color="positive_500"
+          onPress={() => {
+            void removeRepost(client, post.id);
+          }}
+        />
+      </View>
+    );
+  }
+
+  // Otherwise, a dropdown
   return (
     <View style={[Atoms.flex_1]}>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
-          <PostActionButton
-            icon="repost"
-            active={hasReposted}
-            color={'positive_500'}
-          />
+          <PostActionButton icon="repost" color="positive_500" />
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
-          <DropdownMenu.Item onPress={onRepostPress}>
-            <Icon
-              name="repost"
-              color={hasReposted ? 'negative_500' : 'neutral_500'}
-              size={16}
-            />
-            <Text
-              fontWeight="bold"
-              color={hasReposted ? 'negative_500' : 'neutral_900'}
-            >
-              {hasReposted ? 'Undo Repost' : 'Repost'}
-            </Text>
+          <DropdownMenu.Item
+            onPress={() => {
+              void addRepost(client, post);
+            }}
+          >
+            <Icon name="repost" color="neutral_500" size={16} />
+            <Text fontWeight="bold">Repost</Text>
           </DropdownMenu.Item>
           <DropdownMenu.Item onPress={onQuotePress}>
             <Icon name="quote" color="neutral_500" size={16} />
