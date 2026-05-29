@@ -10,10 +10,15 @@ import {
 } from './client-internal';
 import { COLLECTION, KEY_TYPE, type Collection } from './constants';
 import { HTTPClient } from './http';
-import type { ICryptoManager, IStorageDriver } from './platform-interfaces';
+import { sha256 } from '@noble/hashes/sha2';
+import type {
+  ICryptoManager,
+  IFileStoreDriver,
+  IStorageDriver,
+} from './platform-interfaces';
 import * as Proto from './proto/v2';
-import { StorageHandle } from './storage/storage-handle';
-import { bytesToHex } from './utils/hex';
+import { StorageHandle } from './datastore/storage-handle';
+import { bytesToHex, toDigestKey } from './utils/hex';
 
 import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
@@ -49,6 +54,7 @@ export interface PolycentricClientConfig {
    */
   core: CoreType;
   storageDriver: IStorageDriver;
+  filestoreDriver: IFileStoreDriver;
   cryptoManager: ICryptoManager;
   /**
    * gRPC-web URLs the client should start with. Used to seed
@@ -90,11 +96,13 @@ export class PolycentricClient {
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
+  public readonly filestoreDriver: IFileStoreDriver;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
+    this.filestoreDriver = config.filestoreDriver;
     if (config.seedServers && config.seedServers.length > 0) {
       this.servers = [...config.seedServers];
     }
@@ -206,7 +214,7 @@ export class PolycentricClient {
     if (!server) return null;
     const cdn = this.cdnUrlByServer.get(server);
     if (!cdn) return null;
-    return `${cdn}/blob/${digest.type}_${bytesToHex(digest.value)}`;
+    return `${cdn}/blob/${toDigestKey(digest)}`;
   }
 
   /**
@@ -499,7 +507,8 @@ export class PolycentricClient {
 
   /**
    * Decode an image, resize into `width` x `height` per `mode`, and
-   * encode as JPEG via the core.
+   * encode as JPEG via the core. Returns the JPEG bytes plus the
+   * actual output dimensions.
    *
    * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
    * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
@@ -509,15 +518,18 @@ export class PolycentricClient {
     width: number,
     height: number,
     mode: 'fill' | 'fit' = 'fill',
-  ): Uint8Array {
-    return new Uint8Array(
-      this.core.processImageToJpeg(
-        image.buffer as ArrayBuffer,
-        width,
-        height,
-        mode,
-      ),
+  ): { bytes: Uint8Array; width: number; height: number } {
+    const result = this.core.processImageToJpeg(
+      image.buffer as ArrayBuffer,
+      width,
+      height,
+      mode,
     );
+    return {
+      bytes: new Uint8Array(result.bytes),
+      width: result.width,
+      height: result.height,
+    };
   }
 
   /**
@@ -566,6 +578,45 @@ export class PolycentricClient {
         );
       }
     }
+  }
+
+  /**
+   * Hash `bytes` and save to the local filestore. Returns the matching
+   * `Blob` proto. Does not upload to servers.
+   */
+  async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
+    const digest: Proto.ContentDigest = {
+      type: Proto.ContentDigestType.SHA256,
+      value: sha256(bytes),
+    };
+    await this.filestoreDriver.put(digest, bytes);
+    return Proto.Blob.create({
+      digest,
+      mimeType,
+      size: BigInt(bytes.length),
+    });
+  }
+
+  /**
+   * Fetch a blob body by digest from any server CDN that has it.
+   * Returns null if no configured server's CDN serves it.
+   */
+  async fetchBlobBytes(
+    digest: Proto.ContentDigest,
+  ): Promise<Uint8Array | null> {
+    const suffix = `/blob/${toDigestKey(digest)}`;
+    for (const server of this.servers) {
+      const cdn = this.cdnUrlByServer.get(server);
+      if (!cdn) continue;
+      try {
+        const res = await fetch(`${cdn}${suffix}`);
+        if (!res.ok) continue;
+        return new Uint8Array(await res.arrayBuffer());
+      } catch {
+        // try next server
+      }
+    }
+    return null;
   }
 
   /**
@@ -703,6 +754,11 @@ export class PolycentricClient {
     // mirror into rs-core
     await this.copyEvents(signedEvents);
     await this.copyContents(contents);
+
+    // Catch any of our own referenced blobs so they persist locally.
+    await Promise.all(
+      contents.map(({ content }) => this.contentManager.pullBlobs(content)),
+    );
 
     return newCount;
   }

@@ -35,6 +35,7 @@ yarn-error.log*
 
 dist
 services/server/data
+polycentric-blobs/
 
 # Turborepo
 .turbo/

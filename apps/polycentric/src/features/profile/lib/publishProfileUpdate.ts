@@ -17,7 +17,6 @@ export async function publishProfileUpdate(
   const avatar = avatarUri
     ? await processAndUploadImage(client, avatarUri)
     : undefined;
-
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: {

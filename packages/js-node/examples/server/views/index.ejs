@@ -36,8 +36,9 @@
 
 <h2>New post</h2>
 <% if (activeIdentityKey) { %>
-  <form method="post" action="/post">
-    <textarea name="text" rows="3" cols="60" required></textarea><br>
+  <form method="post" action="/post" enctype="multipart/form-data">
+    <textarea name="text" rows="3" cols="60"></textarea><br>
+    <input type="file" name="image" accept="image/*"><br>
     <button type="submit">Post</button>
   </form>
 <% } else { %>
@@ -53,7 +54,12 @@
     <% posts.forEach(function (p) { %>
       <tr>
         <td><%= p.createdAt %></td>
-        <td><%= p.text %></td>
+        <td>
+          <%= p.text %>
+          <% p.imageBlobUrls.forEach(function (src) { %>
+            <br><img src="<%= src %>" style="max-width: 240px; max-height: 240px;">
+          <% }) %>
+        </td>
         <td><code><%= p.identityKey.slice(0, 12) %>...</code></td>
         <td><code><%= p.signerHex.slice(0, 12) %>...</code></td>
         <td><code><%= p.signaturePrefix %></code></td>

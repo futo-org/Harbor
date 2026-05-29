@@ -551,6 +551,58 @@ const FfiConverterTypeListEventsArgs = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * JPEG bytes plus the exact output dimensions of the resized image.
+ */
+export type ProcessedImage = {
+  bytes: ArrayBuffer;
+  width: /*u32*/ number;
+  height: /*u32*/ number;
+};
+
+/**
+ * Generated factory for {@link ProcessedImage} record objects.
+ */
+export const ProcessedImage = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ProcessedImage, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ProcessedImage>,
+  });
+})();
+
+const FfiConverterTypeProcessedImage = (() => {
+  type TypeName = ProcessedImage;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        bytes: FfiConverterArrayBuffer.read(from),
+        width: FfiConverterUInt32.read(from),
+        height: FfiConverterUInt32.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterArrayBuffer.write(value.bytes, into);
+      FfiConverterUInt32.write(value.width, into);
+      FfiConverterUInt32.write(value.height, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterArrayBuffer.allocationSize(value.bytes) +
+        FfiConverterUInt32.allocationSize(value.width) +
+        FfiConverterUInt32.allocationSize(value.height)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type PublicKey = {
   keyType: /*i32*/ number;
   key: ArrayBuffer;
@@ -1941,7 +1993,7 @@ export interface PolycentricCoreLike {
     width: /*u32*/ number,
     height: /*u32*/ number,
     mode: string
-  ) /*throws*/ : ArrayBuffer;
+  ) /*throws*/ : ProcessedImage;
   /**
    * Push event bundles to a server.
    */
@@ -2447,8 +2499,8 @@ export class PolycentricCore
     width: /*u32*/ number,
     height: /*u32*/ number,
     mode: string
-  ): ArrayBuffer /*throws*/ {
-    return FfiConverterArrayBuffer.lift(
+  ): ProcessedImage /*throws*/ {
+    return FfiConverterTypeProcessedImage.lift(
       uniffiCaller.rustCallWithError(
         /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
           FfiConverterTypeCoreError
@@ -3679,7 +3731,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !==
-    65374
+    45203
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg'
@@ -3853,6 +3905,7 @@ export default Object.freeze({
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
+    FfiConverterTypeProcessedImage,
     FfiConverterTypePublicKey,
     FfiConverterTypeQuery,
     FfiConverterTypeQueryObservable,

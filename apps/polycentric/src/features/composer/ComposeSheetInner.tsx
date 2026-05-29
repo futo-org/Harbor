@@ -152,8 +152,6 @@ export function ComposeSheetInner({
                 processAndUploadImage(client, a.uri, {
                   mode: 'fit',
                   sizes: POST_VARIANT_SIZES,
-                  sourceWidth: a.width,
-                  sourceHeight: a.height,
                 }),
               ),
             )
@@ -190,6 +188,7 @@ export function ComposeSheetInner({
         signedEvent,
         serializedContent: { contentBytes: v2.Content.toBinary(content) },
       });
+
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to the below query

@@ -7,8 +7,10 @@ import {
   type ServerResponse,
 } from 'node:http';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 
 const DB_PATH = path.resolve(process.cwd(), 'polycentric.db');
+const BLOB_DIR = path.resolve(process.cwd(), 'polycentric-blobs');
 const PORT = 3001;
 const VIEWS = path.resolve(import.meta.dirname, '../views');
 const SEED_SERVERS = (
@@ -20,6 +22,7 @@ const SEED_SERVERS = (
 
 const client = await createPolycentricNodeClient({
   databasePath: DB_PATH,
+  blobDirectory: BLOB_DIR,
   seedServers: SEED_SERVERS,
 });
 
@@ -32,6 +35,7 @@ interface PostRow {
   signerHex: string;
   createdAt: string;
   text: string;
+  imageBlobUrls: string[];
 }
 
 async function loadFeed(): Promise<PostRow[]> {
@@ -51,6 +55,16 @@ async function loadFeed(): Promise<PostRow[]> {
         bundle.serializedContent.contentBytes,
       );
       if (content.contentBody.oneofKind !== 'post') continue;
+      const post = content.contentBody.post;
+      // Basic functionality for images in posts.
+      const imageBlobUrls: string[] = [];
+      for (const set of post.images) {
+        const first = set.images[0];
+        if (first?.blob?.digest) {
+          const url = client.blobUrl(first.blob.digest);
+          if (url) imageBlobUrls.push(url);
+        }
+      }
       posts.push({
         signaturePrefix: toHex(bundle.signedEvent.signature.slice(0, 8)),
         identityKey: event.key?.identity ?? '',
@@ -58,7 +72,8 @@ async function loadFeed(): Promise<PostRow[]> {
           ? toHex(event.key.signedBy.key)
           : '',
         createdAt: new Date(Number(event.createdAt)).toISOString(),
-        text: content.contentBody.post.text,
+        text: post.text,
+        imageBlobUrls,
       });
     } catch {
       // skip malformed
@@ -81,10 +96,19 @@ async function renderIndex() {
   });
 }
 
-async function readBody(req: IncomingMessage): Promise<URLSearchParams> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  return new URLSearchParams(Buffer.concat(chunks).toString('utf-8'));
+async function readFormData(req: IncomingMessage): Promise<FormData> {
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (Array.isArray(v)) headers.set(k, v.join(','));
+    else if (typeof v === 'string') headers.set(k, v);
+  }
+  const r = new Request('http://localhost/', {
+    method: req.method,
+    headers,
+    body: Readable.toWeb(req) as ReadableStream<Uint8Array>,
+    duplex: 'half',
+  } as RequestInit & { duplex: 'half' });
+  return r.formData();
 }
 
 type Handler = (
@@ -92,83 +116,106 @@ type Handler = (
   res: ServerResponse,
 ) => Promise<void> | void;
 
-const routes: Record<string, Handler> = {
-  'GET /': async (_req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(await renderIndex());
-  },
+const routes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [];
+const route = (method: string, pattern: RegExp, handler: Handler) =>
+  routes.push({ method, pattern, handler });
 
-  'POST /identity': async (_req, res) => {
-    if (!client.currentKeyPair) {
-      res.statusCode = 400;
-      res.end('no key pair');
-      return;
-    }
-    if (client.activeIdentityKey) {
-      res.statusCode = 303;
-      res.setHeader('Location', '/');
-      res.end();
-      return;
-    }
-    await client.identityManager.publish(
-      null,
-      [client.currentKeyPair.publicKey],
-      [],
+route('GET', /^\/$/, async (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.end(await renderIndex());
+});
+
+route('POST', /^\/identity$/, async (_req, res) => {
+  if (!client.currentKeyPair) {
+    res.statusCode = 400;
+    res.end('no key pair');
+    return;
+  }
+  if (client.activeIdentityKey) {
+    res.statusCode = 303;
+    res.setHeader('Location', '/');
+    res.end();
+    return;
+  }
+  await client.identityManager.publish(
+    null,
+    [client.currentKeyPair.publicKey],
+    [],
+  );
+  res.statusCode = 303;
+  res.setHeader('Location', '/');
+  res.end();
+});
+
+route('POST', /^\/post$/, async (req, res) => {
+  if (!client.activeIdentityKey) {
+    res.statusCode = 400;
+    res.end('create an identity first');
+    return;
+  }
+  const form = await readFormData(req);
+  const text = String(form.get('text') ?? '').trim();
+  const file = form.get('image');
+  const imageSets: v2.ImageSet[] = [];
+  if (file instanceof File && file.size > 0) {
+    // Basic functionality for images in posts.
+    const raw = new Uint8Array(await file.arrayBuffer());
+    const { bytes, width, height } = client.processImageToJpeg(
+      raw,
+      800,
+      800,
+      'fit',
     );
+    const blob = await client.commitBlob(bytes, 'image/jpeg');
+    await client.uploadBlob(blob, bytes);
+    imageSets.push(
+      v2.ImageSet.create({
+        images: [v2.Image.create({ blob, width, height })],
+      }),
+    );
+  }
+  if (!text && imageSets.length === 0) {
     res.statusCode = 303;
     res.setHeader('Location', '/');
     res.end();
-  },
+    return;
+  }
+  const content = client.contentManager.build({
+    oneofKind: 'post',
+    post: { text, images: imageSets },
+  });
+  await client.contentManager.save(content);
+  const event = await client.buildEvent(content);
+  const signedEvent = await client.signEvent(event);
+  await client.commitEvent(signedEvent, content);
+  await client.sync();
+  res.statusCode = 303;
+  res.setHeader('Location', '/');
+  res.end();
+});
 
-  'POST /post': async (req, res) => {
-    if (!client.activeIdentityKey) {
-      res.statusCode = 400;
-      res.end('create an identity first');
-      return;
-    }
-    const body = await readBody(req);
-    const text = (body.get('text') ?? '').trim();
-    if (!text) {
-      res.statusCode = 303;
-      res.setHeader('Location', '/');
-      res.end();
-      return;
-    }
-    const content = await client.contentManager.build({
-      oneofKind: 'post',
-      post: { text, images: [] },
-    });
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content);
-    const signedEvent = await client.signEvent(event);
-    await client.commitEvent(signedEvent, content);
+route('POST', /^\/sync$/, async (_req, res) => {
+  try {
     await client.sync();
-    res.statusCode = 303;
-    res.setHeader('Location', '/');
-    res.end();
-  },
-
-  'POST /sync': async (_req, res) => {
-    try {
-      await client.sync();
-    } catch (err) {
-      console.error('sync failed:', err);
-    }
-    res.statusCode = 303;
-    res.setHeader('Location', '/');
-    res.end();
-  },
-};
+  } catch (err) {
+    console.error('sync failed:', err);
+  }
+  res.statusCode = 303;
+  res.setHeader('Location', '/');
+  res.end();
+});
 
 const server = createServer(async (req, res) => {
-  const handler = routes[`${req.method} ${req.url}`];
-  if (!handler) {
+  const method = req.method ?? 'GET';
+  const url = req.url ?? '/';
+  const match = routes.find((r) => r.method === method && r.pattern.test(url));
+  if (!match) {
     res.statusCode = 404;
     res.end('not found');
     return;
   }
   try {
-    await handler(req, res);
+    await match.handler(req, res);
   } catch (err) {
     console.error(err);
     res.statusCode = 500;
