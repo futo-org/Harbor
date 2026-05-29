@@ -854,6 +854,42 @@ mod tests {
     }
 
     #[test]
+    fn signing_key_can_ack_membership_and_publish() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        add_identity_event(
+            &mut client,
+            &b,
+            Some(&identity),
+            3,
+            vec![a.public.clone()],
+            vec![b.public.clone()],
+        );
+
+        let directory = client.identity_directory(&identity).expect("directory");
+        let chain = directory.validate(&client.event_store).expect("validates");
+        assert_eq!(chain.head().sequence, 3);
+
+        let post = sign_event(&b, &identity, 2, 1, 3, vec![0, 1], dummy_post_digest());
+        client
+            .validate_event(&post, &[])
+            .expect("B's FEED post validates against its own ack at seq=3");
+    }
+
+    #[test]
     fn revoked_key_cannot_sign_against_new_identity_content() {
         let mut client = PolycentricClient::new();
         let a = keypair(1);
