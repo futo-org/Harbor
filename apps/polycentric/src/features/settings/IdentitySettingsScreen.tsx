@@ -1,23 +1,20 @@
-import { DismissReason, SheetMenu } from '@/src/common/lib/sheet';
 import { ProfileAvatar, Text } from '@/src/common/components';
+import { Sheet } from '@/src/common/components/sheet';
 import {
   publicKeyToString,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-export function IdentitySettings({
+export function IdentitySettingsSheet({
   identityKey,
-  dismissSheet,
 }: {
   identityKey: string;
-  dismissSheet: DismissSheet;
 }) {
   const { theme } = useTheme();
   const client = usePolycentric();
@@ -31,9 +28,12 @@ export function IdentitySettings({
   const displayName = profile.name;
 
   return (
-    <View>
-      <SheetHeaderBlock title="Identity" onClose={() => void dismissSheet()} />
-      <View style={[Atoms.p_lg, Atoms.gap_xl]}>
+    <Sheet detents={[1]} dismissible scrollable>
+      <Sheet.Header
+        title="Identity"
+        onClose={() => router.canGoBack() && router.back()}
+      />
+      <Sheet.Content style={[Atoms.gap_xl]}>
         {/* Hero: avatar + name */}
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <Link href={'/feed/compose'}>
@@ -98,8 +98,8 @@ export function IdentitySettings({
             </Text>
           </View>
         </View>
-      </View>
-    </View>
+      </Sheet.Content>
+    </Sheet>
   );
 }
 
@@ -108,21 +108,5 @@ export default function IdentitySettingsScreen() {
 
   if (!identityKey) return null;
 
-  return (
-    <SheetMenu
-      onClose={(reason) => {
-        if (reason === DismissReason.UserDismissed) router.back();
-      }}
-      detents={[1]}
-      dismissible
-      scrollable
-    >
-      {(dismissSheet) => (
-        <IdentitySettings
-          identityKey={identityKey}
-          dismissSheet={dismissSheet}
-        />
-      )}
-    </SheetMenu>
-  );
+  return <IdentitySettingsSheet identityKey={identityKey} />;
 }
