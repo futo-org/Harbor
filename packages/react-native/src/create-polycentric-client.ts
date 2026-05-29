@@ -1,6 +1,7 @@
 import { PolycentricClient } from '@polycentric/js-core';
 import { PolycentricCore, setLogger } from './generated/rn/polycentric_core';
-import { createReactNativeStorageDriver } from './storage/expo-sqlite';
+import { createReactNativeStorageDriver } from './datastore/expo-sqlite';
+import { createReactNativeFileStoreDriver } from './filestore/expo-file-system';
 import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
 import {
   createIdentity,
@@ -24,11 +25,15 @@ export async function createPolycentricClient(
 ): Promise<PolycentricClient> {
   installConsoleLogger();
   const databaseName = normalizeDatabaseName(config.databaseName);
+  const cryptoManager = new ReactNativeCryptoManager();
 
   return PolycentricClient.create({
     core: new PolycentricCore(),
     storageDriver: await createReactNativeStorageDriver(databaseName),
-    cryptoManager: new ReactNativeCryptoManager(),
+    filestoreDriver: await createReactNativeFileStoreDriver(
+      `${databaseName}-blobs`
+    ),
+    cryptoManager,
     seedServers: config.seedServers,
   });
 }

@@ -1,11 +1,13 @@
 import { PolycentricClient } from '@polycentric/js-core';
 
 import { NodeCryptoManager } from './crypto/node-crypto-manager.js';
-import { createNodeStorageDriver } from './storage/better-sqlite3/index.js';
+import { createNodeStorageDriver } from './datastore/better-sqlite3/index.js';
+import { createNodeFileStoreDriver } from './filestore/fs/index.js';
 import { PolycentricCore, uniffiInitAsync } from './uniffi-init.js';
 
 export interface CreatePolycentricNodeClientConfig {
   databasePath: string;
+  blobDirectory: string;
   seedServers?: string[];
 }
 
@@ -14,11 +16,14 @@ export async function createPolycentricNodeClient(
 ): Promise<PolycentricClient> {
   await uniffiInitAsync();
   const core = new PolycentricCore();
+  const cryptoManager = new NodeCryptoManager();
   const { driver } = await createNodeStorageDriver(config.databasePath);
+  const filestoreDriver = await createNodeFileStoreDriver(config.blobDirectory);
   return PolycentricClient.create({
     core,
     storageDriver: driver,
-    cryptoManager: new NodeCryptoManager(),
+    filestoreDriver,
+    cryptoManager,
     seedServers: config.seedServers,
   });
 }
