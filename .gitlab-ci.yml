@@ -9,12 +9,14 @@ include:
   - local: '.gitlab/ci/deploy_server.yml'
   - local: '.gitlab/ci/deploy_pages.yml'
   - local: '.gitlab/ci/scan_dependencies.yml'
+  - local: '.gitlab/ci/release.yml'
 stages:
   - setup
   - check
   - build
   - publish
   - deploy
+  - release
   - test
 variables:
   CARGO_HOME: ${CI_PROJECT_DIR}/.cargo

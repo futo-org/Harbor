@@ -1,0 +1,26 @@
+# Match the SemVer tags this project releases on (v2.0.0, v2.0.0-alpha.1, ...).
+tag_regex: '^v\d+\.\d+\.\d+'
+
+categories:
+  feature: 🚀 Features
+  fix: 🐛 Bug fixes
+  enhancement: ⚡ Enhancements
+  security: 🔒 Security
+  deprecated: ⚠️ Deprecated
+  breaking-change: 🚨 Breaking Changes
+  documentation: 📚 Documentation
+  other: 📦 Other
+
+template: |
+  {% if categories %}
+  {% each categories %}
+  #### {{ title }}
+
+  {% each entries %}
+  - {{ title }} ({{ commit.reference }}){% if author.contributor %} by {{ author.reference }}{% end %}{% if commit.trailers.MR %} ([merge request]({{ commit.trailers.MR }})){% end %}
+
+  {% end %}
+  {% end %}
+  {% else %}
+  No changes.
+  {% end %}
