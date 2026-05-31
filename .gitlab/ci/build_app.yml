@@ -28,6 +28,9 @@
 
 app-web-image:
   extends: .app-build-base
+  rules:
+    - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]
   image:
     name: moby/buildkit:rootless
     entrypoint: ['']
@@ -43,6 +46,8 @@ app-web-image:
         --local dockerfile=./apps/polycentric \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA-cache \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA-cache,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA,push=true
 
 .app-build-expo:
@@ -56,18 +61,44 @@ app-web-image:
     - apt-get update && apt-get install -y --no-install-recommends git
     - cd ./apps/polycentric
 
-app-android-apk:
+# EAS builds run: manual on merge requests, automatic on the default branch and
+# on tags. Only the APK waits for completion (we download it); the others are
+# fire-and-forget.
+.app-eas-build:
   extends: .app-build-expo
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+      when: manual
+      allow_failure: true
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+    - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+
+app-android-apk:
+  extends: .app-eas-build
   script:
-    - npx eas-cli build --platform android --profile preview --non-interactive --no-wait
+    - npx eas-cli build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+    # eas only builds remotely; download the resulting APK so it is a CI artifact.
+    - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json polycentric.apk
+  artifacts:
+    paths:
+      - apps/polycentric/polycentric.apk
+      - apps/polycentric/eas-build.json
+    expire_in: 1 week
 
 app-android-aab:
-  extends: .app-build-expo
+  extends: .app-eas-build
   script:
-    - npx eas-cli build --platform android --non-interactive --no-wait
-  when: manual
+    - npx eas-cli build --platform android --non-interactive --no-wait ${CI_COMMIT_TAG:+--auto-submit}
 
 app-ios:
-  extends: .app-build-expo
+  extends: .app-eas-build
   script:
-    - npx eas-cli build --platform ios --non-interactive --no-wait
+    - npx eas-cli build --platform ios --non-interactive --no-wait ${CI_COMMIT_TAG:+--auto-submit}

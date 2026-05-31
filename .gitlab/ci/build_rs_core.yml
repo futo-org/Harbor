@@ -87,6 +87,7 @@ rs-core-uniffi-web-build:
     - !reference [.js-sdk-workflow, rules]
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]
   cache:
     - key:
         files:

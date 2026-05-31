@@ -47,6 +47,9 @@ server-build:
 
 server-image:
   extends: .server-workflow
+  rules:
+    - !reference [.server-workflow, rules]
+    - !reference [.release-workflow, rules]
   image:
     name: moby/buildkit:rootless
     entrypoint: ['']
@@ -60,4 +63,6 @@ server-image:
         --frontend dockerfile.v0 \
         --local context=. \
         --local dockerfile=./services/server \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA-cache \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA-cache,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/server:$CI_COMMIT_SHA,push=true
