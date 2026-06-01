@@ -19,7 +19,7 @@ export default function useReportAction() {
       additionalInfo: string;
     }) => {
       if (isPending) {
-        throw "Already pending";
+        throw 'Already pending';
       }
       setPending(true);
 
