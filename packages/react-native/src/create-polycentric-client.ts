@@ -21,7 +21,7 @@ function installConsoleLogger() {
 }
 
 export async function createPolycentricClient(
-  config: CreatePolycentricClientConfig = {}
+  config: CreatePolycentricClientConfig = {},
 ): Promise<PolycentricClient> {
   installConsoleLogger();
   const databaseName = normalizeDatabaseName(config.databaseName);
@@ -31,7 +31,7 @@ export async function createPolycentricClient(
     core: new PolycentricCore(),
     storageDriver: await createReactNativeStorageDriver(databaseName),
     filestoreDriver: await createReactNativeFileStoreDriver(
-      `${databaseName}-blobs`
+      `${databaseName}-blobs`,
     ),
     cryptoManager,
     seedServers: config.seedServers,

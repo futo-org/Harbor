@@ -10,8 +10,9 @@ let initPromise: Promise<void> | null = null;
 export async function uniffiInitAsync(): Promise<void> {
   if (initPromise) return initPromise;
   initPromise = (async () => {
-    const wasmUrl = import.meta
-      .resolve('@polycentric/rs-core-uniffi-web/generated/wasm-bindgen/index_bg.wasm');
+    const wasmUrl = import.meta.resolve(
+      '@polycentric/rs-core-uniffi-web/generated/wasm-bindgen/index_bg.wasm',
+    );
     const wasmBytes = await readFile(fileURLToPath(wasmUrl));
     await initAsync({ module_or_path: wasmBytes });
     polycentricCoreModule.initialize();

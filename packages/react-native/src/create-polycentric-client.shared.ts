@@ -23,11 +23,11 @@ export function normalizeDatabaseName(databaseName?: string) {
  */
 export async function createIdentity(
   client: PolycentricClient,
-  server: string
+  server: string,
 ) {
   if (!client.currentKeyPair) {
     throw new Error(
-      'createIdentity: client has no current keypair. PolycentricClient.initialize() should have created one.'
+      'createIdentity: client has no current keypair. PolycentricClient.initialize() should have created one.',
     );
   }
 

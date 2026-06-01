@@ -15,10 +15,8 @@ import {
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 
-export interface TextInputProps extends Omit<
-  RNTextInputProps,
-  'placeholderTextColor'
-> {
+export interface TextInputProps
+  extends Omit<RNTextInputProps, 'placeholderTextColor'> {
   variant?: 'default' | 'plain';
   placeholderTextColor?: PaletteColorToken;
   disabled?: boolean;
