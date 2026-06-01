@@ -56,7 +56,8 @@ export default function ReportSheet({
     <Sheet
       open={open}
       onClose={onClosePress}
-      detents={[1]}
+      detents={[0.5, 0.75, 1]}
+      scrollable={true}
       header={
         <Sheet.Header
           title={
@@ -69,18 +70,20 @@ export default function ReportSheet({
       footer={
         <Sheet.Footer
           right={
-            isPending ? <ActivityIndicator
-              size="small"
-              color={theme.palette.primary_500}
-              accessibilityLabel="Posting"
-            />
-              :
+            isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.palette.primary_500}
+                accessibilityLabel="Posting"
+              />
+            ) : (
               <Button
                 size="sm"
                 title={isOption ? 'Next' : 'Submit'}
                 onPress={onNextPress}
                 disabled={(isOption && !selected) || isPending}
               />
+            )
           }
         />
       }

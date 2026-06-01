@@ -33,6 +33,7 @@ import Reanimated, {
 import { runOnJS } from 'react-native-worklets';
 import Icon, { IconProps } from '../Icon';
 import Topbar from '../layout/Topbar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 120;
@@ -122,11 +123,15 @@ type SheetFooterProps = {
 };
 export function SheetFooter({ left, right }: SheetFooterProps) {
   const { theme } = useTheme();
+
+  const insets = useSafeAreaInsets();
+
   return (
     <View
       style={[
         Atoms.flex_row,
         Atoms.p_lg,
+        { paddingBottom: insets.bottom + Spacing['lg'] },
         {
           backgroundColor: theme.palette.neutral_0,
         },
