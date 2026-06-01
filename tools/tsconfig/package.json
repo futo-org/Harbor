@@ -1,7 +1,5 @@
 {
   "name": "@polycentric/tsconfig",
   "private": true,
-  "files": [
-    "*.json"
-  ]
+  "files": ["*.json", "*.jsonc"]
 }

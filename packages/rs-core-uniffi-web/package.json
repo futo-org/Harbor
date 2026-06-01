@@ -15,11 +15,7 @@
     "./generated/wasm-bindgen": "./dist/generated/wasm-bindgen/index.js",
     "./generated/wasm-bindgen/index_bg.wasm": "./dist/generated/wasm-bindgen/index_bg.wasm"
   },
-  "files": [
-    "dist",
-    "ubrn.config.yaml",
-    "ubrn-wasm-patch.toml"
-  ],
+  "files": ["dist", "ubrn.config.yaml", "ubrn-wasm-patch.toml"],
   "scripts": {
     "prebuild": "cargo install wasm-bindgen-cli --version 0.2.122 --locked",
     "build": "ubrn build web",

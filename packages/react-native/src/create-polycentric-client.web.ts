@@ -27,7 +27,7 @@ function installConsoleLogger() {
 }
 
 export async function createPolycentricClient(
-  config: CreatePolycentricClientConfig = {}
+  config: CreatePolycentricClientConfig = {},
 ): Promise<PolycentricClient> {
   const databaseName = normalizeDatabaseName(config.databaseName);
   const cryptoManager = new BrowserCryptoManager();

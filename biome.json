@@ -1,0 +1,71 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/LICENSE",
+      "!**/public",
+      "!**/pnpm-lock.yaml",
+      "!**/justfile",
+      "!**/README.md",
+      "!legacy",
+      "!turbo.jsonc",
+      "!apps/polycentric/build",
+      "!apps/polycentric/android",
+      "!apps/polycentric/ios",
+      "!packages/react-native/android",
+      "!packages/react-native/ios",
+      "!packages/react-native/lib",
+      "!packages/react-native/src/generated",
+      "!packages/react-native/src/Native*",
+      "!packages/react-native/src/uniffi-init.tsx",
+      "!apps/polycentric/.expo",
+      "!apps/polycentric/expo-env.d.ts",
+      "!packages/rs-core",
+      "!packages/rs-core-wasm-browser",
+      "!packages/rs-core-wasm-node",
+      "!packages/js-core/src/proto/polycentric.ts",
+      "!packages/js-core/src/proto/polycentric/v2",
+      "!**/rust_modules"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 80,
+    "attributePosition": "auto",
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "expand": "auto",
+    "useEditorconfig": true
+  },
+  "linter": { "enabled": false, "rules": { "recommended": true } },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
+  "html": {
+    "formatter": {
+      "indentScriptAndStyle": false,
+      "selfCloseVoidElements": "always"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": { "source": { "organizeImports": "off" } }
+  }
+}
