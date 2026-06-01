@@ -40,7 +40,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
 }
 
 export async function createReactNativeFileStoreDriver(
-  subdir: string
+  subdir: string,
 ): Promise<ExpoFileStoreDriver> {
   return ExpoFileStoreDriver.create(subdir);
 }

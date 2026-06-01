@@ -173,19 +173,19 @@ export function PolycentricProvider({
           // re-refreshes once new events have been pulled in.
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
-          (useReactions.getState().refresh(c),
-            void c
-              .sync()
-              .then(() =>
-                Promise.all([
-                  useFollows.getState().refresh(c),
-                  useReposts.getState().refresh(c),
-                  useReactions.getState().refresh(c),
-                ]),
-              )
-              .catch((syncError) => {
-                console.warn('Initial Polycentric sync failed:', syncError);
-              }));
+          useReactions.getState().refresh(c);
+          void c
+            .sync()
+            .then(() =>
+              Promise.all([
+                useFollows.getState().refresh(c),
+                useReposts.getState().refresh(c),
+                useReactions.getState().refresh(c),
+              ]),
+            )
+            .catch((syncError) => {
+              console.warn('Initial Polycentric sync failed:', syncError);
+            });
         }
 
         setIsLoading(false);

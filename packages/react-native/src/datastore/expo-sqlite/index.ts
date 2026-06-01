@@ -7,7 +7,7 @@ import {
 } from '@polycentric/js-storage-sqlite';
 
 export async function createReactNativeStorageDriver(
-  databaseName: string
+  databaseName: string,
 ): Promise<DrizzleStorageDriver> {
   const raw = openDatabaseSync(databaseName);
   const db = drizzle(raw) as unknown as SqliteDb;
