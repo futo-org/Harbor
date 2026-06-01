@@ -35,6 +35,9 @@ rustup target add wasm32-unknown-unknown
 pnpm install
 pnpm build
 
+# Setup the git pre-commit hooks
+pnpm prepare
+
 # Start the server process
 docker compose up -d --build
 

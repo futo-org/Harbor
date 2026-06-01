@@ -11,9 +11,7 @@
       "import": "./dist/index.es.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto ../../protos/polycentric/v2/keypair.proto ../../protos/polycentric/v2/event_key.proto ../../protos/polycentric/v2/identity.proto ../../protos/polycentric/v2/content.proto ../../protos/polycentric/v2/events.proto ../../protos/polycentric/v2/feeds.proto ../../protos/polycentric/v2/server.proto ../../protos/polycentric/v2/pairing_service.proto ../../protos/polycentric/v2/notifications.proto",
     "build": "tsc -b && webpack",
