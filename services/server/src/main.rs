@@ -12,6 +12,7 @@ use crate::service::content::content_filestore::{
 };
 use crate::service::notifications::notification_manager::NotificationManager;
 use crate::service::server::server_service::ServerConfig;
+use expo_push_notification_client::{Expo, ExpoClientOptions};
 use sea_orm::DatabaseConnection;
 
 /// Connect to the database, retrying with backoff.
@@ -47,7 +48,11 @@ async fn main() {
     util::dotenv::load(".env");
 
     let db = connect_db_with_retry().await;
-    let (notification_manager, notification_rx) = NotificationManager::new();
+    let expo = Expo::new(ExpoClientOptions {
+        access_token: std::env::var("EXPO_ACCESS_TOKEN").ok(),
+    });
+    let (notification_manager, notification_rx) =
+        NotificationManager::new(expo);
     tokio::spawn(
         notification_manager
             .clone()

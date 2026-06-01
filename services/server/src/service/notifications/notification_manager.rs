@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{error::Error, fmt};
 
 use expo_push_notification_client::{
-    DetailsErrorType, Expo, ExpoClientOptions, ExpoPushMessage, ExpoPushTicket,
+    DetailsErrorType, Expo, ExpoPushMessage, ExpoPushTicket,
 };
 use sea_orm::{DbConn, DbErr, EnumIter};
 use tokio::sync::mpsc;
@@ -81,14 +81,12 @@ impl NotificationManager {
     /// caller (typically `main`) keeps the manager in an Arc, hands clones
     /// to the gRPC services, and spawns `run_worker(db, rx)` exactly once.
     /// Dropping the rx (e.g. in tests) makes `enqueue` a logged no-op.
-    pub fn new() -> (Arc<Self>, mpsc::Receiver<NotificationJob>) {
+    ///
+    /// The `Expo` client is injected so tests can point it at a wiremock
+    /// server via `Expo::new_with_base_url(None, &server.url())`.
+    pub fn new(expo: Expo) -> (Arc<Self>, mpsc::Receiver<NotificationJob>) {
         let (tx, rx) = mpsc::channel(1024);
-        let manager = Arc::new(Self {
-            expo: Expo::new(ExpoClientOptions {
-                access_token: std::env::var("EXPO_ACCESS_TOKEN").ok(),
-            }),
-            tx,
-        });
+        let manager = Arc::new(Self { expo, tx });
         (manager, rx)
     }
 
