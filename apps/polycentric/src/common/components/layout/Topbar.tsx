@@ -1,18 +1,19 @@
-import { Link, router, useSegments } from 'expo-router';
-import { Pressable, View } from 'react-native';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
-import { Image } from 'expo-image';
 import Icon from '@/src/common/components/Icon';
+import { Image } from 'expo-image';
+import { Link, router, useSegments } from 'expo-router';
+import { memo, type ReactNode } from 'react';
+import { Pressable, View } from 'react-native';
 import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
 import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
-import { ProfileAvatar, Text } from '../primitives';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
-import { memo, type ReactNode } from 'react';
+import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
+import { ProfileAvatar, Text } from '../primitives';
 
 const SIDE_WIDTH = 32;
 
 type TopbarProps = {
   title?: string;
+  left?: ReactNode;
   /**
    * Replaces the default centred title/logo. Use this when the centre
    * slot needs a non-navigational element (e.g. a search bar).
@@ -22,7 +23,7 @@ type TopbarProps = {
   right?: ReactNode;
 };
 
-function Topbar({ title, center, right }: TopbarProps) {
+function Topbar({ title, left, center, right }: TopbarProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
 
@@ -56,32 +57,33 @@ function Topbar({ title, center, right }: TopbarProps) {
           Atoms.items_start,
         ]}
       >
-        {canGoBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={() => router.back()}
-            hitSlop={Spacing['lg']}
-            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
-          >
-            <Icon name="chevronBack" size={24} color="neutral_900" />
-          </Pressable>
-        ) : (
-          <ProfileAvatar
-            identityKey={identityKey ?? ''}
-            size="sm"
-            containerProps={{ hitSlop: Spacing['lg'] }}
-            onPress={
-              identityKey
-                ? () =>
-                    router.push({
-                      pathname: '/profile/[identityId]',
-                      params: { identityId: identityKey },
-                    })
-                : undefined
-            }
-          />
-        )}
+        {left ??
+          (canGoBack ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              onPress={() => router.back()}
+              hitSlop={Spacing['lg']}
+              style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            >
+              <Icon name="chevronBack" size={24} color="neutral_900" />
+            </Pressable>
+          ) : (
+            <ProfileAvatar
+              identityKey={identityKey ?? ''}
+              size="sm"
+              containerProps={{ hitSlop: Spacing['lg'] }}
+              onPress={
+                identityKey
+                  ? () =>
+                      router.push({
+                        pathname: '/profile/[identityId]',
+                        params: { identityId: identityKey },
+                      })
+                  : undefined
+              }
+            />
+          ))}
       </View>
       <View
         style={[

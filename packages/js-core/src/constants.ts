@@ -10,6 +10,7 @@ export const COLLECTION = {
   PROFILE: 3,
   INTERACTIONS: 4,
   GRAPH: 5,
+  REPORTS: 6,
 } as const;
 
 /** A known COLLECTION value. Callers may also pass any number. */

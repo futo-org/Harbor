@@ -1,13 +1,15 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
+import Icon from '@/src/common/components/Icon';
 import {
   PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
-import Icon from '@/src/common/components/Icon';
+import { useState } from 'react';
 import { View } from 'react-native';
+import ReportSheet from '../moderation/ReportSheet';
 import usePostActions from './hooks/usePostActions';
 
 type PostMenuProps = {
@@ -22,6 +24,8 @@ export default function PostMenu({ post }: PostMenuProps) {
 
   const { deleteAsync: deleteAsync } = usePostActions(post);
 
+  const [showReportSheet, setShowReportSheet] = useState<boolean>(false);
+
   const onDeletePress = async () => {
     // Wait for confirm
     await new Promise((resolve, reject) => {
@@ -34,48 +38,57 @@ export default function PostMenu({ post }: PostMenuProps) {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
-        {({ pressed, hovered }) => (
-          <View
-            style={[
-              Atoms.p_xs,
-              Atoms.rounded_full,
-              // overflow:hidden forces a rounded clip on native — without it the
-              // press background renders with square corners.
-              Atoms.overflow_hidden,
-              (hovered || pressed) && {
-                backgroundColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '14',
-                ),
-              },
-            ]}
-          >
-            <Icon name="more" color="neutral_500" size={16} />
-          </View>
-        )}
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content>
-        {/* Delete  */}
-        {isPostAuthor && (
-          <DropdownMenu.Item onPress={onDeletePress}>
-            <Icon name="trashBin" color="negative_500" size={16} />
-            <Text variant="secondary" fontWeight="bold" color="negative_500">
-              Delete
-            </Text>
-          </DropdownMenu.Item>
-        )}
-        {/* Report */}
-        {!isPostAuthor && (
-          <DropdownMenu.Item onPress={() => Alert.alert('Working on it')}>
-            <Icon name="flag" color="neutral_500" size={16} />
-            <Text variant="secondary" fontWeight="bold">
-              Report
-            </Text>
-          </DropdownMenu.Item>
-        )}
-      </DropdownMenu.Content>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenu.Trigger hitSlop={16} style={Atoms.outline_none}>
+          {({ pressed, hovered }) => (
+            <View
+              style={[
+                Atoms.p_xs,
+                Atoms.rounded_full,
+                // overflow:hidden forces a rounded clip on native — without it the
+                // press background renders with square corners.
+                Atoms.overflow_hidden,
+                (hovered || pressed) && {
+                  backgroundColor: withHexOpacity(
+                    theme.palette.neutral_500,
+                    '14',
+                  ),
+                },
+              ]}
+            >
+              <Icon name="more" color="neutral_500" size={16} />
+            </View>
+          )}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content>
+          {/* Delete  */}
+          {isPostAuthor && (
+            <DropdownMenu.Item onPress={onDeletePress}>
+              <Icon name="trashBin" color="negative_500" size={16} />
+              <Text variant="secondary" fontWeight="bold" color="negative_500">
+                Delete
+              </Text>
+            </DropdownMenu.Item>
+          )}
+          {/* Report */}
+          {!isPostAuthor && (
+            <DropdownMenu.Item onPress={() => setShowReportSheet(true)}>
+              <Icon name="flag" color="neutral_500" size={16} />
+              <Text variant="secondary" fontWeight="bold">
+                Report
+              </Text>
+            </DropdownMenu.Item>
+          )}
+        </DropdownMenu.Content>
+      </DropdownMenu>
+
+      {/* Modals */}
+      <ReportSheet
+        eventId={post.id}
+        open={showReportSheet}
+        onClose={() => setShowReportSheet(false)}
+      />
+    </>
   );
 }

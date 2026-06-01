@@ -1,8 +1,7 @@
-import { Button, Text } from '@/src/common/components/primitives';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
-import { ActivityIndicator, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '@/src/common/components/primitives';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Pressable, View } from 'react-native';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -51,33 +50,6 @@ export function ComposeSheetFooterBar({
     </View>
   );
 
-  const postSlot = (
-    <View
-      style={{
-        minWidth: 80,
-        minHeight: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      {submitting ? (
-        <ActivityIndicator
-          size="small"
-          color={theme.palette.primary_500}
-          accessibilityLabel="Posting"
-        />
-      ) : (
-        <Button
-          title="Post"
-          onPress={onPost}
-          variant="primary"
-          disabled={!canPost}
-          size="sm"
-        />
-      )}
-    </View>
-  );
-
   const borderTop = {
     borderTopWidth: 1,
     borderTopColor: withHexOpacity(theme.palette.neutral_500, '20'),
@@ -97,7 +69,6 @@ export function ComposeSheetFooterBar({
         ]}
       >
         {leading}
-        {postSlot}
       </View>
     );
   }

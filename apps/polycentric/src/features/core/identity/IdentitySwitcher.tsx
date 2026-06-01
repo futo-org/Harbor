@@ -1,10 +1,12 @@
 import { IdentityBadge } from '@/src/common/components/composites/IdentityBadge';
+import Icon from '@/src/common/components/Icon';
 import {
   Button,
   IconButton,
   LinkButton,
   SelectionIndicator,
 } from '@/src/common/components/primitives';
+import { Sheet } from '@/src/common/components/sheet';
 import { useFadeIn } from '@/src/common/lib/animation';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
@@ -15,15 +17,14 @@ import {
   useIdentityKeyFor,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { SheetHeaderBlock, type DismissSheet } from '@/src/common/lib/sheet';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import Icon from '@/src/common/components/Icon';
 import {
   createIdentity,
   KEY_TYPE,
   type KeyPair,
 } from '@polycentric/react-native';
+import { router } from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -50,7 +51,7 @@ type IdentityKeyPair = KeyPair;
 interface IdentitySwitcherContextType {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
-  dismiss: () => Promise<void>;
+  dismiss: () => void;
   onDeleteIdentity: (keyPair: IdentityKeyPair) => void;
 }
 
@@ -67,14 +68,14 @@ function useIdentitySwitcher() {
   return context;
 }
 
-export function IdentitySwitcher({
-  dismissSheet,
-}: {
-  dismissSheet: DismissSheet;
-}) {
+export function IdentitySwitcherSheet() {
   const client = usePolycentric();
   const identities = useIdentities();
   const [isEditing, setIsEditing] = useState(false);
+
+  const dismiss = useCallback(() => {
+    if (router.canGoBack()) router.back();
+  }, []);
 
   const handleCreateIdentity = useCallback(async () => {
     // Adding a second identity on this device means generating a fresh
@@ -106,19 +107,19 @@ export function IdentitySwitcher({
     () => ({
       isEditing,
       setIsEditing,
-      dismiss: dismissSheet,
+      dismiss,
       onDeleteIdentity: handleDeleteIdentity,
     }),
-    [isEditing, dismissSheet, handleDeleteIdentity],
+    [isEditing, dismiss, handleDeleteIdentity],
   );
 
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
-      <View style={Atoms.flex_1}>
-        <SheetHeaderBlock
+      <Sheet detents={[0.5, 1]} scrollable>
+        <Sheet.Header
           title={isEditing ? 'Editing identities' : 'Your identities'}
-          onClose={() => void dismissSheet()}
-          trailing={
+          onClose={dismiss}
+          right={
             <View style={{ minWidth: 72, alignItems: 'flex-end' }}>
               <LinkButton
                 title={isEditing ? 'Done' : 'Edit'}
@@ -128,7 +129,7 @@ export function IdentitySwitcher({
             </View>
           }
         />
-        <View style={Atoms.flex_1}>
+        <Sheet.Content>
           {isEditing ? (
             <DraggableFlatList
               data={identities}
@@ -150,9 +151,9 @@ export function IdentitySwitcher({
               removeClippedSubviews={Platform.OS !== 'android'}
             />
           )}
-        </View>
+        </Sheet.Content>
         {isEditing ? <Footer onCreateIdentity={handleCreateIdentity} /> : null}
-      </View>
+      </Sheet>
     </IdentitySwitcherContext.Provider>
   );
 }

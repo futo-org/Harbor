@@ -21,7 +21,7 @@ function defineIcon<G extends string>(
  * Map of icon names to their icon set definitions
  */
 export const IconsMap = {
-  add: defineIcon(Ionicons, 'add-circle'),
+  add: defineIcon(Ionicons, 'add'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
   ban: defineIcon(Ionicons, 'ban'),
@@ -68,7 +68,7 @@ export type IconName = keyof typeof IconsMap;
 /** A palette token (resolved against the theme) or any raw color string. */
 type IconColor = PaletteColorToken | (string & {});
 
-type IconProps = Omit<
+export type IconProps = Omit<
   ComponentProps<typeof Ionicons>,
   'name' | 'color' | 'size'
 > & {
