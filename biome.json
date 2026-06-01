@@ -28,8 +28,7 @@
       "!packages/rs-core-wasm-node",
       "!packages/js-core/src/proto/polycentric.ts",
       "!packages/js-core/src/proto/polycentric/v2",
-      "!**/rust_modules",
-      "!tools"
+      "!**/rust_modules"
     ]
   },
   "formatter": {

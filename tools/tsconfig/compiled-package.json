@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.schemastore.org/tsconfig",
-  "extends": "./base.json",
+  "extends": "./base.jsonc",
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
