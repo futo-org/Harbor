@@ -29,3 +29,6 @@ tower-http = { version = "*", features = ["cors"] }
 tower-layer = "*"
 http = "*"
 
+[dev-dependencies]
+mockito = "1"
+

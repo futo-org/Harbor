@@ -296,3 +296,100 @@ impl NotificationManager {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::{Identity, KeyType};
+    use ::entity::push_token_model as PushTokenModel;
+    use prost::Message;
+    use sea_orm::{DbBackend, MockDatabase, Value};
+    use std::collections::BTreeMap;
+
+    /// Drives `process_job` end-to-end against a mocked DB and a wiremock-
+    /// style Expo server, and asserts that exactly one POST hits Expo with
+    /// the recipient's token.
+    ///
+    /// Scenario: a reply post with no followers. The reply recipient has
+    /// one authorized signing key, and that key has a registered Expo
+    /// token. We expect:
+    ///   - one DB read each for authorized_keys, token_for_public_key,
+    ///     and list_followers (in that order — `process_job` handles the
+    ///     reply recipient before the follower fan-out)
+    ///   - exactly one POST to `/--/api/v2/push/send` carrying the token
+    #[tokio::test]
+    async fn process_job_sends_to_reply_recipient_via_expo() {
+        // ── 1. Mock Expo at the HTTP layer ──────────────────────────
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_header("content-type", "application/json")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"{"to":["ExponentPushToken[abc123]"],"title":"New reply from Alice","body":"hello"}"#
+                    .to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+
+        let expo = Expo::new_with_base_url(None, &expo_server.url());
+
+        // ── 2. Mock the three DB queries process_job will issue ─────
+        // The first and third queries project non-entity shapes
+        // (a custom FromQueryResult struct, and `into_tuple::<String>()`)
+        // so we feed MockDatabase BTreeMap rows. The middle query is an
+        // entity find, so its Model type works directly.
+        let signing_key_bytes = vec![1u8; 32];
+        let signing_pk = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: signing_key_bytes.clone(),
+        };
+        let identity_bytes = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![signing_pk],
+        }
+        .encode_to_vec();
+
+        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([
+            ("identity_bytes".to_string(), Value::from(identity_bytes)),
+        ]);
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // (a) authorized_keys(reply_recipient): one identity row
+            .append_query_results([vec![authorized_keys_row]])
+            // (b) token_for_public_key(signing_key): one registered token
+            .append_query_results([vec![PushTokenModel::Model {
+                public_key_type: KeyType::Ed25519 as i16,
+                public_key: signing_key_bytes,
+                service: PushService::Expo.as_ref().to_string(),
+                token: "ExponentPushToken[abc123]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
+            }]])
+            // (c) list_followers(author): none
+            .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+            .into_connection();
+
+        // ── 3. Build the manager and drive process_job directly ─────
+        let (manager, _rx) = NotificationManager::new(expo);
+        let job = NotificationJob {
+            author_identity: "id-author".to_string(),
+            author_name: Some("Alice".to_string()),
+            body: "hello".to_string(),
+            reply_recipient: Some("id-recipient".to_string()),
+        };
+
+        manager
+            .process_job(&db, &job)
+            .await
+            .expect("process_job should succeed");
+
+        // ── 4. Assert Expo received exactly one POST as configured ──
+        send_mock.assert_async().await;
+    }
+}
+
