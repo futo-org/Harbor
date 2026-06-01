@@ -1,6 +1,6 @@
 import { Button, Text, TextInput } from '@/src/common/components';
-import AvatarEdit from '@/src/common/components/Avatar/AvatarEdit';
 import { Sheet } from '@/src/common/components/sheet';
+import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
 import {
   useCurrentIdentity,
   useProfileEdit,
@@ -47,8 +47,8 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
       />
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md]}>
-          <AvatarEdit
-            identity={identityKey}
+          <ProfileEditAvatar
+            identityKey={identityKey}
             size="massive"
             onSelect={edit.setAvatarUri}
           />

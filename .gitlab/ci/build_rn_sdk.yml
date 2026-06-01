@@ -21,6 +21,7 @@ rn-android-build:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.rs-core-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]
   cache:
     - key:
         files:
@@ -59,6 +60,7 @@ rn-android-build:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.rs-core-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]
   tags:
     - macscript
   variables:
@@ -124,3 +126,4 @@ rn-sdk-build:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.rs-core-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]

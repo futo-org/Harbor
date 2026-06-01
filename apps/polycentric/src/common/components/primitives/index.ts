@@ -1,5 +1,6 @@
 export * from '../Avatar/Avatar';
 export * from '../Avatar/ProfileAvatar';
+export * from '../Avatar/ProfileEditAvatar';
 export * from '../TextArea';
 export * from './Button';
 export * from './Chip';
