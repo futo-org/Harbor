@@ -18,6 +18,7 @@ use ::entity::{
     content_identity_model as ContentIdentityModel,
     content_model as ContentModel, content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel,
+    content_report_model as ContentReportModel,
     content_repost_model as ContentRepostModel, event_model as EventModel,
 };
 use polycentric_common::models::collections;
@@ -394,6 +395,29 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
                 .await
                 .map_err(map_db_err)?;
             }
+        }
+
+        Some(ContentBody::Report(report)) => {
+            let key = report.event_key.ok_or_else(|| {
+                Status::invalid_argument("report content missing event_key")
+            })?;
+            let signed_by = key.signed_by.ok_or_else(|| {
+                Status::invalid_argument("report event_key missing signed_by")
+            })?;
+
+            ContentReportModel::ActiveModel {
+                content_id: Set(content_id),
+                category: Set(report.category as i16),
+                additional_info: Set(report.additional_info),
+                event_key_collection: Set(key.collection as i16),
+                event_key_identity: Set(key.identity),
+                event_key_public_key_type: Set(signed_by.key_type as i16),
+                event_key_public_key: Set(signed_by.key),
+                event_key_sequence: Set(key.sequence as i64),
+            }
+            .insert(db)
+            .await
+            .map_err(map_db_err)?;
         }
 
         None => {}

@@ -1,7 +1,7 @@
 import { Button, Text, TextArea } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import useReportOptions, { ReportOptions } from './hooks/useReportOptions';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
@@ -20,7 +20,8 @@ export default function ReportSheet({
   onClose,
 }: ReportSheetProps) {
   const { options } = useReportOptions();
-  const { submit } = useReportAction();
+  const { theme } = useTheme();
+  const { isPending, submit } = useReportAction();
 
   const [selected, setSelected] = useState<string>();
   const [additionalInfo, setAdditionalInfo] = useState<string>();
@@ -40,6 +41,9 @@ export default function ReportSheet({
       category: Number(selected) as v2.ReportCategory,
       additionalInfo: additionalInfo ?? '',
     });
+    // Reset states
+    setStage('option');
+    setAdditionalInfo('');
     onClose();
   };
 
@@ -65,12 +69,18 @@ export default function ReportSheet({
       footer={
         <Sheet.Footer
           right={
-            <Button
-              size="sm"
-              title={isOption ? 'Next' : 'Submit'}
-              onPress={onNextPress}
-              disabled={isOption && !selected}
+            isPending ? <ActivityIndicator
+              size="small"
+              color={theme.palette.primary_500}
+              accessibilityLabel="Posting"
             />
+              :
+              <Button
+                size="sm"
+                title={isOption ? 'Next' : 'Submit'}
+                onPress={onNextPress}
+                disabled={(isOption && !selected) || isPending}
+              />
           }
         />
       }
@@ -88,6 +98,8 @@ export default function ReportSheet({
           <TextArea
             numberOfLines={3}
             placeholder="Please provide any additional information that you think may be helpful."
+            value={additionalInfo ?? ''}
+            onChangeText={setAdditionalInfo}
           />
         )}
       </Sheet.Content>

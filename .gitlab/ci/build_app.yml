@@ -59,6 +59,9 @@ app-web-image:
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
     - apt-get update && apt-get install -y --no-install-recommends git
+    # Tag builds use the tag version; others use the latest release + a patch.
+    - export APP_VERSION=$(node "$CI_PROJECT_DIR/tools/expo/resolve-version.js")
+    - echo "Building app version ${APP_VERSION}"
     - cd ./apps/polycentric
 
 # EAS builds run: manual on merge requests, automatic on the default branch and

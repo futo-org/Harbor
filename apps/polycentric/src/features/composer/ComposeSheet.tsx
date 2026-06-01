@@ -143,15 +143,13 @@ export function ComposeSheet({
       const imageSets: v2.ImageSet[] =
         attachments.length > 0
           ? await Promise.all(
-              attachments.map((a) =>
-                processAndUploadImage(client, a.uri, {
-                  mode: 'fit',
-                  sizes: POST_VARIANT_SIZES,
-                  sourceWidth: a.width,
-                  sourceHeight: a.height,
-                }),
-              ),
-            )
+            attachments.map((a) =>
+              processAndUploadImage(client, a.uri, {
+                mode: 'fit',
+                sizes: POST_VARIANT_SIZES,
+              }),
+            ),
+          )
           : [];
 
       const post: types.v2.Post = {
