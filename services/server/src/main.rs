@@ -4,8 +4,6 @@ mod routes;
 mod service;
 mod util;
 
-use std::sync::Arc;
-
 use crate::db::client::build_db_client;
 use crate::grpc::server::build_grpc_router;
 use crate::routes::build_routes;
@@ -49,7 +47,12 @@ async fn main() {
     util::dotenv::load(".env");
 
     let db = connect_db_with_retry().await;
-    let notification_manager = Arc::new(NotificationManager::new());
+    let (notification_manager, notification_rx) = NotificationManager::new();
+    tokio::spawn(
+        notification_manager
+            .clone()
+            .run_worker(db.clone(), notification_rx),
+    );
     let filestore_cfg = ContentFilestoreConfig::from_env()
         .expect("blob store configuration error");
     let filestore = ContentFilestore::new(filestore_cfg).await;

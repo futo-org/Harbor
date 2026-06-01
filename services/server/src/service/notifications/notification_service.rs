@@ -75,9 +75,10 @@ mod tests {
     use tonic::Code;
 
     async fn impl_for_testing() -> NotificationServiceImpl {
+        let (notification_manager, _rx) = NotificationManager::new();
         NotificationServiceImpl {
             db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-            notification_manager: Arc::new(NotificationManager::new()),
+            notification_manager,
         }
     }
 
@@ -148,9 +149,10 @@ mod tests {
             }]])
             .into_connection();
 
+        let (notification_manager, _rx) = NotificationManager::new();
         let service = NotificationServiceImpl {
             db,
-            notification_manager: Arc::new(NotificationManager::new()),
+            notification_manager,
         };
 
         let message_bytes = RegisterPushNotificationRequest {

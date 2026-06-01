@@ -1,11 +1,14 @@
+use std::sync::Arc;
 use std::{error::Error, fmt};
 
 use expo_push_notification_client::{
     DetailsErrorType, Expo, ExpoClientOptions, ExpoPushMessage, ExpoPushTicket,
 };
 use sea_orm::{DbConn, DbErr, EnumIter};
+use tokio::sync::mpsc;
 
 use super::token_repository;
+use crate::service::feeds::feeds_repository as FeedsRepository;
 use crate::service::{identity::identity_repository, proto::PublicKey};
 
 #[derive(EnumIter)]
@@ -57,17 +60,36 @@ impl From<DbErr> for NotificationError {
     }
 }
 
+/// A unit of work for the notification worker. One job per newly-persisted
+/// post; the worker expands it into the per-recipient sends.
+#[derive(Debug, Clone)]
+pub struct NotificationJob {
+    pub author_identity: String,
+    pub author_name: Option<String>,
+    pub body: String,
+    /// If the post is a reply, the identity of the parent author.
+    pub reply_recipient: Option<String>,
+}
+
 pub struct NotificationManager {
     expo: Expo,
+    tx: mpsc::Sender<NotificationJob>,
 }
 
 impl NotificationManager {
-    pub fn new() -> Self {
-        Self {
+    /// Returns the manager plus the receiving end of the job queue. The
+    /// caller (typically `main`) keeps the manager in an Arc, hands clones
+    /// to the gRPC services, and spawns `run_worker(db, rx)` exactly once.
+    /// Dropping the rx (e.g. in tests) makes `enqueue` a logged no-op.
+    pub fn new() -> (Arc<Self>, mpsc::Receiver<NotificationJob>) {
+        let (tx, rx) = mpsc::channel(1024);
+        let manager = Arc::new(Self {
             expo: Expo::new(ExpoClientOptions {
                 access_token: std::env::var("EXPO_ACCESS_TOKEN").ok(),
             }),
-        }
+            tx,
+        });
+        (manager, rx)
     }
 
     /// Registers a push token for a public key after verifying that the
@@ -87,10 +109,94 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Enqueue a job for the worker. Awaits when the queue is full —
+    /// backpressure into the caller, preferable to silent unbounded
+    /// growth. Logs and drops if the worker is gone.
+    pub async fn enqueue(&self, job: NotificationJob) {
+        if let Err(e) = self.tx.send(job).await {
+            eprintln!("notification queue dropped job: {e}");
+        }
+    }
+
+    /// Long-running worker loop. Spawn once at startup; returns when
+    /// every `Arc<Self>` has been dropped (closing the channel).
+    pub async fn run_worker(
+        self: Arc<Self>,
+        db: DbConn,
+        mut rx: mpsc::Receiver<NotificationJob>,
+    ) {
+        while let Some(job) = rx.recv().await {
+            if let Err(e) = self.process_job(&db, &job).await {
+                eprintln!(
+                    "notification job failed (author={}): {e}",
+                    job.author_identity,
+                );
+            }
+        }
+    }
+
+    /// Expand a NotificationJob into per-recipient sends:
+    /// - the reply recipient (if any), with a "New reply from X" title
+    /// - every follower of the author (minus the author and the reply
+    ///   recipient), with a "New post from X" title
+    async fn process_job(
+        &self,
+        db: &DbConn,
+        job: &NotificationJob,
+    ) -> Result<(), NotificationError> {
+        if let Some(recipient) = &job.reply_recipient {
+            let title = match &job.author_name {
+                Some(name) => format!("New reply from {name}"),
+                None => "New reply".to_string(),
+            };
+            if let Err(e) = self
+                .send_to_identity(db, recipient, title, job.body.clone())
+                .await
+            {
+                eprintln!("reply notification send error: {e}");
+            }
+        }
+
+        let followers = FeedsRepository::Query::list_followers(
+            db,
+            &job.author_identity,
+        )
+        .await?;
+
+        let title = match &job.author_name {
+            Some(name) => format!("New post from {name}"),
+            None => "New post".to_string(),
+        };
+
+        for follower in followers {
+            if follower == job.author_identity {
+                continue;
+            }
+            if job.reply_recipient.as_deref() == Some(follower.as_str()) {
+                continue;
+            }
+            if let Err(e) = self
+                .send_to_identity(
+                    db,
+                    &follower,
+                    title.clone(),
+                    job.body.clone(),
+                )
+                .await
+            {
+                eprintln!(
+                    "follower notification send error for {follower}: {e}"
+                );
+            }
+        }
+
+        Ok(())
+    }
+
     /// Sends a push notification to every authorized key of an identity that
     /// has a registered token. Tokens reported as invalid by the push service
     /// are unregistered as part of the send.
-    pub async fn send(
+    async fn send_to_identity(
         &self,
         db: &DbConn,
         identity: &str,
