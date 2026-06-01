@@ -391,5 +391,350 @@ mod tests {
         // ── 4. Assert Expo received exactly one POST as configured ──
         send_mock.assert_async().await;
     }
+
+    /// Companion to the reply-recipient test: a non-reply post that
+    /// fans out to a follower via the following-feed path.
+    ///
+    /// Scenario: a post with no reply_recipient. The author has one
+    /// follower, and that follower has one authorized signing key with
+    /// a registered Expo token. We expect:
+    ///   - DB reads in order: list_followers, then for the follower
+    ///     authorized_keys and token_for_public_key (reply-recipient
+    ///     branch is skipped entirely when reply_recipient is None)
+    ///   - exactly one POST to `/--/api/v2/push/send` with the
+    ///     follower's token and a "New post from …" title
+    #[tokio::test]
+    async fn process_job_fans_out_to_followers_via_expo() {
+        // ── 1. Mock Expo at the HTTP layer ──────────────────────────
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_header("content-type", "application/json")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"{"to":["ExponentPushToken[follower-xyz]"],"title":"New post from Alice","body":"hello world"}"#
+                    .to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000002"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+
+        let expo = Expo::new_with_base_url(None, &expo_server.url());
+
+        // ── 2. Mock the three DB queries process_job will issue ─────
+        // Note the order vs. the reply-recipient test:
+        // list_followers runs first when reply_recipient is None.
+        let follower_signing_key_bytes = vec![2u8; 32];
+        let follower_signing_pk = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: follower_signing_key_bytes.clone(),
+        };
+        let follower_identity_bytes = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![follower_signing_pk],
+        }
+        .encode_to_vec();
+
+        let follower_row: BTreeMap<String, Value> = BTreeMap::from([(
+            // list_followers uses `into_tuple::<String>()`; the column
+            // name is positional in MockRow so any string key works.
+            "identity".to_string(),
+            Value::from("id-follower".to_string()),
+        )]);
+
+        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([(
+            "identity_bytes".to_string(),
+            Value::from(follower_identity_bytes),
+        )]);
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // (a) list_followers(author): one follower
+            .append_query_results([vec![follower_row]])
+            // (b) authorized_keys(follower): one identity row
+            .append_query_results([vec![authorized_keys_row]])
+            // (c) token_for_public_key(follower_signing_key): one token
+            .append_query_results([vec![PushTokenModel::Model {
+                public_key_type: KeyType::Ed25519 as i16,
+                public_key: follower_signing_key_bytes,
+                service: PushService::Expo.as_ref().to_string(),
+                token: "ExponentPushToken[follower-xyz]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
+            }]])
+            .into_connection();
+
+        // ── 3. Build the manager and drive process_job directly ─────
+        let (manager, _rx) = NotificationManager::new(expo);
+        let job = NotificationJob {
+            author_identity: "id-author".to_string(),
+            author_name: Some("Alice".to_string()),
+            body: "hello world".to_string(),
+            reply_recipient: None,
+        };
+
+        manager
+            .process_job(&db, &job)
+            .await
+            .expect("process_job should succeed");
+
+        // ── 4. Assert Expo received exactly one POST as configured ──
+        send_mock.assert_async().await;
+    }
+
+    /// The author themselves may appear in `list_followers` (since we
+    /// also include their own posts in their following feed elsewhere).
+    /// Verify `process_job` skips them so they don't get a notification
+    /// for their own post.
+    #[tokio::test]
+    async fn process_job_excludes_author_from_follower_fan_out() {
+        // Only "id-other" should receive a push — never the author.
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"{"to":["ExponentPushToken[other-token]"]}"#.to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000003"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo = Expo::new_with_base_url(None, &expo_server.url());
+
+        // `id-author` appears in list_followers but should be filtered out
+        // by `process_job`. If the guard regresses, the test would try to
+        // also send to id-author — MockDatabase has no further results
+        // queued for that path, so process_job would fail downstream.
+        let signing_key_bytes = vec![3u8; 32];
+        let signing_pk = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: signing_key_bytes.clone(),
+        };
+        let identity_bytes = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![signing_pk],
+        }
+        .encode_to_vec();
+
+        let row = |id: &str| -> BTreeMap<String, Value> {
+            BTreeMap::from([(
+                "identity".to_string(),
+                Value::from(id.to_string()),
+            )])
+        };
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // list_followers: author + a real follower, in that order
+            .append_query_results([vec![row("id-author"), row("id-other")]])
+            // authorized_keys(id-other): one identity row
+            .append_query_results([vec![BTreeMap::from([(
+                "identity_bytes".to_string(),
+                Value::from(identity_bytes),
+            )])]])
+            // token_for_public_key: id-other's token
+            .append_query_results([vec![PushTokenModel::Model {
+                public_key_type: KeyType::Ed25519 as i16,
+                public_key: signing_key_bytes,
+                service: PushService::Expo.as_ref().to_string(),
+                token: "ExponentPushToken[other-token]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
+            }]])
+            .into_connection();
+
+        let (manager, _rx) = NotificationManager::new(expo);
+        let job = NotificationJob {
+            author_identity: "id-author".to_string(),
+            author_name: Some("Alice".to_string()),
+            body: "self post".to_string(),
+            reply_recipient: None,
+        };
+
+        manager
+            .process_job(&db, &job)
+            .await
+            .expect("process_job should succeed");
+
+        send_mock.assert_async().await;
+    }
+
+    /// A follower who is also the reply recipient should not be
+    /// notified twice. Verify the follower-loop's skip guard fires.
+    ///
+    /// To catch a regression, two mockito mocks are registered:
+    /// - the expected "New reply from …" call with expect(1)
+    /// - a catch-all "New post from …" call with expect(0)
+    /// If dedup breaks, the second send would match the latter and fail.
+    #[tokio::test]
+    async fn process_job_skips_follower_who_is_also_reply_recipient() {
+        let mut expo_server = mockito::Server::new_async().await;
+
+        let reply_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"{"title":"New reply from Alice"}"#.to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000004"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+
+        // Catch-all that should never fire — proves no "New post" was sent.
+        let new_post_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"{"title":"New post from Alice"}"#.to_string(),
+            ))
+            .with_status(200)
+            .with_body("{}")
+            .expect(0)
+            .create_async()
+            .await;
+
+        let expo = Expo::new_with_base_url(None, &expo_server.url());
+
+        // Single follower whose identity matches reply_recipient.
+        let signing_key_bytes = vec![4u8; 32];
+        let signing_pk = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: signing_key_bytes.clone(),
+        };
+        let identity_bytes = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![signing_pk],
+        }
+        .encode_to_vec();
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // (reply branch) authorized_keys(id-bob)
+            .append_query_results([vec![BTreeMap::from([(
+                "identity_bytes".to_string(),
+                Value::from(identity_bytes),
+            )])]])
+            // (reply branch) token_for_public_key
+            .append_query_results([vec![PushTokenModel::Model {
+                public_key_type: KeyType::Ed25519 as i16,
+                public_key: signing_key_bytes,
+                service: PushService::Expo.as_ref().to_string(),
+                token: "ExponentPushToken[bob-token]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
+            }]])
+            // list_followers returns id-bob — the follower loop should
+            // skip them because they match reply_recipient.
+            .append_query_results([vec![BTreeMap::<String, Value>::from(
+                [("identity".to_string(), Value::from("id-bob".to_string()))],
+            )]])
+            .into_connection();
+
+        let (manager, _rx) = NotificationManager::new(expo);
+        let job = NotificationJob {
+            author_identity: "id-author".to_string(),
+            author_name: Some("Alice".to_string()),
+            body: "hi bob".to_string(),
+            reply_recipient: Some("id-bob".to_string()),
+        };
+
+        manager
+            .process_job(&db, &job)
+            .await
+            .expect("process_job should succeed");
+
+        reply_mock.assert_async().await;
+        new_post_mock.assert_async().await;
+    }
+
+    /// When Expo returns a `DeviceNotRegistered` ticket, the token row
+    /// must be removed from the database via `unregister`. We assert
+    /// the DELETE statement appears in MockDatabase's transaction log.
+    #[tokio::test]
+    async fn process_job_unregisters_token_on_device_not_registered() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            // A DeviceNotRegistered error ticket triggers the unregister
+            // branch in `send_to_identity`.
+            .with_body(
+                r#"{"data":[{"status":"error","message":"not registered","details":{"error":"DeviceNotRegistered"}}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo = Expo::new_with_base_url(None, &expo_server.url());
+
+        let signing_key_bytes = vec![5u8; 32];
+        let signing_pk = PublicKey {
+            key_type: KeyType::Ed25519 as i32,
+            key: signing_key_bytes.clone(),
+        };
+        let identity_bytes = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![signing_pk],
+        }
+        .encode_to_vec();
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // (reply branch) authorized_keys
+            .append_query_results([vec![BTreeMap::from([(
+                "identity_bytes".to_string(),
+                Value::from(identity_bytes),
+            )])]])
+            // (reply branch) token_for_public_key
+            .append_query_results([vec![PushTokenModel::Model {
+                public_key_type: KeyType::Ed25519 as i16,
+                public_key: signing_key_bytes,
+                service: PushService::Expo.as_ref().to_string(),
+                token: "ExponentPushToken[dead-device]".to_string(),
+                created_at: time::PrimitiveDateTime::MIN,
+            }]])
+            // unregister DELETE — sea-orm issues this as exec, not query.
+            .append_exec_results([sea_orm::MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
+            // list_followers: empty
+            .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+            .into_connection();
+
+        let (manager, _rx) = NotificationManager::new(expo);
+        let job = NotificationJob {
+            author_identity: "id-author".to_string(),
+            author_name: Some("Alice".to_string()),
+            body: "ping".to_string(),
+            reply_recipient: Some("id-recipient".to_string()),
+        };
+
+        manager
+            .process_job(&db, &job)
+            .await
+            .expect("process_job should succeed");
+
+        send_mock.assert_async().await;
+
+        // Confirm the unregister DELETE was issued. Consuming the
+        // connection here is fine — we're done with the DB.
+        let log = db.into_transaction_log();
+        let saw_delete = log.iter().any(|tx| {
+            tx.statements().iter().any(|stmt| {
+                let sql = stmt.sql.to_ascii_uppercase();
+                sql.starts_with("DELETE")
+                    && sql.contains("PUSH_TOKEN")
+            })
+        });
+        assert!(
+            saw_delete,
+            "expected an unregister DELETE on push_token, got: {log:?}"
+        );
+    }
 }
 
