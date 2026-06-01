@@ -3,6 +3,19 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+// Without a handler, expo-notifications silently delivers pushes while the
+// app is foregrounded — the OS suppresses the banner/sound. Setting this
+// at module load (rather than inside a component) ensures it's registered
+// before the first notification arrives.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === 'web' || !Device.isDevice) return null;
 
