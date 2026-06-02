@@ -57,7 +57,7 @@ rs-core-tests:
 rs-common-format-check:
   extends: .rust-check
   script:
-    - cd packages/rs-core
+    - cd packages/rs-common
     - cargo fmt --check
 
 rs-common-clippy:
