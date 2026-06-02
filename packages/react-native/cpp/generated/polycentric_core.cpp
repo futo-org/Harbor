@@ -224,7 +224,7 @@ extern "C" {
         uint64_t identity_sequence, 
         RustBuffer signed_by, 
         uint64_t current_sequence, 
-        RustBuffer identity_content_override, 
+        RustBuffer identity_content, 
         RustCallStatus *uniffi_out_err
     );
     void uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(

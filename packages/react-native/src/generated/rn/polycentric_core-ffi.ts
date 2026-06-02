@@ -45,7 +45,7 @@ interface NativeModuleInterface {
     identitySequence: bigint,
     signedBy: Uint8Array,
     currentSequence: bigint,
-    identityContentOverride: Uint8Array,
+    identityContent: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): Uint8Array;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(
