@@ -1,7 +1,7 @@
 [package]
 name = "polycentric-core"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 description = "Rust core for the Polycentric protocol"
 license-file = "../../LICENSE"
 repository = ""

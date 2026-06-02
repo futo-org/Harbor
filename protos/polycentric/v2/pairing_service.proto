@@ -10,8 +10,8 @@ import "polycentric/v2/server.proto";
 message InitialPairingSession {
   // Identity key the session is created for.
   string issuer_identity = 1;
-  // Creation timestamp in unix milliseconds.
-  int64 created_at = 2;
+  // Timestamp so that the pairing session id is unique.
+  int64 timestamp = 2;
 }
 
 /**
@@ -25,16 +25,18 @@ message JoinPairingSessionBody {
  * Pairing session stored and returned by the server.
  */
 message PairingSession {
-  // Signature of the signed InitialPairingSession payload.
+  // Signature of the signed InitialPairingSession payload; serves as the session id.
   string pairing_session_signature = 1;
   // Public key that signed the InitialPairingSession payload.
   PublicKey signed_by = 2;
-  // Session metadata.
-  InitialPairingSession initial_session = 3;
+  // Identity key the session was created for.
+  string issuer_identity = 3;
   // Expiration timestamp in unix milliseconds.
   int64 expires_at = 4;
   // Public keys that have joined the session so far.
   repeated PublicKey claimer_pubkeys = 5;
+  // Server-authoritative creation timestamp in unix milliseconds.
+  int64 created_at = 6;
 }
 
 /**

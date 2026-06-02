@@ -80,12 +80,12 @@ mod tests {
 
     fn make_signed_initial_session(
         issuer_identity: &str,
-        created_at: i64,
+        timestamp: i64,
     ) -> SignedMessage {
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
         let initial_session = Proto::InitialPairingSession {
             issuer_identity: issuer_identity.to_string(),
-            created_at,
+            timestamp,
         };
         let message_bytes = Message::encode_to_vec(&initial_session);
         let signature = signing_key.sign(&message_bytes);
@@ -102,8 +102,7 @@ mod tests {
 
     #[test]
     fn verify_signed_message_accepts_valid_signature() {
-        let created_at = Utc::now().timestamp_millis();
-        let msg = make_signed_initial_session("issuer", created_at);
+        let msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         let public_key = verify_signed_message(&msg).unwrap();
 
         assert_eq!(
@@ -130,11 +129,29 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_pairing_session_rejects_future_created_at() {
+    async fn create_pairing_session_rejects_timestamp_too_far_in_future() {
         let service = impl_for_testing();
         let msg = make_signed_initial_session(
             "issuer",
-            Utc::now().timestamp_millis() + 60_000,
+            Utc::now().timestamp_millis() + 60 * 60 * 1000,
+        );
+
+        let err = service
+            .create_pairing_session(Request::new(CreatePairingSessionRequest {
+                signed_message: Some(msg),
+            }))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn create_pairing_session_rejects_timestamp_too_far_in_past() {
+        let service = impl_for_testing();
+        let msg = make_signed_initial_session(
+            "issuer",
+            Utc::now().timestamp_millis() - 60 * 60 * 1000,
         );
 
         let err = service
@@ -150,10 +167,7 @@ mod tests {
     #[tokio::test]
     async fn create_pairing_session_rejects_invalid_signature() {
         let service = impl_for_testing();
-        let mut msg = make_signed_initial_session(
-            "issuer",
-            Utc::now().timestamp_millis(),
-        );
+        let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 
         let err = service
@@ -207,10 +221,7 @@ mod tests {
     #[tokio::test]
     async fn join_pairing_session_rejects_invalid_signature() {
         let service = impl_for_testing();
-        let mut msg = make_signed_initial_session(
-            "issuer",
-            Utc::now().timestamp_millis(),
-        );
+        let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 
         let err = service

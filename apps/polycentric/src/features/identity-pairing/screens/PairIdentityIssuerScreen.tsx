@@ -271,7 +271,8 @@ export default function PairIdentityIssuerScreen() {
                                 pairAsRotationKey,
                               );
                               router.back();
-                            } catch {
+                            } catch (err) {
+                              console.error('approve failed:', err);
                             } finally {
                               setApprovingClaimers((prev) => {
                                 const next = new Set(prev);

@@ -19,4 +19,4 @@ pub use client::{
 pub use query_observable::{
     QueryObservable, QueryObserver, QueryResult, QueryResultFfi, QueryStatus, ToFfiBytes,
 };
-pub use transport::{channel, GrpcChannel};
+pub use transport::{GrpcChannel, channel};

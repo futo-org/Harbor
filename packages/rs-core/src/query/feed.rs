@@ -4,17 +4,17 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    feeds_service_client::FeedsServiceClient, EventBundle, EventHint, FeedPageParams,
-    GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
-    GetPostThreadRequest, GetPostThreadResponse,
+    EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
+    feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::event::key::EventKey;
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
-use crate::query::{channel, QueryClient, QueryKey, QueryObservable, QueryOpts};
+use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetIdentityFeedArgs {

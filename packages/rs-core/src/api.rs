@@ -1,13 +1,13 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
 use polycentric_common::models::protos_v2::{
+    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
+    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
-    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -180,6 +180,9 @@ impl PolycentricCore {
     }
 
     /// Build a vector clock (returns serialized `VectorClock` proto bytes).
+    /// For identity events, callers should pass the new event's identity
+    /// content as `identity_content` (serialized `Identity` proto bytes).
+    /// For other events, leave it `None`.
     pub fn build_vector_clock(
         &self,
         identity: String,
@@ -187,9 +190,14 @@ impl PolycentricCore {
         identity_sequence: u64,
         signed_by: Vec<u8>,
         current_sequence: u64,
+        identity_content: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, CoreError> {
         let pk = PublicKey::decode(signed_by.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode signed_by: {e}")))?;
+        let identity_content_decoded = identity_content
+            .map(|bytes| Identity::decode(bytes.as_slice()))
+            .transpose()
+            .map_err(|e| CoreError::Decode(format!("Failed to decode identity_content: {e}")))?;
         let clock = self
             .client
             .lock()
@@ -200,6 +208,7 @@ impl PolycentricCore {
                 identity_sequence,
                 &pk,
                 current_sequence,
+                identity_content_decoded,
             )
             .map_err(|e| CoreError::Store(format!("build_vector_clock: {e}")))?;
         Ok(clock.encode_to_vec())

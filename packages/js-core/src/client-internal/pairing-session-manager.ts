@@ -53,13 +53,10 @@ export class PairingSessionManager {
     identityKey: string,
     server: string,
   ): Promise<ActivePairingSession> {
-    // Create and sign the local InitialPairingSession
     const pairingSessionBytes = Proto.InitialPairingSession.toBinary(
       Proto.InitialPairingSession.create({
         issuerIdentity: identityKey,
-        // Servers don't allow these to be in the future.
-        // 1 second in the past to prevent timing issues.
-        createdAt: BigInt(Date.now() - 1_000),
+        timestamp: BigInt(Date.now()),
       }),
     );
     const signedMessage = await this.signMessage(pairingSessionBytes);
@@ -71,12 +68,11 @@ export class PairingSessionManager {
     const session = Proto.PairingSession.fromBinary(
       new Uint8Array(sessionBytes),
     );
-    const initialSession = session.initialSession!;
 
     return {
       code: bytesToHex(signedMessage.signature),
-      identityKey: initialSession.issuerIdentity,
-      createdAt: new Date(Number(initialSession.createdAt)),
+      identityKey: session.issuerIdentity,
+      createdAt: new Date(Number(session.createdAt)),
       expiresAt: new Date(Number(session.expiresAt)),
       signedBy: session.signedBy!,
       claimers: [],
@@ -98,13 +94,12 @@ export class PairingSessionManager {
     const session = Proto.PairingSession.fromBinary(
       new Uint8Array(sessionBytes),
     );
-    const initialSession = session.initialSession!;
     return {
       session,
       claimerPubkeys: [...session.claimerPubkeys],
       pairingSession: {
-        issuerIdentity: initialSession.issuerIdentity,
-        createdAt: new Date(Number(initialSession.createdAt)),
+        issuerIdentity: session.issuerIdentity,
+        createdAt: new Date(Number(session.createdAt)),
         expiresAt: new Date(Number(session.expiresAt)),
         signedBy: session.signedBy!,
       },
@@ -130,13 +125,12 @@ export class PairingSessionManager {
     const session = Proto.PairingSession.fromBinary(
       new Uint8Array(sessionBytes),
     );
-    const initialSession = session.initialSession!;
     return {
       session,
       claimerPubkeys: [...session.claimerPubkeys],
       pairingSession: {
-        issuerIdentity: initialSession.issuerIdentity,
-        createdAt: new Date(Number(initialSession.createdAt)),
+        issuerIdentity: session.issuerIdentity,
+        createdAt: new Date(Number(session.createdAt)),
         expiresAt: new Date(Number(session.expiresAt)),
         signedBy: session.signedBy!,
       },

@@ -71,12 +71,18 @@ impl IdentityDirectory {
             let next_seq = current.sequence + 1;
             let mut candidates: Vec<&DecodedIdentityEvent> = self
                 .raw_at_sequence(next_seq)
-                .filter(|e| current.content.authorizes_rotation(&e.signer))
+                .filter(|e| {
+                    current.content.authorizes_rotation(&e.signer)
+                        || (current.content.authorizes_signer(&e.signer)
+                            // Signing keys are allowed to sign the same content
+                            // to acknowledge their membership in the identity
+                            && e.content == current.content)
+                })
                 .filter(|e| match &e.vc {
                     Some(vc) => vector_clock::verify_vector_clock(
                         store,
                         vc,
-                        &current.content,
+                        &e.content,
                         &self.identity,
                         collections::IDENTITY,
                         &e.signer,

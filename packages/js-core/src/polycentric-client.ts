@@ -322,7 +322,12 @@ export class PolycentricClient {
       createdAt: BigInt(Date.now()),
     });
 
-    event.vectorClock = this.buildVectorClock(event);
+    const identityContentForVC =
+      collection === COLLECTION.IDENTITY &&
+      content.contentBody.oneofKind === 'identity'
+        ? content.contentBody.identity
+        : undefined;
+    event.vectorClock = this.buildVectorClock(event, identityContentForVC);
 
     return event;
   }
@@ -395,13 +400,19 @@ export class PolycentricClient {
    * Requires the identity event and its content to already have been
    * copied into the core via `copy_events` / `copy_contents`.
    */
-  buildVectorClock(event: Proto.Event): Proto.VectorClock {
+  buildVectorClock(
+    event: Proto.Event,
+    identityContent?: Proto.Identity,
+  ): Proto.VectorClock {
     const clockBytes = this.core.buildVectorClock(
       event.key!.identity,
       event.key!.collection,
       event.identitySequence,
       Proto.PublicKey.toBinary(event.key!.signedBy!).buffer as ArrayBuffer,
       event.key!.sequence,
+      identityContent
+        ? (Proto.Identity.toBinary(identityContent).buffer as ArrayBuffer)
+        : undefined,
     );
     return Proto.VectorClock.fromBinary(new Uint8Array(clockBytes));
   }
