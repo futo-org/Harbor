@@ -1,12 +1,11 @@
 use polycentric_common::{
     error::CoreError,
     models::{
-        collections,
+        Serializable, collections,
         protos_v2::{
-            self, content::ContentBody, Content, ContentDigest, Event, EventBundle, EventProof,
-            Identity, PublicKey, SerializedContent, SignedEvent, VectorClock,
+            self, Content, ContentDigest, Event, EventBundle, EventProof, Identity, PublicKey,
+            SerializedContent, SignedEvent, VectorClock, content::ContentBody,
         },
-        Serializable,
     },
 };
 
@@ -126,10 +125,10 @@ impl PolycentricClient {
             if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized) {
                 self.copy_content(digest, content.content_bytes);
             }
-            if !proofs.is_empty() {
-                if let Ok(key) = EventKey::from_event(event) {
-                    self.event_proofs_store.insert(key, proofs);
-                }
+            if !proofs.is_empty()
+                && let Ok(key) = EventKey::from_event(event)
+            {
+                self.event_proofs_store.insert(key, proofs);
             }
             let _ = self.copy_event(signed_event);
         }
@@ -276,22 +275,19 @@ impl PolycentricClient {
                 .and_then(|d| self.content_store.get(d))
                 .map(|b| b.to_vec());
 
-            if let Some(bytes) = content_bytes.as_deref() {
-                if let Ok(content) = Content::decode(bytes) {
-                    if let Some(ContentBody::Delete(d)) = content.content_body {
-                        if let Some(target) = d.event_key {
-                            if let Some(signed_by) = target.signed_by {
-                                tombstoned.insert(EventKey {
-                                    identity: target.identity,
-                                    collection: target.collection,
-                                    signed_by_key_type: signed_by.key_type,
-                                    signed_by_key: signed_by.key,
-                                    sequence: target.sequence,
-                                });
-                            }
-                        }
-                    }
-                }
+            if let Some(bytes) = content_bytes.as_deref()
+                && let Ok(content) = Content::decode(bytes)
+                && let Some(ContentBody::Delete(d)) = content.content_body
+                && let Some(target) = d.event_key
+                && let Some(signed_by) = target.signed_by
+            {
+                tombstoned.insert(EventKey {
+                    identity: target.identity,
+                    collection: target.collection,
+                    signed_by_key_type: signed_by.key_type,
+                    signed_by_key: signed_by.key,
+                    sequence: target.sequence,
+                });
             }
 
             let bundle = EventBundle {
@@ -458,8 +454,8 @@ mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
     use polycentric_common::models::protos_v2::{
-        content::ContentBody as Body, ContentDigestType, EventKey as ProtoEventKey,
-        EventProofTarget, Identity, KeyType, Post, RevocationBound,
+        ContentDigestType, EventKey as ProtoEventKey, EventProofTarget, Identity, KeyType, Post,
+        RevocationBound, content::ContentBody as Body,
     };
     use sha2::{Digest as ShaDigest, Sha256};
     use std::collections::HashMap;

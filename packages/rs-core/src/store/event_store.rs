@@ -58,7 +58,10 @@ impl EventStore {
     }
 
     /// All events for a given identity, ordered by (collection, signer, sequence).
-    pub fn by_identity(&self, identity: &str) -> impl Iterator<Item = (&EventKey, &SignedEvent)> {
+    pub fn by_identity(
+        &self,
+        identity: &str,
+    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> + use<'_> {
         let identity_owned = identity.to_string();
         self.events
             .range(Self::prefix_start(identity, None, None)..)
@@ -70,7 +73,7 @@ impl EventStore {
         &self,
         identity: &str,
         collection: i32,
-    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> {
+    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> + use<'_> {
         let identity_owned = identity.to_string();
         self.events
             .range(Self::prefix_start(identity, Some(collection), None)..)
@@ -87,7 +90,7 @@ impl EventStore {
         collection: i32,
         signer_key_type: i32,
         signer_key: &[u8],
-    ) -> impl DoubleEndedIterator<Item = (&EventKey, &SignedEvent)> {
+    ) -> impl DoubleEndedIterator<Item = (&EventKey, &SignedEvent)> + use<'_> {
         let lower = EventKey {
             identity: identity.to_string(),
             collection,

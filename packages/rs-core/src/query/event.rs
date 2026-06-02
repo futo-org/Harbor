@@ -5,16 +5,16 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use polycentric_common::models::protos_v2::{
-    event_sync_service_client::EventSyncServiceClient, EventBundle, ListEventsFilters,
-    ListEventsRequest, ListEventsResponse,
+    EventBundle, ListEventsFilters, ListEventsRequest, ListEventsResponse,
+    event_sync_service_client::EventSyncServiceClient,
 };
 use prost::Message;
 
-use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::event::key::PublicKey;
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
-    channel, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus,
+    QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
 
