@@ -3,12 +3,15 @@ members = [
     "packages/rs-common",
     "packages/rs-core",
     "services/server",
-    "services/server/entity",
-    "services/server/migration",
-    "services/server/tests",
+    "services/moderation",
+    "services/common/*",
 ]
 exclude = ["legacy/"]
 resolver = "2"
 
 [workspace.dependencies]
 uniffi = { version = "=0.31.0", features = ["tokio"] }
+rdkafka = { version = "0.39" }
+sea-orm = { version = "~2.0.0-rc.40" }
+sea-orm-migration = { version = "~2.0.0-rc.40" }
+tokio = { version = "1.50.0" }

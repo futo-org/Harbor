@@ -1,0 +1,27 @@
+[package]
+edition      = "2024"
+name         = "moderation-service"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+[dependencies]
+# Workspace
+polycentric-core = { path = "../../packages/rs-core" }
+polycentric-common = { path = "../../packages/rs-common" }
+common-dotenv = { path = "../common/dotenv" }
+common-kafka = { path = "../common/kafka" }
+common-object-store = { path = "../common/object-store" }
+moderation-migration = { path = "./migration" }
+moderation-entity = { path = "./entity" }
+
+# 3rd Party
+log = "0.4"
+env_logger = "0.11"
+prost = "0.14"
+time = "0.3"
+reqwest = { version = "0.13", default-features = false, features = ["json", "query", "rustls"] }
+base64 = "0.22"
+serde_json = "1"
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
+tokio = { workspace = true, features = ["full"] }

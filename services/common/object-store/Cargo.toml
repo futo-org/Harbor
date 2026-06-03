@@ -1,0 +1,12 @@
+[package]
+name = "common-object-store"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+# Workspace
+polycentric-common = { path = "../../../packages/rs-common" }
+
+# 3rd Party
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1"
