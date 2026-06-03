@@ -28,7 +28,8 @@ impl MigrationTrait for Migration {
         let schema = Schema::new(manager.get_database_backend());
 
         create_entity(manager, &schema, pairing_session_model::Entity).await?;
-        create_entity(manager, &schema, pairing_session_claimer_model::Entity).await?;
+        create_entity(manager, &schema, pairing_session_claimer_model::Entity)
+            .await?;
 
         Ok(())
     }

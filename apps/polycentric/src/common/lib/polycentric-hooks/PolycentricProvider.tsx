@@ -1,5 +1,6 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import useFollows from '@/src/features/follow/hooks/useFollows';
+import useReposts from '@/src/features/post/hooks/useReposts';
 import {
   PolycentricClient,
   createPolycentricClient,
@@ -23,6 +24,7 @@ import {
   useStore,
   type PolycentricStoreApi,
 } from './store';
+import useReactions from '@/src/features/reaction/useReactions';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
@@ -169,10 +171,18 @@ export function PolycentricProvider({
           // Read follows from the local store immediately — don't gate
           // the UI on the network sync. The sync runs in parallel and
           // re-refreshes once new events have been pulled in.
-          await useFollows.getState().refresh(c);
+          useFollows.getState().refresh(c);
+          useReposts.getState().refresh(c);
+          useReactions.getState().refresh(c);
           void c
             .sync()
-            .then(() => useFollows.getState().refresh(c))
+            .then(() =>
+              Promise.all([
+                useFollows.getState().refresh(c),
+                useReposts.getState().refresh(c),
+                useReactions.getState().refresh(c),
+              ]),
+            )
             .catch((syncError) => {
               console.warn('Initial Polycentric sync failed:', syncError);
             });
@@ -184,14 +194,17 @@ export function PolycentricProvider({
           if (cancelled) return;
           setCurrentIdentity(await resolveIdentity(c));
           await s.getState().refreshIdentities();
-          await useFollows.getState().refresh(c);
+          // TODO: Cleanup this up
+          useFollows.getState().refresh(c);
+          useReposts.getState().refresh(c);
+          useReactions.getState().refresh(c);
         });
 
-        // Identity onboarding (create / claim) publishes an Identity event,
-        // which flows through onContentCreated. Re-resolve so the gate
-        // flips from onboarding → app once the user completes signup.
-        c.events.onContentCreated(async () => {
+        // Identity onboarding (create / claim) publishes an Identity event.
+        // Set to current identity
+        c.events.onContentCreated(async ({ content }) => {
           if (cancelled) return;
+          if (content?.contentBody.oneofKind !== 'identity') return;
           setCurrentIdentity(await resolveIdentity(c));
         });
       } catch (err) {
@@ -223,7 +236,6 @@ export function PolycentricProvider({
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
-    if (!client || !store) return null;
     return {
       client,
       store,

@@ -1,0 +1,4 @@
+{
+  "*": "biome check --write --files-ignore-unknown=true --no-errors-on-unmatched",
+  "{packages,services}/**/*.rs": "rustfmt --edition 2024"
+}

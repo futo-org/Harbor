@@ -551,6 +551,58 @@ const FfiConverterTypeListEventsArgs = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * JPEG bytes plus the exact output dimensions of the resized image.
+ */
+export type ProcessedImage = {
+  bytes: ArrayBuffer;
+  width: /*u32*/ number;
+  height: /*u32*/ number;
+};
+
+/**
+ * Generated factory for {@link ProcessedImage} record objects.
+ */
+export const ProcessedImage = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ProcessedImage, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ProcessedImage>,
+  });
+})();
+
+const FfiConverterTypeProcessedImage = (() => {
+  type TypeName = ProcessedImage;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        bytes: FfiConverterArrayBuffer.read(from),
+        width: FfiConverterUInt32.read(from),
+        height: FfiConverterUInt32.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterArrayBuffer.write(value.bytes, into);
+      FfiConverterUInt32.write(value.width, into);
+      FfiConverterUInt32.write(value.height, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterArrayBuffer.allocationSize(value.bytes) +
+        FfiConverterUInt32.allocationSize(value.width) +
+        FfiConverterUInt32.allocationSize(value.height)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type PublicKey = {
   keyType: /*i32*/ number;
   key: ArrayBuffer;
@@ -1829,13 +1881,17 @@ const uniffiCallbackInterfaceObserver: {
 export interface PolycentricCoreLike {
   /**
    * Build a vector clock (returns serialized `VectorClock` proto bytes).
+   * For identity events, callers should pass the new event's identity
+   * content as `identity_content` (serialized `Identity` proto bytes).
+   * For other events, leave it `None`.
    */
   buildVectorClock(
     identity: string,
     collection: /*i32*/ number,
     identitySequence: /*u64*/ bigint,
     signedBy: ArrayBuffer,
-    currentSequence: /*u64*/ bigint
+    currentSequence: /*u64*/ bigint,
+    identityContent: ArrayBuffer | undefined
   ) /*throws*/ : ArrayBuffer;
   /**
    * Insert each (digest, content) pair into the content store.
@@ -1868,6 +1924,14 @@ export interface PolycentricCoreLike {
     query: Query,
     opts: QueryOpts | undefined
   ): QueryObservable;
+  /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ) /*throws*/ : /*u64*/ bigint | undefined;
   /**
    * Fetch a pairing session by its signature. Returns serialized
    * `PairingSession` proto bytes.
@@ -1915,6 +1979,16 @@ export interface PolycentricCoreLike {
   ) /*throws*/ : ArrayBuffer;
   nextSequence(identity: string, collection: /*i32*/ number): /*u64*/ bigint;
   /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer;
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer;
+  /**
    * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
    * "fit"), encode as JPEG.
    */
@@ -1923,7 +1997,7 @@ export interface PolycentricCoreLike {
     width: /*u32*/ number,
     height: /*u32*/ number,
     mode: string
-  ) /*throws*/ : ArrayBuffer;
+  ) /*throws*/ : ProcessedImage;
   /**
    * Push event bundles to a server.
    */
@@ -2001,13 +2075,17 @@ export class PolycentricCore
 
   /**
    * Build a vector clock (returns serialized `VectorClock` proto bytes).
+   * For identity events, callers should pass the new event's identity
+   * content as `identity_content` (serialized `Identity` proto bytes).
+   * For other events, leave it `None`.
    */
   buildVectorClock(
     identity: string,
     collection: /*i32*/ number,
     identitySequence: /*u64*/ bigint,
     signedBy: ArrayBuffer,
-    currentSequence: /*u64*/ bigint
+    currentSequence: /*u64*/ bigint,
+    identityContent: ArrayBuffer | undefined
   ): ArrayBuffer /*throws*/ {
     return FfiConverterArrayBuffer.lift(
       uniffiCaller.rustCallWithError(
@@ -2022,6 +2100,7 @@ export class PolycentricCore
             FfiConverterUInt64.lower(identitySequence),
             FfiConverterArrayBuffer.lower(signedBy),
             FfiConverterUInt64.lower(currentSequence),
+            FfiConverterOptionalArrayBuffer.lower(identityContent),
             callStatus
           );
         },
@@ -2135,6 +2214,32 @@ export class PolycentricCore
             FfiConverterArrayString.lower(queryKey),
             FfiConverterTypeQuery.lower(query),
             FfiConverterOptionalTypeQueryOpts.lower(opts),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Max sequence of identity events signed by `signer` for `identity`,
+   * or `None` if this signer has no identity events.
+   */
+  getIdentitySequence(
+    identity: string,
+    signer: ArrayBuffer
+  ): /*u64*/ bigint | undefined /*throws*/ {
+    return FfiConverterOptionalUInt64.lift(
+      uniffiCaller.rustCallWithError(
+        /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        ),
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterArrayBuffer.lower(signer),
             callStatus
           );
         },
@@ -2355,6 +2460,46 @@ export class PolycentricCore
   }
 
   /**
+   * Merkle root over the canonically-ordered signatures in
+   * `(identity, collection)`. Empty when no events exist.
+   */
+  previousRoot(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
+   * Signature of the canonically-latest event in `(identity, collection)`.
+   * Empty when no events exist.
+   */
+  previousSignature(identity: string, collection: /*i32*/ number): ArrayBuffer {
+    return FfiConverterArrayBuffer.lift(
+      uniffiCaller.rustCall(
+        /*caller:*/ (callStatus) => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity),
+            FfiConverterInt32.lower(collection),
+            callStatus
+          );
+        },
+        /*liftString:*/ FfiConverterString.lift
+      )
+    );
+  }
+
+  /**
    * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
    * "fit"), encode as JPEG.
    */
@@ -2363,8 +2508,8 @@ export class PolycentricCore
     width: /*u32*/ number,
     height: /*u32*/ number,
     mode: string
-  ): ArrayBuffer /*throws*/ {
-    return FfiConverterArrayBuffer.lift(
+  ): ProcessedImage /*throws*/ {
+    return FfiConverterTypeProcessedImage.lift(
       uniffiCaller.rustCallWithError(
         /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
           FfiConverterTypeCoreError
@@ -3417,6 +3562,9 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
+// FfiConverter for /*u64*/bigint | undefined
+const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
+
 // FfiConverter for Array<ArrayBuffer>
 const FfiConverterArrayArrayBuffer = new FfiConverterArray(
   FfiConverterArrayBuffer
@@ -3472,7 +3620,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !==
-    31180
+    16886
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock'
@@ -3508,6 +3656,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !==
+    8615
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence'
     );
   }
   if (
@@ -3567,8 +3723,24 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root() !==
+    20406
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_root'
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !==
+    18222
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !==
-    65374
+    45203
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg'
@@ -3742,6 +3914,7 @@ export default Object.freeze({
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
+    FfiConverterTypeProcessedImage,
     FfiConverterTypePublicKey,
     FfiConverterTypeQuery,
     FfiConverterTypeQueryObservable,

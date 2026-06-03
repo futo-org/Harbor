@@ -29,4 +29,6 @@ setup-image-rust:
         --frontend dockerfile.v0 \
         --local context=.gitlab/images/rust \
         --local dockerfile=.gitlab/images/rust \
+        --import-cache type=registry,ref=$RUST_IMAGE \
+        --export-cache type=inline \
         --output type=image,name=$RUST_IMAGE,push=true

@@ -25,6 +25,8 @@ message Content {
     Reaction reaction = 6;
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
+    Repost repost = 9;
+    Report report = 10;
   }
 }
 
@@ -39,6 +41,7 @@ message Post {
   optional PostReply reply = 2;
   // Multiple images
   repeated ImageSet images = 3;
+  optional EventKey quote = 4;
 }
 
 message PostReply {
@@ -46,6 +49,10 @@ message PostReply {
   EventKey root = 1;
   // Post that is being replied to
   EventKey parent = 2;
+}
+
+message Repost {
+  optional EventKey post = 1;
 }
 
 // When processed by a server it should check if the data is referenced by any events
@@ -65,20 +72,13 @@ message Block {
   string identity = 1;
 }
 
-enum Opinion {
-  OPINION_UNSPECIFIED = 0;
-  OPINION_LIKE = 1;
-  OPINION_DISLIKE = 2;
-  OPINION_NEUTRAL = 3;
-}
-
 message Reaction {
   // Key of the event being reacted to
   EventKey event_key = 1;
   // Optional emoji
   optional string emoji = 2;
-  // Opinion ratings
-  Opinion opinion = 3;
+  // Upvote = true. Downvote = false.
+  bool positive = 3;
 }
 
 message ProfileUpdate {
@@ -111,6 +111,24 @@ message Image {
 // Collection of different variants of an image
 message ImageSet {
   repeated Image images = 1;
+}
+
+enum ReportCategory {
+  REPORT_CATEGORY_UNSPECIFIED = 0;
+  REPORT_CATEGORY_SPAM = 1;
+  REPORT_CATEGORY_ABUSE = 2;
+  REPORT_CATEGORY_CHILD_SAFETY = 3;
+  REPORT_CATEGORY_TERRORISM = 4;
+  REPORT_CATEGORY_ILLEGAL = 5;
+  REPORT_CATEGORY_COPYRIGHT = 6;
+  REPORT_CATEGORY_SERVER_POLICY = 7;
+}
+
+message Report {
+  // Event that is being reported
+  EventKey event_key = 1;
+  ReportCategory category = 2;
+  string additional_info = 3;
 }
 
 /**

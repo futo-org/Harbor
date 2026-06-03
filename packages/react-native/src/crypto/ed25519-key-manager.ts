@@ -22,7 +22,7 @@ export class ED25519KeyManager {
   getPublicKeyFromPrivate(privateKey: Uint8Array): Uint8Array {
     if (privateKey.length !== ED25519_PRIVATE_KEY_LENGTH) {
       throw new InvalidKeyLengthError(
-        `Invalid private key length. Expected ${ED25519_PRIVATE_KEY_LENGTH} bytes, got ${privateKey.length}.`
+        `Invalid private key length. Expected ${ED25519_PRIVATE_KEY_LENGTH} bytes, got ${privateKey.length}.`,
       );
     }
     return ed25519.getPublicKey(privateKey);
@@ -37,7 +37,7 @@ export class ED25519KeyManager {
   sign(message: Uint8Array, privateKey: Uint8Array): Uint8Array {
     if (privateKey.length !== ED25519_PRIVATE_KEY_LENGTH) {
       throw new InvalidKeyLengthError(
-        `Invalid private key length for signing. Expected ${ED25519_PRIVATE_KEY_LENGTH} bytes, got ${privateKey.length}.`
+        `Invalid private key length for signing. Expected ${ED25519_PRIVATE_KEY_LENGTH} bytes, got ${privateKey.length}.`,
       );
     }
     return ed25519.sign(message, privateKey);
@@ -46,16 +46,16 @@ export class ED25519KeyManager {
   verify(
     signature: Uint8Array,
     message: Uint8Array,
-    publicKey: Uint8Array
+    publicKey: Uint8Array,
   ): boolean {
     if (signature.length !== ED25519_SIGNATURE_LENGTH) {
       throw new InvalidSignatureError(
-        `Invalid signature length. Expected ${ED25519_SIGNATURE_LENGTH} bytes, got ${signature.length}.`
+        `Invalid signature length. Expected ${ED25519_SIGNATURE_LENGTH} bytes, got ${signature.length}.`,
       );
     }
     if (publicKey.length !== ED25519_PUBLIC_KEY_LENGTH) {
       throw new InvalidKeyLengthError(
-        `Invalid public key length for verification. Expected ${ED25519_PUBLIC_KEY_LENGTH} bytes, got ${publicKey.length}.`
+        `Invalid public key length for verification. Expected ${ED25519_PUBLIC_KEY_LENGTH} bytes, got ${publicKey.length}.`,
       );
     }
     return ed25519.verify(signature, message, publicKey);

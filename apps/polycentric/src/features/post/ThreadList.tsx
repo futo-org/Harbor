@@ -5,8 +5,7 @@ import { Post } from './Post';
 import { useThread } from './hooks/useThread';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
-import { List, ListProps } from '@/src/common/components/List/List';
-import Topbar from '@/src/common/components/layout/Topbar';
+import { List, ListProps } from '@/src/common/components/List';
 
 type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   post: PostData;

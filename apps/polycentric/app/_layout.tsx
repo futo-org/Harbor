@@ -3,6 +3,7 @@ import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
+import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -41,7 +42,7 @@ function RootStack() {
           name="feed"
           options={{
             presentation: 'transparentModal',
-            animation: 'none',
+            animation: isWeb ? 'fade' : 'default',
             contentStyle: { backgroundColor: 'transparent' },
           }}
         />
@@ -79,6 +80,7 @@ export default function RootLayout() {
           <PolycentricProvider onInitialized={onInitialized}>
             <TrueSheetProvider>
               <RootStack />
+              <PortalHost />
             </TrueSheetProvider>
           </PolycentricProvider>
         </ThemeProvider>

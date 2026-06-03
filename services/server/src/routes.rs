@@ -1,11 +1,12 @@
 use axum::{
     Router,
     extract::{Path, State},
-    http::{StatusCode, header},
+    http::{Method, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
 };
 use sea_orm::DatabaseConnection;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::grpc::reflection_ui::reflection_ui;
 use crate::service::content::content_filestore::ContentFilestore;
@@ -26,12 +27,18 @@ pub fn build_routes(
 ) -> Router {
     let state = AppState { db, filestore };
 
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::any())
+        .allow_methods([Method::GET, Method::OPTIONS])
+        .max_age(std::time::Duration::from_secs(86400));
+
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/status", get(|| async { "OK." }))
         .route("/docs", get(reflection_ui))
         .route("/blob/{digest_id}", get(get_blob))
         .with_state(state)
+        .layer(cors)
 }
 
 /// Serve a blob body by its content digest. `digest_id` is encoded as

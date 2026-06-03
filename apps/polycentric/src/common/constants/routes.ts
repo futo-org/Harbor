@@ -3,20 +3,26 @@ import { PostData } from '../lib/polycentric-hooks';
 
 export type OpenComposeOptions = {
   replyTo?: PostData['id'];
+  quote?: PostData['id'];
   /** Immediately launch the image picker once the composer mounts. */
   attachImage?: boolean;
 };
 
 export function openCompose(options: OpenComposeOptions = {}) {
-  const { replyTo, attachImage } = options;
+  const { replyTo, quote, attachImage } = options;
   const params = new URLSearchParams();
   if (replyTo) {
     params.set('replyTo', replyTo);
   }
+  if (quote) {
+    params.set('quote', quote);
+  }
   if (attachImage) params.set('attach', '1');
-  const qs = params.toString();
+  const queryString = params.toString();
   router.push(
-    qs ? `${Routes.tabs.feed.compose}?${qs}` : Routes.tabs.feed.compose,
+    queryString
+      ? `${Routes.tabs.feed.compose}?${queryString}`
+      : Routes.tabs.feed.compose,
   );
 }
 

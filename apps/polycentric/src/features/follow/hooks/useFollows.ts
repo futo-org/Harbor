@@ -3,6 +3,10 @@ import {
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
+import {
+  decodeBundle,
+  type DecodedBundle,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { create } from 'zustand';
 
 type FollowsState = {
@@ -13,27 +17,6 @@ type FollowsState = {
   refresh: (client: PolycentricClient) => Promise<void>;
 };
 
-/**
- * Decode a `Follow` content out of an EventBundle. Returns `null` if the
- * bundle doesn't carry a Follow.
- */
-function decodeFollow(
-  bundle: v2.EventBundle,
-): { event: v2.Event; identity: string } | null {
-  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return null;
-  }
-  let content: v2.Content;
-  try {
-    content = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
-  } catch {
-    return null;
-  }
-  if (content.contentBody.oneofKind !== 'follow') return null;
-  const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-  return { event, identity: content.contentBody.follow.identity };
-}
-
 const useFollows = create<FollowsState>((set, get) => ({
   follows: new Map(),
   isFollowing(identity) {
@@ -43,6 +26,8 @@ const useFollows = create<FollowsState>((set, get) => ({
    * Creates the Follow event and syncs
    */
   async addFollow(client, identity) {
+    const follows = get().follows;
+
     const content = v2.Content.create({
       contentBody: {
         oneofKind: 'follow',
@@ -53,10 +38,18 @@ const useFollows = create<FollowsState>((set, get) => ({
     await client.contentManager.save(content);
     const event = await client.buildEvent(content, COLLECTION.GRAPH);
     const signedEvent = await client.signEvent(event);
-    await client.commitEvent(signedEvent, content);
-    await client.sync();
 
-    set({ follows: new Map(get().follows).set(identity, true) });
+    // Optimistically upate the state
+    set({ follows: new Map(follows).set(identity, true) });
+
+    try {
+      await client.commitEvent(signedEvent, content);
+      await client.sync();
+    } catch (err) {
+      console.error(err);
+      // revert the change
+      set({ follows });
+    }
   },
   /**
    * Creates a Delete event for the last know Follow event and sync
@@ -65,42 +58,51 @@ const useFollows = create<FollowsState>((set, get) => ({
     const self = client.activeIdentityKey;
     if (!self) return;
 
+    const follows = get().follows;
+
     const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
 
     // Tombstone every active Follow event this identity wrote that targets
     // `identity`. A single identity may have multiple follow events across
     // signing keys — delete them all.
     const targets = bundles
-      .map(decodeFollow)
+      .map((bundle) => decodeBundle(bundle, 'follow'))
       .filter(
-        (entry): entry is { event: v2.Event; identity: string } =>
-          entry !== null && entry.identity === identity,
+        (entry): entry is DecodedBundle<'follow'> =>
+          entry !== null && entry.content.identity === identity,
       );
 
-    for (const { event } of targets) {
-      if (!event.key) continue;
-      const deleteContent = v2.Content.create({
-        contentBody: {
-          oneofKind: 'delete',
-          delete: { eventKey: event.key },
-        },
-      });
-      await client.contentManager.save(deleteContent);
-      const deleteEvent = await client.buildEvent(
-        deleteContent,
-        COLLECTION.GRAPH,
-      );
-      const signedDelete = await client.signEvent(deleteEvent);
-      await client.commitEvent(signedDelete, deleteContent);
+    // Optimistically upate the state
+    const next = new Map(follows);
+    next.delete(identity);
+    set({ follows: next });
+
+    try {
+      for (const { event } of targets) {
+        if (!event.key) continue;
+        const deleteContent = v2.Content.create({
+          contentBody: {
+            oneofKind: 'delete',
+            delete: { eventKey: event.key },
+          },
+        });
+        await client.contentManager.save(deleteContent);
+        const deleteEvent = await client.buildEvent(
+          deleteContent,
+          COLLECTION.GRAPH,
+        );
+        const signedDelete = await client.signEvent(deleteEvent);
+        await client.commitEvent(signedDelete, deleteContent);
+      }
+    } catch (err) {
+      console.error(err);
+      // Revert the state change
+      set({ follows });
     }
 
     if (targets.length > 0) {
       await client.sync();
     }
-
-    const next = new Map(get().follows);
-    next.delete(identity);
-    set({ follows: next });
   },
   /**
    * Returns the synced and valid (post tombstoned) Follow events
@@ -113,8 +115,8 @@ const useFollows = create<FollowsState>((set, get) => ({
 
     const follows = new Map<string, boolean>();
     for (const bundle of bundles) {
-      const entry = decodeFollow(bundle);
-      if (entry) follows.set(entry.identity, true);
+      const entry = decodeBundle(bundle, 'follow');
+      if (entry) follows.set(entry.content.identity, true);
     }
 
     set({ follows });

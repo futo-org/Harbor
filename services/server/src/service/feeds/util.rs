@@ -1,0 +1,18 @@
+//! Small helpers shared across the feeds handlers.
+
+use crate::service::proto::FeedPageParams;
+use sea_orm::DbErr;
+use tonic::Status;
+
+pub fn page_limit(page_params: &Option<FeedPageParams>) -> u64 {
+    page_params
+        .as_ref()
+        .and_then(|p| p.limit)
+        .unwrap_or(50)
+        .clamp(1, 200) as u64
+}
+
+pub fn map_db_err(e: DbErr) -> Status {
+    eprintln!("feeds_service db error: {e}");
+    Status::internal("internal server error")
+}

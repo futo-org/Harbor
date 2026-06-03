@@ -1,4 +1,4 @@
-import { StyleSheet, TextStyle } from 'react-native';
+import { StyleSheet, TextStyle, ViewStyle } from 'react-native';
 
 export const Spacing = {
   '0': 0,
@@ -22,6 +22,7 @@ export const BorderRadius = {
   md: 8,
   lg: 12,
   xl: 16,
+  '2xl': 24,
   full: 999,
 } as const;
 
@@ -208,6 +209,10 @@ export const Atoms = StyleSheet.create({
   },
   text_right: {
     textAlign: 'right',
+  },
+
+  text_underline: {
+    textDecorationLine: 'underline',
   },
 
   font_normal: {
@@ -647,4 +652,15 @@ export const Atoms = StyleSheet.create({
   rounded_full: {
     borderRadius: BorderRadius.full,
   },
+
+  /**
+   * Outline
+   */
+  // `outlineStyle: 'none'` is web-only and not in RN's ViewStyle union, so cast
+  // (as TextInput does). On web this fully removes the focus ring that
+  // `outlineWidth: 0` alone leaves behind; on native both props are ignored.
+  outline_none: {
+    outlineStyle: 'none',
+    outlineWidth: 0,
+  } as unknown as ViewStyle,
 });

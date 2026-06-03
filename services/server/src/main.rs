@@ -1,3 +1,4 @@
+mod data;
 mod db;
 mod grpc;
 mod routes;
@@ -10,8 +11,8 @@ use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
-use crate::service::notifications::notification_manager::NotificationManager;
-use crate::service::server::server_service::ServerConfig;
+use crate::service::notifications::manager::NotificationManager;
+use crate::service::server::rpc::ServerConfig;
 use expo_push_notification_client::{Expo, ExpoClientOptions};
 use sea_orm::DatabaseConnection;
 

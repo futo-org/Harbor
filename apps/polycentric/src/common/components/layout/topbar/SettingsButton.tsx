@@ -1,5 +1,5 @@
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable } from 'react-native';
 
@@ -15,11 +15,7 @@ export function TopbarSettingsButton() {
       ]}
       hitSlop={Spacing['lg']}
     >
-      <Ionicons
-        name="settings-outline"
-        size={20}
-        color={theme.palette.neutral_800}
-      />
+      <Icon name="settings" size={20} color="neutral_800" />
     </Pressable>
   );
 }

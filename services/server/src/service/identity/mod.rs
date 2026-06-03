@@ -1,1 +1,3 @@
-pub mod identity_repository;
+pub mod pairing;
+pub mod repository;
+pub mod service;

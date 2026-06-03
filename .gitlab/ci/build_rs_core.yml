@@ -15,7 +15,6 @@
         - .gitlab/ci/build_rs_core.yml
   variables:
     RUST_CORE_PATH: packages/rs-core
-    CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
   cache:
     - key:
         files:
@@ -49,6 +48,30 @@ rs-core-clippy:
     - cd packages/rs-core
     - just clippy
 
+rs-core-tests:
+  extends: .rust-check
+  script:
+    - cd packages/rs-core
+    - just test
+
+rs-common-format-check:
+  extends: .rust-check
+  script:
+    - cd packages/rs-common
+    - cargo fmt --check
+
+rs-common-clippy:
+  extends: .rust-check
+  script:
+    - cd packages/rs-common
+    - cargo clippy
+
+rs-common-tests:
+  extends: .rust-check
+  script:
+    - cd packages/rs-common
+    - cargo test
+
 # rs-core-build:
 #   extends: .rs-core-workflow
 #   stage: build
@@ -64,6 +87,7 @@ rs-core-uniffi-web-build:
     - !reference [.js-sdk-workflow, rules]
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.release-workflow, rules]
   cache:
     - key:
         files:
@@ -76,15 +100,10 @@ rs-core-uniffi-web-build:
     - key:
         files:
           - packages/rs-core/Cargo.lock
+          - pnpm-lock.yaml
         prefix: rs-core-target-${CI_JOB_NAME}
       paths:
         - target
-    - key:
-        files:
-          - pnpm-lock.yaml
-        prefix: ubrn-target
-      paths:
-        - node_modules/.pnpm/uniffi-bindgen-react-native@*/node_modules/uniffi-bindgen-react-native/target
   script:
     - cd packages/rs-core-uniffi-web
     - |

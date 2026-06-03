@@ -1,17 +1,13 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
+import { Sheet } from '@/src/common/components/sheet';
 import {
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  DismissReason,
-  SheetHeaderBlock,
-  SheetMenu,
-} from '@/src/common/lib/sheet';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -71,11 +67,7 @@ function CountdownTimer({
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-      <Ionicons
-        name="time-outline"
-        size={16}
-        color={theme.palette.neutral_500}
-      />
+      <Icon name="time" size={16} color="neutral_500" />
       <Text variant="small" color="neutral_500">
         Valid for{'  '}
         <Text
@@ -173,26 +165,27 @@ export default function PairIdentityIssuerScreen() {
 
   const renderPendingApprovalsSheet = () => {
     const claimerStr = activePendingClaimer;
+    const activeClaimer = claimerStr ?? '';
 
-    if (!claimerStr) {
-      return null;
-    }
+    const closeAndDeny = () => {
+      if (activeClaimer) denyClaimer(activeClaimer);
+      setActivePendingClaimer(null);
+      setShowPendingApprovals(false);
+    };
 
-    const activeClaimer = claimerStr;
+    const closeSilently = () => {
+      setActivePendingClaimer(null);
+      setShowPendingApprovals(false);
+    };
 
     return (
-      <SheetMenu
+      <Sheet
+        open={!!claimerStr}
         detents={['auto', 1]}
         dismissible
-        onClose={(reason) => {
-          if (reason === DismissReason.UserDismissed) {
-            denyClaimer(activeClaimer);
-          }
-          setActivePendingClaimer(null);
-          setShowPendingApprovals(false);
-        }}
+        onClose={closeAndDeny}
       >
-        {(dismissSheet) => {
+        {(() => {
           function PendingApprovalsSheetBody() {
             const { theme } = useTheme();
             const dismissRequestedRef = useRef(false);
@@ -209,18 +202,16 @@ export default function PairIdentityIssuerScreen() {
 
               if (dismissRequestedRef.current) return;
               dismissRequestedRef.current = true;
-              void dismissSheet(DismissReason.PostSubmitted);
-            }, [pendingCount, isApproving, isApproveActionActive, claimerStr]);
+              closeSilently();
+            }, [pendingCount, isApproving, isApproveActionActive]);
 
             return (
-              <View>
-                <SheetHeaderBlock
+              <>
+                <Sheet.Header
                   title="Pending Approvals"
-                  onClose={() => {
-                    void dismissSheet();
-                  }}
+                  onClose={closeAndDeny}
                 />
-                <View
+                <Sheet.Content
                   style={[Atoms.px_lg, Atoms.pt_2xl, Atoms.pb_lg, Atoms.gap_lg]}
                 >
                   <View style={[Atoms.items_center, Atoms.gap_md]}>
@@ -280,7 +271,8 @@ export default function PairIdentityIssuerScreen() {
                                 pairAsRotationKey,
                               );
                               router.back();
-                            } catch {
+                            } catch (err) {
+                              console.error('approve failed:', err);
                             } finally {
                               setApprovingClaimers((prev) => {
                                 const next = new Set(prev);
@@ -339,11 +331,7 @@ export default function PairIdentityIssuerScreen() {
                       }}
                     >
                       {pairAsRotationKey ? (
-                        <Ionicons
-                          name="checkmark"
-                          size={14}
-                          color={theme.palette.neutral_0}
-                        />
+                        <Icon name="checkmark" size={14} color="neutral_0" />
                       ) : null}
                     </View>
                     <View style={[Atoms.flex_1, Atoms.gap_xs]}>
@@ -355,14 +343,14 @@ export default function PairIdentityIssuerScreen() {
                       </Text>
                     </View>
                   </Pressable>
-                </View>
-              </View>
+                </Sheet.Content>
+              </>
             );
           }
 
           return <PendingApprovalsSheetBody />;
-        }}
-      </SheetMenu>
+        })()}
+      </Sheet>
     );
   };
 
@@ -448,10 +436,10 @@ export default function PairIdentityIssuerScreen() {
                       },
                     ]}
                   >
-                    <Ionicons
-                      name={justCopied ? 'checkmark' : 'copy-outline'}
+                    <Icon
+                      name={justCopied ? 'checkmark' : 'copy'}
                       size={16}
-                      color={theme.palette.primary_500}
+                      color="primary_500"
                     />
                     <Text
                       variant="small"

@@ -3,13 +3,14 @@ import {
   List,
   type ListProps,
   type ListRenderItem,
-} from '../../common/components/List/List';
+} from '../../common/components/List';
 import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import { Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
+import { PostSkeletonList } from '../post/PostSkeleton';
 
 export type FeedListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   feed: FeedHookResult;
@@ -17,7 +18,7 @@ export type FeedListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   renderItem?: ListProps<PostData>['renderItem'];
 };
 
-const defaultKeyExtractor = (item: PostData) => item.id;
+const defaultKeyExtractor = (item: PostData) => item.repostId ?? item.id;
 
 const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} />
@@ -38,7 +39,9 @@ export default function FeedList({
       keyExtractor={keyExtractor}
       data={feed.items}
       ListEmptyComponent={
-        !feed.isLoading ? (
+        feed.isLoading ? (
+          <PostSkeletonList />
+        ) : (
           <View
             style={[
               Atoms.flex_1,
@@ -49,7 +52,7 @@ export default function FeedList({
           >
             <Text color="neutral_500">{emptyMessage}</Text>
           </View>
-        ) : null
+        )
       }
       ListFooterComponent={
         feed.hasMore && feed.items.length > 0 ? (

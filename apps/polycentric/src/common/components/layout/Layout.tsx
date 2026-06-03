@@ -19,9 +19,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
-import { Ionicons } from '@expo/vector-icons';
-import WEB_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
+import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
+import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
@@ -127,7 +128,7 @@ function Screen({
     <KeyboardAvoidingView
       style={[Atoms.flex_1, Atoms.flex_row, Atoms.w_full, Atoms.min_w_0]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.bottom}
+      keyboardVerticalOffset={insets.top}
     >
       {children}
     </KeyboardAvoidingView>
@@ -183,6 +184,7 @@ export const LeftSidebar = memo(function LeftSidebar({
   ...props
 }: LeftSidebarProps) {
   const { width: deviceWidth } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const { identity } = useCurrentIdentity();
 
@@ -237,7 +239,7 @@ export const LeftSidebar = memo(function LeftSidebar({
                 ]}
               >
                 <Image
-                  source={WEB_LOGO}
+                  source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
                   contentFit="contain"
                   style={{ width: 30, height: 30 }}
                 />
@@ -259,7 +261,7 @@ export const LeftSidebar = memo(function LeftSidebar({
                     size="md"
                     fullWidth={!narrowSidebar}
                     icon={({ size, color }) => (
-                      <Ionicons name="add-circle" size={size} color={color} />
+                      <Icon name="add" size={size} color={color} />
                     )}
                     onPress={() => openCompose()}
                   />
@@ -348,10 +350,10 @@ export const RightSidebar = memo(function RightSidebar({
               onPress={toggleTheme}
               style={({ pressed }) => [pressed && { opacity: 0.65 }]}
             >
-              <Ionicons
-                name={theme.name === 'dark' ? 'moon' : 'sunny'}
+              <Icon
+                name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
                 size={typography.fontSize.sm}
-                color={theme.palette.neutral_500}
+                color="neutral_500"
               />
             </Pressable>
             {LINKS.map(({ text, href }) => (

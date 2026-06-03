@@ -1,9 +1,9 @@
-import { v2 } from '@polycentric/react-native';
-import { bundleEventId } from '@/src/common/lib/polycentric-hooks';
+import { bundleEventId } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   getQueryCache,
   setQueryCache,
 } from '@/src/common/query/hooks/useQuery';
+import { v2 } from '@polycentric/react-native';
 
 export const feedQueryKeys = {
   following: (): string[] => ['following_feed'],

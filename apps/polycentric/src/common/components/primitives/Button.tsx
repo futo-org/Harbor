@@ -55,7 +55,7 @@ const SIZE_CONFIG: Record<
 > = {
   sm: {
     paddingV: 4,
-    paddingH: Spacing['lg'],
+    paddingH: Spacing['md'],
     iconSize: 16,
     borderRadius: 'full',
   },
@@ -184,7 +184,7 @@ function getVariantStyle(theme: Theme, variant: ButtonVariant) {
     case 'primary':
       return {
         backgroundColor: theme.palette.primary_500,
-        borderColor: theme.palette.primary_600,
+        borderColor: theme.palette.primary_500,
         shadowColor: theme.palette.primary_900,
         shadowOpacity: 0.22,
         shadowRadius: 10,

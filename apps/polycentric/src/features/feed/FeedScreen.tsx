@@ -1,18 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@/src/common/components/layout';
 import { Fab } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
+import { Screen } from '@/src/common/components/layout';
+import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
 import { Text } from '@/src/common/components/primitives';
-import { ComposerInput } from '@/src/features/composer';
-import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { openCompose } from '@/src/common/constants';
-import { isWeb } from '@/src/common/util/platform';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
-import { View } from 'react-native';
+import { isWeb } from '@/src/common/util/platform';
+import { ComposerInput } from '@/src/features/composer';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
+import { View } from 'react-native';
 import FeedList from './FeedList';
+import { useFollowingFeed } from './hooks/useFollowingFeed';
 
 const ListHeader = () => {
   return (
@@ -63,7 +63,7 @@ export default function FeedScreen() {
         {showComposeFab ? (
           <Fab
             onPress={openCompose}
-            icon={() => <Ionicons name="add" size={32} color="white" />}
+            icon={() => <Icon name="add" size={32} color="white" />}
           />
         ) : null}
       </Screen.PrimaryColumn>

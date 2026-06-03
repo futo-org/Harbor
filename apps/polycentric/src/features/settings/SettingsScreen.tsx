@@ -4,10 +4,11 @@ import {
   ListItem,
   ListItemGroup,
   ProfileAvatar,
-  ScreenHeader,
   Screen,
   Text,
 } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
+import Topbar from '@/src/common/components/layout/Topbar';
 import {
   REPORT_BUG_URL,
   Routes,
@@ -15,12 +16,10 @@ import {
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
 import { Linking, ScrollView, View } from 'react-native';
-import Topbar from '@/src/common/components/layout/Topbar';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -35,10 +34,10 @@ function AppearanceSettingRow() {
       <View
         style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
       >
-        <Ionicons
-          name={theme.name === 'dark' ? 'moon' : 'sunny'}
+        <Icon
+          name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
           size={22}
-          style={theme.atoms.icon_accent}
+          color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
         />
         <Text variant="body" style={theme.atoms.text}>
           Theme
@@ -144,8 +143,6 @@ function ListItemWrapper({
   children: React.ReactNode;
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
-
   return (
     <ListItem onPress={onPress}>
       <View
@@ -157,11 +154,7 @@ function ListItemWrapper({
         ]}
       >
         {children}
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={theme.palette.neutral_500}
-        />
+        <Icon name="chevronForward" size={18} color="neutral_500" />
       </View>
     </ListItem>
   );

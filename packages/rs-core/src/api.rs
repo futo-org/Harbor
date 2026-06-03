@@ -1,13 +1,13 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
 use polycentric_common::models::protos_v2::{
+    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
+    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
-    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
 };
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
@@ -120,6 +120,40 @@ impl PolycentricCore {
             .next_sequence(&identity, collection)
     }
 
+    /// Max sequence of identity events signed by `signer` for `identity`,
+    /// or `None` if this signer has no identity events.
+    pub fn get_identity_sequence(
+        &self,
+        identity: String,
+        signer: Vec<u8>,
+    ) -> Result<Option<u64>, CoreError> {
+        let pk = PublicKey::decode(signer.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode signer: {e}")))?;
+        Ok(self
+            .client
+            .lock()
+            .unwrap()
+            .get_identity_sequence(&identity, &pk))
+    }
+
+    /// Merkle root over the canonically-ordered signatures in
+    /// `(identity, collection)`. Empty when no events exist.
+    pub fn previous_root(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_root(&identity, collection)
+    }
+
+    /// Signature of the canonically-latest event in `(identity, collection)`.
+    /// Empty when no events exist.
+    pub fn previous_signature(&self, identity: String, collection: i32) -> Vec<u8> {
+        self.client
+            .lock()
+            .unwrap()
+            .previous_signature(&identity, collection)
+    }
+
     /// Verify each `SignedEvent` (decoding implicitly verifies the
     /// signature) and copy it into the local event store.
     pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
@@ -146,6 +180,9 @@ impl PolycentricCore {
     }
 
     /// Build a vector clock (returns serialized `VectorClock` proto bytes).
+    /// For identity events, callers should pass the new event's identity
+    /// content as `identity_content` (serialized `Identity` proto bytes).
+    /// For other events, leave it `None`.
     pub fn build_vector_clock(
         &self,
         identity: String,
@@ -153,9 +190,14 @@ impl PolycentricCore {
         identity_sequence: u64,
         signed_by: Vec<u8>,
         current_sequence: u64,
+        identity_content: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, CoreError> {
         let pk = PublicKey::decode(signed_by.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode signed_by: {e}")))?;
+        let identity_content_decoded = identity_content
+            .map(|bytes| Identity::decode(bytes.as_slice()))
+            .transpose()
+            .map_err(|e| CoreError::Decode(format!("Failed to decode identity_content: {e}")))?;
         let clock = self
             .client
             .lock()
@@ -166,6 +208,7 @@ impl PolycentricCore {
                 identity_sequence,
                 &pk,
                 current_sequence,
+                identity_content_decoded,
             )
             .map_err(|e| CoreError::Store(format!("build_vector_clock: {e}")))?;
         Ok(clock.encode_to_vec())
@@ -225,8 +268,7 @@ impl PolycentricCore {
 
         let response = ListEventsResponse {
             event_bundles,
-            previous_token: String::new(),
-            next_token: String::new(),
+            event_hints: Vec::new(),
         };
 
         Ok(response.encode_to_vec())
@@ -240,7 +282,7 @@ impl PolycentricCore {
         width: u32,
         height: u32,
         mode: String,
-    ) -> Result<Vec<u8>, CoreError> {
+    ) -> Result<process_image::ProcessedImage, CoreError> {
         let mode = match mode.as_str() {
             "fit" => process_image::ResizeMode::Fit,
             _ => process_image::ResizeMode::Fill,

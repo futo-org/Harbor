@@ -11,4 +11,28 @@ message Identity {
 
   // List of keys that are allowed to sign events (but not change the identity content).
   repeated PublicKey signing_keys = 2;
+
+  // In order to retain valid events from a revoked keypair, we store their last known
+  // signature.
+  repeated RevocationBound revocation_bounds = 3;
+}
+
+message RevocationBound {
+  // Key that is revoked
+  PublicKey revoked_key = 1;
+  // One target per collection `revoked_key` wrote in, anchoring proof
+  // verification at that collection's head event.
+  repeated EventProofTarget targets = 2;
+}
+
+// Per-collection target for verifying an EventProof.
+message EventProofTarget {
+  int32 collection = 1;
+  // Event's signature; matched by `EventProof.target_signature`.
+  bytes signature = 2;
+  // Event's `previous_root` — the Merkle root proofs verify against.
+  bytes root = 3;
+  // Leaf count of the tree at `root` (the number of events the head's
+  // signer was aware of when they signed it).
+  uint64 leaf_count = 4;
 }

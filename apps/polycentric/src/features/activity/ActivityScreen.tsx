@@ -4,7 +4,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { Atoms } from '@/src/common/theme';
 import { FlashList } from '@shopify/flash-list';
 import { View } from 'react-native';
-import { List } from '@/src/common/components/List/List';
+import { List } from '@/src/common/components/List';
 
 export default function ActivityScreen() {
   return (

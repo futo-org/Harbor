@@ -10,10 +10,15 @@ import {
 } from './client-internal';
 import { COLLECTION, KEY_TYPE, type Collection } from './constants';
 import { HTTPClient } from './http';
-import type { ICryptoManager, IStorageDriver } from './platform-interfaces';
+import { sha256 } from '@noble/hashes/sha2';
+import type {
+  ICryptoManager,
+  IFileStoreDriver,
+  IStorageDriver,
+} from './platform-interfaces';
 import * as Proto from './proto/v2';
-import { StorageHandle } from './storage/storage-handle';
-import { bytesToHex } from './utils/hex';
+import { StorageHandle } from './datastore/storage-handle';
+import { bytesToHex, toDigestKey } from './utils/hex';
 
 import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
@@ -49,6 +54,7 @@ export interface PolycentricClientConfig {
    */
   core: CoreType;
   storageDriver: IStorageDriver;
+  filestoreDriver: IFileStoreDriver;
   cryptoManager: ICryptoManager;
   /**
    * gRPC-web URLs the client should start with. Used to seed
@@ -90,11 +96,13 @@ export class PolycentricClient {
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
+  public readonly filestoreDriver: IFileStoreDriver;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
+    this.filestoreDriver = config.filestoreDriver;
     if (config.seedServers && config.seedServers.length > 0) {
       this.servers = [...config.seedServers];
     }
@@ -206,7 +214,7 @@ export class PolycentricClient {
     if (!server) return null;
     const cdn = this.cdnUrlByServer.get(server);
     if (!cdn) return null;
-    return `${cdn}/blob/${digest.type}_${bytesToHex(digest.value)}`;
+    return `${cdn}/blob/${toDigestKey(digest)}`;
   }
 
   /**
@@ -276,8 +284,29 @@ export class PolycentricClient {
 
     const sequence = this.core.nextSequence(this.activeIdentityKey, collection);
 
+    // identity_sequence must reference an identity event signed by the
+    // current keypair.
     const identitySequence =
-      this.core.nextSequence(this.activeIdentityKey, COLLECTION.IDENTITY) - 1n;
+      collection === COLLECTION.IDENTITY
+        ? sequence
+        : this.core.getIdentitySequence(
+            this.activeIdentityKey,
+            Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
+              .buffer as ArrayBuffer,
+          );
+
+    if (!identitySequence) {
+      throw new Error(
+        'Cannot build event: current keypair has no identity event for the active identity (broken pairing?)',
+      );
+    }
+
+    const previousSignature = new Uint8Array(
+      this.core.previousSignature(this.activeIdentityKey, collection),
+    );
+    const previousRoot = new Uint8Array(
+      this.core.previousRoot(this.activeIdentityKey, collection),
+    );
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
@@ -287,12 +316,18 @@ export class PolycentricClient {
         sequence,
       }),
       identitySequence,
-      previousSignature: new Uint8Array(0),
+      previousSignature,
+      previousRoot,
       contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
     });
 
-    event.vectorClock = this.buildVectorClock(event);
+    const identityContentForVC =
+      collection === COLLECTION.IDENTITY &&
+      content.contentBody.oneofKind === 'identity'
+        ? content.contentBody.identity
+        : undefined;
+    event.vectorClock = this.buildVectorClock(event, identityContentForVC);
 
     return event;
   }
@@ -365,13 +400,19 @@ export class PolycentricClient {
    * Requires the identity event and its content to already have been
    * copied into the core via `copy_events` / `copy_contents`.
    */
-  buildVectorClock(event: Proto.Event): Proto.VectorClock {
+  buildVectorClock(
+    event: Proto.Event,
+    identityContent?: Proto.Identity,
+  ): Proto.VectorClock {
     const clockBytes = this.core.buildVectorClock(
       event.key!.identity,
       event.key!.collection,
       event.identitySequence,
       Proto.PublicKey.toBinary(event.key!.signedBy!).buffer as ArrayBuffer,
       event.key!.sequence,
+      identityContent
+        ? (Proto.Identity.toBinary(identityContent).buffer as ArrayBuffer)
+        : undefined,
     );
     return Proto.VectorClock.fromBinary(new Uint8Array(clockBytes));
   }
@@ -477,7 +518,8 @@ export class PolycentricClient {
 
   /**
    * Decode an image, resize into `width` x `height` per `mode`, and
-   * encode as JPEG via the core.
+   * encode as JPEG via the core. Returns the JPEG bytes plus the
+   * actual output dimensions.
    *
    * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
    * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
@@ -487,15 +529,18 @@ export class PolycentricClient {
     width: number,
     height: number,
     mode: 'fill' | 'fit' = 'fill',
-  ): Uint8Array {
-    return new Uint8Array(
-      this.core.processImageToJpeg(
-        image.buffer as ArrayBuffer,
-        width,
-        height,
-        mode,
-      ),
+  ): { bytes: Uint8Array; width: number; height: number } {
+    const result = this.core.processImageToJpeg(
+      image.buffer as ArrayBuffer,
+      width,
+      height,
+      mode,
     );
+    return {
+      bytes: new Uint8Array(result.bytes),
+      width: result.width,
+      height: result.height,
+    };
   }
 
   /**
@@ -547,6 +592,45 @@ export class PolycentricClient {
   }
 
   /**
+   * Hash `bytes` and save to the local filestore. Returns the matching
+   * `Blob` proto. Does not upload to servers.
+   */
+  async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
+    const digest: Proto.ContentDigest = {
+      type: Proto.ContentDigestType.SHA256,
+      value: sha256(bytes),
+    };
+    await this.filestoreDriver.put(digest, bytes);
+    return Proto.Blob.create({
+      digest,
+      mimeType,
+      size: BigInt(bytes.length),
+    });
+  }
+
+  /**
+   * Fetch a blob body by digest from any server CDN that has it.
+   * Returns null if no configured server's CDN serves it.
+   */
+  async fetchBlobBytes(
+    digest: Proto.ContentDigest,
+  ): Promise<Uint8Array | null> {
+    const suffix = `/blob/${toDigestKey(digest)}`;
+    for (const server of this.servers) {
+      const cdn = this.cdnUrlByServer.get(server);
+      if (!cdn) continue;
+      try {
+        const res = await fetch(`${cdn}${suffix}`);
+        if (!res.ok) continue;
+        return new Uint8Array(await res.arrayBuffer());
+      } catch {
+        // try next server
+      }
+    }
+    return null;
+  }
+
+  /**
    * Upload a blob body to all configured servers. The server verifies
    * that `body` hashes to `blob.digest` before persisting. Rejections
    * from individual servers are logged but do not throw.
@@ -575,18 +659,17 @@ export class PolycentricClient {
    */
   async push(): Promise<void> {
     if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
 
     const localEvents = await this.storage.events.getAll();
-    const publicKey = this.currentKeyPair.publicKey.key;
 
-    // Build event bundles with content for events matching the active key
+    // Build event bundles with content for events matching the active identity
     const bundles: Proto.EventBundle[] = [];
     for (const signedEvent of localEvents) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
 
-      // Only push events signed by the active key
-      const signedBy = event.key?.signedBy;
-      if (!signedBy || !this.bytesEqual(signedBy.key, publicKey)) continue;
+      // Only push events belonging to the active identity
+      if (event.key?.identity !== this.activeIdentityKey) continue;
 
       // Look up content by digest
       let serializedContent: Proto.SerializedContent | undefined;
@@ -683,6 +766,11 @@ export class PolycentricClient {
     await this.copyEvents(signedEvents);
     await this.copyContents(contents);
 
+    // Catch any of our own referenced blobs so they persist locally.
+    await Promise.all(
+      contents.map(({ content }) => this.contentManager.pullBlobs(content)),
+    );
+
     return newCount;
   }
 
@@ -744,14 +832,6 @@ export class PolycentricClient {
     this.error = error;
     this.events.emitStateChanged(this.state);
     this.events.emitError(error);
-  }
-
-  private bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
   }
 
   get currentSystem(): Proto.PublicKey {

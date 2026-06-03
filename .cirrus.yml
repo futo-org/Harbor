@@ -2,9 +2,24 @@ build_ios_task:
   name: buildReactNativeIOS
   macos_instance:
     image: ghcr.io/cirruslabs/macos-sequoia-xcode:26.2
+  env:
+    CARGO_HOME: $CIRRUS_WORKING_DIR/.cargo
+    CARGO_TARGET_DIR: $CIRRUS_WORKING_DIR/target
+  cargo_registry_cache:
+    folder: $CIRRUS_WORKING_DIR/.cargo/registry
+    fingerprint_script:
+      - cat packages/rs-core/Cargo.lock
+  cargo_git_cache:
+    folder: $CIRRUS_WORKING_DIR/.cargo/git
+    fingerprint_script:
+      - cat packages/rs-core/Cargo.lock
+  target_cache:
+    folder: $CIRRUS_WORKING_DIR/target
+    fingerprint_script:
+      - cat packages/rs-core/Cargo.lock pnpm-lock.yaml
   build_script:
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - source "$HOME/.cargo/env"
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+    - source "$CARGO_HOME/env"
     - brew install just protobuf cmake ninja clang-format pnpm
     - cd packages/react-native
     - |

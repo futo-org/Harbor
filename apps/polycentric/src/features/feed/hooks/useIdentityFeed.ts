@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { Query, QueryStatus, v2 } from '@polycentric/react-native';
-import {
-  decodeV2PostBundle,
-  PostData,
-} from '@/src/common/lib/polycentric-hooks';
+import { decodeFeedItems } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
@@ -26,13 +23,7 @@ export function useIdentityFeed(
       return [];
     }
     const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
-    const items: PostData[] = [];
-    for (const bundle of response.eventBundles) {
-      const decoded = decodeV2PostBundle(bundle);
-      if (decoded) items.push(decoded);
-    }
-
-    return items;
+    return decodeFeedItems(response);
   }, [query.data]);
 
   return {

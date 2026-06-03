@@ -47,19 +47,18 @@ server-deploy-image-production:
     strategy: depend
   variables:
     MANIFEST_SETUP_COMMAND: quick
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:$ENVIRONMENT
     MANIFEST_STAGGER_TIME: '10'
 
 server-deploy-manifest-staging:
   extends: .server-deploy-manifest
   variables:
-    ENVIRONMENT: staging
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:staging
   needs:
     - server-deploy-image-staging
 
 server-deploy-manifest-production:
   extends: .server-deploy-manifest
   variables:
-    ENVIRONMENT: polycentric # not production!
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/server.yml:polycentriceast,inventory/polycentric-west/server.yml:polycentricwest
   needs:
     - server-deploy-image-production

@@ -47,19 +47,18 @@ app-deploy-image-production:
     strategy: depend
   variables:
     MANIFEST_SETUP_COMMAND: quick
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/app.yml:$ENVIRONMENT
     MANIFEST_STAGGER_TIME: '10'
 
 app-deploy-manifest-staging:
   extends: .app-deploy-manifest
   variables:
-    ENVIRONMENT: staging
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/app.yml:staging
   needs:
     - app-deploy-image-staging
 
 app-deploy-manifest-production:
   extends: .app-deploy-manifest
   variables:
-    ENVIRONMENT: polycentric # not production!
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/app.yml:polycentriceast,inventory/polycentric-west/app.yml:polycentricwest
   needs:
     - app-deploy-image-production

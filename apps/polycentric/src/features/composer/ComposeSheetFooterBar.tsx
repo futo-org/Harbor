@@ -1,8 +1,7 @@
-import { Button, Text } from '@/src/common/components/primitives';
+import Icon from '@/src/common/components/Icon';
+import { Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, View } from 'react-native';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -38,11 +37,7 @@ export function ComposeSheetFooterBar({
         { opacity: attachDisabled ? 0.4 : 1 },
       ]}
     >
-      <Ionicons
-        name="image-outline"
-        size={22}
-        color={theme.palette.neutral_700}
-      />
+      <Icon name="image" size={22} color="neutral_700" />
     </Pressable>
   ) : null;
 
@@ -52,33 +47,6 @@ export function ComposeSheetFooterBar({
       <Text variant="small" color="neutral_500">
         {charCount}/2000
       </Text>
-    </View>
-  );
-
-  const postSlot = (
-    <View
-      style={{
-        minWidth: 80,
-        minHeight: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      {submitting ? (
-        <ActivityIndicator
-          size="small"
-          color={theme.palette.primary_500}
-          accessibilityLabel="Posting"
-        />
-      ) : (
-        <Button
-          title="Post"
-          onPress={onPost}
-          variant="primary"
-          disabled={!canPost}
-          size="sm"
-        />
-      )}
     </View>
   );
 
@@ -101,7 +69,6 @@ export function ComposeSheetFooterBar({
         ]}
       >
         {leading}
-        {postSlot}
       </View>
     );
   }

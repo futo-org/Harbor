@@ -5,7 +5,6 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
@@ -13,7 +12,8 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -67,7 +67,8 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     >
       {avatar}
       <Pressable
-        onPress={() => router.push(Routes.tabs.identitySwitch)}
+        // TODO  Route to identitySwitch when that is implemented
+        onPress={() => router.push(Routes.tabs.settings.identity)}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         hitSlop={10}
@@ -102,11 +103,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             ]}
           />
         ) : null}
-        <Ionicons
-          name="chevron-down"
-          size={18}
-          color={theme.palette.neutral_1000}
-        />
+        <Icon name="chevronDown" size={18} color="neutral_1000" />
       </Pressable>
     </View>
   );

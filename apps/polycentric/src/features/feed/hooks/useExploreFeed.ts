@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Query, QueryStatus, v2 } from '@polycentric/react-native';
 import {
-  decodeV2PostBundle,
-  PostData,
+  decodeFeedItems,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult, NOOP } from './types';
@@ -22,6 +21,8 @@ export function useExploreFeed(options?: {
     new Query.GetExploreFeed({
       identity: identity === '' ? undefined : identity,
     }),
+    undefined,
+    enabled,
   );
 
   const items = useMemo(() => {
@@ -29,13 +30,7 @@ export function useExploreFeed(options?: {
       return [];
     }
     const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
-    const items: PostData[] = [];
-    for (const bundle of response.eventBundles) {
-      const decoded = decodeV2PostBundle(bundle);
-      if (decoded) items.push(decoded);
-    }
-
-    return items;
+    return decodeFeedItems(response);
   }, [query.data]);
 
   return {

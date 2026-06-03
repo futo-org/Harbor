@@ -1,21 +1,19 @@
 import { ComponentProps, useState } from 'react';
 import { Avatar } from './Avatar';
-import { identiconUrl } from '../../lib/polycentric-hooks';
 import * as ImagePicker from 'expo-image-picker';
-import type { ImagePickerAsset } from 'expo-image-picker';
 
 type AvatarEditProps = {
-  identity: string;
+  /** Avatar shown until the user picks a new image. */
+  defaultUri: string;
   onSelect?: (uri: string) => void;
-} & ComponentProps<typeof Avatar>;
+} & Omit<ComponentProps<typeof Avatar>, 'source' | 'onPress'>;
+
 export default function AvatarEdit({
-  identity,
+  defaultUri,
   onSelect,
   ...props
 }: AvatarEditProps) {
-  const [avatarUrl, setAvatarUrl] = useState<string>(
-    identiconUrl(identity, 160),
-  );
+  const [selectedUri, setSelectedUri] = useState<string>();
 
   const onPress = async () => {
     const result = await ImagePicker.launchImageLibraryAsync();
@@ -25,9 +23,15 @@ export default function AvatarEdit({
     }
 
     const asset = result.assets[0];
-    setAvatarUrl(asset.uri);
+    setSelectedUri(asset.uri);
     onSelect?.(asset.uri);
   };
 
-  return <Avatar {...props} source={{ uri: avatarUrl }} onPress={onPress} />;
+  return (
+    <Avatar
+      {...props}
+      source={{ uri: selectedUri ?? defaultUri }}
+      onPress={onPress}
+    />
+  );
 }

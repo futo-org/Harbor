@@ -1,32 +1,35 @@
-import { Button, Screen, Text } from '@/src/common/components';
+import { Button, Screen } from '@/src/common/components';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Image } from 'expo-image';
-import WEB_LOGO from '../../common/assets/images/polycentric-logo-with-text.png';
+import LOGO_WITH_TEXT from '../../common/assets/images/polycentric-logo-with-text.png';
 
 export default function OnboardingWelcomeScreen() {
-  const dimensions = useWindowDimensions();
   return (
     <Screen>
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.mx_lg]}>
           <View
+            // Absolute column to vertically center the logo
+            // (not offset by the buttons)
             style={[
-              Atoms.flex_1,
+              Atoms.absolute,
+              Atoms.inset_0,
               Atoms.justify_center,
               Atoms.items_center,
               Atoms.gap_2xl,
+              Atoms.p_3xl,
             ]}
           >
             <Image
-              source={WEB_LOGO}
+              source={LOGO_WITH_TEXT}
               contentFit="contain"
               style={{
-                width: dimensions.width - 100,
-                height: dimensions.width,
+                width: '100%',
+                aspectRatio: 1,
               }}
             />
           </View>

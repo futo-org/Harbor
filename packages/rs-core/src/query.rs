@@ -10,6 +10,7 @@ pub mod feed;
 pub mod profile;
 pub mod query_observable;
 pub mod transport;
+pub(crate) mod validation;
 
 pub use client::{
     FetchMode, MaybeSend, MergeFn, QueryClient, QueryFnBox, QueryFutureBox, QueryKey, QueryOpts,
@@ -18,4 +19,4 @@ pub use client::{
 pub use query_observable::{
     QueryObservable, QueryObserver, QueryResult, QueryResultFfi, QueryStatus, ToFfiBytes,
 };
-pub use transport::{channel, GrpcChannel};
+pub use transport::{GrpcChannel, channel};
