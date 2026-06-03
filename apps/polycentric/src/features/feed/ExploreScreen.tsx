@@ -4,7 +4,7 @@ import { Fab } from '@/src/common/components';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { useExploreFeed } from './hooks/useExploreFeed';
 import { openCompose } from '@/src/common/constants';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import {
   Atoms,
   BorderRadius,
@@ -67,7 +67,8 @@ const ListHeader = () => {
 };
 
 export default function ExploreScreen() {
-  const showComposeFab = !isWeb;
+  // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
+  const showComposeFab = !isWeb && !isIOS;
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useExploreFeed({ enabled });

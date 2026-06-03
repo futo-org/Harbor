@@ -148,13 +148,13 @@ export function ComposeSheetInner({
       const imageSets: v2.ImageSet[] =
         attachments.length > 0
           ? await Promise.all(
-              attachments.map((a) =>
-                processAndUploadImage(client, a.uri, {
-                  mode: 'fit',
-                  sizes: POST_VARIANT_SIZES,
-                }),
-              ),
-            )
+            attachments.map((a) =>
+              processAndUploadImage(client, a.uri, {
+                mode: 'fit',
+                sizes: POST_VARIANT_SIZES,
+              }),
+            ),
+          )
           : [];
 
       const post: types.v2.Post = {
@@ -244,7 +244,7 @@ export function ComposeSheetInner({
     : "What's on your mind?";
 
   return (
-    <View style={theme.atoms.bg}>
+    <View style={[Atoms.flex_1, theme.atoms.bg]}>
       <SheetHeaderBlock
         title={title}
         onClose={handleClose}

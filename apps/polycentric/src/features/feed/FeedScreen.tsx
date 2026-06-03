@@ -5,7 +5,7 @@ import { Text } from '@/src/common/components/primitives';
 import { ComposerInput } from '@/src/features/composer';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { openCompose } from '@/src/common/constants';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
@@ -24,7 +24,8 @@ const ListHeader = () => {
 };
 
 export default function FeedScreen() {
-  const showComposeFab = !isWeb;
+  // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
+  const showComposeFab = !isWeb && !isIOS;
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useFollowingFeed({ enabled });

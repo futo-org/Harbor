@@ -1,5 +1,5 @@
 import { useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Slot } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
@@ -11,6 +11,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs
+      backBehavior="history"
       minimizeBehavior="onScrollDown"
       backgroundColor={theme.palette.neutral_0}
       iconColor={theme.palette.neutral_900}
@@ -33,6 +34,16 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
       </NativeTabs.Trigger>
+
+      {isIOS ? (
+        <NativeTabs.Trigger name="compose" role="search">
+          <NativeTabs.Trigger.Label hidden>Compose</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon
+            sf={{ default: 'square.and.pencil', selected: 'square.and.pencil' }}
+            md="edit"
+          />
+        </NativeTabs.Trigger>
+      ) : null}
     </NativeTabs>
   );
 }
