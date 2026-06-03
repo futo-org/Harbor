@@ -11,6 +11,7 @@ use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
+use crate::service::context::ServiceContext;
 use crate::service::notifications::manager::NotificationManager;
 use crate::service::server::rpc::ServerConfig;
 use expo_push_notification_client::{Expo, ExpoClientOptions};
@@ -54,10 +55,14 @@ async fn main() {
     });
     let (notification_manager, notification_rx) =
         NotificationManager::new(expo);
+    let ctx = ServiceContext::new(
+        db.clone(),
+        Some(notification_manager.clone()),
+    );
     tokio::spawn(
         notification_manager
             .clone()
-            .run_worker(db.clone(), notification_rx),
+            .run_worker(ctx.clone(), notification_rx),
     );
     let filestore_cfg = ContentFilestoreConfig::from_env()
         .expect("blob store configuration error");
@@ -65,8 +70,7 @@ async fn main() {
     let server_cfg = server_config();
 
     let grpc_router = build_grpc_router(
-        db.clone(),
-        notification_manager.clone(),
+        ctx.clone(),
         filestore.clone(),
         server_cfg,
     )

@@ -8,7 +8,10 @@ use sea_orm::{DbConn, DbErr, EnumIter};
 use tokio::sync::mpsc;
 
 use super::repository as token_repository;
+use crate::service::context::ServiceContext;
+use crate::service::feeds::repository as feeds_repository;
 use crate::service::identity::repository as identity_repository;
+use crate::service::identity::service as identity_service;
 use crate::service::proto::PublicKey;
 
 #[derive(EnumIter)]
@@ -65,7 +68,6 @@ impl From<DbErr> for NotificationError {
 #[derive(Debug, Clone)]
 pub struct NotificationJob {
     pub author_identity: String,
-    pub author_name: Option<String>,
     pub body: String,
     /// If the post is a reply, the identity of the parent author.
     pub reply_recipient: Option<String>,
@@ -120,11 +122,11 @@ impl NotificationManager {
     /// every `Arc<Self>` has been dropped (closing the channel).
     pub async fn run_worker(
         self: Arc<Self>,
-        db: DbConn,
+        ctx: Arc<ServiceContext>,
         mut rx: mpsc::Receiver<NotificationJob>,
     ) {
         while let Some(job) = rx.recv().await {
-            if let Err(e) = self.process_job(&db, &job).await {
+            if let Err(e) = self.process_job(&ctx, &job).await {
                 eprintln!(
                     "notification job failed (author={}): {e}",
                     job.author_identity,
@@ -139,18 +141,19 @@ impl NotificationManager {
     ///   recipient), with a "New post from X" title
     async fn process_job(
         &self,
-        db: &DbConn,
+        ctx: &ServiceContext,
         job: &NotificationJob,
     ) -> Result<(), NotificationError> {
-        let title = match &job.author_name {
-            Some(name) => name.to_owned(),
-            None => "Anonymous".to_string(),
-        };
+        let title = identity_service::display_name(ctx, &job.author_identity)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "Anonymous".to_string());
 
         if let Some(recipient) = &job.reply_recipient {
             if let Err(e) = self
                 .send_to_identity(
-                    db,
+                    &ctx.db,
                     recipient,
                     title.clone(),
                     "Replied to your post".to_string(),
@@ -161,9 +164,11 @@ impl NotificationManager {
             }
         }
 
-        let followers =
-            FeedsRepository::Query::list_followers(db, &job.author_identity)
-                .await?;
+        let followers = feeds_repository::Query::list_followers(
+            &ctx.db,
+            &job.author_identity,
+        )
+        .await?;
 
         for follower in followers {
             if follower == job.author_identity {
@@ -174,7 +179,7 @@ impl NotificationManager {
             }
             if let Err(e) = self
                 .send_to_identity(
-                    db,
+                    &ctx.db,
                     &follower,
                     title.clone(),
                     "Created a new post".to_string(),
@@ -351,6 +356,7 @@ mod tests {
         let identity_bytes = Identity {
             rotation_keys: vec![],
             signing_keys: vec![signing_pk],
+            revocation_bounds: vec![],
         }
         .encode_to_vec();
 
@@ -378,13 +384,14 @@ mod tests {
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
-            author_name: Some("Alice".to_string()),
             body: "hello".to_string(),
             reply_recipient: Some("id-recipient".to_string()),
         };
 
+        let ctx =
+            crate::service::context::ServiceContext::new(db.clone(), None);
         manager
-            .process_job(&db, &job)
+            .process_job(&ctx, &job)
             .await
             .expect("process_job should succeed");
 
@@ -436,6 +443,7 @@ mod tests {
         let follower_identity_bytes = Identity {
             rotation_keys: vec![],
             signing_keys: vec![follower_signing_pk],
+            revocation_bounds: vec![],
         }
         .encode_to_vec();
 
@@ -470,13 +478,14 @@ mod tests {
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
-            author_name: Some("Alice".to_string()),
             body: "hello world".to_string(),
             reply_recipient: None,
         };
 
+        let ctx =
+            crate::service::context::ServiceContext::new(db.clone(), None);
         manager
-            .process_job(&db, &job)
+            .process_job(&ctx, &job)
             .await
             .expect("process_job should succeed");
 
@@ -519,6 +528,7 @@ mod tests {
         let identity_bytes = Identity {
             rotation_keys: vec![],
             signing_keys: vec![signing_pk],
+            revocation_bounds: vec![],
         }
         .encode_to_vec();
 
@@ -550,13 +560,14 @@ mod tests {
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
-            author_name: Some("Alice".to_string()),
             body: "self post".to_string(),
             reply_recipient: None,
         };
 
+        let ctx =
+            crate::service::context::ServiceContext::new(db.clone(), None);
         manager
-            .process_job(&db, &job)
+            .process_job(&ctx, &job)
             .await
             .expect("process_job should succeed");
 
@@ -611,6 +622,7 @@ mod tests {
         let identity_bytes = Identity {
             rotation_keys: vec![],
             signing_keys: vec![signing_pk],
+            revocation_bounds: vec![],
         }
         .encode_to_vec();
 
@@ -639,13 +651,14 @@ mod tests {
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
-            author_name: Some("Alice".to_string()),
             body: "hi bob".to_string(),
             reply_recipient: Some("id-bob".to_string()),
         };
 
+        let ctx =
+            crate::service::context::ServiceContext::new(db.clone(), None);
         manager
-            .process_job(&db, &job)
+            .process_job(&ctx, &job)
             .await
             .expect("process_job should succeed");
 
@@ -681,6 +694,7 @@ mod tests {
         let identity_bytes = Identity {
             rotation_keys: vec![],
             signing_keys: vec![signing_pk],
+            revocation_bounds: vec![],
         }
         .encode_to_vec();
 
@@ -710,13 +724,14 @@ mod tests {
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
-            author_name: Some("Alice".to_string()),
             body: "ping".to_string(),
             reply_recipient: Some("id-recipient".to_string()),
         };
 
+        let ctx =
+            crate::service::context::ServiceContext::new(db.clone(), None);
         manager
-            .process_job(&db, &job)
+            .process_job(&ctx, &job)
             .await
             .expect("process_job should succeed");
 

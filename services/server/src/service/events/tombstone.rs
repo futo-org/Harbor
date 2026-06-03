@@ -234,6 +234,7 @@ mod tests {
     fn mock_ctx() -> Arc<ServiceContext> {
         ServiceContext::new(
             MockDatabase::new(DbBackend::Postgres).into_connection(),
+            None,
         )
     }
 

@@ -5,6 +5,7 @@ use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::ServiceContext;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::service::authorize_event_signer;
+use crate::service::notifications::manager::NotificationJob;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, Event, EventBundle, PublicKey, PutEventError, PutEventsRequest,
@@ -132,6 +133,24 @@ async fn process_event(
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
+        // Capture the post text and (optional) reply target before
+        // `content` is moved into `save_content_child`. Self-replies are
+        // filtered out so replying to your own post is not a reply
+        // notification to yourself.
+        let post_body: Option<String> = match &content.content_body {
+            Some(ContentBody::Post(post)) => Some(post.text.clone()),
+            _ => None,
+        };
+        let reply_recipient: Option<String> = match &content.content_body {
+            Some(ContentBody::Post(post)) => post
+                .reply
+                .as_ref()
+                .and_then(|r| r.parent.as_ref())
+                .map(|k| k.identity.clone())
+                .filter(|target| target != &key.identity),
+            _ => None,
+        };
+
         let txn = ctx.db.begin().await.map_err(|e| {
             eprintln!("sync_events txn begin error: {e}");
             Status::internal("internal server error")
@@ -153,6 +172,9 @@ async fn process_event(
             Status::internal("internal server error")
         })?;
 
+        // `None` means the content already existed — only newly-persisted
+        // posts should fan out notifications.
+        let content_was_new = content_row.is_some();
         if let Some(content_row) = content_row {
             save_content_child(&txn, content_row.id, content, &key.identity)
                 .await?;
@@ -162,6 +184,22 @@ async fn process_event(
             eprintln!("sync_events txn commit error: {e}");
             Status::internal("internal server error")
         })?;
+
+        // Enqueue post notifications only for new posts; the worker
+        // expands recipients (reply target + followers) and handles
+        // per-send errors. A missing manager (e.g. in tests) skips this.
+        if content_was_new
+            && let (Some(body), Some(manager)) =
+                (post_body, ctx.notification_manager.as_ref())
+        {
+            manager
+                .enqueue(NotificationJob {
+                    author_identity: key.identity.clone(),
+                    body,
+                    reply_recipient,
+                })
+                .await;
+        }
     }
 
     let event_identity = key.identity.clone();

@@ -3,7 +3,7 @@
 
 pub mod register_push_notifications;
 
-use crate::service::notifications::manager::NotificationManager;
+use crate::service::context::ServiceContext;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
@@ -12,8 +12,7 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct NotificationServiceImpl {
-    db: sea_orm::DatabaseConnection,
-    notification_manager: Arc<NotificationManager>,
+    ctx: Arc<ServiceContext>,
 }
 
 #[tonic::async_trait]
@@ -22,10 +21,15 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<SignedMessage>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
+        let notification_manager = self
+            .ctx
+            .notification_manager
+            .as_ref()
+            .ok_or_else(|| Status::internal("notifications are not configured"))?;
         Ok(Response::new(
             register_push_notifications::handle(
-                &self.db,
-                &self.notification_manager,
+                &self.ctx.db,
+                notification_manager,
                 request.into_inner(),
             )
             .await?,
@@ -34,19 +38,17 @@ impl NotificationService for NotificationServiceImpl {
 }
 
 pub fn build_notification_service(
-    db: sea_orm::DatabaseConnection,
-    notification_manager: Arc<NotificationManager>,
+    ctx: Arc<ServiceContext>,
 ) -> NotificationServiceServer<NotificationServiceImpl> {
-    NotificationServiceServer::new(NotificationServiceImpl {
-        db,
-        notification_manager,
-    })
+    NotificationServiceServer::new(NotificationServiceImpl { ctx })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::notifications::manager::PushService;
+    use crate::service::notifications::manager::{
+        NotificationManager, PushService,
+    };
     use crate::service::proto::{KeyType, PublicKey};
     use ::entity::push_token_model as PushTokenModel;
     use ed25519_dalek::{Signer, SigningKey};
@@ -57,10 +59,11 @@ mod tests {
 
     async fn impl_for_testing() -> NotificationServiceImpl {
         let (notification_manager, _rx) = NotificationManager::new(test_expo());
-        NotificationServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-            notification_manager,
-        }
+        let ctx = ServiceContext::new(
+            MockDatabase::new(DbBackend::Postgres).into_connection(),
+            Some(notification_manager),
+        );
+        NotificationServiceImpl { ctx }
     }
 
     /// Expo client pointed at an unused base URL. These tests exercise
@@ -143,10 +146,8 @@ mod tests {
             .into_connection();
 
         let (notification_manager, _rx) = NotificationManager::new(test_expo());
-        let service = NotificationServiceImpl {
-            db,
-            notification_manager,
-        };
+        let ctx = ServiceContext::new(db, Some(notification_manager));
+        let service = NotificationServiceImpl { ctx };
 
         let message_bytes = RegisterPushNotificationRequest {
             service: PushService::Expo.as_ref().to_string(),

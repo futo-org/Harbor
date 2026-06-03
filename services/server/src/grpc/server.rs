@@ -3,11 +3,9 @@ use std::sync::Arc;
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
-use crate::service::notifications::manager::NotificationManager;
 use crate::service::server::rpc::ServerConfig;
 use axum::Router;
 use http::header::HeaderName;
-use sea_orm::DatabaseConnection;
 use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -31,14 +29,14 @@ fn build_reflection_service() -> Result<
 /// Build the gRPC services as an `axum::Router` so they can be merged with
 /// the HTTP router and served on a single port.
 pub fn build_grpc_router(
-    db: DatabaseConnection,
-    notification_manager: Arc<NotificationManager>,
+    ctx: Arc<ServiceContext>,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let ctx = ServiceContext::new(db.clone(), notification_manager.clone());
+    let db = ctx.db.clone();
     let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
-    let events_service = service::events::rpc::build_events_service(ctx);
+    let events_service =
+        service::events::rpc::build_events_service(ctx.clone());
     let content_service =
         service::content::content_service::build_content_service(
             db.clone(),
@@ -50,10 +48,7 @@ pub fn build_grpc_router(
         service::server::rpc::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
     let notification_service =
-        service::notifications::rpc::build_notification_service(
-            db.clone(),
-            notification_manager,
-        );
+        service::notifications::rpc::build_notification_service(ctx);
 
     let grpc_web = GrpcWebLayer::new();
 

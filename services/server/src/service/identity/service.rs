@@ -59,6 +59,30 @@ pub async fn list_profile_events(
     .map_err(map_db_err)
 }
 
+/// Best-effort display name for `identity`, decoded from the latest
+/// PROFILE event's `ProfileUpdate.name`. Returns `None` when no profile
+/// name is set or the content can't be decoded — callers fall back to a
+/// generic label rather than treating this as an error.
+pub async fn display_name(
+    ctx: &ServiceContext,
+    identity: &str,
+) -> Result<Option<String>, Status> {
+    let profiles = list_profile_events(ctx, vec![identity.to_string()]).await?;
+    let Some((_event, Some(content))) = profiles.into_iter().next() else {
+        return Ok(None);
+    };
+    let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
+    else {
+        return Ok(None);
+    };
+    Ok(match decoded.content_body {
+        Some(ContentBody::ProfileUpdate(profile)) => {
+            profile.name.filter(|s| !s.is_empty())
+        }
+        _ => None,
+    })
+}
+
 /// Pass our the identity events through to the proof cache
 /// probably a better place for this
 async fn warm_identity_cache(

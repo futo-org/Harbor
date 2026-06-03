@@ -1,3 +1,4 @@
+use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
@@ -9,6 +10,7 @@ pub use crate::service::events::tombstone::EventWithContentRow;
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
+const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
 
 pub struct Query;
 
@@ -27,39 +29,6 @@ impl Query {
             .limit(limit)
             .all(db)
             .await
-    }
-
-    /// Return the list of identities that `caller` has followed (as
-    /// recorded by Follow events in the GRAPH collection).
-    ///
-    /// Unfollow (Delete) tombstones are not yet applied server-side, so a
-    /// previously-unfollowed identity still appears here.
-    pub async fn list_followed_identities(
-        db: &DbConn,
-        caller: &str,
-    ) -> Result<Vec<String>, DbErr> {
-        // Deduplicate because the same Follow content (by digest) may be
-        // referenced by multiple events — e.g. follow → unfollow → follow
-        // again all share one content row but produce distinct events.
-        let rows = EventModel::Entity::find()
-            .select_only()
-            .column(ContentFollowModel::Column::IdentityId)
-            .distinct()
-            .join(JoinType::InnerJoin, content_join())
-            .join(
-                JoinType::InnerJoin,
-                ContentModel::Entity::belongs_to(ContentFollowModel::Entity)
-                    .from(ContentModel::Column::Id)
-                    .to(ContentFollowModel::Column::ContentId)
-                    .into(),
-            )
-            .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
-            .filter(EventModel::Column::Identity.eq(caller))
-            .into_tuple::<String>()
-            .all(db)
-            .await?;
-
-        Ok(rows)
     }
 
     /// Return the list of identities that follow `target` (as recorded
