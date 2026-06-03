@@ -142,29 +142,28 @@ impl NotificationManager {
         db: &DbConn,
         job: &NotificationJob,
     ) -> Result<(), NotificationError> {
+        let title = match &job.author_name {
+            Some(name) => name.to_owned(),
+            None => "Anonymous".to_string(),
+        };
+
         if let Some(recipient) = &job.reply_recipient {
-            let title = match &job.author_name {
-                Some(name) => format!("New reply from {name}"),
-                None => "New reply".to_string(),
-            };
             if let Err(e) = self
-                .send_to_identity(db, recipient, title, job.body.clone())
+                .send_to_identity(
+                    db,
+                    recipient,
+                    title.clone(),
+                    "Replied to your post".to_string(),
+                )
                 .await
             {
                 eprintln!("reply notification send error: {e}");
             }
         }
 
-        let followers = FeedsRepository::Query::list_followers(
-            db,
-            &job.author_identity,
-        )
-        .await?;
-
-        let title = match &job.author_name {
-            Some(name) => format!("New post from {name}"),
-            None => "New post".to_string(),
-        };
+        let followers =
+            FeedsRepository::Query::list_followers(db, &job.author_identity)
+                .await?;
 
         for follower in followers {
             if follower == job.author_identity {
@@ -178,7 +177,7 @@ impl NotificationManager {
                     db,
                     &follower,
                     title.clone(),
-                    job.body.clone(),
+                    "Created a new post".to_string(),
                 )
                 .await
             {
@@ -355,9 +354,10 @@ mod tests {
         }
         .encode_to_vec();
 
-        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([
-            ("identity_bytes".to_string(), Value::from(identity_bytes)),
-        ]);
+        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([(
+            "identity_bytes".to_string(),
+            Value::from(identity_bytes),
+        )]);
 
         let db = MockDatabase::new(DbBackend::Postgres)
             // (a) authorized_keys(reply_recipient): one identity row
@@ -630,9 +630,10 @@ mod tests {
             }]])
             // list_followers returns id-bob — the follower loop should
             // skip them because they match reply_recipient.
-            .append_query_results([vec![BTreeMap::<String, Value>::from(
-                [("identity".to_string(), Value::from("id-bob".to_string()))],
-            )]])
+            .append_query_results([vec![BTreeMap::<String, Value>::from([(
+                "identity".to_string(),
+                Value::from("id-bob".to_string()),
+            )])]])
             .into_connection();
 
         let (manager, _rx) = NotificationManager::new(expo);
@@ -727,8 +728,7 @@ mod tests {
         let saw_delete = log.iter().any(|tx| {
             tx.statements().iter().any(|stmt| {
                 let sql = stmt.sql.to_ascii_uppercase();
-                sql.starts_with("DELETE")
-                    && sql.contains("PUSH_TOKEN")
+                sql.starts_with("DELETE") && sql.contains("PUSH_TOKEN")
             })
         });
         assert!(
@@ -737,4 +737,3 @@ mod tests {
         );
     }
 }
-
