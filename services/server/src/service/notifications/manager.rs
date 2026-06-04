@@ -304,11 +304,122 @@ impl NotificationManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::proto::{Identity, KeyType};
-    use ::entity::push_token_model as PushTokenModel;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{
+        Content, Identity, KeyType, ProfileUpdate,
+    };
+    use ::entity::{
+        content_model as ContentModel, event_model as EventModel,
+        push_token_model as PushTokenModel,
+    };
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase, Value};
+    use sha2::{Digest, Sha256};
     use std::collections::BTreeMap;
+
+    /// Hex sha256 of an encoded `Identity` — the canonical genesis
+    /// identifier the server keys identities by (see
+    /// `identity::repository::identity_matches_content`). A `send_to_identity`
+    /// only fires when the mocked IDENTITY row's content hashes to the
+    /// identity string passed in, so test identities MUST be derived this way.
+    fn identity_string(identity: &Identity) -> String {
+        Sha256::digest(identity.encode_to_vec())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    }
+
+    /// Wrap encoded proto bytes in a `ContentModel::Model` row. Only
+    /// `serialized_bytes` is read by the code under test; the rest is
+    /// filler so the struct literal type-checks. (The `#[sea_orm::model]`
+    /// macro keeps only the scalar columns on `Model`; the `has_one`
+    /// relation fields are not part of the runtime struct.)
+    fn content_model(serialized_bytes: Vec<u8>) -> ContentModel::Model {
+        ContentModel::Model {
+            id: 0,
+            digest_type: 0,
+            digest_bytes: vec![],
+            serialized_bytes,
+            synced_at: time::PrimitiveDateTime::MIN,
+        }
+    }
+
+    /// A bare `EventModel::Model` carrying `serialized_bytes`' digest
+    /// fields irrelevant; only `sequence`/`public_key*` matter to the
+    /// chain walk, and a single-event chain never exercises rotation.
+    fn event_model() -> EventModel::Model {
+        EventModel::Model {
+            id: 0,
+            collection: 0,
+            identity: String::new(),
+            public_key_type: KeyType::Ed25519 as i16,
+            public_key: vec![],
+            sequence: 0,
+            content_digest_type: None,
+            content_digest_bytes: None,
+            signature: vec![],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![],
+            created_at: time::PrimitiveDateTime::MIN,
+            synced_at: time::PrimitiveDateTime::MIN,
+        }
+    }
+
+    /// Build the single IDENTITY-collection `select_also` row that
+    /// `authorized_keys` reads. Returns the derived identity string (the
+    /// sha256-genesis id the chain walk must match) alongside the row, so
+    /// the caller uses that exact string in the job / list_followers.
+    fn identity_event_row(
+        signing_key: &[u8],
+    ) -> (String, (EventModel::Model, Option<ContentModel::Model>)) {
+        let identity = Identity {
+            rotation_keys: vec![],
+            signing_keys: vec![PublicKey {
+                key_type: KeyType::Ed25519 as i32,
+                key: signing_key.to_vec(),
+            }],
+            revocation_bounds: vec![],
+        };
+        let id = identity_string(&identity);
+        let content = Content {
+            content_body: Some(ContentBody::Identity(identity)),
+        };
+        (
+            id,
+            (event_model(), Some(content_model(content.encode_to_vec()))),
+        )
+    }
+
+    /// A PROFILE `select_also` row whose `ProfileUpdate.name` is "Alice".
+    /// `display_name` decodes this to derive the notification title.
+    fn profile_row() -> (EventModel::Model, Option<ContentModel::Model>) {
+        let content = Content {
+            content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+                name: Some("Alice".to_string()),
+                avatar: None,
+                banner: None,
+                description: None,
+            })),
+        };
+        (event_model(), Some(content_model(content.encode_to_vec())))
+    }
+
+    /// A registered Expo `PushTokenModel::Model` for `signing_key`.
+    fn token_row(signing_key: &[u8], token: &str) -> PushTokenModel::Model {
+        PushTokenModel::Model {
+            public_key_type: KeyType::Ed25519 as i16,
+            public_key: signing_key.to_vec(),
+            service: PushService::Expo.as_ref().to_string(),
+            token: token.to_string(),
+            created_at: time::PrimitiveDateTime::MIN,
+        }
+    }
+
+    /// A `list_followers` row (`into_tuple::<String>()` — positional).
+    fn follower_row(id: &str) -> BTreeMap<String, Value> {
+        BTreeMap::from([("identity".to_string(), Value::from(id.to_string()))])
+    }
 
     /// Drives `process_job` end-to-end against a mocked DB and a wiremock-
     /// style Expo server, and asserts that exactly one POST hits Expo with
@@ -316,11 +427,12 @@ mod tests {
     ///
     /// Scenario: a reply post with no followers. The reply recipient has
     /// one authorized signing key, and that key has a registered Expo
-    /// token. We expect:
-    ///   - one DB read each for authorized_keys, token_for_public_key,
-    ///     and list_followers (in that order — `process_job` handles the
-    ///     reply recipient before the follower fan-out)
-    ///   - exactly one POST to `/--/api/v2/push/send` carrying the token
+    /// token. DB queries, in `process_job` order:
+    ///   - the author's profile lookup (title resolution → "Alice")
+    ///   - the recipient's authorized_keys, then token_for_public_key
+    ///   - list_followers(author): empty
+    /// We expect exactly one POST to `/--/api/v2/push/send` carrying the
+    /// token, titled "Alice" with body "Replied to your post".
     #[tokio::test]
     async fn process_job_sends_to_reply_recipient_via_expo() {
         // ── 1. Mock Expo at the HTTP layer ──────────────────────────
@@ -329,7 +441,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"{"to":["ExponentPushToken[abc123]"],"title":"New reply from Alice","body":"hello"}"#
+                r#"{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post"}"#
                     .to_string(),
             ))
             .with_status(200)
@@ -343,40 +455,22 @@ mod tests {
 
         let expo = Expo::new_with_base_url(None, &expo_server.url());
 
-        // ── 2. Mock the three DB queries process_job will issue ─────
-        // The first and third queries project non-entity shapes
-        // (a custom FromQueryResult struct, and `into_tuple::<String>()`)
-        // so we feed MockDatabase BTreeMap rows. The middle query is an
-        // entity find, so its Model type works directly.
+        // ── 2. Mock the DB queries process_job will issue ───────────
         let signing_key_bytes = vec![1u8; 32];
-        let signing_pk = PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: signing_key_bytes.clone(),
-        };
-        let identity_bytes = Identity {
-            rotation_keys: vec![],
-            signing_keys: vec![signing_pk],
-            revocation_bounds: vec![],
-        }
-        .encode_to_vec();
-
-        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([(
-            "identity_bytes".to_string(),
-            Value::from(identity_bytes),
-        )]);
+        let (recipient_id, recipient_identity_row) =
+            identity_event_row(&signing_key_bytes);
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // (a) authorized_keys(reply_recipient): one identity row
-            .append_query_results([vec![authorized_keys_row]])
-            // (b) token_for_public_key(signing_key): one registered token
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: signing_key_bytes,
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[abc123]".to_string(),
-                created_at: time::PrimitiveDateTime::MIN,
-            }]])
-            // (c) list_followers(author): none
+            // (a) author's profile lookup → title "Alice"
+            .append_query_results([vec![profile_row()]])
+            // (b) authorized_keys(reply_recipient): one identity row
+            .append_query_results([vec![recipient_identity_row]])
+            // (c) token_for_public_key(signing_key): one registered token
+            .append_query_results([vec![token_row(
+                &signing_key_bytes,
+                "ExponentPushToken[abc123]",
+            )]])
+            // (d) list_followers(author): none
             .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
 
@@ -385,7 +479,7 @@ mod tests {
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
             body: "hello".to_string(),
-            reply_recipient: Some("id-recipient".to_string()),
+            reply_recipient: Some(recipient_id),
         };
 
         let ctx =
@@ -404,12 +498,13 @@ mod tests {
     ///
     /// Scenario: a post with no reply_recipient. The author has one
     /// follower, and that follower has one authorized signing key with
-    /// a registered Expo token. We expect:
-    ///   - DB reads in order: list_followers, then for the follower
-    ///     authorized_keys and token_for_public_key (reply-recipient
-    ///     branch is skipped entirely when reply_recipient is None)
-    ///   - exactly one POST to `/--/api/v2/push/send` with the
-    ///     follower's token and a "New post from …" title
+    /// a registered Expo token. DB queries, in `process_job` order:
+    ///   - the author's profile lookup (title → "Alice")
+    ///   - list_followers (the reply-recipient branch is skipped when
+    ///     reply_recipient is None)
+    ///   - the follower's authorized_keys, then token_for_public_key
+    /// We expect exactly one POST to `/--/api/v2/push/send` with the
+    /// follower's token, titled "Alice" with body "Created a new post".
     #[tokio::test]
     async fn process_job_fans_out_to_followers_via_expo() {
         // ── 1. Mock Expo at the HTTP layer ──────────────────────────
@@ -418,7 +513,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"{"to":["ExponentPushToken[follower-xyz]"],"title":"New post from Alice","body":"hello world"}"#
+                r#"{"to":["ExponentPushToken[follower-xyz]"],"title":"Alice","body":"Created a new post"}"#
                     .to_string(),
             ))
             .with_status(200)
@@ -432,46 +527,23 @@ mod tests {
 
         let expo = Expo::new_with_base_url(None, &expo_server.url());
 
-        // ── 2. Mock the three DB queries process_job will issue ─────
-        // Note the order vs. the reply-recipient test:
-        // list_followers runs first when reply_recipient is None.
+        // ── 2. Mock the DB queries process_job will issue ───────────
         let follower_signing_key_bytes = vec![2u8; 32];
-        let follower_signing_pk = PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: follower_signing_key_bytes.clone(),
-        };
-        let follower_identity_bytes = Identity {
-            rotation_keys: vec![],
-            signing_keys: vec![follower_signing_pk],
-            revocation_bounds: vec![],
-        }
-        .encode_to_vec();
-
-        let follower_row: BTreeMap<String, Value> = BTreeMap::from([(
-            // list_followers uses `into_tuple::<String>()`; the column
-            // name is positional in MockRow so any string key works.
-            "identity".to_string(),
-            Value::from("id-follower".to_string()),
-        )]);
-
-        let authorized_keys_row: BTreeMap<String, Value> = BTreeMap::from([(
-            "identity_bytes".to_string(),
-            Value::from(follower_identity_bytes),
-        )]);
+        let (follower_id, follower_identity_row) =
+            identity_event_row(&follower_signing_key_bytes);
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // (a) list_followers(author): one follower
-            .append_query_results([vec![follower_row]])
-            // (b) authorized_keys(follower): one identity row
-            .append_query_results([vec![authorized_keys_row]])
-            // (c) token_for_public_key(follower_signing_key): one token
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: follower_signing_key_bytes,
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[follower-xyz]".to_string(),
-                created_at: time::PrimitiveDateTime::MIN,
-            }]])
+            // (a) author's profile lookup → title "Alice"
+            .append_query_results([vec![profile_row()]])
+            // (b) list_followers(author): one follower (derived id)
+            .append_query_results([vec![follower_row(&follower_id)]])
+            // (c) authorized_keys(follower): one identity row
+            .append_query_results([vec![follower_identity_row]])
+            // (d) token_for_public_key(follower_signing_key): one token
+            .append_query_results([vec![token_row(
+                &follower_signing_key_bytes,
+                "ExponentPushToken[follower-xyz]",
+            )]])
             .into_connection();
 
         // ── 3. Build the manager and drive process_job directly ─────
@@ -516,50 +588,36 @@ mod tests {
             .await;
         let expo = Expo::new_with_base_url(None, &expo_server.url());
 
-        // `id-author` appears in list_followers but should be filtered out
+        // The author appears in list_followers but should be filtered out
         // by `process_job`. If the guard regresses, the test would try to
-        // also send to id-author — MockDatabase has no further results
-        // queued for that path, so process_job would fail downstream.
+        // also send to the author — MockDatabase has no further results
+        // queued for that path, so process_job would diverge from the
+        // mocked query order.
         let signing_key_bytes = vec![3u8; 32];
-        let signing_pk = PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: signing_key_bytes.clone(),
-        };
-        let identity_bytes = Identity {
-            rotation_keys: vec![],
-            signing_keys: vec![signing_pk],
-            revocation_bounds: vec![],
-        }
-        .encode_to_vec();
-
-        let row = |id: &str| -> BTreeMap<String, Value> {
-            BTreeMap::from([(
-                "identity".to_string(),
-                Value::from(id.to_string()),
-            )])
-        };
+        let (other_id, other_identity_row) =
+            identity_event_row(&signing_key_bytes);
+        let author_id = "id-author".to_string();
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // list_followers: author + a real follower, in that order
-            .append_query_results([vec![row("id-author"), row("id-other")]])
-            // authorized_keys(id-other): one identity row
-            .append_query_results([vec![BTreeMap::from([(
-                "identity_bytes".to_string(),
-                Value::from(identity_bytes),
-            )])]])
-            // token_for_public_key: id-other's token
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: signing_key_bytes,
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[other-token]".to_string(),
-                created_at: time::PrimitiveDateTime::MIN,
-            }]])
+            // (a) author's profile lookup → title "Alice"
+            .append_query_results([vec![profile_row()]])
+            // (b) list_followers: author + a real follower, in that order
+            .append_query_results([vec![
+                follower_row(&author_id),
+                follower_row(&other_id),
+            ]])
+            // (c) authorized_keys(other): one identity row
+            .append_query_results([vec![other_identity_row]])
+            // (d) token_for_public_key: other's token
+            .append_query_results([vec![token_row(
+                &signing_key_bytes,
+                "ExponentPushToken[other-token]",
+            )]])
             .into_connection();
 
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
-            author_identity: "id-author".to_string(),
+            author_identity: author_id,
             body: "self post".to_string(),
             reply_recipient: None,
         };
@@ -578,8 +636,8 @@ mod tests {
     /// notified twice. Verify the follower-loop's skip guard fires.
     ///
     /// To catch a regression, two mockito mocks are registered:
-    /// - the expected "New reply from …" call with expect(1)
-    /// - a catch-all "New post from …" call with expect(0)
+    /// - the expected "Replied to your post" call with expect(1)
+    /// - a catch-all "Created a new post" call with expect(0)
     /// If dedup breaks, the second send would match the latter and fail.
     #[tokio::test]
     async fn process_job_skips_follower_who_is_also_reply_recipient() {
@@ -588,7 +646,7 @@ mod tests {
         let reply_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"{"title":"New reply from Alice"}"#.to_string(),
+                r#"{"body":"Replied to your post"}"#.to_string(),
             ))
             .with_status(200)
             .with_header("content-type", "application/json; charset=utf-8")
@@ -599,11 +657,12 @@ mod tests {
             .create_async()
             .await;
 
-        // Catch-all that should never fire — proves no "New post" was sent.
+        // Catch-all that should never fire — proves no follower "Created
+        // a new post" send was issued for the deduplicated recipient.
         let new_post_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"{"title":"New post from Alice"}"#.to_string(),
+                r#"{"body":"Created a new post"}"#.to_string(),
             ))
             .with_status(200)
             .with_body("{}")
@@ -615,44 +674,29 @@ mod tests {
 
         // Single follower whose identity matches reply_recipient.
         let signing_key_bytes = vec![4u8; 32];
-        let signing_pk = PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: signing_key_bytes.clone(),
-        };
-        let identity_bytes = Identity {
-            rotation_keys: vec![],
-            signing_keys: vec![signing_pk],
-            revocation_bounds: vec![],
-        }
-        .encode_to_vec();
+        let (bob_id, bob_identity_row) =
+            identity_event_row(&signing_key_bytes);
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // (reply branch) authorized_keys(id-bob)
-            .append_query_results([vec![BTreeMap::from([(
-                "identity_bytes".to_string(),
-                Value::from(identity_bytes),
-            )])]])
-            // (reply branch) token_for_public_key
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: signing_key_bytes,
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[bob-token]".to_string(),
-                created_at: time::PrimitiveDateTime::MIN,
-            }]])
-            // list_followers returns id-bob — the follower loop should
+            // (a) author's profile lookup → title "Alice"
+            .append_query_results([vec![profile_row()]])
+            // (b) reply branch: authorized_keys(bob)
+            .append_query_results([vec![bob_identity_row]])
+            // (c) reply branch: token_for_public_key
+            .append_query_results([vec![token_row(
+                &signing_key_bytes,
+                "ExponentPushToken[bob-token]",
+            )]])
+            // (d) list_followers returns bob — the follower loop should
             // skip them because they match reply_recipient.
-            .append_query_results([vec![BTreeMap::<String, Value>::from([(
-                "identity".to_string(),
-                Value::from("id-bob".to_string()),
-            )])]])
+            .append_query_results([vec![follower_row(&bob_id)]])
             .into_connection();
 
         let (manager, _rx) = NotificationManager::new(expo);
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
             body: "hi bob".to_string(),
-            reply_recipient: Some("id-bob".to_string()),
+            reply_recipient: Some(bob_id),
         };
 
         let ctx =
@@ -687,37 +731,25 @@ mod tests {
         let expo = Expo::new_with_base_url(None, &expo_server.url());
 
         let signing_key_bytes = vec![5u8; 32];
-        let signing_pk = PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: signing_key_bytes.clone(),
-        };
-        let identity_bytes = Identity {
-            rotation_keys: vec![],
-            signing_keys: vec![signing_pk],
-            revocation_bounds: vec![],
-        }
-        .encode_to_vec();
+        let (recipient_id, recipient_identity_row) =
+            identity_event_row(&signing_key_bytes);
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // (reply branch) authorized_keys
-            .append_query_results([vec![BTreeMap::from([(
-                "identity_bytes".to_string(),
-                Value::from(identity_bytes),
-            )])]])
-            // (reply branch) token_for_public_key
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: signing_key_bytes,
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[dead-device]".to_string(),
-                created_at: time::PrimitiveDateTime::MIN,
-            }]])
-            // unregister DELETE — sea-orm issues this as exec, not query.
+            // (a) author's profile lookup → title "Alice"
+            .append_query_results([vec![profile_row()]])
+            // (b) reply branch: authorized_keys
+            .append_query_results([vec![recipient_identity_row]])
+            // (c) reply branch: token_for_public_key
+            .append_query_results([vec![token_row(
+                &signing_key_bytes,
+                "ExponentPushToken[dead-device]",
+            )]])
+            // (d) unregister DELETE — sea-orm issues this as exec, not query.
             .append_exec_results([sea_orm::MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
             }])
-            // list_followers: empty
+            // (e) list_followers: empty
             .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
 
@@ -725,7 +757,7 @@ mod tests {
         let job = NotificationJob {
             author_identity: "id-author".to_string(),
             body: "ping".to_string(),
-            reply_recipient: Some("id-recipient".to_string()),
+            reply_recipient: Some(recipient_id),
         };
 
         let ctx =
