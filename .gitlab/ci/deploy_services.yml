@@ -116,6 +116,6 @@ moderation-deploy-manifest-production:
     - .moderation-deploy-workflow
     - .service-deploy-manifest
   variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/moderation-service.yml:polycentriceast
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/moderation.yml:polycentriceast
   needs:
     - moderation-deploy-image-production
