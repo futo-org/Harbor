@@ -63,8 +63,8 @@ impl Query {
         Ok(rows)
     }
 
-    /// Return recent Feed events (with joined content) authored by any of
-    /// `identities`, newest first. Short-circuits with an empty Vec when
+    /// Same as [`list_feed_events`] restricted to events authored by
+    /// any of `identities`. Short-circuits with an empty Vec when
     /// the identity list is empty.
     pub async fn list_feed_events_by_identities(
         db: &DbConn,
