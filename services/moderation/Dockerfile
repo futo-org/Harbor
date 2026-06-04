@@ -2,20 +2,13 @@ FROM rust:1.95-slim AS build
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    protobuf-compiler \
-    cmake \
-    g++ \
-    pkg-config \
-    libssl-dev \
-    libsasl2-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock
 COPY protos protos
 COPY packages packages
 COPY services services
+
+RUN services/common/deps.sh
 
 RUN cargo build --release --package moderation-service
 RUN cargo build --release --package moderation-migration
