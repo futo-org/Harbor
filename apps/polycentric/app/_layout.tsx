@@ -42,7 +42,7 @@ function RootStack() {
           name="feed"
           options={{
             presentation: 'transparentModal',
-            animation: 'none',
+            animation: isWeb ? 'fade' : 'default',
             contentStyle: { backgroundColor: 'transparent' },
           }}
         />

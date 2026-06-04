@@ -1,2 +1,2 @@
-export * from './ComposeSheetInner';
 export * from './ComposerInput';
+export * from './ComposeSheet';

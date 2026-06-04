@@ -1,9 +1,11 @@
+import Icon from '@/src/common/components/Icon';
 import {
   Button,
   ProfileAvatar,
   Text,
   TextArea,
 } from '@/src/common/components/primitives';
+import { Sheet } from '@/src/common/components/sheet';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -13,11 +15,6 @@ import {
   useUsername,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  DismissReason,
-  SheetHeaderBlock,
-  type DismissSheet,
-} from '@/src/common/lib/sheet';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
@@ -26,9 +23,9 @@ import {
   injectPostIntoFeedCache,
 } from '@/src/features/feed/hooks/feedCache';
 import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import Icon from '@/src/common/components/Icon';
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 import ComposerPostEmbed from './ComposerPostEmbed';
@@ -41,23 +38,21 @@ const THUMBNAIL_SIZE = 72;
 /** Longest edge lengths for post image variants. */
 const POST_VARIANT_SIZES = [512, 1280];
 
-interface ComposeSheetInnerProps {
-  dismissSheet: DismissSheet;
+type ComposeSheetProps = {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
   /** Open the image picker as soon as the composer mounts. */
   attachOnMount?: boolean;
-}
+};
 
-export function ComposeSheetInner({
-  dismissSheet,
+export function ComposeSheet({
   onPostCreated,
   replyTo,
   quote,
   attachOnMount = false,
-}: ComposeSheetInnerProps) {
+}: ComposeSheetProps) {
   const client = usePolycentric();
   const { identityKey: currentIdentityKey, identity: currentIdentity } =
     useCurrentIdentity();
@@ -100,8 +95,8 @@ export function ComposeSheetInner({
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const handleClose = useCallback(() => {
-    if (!submitting) void dismissSheet(DismissReason.UserDismissed);
-  }, [submitting, dismissSheet]);
+    if (!submitting && router.canGoBack()) router.back();
+  }, [submitting]);
 
   const handleAttachImage = useCallback(async () => {
     if (attachDisabled) return;
@@ -188,7 +183,6 @@ export function ComposeSheetInner({
         signedEvent,
         serializedContent: { contentBytes: v2.Content.toBinary(content) },
       });
-
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to the below query
@@ -203,7 +197,7 @@ export function ComposeSheetInner({
       await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
-      await dismissSheet(DismissReason.PostSubmitted);
+      if (router.canGoBack()) router.back();
       resetComposer();
 
       void client
@@ -230,7 +224,6 @@ export function ComposeSheetInner({
     submitting,
     client,
     currentIdentityKey,
-    dismissSheet,
     isReply,
     replyToEventKey,
     replyRootEventKey,
@@ -244,43 +237,45 @@ export function ComposeSheetInner({
     : "What's on your mind?";
 
   return (
-    <View style={theme.atoms.bg}>
-      <SheetHeaderBlock
+    <Sheet
+      detents={[1]}
+      scrollable
+      footer={
+        <ComposeSheetFooterBar
+          variant={isWeb ? 'web' : 'native'}
+          charCount={text.length}
+          submitting={submitting}
+          canPost={canPost}
+          onPost={handlePost}
+          onAttachImage={() => void handleAttachImage()}
+          attachDisabled={attachDisabled}
+        />
+      }
+    >
+      <Sheet.Header
         title={title}
         onClose={handleClose}
         //closeDisabled={submitting}
-        trailing={
-          isWeb ? (
-            <View style={{ minWidth: 80 }} />
+        right={
+          submitting ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.palette.primary_500}
+              accessibilityLabel="Posting"
+            />
           ) : (
-            <View
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              {submitting ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.primary_500}
-                  accessibilityLabel="Posting"
-                />
-              ) : (
-                <Button
-                  title={'Post'}
-                  onPress={handlePost}
-                  variant="primary"
-                  disabled={!canPost}
-                  size="sm"
-                />
-              )}
-            </View>
+            <Button
+              title={'Post'}
+              onPress={handlePost}
+              variant="primary"
+              disabled={!canPost}
+              size="sm"
+            />
           )
         }
       />
-      <View
+      <Sheet.Content
         style={[
-          Atoms.flex_1,
           Atoms.py_lg,
           Atoms.px_lg,
           {
@@ -359,18 +354,9 @@ export function ComposeSheetInner({
 
         {/* Quote preview */}
         {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
-      </View>
+      </Sheet.Content>
       {/*  Footer */}
-      <ComposeSheetFooterBar
-        variant={isWeb ? 'web' : 'native'}
-        charCount={text.length}
-        submitting={submitting}
-        canPost={canPost}
-        onPost={handlePost}
-        onAttachImage={() => void handleAttachImage()}
-        attachDisabled={attachDisabled}
-      />
-    </View>
+    </Sheet>
   );
 }
 

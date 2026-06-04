@@ -86,6 +86,12 @@ export interface Content {
          */
         repost: Repost;
     } | {
+        oneofKind: "report";
+        /**
+         * @generated from protobuf field: polycentric.v2.Report report = 10
+         */
+        report: Report;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -290,6 +296,25 @@ export interface ImageSet {
     images: Image[];
 }
 /**
+ * @generated from protobuf message polycentric.v2.Report
+ */
+export interface Report {
+    /**
+     * Event that is being reported
+     *
+     * @generated from protobuf field: polycentric.v2.EventKey event_key = 1
+     */
+    eventKey?: EventKey;
+    /**
+     * @generated from protobuf field: polycentric.v2.ReportCategory category = 2
+     */
+    category: ReportCategory;
+    /**
+     * @generated from protobuf field: string additional_info = 3
+     */
+    additionalInfo: string;
+}
+/**
  * *
  * gRPC requests
  *
@@ -351,6 +376,43 @@ export enum ContentDigestType {
      * @generated from protobuf enum value: CONTENT_DIGEST_TYPE_SHA256 = 1;
      */
     SHA256 = 1
+}
+/**
+ * @generated from protobuf enum polycentric.v2.ReportCategory
+ */
+export enum ReportCategory {
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_SPAM = 1;
+     */
+    SPAM = 1,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_ABUSE = 2;
+     */
+    ABUSE = 2,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_CHILD_SAFETY = 3;
+     */
+    CHILD_SAFETY = 3,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_TERRORISM = 4;
+     */
+    TERRORISM = 4,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_ILLEGAL = 5;
+     */
+    ILLEGAL = 5,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_COPYRIGHT = 6;
+     */
+    COPYRIGHT = 6,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_SERVER_POLICY = 7;
+     */
+    SERVER_POLICY = 7
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ContentDigest$Type extends MessageType<ContentDigest> {
@@ -418,7 +480,8 @@ class Content$Type extends MessageType<Content> {
             { no: 6, name: "reaction", kind: "message", oneof: "contentBody", T: () => Reaction },
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
             { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
-            { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost }
+            { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost },
+            { no: 10, name: "report", kind: "message", oneof: "contentBody", T: () => Report }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -481,6 +544,12 @@ class Content$Type extends MessageType<Content> {
                         repost: Repost.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).repost)
                     };
                     break;
+                case /* polycentric.v2.Report report */ 10:
+                    message.contentBody = {
+                        oneofKind: "report",
+                        report: Report.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).report)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -517,6 +586,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.Repost repost = 9; */
         if (message.contentBody.oneofKind === "repost")
             Repost.internalBinaryWrite(message.contentBody.repost, writer.tag(9, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.Report report = 10; */
+        if (message.contentBody.oneofKind === "report")
+            Report.internalBinaryWrite(message.contentBody.report, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1181,6 +1253,68 @@ class ImageSet$Type extends MessageType<ImageSet> {
  * @generated MessageType for protobuf message polycentric.v2.ImageSet
  */
 export const ImageSet = new ImageSet$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Report$Type extends MessageType<Report> {
+    constructor() {
+        super("polycentric.v2.Report", [
+            { no: 1, name: "event_key", kind: "message", T: () => EventKey },
+            { no: 2, name: "category", kind: "enum", T: () => ["polycentric.v2.ReportCategory", ReportCategory, "REPORT_CATEGORY_"] },
+            { no: 3, name: "additional_info", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<Report>): Report {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.category = 0;
+        message.additionalInfo = "";
+        if (value !== undefined)
+            reflectionMergePartial<Report>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Report): Report {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey event_key */ 1:
+                    message.eventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.eventKey);
+                    break;
+                case /* polycentric.v2.ReportCategory category */ 2:
+                    message.category = reader.int32();
+                    break;
+                case /* string additional_info */ 3:
+                    message.additionalInfo = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Report, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey event_key = 1; */
+        if (message.eventKey)
+            EventKey.internalBinaryWrite(message.eventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.ReportCategory category = 2; */
+        if (message.category !== 0)
+            writer.tag(2, WireType.Varint).int32(message.category);
+        /* string additional_info = 3; */
+        if (message.additionalInfo !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.additionalInfo);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.Report
+ */
+export const Report = new Report$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class SyncContentRequest$Type extends MessageType<SyncContentRequest> {
     constructor() {

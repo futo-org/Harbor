@@ -30,6 +30,8 @@
     "@rn-primitives/hover-card": "^1.4.0",
     "@rn-primitives/popover": "^1.4.0",
     "@rn-primitives/portal": "^1.4.0",
+    "@rn-primitives/radio-group": "^1.4.0",
+    "@rn-primitives/toast": "^1.4.0",
     "@shopify/flash-list": "^2.3.1",
     "@types/react-native-web": "^0.19.2",
     "better-sqlite3": "^12.6.2",

@@ -26,6 +26,7 @@ message Content {
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
     Repost repost = 9;
+    Report report = 10;
   }
 }
 
@@ -110,6 +111,24 @@ message Image {
 // Collection of different variants of an image
 message ImageSet {
   repeated Image images = 1;
+}
+
+enum ReportCategory {
+  REPORT_CATEGORY_UNSPECIFIED = 0;
+  REPORT_CATEGORY_SPAM = 1;
+  REPORT_CATEGORY_ABUSE = 2;
+  REPORT_CATEGORY_CHILD_SAFETY = 3;
+  REPORT_CATEGORY_TERRORISM = 4;
+  REPORT_CATEGORY_ILLEGAL = 5;
+  REPORT_CATEGORY_COPYRIGHT = 6;
+  REPORT_CATEGORY_SERVER_POLICY = 7;
+}
+
+message Report {
+  // Event that is being reported
+  EventKey event_key = 1;
+  ReportCategory category = 2;
+  string additional_info = 3;
 }
 
 /**

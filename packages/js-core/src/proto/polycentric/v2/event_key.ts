@@ -25,6 +25,7 @@ export interface EventKey {
      * 3 -> Polycentric profile
      * 4 -> Polycentric interactions (likes etc)
      * 5 -> Polycentric social graph (follows)
+     * 6 -> Polycentric reports
      *
      * @generated from protobuf field: int32 collection = 1
      */

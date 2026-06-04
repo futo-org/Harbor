@@ -3,15 +3,15 @@ use std::sync::Arc;
 
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    event_sync_service_client::EventSyncServiceClient, ListEventsFilters, ListEventsRequest,
-    ListEventsResponse,
+    ListEventsFilters, ListEventsRequest, ListEventsResponse,
+    event_sync_service_client::EventSyncServiceClient,
 };
 use prost::Message;
 
-use crate::query::event::dedup::{event_dedup_key, EventDedupKey};
+use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
-    channel, FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus,
+    FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
 

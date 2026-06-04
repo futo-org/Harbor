@@ -1,16 +1,11 @@
 import { Button, Text, TextInput } from '@/src/common/components';
+import { Sheet } from '@/src/common/components/sheet';
 import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
 import {
   useCurrentIdentity,
   useProfileEdit,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  DismissReason,
-  SheetHeaderBlock,
-  SheetMenu,
-  type DismissSheet,
-} from '@/src/common/lib/sheet';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
@@ -18,31 +13,39 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
-function EditProfileSheet({
-  identityKey,
-  dismissSheet,
-}: {
-  identityKey: string;
-  dismissSheet: DismissSheet;
-}) {
+function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
   const edit = useProfileEdit(username, profile);
 
+  const close = useCallback(() => {
+    if (router.canGoBack()) router.back();
+  }, []);
+
   const handleSave = useCallback(async () => {
     await edit.handleSave();
-    await dismissSheet();
-  }, [edit, dismissSheet]);
+    close();
+  }, [edit, close]);
 
   return (
-    <View>
-      <SheetHeaderBlock
+    <Sheet detents={[1]} dismissible scrollable>
+      <Sheet.Header
         title="Edit profile"
-        onClose={() => void dismissSheet()}
-        closeDisabled={edit.saving}
+        right={
+          <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_end]}>
+            <Button
+              title={edit.saving ? 'Saving...' : 'Save'}
+              onPress={handleSave}
+              variant="primary"
+              size="sm"
+              disabled={edit.saving}
+            />
+          </View>
+        }
+        onClose={close}
       />
-      <View style={[Atoms.p_lg, Atoms.gap_xl]}>
+      <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md]}>
           <ProfileEditAvatar
             identityKey={identityKey}
@@ -76,25 +79,8 @@ function EditProfileSheet({
             />
           </View>
         </View>
-
-        <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.justify_end]}>
-          <Button
-            title="Cancel"
-            onPress={() => void dismissSheet()}
-            variant="tertiary"
-            size="sm"
-            disabled={edit.saving}
-          />
-          <Button
-            title={edit.saving ? 'Saving...' : 'Save'}
-            onPress={handleSave}
-            variant="primary"
-            size="sm"
-            disabled={edit.saving}
-          />
-        </View>
-      </View>
-    </View>
+      </Sheet.Content>
+    </Sheet>
   );
 }
 
@@ -106,21 +92,5 @@ export default function EditProfileScreen() {
 
   if (!identityKey) return null;
 
-  return (
-    <SheetMenu
-      onClose={(reason) => {
-        if (reason === DismissReason.UserDismissed) router.back();
-      }}
-      detents={[1]}
-      dismissible
-      scrollable
-    >
-      {(dismissSheet) => (
-        <EditProfileSheet
-          identityKey={identityKey}
-          dismissSheet={dismissSheet}
-        />
-      )}
-    </SheetMenu>
-  );
+  return <EditProfileSheet identityKey={identityKey} />;
 }
