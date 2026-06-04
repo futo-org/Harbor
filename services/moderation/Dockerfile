@@ -2,7 +2,14 @@ FROM rust:1.95-slim AS build
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y protobuf-compiler
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    cmake \
+    g++ \
+    pkg-config \
+    libssl-dev \
+    libsasl2-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock

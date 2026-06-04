@@ -1,5 +1,5 @@
 trivy:
-  stage: test
+  stage: check
   image:
     name: aquasec/trivy:0.69.3
     entrypoint: ['']
