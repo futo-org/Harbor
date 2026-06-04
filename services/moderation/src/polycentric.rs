@@ -18,8 +18,8 @@ use sha2::{Digest, Sha256};
 /// Failure while publishing a labels event.
 pub enum PublishError {
     /// The service's identity state is not available (e.g. the identity
-    /// chain was never loaded). Not worth retrying the same message —
-    /// labeling is skipped.
+    /// chain was never loaded). The caller should retry rather than drop
+    /// the label.
     NotReady(String),
     /// A transient failure (network/server). Retrying may succeed.
     Transient(String),
@@ -170,17 +170,7 @@ impl PolycentricClient {
             ));
         }
 
-        let content = Content {
-            content_body: Some(ContentBody::Labels(Labels {
-                event_key: Some(target),
-                label_values,
-            })),
-        };
-        let content_bytes = content.encode_to_vec();
-        let digest = ContentDigest {
-            r#type: ContentDigestType::Sha256 as i32,
-            value: sha256(&content_bytes),
-        };
+        let (content_bytes, digest) = labels_content(&target, &label_values);
 
         // Compute the chain position synchronously, without holding the lock
         // across any await.
@@ -288,6 +278,23 @@ async fn put_events(server: &str, request: PutEventsRequest) -> Result<(), Strin
         return Err(format!("server rejected event: {messages:?}"));
     }
     Ok(())
+}
+
+/// Build the serialized `Labels` content for `target`/`label_values` and
+/// its digest.
+pub fn labels_content(target: &EventKey, label_values: &[String]) -> (Vec<u8>, ContentDigest) {
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(target.clone()),
+            label_values: label_values.to_vec(),
+        })),
+    };
+    let content_bytes = content.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256 as i32,
+        value: sha256(&content_bytes),
+    };
+    (content_bytes, digest)
 }
 
 fn sha256(data: &[u8]) -> Vec<u8> {

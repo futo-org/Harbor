@@ -7,6 +7,7 @@ COPY Cargo.lock Cargo.lock
 COPY protos protos
 COPY packages packages
 COPY services services
+COPY tools tools
 
 RUN services/common/deps.sh
 

@@ -87,6 +87,20 @@ pub async fn persist_created(db: &DatabaseConnection, created: &CreatedEvent) ->
     txn.commit().await
 }
 
+/// Returns if already stored content with this digest
+pub async fn created_content_exists<C: ConnectionTrait>(
+    db: &C,
+    digest_type: i32,
+    digest_bytes: Vec<u8>,
+) -> Result<bool, DbErr> {
+    Ok(
+        created_content_model::Entity::find_by_id((digest_type, digest_bytes))
+            .one(db)
+            .await?
+            .is_some(),
+    )
+}
+
 /// Return the content reference, if any, from the database
 pub async fn get_content<C: ConnectionTrait>(
     db: &C,

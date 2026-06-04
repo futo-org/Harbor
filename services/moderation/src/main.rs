@@ -275,62 +275,89 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         None => return Outcome::Commit,
     };
 
-    // Have we already processed this content? If so, skip it.
-    match repository::get_content(&ctx.db, digest_type, digest_bytes.clone()).await {
-        Ok(Some(_)) => {
-            info!("content already processed, skipping");
-            return Outcome::Commit;
-        }
-        Ok(None) => {}
-        Err(e) => {
-            warn!("get_content error: {}", e);
-            return Outcome::Retry;
-        }
-    }
+    // Obtain the Azure result: reuse a prior one if this content was already
+    // processed, otherwise run Azure now and persist the outcome.
+    let azure_response =
+        match repository::get_content(&ctx.db, digest_type, digest_bytes.clone()).await {
+            // Already processed by Azure — skip the Azure step and reuse the
+            // stored result (we still confirm the labels event below).
+            Ok(Some(row)) => match row.azure_response {
+                Some(response) => response,
+                // Row exists but Azure never completed (pending/failed) — nothing
+                // to label; skip to avoid reprocessing.
+                None => {
+                    info!("content already seen without an Azure result, skipping");
+                    return Outcome::Commit;
+                }
+            },
+            Ok(None) => {
+                // Reserve the row in the PENDING state before processing.
+                if let Err(e) =
+                    repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await
+                {
+                    warn!("create_pending error: {}", e);
+                    return Outcome::Retry;
+                }
 
-    // Reserve the row in the PENDING state before processing.
-    if let Err(e) = repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await {
-        warn!("create_pending error: {}", e);
-        return Outcome::Retry;
-    }
+                // TODO: if an image, check CSAM first and immediately delete the
+                // content on a positive match (short-circuit before Azure).
 
-    // TODO: if an image, check CSAM first and immediately delete the content
-    // on a positive match (short-circuit before Azure).
-
-    // Pass the content through the moderation provider and persist the
-    // outcome.
-    match moderate(ctx, &content).await {
-        Ok(azure_response) => {
-            // Derive the labels to apply before the response is consumed.
-            let labels = labels::labels_from_azure(&azure_response);
-
-            if let Err(e) =
-                repository::store_azure_result(&ctx.db, digest_type, digest_bytes, azure_response)
-                    .await
-            {
-                warn!("store_azure_result error: {}", e);
+                match moderate(ctx, &content).await {
+                    Ok(response) => {
+                        if let Err(e) = repository::store_azure_result(
+                            &ctx.db,
+                            digest_type,
+                            digest_bytes.clone(),
+                            response.clone(),
+                        )
+                        .await
+                        {
+                            warn!("store_azure_result error: {}", e);
+                            return Outcome::Retry;
+                        }
+                        response
+                    }
+                    Err(()) => {
+                        if let Err(e) =
+                            repository::mark_failed(&ctx.db, digest_type, digest_bytes).await
+                        {
+                            warn!("mark_failed error: {}", e);
+                            return Outcome::Retry;
+                        }
+                        // Azure failed — nothing to label.
+                        return Outcome::Commit;
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("get_content error: {}", e);
                 return Outcome::Retry;
             }
+        };
 
-            // Publish a labels event for the moderated content, if anything
-            // applies. (Nothing to label, or no decodable target key, means
-            // there is nothing to publish.)
-            if !labels.is_empty() {
-                match key.clone() {
-                    Some(target) => {
+    // Confirm a labels event exists for this content. Derive the labels from
+    // the Azure result; if any apply, look up whether we have already created
+    // the (deterministic) labels content — publish it only if we have not.
+    let labels = labels::labels_from_azure(&azure_response);
+    if !labels.is_empty() {
+        match key.clone() {
+            Some(target) => {
+                let digest = polycentric::labels_content(&target, &labels).1;
+                match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await
+                {
+                    Ok(true) => info!("labels event already created, skipping"),
+                    Ok(false) => {
                         if let Outcome::Retry = publish_labels(ctx, target, labels).await {
                             return Outcome::Retry;
                         }
                     }
-                    None => warn!("cannot publish labels: message had no decodable event key"),
+                    Err(e) => {
+                        warn!("created_content_exists error: {}", e);
+                        return Outcome::Retry;
+                    }
                 }
             }
-        }
-        Err(()) => {
-            if let Err(e) = repository::mark_failed(&ctx.db, digest_type, digest_bytes).await {
-                warn!("mark_failed error: {}", e);
-                return Outcome::Retry;
-            }
+            None => warn!("cannot publish labels: message had no decodable event key"),
         }
     }
 
@@ -346,8 +373,8 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
 }
 
 /// Publish a labels event for `target` and persist what we created to the
-/// moderation DB. Returns `Retry` only on transient/persistence failures
-/// worth re-attempting; a not-ready identity is logged and committed.
+/// moderation DB. Returns `Retry` on any failure (transient, persistence,
+/// or a not-ready identity) so the label is never silently dropped.
 async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) -> Outcome {
     match ctx.polycentric.publish_labels(target, labels).await {
         Ok(created) => match repository::persist_created(&ctx.db, &created).await {
@@ -358,8 +385,8 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
             }
         },
         Err(PublishError::NotReady(e)) => {
-            warn!("skipping labels publish (not ready): {}", e);
-            Outcome::Commit
+            warn!("labels publish not ready, will retry: {}", e);
+            Outcome::Retry
         }
         Err(PublishError::Transient(e)) => {
             warn!("labels publish failed: {}", e);
