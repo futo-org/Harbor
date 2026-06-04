@@ -1,6 +1,8 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
+use std::time::Duration;
+
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::ServiceContext;
 use crate::service::events::repository as EventsRepository;
@@ -16,15 +18,18 @@ use ::entity::{
     content_delete_model as ContentDeleteModel,
     content_follow_model as ContentFollowModel,
     content_identity_model as ContentIdentityModel,
-    content_model as ContentModel, content_post_model as ContentPostModel,
+    content_label_model as ContentLabelModel, content_model as ContentModel,
+    content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel,
     content_report_model as ContentReportModel,
     content_repost_model as ContentRepostModel, event_model as EventModel,
 };
+use common_kafka::FutureRecord;
 use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::EntityTrait;
 use sea_orm::TransactionTrait;
 use tonic::Status;
 
@@ -56,6 +61,10 @@ async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
 ) -> Result<(), Status> {
+    // Encode the bundle up front while it's still whole — its fields are
+    // moved out during validation below. Published to Kafka on success.
+    let event_bundle_bytes = event_bundle.encode_to_vec();
+
     let signed_event = event_bundle.signed_event.ok_or_else(|| {
         Status::invalid_argument("package is missing signed event")
     })?;
@@ -69,6 +78,10 @@ async fn process_event(
     let key = event
         .key
         .ok_or_else(|| Status::invalid_argument("event missing key"))?;
+
+    // Kafka partition/message key: the serialized protobuf event key.
+    // Encoded here while `key` is whole — its fields are moved out below.
+    let event_key_bytes = key.encode_to_vec();
 
     let signed_by = key.signed_by.ok_or_else(|| {
         Status::invalid_argument("event key missing signed_by")
@@ -194,6 +207,21 @@ async fn process_event(
             if event_collection == collections::IDENTITY {
                 ctx.proof_cache.invalidate_identity(&event_identity).await;
             }
+
+            let producer = ctx.kafka_producer.clone();
+            tokio::spawn(async move {
+                if let Err((e, _)) = producer
+                    .send(
+                        FutureRecord::to("events")
+                            .key(&event_key_bytes)
+                            .payload(&event_bundle_bytes),
+                        Duration::from_secs(0),
+                    )
+                    .await
+                {
+                    eprintln!("put_events kafka publish error: {e}");
+                }
+            });
         }
         Err(ref e) if is_unique_violation(e) => {
             // Duplicate event — already stored, treat as success.
@@ -418,6 +446,38 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             .insert(db)
             .await
             .map_err(map_db_err)?;
+        }
+
+        Some(ContentBody::Labels(labels)) => {
+            let key = labels.event_key.ok_or_else(|| {
+                Status::invalid_argument("labels content missing event_key")
+            })?;
+            let signed_by = key.signed_by.ok_or_else(|| {
+                Status::invalid_argument("labels event_key missing signed_by")
+            })?;
+
+            // One row per label value for efficient aggregation; the
+            // labeled event's key is denormalized onto each row.
+            let rows: Vec<ContentLabelModel::ActiveModel> = labels
+                .label_values
+                .into_iter()
+                .map(|label_value| ContentLabelModel::ActiveModel {
+                    content_id: Set(content_id),
+                    label_value: Set(label_value),
+                    event_key_collection: Set(key.collection as i16),
+                    event_key_identity: Set(key.identity.clone()),
+                    event_key_public_key_type: Set(signed_by.key_type as i16),
+                    event_key_public_key: Set(signed_by.key.clone()),
+                    event_key_sequence: Set(key.sequence as i64),
+                })
+                .collect();
+
+            if !rows.is_empty() {
+                ContentLabelModel::Entity::insert_many(rows)
+                    .exec(db)
+                    .await
+                    .map_err(map_db_err)?;
+            }
         }
 
         None => {}

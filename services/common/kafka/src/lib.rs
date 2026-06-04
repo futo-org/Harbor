@@ -1,0 +1,11 @@
+//! Shared Kafka helpers. Producers and consumers read the same broker /
+//! security / SASL settings from the environment.
+
+mod config;
+mod consumer;
+mod producer;
+
+pub use rdkafka::message::{BorrowedMessage, Message};
+
+pub use consumer::{CommitMode, Consumer, CustomContext, build_consumer};
+pub use producer::{FutureProducer, FutureRecord, build_producer};

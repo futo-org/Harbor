@@ -1,0 +1,19 @@
+[package]
+edition      = "2024"
+name         = "moderation-migration"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+[lib]
+name = "moderation_migration"
+path = "src/lib.rs"
+
+[dependencies]
+moderation-entity = { path = "../entity" }
+sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+
+[dependencies.sea-orm-migration]
+workspace = true
+features = [ "sqlx-postgres", "runtime-tokio" ]

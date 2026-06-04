@@ -1,0 +1,7 @@
+[package]
+name = "common-kafka"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+rdkafka = { workspace = true, features = ["cmake-build", "curl", "sasl"] }

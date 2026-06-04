@@ -2,12 +2,6 @@ use crate::service::proto::{Blob, ContentDigest, UploadBlobRequest};
 use crate::util;
 use tonic::Status;
 
-/// Storage key for a blob in the object store. Layout:
-/// `{digest_type}_{hex(digest_value)}`.
-pub fn blob_key(digest: &ContentDigest) -> String {
-    format!("{}_{}", digest.r#type, util::hex::encode(&digest.value))
-}
-
 /// Pull the blob, digest, and body out of an `UploadBlobRequest`,
 /// returning `InvalidArgument` for any structural or integrity problem.
 pub fn parse_upload_blob_request(
@@ -131,35 +125,6 @@ mod tests {
         let err = parse_upload_blob_request(req).unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);
         assert!(err.message().contains("unsupported content digest type"));
-    }
-
-    #[test]
-    fn blob_key_formats_sha256_digest() {
-        let digest = ContentDigest {
-            r#type: 1,
-            value: vec![0xab, 0xcd, 0xef],
-        };
-        assert_eq!(blob_key(&digest), "1_abcdef");
-    }
-
-    #[test]
-    fn blob_key_handles_empty_value() {
-        let digest = ContentDigest {
-            r#type: 1,
-            value: vec![],
-        };
-        assert_eq!(blob_key(&digest), "1_");
-    }
-
-    #[test]
-    fn blob_key_includes_full_32_byte_digest() {
-        let digest = ContentDigest {
-            r#type: 1,
-            value: (0u8..32).collect(),
-        };
-        let key = blob_key(&digest);
-        assert!(key.starts_with("1_"));
-        assert_eq!(key.len(), 2 + 64);
     }
 
     #[test]
