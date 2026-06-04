@@ -18,7 +18,8 @@ use ::entity::{
     content_delete_model as ContentDeleteModel,
     content_follow_model as ContentFollowModel,
     content_identity_model as ContentIdentityModel,
-    content_model as ContentModel, content_post_model as ContentPostModel,
+    content_label_model as ContentLabelModel, content_model as ContentModel,
+    content_post_model as ContentPostModel,
     content_reaction_model as ContentReactionModel,
     content_report_model as ContentReportModel,
     content_repost_model as ContentRepostModel, event_model as EventModel,
@@ -28,6 +29,7 @@ use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::EntityTrait;
 use sea_orm::TransactionTrait;
 use tonic::Status;
 
@@ -444,6 +446,38 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             .insert(db)
             .await
             .map_err(map_db_err)?;
+        }
+
+        Some(ContentBody::Labels(labels)) => {
+            let key = labels.event_key.ok_or_else(|| {
+                Status::invalid_argument("labels content missing event_key")
+            })?;
+            let signed_by = key.signed_by.ok_or_else(|| {
+                Status::invalid_argument("labels event_key missing signed_by")
+            })?;
+
+            // One row per label value for efficient aggregation; the
+            // labeled event's key is denormalized onto each row.
+            let rows: Vec<ContentLabelModel::ActiveModel> = labels
+                .label_values
+                .into_iter()
+                .map(|label_value| ContentLabelModel::ActiveModel {
+                    content_id: Set(content_id),
+                    label_value: Set(label_value),
+                    event_key_collection: Set(key.collection as i16),
+                    event_key_identity: Set(key.identity.clone()),
+                    event_key_public_key_type: Set(signed_by.key_type as i16),
+                    event_key_public_key: Set(signed_by.key.clone()),
+                    event_key_sequence: Set(key.sequence as i64),
+                })
+                .collect();
+
+            if !rows.is_empty() {
+                ContentLabelModel::Entity::insert_many(rows)
+                    .exec(db)
+                    .await
+                    .map_err(map_db_err)?;
+            }
         }
 
         None => {}

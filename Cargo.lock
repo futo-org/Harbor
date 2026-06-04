@@ -3366,6 +3366,7 @@ dependencies = [
  "common-dotenv",
  "common-kafka",
  "common-object-store",
+ "ed25519-dalek",
  "env_logger",
  "log",
  "moderation-entity",
@@ -3376,6 +3377,7 @@ dependencies = [
  "reqwest",
  "sea-orm",
  "serde_json",
+ "sha2 0.10.9",
  "time",
  "tokio",
 ]
@@ -3583,7 +3585,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3822,6 +3824,22 @@ dependencies = [
  "tonic-web-wasm-client",
  "uniffi",
  "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "polycentric-identity"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ed25519-dalek",
+ "getrandom 0.2.17",
+ "hex",
+ "polycentric-common",
+ "polycentric-core",
+ "prost",
+ "sha2 0.10.9",
+ "tokio",
 ]
 
 [[package]]

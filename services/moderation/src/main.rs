@@ -2,12 +2,15 @@ use log::{info, warn};
 
 mod context;
 mod db;
+mod labels;
+mod polycentric;
 mod providers;
 mod repository;
 
 use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
+use polycentric::{PolycentricClient, PublishError};
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
 };
@@ -202,7 +205,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let azure = AzureClient::from_env()?;
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
-    let ctx = Context { db, azure, blobs };
+    // Our own Polycentric identity, used to sign + publish labels events.
+    let polycentric = PolycentricClient::from_env()?;
+    // Pull our identity state from the remote servers before consuming, so
+    // the first labels event we author continues our chain correctly.
+    polycentric.bootstrap().await;
+
+    let ctx = Context {
+        db,
+        azure,
+        blobs,
+        polycentric,
+    };
 
     // Listen to a Kafka topic of all events.
     let consumer = common_kafka::build_consumer("events", &["events"]).await;
@@ -287,12 +301,29 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     // outcome.
     match moderate(ctx, &content).await {
         Ok(azure_response) => {
+            // Derive the labels to apply before the response is consumed.
+            let labels = labels::labels_from_azure(&azure_response);
+
             if let Err(e) =
                 repository::store_azure_result(&ctx.db, digest_type, digest_bytes, azure_response)
                     .await
             {
                 warn!("store_azure_result error: {}", e);
                 return Outcome::Retry;
+            }
+
+            // Publish a labels event for the moderated content, if anything
+            // applies. (Nothing to label, or no decodable target key, means
+            // there is nothing to publish.)
+            if !labels.is_empty() {
+                match key.clone() {
+                    Some(target) => {
+                        if let Outcome::Retry = publish_labels(ctx, target, labels).await {
+                            return Outcome::Retry;
+                        }
+                    }
+                    None => warn!("cannot publish labels: message had no decodable event key"),
+                }
             }
         }
         Err(()) => {
@@ -312,4 +343,27 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     );
 
     Outcome::Commit
+}
+
+/// Publish a labels event for `target` and persist what we created to the
+/// moderation DB. Returns `Retry` only on transient/persistence failures
+/// worth re-attempting; a not-ready identity is logged and committed.
+async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) -> Outcome {
+    match ctx.polycentric.publish_labels(target, labels).await {
+        Ok(created) => match repository::persist_created(&ctx.db, &created).await {
+            Ok(()) => Outcome::Commit,
+            Err(e) => {
+                warn!("persist_created error: {}", e);
+                Outcome::Retry
+            }
+        },
+        Err(PublishError::NotReady(e)) => {
+            warn!("skipping labels publish (not ready): {}", e);
+            Outcome::Commit
+        }
+        Err(PublishError::Transient(e)) => {
+            warn!("labels publish failed: {}", e);
+            Outcome::Retry
+        }
+    }
 }

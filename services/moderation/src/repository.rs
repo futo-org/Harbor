@@ -1,16 +1,90 @@
 use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
+use moderation_entity::{created_content_model, created_event_model};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ConnectionTrait, DbErr, EntityTrait,
-    prelude::TimeDateTime, sea_query::value::prelude::serde_json,
+    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ConnectionTrait, DatabaseConnection,
+    DbErr, EntityTrait, TransactionTrait, prelude::TimeDateTime, sea_query::OnConflict,
+    sea_query::value::prelude::serde_json,
 };
 use time::OffsetDateTime;
+
+use crate::polycentric::CreatedEvent;
 
 /// Current wall-clock time as the `TimeDateTime` (naive) the schema uses.
 fn now() -> TimeDateTime {
     let now = OffsetDateTime::now_utc();
     TimeDateTime::new(now.date(), now.time())
+}
+
+/// Convert a millisecond Unix timestamp into the naive `TimeDateTime` the
+/// schema uses, falling back to now on overflow.
+fn millis_to_datetime(ms: u64) -> TimeDateTime {
+    let offset = OffsetDateTime::from_unix_timestamp_nanos((ms as i128) * 1_000_000)
+        .unwrap_or_else(|_| OffsetDateTime::now_utc());
+    TimeDateTime::new(offset.date(), offset.time())
+}
+
+/// Persist an event we created (and its content) to the moderation DB, in
+/// a single transaction. Re-publishing the same event is a no-op via the
+/// primary keys (content digest / event key) — duplicates are ignored.
+pub async fn persist_created(db: &DatabaseConnection, created: &CreatedEvent) -> Result<(), DbErr> {
+    let txn = db.begin().await?;
+
+    if let Some(digest) = created.event.content_digest.as_ref() {
+        let content = created_content_model::ActiveModel {
+            digest_type: Set(digest.r#type),
+            digest_bytes: Set(digest.value.clone()),
+            serialized_bytes: Set(created.content_bytes.clone()),
+            created_at: Set(now()),
+        };
+        // Ignore a duplicate content row (already stored under this digest).
+        created_content_model::Entity::insert(content)
+            .on_conflict(
+                OnConflict::columns([
+                    created_content_model::Column::DigestType,
+                    created_content_model::Column::DigestBytes,
+                ])
+                .do_nothing()
+                .to_owned(),
+            )
+            .exec_without_returning(&txn)
+            .await?;
+    }
+
+    let key = created
+        .event
+        .key
+        .as_ref()
+        .ok_or_else(|| DbErr::Custom("created event missing key".to_string()))?;
+    let signed_by = key
+        .signed_by
+        .as_ref()
+        .ok_or_else(|| DbErr::Custom("created event key missing signed_by".to_string()))?;
+
+    let event = created_event_model::ActiveModel {
+        collection: Set(key.collection),
+        identity: Set(key.identity.clone()),
+        public_key_type: Set(signed_by.key_type),
+        public_key: Set(signed_by.key.clone()),
+        sequence: Set(key.sequence as i64),
+        content_digest_type: Set(created.event.content_digest.as_ref().map(|d| d.r#type)),
+        content_digest_bytes: Set(created
+            .event
+            .content_digest
+            .as_ref()
+            .map(|d| d.value.clone())),
+        signature: Set(created.signature.clone()),
+        previous_signature: Set(created.event.previous_signature.clone()),
+        previous_root: Set(created.event.previous_root.clone()),
+        event_bytes: Set(created.event_bytes.clone()),
+        created_at: Set(millis_to_datetime(created.event.created_at)),
+    };
+    // A duplicate event key means we authored the same sequence twice —
+    // surface it as an error (rolls back the content insert above too).
+    event.insert(&txn).await?;
+
+    txn.commit().await
 }
 
 /// Return the content reference, if any, from the database

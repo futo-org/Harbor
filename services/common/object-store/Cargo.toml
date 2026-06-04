@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 # Workspace
-polycentric-common = { path = "../../../packages/rs-common" }
+polycentric-common.workspace = true
 
 # 3rd Party
 aws-config = { version = "1", features = ["behavior-version-latest"] }
