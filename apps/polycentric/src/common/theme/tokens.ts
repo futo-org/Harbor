@@ -405,6 +405,9 @@ export const Atoms = StyleSheet.create({
   pb_3xl: {
     paddingBottom: Spacing['3xl'],
   },
+  pb_4xl: {
+    paddingBottom: Spacing['4xl'],
+  },
 
   pl_0: {
     paddingLeft: Spacing['0'],
