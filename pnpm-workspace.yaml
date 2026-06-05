@@ -16,3 +16,5 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch
+
+minimumReleaseAge: 1440
