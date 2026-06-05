@@ -11,7 +11,7 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useFocusEffect } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
@@ -67,7 +67,8 @@ const ListHeader = () => {
 };
 
 export default function ExploreScreen() {
-  const showComposeFab = !isWeb;
+  // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
+  const showComposeFab = !isWeb && !isIOS;
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useExploreFeed({ enabled });

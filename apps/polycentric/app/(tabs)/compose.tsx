@@ -1,1 +1,1 @@
-export { default } from '@/src/features/composer/ComposeScreen';
+export { default } from '@/src/features/composer/ComposeTabScreen';

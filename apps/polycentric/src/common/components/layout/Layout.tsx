@@ -1,5 +1,5 @@
 import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { ExternalPathString, Link } from 'expo-router';
 import {
@@ -80,6 +80,7 @@ type PrimaryColumnProps = {
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -87,6 +88,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
       style={[
         Atoms.flex_1,
         isWeb && Atoms.pb_lg,
+        !isWeb && { paddingBottom: insets.bottom },
         isWeb && {
           maxWidth: 600,
           borderLeftColor: theme.palette.neutral_25,
