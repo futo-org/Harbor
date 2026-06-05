@@ -10,6 +10,7 @@ import {
   uniffiInitAsync,
 } from '@polycentric/rs-core-uniffi-web';
 import {
+  createBatchingLogSink,
   createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
@@ -19,11 +20,7 @@ let loggerInstalled = false;
 function installConsoleLogger() {
   if (loggerInstalled) return;
   loggerInstalled = true;
-  setLogger({
-    log: (message: string) => {
-      console.log(message);
-    },
-  });
+  setLogger(createBatchingLogSink());
 }
 
 export async function createPolycentricClient(
