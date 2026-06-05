@@ -25,5 +25,10 @@ pub(crate) fn set_defaults(config: &mut ClientConfig) {
         .set(
             "sasl.password",
             env::var("POLYCENTRIC_KAFKA_SASL_PASSWORD").unwrap_or_default(),
+        )
+        .set(
+            "broker.address.family",
+            env::var("POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY")
+                .unwrap_or_else(|_| "any".to_string()),
         );
 }
