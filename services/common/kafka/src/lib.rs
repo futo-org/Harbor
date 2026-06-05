@@ -5,6 +5,7 @@ mod config;
 mod consumer;
 mod producer;
 
+pub use rdkafka::Offset;
 pub use rdkafka::message::{BorrowedMessage, Message};
 
 pub use consumer::{CommitMode, Consumer, CustomContext, build_consumer};

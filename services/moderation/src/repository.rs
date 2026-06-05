@@ -2,14 +2,15 @@ use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
 use moderation_entity::{created_content_model, created_event_model};
+use polycentric_common::merkle;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ConnectionTrait, DatabaseConnection,
-    DbErr, EntityTrait, TransactionTrait, prelude::TimeDateTime, sea_query::OnConflict,
-    sea_query::value::prelude::serde_json,
+    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ColumnTrait, ConnectionTrait,
+    DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait, prelude::TimeDateTime,
+    sea_query::OnConflict, sea_query::value::prelude::serde_json,
 };
 use time::OffsetDateTime;
 
-use crate::polycentric::CreatedEvent;
+use crate::polycentric::{ChainHead, CreatedEvent};
 
 /// Current wall-clock time as the `TimeDateTime` (naive) the schema uses.
 fn now() -> TimeDateTime {
@@ -85,6 +86,47 @@ pub async fn persist_created(db: &DatabaseConnection, created: &CreatedEvent) ->
     event.insert(&txn).await?;
 
     txn.commit().await
+}
+
+/// Read the next chain position for events we author in
+pub async fn chain_head<C: ConnectionTrait>(
+    db: &C,
+    collection: i32,
+    identity: &str,
+    public_key_type: i32,
+    public_key: &[u8],
+) -> Result<ChainHead, DbErr> {
+    let rows = created_event_model::Entity::find()
+        .filter(created_event_model::Column::Collection.eq(collection))
+        .filter(created_event_model::Column::Identity.eq(identity))
+        .filter(created_event_model::Column::PublicKeyType.eq(public_key_type))
+        .filter(created_event_model::Column::PublicKey.eq(public_key.to_vec()))
+        .all(db)
+        .await?;
+
+    let next_sequence = rows
+        .iter()
+        .map(|r| r.sequence)
+        .max()
+        .map(|s| s as u64 + 1)
+        .unwrap_or(1);
+
+    // Canonical ordering depends on each event's full bytes (vector-clock
+    // sum, created_at) paired with its signature — both stored per row.
+    let canonical = merkle::canonical_signatures(
+        rows.iter()
+            .map(|r| (r.event_bytes.as_slice(), r.signature.as_slice())),
+    );
+    let previous_signature = canonical.last().cloned().unwrap_or_default();
+    let previous_root = merkle::merkle_tree_hash(&canonical)
+        .map(|h| h.to_vec())
+        .unwrap_or_default();
+
+    Ok(ChainHead {
+        next_sequence,
+        previous_signature,
+        previous_root,
+    })
 }
 
 /// Returns if already stored content with this digest

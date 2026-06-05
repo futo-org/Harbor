@@ -34,6 +34,18 @@ impl std::fmt::Display for PublishError {
     }
 }
 
+/// Chain position for the next event we author in a collection, read from
+/// the durable Postgres store (not local in-memory state) so that multiple
+/// moderation processes extend a single, shared chain consistently.
+pub struct ChainHead {
+    /// Sequence to assign the next event (`max(sequence) + 1`, or 1).
+    pub next_sequence: u64,
+    /// Canonically-latest signature in the collection (empty if none).
+    pub previous_signature: Vec<u8>,
+    /// Merkle root over the collection's canonical signatures (empty if none).
+    pub previous_root: Vec<u8>,
+}
+
 /// Signed event and content that should persist to the database.
 pub struct CreatedEvent {
     /// The decoded event (carries key, digest, previous_root, etc.).
@@ -155,13 +167,22 @@ impl PolycentricClient {
         Ok(count)
     }
 
-    /// Build, sign, and push a `Labels` event for `target`, then record it
-    /// locally so the next event chains correctly. Returns the created
-    /// event for persistence by the caller.
+    /// The hex identity string this service publishes under.
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+
+    /// The public key this service signs events with.
+    pub fn public_key(&self) -> &PublicKey {
+        &self.public_key
+    }
+
+    /// Build, sign, and push a `Labels` event for `target`.
     pub async fn publish_labels(
         &self,
         target: EventKey,
         label_values: Vec<String>,
+        head: ChainHead,
     ) -> Result<CreatedEvent, PublishError> {
         let identity_sequence = self.identity_sequence.load(Ordering::Relaxed);
         if identity_sequence == 0 {
@@ -172,38 +193,36 @@ impl PolycentricClient {
 
         let (content_bytes, digest) = labels_content(&target, &label_values);
 
-        // Compute the chain position synchronously, without holding the lock
-        // across any await.
-        let event = {
+        // The sequence and prior-chain references come from the durable
+        // Postgres store (`head`); only the vector clock is derived locally,
+        // from the static identity chain loaded at bootstrap.
+        let sequence = head.next_sequence;
+        let vector_clock = {
             let core = self.core.lock().unwrap();
-            let sequence = core.next_sequence(&self.identity, collections::LABELS);
-            let vector_clock = core
-                .build_vector_clock(
-                    &self.identity,
-                    collections::LABELS,
-                    identity_sequence,
-                    &self.public_key,
-                    sequence,
-                    None,
-                )
-                .map_err(|e| PublishError::NotReady(e.to_string()))?;
-            let previous_root = core.previous_root(&self.identity, collections::LABELS);
-            let previous_signature = core.previous_signature(&self.identity, collections::LABELS);
-
-            Event {
-                key: Some(EventKey {
-                    collection: collections::LABELS,
-                    identity: self.identity.clone(),
-                    signed_by: Some(self.public_key.clone()),
-                    sequence,
-                }),
+            core.build_vector_clock(
+                &self.identity,
+                collections::LABELS,
                 identity_sequence,
-                vector_clock: Some(vector_clock),
-                previous_signature,
-                previous_root,
-                content_digest: Some(digest),
-                created_at: now_millis(),
-            }
+                &self.public_key,
+                sequence,
+                None,
+            )
+            .map_err(|e| PublishError::NotReady(e.to_string()))?
+        };
+
+        let event = Event {
+            key: Some(EventKey {
+                collection: collections::LABELS,
+                identity: self.identity.clone(),
+                signed_by: Some(self.public_key.clone()),
+                sequence,
+            }),
+            identity_sequence,
+            vector_clock: Some(vector_clock),
+            previous_signature: head.previous_signature,
+            previous_root: head.previous_root,
+            content_digest: Some(digest),
+            created_at: now_millis(),
         };
 
         let event_bytes = event.encode_to_vec();
@@ -223,7 +242,7 @@ impl PolycentricClient {
         // Push to every server; success on any is enough to consider it
         // published (servers gossip among themselves).
         let request = PutEventsRequest {
-            event_bundles: vec![bundle.clone()],
+            event_bundles: vec![bundle],
         };
         let mut pushed = false;
         for server in &self.servers {
@@ -238,9 +257,8 @@ impl PolycentricClient {
             ));
         }
 
-        // Record locally so subsequent events extend this chain.
-        self.core.lock().unwrap().copy_bundles(vec![bundle]);
-
+        // No local state to update: the next event's chain position is read
+        // back from Postgres once the caller persists this one.
         Ok(CreatedEvent {
             event,
             signature,

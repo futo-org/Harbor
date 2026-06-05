@@ -7,10 +7,14 @@ mod polycentric;
 mod providers;
 mod repository;
 
-use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message};
+use std::collections::HashMap;
+use std::time::Duration;
+
+use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
+use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
 };
@@ -20,11 +24,19 @@ use providers::azure::{AzureClient, ModerationRequest};
 use prost::Message as ProstMessage;
 use sea_orm::sea_query::value::prelude::serde_json;
 
+/// Duration before retrying a Retry event
+const RETRY_BACKOFF: Duration = Duration::from_secs(2);
+
+/// Number of times a message is retried before it is skipped (committed
+/// past without being processed).
+const MAX_RETRIES: u32 = 5;
+
 /// Whether the consumed message's offset should be committed.
 enum Outcome {
     /// Done with this message — commit so it is not redelivered.
     Commit,
-    /// Transient failure — leave uncommitted so it is retried.
+    /// Transient failure — seek back so the message is re-delivered and
+    /// retried (see the consume loop). After [`MAX_RETRIES`] it is skipped.
     Retry,
 }
 
@@ -221,6 +233,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Listen to a Kafka topic of all events.
     let consumer = common_kafka::build_consumer("events", &["events"]).await;
 
+    // Failure counts for messages currently being retried.
+    let mut attempts: HashMap<(i32, i64), u32> = HashMap::new();
+
     loop {
         let message = match consumer.recv().await {
             Ok(message) => message,
@@ -230,13 +245,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
+        let coord = (message.partition(), message.offset());
+
         match process(&ctx, &message).await {
             Outcome::Commit => {
+                attempts.remove(&coord);
                 if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
                     warn!("failed to commit offset: {}", e);
                 }
             }
-            Outcome::Retry => {}
+            Outcome::Retry => {
+                let failures = {
+                    let count = attempts.entry(coord).or_insert(0);
+                    *count += 1;
+                    *count
+                };
+
+                if failures > MAX_RETRIES {
+                    // Retries exhausted — give up and commit past this message
+                    // so the partition can make progress.
+                    warn!(
+                        "message at partition {} offset {} failed {} times; skipping",
+                        coord.0, coord.1, failures
+                    );
+                    attempts.remove(&coord);
+                    if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
+                        warn!("failed to commit offset after skip: {}", e);
+                    }
+                } else {
+                    // Seek back so the next poll re-delivers this message, then
+                    // back off to avoid a hot loop.
+                    if let Err(e) = consumer.seek(
+                        message.topic(),
+                        message.partition(),
+                        Offset::Offset(message.offset()),
+                        Duration::from_secs(5),
+                    ) {
+                        warn!("failed to seek for retry: {}", e);
+                    }
+                    tokio::time::sleep(RETRY_BACKOFF).await;
+                }
+            }
         }
     }
 }
@@ -376,7 +425,24 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
 /// moderation DB. Returns `Retry` on any failure (transient, persistence,
 /// or a not-ready identity) so the label is never silently dropped.
 async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) -> Outcome {
-    match ctx.polycentric.publish_labels(target, labels).await {
+    let signer = ctx.polycentric.public_key();
+    let head = match repository::chain_head(
+        &ctx.db,
+        collections::LABELS,
+        ctx.polycentric.identity(),
+        signer.key_type,
+        &signer.key,
+    )
+    .await
+    {
+        Ok(head) => head,
+        Err(e) => {
+            warn!("chain_head error: {}", e);
+            return Outcome::Retry;
+        }
+    };
+
+    match ctx.polycentric.publish_labels(target, labels, head).await {
         Ok(created) => match repository::persist_created(&ctx.db, &created).await {
             Ok(()) => Outcome::Commit,
             Err(e) => {
