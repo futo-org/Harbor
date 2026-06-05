@@ -135,6 +135,7 @@ fn merge_event(
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
     let c = client.lock().unwrap();
+    let mut first_error: Option<String> = None;
     for v in values {
         if v.is_empty() {
             continue;
@@ -148,9 +149,14 @@ fn merge_event(
         match c.validate_event(signed, &bundle.event_proofs) {
             Ok(()) => return v.clone(),
             Err(e) => {
-                crate::logging::log_msg(format!("[merge_event] dropping bundle: {e:?}"));
+                first_error.get_or_insert_with(|| format!("{e:?}"));
             }
         }
+    }
+    if let Some(reason) = first_error {
+        crate::logging::log_debug(|| {
+            format!("[merge_event] no valid bundle; first reason: {reason}")
+        });
     }
     Vec::new()
 }
