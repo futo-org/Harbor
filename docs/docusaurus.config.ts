@@ -60,6 +60,7 @@ const config: Config = {
       logo: {
         alt: 'Polycentric',
         src: 'img/logo.png',
+        srcDark: 'img/logo-dark.png',
       },
       items: [
         {

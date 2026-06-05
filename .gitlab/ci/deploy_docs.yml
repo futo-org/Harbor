@@ -29,8 +29,8 @@ docs-deploy:
 
 # Deploy Review Apps on every merge request for the docs.
 # We deploy each MR to the branch "mr-$CI_MERGE_REQUEST_IID" of the Cloudflare project name
-# "polycentric-docs", meaning we can hand Gitlab the URL
-# "<mr-$CI_MERGE_REQUEST_IID>.polycentric-docs.pages.dev".
+# "polycentric-docs-cs8" (domain name auto-assigned by Cloudflare), meaning we can hand Gitlab the
+# URL "<mr-$CI_MERGE_REQUEST_IID>.polycentric-docs-cs8.pages.dev".
 
 .docs-review-rules:
   rules:
