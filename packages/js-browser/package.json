@@ -21,9 +21,7 @@
       "default": "./src/index.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",

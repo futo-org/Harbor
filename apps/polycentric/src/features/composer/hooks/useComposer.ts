@@ -1,9 +1,3 @@
-import {
-  Button,
-  ProfileAvatar,
-  Text,
-  TextArea,
-} from '@/src/common/components/primitives';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -13,56 +7,51 @@ import {
   useUsername,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import {
-  DismissReason,
-  SheetHeaderBlock,
-  type DismissSheet,
-} from '@/src/common/lib/sheet';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
 import {
   feedQueryKeys,
   injectPostIntoFeedCache,
 } from '@/src/features/feed/hooks/feedCache';
 import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import Icon from '@/src/common/components/Icon';
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
-import ComposerPostEmbed from './ComposerPostEmbed';
-import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
-import { useComposerStore } from './hooks/useComposerStore';
+import { useComposerStore } from './useComposerStore';
 
-const MAX_ATTACHMENTS = 4;
-const THUMBNAIL_SIZE = 72;
+export const MAX_ATTACHMENTS = 4;
 
 /** Longest edge lengths for post image variants. */
 const POST_VARIANT_SIZES = [512, 1280];
 
-interface ComposeSheetInnerProps {
-  dismissSheet: DismissSheet;
+export type UseComposerArgs = {
   /** TODO: should be v2 `SignedEvent` */
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
   /** Open the image picker as soon as the composer mounts. */
   attachOnMount?: boolean;
-}
+  /**
+   * Dismiss the composer. Called by the close (X) button and after a
+   * successful post. The sheet pops the modal route; the full-screen tab
+   * returns to the previously selected tab.
+   */
+  onClose: () => void;
+};
 
-export function ComposeSheetInner({
-  dismissSheet,
+/**
+ * All composer state + behavior, shared between the sheet/modal composer
+ * (`ComposeSheet`) and the full-screen compose tab (`ComposeTabScreen`). The
+ * presentation chrome (Sheet vs Screen) and dismiss target live in the callers.
+ */
+export function useComposer({
   onPostCreated,
   replyTo,
   quote,
   attachOnMount = false,
-}: ComposeSheetInnerProps) {
+  onClose,
+}: UseComposerArgs) {
   const client = usePolycentric();
-  const { identityKey: currentIdentityKey, identity: currentIdentity } =
-    useCurrentIdentity();
-
-  const { theme } = useTheme();
+  const { identityKey: currentIdentityKey } = useCurrentIdentity();
 
   const onPostCreatedRef = useRef(onPostCreated);
   onPostCreatedRef.current = onPostCreated;
@@ -100,8 +89,8 @@ export function ComposeSheetInner({
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const handleClose = useCallback(() => {
-    if (!submitting) void dismissSheet(DismissReason.UserDismissed);
-  }, [submitting, dismissSheet]);
+    if (!submitting) onClose();
+  }, [submitting, onClose]);
 
   const handleAttachImage = useCallback(async () => {
     if (attachDisabled) return;
@@ -148,13 +137,13 @@ export function ComposeSheetInner({
       const imageSets: v2.ImageSet[] =
         attachments.length > 0
           ? await Promise.all(
-            attachments.map((a) =>
-              processAndUploadImage(client, a.uri, {
-                mode: 'fit',
-                sizes: POST_VARIANT_SIZES,
-              }),
-            ),
-          )
+              attachments.map((a) =>
+                processAndUploadImage(client, a.uri, {
+                  mode: 'fit',
+                  sizes: POST_VARIANT_SIZES,
+                }),
+              ),
+            )
           : [];
 
       const post: types.v2.Post = {
@@ -188,7 +177,6 @@ export function ComposeSheetInner({
         signedEvent,
         serializedContent: { contentBytes: v2.Content.toBinary(content) },
       });
-
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to the below query
@@ -203,7 +191,7 @@ export function ComposeSheetInner({
       await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
-      await dismissSheet(DismissReason.PostSubmitted);
+      onClose();
       resetComposer();
 
       void client
@@ -230,191 +218,41 @@ export function ComposeSheetInner({
     submitting,
     client,
     currentIdentityKey,
-    dismissSheet,
     isReply,
+    quote,
+    replyTo,
     replyToEventKey,
     replyRootEventKey,
     resetComposer,
     setSubmitting,
     setError,
+    onClose,
   ]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
     : "What's on your mind?";
 
-  return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
-      <SheetHeaderBlock
-        title={title}
-        onClose={handleClose}
-        //closeDisabled={submitting}
-        trailing={
-          isWeb ? (
-            <View style={{ minWidth: 80 }} />
-          ) : (
-            <View
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              {submitting ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.primary_500}
-                  accessibilityLabel="Posting"
-                />
-              ) : (
-                <Button
-                  title={'Post'}
-                  onPress={handlePost}
-                  variant="primary"
-                  disabled={!canPost}
-                  size="sm"
-                />
-              )}
-            </View>
-          )
-        }
-      />
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.py_lg,
-          Atoms.px_lg,
-          {
-            minHeight: 200,
-          },
-        ]}
-      >
-        {/* Reply preview */}
-        {isReply && <ComposerPostEmbed post={replyTo} />}
-
-        {/* Error displays */}
-        {error && (
-          <View
-            style={[
-              Atoms.p_md,
-              {
-                borderBottomWidth: 1,
-                borderBottomColor: withHexOpacity(
-                  theme.palette.negative_500,
-                  '80',
-                ),
-                marginBottom: 10,
-              },
-            ]}
-          >
-            <Text variant="secondary" color="negative_500">
-              {error}
-            </Text>
-          </View>
-        )}
-
-        {/* Main block */}
-        <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1]}>
-          {currentIdentityKey ? (
-            <View style={[Atoms.self_start]}>
-              <ProfileAvatar identityKey={currentIdentityKey} size="md" />
-            </View>
-          ) : null}
-          <View style={Atoms.flex_1}>
-            <TextArea
-              variant="plain"
-              placeholder={placeholder}
-              autoFocus
-              value={text}
-              onChangeText={setText}
-              // disabled={submitting}
-              maxLength={2000}
-              style={[
-                Atoms.px_0,
-                Atoms.py_0,
-                Atoms.pt_sm,
-                Atoms.text_lg,
-                Atoms.flex_1,
-              ]}
-            />
-            {attachments.length > 0 && (
-              <View
-                style={[
-                  Atoms.flex_row,
-                  Atoms.gap_sm,
-                  { flexWrap: 'wrap', marginTop: 8 },
-                ]}
-              >
-                {attachments.map((a) => (
-                  <AttachmentThumb
-                    key={a.id}
-                    uri={a.uri}
-                    disabled={submitting}
-                    onRemove={() => handleRemoveAttachment(a.id)}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Quote preview */}
-        {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
-      </View>
-      {/*  Footer */}
-      <ComposeSheetFooterBar
-        variant={isWeb ? 'web' : 'native'}
-        charCount={text.length}
-        submitting={submitting}
-        canPost={canPost}
-        onPost={handlePost}
-        onAttachImage={() => void handleAttachImage()}
-        attachDisabled={attachDisabled}
-      />
-    </View>
-  );
-}
-
-function AttachmentThumb({
-  uri,
-  disabled,
-  onRemove,
-}: {
-  uri: string;
-  disabled: boolean;
-  onRemove: () => void;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      style={{
-        width: THUMBNAIL_SIZE,
-        height: THUMBNAIL_SIZE,
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
-    >
-      <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
-      <Pressable
-        onPress={onRemove}
-        disabled={disabled}
-        accessibilityLabel="Remove attachment"
-        hitSlop={6}
-        style={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
-      >
-        <Icon name="close" size={14} color="white" />
-      </Pressable>
-    </View>
-  );
+  return {
+    // state
+    text,
+    setText,
+    attachments,
+    submitting,
+    error,
+    // computed
+    isReply,
+    title,
+    placeholder,
+    canPost,
+    attachDisabled,
+    currentIdentityKey,
+    replyTo,
+    quote,
+    // handlers
+    handleClose,
+    handlePost,
+    handleAttachImage,
+    handleRemoveAttachment,
+  };
 }

@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "format": "prettier --check .",
-    "format:fix": "prettier --write .",
+    "format": "biome check",
+    "format:fix": "biome check --write",
     "generate": "turbo run generate",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
@@ -16,12 +16,15 @@
     "ubrn:android": "pnpm -C packages/react-native ubrn:android",
     "ubrn:ios": "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then pnpm -C packages/react-native ubrn:ios; else echo Skipping ubrn:ios: macOS-only build; fi'",
     "ubrn": "pnpm ubrn:android && pnpm ubrn:ios",
-    "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-uniffi-web clean"
+    "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-uniffi-web clean",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/react": "~19.2.10",
     "eslint": "^9.38.0",
-    "prettier": "^3.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "turbo": "^2.6.1",
     "typescript-eslint": "^8.46.2"
   },

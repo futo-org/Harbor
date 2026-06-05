@@ -1,5 +1,5 @@
 <p align="center">
-<img alt="posthoglogo" src="https://gitlab.futo.org/polycentric/docs/-/raw/main/docs/static/logo.png?ref_type=heads" width="50">
+<img alt="posthoglogo" src="https://gitlab.futo.org/polycentric/polycentric/-/raw/develop/apps/polycentric/src/common/assets/images/polycentric-logo-blue.png?ref_type=heads" width="50">
 
 </p>
 
@@ -34,6 +34,9 @@ rustup target add wasm32-unknown-unknown
 # Build the frontend and core binaries
 pnpm install
 pnpm build
+
+# Setup the git pre-commit hooks
+pnpm prepare
 
 # Start the server process
 docker compose up -d --build

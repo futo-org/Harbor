@@ -1881,13 +1881,17 @@ const uniffiCallbackInterfaceObserver: {
 export interface PolycentricCoreLike {
   /**
    * Build a vector clock (returns serialized `VectorClock` proto bytes).
+   * For identity events, callers should pass the new event's identity
+   * content as `identity_content` (serialized `Identity` proto bytes).
+   * For other events, leave it `None`.
    */
   buildVectorClock(
     identity: string,
     collection: /*i32*/ number,
     identitySequence: /*u64*/ bigint,
     signedBy: ArrayBuffer,
-    currentSequence: /*u64*/ bigint
+    currentSequence: /*u64*/ bigint,
+    identityContent: ArrayBuffer | undefined
   ) /*throws*/ : ArrayBuffer;
   /**
    * Insert each (digest, content) pair into the content store.
@@ -2071,13 +2075,17 @@ export class PolycentricCore
 
   /**
    * Build a vector clock (returns serialized `VectorClock` proto bytes).
+   * For identity events, callers should pass the new event's identity
+   * content as `identity_content` (serialized `Identity` proto bytes).
+   * For other events, leave it `None`.
    */
   buildVectorClock(
     identity: string,
     collection: /*i32*/ number,
     identitySequence: /*u64*/ bigint,
     signedBy: ArrayBuffer,
-    currentSequence: /*u64*/ bigint
+    currentSequence: /*u64*/ bigint,
+    identityContent: ArrayBuffer | undefined
   ): ArrayBuffer /*throws*/ {
     return FfiConverterArrayBuffer.lift(
       uniffiCaller.rustCallWithError(
@@ -2092,6 +2100,7 @@ export class PolycentricCore
             FfiConverterUInt64.lower(identitySequence),
             FfiConverterArrayBuffer.lower(signedBy),
             FfiConverterUInt64.lower(currentSequence),
+            FfiConverterOptionalArrayBuffer.lower(identityContent),
             callStatus
           );
         },
@@ -3611,7 +3620,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !==
-    31180
+    16886
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock'

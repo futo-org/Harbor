@@ -9,7 +9,7 @@ use crate::service::proto::{
     CreatePairingSessionRequest, CreatePairingSessionResponse,
 };
 use crate::util;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
@@ -27,17 +27,15 @@ pub async fn handle(
         Proto::InitialPairingSession::decode(&msg.message_bytes[..])
             .map_err(|_| Status::invalid_argument("invalid session"))?;
 
-    if initial_session.created_at > Utc::now().timestamp_millis() {
+    let now = Utc::now();
+    let skew_ms: i64 = 30 * 60 * 1000;
+    if (initial_session.timestamp - now.timestamp_millis()).abs() > skew_ms {
         return Err(Status::invalid_argument(
-            "session created_at must be in the past",
+            "session timestamp outside acceptable skew window",
         ));
     }
 
-    let created_at =
-        DateTime::<Utc>::from_timestamp_millis(initial_session.created_at)
-            .ok_or_else(|| {
-                Status::invalid_argument("invalid session created_at")
-            })?;
+    let created_at = now;
     let expires_at = created_at
         + chrono::Duration::seconds(
             pair_repo::PAIRING_SESSION_TTL_SECONDS as i64,
@@ -76,10 +74,8 @@ pub async fn handle(
                 key_type: row.signed_by_key_type,
                 key: row.signed_by_key,
             }),
-            initial_session: Some(Proto::InitialPairingSession {
-                issuer_identity: row.issuer_identity,
-                created_at: row.created_at.timestamp_millis(),
-            }),
+            issuer_identity: row.issuer_identity,
+            created_at: row.created_at.timestamp_millis(),
             expires_at: row.expires_at.timestamp_millis(),
             claimer_pubkeys: vec![],
         }),

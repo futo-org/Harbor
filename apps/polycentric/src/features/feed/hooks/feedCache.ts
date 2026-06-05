@@ -1,4 +1,4 @@
-import { bundleEventId } from '@/src/common/lib/polycentric-hooks';
+import { bundleEventId } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   getQueryCache,
   setQueryCache,

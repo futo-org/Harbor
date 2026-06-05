@@ -224,6 +224,7 @@ extern "C" {
         uint64_t identity_sequence, 
         RustBuffer signed_by, 
         uint64_t current_sequence, 
+        RustBuffer identity_content, 
         RustCallStatus *uniffi_out_err
     );
     void uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(
@@ -4765,7 +4766,7 @@ NativePolycentricCore::NativePolycentricCore(
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock"),
-        6,
+        7,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(rt, thisVal, args, count);
         }
@@ -6055,7 +6056,7 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_constructor_pol
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging<int32_t>::fromJs(rt, callInvoker, args[2]), uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[5]), 
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging<int32_t>::fromJs(rt, callInvoker, args[2]), uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[5]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[6]), 
             &status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
