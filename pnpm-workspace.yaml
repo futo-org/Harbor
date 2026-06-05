@@ -4,6 +4,7 @@ packages:
   - packages/js-browser/examples/*
   - packages/js-node/examples/*
   - tools/*
+  - docs/
 
 catalog:
   '@noble/hashes': ^1.8.0
