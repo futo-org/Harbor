@@ -6,6 +6,7 @@ include:
   - local: '.gitlab/ci/build_services.yml'
   - local: '.gitlab/ci/build_app.yml'
   - local: '.gitlab/ci/build_docs.yml'
+  - local: '.gitlab/ci/deploy_docs.yml'
   - local: '.gitlab/ci/deploy_app.yml'
   - local: '.gitlab/ci/deploy_services.yml'
   - local: '.gitlab/ci/deploy_pages.yml'
