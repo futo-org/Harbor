@@ -25,10 +25,6 @@ docs-deploy:
   before_script:
     - npm install -g wrangler
   script:
-    - |
-      if ! wrangler pages project list | grep -q "polycentric-docs"; then
-        wrangler pages project create polycentric-docs --production-branch production
-      fi
     - wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch=production
 
 # Deploy Review Apps on every merge request for the docs.
@@ -53,16 +49,12 @@ docs-review:
       artifacts: true
   environment:
     name: review/docs/$CI_MERGE_REQUEST_IID
-    url: https://mr-$CI_MERGE_REQUEST_IID.polycentric-docs.pages.dev
+    url: https://mr-$CI_MERGE_REQUEST_IID.polycentric-docs-cs8.pages.dev
     on_stop: docs-review-stop
     auto_stop_in: 1 week
   before_script:
     - npm install -g wrangler
   script:
-    - |
-      if ! wrangler pages project list | grep -q "polycentric-docs"; then
-        wrangler pages project create polycentric-docs --production-branch production
-      fi
     - wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch="mr-$CI_MERGE_REQUEST_IID"
 
 docs-review-stop:

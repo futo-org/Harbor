@@ -1,19 +1,14 @@
 ---
-title: Services
-sidebar_label: Services
+title: gRPC
+sidebar_label: gRPC
 sidebar_position: 3
 ---
 
-# Services
+# gRPC
 
 The server exposes its API as gRPC services, served over both gRPC (h2c) and gRPC-Web
 on port `3000`. The message types referenced here are defined in
 [Data Model](/protocol/data-model).
-
-:::tip[Live reference]
-A running server serves an always-current, reflection-generated API browser at
-`/docs`. Use it as the authoritative reference for the deployed version.
-:::
 
 ## EventSyncService
 
