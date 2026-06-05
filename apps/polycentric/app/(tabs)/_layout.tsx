@@ -37,7 +37,7 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="trust">
         <NativeTabs.Trigger.Label>Trust</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="checkmark.seal" md="key" />
+        <NativeTabs.Trigger.Icon sf="checkmark.seal" md="verified" />
       </NativeTabs.Trigger>
 
       {isIOS ? (
