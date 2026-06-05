@@ -10,7 +10,7 @@ import {
   truncateName,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -27,6 +27,7 @@ export interface ProfileHeaderProps {
 }
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
+  const { theme } = useTheme();
   const { identityKey, isSelf, activeFeed, setActiveFeed } =
     useProfileContext();
 
@@ -44,7 +45,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   if (profile.isLoading && !profile.name) return undefined;
 
   return (
-    <>
+    <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       <View style={{ position: 'relative' }}>
         <View
           style={{
@@ -122,7 +123,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           )}
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
