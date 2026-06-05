@@ -30,3 +30,59 @@ docs-deploy:
         wrangler pages project create polycentric-docs --production-branch production
       fi
     - wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch=production
+
+# Deploy Review Apps on every merge request for the docs.
+# We deploy each MR to the branch "mr-$CI_MERGE_REQUEST_IID" of the Cloudflare project name
+# "polycentric-docs", meaning we can hand Gitlab the URL
+# "<mr-$CI_MERGE_REQUEST_IID>.polycentric-docs.pages.dev".
+
+.docs-review-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - docs/**/*
+        - .gitlab/ci/build_docs.yml
+        - .gitlab/ci/deploy_docs.yml
+
+docs-review:
+  extends: .docs-review-rules
+  stage: deploy
+  image: node:24-slim
+  needs:
+    - job: docs-build
+      artifacts: true
+  environment:
+    name: review/docs/$CI_MERGE_REQUEST_IID
+    url: https://mr-$CI_MERGE_REQUEST_IID.polycentric-docs.pages.dev
+    on_stop: docs-review-stop
+    auto_stop_in: 1 week
+  before_script:
+    - npm install -g wrangler
+  script:
+    - |
+      if ! wrangler pages project list | grep -q "polycentric-docs"; then
+        wrangler pages project create polycentric-docs --production-branch production
+      fi
+    - wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch="mr-$CI_MERGE_REQUEST_IID"
+
+docs-review-stop:
+  stage: deploy
+  image: node:24-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - docs/**/*
+        - .gitlab/ci/build_docs.yml
+        - .gitlab/ci/deploy_docs.yml
+      # Should only trigger when `docs-review` triggers it (when stopping)
+      when: manual
+  variables:
+    CF_PAGES_PROJECT: polycentric-docs
+    CF_PAGES_BRANCH: mr-$CI_MERGE_REQUEST_IID
+    # Needs a git checkout for the cleanup script below
+    GIT_STRATEGY: none
+  environment:
+    name: review/docs/$CI_MERGE_REQUEST_IID
+    action: stop
+  script:
+    - node .gitlab/ci/scripts/cf-pages-delete-branch.mjs
