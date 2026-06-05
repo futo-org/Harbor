@@ -231,9 +231,13 @@ mod tests {
     use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
 
-    fn mock_ctx() -> Arc<ServiceContext> {
+    async fn mock_ctx() -> Arc<ServiceContext> {
+        let kafka_producer = common_kafka::build_producer()
+            .await
+            .expect("failed to build Kafka producer");
         ServiceContext::new(
             MockDatabase::new(DbBackend::Postgres).into_connection(),
+            kafka_producer,
         )
     }
 
@@ -285,7 +289,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_bundle_without_signed_event() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let bundle = EventBundle {
             signed_event: None,
             serialized_content: None,
@@ -298,7 +302,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_undecodable_event_bytes() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let bundle = EventBundle {
             signed_event: Some(SignedEvent {
                 signature: vec![],
@@ -315,7 +319,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_event_with_no_key() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let bundle = bundle_with_key(None);
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
@@ -324,7 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_key_with_no_signed_by() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let bundle = bundle_with_key(Some(key_with("alice", None, 6)));
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
@@ -333,7 +337,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_signer_identity_mismatch() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let signer = Some(PublicKey {
             key_type: 1,
             key: vec![0xbb; 32],
@@ -347,7 +351,7 @@ mod tests {
 
     #[tokio::test]
     async fn validate_tombstones_passes_through_empty_input() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let validated =
             validate_tombstones(&ctx, HashMap::new()).await.unwrap();
         assert!(validated.is_empty());
@@ -355,7 +359,7 @@ mod tests {
 
     #[tokio::test]
     async fn validate_tombstones_drops_target_when_all_bundles_invalid() {
-        let ctx = mock_ctx();
+        let ctx = mock_ctx().await;
         let bad = bundle_with_key(None);
         let mut deletes: HashMap<TargetEventKey, Vec<EventBundle>> =
             HashMap::new();

@@ -1,0 +1,146 @@
+
+.service-rust-base:
+  image: ${RUST_IMAGE}
+  stage: check
+
+.service-format-check:
+  extends: .service-rust-base
+  script:
+    - cargo fmt --check --package ${SERVICE_NAME}
+  allow_failure: true
+
+.service-clippy:
+  extends: .service-rust-base
+  script:
+    - cargo clippy --package ${SERVICE_NAME} -- -D warnings
+  allow_failure: true
+
+.service-build:
+  extends: .service-rust-base
+  stage: build
+  script:
+    - cargo build --release --package ${SERVICE_NAME}
+  artifacts:
+    paths:
+      - target/release/${SERVICE_NAME}
+    expire_in: 1 week
+
+.service-image:
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: ['']
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  stage: build
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=./services/${SERVICE_DIR} \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache,mode=max \
+        --output type=image,name=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA,push=true
+
+########################################################################
+# server
+########################################################################
+
+.server-workflow:
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^server-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - services/server/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/server/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    RUNNER_SCRIPT_TIMEOUT: 179m
+    SERVICE_NAME: server
+    SERVICE_DIR: server
+
+server-format-check:
+  extends:
+    - .server-workflow
+    - .service-format-check
+
+server-clippy:
+  extends:
+    - .server-workflow
+    - .service-clippy
+
+server-build:
+  extends:
+    - .server-workflow
+    - .service-build
+
+server-image:
+  extends:
+    - .server-workflow
+    - .service-image
+  rules:
+    - !reference [.server-workflow, rules]
+    - !reference [.release-workflow, rules]
+
+########################################################################
+# moderation
+########################################################################
+
+.moderation-workflow:
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^moderation-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - services/moderation/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/moderation/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    RUNNER_SCRIPT_TIMEOUT: 179m
+    SERVICE_NAME: moderation-service
+    SERVICE_DIR: moderation
+
+moderation-format-check:
+  extends:
+    - .moderation-workflow
+    - .service-format-check
+
+moderation-clippy:
+  extends:
+    - .moderation-workflow
+    - .service-clippy
+
+moderation-build:
+  extends:
+    - .moderation-workflow
+    - .service-build
+
+moderation-image:
+  extends:
+    - .moderation-workflow
+    - .service-image
+  rules:
+    - !reference [.moderation-workflow, rules]
+    - !reference [.release-workflow, rules]

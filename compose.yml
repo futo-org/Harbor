@@ -64,6 +64,39 @@ services:
       done;
       rc mb -p rustfs/polycentric-blobs"
 
+  kafka:
+    image: apache/kafka:latest
+    container_name: broker
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:19092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - 9092:9092
+
+  kafka-ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    environment:
+      CONFIG_FILEPATH: /etc/console/config.yaml
+      KAFKA_BROKERS: kafka:19092
+    ports:
+      - 8080:8080
+    depends_on:
+      - kafka
+    volumes:
+      - ./kafka-ui.yml:/etc/console/config.yaml
+      - ./protos:/proto
+
 volumes:
   postgres-data:
   rustfs-data:

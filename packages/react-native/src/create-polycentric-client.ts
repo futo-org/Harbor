@@ -4,6 +4,7 @@ import { createReactNativeStorageDriver } from './datastore/expo-sqlite';
 import { createReactNativeFileStoreDriver } from './filestore/expo-file-system';
 import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
 import {
+  createBatchingLogSink,
   createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
@@ -13,11 +14,7 @@ let loggerInstalled = false;
 function installConsoleLogger() {
   if (loggerInstalled) return;
   loggerInstalled = true;
-  setLogger({
-    log: (message: string) => {
-      console.log(message);
-    },
-  });
+  setLogger(createBatchingLogSink());
 }
 
 export async function createPolycentricClient(

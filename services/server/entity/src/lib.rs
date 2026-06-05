@@ -4,6 +4,7 @@ pub mod content_delete_model;
 pub mod content_follow_model;
 pub mod content_identity_model;
 pub mod content_image_model;
+pub mod content_label_model;
 pub mod content_model;
 pub mod content_post_model;
 pub mod content_profile_update_model;

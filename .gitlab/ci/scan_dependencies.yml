@@ -1,8 +1,13 @@
 trivy:
-  stage: test
+  stage: check
   image:
     name: aquasec/trivy:0.69.3
     entrypoint: ['']
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   variables:
     TRIVY_NO_PROGRESS: 'true'
     TRIVY_CACHE_DIR: '.trivycache/'
