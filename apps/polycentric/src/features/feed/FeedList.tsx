@@ -11,6 +11,7 @@ import { Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
 import { PostSkeletonList } from '../post/PostSkeleton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type FeedListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   feed: FeedHookResult;
@@ -32,6 +33,8 @@ export default function FeedList({
   ...rest
 }: FeedListProps) {
   const { theme } = useTheme();
+
+  const insets = useSafeAreaInsets();
 
   return (
     <List<PostData>
@@ -55,15 +58,17 @@ export default function FeedList({
         )
       }
       ListFooterComponent={
-        feed.hasMore && feed.items.length > 0 ? (
-          <View style={[Atoms.items_center, Atoms.p_lg]}>
-            <ActivityIndicator
-              size="small"
-              color={theme.palette.neutral_500}
-              accessibilityLabel="Loading more posts"
-            />
-          </View>
-        ) : null
+        <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
+          {feed.hasMore && feed.items.length > 0 ? (
+            <View style={[Atoms.items_center, Atoms.p_lg]}>
+              <ActivityIndicator
+                size="small"
+                color={theme.palette.neutral_500}
+                accessibilityLabel="Loading more posts"
+              />
+            </View>
+          ) : null}
+        </View>
       }
       onEndReached={feed.hasMore ? feed.loadMore : undefined}
       onEndReachedThreshold={0.5}

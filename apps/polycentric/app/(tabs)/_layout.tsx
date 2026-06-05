@@ -22,7 +22,7 @@ export default function TabsLayout() {
     >
       <NativeTabs.Trigger name="feed">
         <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Icon sf="house" md="home" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">
@@ -32,7 +32,12 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="activity">
         <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
+        <NativeTabs.Trigger.Icon sf="bell" md="notifications" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="trust">
+        <NativeTabs.Trigger.Label>Trust</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="checkmark.seal" md="key" />
       </NativeTabs.Trigger>
 
       {isIOS ? (

@@ -88,7 +88,6 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
       style={[
         Atoms.flex_1,
         isWeb && Atoms.pb_lg,
-        !isWeb && { paddingBottom: insets.bottom },
         isWeb && {
           maxWidth: 600,
           borderLeftColor: theme.palette.neutral_25,
