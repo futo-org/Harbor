@@ -106,4 +106,4 @@ ask any server for an identity's events and verify every signature itself. Searc
 recommendation, and curated feeds are different — they are computed by servers. A
 client queries several servers, deduplicates, and attributes results, so no single
 server fully controls what a user sees. See
-[Protocol → Services](/protocol/services) for the feed and sync APIs.
+[Protocol → gRPC](/protocol/grpc) for the feed and sync APIs.

@@ -9,7 +9,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Protocol',
-      items: ['protocol/overview', 'protocol/data-model', 'protocol/services'],
+      items: ['protocol/overview', 'protocol/data-model', 'protocol/grpc'],
     },
     'contributing',
     'support',
