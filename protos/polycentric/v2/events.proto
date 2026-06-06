@@ -117,6 +117,19 @@ message PutEventsResponse {
   // One entry per event the server could not store. Empty when every
   // event in the request was accepted.
   repeated PutEventError errors = 1;
+  // Blobs referenced by the events that the server does not have.
+  // Client should upload these.
+  repeated Blob missing_blobs = 2;
+}
+
+message ListHeadsRequest {
+  string identity = 1;
+}
+
+message ListHeadsResponse {
+  // Each event key represents the greatest sequence number
+  // with the same (identity, public key, collection) known by this server
+  repeated EventKey heads = 1;
 }
 
 // Sync between clients and servers
@@ -125,4 +138,7 @@ service EventSyncService {
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
   // Add events (with content) from a client to the server
   rpc PutEvents(PutEventsRequest) returns (PutEventsResponse);
+  // Returns the latest sequence number seen by the server for each
+  // (signing key, collection) for the given identity
+  rpc ListHeads(ListHeadsRequest) returns (ListHeadsResponse);
 }

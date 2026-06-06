@@ -1,5 +1,6 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
+use crate::sync;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
     GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
@@ -9,6 +10,7 @@ use polycentric_common::models::protos_v2::{
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
 };
+use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
 use std::sync::{Arc, Mutex};
@@ -337,19 +339,69 @@ impl PolycentricCore {
     }
 
     /// Push event bundles to a server.
+    /// Returns the response from the server with any errors and missing blobs.
     pub async fn put_events(
         &self,
         server_url: String,
         event_bundles_bytes: Vec<u8>,
-    ) -> Result<(), CoreError> {
+    ) -> Result<Vec<u8>, CoreError> {
         let request = PutEventsRequest::decode(event_bundles_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode PutEventsRequest: {e}")))?;
+
         let mut client = EventSyncServiceClient::new(channel(&server_url)?);
-        client
+        let response = client
             .put_events(request)
             .await
-            .map_err(|e| CoreError::Network(format!("put_events: {e}")))?;
-        Ok(())
+            .map_err(|e| CoreError::Network(format!("put_events: {e}")))?
+            .into_inner();
+
+        let response_bytes = PutEventsResponse::encode_to_vec(&response);
+        Ok(response_bytes)
+    }
+
+    /// List latest known sequence numbers from a server for a single identity.
+    pub async fn list_heads(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = ListHeadsRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode ListHeadsRequest: {e}")))?;
+
+        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
+
+        let response = client
+            .list_heads(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("list_heads: {e}")))?;
+
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Query servers for their latest known events and push newer local events to them.
+    /// Returns the `PutEventsResponse` if any events were pushed, so that the caller can
+    /// handle any errors and upload any blobs that the server requests.
+    pub async fn sync_to_server(
+        &self,
+        identity: String,
+        server: String,
+    ) -> Result<Option<Vec<u8>>, CoreError> {
+        let heads = sync::request_heads(&identity, &server).await?;
+
+        // Find events and blobs to send to server
+        let bundles = {
+            let client = self.client.lock().unwrap();
+            sync::bundle_unsent_events(&client, &identity, heads)?
+        };
+
+        // Upload events to server and return results
+        if bundles.len() > 0 {
+            let response = sync::push_bundles(&server, bundles).await?;
+            let encoded = PutEventsResponse::encode_to_vec(&response);
+            Ok(Some(encoded))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Fetch a server's public info. Returns serialized

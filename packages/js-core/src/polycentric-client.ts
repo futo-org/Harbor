@@ -20,7 +20,10 @@ import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { bytesToHex, toDigestKey } from './utils/hex';
 
-import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
+import type {
+  PolycentricCoreLike,
+  QueryOpts,
+} from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -432,6 +435,7 @@ export class PolycentricClient {
     sequenceGt?: number | bigint | null;
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
+    queryOpts?: QueryOpts | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -472,7 +476,7 @@ export class PolycentricClient {
           sequenceGt,
           sequenceLt,
         }),
-        undefined,
+        options?.queryOpts ?? undefined,
       );
 
       let latest: Proto.EventBundle[] = [];
@@ -665,6 +669,7 @@ export class PolycentricClient {
 
     // Build event bundles with content for events matching the active identity
     const bundles: Proto.EventBundle[] = [];
+
     for (const signedEvent of localEvents) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
 
@@ -698,15 +703,44 @@ export class PolycentricClient {
       Proto.PutEventsRequest.create({ eventBundles: bundles }),
     );
 
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.putEvents(server, requestBytes.buffer as ArrayBuffer),
-      ),
+    let uploadBlobTasks: Promise<void>[] = [];
+
+    const pushResults = await Promise.allSettled(
+      this.servers.map(async (server) => {
+        const responseBytes = await this.core.putEvents(
+          server,
+          requestBytes.buffer as ArrayBuffer,
+        );
+        const response = Proto.PutEventsResponse.fromBinary(
+          new Uint8Array(responseBytes),
+        );
+
+        for (const error of response.errors) {
+          console.error('Error from event push:', error);
+        }
+
+        for (const blob of response.missingBlobs) {
+          if (!blob.digest) continue;
+
+          const blobBytes = await this.filestoreDriver.get(blob.digest);
+          if (!blobBytes) continue;
+
+          uploadBlobTasks.push(this.uploadBlob(blob, blobBytes));
+        }
+      }),
     );
 
-    for (const result of results) {
+    for (const result of pushResults) {
       if (result.status === 'rejected') {
         console.error('Push failed for a server:', result.reason);
+      }
+    }
+
+    const blobResults = await Promise.allSettled(uploadBlobTasks);
+
+    for (const result of blobResults) {
+      if (result.status === 'rejected') {
+        console.error('Blob upload failed for a server:', result.reason);
       }
     }
   }
@@ -780,8 +814,60 @@ export class PolycentricClient {
    * @returns The number of new events pulled
    */
   async sync(): Promise<number> {
-    await this.push();
-    return this.pull();
+    const identity = this.activeIdentityKey;
+    if (!identity) return 0;
+
+    const pullTask = this.pull();
+
+    // Push new events and blobs to servers
+    const pushTasks = this.servers.map(async (server): Promise<void> => {
+      const responseBytes = await this.core.syncToServer(identity, server);
+      if (!responseBytes) return; // Nothing was done
+
+      const response = Proto.PutEventsResponse.fromBinary(
+        new Uint8Array(responseBytes),
+      );
+      const blobs = response.missingBlobs;
+
+      for (const error of response.errors) {
+        console.error('Error from event push:', error);
+      }
+
+      const blobResults = await Promise.allSettled(
+        blobs.map(async (blob) => {
+          if (!blob.digest) return;
+
+          const blobData = await this.filestoreDriver.get(blob.digest);
+          if (!blobData) return;
+
+          const request = Proto.UploadBlobRequest.create({
+            blob: blob,
+            body: blobData,
+          });
+
+          const requestBytes = Proto.UploadBlobRequest.toBinary(request);
+          await this.core.uploadBlob(
+            server,
+            requestBytes.buffer as ArrayBuffer,
+          );
+        }),
+      );
+
+      for (const result of blobResults) {
+        if (result.status === 'rejected') {
+          console.error('Blob upload failed for a server:', result.reason);
+        }
+      }
+    });
+
+    const pushResults = await Promise.allSettled(pushTasks);
+    for (const result of pushResults) {
+      if (result.status === 'rejected') {
+        console.error('Push failed for a server:', result.reason);
+      }
+    }
+
+    return await pullTask;
   }
 
   public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {

@@ -38,10 +38,13 @@ export class ContentManager {
    * persist on other devices in that identity.
    */
   async pullBlobs(content: Proto.Content): Promise<void> {
-    const digests = this.collectBlobDigests(content);
+    const digests = ContentManager.collectBlobs(content)
+      .map((b) => b.digest)
+      .filter((d) => !!d);
+
     if (digests.length === 0) return;
 
-    await Promise.all(
+    await Promise.allSettled(
       digests.map(async (digest) => {
         try {
           if (await this.client.filestoreDriver.has(digest)) return;
@@ -56,14 +59,14 @@ export class ContentManager {
   }
 
   /**
-   * Collect all blob digests referenced in a post or profile update
+   * Collect all blobs referenced in a post or profile update
    */
-  private collectBlobDigests(content: Proto.Content): Proto.ContentDigest[] {
-    const out: Proto.ContentDigest[] = [];
+  static collectBlobs(content: Proto.Content): Proto.Blob[] {
+    const out: Proto.Blob[] = [];
     const pushSet = (set?: Proto.ImageSet) => {
       if (!set) return;
       for (const img of set.images) {
-        if (img.blob?.digest) out.push(img.blob.digest);
+        if (img.blob) out.push(img.blob);
       }
     };
     const body = content.contentBody;

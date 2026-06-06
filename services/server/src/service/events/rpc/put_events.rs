@@ -1,7 +1,9 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
+
 use std::sync::LazyLock;
+use std::collections::HashSet;
 use std::time::Duration;
 
 use crate::service::content::content_repository as ContentRepository;
@@ -27,6 +29,7 @@ use ::entity::{
 };
 use common_kafka::FutureRecord;
 use polycentric_common::models::collections;
+use polycentric_common::models::protos_v2::Blob;
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveModelTrait;
@@ -46,27 +49,44 @@ pub async fn handle(
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
+    let mut missing_blobs = HashSet::<Blob>::new();
+
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        if let Err(status) = process_event(ctx, event_bundle).await {
-            eprintln!(
-                "put_events[{idx}] skipped: {} {}",
-                status.code(),
-                status.message()
-            );
-            errors.push(PutEventError {
-                event_bundle_index: idx as u32,
-                message: format!("{}: {}", status.code(), status.message()),
-            });
+        match process_event(ctx, event_bundle).await {
+            Ok(blobs) => {
+                blobs.into_iter().for_each(|blob| {
+                    missing_blobs.insert(blob);
+                });
+            }
+
+            Err(status) => {
+                eprintln!(
+                    "put_events[{idx}] skipped: {} {}",
+                    status.code(),
+                    status.message()
+                );
+                errors.push(PutEventError {
+                    event_bundle_index: idx as u32,
+                    message: format!("{}: {}", status.code(), status.message()),
+                });
+            }
         }
     }
-    Ok(PutEventsResponse { errors })
+
+    let missing_blobs = missing_blobs.into_iter().collect();
+
+    Ok(PutEventsResponse {
+        missing_blobs,
+        errors,
+    })
 }
 
 /// Validate and persist an event.
 async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
-) -> Result<(), Status> {
+) -> Result<Vec<Blob>, Status> {
+    let mut missing_blobs = Vec::<Blob>::new();
     // Encode the bundle up front while it's still whole — its fields are
     // moved out during validation below. Published to Kafka on success.
     let event_bundle_bytes = event_bundle.encode_to_vec();
@@ -173,14 +193,40 @@ async fn process_event(
         })?;
 
         if let Some(content_row) = content_row {
-            save_content_child(&txn, content_row.id, content, &key.identity)
-                .await?;
+            save_content_child(
+                &txn,
+                content_row.id,
+                content.clone(),
+                &key.identity,
+            )
+            .await?;
         }
 
         txn.commit().await.map_err(|e| {
             eprintln!("sync_events txn commit error: {e}");
             Status::internal("internal server error")
         })?;
+
+        // Find missing blobs referenced by this event
+        for blob in content.to_blobs() {
+            if let Some(ref digest) = blob.digest {
+                let maybe_blob_row =
+                    ContentRepository::Query::find_blob_by_digest(
+                        &ctx.db,
+                        digest.r#type as i16,
+                        digest.value.as_slice(),
+                    )
+                    .await
+                    .map_err(|e| {
+                        eprintln!("sync_events blob db error: {e}");
+                        Status::internal("internal server error")
+                    })?;
+
+                if maybe_blob_row == None {
+                    missing_blobs.push(blob);
+                }
+            }
+        }
     }
 
     let event_identity = key.identity.clone();
@@ -242,7 +288,7 @@ async fn process_event(
         }
     }
 
-    Ok(())
+    Ok(missing_blobs)
 }
 
 fn is_unique_violation(err: &sea_orm::DbErr) -> bool {

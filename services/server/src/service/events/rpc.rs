@@ -2,6 +2,7 @@
 //! under `events/rpc/`.
 
 pub mod list_events;
+pub mod list_heads;
 pub mod put_events;
 
 use crate::service::context::ServiceContext;
@@ -10,6 +11,9 @@ use crate::service::proto::event_sync_service_server::{
 };
 use crate::service::proto::{
     ListEventsRequest, ListEventsResponse, PutEventsRequest, PutEventsResponse,
+};
+use polycentric_common::models::protos_v2::{
+    ListHeadsRequest, ListHeadsResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -35,6 +39,15 @@ impl EventSyncService for EventSyncServiceImpl {
     ) -> Result<Response<PutEventsResponse>, Status> {
         Ok(Response::new(
             put_events::handle(&self.ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn list_heads(
+        &self,
+        request: Request<ListHeadsRequest>,
+    ) -> Result<Response<ListHeadsResponse>, Status> {
+        Ok(Response::new(
+            list_heads::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }
