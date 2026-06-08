@@ -59,6 +59,24 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
 /** First seed server — used by identity onboarding helpers. */
 export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
 
+/**
+ * Comma-separated list of gRPC-web URLs for the notification service the
+ * client registers push tokens with. Read from
+ * `EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS`; falls back to
+ * `http://<host>:3001` for local dev (the notifications service's default
+ * gRPC port).
+ */
+export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
+  const raw = (
+    process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS ?? ''
+  ).trim();
+  const parsed = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:3001`];
+})();
+
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
@@ -132,7 +150,7 @@ export function PolycentricProvider({
       try {
         const token = await registerForPushNotifications();
         if (!token) return;
-        await client.registerPushNotifications(DEFAULT_SEED_SERVERS, {
+        await client.registerPushNotifications(DEFAULT_NOTIFICATION_SERVERS, {
           service: 'expo',
           token,
         });
