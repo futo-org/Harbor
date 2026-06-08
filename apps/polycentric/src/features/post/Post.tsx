@@ -24,6 +24,7 @@ import { PostContentQuote } from './content/PostContentQuote';
 import { PostHeader } from './PostHeader';
 import { PostImages } from './PostImages';
 import PostMenu from './PostMenu';
+import { PostText } from './PostText';
 import { PostToolbar } from './toolbar/PostToolbar';
 
 const PREVIEW_LIMIT = 240;
@@ -202,10 +203,10 @@ export const Post = memo(function Post({
           ) : null}
 
           {displayContent ? (
-            <Text variant="secondary">
-              {displayContent}
-              {isTruncatedPreview ? '...' : ''}
-            </Text>
+            <PostText
+              content={displayContent}
+              suffix={isTruncatedPreview ? '...' : ''}
+            />
           ) : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
           {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
