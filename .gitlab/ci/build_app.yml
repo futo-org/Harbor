@@ -99,9 +99,9 @@ app-android-apk:
 app-android-aab:
   extends: .app-eas-build
   script:
-    - npx eas-cli build --platform android --non-interactive --no-wait ${CI_COMMIT_TAG:+--auto-submit}
+    - npx eas-cli build --platform android --non-interactive --no-wait --auto-submit
 
 app-ios:
   extends: .app-eas-build
   script:
-    - npx eas-cli build --platform ios --non-interactive --no-wait ${CI_COMMIT_TAG:+--auto-submit}
+    - npx eas-cli build --platform ios --non-interactive --no-wait --auto-submit

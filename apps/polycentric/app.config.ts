@@ -28,6 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: ID,
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
+      ITSAppUsesNonExemptEncryption: false,
     },
     entitlements: {
       'aps-environment': 'production',
