@@ -135,8 +135,6 @@ impl NotificationManager {
             _ => None,
         };
 
-        // The only notification we can produce without a follower lookup
-        // is the reply notification; bail out for everything else.
         let Some(recipient) = reply_recipient else {
             return Ok(());
         };
@@ -550,8 +548,7 @@ mod tests {
         );
     }
 
-    /// A non-reply post produces no notification (follower fan-out is not
-    /// implemented), so Expo is never called.
+    /// A non-reply post produces no notification, so Expo is never called.
     #[tokio::test]
     async fn process_event_ignores_post_without_reply() {
         let mut expo_server = mockito::Server::new_async().await;
