@@ -1,6 +1,7 @@
 import { v2, type PolycentricClient } from '@polycentric/react-native';
 import { File } from 'expo-file-system';
 import { isWeb } from '@/src/common/util/platform';
+import { normalizeImage } from './normalizeImage';
 
 /** Default variant edge lengths. */
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
@@ -25,13 +26,18 @@ export async function processAndUploadImage(
   const sizes = options.sizes ?? DEFAULT_IMAGE_VARIANT_SIZES;
   const mode = options.mode ?? 'fill';
 
+  // Decode via the platform's native image pipeline first: this handles
+  // formats the core can't (HEIC/HEIF) and bakes EXIF orientation into
+  // upright pixels, so the core only ever sees an upright JPEG.
+  const normalizedUri = await normalizeImage(uri);
+
   // RN's `fetch` can't read `file://` URIs on Android (and is
   // unreliable on iOS), so go through `expo-file-system` on
   // native. Web stays on `fetch` to handle `blob:` / `data:` URIs
   // from `<input type="file">`.
   const buffer = isWeb
-    ? await (await fetch(uri)).arrayBuffer()
-    : await new File(uri).arrayBuffer();
+    ? await (await fetch(normalizedUri)).arrayBuffer()
+    : await new File(normalizedUri).arrayBuffer();
   const raw = new Uint8Array(buffer);
 
   const variants = await Promise.all(
