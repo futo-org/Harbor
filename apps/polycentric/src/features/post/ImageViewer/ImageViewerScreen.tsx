@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { ImageViewer } from './ImageViewer';
 import { useImageViewerStore } from './useImageViewerStore';
 
@@ -13,7 +13,13 @@ export default function ImageViewerScreen() {
   const images = useImageViewerStore((s) => s.images);
   const index = useImageViewerStore((s) => s.index);
 
+  // Guard against double-dismiss: simultaneous pinch + pan can both fire
+  // close, and `router.canGoBack()` may still read true before the first
+  // back() settles — popping an extra screen (notably on Android).
+  const closing = useRef(false);
   const onClose = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
     if (router.canGoBack()) router.back();
   }, []);
 

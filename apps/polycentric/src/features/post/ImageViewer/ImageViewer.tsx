@@ -176,7 +176,9 @@ export function ImageViewer({
           if (scale.value > 1) {
             translateX.value = savedTranslateX.value + e.translationX;
             translateY.value = savedTranslateY.value + e.translationY;
-          } else {
+          } else if (scale.value === 1) {
+            // Only drag-to-dismiss at natural size; ignore the centroid
+            // drift while a pinch is shrinking the image.
             dismissY.value = e.translationY;
           }
         })
@@ -184,6 +186,13 @@ export function ImageViewer({
           if (scale.value > 1) {
             savedTranslateX.value = translateX.value;
             savedTranslateY.value = translateY.value;
+            return;
+          }
+          if (scale.value < 1) {
+            // A pinch-to-close is in progress; let the pinch decide
+            // whether to dismiss, so we don't double-fire onClose (which
+            // on Android popped an extra screen).
+            dismissY.value = withTiming(0, { duration: 150 });
             return;
           }
           const dismiss =
