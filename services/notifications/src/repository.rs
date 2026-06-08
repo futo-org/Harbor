@@ -1,5 +1,5 @@
-use crate::service::proto::PublicKey;
-use ::entity::push_token_model as PushTokenModel;
+use notifications_entity::push_token_model as PushTokenModel;
+use polycentric_common::models::protos_v2::PublicKey;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::*;
 
@@ -11,13 +11,8 @@ impl Query {
         public_key: &PublicKey,
     ) -> Result<Option<PushTokenModel::Model>, DbErr> {
         PushTokenModel::Entity::find()
-            .filter(
-                PushTokenModel::Column::PublicKeyType
-                    .eq(public_key.key_type as i16),
-            )
-            .filter(
-                PushTokenModel::Column::PublicKey.eq(public_key.key.clone()),
-            )
+            .filter(PushTokenModel::Column::PublicKeyType.eq(public_key.key_type as i16))
+            .filter(PushTokenModel::Column::PublicKey.eq(public_key.key.clone()))
             .one(db)
             .await
     }
@@ -68,13 +63,8 @@ impl Mutation {
         token: &str,
     ) -> Result<(), DbErr> {
         PushTokenModel::Entity::delete_many()
-            .filter(
-                PushTokenModel::Column::PublicKeyType
-                    .eq(public_key.key_type as i16),
-            )
-            .filter(
-                PushTokenModel::Column::PublicKey.eq(public_key.key.clone()),
-            )
+            .filter(PushTokenModel::Column::PublicKeyType.eq(public_key.key_type as i16))
+            .filter(PushTokenModel::Column::PublicKey.eq(public_key.key.clone()))
             .filter(PushTokenModel::Column::Service.eq(service))
             .filter(PushTokenModel::Column::Token.eq(token))
             .exec(db)

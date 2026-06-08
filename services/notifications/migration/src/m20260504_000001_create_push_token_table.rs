@@ -1,4 +1,4 @@
-use ::entity::push_token_model;
+use notifications_entity::push_token_model;
 use sea_orm::Schema;
 use sea_orm_migration::prelude::*;
 
@@ -11,9 +11,7 @@ impl MigrationTrait for Migration {
         let schema = Schema::new(manager.get_database_backend());
 
         manager
-            .create_table(
-                schema.create_table_from_entity(push_token_model::Entity),
-            )
+            .create_table(schema.create_table_from_entity(push_token_model::Entity))
             .await?;
 
         for index in schema.create_index_from_entity(push_token_model::Entity) {
@@ -25,9 +23,7 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(
-                Table::drop().table(push_token_model::Entity).to_owned(),
-            )
+            .drop_table(Table::drop().table(push_token_model::Entity).to_owned())
             .await?;
 
         Ok(())

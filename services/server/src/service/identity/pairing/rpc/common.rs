@@ -3,7 +3,6 @@
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::SignedMessage;
-use crate::util;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
 
@@ -15,7 +14,7 @@ pub fn verify_signed_message(
         .public_key
         .clone()
         .ok_or_else(|| Status::invalid_argument("public_key is required"))?;
-    util::signing::verify_signature(
+    polycentric_common::signing::verify_signature(
         &public_key.key,
         &msg.signature,
         &msg.message_bytes,

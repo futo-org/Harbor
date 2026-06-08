@@ -14,4 +14,3 @@ pub mod content_repost_model;
 pub mod event_model;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;
-pub mod push_token_model;

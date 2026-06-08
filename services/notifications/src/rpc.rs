@@ -4,19 +4,19 @@
 pub mod register_push_notifications;
 pub mod unregister_push_notifications;
 
-use crate::service::context::ServiceContext;
-use crate::service::proto::notification_service_server::{
+use crate::context::Context;
+use polycentric_common::models::protos_v2::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
-use crate::service::proto::{
-    RegisterPushNotificationResponse, SignedMessage,
-    UnregisterPushNotificationResponse,
+use polycentric_common::models::protos_v2::{
+    RegisterPushNotificationResponse, SignedMessage, UnregisterPushNotificationResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
+#[derive(Clone)]
 pub struct NotificationServiceImpl {
-    ctx: Arc<ServiceContext>,
+    ctx: Arc<Context>,
 }
 
 #[tonic::async_trait]
@@ -25,14 +25,10 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<SignedMessage>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
-        let notification_manager =
-            self.ctx.notification_manager.as_ref().ok_or_else(|| {
-                Status::internal("notifications are not configured")
-            })?;
         Ok(Response::new(
             register_push_notifications::handle(
                 &self.ctx.db,
-                notification_manager,
+                &self.ctx.notification_manager,
                 request.into_inner(),
             )
             .await?,
@@ -43,14 +39,10 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<SignedMessage>,
     ) -> Result<Response<UnregisterPushNotificationResponse>, Status> {
-        let notification_manager =
-            self.ctx.notification_manager.as_ref().ok_or_else(|| {
-                Status::internal("notifications are not configured")
-            })?;
         Ok(Response::new(
             unregister_push_notifications::handle(
                 &self.ctx.db,
-                notification_manager,
+                &self.ctx.notification_manager,
                 request.into_inner(),
             )
             .await?,
@@ -59,7 +51,7 @@ impl NotificationService for NotificationServiceImpl {
 }
 
 pub fn build_notification_service(
-    ctx: Arc<ServiceContext>,
+    ctx: Arc<Context>,
 ) -> NotificationServiceServer<NotificationServiceImpl> {
     NotificationServiceServer::new(NotificationServiceImpl { ctx })
 }
@@ -67,23 +59,22 @@ pub fn build_notification_service(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::notifications::manager::{
-        NotificationManager, PushService,
-    };
-    use crate::service::proto::{KeyType, PublicKey};
-    use ::entity::push_token_model as PushTokenModel;
+    use crate::manager::{NotificationManager, PushService};
+    use crate::polycentric::PolycentricClient;
     use ed25519_dalek::{Signer, SigningKey};
+    use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
+    use polycentric_common::models::protos_v2::{KeyType, PublicKey};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
     async fn impl_for_testing() -> NotificationServiceImpl {
-        let (notification_manager, _rx) = NotificationManager::new(test_expo());
-        let ctx = ServiceContext::new(
-            MockDatabase::new(DbBackend::Postgres).into_connection(),
-            Some(notification_manager),
-        );
+        let ctx = Arc::new(Context {
+            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            notification_manager: NotificationManager::new(test_expo()),
+            polycentric: PolycentricClient::new(vec![]),
+        });
         NotificationServiceImpl { ctx }
     }
 
@@ -91,10 +82,7 @@ mod tests {
     /// only the register path, which never calls the push service, so
     /// the client is never actually invoked.
     fn test_expo() -> expo_push_notification_client::Expo {
-        expo_push_notification_client::Expo::new_with_base_url(
-            None,
-            "http://127.0.0.1:0",
-        )
+        expo_push_notification_client::Expo::new_with_base_url(None, "http://127.0.0.1:0")
     }
 
     #[tokio::test]
@@ -127,8 +115,7 @@ mod tests {
         }
         .encode_to_vec();
 
-        let mut signature =
-            signing_key.sign(&message_bytes).to_bytes().to_vec();
+        let mut signature = signing_key.sign(&message_bytes).to_bytes().to_vec();
         // Corrupt the signature so verification fails despite the body being valid.
         signature[0] ^= 0xff;
 
@@ -166,8 +153,11 @@ mod tests {
             }]])
             .into_connection();
 
-        let (notification_manager, _rx) = NotificationManager::new(test_expo());
-        let ctx = ServiceContext::new(db, Some(notification_manager));
+        let ctx = Arc::new(Context {
+            db,
+            notification_manager: NotificationManager::new(test_expo()),
+            polycentric: PolycentricClient::new(vec![]),
+        });
         let service = NotificationServiceImpl { ctx };
 
         let message_bytes = RegisterPushNotificationRequest {

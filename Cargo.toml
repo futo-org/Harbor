@@ -4,6 +4,7 @@ members = [
     "packages/rs-core",
     "services/server",
     "services/moderation",
+    "services/notifications",
     "services/common/*",
     "tools/identity",
 ]
