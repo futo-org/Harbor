@@ -20,10 +20,7 @@ import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { bytesToHex, toDigestKey } from './utils/hex';
 
-import type {
-  PolycentricCoreLike,
-  QueryOpts,
-} from '@polycentric/rs-core-uniffi-web';
+import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -435,7 +432,6 @@ export class PolycentricClient {
     sequenceGt?: number | bigint | null;
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
-    queryOpts?: QueryOpts | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -476,7 +472,7 @@ export class PolycentricClient {
           sequenceGt,
           sequenceLt,
         }),
-        options?.queryOpts ?? undefined,
+        undefined,
       );
 
       let latest: Proto.EventBundle[] = [];
