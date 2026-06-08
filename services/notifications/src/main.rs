@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
 use expo_push_notification_client::{Expo, ExpoClientOptions};
-use polycentric_common::models::protos_v2::{EventBundle, EventKey};
+use polycentric_common::models::protos_v2::EventBundle;
 use prost::Message as _;
 use tonic::transport::Server;
 
