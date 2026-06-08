@@ -639,13 +639,19 @@ export class PolycentricClient {
    * that `body` hashes to `blob.digest` before persisting. Rejections
    * from individual servers are logged but do not throw.
    */
-  async uploadBlob(blob: Proto.Blob, body: Uint8Array): Promise<void> {
+  async uploadBlob(
+    blob: Proto.Blob,
+    body: Uint8Array,
+    servers?: string[],
+  ): Promise<void> {
+    servers = servers ?? this.servers;
+
     const requestBytes = Proto.UploadBlobRequest.toBinary(
       Proto.UploadBlobRequest.create({ blob, body }),
     );
 
     const results = await Promise.allSettled(
-      this.servers.map((server) =>
+      servers.map((server) =>
         this.core.uploadBlob(server, requestBytes.buffer as ArrayBuffer),
       ),
     );
@@ -665,16 +671,15 @@ export class PolycentricClient {
     if (!this.currentKeyPair) throw new Error('No active key pair');
     if (!this.activeIdentityKey) throw new Error('No active identity');
 
-    const localEvents = await this.storage.events.getAll();
+    const localEvents = await this.storage.events.getByIdentity(
+      this.activeIdentityKey,
+    );
 
     // Build event bundles with content for events matching the active identity
     const bundles: Proto.EventBundle[] = [];
 
     for (const signedEvent of localEvents) {
       const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-
-      // Only push events belonging to the active identity
-      if (event.key?.identity !== this.activeIdentityKey) continue;
 
       // Look up content by digest
       let serializedContent: Proto.SerializedContent | undefined;
@@ -725,7 +730,7 @@ export class PolycentricClient {
           const blobBytes = await this.filestoreDriver.get(blob.digest);
           if (!blobBytes) continue;
 
-          uploadBlobTasks.push(this.uploadBlob(blob, blobBytes));
+          uploadBlobTasks.push(this.uploadBlob(blob, blobBytes, [server]));
         }
       }),
     );
@@ -736,13 +741,7 @@ export class PolycentricClient {
       }
     }
 
-    const blobResults = await Promise.allSettled(uploadBlobTasks);
-
-    for (const result of blobResults) {
-      if (result.status === 'rejected') {
-        console.error('Blob upload failed for a server:', result.reason);
-      }
-    }
+    await Promise.allSettled(uploadBlobTasks);
   }
 
   /**
@@ -817,6 +816,7 @@ export class PolycentricClient {
     const identity = this.activeIdentityKey;
     if (!identity) return 0;
 
+    // Pull concurrently with pushing new events and blobs
     const pullTask = this.pull();
 
     // Push new events and blobs to servers
@@ -833,37 +833,22 @@ export class PolycentricClient {
         console.error('Error from event push:', error);
       }
 
-      const blobResults = await Promise.allSettled(
+      await Promise.allSettled(
         blobs.map(async (blob) => {
           if (!blob.digest) return;
 
           const blobData = await this.filestoreDriver.get(blob.digest);
           if (!blobData) return;
 
-          const request = Proto.UploadBlobRequest.create({
-            blob: blob,
-            body: blobData,
-          });
-
-          const requestBytes = Proto.UploadBlobRequest.toBinary(request);
-          await this.core.uploadBlob(
-            server,
-            requestBytes.buffer as ArrayBuffer,
-          );
+          await this.uploadBlob(blob, blobData, [server]);
         }),
       );
-
-      for (const result of blobResults) {
-        if (result.status === 'rejected') {
-          console.error('Blob upload failed for a server:', result.reason);
-        }
-      }
     });
 
     const pushResults = await Promise.allSettled(pushTasks);
     for (const result of pushResults) {
       if (result.status === 'rejected') {
-        console.error('Push failed for a server:', result.reason);
+        console.error('Sync failed for a server:', result.reason);
       }
     }
 
