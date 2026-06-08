@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use sea_orm::DatabaseConnection;
 
-use crate::service::notifications::manager::NotificationManager;
 use crate::service::proofs::cache::ProofCache;
 use common_kafka::FutureProducer;
 

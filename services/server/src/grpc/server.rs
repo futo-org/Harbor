@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
@@ -7,6 +5,7 @@ use crate::service::server::rpc::ServerConfig;
 use axum::Router;
 use common_kafka::FutureProducer;
 use http::header::HeaderName;
+use sea_orm::DatabaseConnection;
 use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -32,7 +31,6 @@ fn build_reflection_service() -> Result<
 pub fn build_grpc_router(
     db: DatabaseConnection,
     kafka_producer: FutureProducer,
-    notification_manager: Arc<NotificationManager>,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
@@ -50,8 +48,6 @@ pub fn build_grpc_router(
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
-    let notification_service =
-        service::notifications::rpc::build_notification_service(ctx);
 
     let grpc_web = GrpcWebLayer::new();
 
@@ -61,8 +57,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(feeds_service))
         .add_service(grpc_web.layer(content_service))
         .add_service(grpc_web.layer(pairing_service))
-        .add_service(grpc_web.layer(server_info_service))
-        .add_service(grpc_web.layer(notification_service));
+        .add_service(grpc_web.layer(server_info_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())

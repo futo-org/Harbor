@@ -11,8 +11,6 @@ use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
-use crate::service::context::ServiceContext;
-use crate::service::notifications::manager::NotificationManager;
 use crate::service::server::rpc::ServerConfig;
 use common_kafka::build_producer;
 use sea_orm::DatabaseConnection;
@@ -53,7 +51,6 @@ async fn main() {
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
-    let notification_manager = Arc::new(NotificationManager::new());
     let filestore_cfg = ContentFilestoreConfig::from_env()
         .expect("blob store configuration error");
     let filestore = ContentFilestore::new(filestore_cfg).await;
@@ -62,7 +59,6 @@ async fn main() {
     let grpc_router = build_grpc_router(
         db.clone(),
         kafka_producer,
-        notification_manager.clone(),
         filestore.clone(),
         server_cfg,
     )
