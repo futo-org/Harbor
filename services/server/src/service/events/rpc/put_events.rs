@@ -85,7 +85,7 @@ pub async fn handle(
 
     Ok(PutEventsResponse {
         errors,
-        requested_blobs: missing_blobs
+        requested_blobs: missing_blobs,
     })
 }
 

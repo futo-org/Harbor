@@ -1,6 +1,8 @@
-use crate::service::{context::ServiceContext, events::repository::HeadInfoRow};
 use crate::service::events::repository as EventsRepository;
 use crate::service::proto::PublicKey;
+use crate::service::{
+    context::ServiceContext, events::repository::HeadInfoRow,
+};
 
 use polycentric_common::models::protos_v2::{
     EventKey, ListHeadsRequest, ListHeadsResponse,
