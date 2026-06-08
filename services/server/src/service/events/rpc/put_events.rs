@@ -87,6 +87,7 @@ async fn process_event(
     event_bundle: EventBundle,
 ) -> Result<Vec<Blob>, Status> {
     let mut missing_blobs = Vec::<Blob>::new();
+
     // Encode the bundle up front while it's still whole — its fields are
     // moved out during validation below. Published to Kafka on success.
     let event_bundle_bytes = event_bundle.encode_to_vec();
@@ -171,6 +172,27 @@ async fn process_event(
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
+        // Find missing blobs referenced by this event
+        for blob in content.blobs() {
+            if let Some(digest) = &blob.digest {
+                let maybe_blob_row =
+                    ContentRepository::Query::find_blob_by_digest(
+                        &ctx.db,
+                        digest.r#type as i16,
+                        digest.value.as_slice(),
+                    )
+                    .await
+                    .map_err(|e| {
+                        eprintln!("sync_events blob db error: {e}");
+                        Status::internal("internal server error")
+                    })?;
+
+                if maybe_blob_row.is_none() {
+                    missing_blobs.push(blob.clone());
+                }
+            }
+        }
+
         let txn = ctx.db.begin().await.map_err(|e| {
             eprintln!("sync_events txn begin error: {e}");
             Status::internal("internal server error")
@@ -193,40 +215,14 @@ async fn process_event(
         })?;
 
         if let Some(content_row) = content_row {
-            save_content_child(
-                &txn,
-                content_row.id,
-                content.clone(),
-                &key.identity,
-            )
-            .await?;
+            save_content_child(&txn, content_row.id, content, &key.identity)
+                .await?;
         }
 
         txn.commit().await.map_err(|e| {
             eprintln!("sync_events txn commit error: {e}");
             Status::internal("internal server error")
         })?;
-
-        // Find missing blobs referenced by this event
-        for blob in content.to_blobs() {
-            if let Some(ref digest) = blob.digest {
-                let maybe_blob_row =
-                    ContentRepository::Query::find_blob_by_digest(
-                        &ctx.db,
-                        digest.r#type as i16,
-                        digest.value.as_slice(),
-                    )
-                    .await
-                    .map_err(|e| {
-                        eprintln!("sync_events blob db error: {e}");
-                        Status::internal("internal server error")
-                    })?;
-
-                if maybe_blob_row.is_none() {
-                    missing_blobs.push(blob);
-                }
-            }
-        }
     }
 
     let event_identity = key.identity.clone();

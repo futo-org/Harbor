@@ -12,22 +12,22 @@ impl Content {
     }
 
     /// Gather all of the blobs referenced by this content.
-    pub fn to_blobs(self) -> Vec<Blob> {
+    pub fn blobs(&self) -> Vec<&Blob> {
         let mut blobs = vec![];
 
         let mut image_sets = vec![];
 
-        if let Some(body) = self.content_body {
+        if let Some(ref body) = self.content_body {
             match body {
-                Post(mut post) => {
-                    image_sets.append(&mut post.images);
+                Post(post) => {
+                    post.images.iter().for_each(|set| image_sets.push(set));
                 }
                 ProfileUpdate(update) => {
-                    if let Some(avatar) = update.avatar {
+                    if let Some(ref avatar) = update.avatar {
                         image_sets.push(avatar);
                     }
 
-                    if let Some(banner) = update.banner {
+                    if let Some(ref banner) = update.banner {
                         image_sets.push(banner);
                     }
                 }
@@ -36,8 +36,8 @@ impl Content {
         }
 
         for set in image_sets {
-            for image in set.images {
-                if let Some(blob) = image.blob {
+            for image in &set.images {
+                if let Some(ref blob) = image.blob {
                     blobs.push(blob);
                 }
             }
