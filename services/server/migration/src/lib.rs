@@ -10,6 +10,7 @@ mod m20260526_000002_add_content_repost_table;
 mod m20260528_000001_reaction_opinion_to_positive;
 mod m20260601_000001_add_content_report_table;
 mod m20260601_000001_add_follower_lookup_indexes;
+mod m20260604_000001_add_content_label_table;
 
 pub struct Migrator;
 
@@ -26,6 +27,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260526_000002_add_content_repost_table::Migration),
             Box::new(m20260528_000001_reaction_opinion_to_positive::Migration),
             Box::new(m20260601_000001_add_content_report_table::Migration),
+            Box::new(m20260604_000001_add_content_label_table::Migration),
             Box::new(m20260601_000001_add_follower_lookup_indexes::Migration),
         ]
     }

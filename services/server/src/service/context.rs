@@ -7,24 +7,23 @@ use sea_orm::DatabaseConnection;
 
 use crate::service::notifications::manager::NotificationManager;
 use crate::service::proofs::cache::ProofCache;
+use common_kafka::FutureProducer;
 
 pub struct ServiceContext {
     pub db: DatabaseConnection,
     pub proof_cache: Arc<ProofCache>,
-    /// Present in the running server so event ingestion can enqueue push
-    /// notifications. `None` in unit tests that build a bare context.
-    pub notification_manager: Option<Arc<NotificationManager>>,
+    pub kafka_producer: FutureProducer,
 }
 
 impl ServiceContext {
     pub fn new(
         db: DatabaseConnection,
-        notification_manager: Option<Arc<NotificationManager>>,
+        kafka_producer: FutureProducer,
     ) -> Arc<Self> {
         Arc::new(Self {
             db,
             proof_cache: ProofCache::new(),
-            notification_manager,
+            kafka_producer,
         })
     }
 }

@@ -4,6 +4,7 @@ packages:
   - packages/js-browser/examples/*
   - packages/js-node/examples/*
   - tools/*
+  - docs/
 
 catalog:
   '@noble/hashes': ^1.8.0
@@ -16,3 +17,5 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch
+
+minimumReleaseAge: 1440

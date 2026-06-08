@@ -5,6 +5,7 @@ use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
 use crate::service::server::rpc::ServerConfig;
 use axum::Router;
+use common_kafka::FutureProducer;
 use http::header::HeaderName;
 use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
@@ -29,11 +30,13 @@ fn build_reflection_service() -> Result<
 /// Build the gRPC services as an `axum::Router` so they can be merged with
 /// the HTTP router and served on a single port.
 pub fn build_grpc_router(
-    ctx: Arc<ServiceContext>,
+    db: DatabaseConnection,
+    kafka_producer: FutureProducer,
+    notification_manager: Arc<NotificationManager>,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let db = ctx.db.clone();
+    let ctx = ServiceContext::new(db.clone(), kafka_producer);
     let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
     let events_service =
         service::events::rpc::build_events_service(ctx.clone());

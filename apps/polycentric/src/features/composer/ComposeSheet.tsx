@@ -1,42 +1,15 @@
-import Icon from '@/src/common/components/Icon';
-import {
-  Button,
-  ProfileAvatar,
-  Text,
-  TextArea,
-} from '@/src/common/components/primitives';
+import { Button } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
-import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
-import {
-  hexToBytes,
-  truncateName,
-  useCurrentIdentity,
-  usePolycentric,
-  useUsername,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
-import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { type PostData } from '@/src/common/lib/polycentric-hooks';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import {
-  feedQueryKeys,
-  injectPostIntoFeedCache,
-} from '@/src/features/feed/hooks/feedCache';
-import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import { COLLECTION, types, v2 } from '@polycentric/react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { types } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
-import ComposerPostEmbed from './ComposerPostEmbed';
+import { useCallback } from 'react';
+import { ActivityIndicator } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
-import { useComposerStore } from './hooks/useComposerStore';
-
-const MAX_ATTACHMENTS = 4;
-const THUMBNAIL_SIZE = 72;
-
-/** Longest edge lengths for post image variants. */
-const POST_VARIANT_SIZES = [512, 1280];
+import { ComposerFields } from './ComposerFields';
+import { useComposer } from './hooks/useComposer';
 
 type ComposeSheetProps = {
   /** TODO: should be v2 `SignedEvent` */
@@ -53,188 +26,20 @@ export function ComposeSheet({
   quote,
   attachOnMount = false,
 }: ComposeSheetProps) {
-  const client = usePolycentric();
-  const { identityKey: currentIdentityKey, identity: currentIdentity } =
-    useCurrentIdentity();
-
   const { theme } = useTheme();
 
-  const onPostCreatedRef = useRef(onPostCreated);
-  onPostCreatedRef.current = onPostCreated;
+  // The composer is presented as a route modal; closing pops it.
+  const onClose = useCallback(() => {
+    if (router.canGoBack()) router.back();
+  }, []);
 
-  const replyToEventKey = v2.EventKey.create({
-    collection: COLLECTION.FEED,
-    identity: replyTo?.identity,
-    signedBy: replyTo?.signedBy,
-    sequence: BigInt(replyTo?.sequence ?? 0),
+  const composer = useComposer({
+    onPostCreated,
+    replyTo,
+    quote,
+    attachOnMount,
+    onClose,
   });
-
-  // If replyTo is itself a reply, inherit its root.
-  // Otherwise, replyTo *is* the root.
-  const replyRootEventKey = replyTo?.reply?.rootId
-    ? v2.EventKey.fromBinary(hexToBytes(replyTo.reply.rootId))
-    : replyToEventKey;
-
-  const replyAuthorName = useUsername(replyTo?.identity ?? null);
-
-  const text = useComposerStore((s) => s.text);
-  const attachments = useComposerStore((s) => s.attachments);
-  const submitting = useComposerStore((s) => s.submitting);
-  const error = useComposerStore((s) => s.error);
-  const setText = useComposerStore((s) => s.setText);
-  const addAttachments = useComposerStore((s) => s.addAttachments);
-  const removeAttachment = useComposerStore((s) => s.removeAttachment);
-  const setSubmitting = useComposerStore((s) => s.setSubmitting);
-  const setError = useComposerStore((s) => s.setError);
-  const resetComposer = useComposerStore((s) => s.reset);
-
-  const isReply = !!replyTo;
-  const title = isReply ? 'Reply' : 'New Post';
-  const canPost =
-    (text.trim().length > 0 || attachments.length > 0) && !submitting;
-  const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
-
-  const handleClose = useCallback(() => {
-    if (!submitting && router.canGoBack()) router.back();
-  }, [submitting]);
-
-  const handleAttachImage = useCallback(async () => {
-    if (attachDisabled) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_ATTACHMENTS - attachments.length,
-    });
-    if (result.canceled || !result.assets?.length) return;
-
-    const additions = result.assets
-      .slice(0, MAX_ATTACHMENTS - attachments.length)
-      .map((asset, i) => ({
-        id: `${Date.now()}-${i}-${asset.uri}`,
-        uri: asset.uri,
-        width: asset.width,
-        height: asset.height,
-      }));
-    addAttachments(additions);
-  }, [attachDisabled, attachments.length, addAttachments]);
-
-  const handleRemoveAttachment = useCallback(
-    (id: string) => removeAttachment(id),
-    [removeAttachment],
-  );
-
-  // Auto-open the image picker once when the caller requested it
-  // (e.g. tapping the attach icon in the inline composer).
-  const attachOnMountFiredRef = useRef(false);
-  useEffect(() => {
-    if (!attachOnMount || attachOnMountFiredRef.current) return;
-    attachOnMountFiredRef.current = true;
-    void handleAttachImage();
-  }, [attachOnMount, handleAttachImage]);
-
-  const handlePost = useCallback(async () => {
-    if (submitting) return;
-    if (text.trim().length === 0 && attachments.length === 0) return;
-
-    setError(null);
-    setSubmitting(true);
-    try {
-      // Process + upload attachments first so every blob body is on
-      // the server before the content that references it.
-      const imageSets: v2.ImageSet[] =
-        attachments.length > 0
-          ? await Promise.all(
-              attachments.map((a) =>
-                processAndUploadImage(client, a.uri, {
-                  mode: 'fit',
-                  sizes: POST_VARIANT_SIZES,
-                }),
-              ),
-            )
-          : [];
-
-      const post: types.v2.Post = {
-        text: text.trim(),
-        images: imageSets,
-      };
-
-      if (isReply) {
-        post.reply = {
-          root: replyRootEventKey,
-          parent: replyToEventKey,
-        };
-      }
-
-      if (!!quote) {
-        post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
-      }
-
-      const content = client.contentManager.build({
-        oneofKind: 'post',
-        post,
-      });
-
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content);
-
-      const signedEvent = await client.signEvent(event);
-
-      const newBundle = v2.EventBundle.create({
-        signedEvent,
-        serializedContent: { contentBytes: v2.Content.toBinary(content) },
-      });
-      const identity = currentIdentityKey ?? '';
-
-      // Optimistically add the new event to the below query
-      if (isReply && replyTo) {
-        injectReplyIntoThreadCache(replyTo.id, newBundle);
-      }
-      injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
-
-      // `commitEvent` persists the event locally
-      await client.commitEvent(signedEvent, content);
-
-      setSubmitting(false);
-      if (router.canGoBack()) router.back();
-      resetComposer();
-
-      void client
-        .sync()
-        .then(() => {
-          // Invalidate all the caches now the post has been successfully submitted
-          invalidateQuery(client, feedQueryKeys.following());
-          invalidateQuery(client, feedQueryKeys.identity(identity));
-          invalidateQuery(client, feedQueryKeys.explore(identity));
-        })
-        .catch((err) => {
-          console.warn('compose sync failed:', err);
-        });
-    } catch (err) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [
-    text,
-    attachments,
-    submitting,
-    client,
-    currentIdentityKey,
-    isReply,
-    replyToEventKey,
-    replyRootEventKey,
-    resetComposer,
-    setSubmitting,
-    setError,
-  ]);
-
-  const placeholder = isReply
-    ? `Reply to ${truncateName(replyAuthorName, 16)}...`
-    : "What's on your mind?";
 
   return (
     <Sheet
@@ -243,37 +48,38 @@ export function ComposeSheet({
       footer={
         <ComposeSheetFooterBar
           variant={isWeb ? 'web' : 'native'}
-          charCount={text.length}
-          submitting={submitting}
-          canPost={canPost}
-          onPost={handlePost}
-          onAttachImage={() => void handleAttachImage()}
-          attachDisabled={attachDisabled}
+          charCount={composer.text.length}
+          submitting={composer.submitting}
+          canPost={composer.canPost}
+          onPost={composer.handlePost}
+          onAttachImage={() => void composer.handleAttachImage()}
+          attachDisabled={composer.attachDisabled}
+        />
+      }
+      header={
+        <Sheet.Header
+          title={composer.title}
+          onClose={composer.handleClose}
+          right={
+            composer.submitting ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.palette.primary_500}
+                accessibilityLabel="Posting"
+              />
+            ) : (
+              <Button
+                title={'Post'}
+                onPress={composer.handlePost}
+                variant="primary"
+                disabled={!composer.canPost}
+                size="sm"
+              />
+            )
+          }
         />
       }
     >
-      <Sheet.Header
-        title={title}
-        onClose={handleClose}
-        //closeDisabled={submitting}
-        right={
-          submitting ? (
-            <ActivityIndicator
-              size="small"
-              color={theme.palette.primary_500}
-              accessibilityLabel="Posting"
-            />
-          ) : (
-            <Button
-              title={'Post'}
-              onPress={handlePost}
-              variant="primary"
-              disabled={!canPost}
-              size="sm"
-            />
-          )
-        }
-      />
       <Sheet.Content
         style={[
           Atoms.py_lg,
@@ -283,124 +89,20 @@ export function ComposeSheet({
           },
         ]}
       >
-        {/* Reply preview */}
-        {isReply && <ComposerPostEmbed post={replyTo} />}
-
-        {/* Error displays */}
-        {error && (
-          <View
-            style={[
-              Atoms.p_md,
-              {
-                borderBottomWidth: 1,
-                borderBottomColor: withHexOpacity(
-                  theme.palette.negative_500,
-                  '80',
-                ),
-                marginBottom: 10,
-              },
-            ]}
-          >
-            <Text variant="secondary" color="negative_500">
-              {error}
-            </Text>
-          </View>
-        )}
-
-        {/* Main block */}
-        <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1]}>
-          {currentIdentityKey ? (
-            <View style={[Atoms.self_start]}>
-              <ProfileAvatar identityKey={currentIdentityKey} size="md" />
-            </View>
-          ) : null}
-          <View style={Atoms.flex_1}>
-            <TextArea
-              variant="plain"
-              placeholder={placeholder}
-              autoFocus
-              value={text}
-              onChangeText={setText}
-              // disabled={submitting}
-              maxLength={2000}
-              style={[
-                Atoms.px_0,
-                Atoms.py_0,
-                Atoms.pt_sm,
-                Atoms.text_lg,
-                Atoms.flex_1,
-              ]}
-            />
-            {attachments.length > 0 && (
-              <View
-                style={[
-                  Atoms.flex_row,
-                  Atoms.gap_sm,
-                  { flexWrap: 'wrap', marginTop: 8 },
-                ]}
-              >
-                {attachments.map((a) => (
-                  <AttachmentThumb
-                    key={a.id}
-                    uri={a.uri}
-                    disabled={submitting}
-                    onRemove={() => handleRemoveAttachment(a.id)}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Quote preview */}
-        {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
+        <ComposerFields
+          isReply={composer.isReply}
+          replyTo={composer.replyTo}
+          quote={composer.quote}
+          error={composer.error}
+          currentIdentityKey={composer.currentIdentityKey}
+          placeholder={composer.placeholder}
+          text={composer.text}
+          setText={composer.setText}
+          attachments={composer.attachments}
+          submitting={composer.submitting}
+          onRemoveAttachment={composer.handleRemoveAttachment}
+        />
       </Sheet.Content>
-      {/*  Footer */}
     </Sheet>
-  );
-}
-
-function AttachmentThumb({
-  uri,
-  disabled,
-  onRemove,
-}: {
-  uri: string;
-  disabled: boolean;
-  onRemove: () => void;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      style={{
-        width: THUMBNAIL_SIZE,
-        height: THUMBNAIL_SIZE,
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
-    >
-      <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
-      <Pressable
-        onPress={onRemove}
-        disabled={disabled}
-        accessibilityLabel="Remove attachment"
-        hitSlop={6}
-        style={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
-      >
-        <Icon name="close" size={14} color="white" />
-      </Pressable>
-    </View>
   );
 }

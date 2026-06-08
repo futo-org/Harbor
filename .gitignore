@@ -43,5 +43,10 @@ polycentric-blobs/
 # Generated files
 docker-compose.live*
 
+# Docusaurus (docs site)
+.docusaurus
+.cache-loader
+docs/build
+
 # Secrets
 .env

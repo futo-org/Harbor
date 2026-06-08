@@ -1,0 +1,26 @@
+[package]
+name = "polycentric-identity"
+version = "0.1.0"
+edition = "2021"
+description = "Create and manage a Polycentric identity (rotation + signing keys), stored locally"
+publish = false
+
+[lib]
+name = "polycentric_identity"
+path = "src/lib.rs"
+
+[[bin]]
+name = "polycentric-identity"
+path = "src/main.rs"
+
+[dependencies]
+polycentric-common.workspace = true
+polycentric-core = { path = "../../packages/rs-core" }
+ed25519-dalek.workspace = true
+prost.workspace = true
+sha2.workspace = true
+getrandom = "0.2"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+hex = "0.4"
+tokio = { workspace = true, features = ["rt", "net", "time"] }

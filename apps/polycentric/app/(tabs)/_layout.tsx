@@ -1,5 +1,5 @@
 import { useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Slot } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
@@ -11,6 +11,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs
+      backBehavior="history"
       minimizeBehavior="onScrollDown"
       backgroundColor={theme.palette.neutral_0}
       iconColor={theme.palette.neutral_900}
@@ -21,7 +22,7 @@ export default function TabsLayout() {
     >
       <NativeTabs.Trigger name="feed">
         <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <NativeTabs.Trigger.Icon sf="house" md="home" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">
@@ -31,8 +32,23 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="activity">
         <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
+        <NativeTabs.Trigger.Icon sf="bell" md="notifications" />
       </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="trust">
+        <NativeTabs.Trigger.Label>Trust</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="checkmark.seal" md="verified" />
+      </NativeTabs.Trigger>
+
+      {isIOS ? (
+        <NativeTabs.Trigger name="compose" role="search">
+          <NativeTabs.Trigger.Label hidden>Compose</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon
+            sf={{ default: 'square.and.pencil', selected: 'square.and.pencil' }}
+            md="edit"
+          />
+        </NativeTabs.Trigger>
+      ) : null}
     </NativeTabs>
   );
 }

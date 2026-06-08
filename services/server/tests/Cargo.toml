@@ -18,8 +18,8 @@ ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 prost = "0.14"
 rand = "0.8"
 sha2 = "0.10"
-sea-orm = { version = "~2.0.0-rc.37", features = ["sqlx-postgres", "runtime-tokio"] }
-tokio = { version = "1", features = ["full"] }
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
+tokio = { workspace = true, features = ["full"] }
 tonic = "*"
 tonic-prost = "*"
 

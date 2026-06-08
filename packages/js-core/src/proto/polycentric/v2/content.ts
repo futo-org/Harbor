@@ -92,6 +92,12 @@ export interface Content {
          */
         report: Report;
     } | {
+        oneofKind: "labels";
+        /**
+         * @generated from protobuf field: polycentric.v2.Labels labels = 11
+         */
+        labels: Labels;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -315,6 +321,21 @@ export interface Report {
     additionalInfo: string;
 }
 /**
+ * @generated from protobuf message polycentric.v2.Labels
+ */
+export interface Labels {
+    /**
+     * Event that is being labeled
+     *
+     * @generated from protobuf field: polycentric.v2.EventKey event_key = 1
+     */
+    eventKey?: EventKey;
+    /**
+     * @generated from protobuf field: repeated string label_values = 2
+     */
+    labelValues: string[];
+}
+/**
  * *
  * gRPC requests
  *
@@ -481,7 +502,8 @@ class Content$Type extends MessageType<Content> {
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
             { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
             { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost },
-            { no: 10, name: "report", kind: "message", oneof: "contentBody", T: () => Report }
+            { no: 10, name: "report", kind: "message", oneof: "contentBody", T: () => Report },
+            { no: 11, name: "labels", kind: "message", oneof: "contentBody", T: () => Labels }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -550,6 +572,12 @@ class Content$Type extends MessageType<Content> {
                         report: Report.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).report)
                     };
                     break;
+                case /* polycentric.v2.Labels labels */ 11:
+                    message.contentBody = {
+                        oneofKind: "labels",
+                        labels: Labels.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).labels)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -589,6 +617,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.Report report = 10; */
         if (message.contentBody.oneofKind === "report")
             Report.internalBinaryWrite(message.contentBody.report, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.Labels labels = 11; */
+        if (message.contentBody.oneofKind === "labels")
+            Labels.internalBinaryWrite(message.contentBody.labels, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1315,6 +1346,60 @@ class Report$Type extends MessageType<Report> {
  * @generated MessageType for protobuf message polycentric.v2.Report
  */
 export const Report = new Report$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Labels$Type extends MessageType<Labels> {
+    constructor() {
+        super("polycentric.v2.Labels", [
+            { no: 1, name: "event_key", kind: "message", T: () => EventKey },
+            { no: 2, name: "label_values", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<Labels>): Labels {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.labelValues = [];
+        if (value !== undefined)
+            reflectionMergePartial<Labels>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Labels): Labels {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey event_key */ 1:
+                    message.eventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.eventKey);
+                    break;
+                case /* repeated string label_values */ 2:
+                    message.labelValues.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Labels, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey event_key = 1; */
+        if (message.eventKey)
+            EventKey.internalBinaryWrite(message.eventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string label_values = 2; */
+        for (let i = 0; i < message.labelValues.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.labelValues[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.Labels
+ */
+export const Labels = new Labels$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class SyncContentRequest$Type extends MessageType<SyncContentRequest> {
     constructor() {

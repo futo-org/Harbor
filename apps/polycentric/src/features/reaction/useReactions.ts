@@ -73,7 +73,7 @@ const useReactions = create<ReactionsState>((set, get) => ({
     });
 
     await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.GRAPH);
+    const event = await client.buildEvent(content, COLLECTION.INTERACTIONS);
     const signedEvent = await client.signEvent(event);
     if (!event.key) return;
     const eventId = bytesToHex(v2.EventKey.toBinary(event.key));
@@ -124,7 +124,7 @@ const useReactions = create<ReactionsState>((set, get) => ({
     await client.contentManager.save(deleteContent);
     const deleteEvent = await client.buildEvent(
       deleteContent,
-      COLLECTION.GRAPH,
+      COLLECTION.INTERACTIONS,
     );
     const signedDelete = await client.signEvent(deleteEvent);
 
@@ -161,7 +161,7 @@ const useReactions = create<ReactionsState>((set, get) => ({
     const self = client.activeIdentityKey;
     if (!self) return;
 
-    const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
+    const bundles = client.listValidEvents(self, COLLECTION.INTERACTIONS);
 
     // Collect the latest reaction per target.
     const latest = new Map<

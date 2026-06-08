@@ -27,6 +27,7 @@ message Content {
     Identity identity = 8;
     Repost repost = 9;
     Report report = 10;
+    Labels labels = 11;
   }
 }
 
@@ -129,6 +130,12 @@ message Report {
   EventKey event_key = 1;
   ReportCategory category = 2;
   string additional_info = 3;
+}
+
+message Labels {
+  // Event that is being labeled
+  EventKey event_key = 1;
+  repeated string label_values = 2;
 }
 
 /**
