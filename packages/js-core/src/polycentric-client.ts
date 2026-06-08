@@ -804,7 +804,7 @@ export class PolycentricClient {
   }
 
   /**
-   * Push local events then pull remote events from all configured servers.
+   * Push "new" local events to servers and pull remote events from all servers
    *
    * @returns The number of new events pulled
    */
