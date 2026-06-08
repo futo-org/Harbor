@@ -49,13 +49,13 @@ pub async fn handle(
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
-    let mut missing_blobs = HashSet::<Blob>::new();
+    let mut all_blobs = HashSet::<Blob>::new();
 
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         match process_event(ctx, event_bundle).await {
             Ok(blobs) => {
                 blobs.into_iter().for_each(|blob| {
-                    missing_blobs.insert(blob);
+                    all_blobs.insert(blob);
                 });
             }
 
@@ -73,20 +73,29 @@ pub async fn handle(
         }
     }
 
-    let missing_blobs = missing_blobs.into_iter().collect();
+    let missing_blobs = remove_present_blobs(ctx, all_blobs)
+        .await
+        .unwrap_or_else(|e| {
+            // A failure occurred while checking what blobs the server already has.
+            // Assume the server is not in a condition to accept new blobs and silently
+            // return no missing blobs to the client.
+            eprintln!("put_events blob processing: {e}");
+            vec![]
+        });
 
     Ok(PutEventsResponse {
-        missing_blobs,
         errors,
+        requested_blobs: missing_blobs
     })
 }
 
 /// Validate and persist an event.
+/// Returns all blobs referenced by the event.
 async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
 ) -> Result<Vec<Blob>, Status> {
-    let mut missing_blobs = Vec::<Blob>::new();
+    let mut blobs = Vec::<Blob>::new();
 
     // Encode the bundle up front while it's still whole — its fields are
     // moved out during validation below. Published to Kafka on success.
@@ -172,26 +181,10 @@ async fn process_event(
                     Status::invalid_argument("invalid content_bytes")
                 })?;
 
-        // Find missing blobs referenced by this event
-        for blob in content.blobs() {
-            if let Some(digest) = &blob.digest {
-                let maybe_blob_row =
-                    ContentRepository::Query::find_blob_by_digest(
-                        &ctx.db,
-                        digest.r#type as i16,
-                        digest.value.as_slice(),
-                    )
-                    .await
-                    .map_err(|e| {
-                        eprintln!("sync_events blob db error: {e}");
-                        Status::internal("internal server error")
-                    })?;
-
-                if maybe_blob_row.is_none() {
-                    missing_blobs.push(blob.clone());
-                }
-            }
-        }
+        content
+            .blobs()
+            .into_iter()
+            .for_each(|blob| blobs.push(blob.clone()));
 
         let txn = ctx.db.begin().await.map_err(|e| {
             eprintln!("sync_events txn begin error: {e}");
@@ -284,7 +277,7 @@ async fn process_event(
         }
     }
 
-    Ok(missing_blobs)
+    Ok(blobs)
 }
 
 fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
@@ -536,4 +529,33 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
     }
 
     Ok(())
+}
+
+/// Keep only the blobs that are not already present
+async fn remove_present_blobs(
+    ctx: &ServiceContext,
+    blobs: HashSet<Blob>,
+) -> Result<Vec<Blob>, Status> {
+    let digests: Vec<_> = blobs
+        .iter()
+        .filter_map(|blob| blob.digest.as_ref())
+        .collect();
+
+    let already_present =
+        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
+            .await
+            .map_err(|e| {
+                eprintln!("put_events blob db error: {e}");
+                Status::internal("internal server error")
+            })?;
+
+    let missing_blobs = blobs
+        .into_iter()
+        .filter(|blob| match &blob.digest {
+            Some(digest) => !already_present.contains(digest),
+            None => false, // Ignore blobs missing a content digest
+        })
+        .collect();
+
+    Ok(missing_blobs)
 }

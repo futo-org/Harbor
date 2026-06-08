@@ -119,7 +119,7 @@ message PutEventsResponse {
   repeated PutEventError errors = 1;
   // Blobs referenced by the events that the server does not have.
   // Client should upload these.
-  repeated Blob missing_blobs = 2;
+  repeated Blob requested_blobs = 2;
 }
 
 message ListHeadsRequest {

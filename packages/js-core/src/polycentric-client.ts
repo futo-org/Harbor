@@ -724,7 +724,7 @@ export class PolycentricClient {
           console.error('Error from event push:', error);
         }
 
-        for (const blob of response.missingBlobs) {
+        for (const blob of response.requestedBlobs) {
           if (!blob.digest) continue;
 
           const blobBytes = await this.filestoreDriver.get(blob.digest);
@@ -827,7 +827,7 @@ export class PolycentricClient {
       const response = Proto.PutEventsResponse.fromBinary(
         new Uint8Array(responseBytes),
       );
-      const blobs = response.missingBlobs;
+      const blobs = response.requestedBlobs;
 
       for (const error of response.errors) {
         console.error('Error from event push:', error);

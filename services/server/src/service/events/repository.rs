@@ -74,6 +74,34 @@ impl Query {
             .all(db)
             .await
     }
+
+    /// Find the latest sequence numbers for an identity
+    pub async fn list_heads(
+        db: &DbConn,
+        identity: &str,
+    ) -> Result<Vec<HeadInfoRow>, DbErr> {
+        EventModel::Entity::find()
+            .select_only()
+            .filter(EventModel::Column::Identity.eq(identity))
+            .column(EventModel::Column::PublicKeyType)
+            .column(EventModel::Column::PublicKey)
+            .column(EventModel::Column::Collection)
+            .column_as(EventModel::Column::Sequence.max(), "max_seq")
+            .group_by(EventModel::Column::PublicKeyType)
+            .group_by(EventModel::Column::PublicKey)
+            .group_by(EventModel::Column::Collection)
+            .into_model::<HeadInfoRow>()
+            .all(db)
+            .await
+    }
+}
+
+#[derive(Debug, FromQueryResult)]
+pub struct HeadInfoRow {
+    pub public_key_type: i16,
+    pub public_key: Vec<u8>,
+    pub collection: i16,
+    pub max_seq: i64,
 }
 
 pub struct Mutation;

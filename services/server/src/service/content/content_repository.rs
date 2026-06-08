@@ -1,11 +1,14 @@
+use std::collections::HashSet;
+
 use crate::service::proto::Blob;
 use ::entity::{
     content_blob_model as ContentBlobModel, content_model as ContentModel,
 };
+use polycentric_common::models::protos_v2::ContentDigest;
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::*;
 use sha2::{Digest, Sha256};
 
 pub struct Query;
@@ -22,6 +25,43 @@ impl Query {
             .filter(ContentBlobModel::Column::DigestBytes.eq(digest_bytes))
             .one(db)
             .await
+    }
+
+    /// Search the database for blobs matching the provided digests
+    /// and return a set of the digests that were found.
+    pub async fn find_digests_in_db<C: ConnectionTrait>(
+        db: &C,
+        digests: &Vec<&ContentDigest>,
+    ) -> Result<HashSet<ContentDigest>, DbErr> {
+        if digests.is_empty() {
+            return Ok(HashSet::new());
+        }
+
+        let mut filter = Condition::any();
+
+        for digest in digests {
+            filter = filter.add(
+                Condition::all()
+                    .add(ContentBlobModel::Column::DigestType.eq(digest.r#type))
+                    .add(
+                        ContentBlobModel::Column::DigestBytes
+                            .eq(digest.value.clone()),
+                    ),
+            );
+        }
+
+        let present = ContentBlobModel::Entity::find()
+            .filter(filter)
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|row| ContentDigest {
+                r#type: row.digest_type as i32,
+                value: row.digest_bytes,
+            })
+            .collect::<HashSet<_>>();
+
+        Ok(present)
     }
 }
 

@@ -268,9 +268,9 @@ export interface PutEventsResponse {
      * Blobs referenced by the events that the server does not have.
      * Client should upload these.
      *
-     * @generated from protobuf field: repeated polycentric.v2.Blob missing_blobs = 2
+     * @generated from protobuf field: repeated polycentric.v2.Blob requested_blobs = 2
      */
-    missingBlobs: Blob[];
+    requestedBlobs: Blob[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListHeadsRequest
@@ -954,13 +954,13 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
     constructor() {
         super("polycentric.v2.PutEventsResponse", [
             { no: 1, name: "errors", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError },
-            { no: 2, name: "missing_blobs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Blob }
+            { no: 2, name: "requested_blobs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Blob }
         ]);
     }
     create(value?: PartialMessage<PutEventsResponse>): PutEventsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.errors = [];
-        message.missingBlobs = [];
+        message.requestedBlobs = [];
         if (value !== undefined)
             reflectionMergePartial<PutEventsResponse>(this, message, value);
         return message;
@@ -973,8 +973,8 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
                 case /* repeated polycentric.v2.PutEventError errors */ 1:
                     message.errors.push(PutEventError.internalBinaryRead(reader, reader.uint32(), options));
                     break;
-                case /* repeated polycentric.v2.Blob missing_blobs */ 2:
-                    message.missingBlobs.push(Blob.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated polycentric.v2.Blob requested_blobs */ 2:
+                    message.requestedBlobs.push(Blob.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -991,9 +991,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
         /* repeated polycentric.v2.PutEventError errors = 1; */
         for (let i = 0; i < message.errors.length; i++)
             PutEventError.internalBinaryWrite(message.errors[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* repeated polycentric.v2.Blob missing_blobs = 2; */
-        for (let i = 0; i < message.missingBlobs.length; i++)
-            Blob.internalBinaryWrite(message.missingBlobs[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.Blob requested_blobs = 2; */
+        for (let i = 0; i < message.requestedBlobs.length; i++)
+            Blob.internalBinaryWrite(message.requestedBlobs[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
