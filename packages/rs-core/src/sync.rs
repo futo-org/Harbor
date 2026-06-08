@@ -67,7 +67,7 @@ pub fn bundle_unsent_events(
             let server_latest = *heads_map.get(&(col, signer)).unwrap_or(&0u64);
 
             let unsent_events =
-                client.get_sync_events(&identity, col, signer.key_type, &signer.key, server_latest);
+                client.get_sync_events(identity, col, signer.key_type, &signer.key, server_latest);
 
             for (_, signed_event) in unsent_events {
                 let event_bytes = &signed_event.event_bytes;

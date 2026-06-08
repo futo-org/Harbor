@@ -395,7 +395,7 @@ impl PolycentricCore {
         };
 
         // Upload events to server and return results
-        if bundles.len() > 0 {
+        if !bundles.is_empty() {
             let response = sync::push_bundles(&server, bundles).await?;
             let encoded = PutEventsResponse::encode_to_vec(&response);
             Ok(Some(encoded))

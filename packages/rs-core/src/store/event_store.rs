@@ -166,7 +166,7 @@ impl EventStore {
             collections.into_iter().collect(),
             keys.into_iter()
                 .map(|(key_type, signer)| Proto::PublicKey {
-                    key_type: key_type,
+                    key_type,
                     key: signer.clone(),
                 })
                 .collect(),

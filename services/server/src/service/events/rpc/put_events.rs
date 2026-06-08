@@ -222,7 +222,7 @@ async fn process_event(
                         Status::internal("internal server error")
                     })?;
 
-                if maybe_blob_row == None {
+                if maybe_blob_row.is_none() {
                     missing_blobs.push(blob);
                 }
             }
