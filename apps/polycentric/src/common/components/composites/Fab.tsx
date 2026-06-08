@@ -21,18 +21,18 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
   const shadow =
     Platform.OS === 'web'
       ? {
-        boxShadow: `0 6px 16px ${withHexOpacity(
-          theme.palette.primary_900,
-          isLight ? '28' : '40',
-        )}`,
-      }
+          boxShadow: `0 6px 16px ${withHexOpacity(
+            theme.palette.primary_900,
+            isLight ? '28' : '40',
+          )}`,
+        }
       : {
-        shadowColor: theme.palette.primary_900,
-        shadowOpacity: isLight ? 0.16 : 0.26,
-        shadowRadius: isLight ? 14 : 10,
-        shadowOffset: { width: 0, height: isLight ? 3 : 4 },
-        elevation: isLight ? 4 : 6,
-      };
+          shadowColor: theme.palette.primary_900,
+          shadowOpacity: isLight ? 0.16 : 0.26,
+          shadowRadius: isLight ? 14 : 10,
+          shadowOffset: { width: 0, height: isLight ? 3 : 4 },
+          elevation: isLight ? 4 : 6,
+        };
 
   return (
     <View style={[Atoms.absolute, { bottom: 0, right: 0 }, Atoms.p_lg]}>
