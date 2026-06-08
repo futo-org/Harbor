@@ -109,6 +109,20 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Remove a registered push token for `public_key`.
+    pub async fn unregister(
+        &self,
+        db: &DbConn,
+        public_key: &PublicKey,
+        service: &str,
+        token: &str,
+    ) -> Result<(), NotificationError> {
+        token_repository::Mutation::unregister(db, public_key, service, token)
+            .await?;
+
+        Ok(())
+    }
+
     /// Enqueue a job for the worker. Awaits when the queue is full —
     /// backpressure into the caller, preferable to silent unbounded
     /// growth. Logs and drops if the worker is gone.
@@ -305,9 +319,7 @@ impl NotificationManager {
 mod tests {
     use super::*;
     use crate::service::proto::content::ContentBody;
-    use crate::service::proto::{
-        Content, Identity, KeyType, ProfileUpdate,
-    };
+    use crate::service::proto::{Content, Identity, KeyType, ProfileUpdate};
     use ::entity::{
         content_model as ContentModel, event_model as EventModel,
         push_token_model as PushTokenModel,
@@ -674,8 +686,7 @@ mod tests {
 
         // Single follower whose identity matches reply_recipient.
         let signing_key_bytes = vec![4u8; 32];
-        let (bob_id, bob_identity_row) =
-            identity_event_row(&signing_key_bytes);
+        let (bob_id, bob_identity_row) = identity_event_row(&signing_key_bytes);
 
         let db = MockDatabase::new(DbBackend::Postgres)
             // (a) author's profile lookup → title "Alice"

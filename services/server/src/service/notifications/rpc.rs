@@ -2,12 +2,16 @@
 //! handler under `notifications/rpc/`.
 
 pub mod register_push_notifications;
+pub mod unregister_push_notifications;
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
-use crate::service::proto::{RegisterPushNotificationResponse, SignedMessage};
+use crate::service::proto::{
+    RegisterPushNotificationResponse, SignedMessage,
+    UnregisterPushNotificationResponse,
+};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -21,13 +25,30 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<SignedMessage>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
-        let notification_manager = self
-            .ctx
-            .notification_manager
-            .as_ref()
-            .ok_or_else(|| Status::internal("notifications are not configured"))?;
+        let notification_manager =
+            self.ctx.notification_manager.as_ref().ok_or_else(|| {
+                Status::internal("notifications are not configured")
+            })?;
         Ok(Response::new(
             register_push_notifications::handle(
+                &self.ctx.db,
+                notification_manager,
+                request.into_inner(),
+            )
+            .await?,
+        ))
+    }
+
+    async fn unregister_push_notifications(
+        &self,
+        request: Request<SignedMessage>,
+    ) -> Result<Response<UnregisterPushNotificationResponse>, Status> {
+        let notification_manager =
+            self.ctx.notification_manager.as_ref().ok_or_else(|| {
+                Status::internal("notifications are not configured")
+            })?;
+        Ok(Response::new(
+            unregister_push_notifications::handle(
                 &self.ctx.db,
                 notification_manager,
                 request.into_inner(),
