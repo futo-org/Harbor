@@ -3,16 +3,12 @@
 //! Uses the PhotoDNA REST API to match image hashes against known CSAM. This module submits images
 //! and returns match responses; callers act on the returned match.
 
-// TODO: remove once the client is wired into `Context` and the CSAM gate in `process()` actually
-// calls it. Until then its public surface is unused, which `-D warnings` would otherwise reject.
-#![allow(dead_code)]
-
-use base64::engine::general_purpose::STANDARD as Base64Engine;
+use base64::{Engine as _, engine::general_purpose::STANDARD as Base64Engine};
 use serde_json::Value;
 use std::{
     env,
     error::Error,
-    fmt::{Display, Formatter, Result},
+    fmt::{self, Display, Formatter},
 };
 
 const ENV_KEY: &str = "POLYCENTRIC_PHOTODNA_KEY";
@@ -32,7 +28,7 @@ pub enum PhotoDnaError {
 }
 
 impl Display for PhotoDnaError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             PhotoDnaError::Config(msg) => {
                 write!(f, "photodna not configured: {msg}")
@@ -124,13 +120,9 @@ impl PhotoDnaClient {
             });
         }
 
-        response
-            .json()
-            .await?
-            .get("IsMatch")
-            .and_then(Value::as_bool)
-            .ok_or_else(|| {
-                PhotoDnaError::Malformed(format!("missing/invalid IsMatch field in {body}"))
-            })
+        let body: Value = response.json().await?;
+        body.get("IsMatch").and_then(Value::as_bool).ok_or_else(|| {
+            PhotoDnaError::Malformed(format!("missing/invalid IsMatch field in {body}"))
+        })
     }
 }

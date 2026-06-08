@@ -14,11 +14,16 @@ use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
+use polycentric_common::models::{
+    collections,
+    protos_v2::{
+        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
+    },
 };
-use providers::azure::{AzureClient, ModerationRequest};
+use providers::{
+    azure::{AzureClient, ModerationRequest},
+    photodna::PhotoDnaClient,
+};
 // Aliased: `Message` above is rdkafka's message trait; this brings the
 // prost decode trait into scope without shadowing it.
 use prost::Message as ProstMessage;
@@ -163,11 +168,14 @@ async fn fetch_images(ctx: &Context, content: &Content) -> Vec<Vec<u8>> {
 /// Run the content through Azure and return its raw response(s). Every
 /// image is scanned (with the post text when present). `Err` signals a
 /// provider failure so the row can be marked `FAILED`.
-async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value, ()> {
+async fn moderate(
+    ctx: &Context,
+    content: &Content,
+    images: &[Vec<u8>],
+) -> Result<serde_json::Value, ()> {
     let client = &ctx.azure;
 
     let text = content_text(content);
-    let images = fetch_images(ctx, content).await;
 
     let analyze = |request| async {
         client.analyze(request).await.map_err(|e| {
@@ -178,7 +186,7 @@ async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value,
     // Each image is scanned with the text (multimodal) when text is
     // present, otherwise on its own.
     let mut image_results = Vec::with_capacity(images.len());
-    for image in &images {
+    for image in images {
         if let Some(request) = ModerationRequest::from_parts(text.as_deref(), Some(image)) {
             image_results.push(analyze(request).await?);
         }
@@ -200,6 +208,31 @@ async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value,
     }))
 }
 
+/// Run every image through PhotoDNA and report whether any is a CSAM match.
+///
+/// Fails open when PhotoDNA is unconfigured (`ctx.photodna == None`) or there
+/// are no images — both yield `Ok(false)`. A provider error returns `Err(())`
+/// so the caller can retry rather than fall through to Azure: a configured
+/// CSAM gate must never be silently skipped.
+async fn photodna_filter(ctx: &Context, images: &[Vec<u8>]) -> Result<bool, ()> {
+    let Some(photodna) = &ctx.photodna else {
+        return Ok(false);
+    };
+
+    for image in images {
+        match photodna.is_match(image).await {
+            Ok(true) => return Ok(true),
+            Ok(false) => {}
+            Err(e) => {
+                warn!("photodna match error: {}", e);
+                return Err(());
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
@@ -217,6 +250,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let azure = AzureClient::from_env()?;
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
+    // PhotoDNA is optional: if it is not configured, warn and moderate
+    // with Azure alone
+    let photodna = match PhotoDnaClient::from_env() {
+        Ok(client) => Some(client),
+        Err(e) => {
+            warn!(
+                "PhotoDNA not configured ({e}) for content moderation, continuing with Azure only"
+            );
+            None
+        }
+    };
+
     // Our own Polycentric identity, used to sign + publish labels events.
     let polycentric = PolycentricClient::from_env()?;
     // Pull our identity state from the remote servers before consuming, so
@@ -226,6 +271,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = Context {
         db,
         azure,
+        photodna,
         blobs,
         polycentric,
     };
@@ -332,10 +378,12 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
             // stored result (we still confirm the labels event below).
             Ok(Some(row)) => match row.azure_response {
                 Some(response) => response,
-                // Row exists but Azure never completed (pending/failed) — nothing
-                // to label; skip to avoid reprocessing.
                 None => {
-                    info!("content already seen without an Azure result, skipping");
+                    if row.is_csam == Some(true) {
+                        info!("content already flagged as CSAM, skipping");
+                    } else {
+                        info!("content already seen without an Azure result, skipping");
+                    }
                     return Outcome::Commit;
                 }
             },
@@ -348,10 +396,29 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                     return Outcome::Retry;
                 }
 
-                // TODO: if an image, check CSAM first and immediately delete the
-                // content on a positive match (short-circuit before Azure).
+                let images = fetch_images(ctx, &content).await;
 
-                match moderate(ctx, &content).await {
+                match photodna_filter(ctx, &images).await {
+                    // If content is CSAM, mark it for purging and return early.
+                    Ok(true) => {
+                        // If we get an error, retry (CSAM should not be ignored).
+                        if let Err(e) =
+                            repository::mark_csam(&ctx.db, digest_type, digest_bytes.clone()).await
+                        {
+                            warn!("mark_csam error: {}", e);
+                            return Outcome::Retry;
+                        }
+                        // TODO: publish a CHILD_SAFETY report so the
+                        // server purges the content, and notify the report sink.
+                        warn!("CSAM match for key {:?}", key);
+                        return Outcome::Commit;
+                    }
+                    Ok(false) => {}
+                    // Retry on error, so that we don't skip the CSAM check.
+                    Err(()) => return Outcome::Retry,
+                }
+
+                match moderate(ctx, &content, &images).await {
                     Ok(response) => {
                         if let Err(e) = repository::store_azure_result(
                             &ctx.db,
