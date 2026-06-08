@@ -13,8 +13,9 @@ import {
 } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useFocusEffect } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import type { ListRef } from '@/src/common/components/List';
 import { ComposerInput } from '../composer';
 import FeedList from './FeedList';
 import { useExploreFeed } from './hooks/useExploreFeed';
@@ -72,12 +73,20 @@ export default function ExploreScreen() {
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useExploreFeed({ enabled });
+  const listRef = useRef<ListRef>(null);
 
   useFocusEffect(() => {
     setEnabled(true);
   });
 
-  useFocusedRefresh(feed.refresh);
+  // Re-tapping the active tab scrolls to the top and refreshes.
+  const { refresh } = feed;
+  useFocusedRefresh(
+    useCallback(() => {
+      listRef.current?.scrollToTop();
+      refresh();
+    }, [refresh]),
+  );
 
   if (feed.error) {
     return (
@@ -101,7 +110,7 @@ export default function ExploreScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList feed={feed} HeaderComponent={ListHeader} />
+        <FeedList ref={listRef} feed={feed} HeaderComponent={ListHeader} />
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

@@ -9,8 +9,10 @@ import {
 } from '@shopify/flash-list';
 import React, {
   cloneElement,
+  forwardRef,
   isValidElement,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
 } from 'react';
@@ -43,22 +45,39 @@ export type ListProps<T> = FlashListProps<T> & {
     | undefined;
 };
 
-export function List<T extends PostData = PostData>(props: ListProps<T>) {
+/** Imperative handle exposed by `List` (and `FeedList`). */
+export type ListRef = { scrollToTop: () => void };
+
+export const List = forwardRef(function List<T extends PostData = PostData>(
+  props: ListProps<T>,
+  ref: React.Ref<ListRef>,
+) {
   if (isWeb) {
-    return <WebFeedViewer<T> {...props} />;
+    return <WebFeedViewer<T> {...props} listRef={ref} />;
   }
 
-  return <NativeList<T> {...props} />;
-}
+  return <NativeList<T> {...props} listRef={ref} />;
+}) as <T extends PostData = PostData>(
+  props: ListProps<T> & { ref?: React.Ref<ListRef> },
+) => React.ReactElement;
 
 function NativeList<T>({
   HeaderComponent,
   contentContainerStyle,
   refreshControl,
   onScroll: _ignoredOnScroll,
+  listRef,
   ...rest
-}: ListProps<T>) {
+}: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
+  useImperativeHandle(
+    listRef,
+    () => ({
+      scrollToTop: () =>
+        ref.current?.scrollToOffset({ offset: 0, animated: true }),
+    }),
+    [],
+  );
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
   const headerHeightShared = useSharedValue(0);
@@ -139,6 +158,7 @@ function NativeList<T>({
       ) : null}
 
       <AnimatedFlashList
+        ref={ref as React.Ref<FlashListRef<unknown>>}
         {...(rest as FlashListProps<unknown>)}
         refreshControl={adjustedRefreshControl}
         onScroll={onScroll}
@@ -166,8 +186,20 @@ function WebFeedViewer<T>({
   onEndReached,
   contentContainerStyle,
   stickyHeaderIndices,
-}: ListProps<T>) {
+  listRef,
+}: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const sentinelRef = useRef<View>(null);
+  useImperativeHandle(
+    listRef,
+    () => ({
+      scrollToTop: () => {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+    }),
+    [],
+  );
   const items = (data as readonly T[] | null | undefined) ?? [];
   const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
 
