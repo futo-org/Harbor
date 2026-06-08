@@ -158,18 +158,6 @@ async fn run_consumer(ctx: Arc<Context>) {
 
 /// Handle a single consumed message.
 async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
-    // Key is a protobuf-encoded EventKey, payload a protobuf EventBundle
-    // (see the server's put_events Kafka publish).
-    let key = message
-        .key()
-        .and_then(|bytes| match EventKey::decode(bytes) {
-            Ok(k) => Some(k),
-            Err(e) => {
-                warn!("failed to decode EventKey: {:?}", e);
-                None
-            }
-        });
-
     let bundle = match message.payload() {
         Some(bytes) => match EventBundle::decode(bytes) {
             Ok(b) => b,
