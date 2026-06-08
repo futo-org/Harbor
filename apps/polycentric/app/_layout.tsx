@@ -33,7 +33,9 @@ function RootStack() {
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
           contentStyle: [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
-          ...(isWeb ? { animation: 'none' as const } : {}),
+          ...(isWeb
+            ? { animation: 'none' as const }
+            : { orientation: 'portrait_up' }),
         }}
       >
         <Stack.Screen name="(tabs)" />
@@ -53,6 +55,17 @@ function RootStack() {
             presentation: 'transparentModal',
             animation: 'none',
             contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+        <Stack.Screen
+          name="image-viewer"
+          options={{
+            presentation: 'transparentModal',
+            animation: 'fade',
+            contentStyle: { backgroundColor: 'transparent' },
+            // Let just this screen rotate to landscape; the rest of the
+            // app stays portrait.
+            ...(isWeb ? {} : { orientation: 'all' as const }),
           }}
         />
       </Stack>
