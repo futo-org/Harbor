@@ -16,6 +16,29 @@
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
 
+# Lightweight base for checks (format, tests): node + pnpm install, no
+# SDK build artifacts needed.
+.app-check-base:
+  extends: .app-workflow
+  image: node:24-slim
+  before_script:
+    - npm install -g pnpm@10.19.0
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+
+app-format-check:
+  extends: .app-check-base
+  stage: check
+  script:
+    - pnpm format apps/polycentric
+  allow_failure: true
+
+app-tests:
+  extends: .app-check-base
+  stage: check
+  script:
+    - pnpm --filter polycentric-app test
+
 .app-build-base:
   extends: .app-workflow
   needs:
