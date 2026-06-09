@@ -9,6 +9,7 @@ import {
 } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
+import { ScrollView } from '@/src/common/components/ScrollView';
 import {
   REPORT_BUG_URL,
   Routes,
@@ -19,7 +20,7 @@ import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
-import { Linking, ScrollView, View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -55,10 +56,10 @@ export default function SettingsTabScreen() {
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_1]}>
           <ScrollView
+            HeaderComponent={<Topbar title="Settings" />}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[{ paddingBottom: TAB_BAR_HEIGHT + 16 }]}
           >
-            <Topbar title="Settings" />
             <View style={[Atoms.p_lg, Atoms.gap_xl]}>
               <ListItemWrapper
                 onPress={() => router.push(Routes.tabs.settings.identity)}
