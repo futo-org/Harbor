@@ -46,6 +46,8 @@ type CommonProps = {
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
+  /** Fired once the sheet has finished presenting. */
+  onPresented?: () => void;
 };
 
 export type SheetProps =
@@ -209,6 +211,7 @@ function NativeSheet({
       initialDetentIndex={0}
       dismissible={dismissible}
       scrollable={scrollable}
+      onDidPresent={() => props.onPresented?.()}
       onDidDismiss={() => {
         if (suppressOnCloseRef.current) {
           suppressOnCloseRef.current = false;
@@ -269,6 +272,7 @@ function WebModal({
   navigation,
   header,
   footer,
+  onPresented,
 }: WebInternalProps) {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
@@ -276,6 +280,12 @@ function WebModal({
 
   const isInline = open !== undefined;
   const { animatedStyle, fadeOut, isExiting } = useFadeTransition();
+
+  // Mirror native's `onPresented` once the modal has mounted.
+  useEffect(() => {
+    onPresented?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const close = useCallback(() => {
     if (isInline) fadeOut(() => onClose?.());

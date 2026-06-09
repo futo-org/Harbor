@@ -61,6 +61,7 @@ export const IconsMap = {
   time: defineIcon(Ionicons, 'time-outline'),
   trash: defineIcon(Ionicons, 'trash-outline'),
   trashBin: defineIcon(Ionicons, 'trash-bin'),
+  verify: defineIcon(MaterialCommunityIcons, 'check-decagram-outline'),
 };
 
 export type IconName = keyof typeof IconsMap;

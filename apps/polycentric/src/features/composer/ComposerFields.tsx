@@ -26,6 +26,8 @@ type ComposerFieldsProps = {
   attachments: Attachment[];
   submitting: boolean;
   onRemoveAttachment: (id: string) => void;
+  /** Auto-focus the text field.**/
+  autoFocus?: boolean;
 };
 
 /**
@@ -45,6 +47,7 @@ export function ComposerFields({
   attachments,
   submitting,
   onRemoveAttachment,
+  autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
 
@@ -83,9 +86,12 @@ export function ComposerFields({
         ) : null}
         <View style={Atoms.flex_1}>
           <TextArea
+            // `autoFocus` only fires on mount, so re-key when it flips
+            // (false → true after the sheet presents) to actually focus.
+            key={autoFocus ? 'autofocus' : 'no-autofocus'}
             variant="plain"
             placeholder={placeholder}
-            autoFocus
+            autoFocus={autoFocus}
             value={text}
             onChangeText={setText}
             // disabled={submitting}

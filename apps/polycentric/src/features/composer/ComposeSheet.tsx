@@ -5,7 +5,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { types } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
@@ -41,10 +41,14 @@ export function ComposeSheet({
     onClose,
   });
 
+  // Focus the field only after the sheet has presented (iOS fix)
+  const [autoFocus, setAutoFocus] = useState(false);
+
   return (
     <Sheet
       detents={[1]}
       scrollable
+      onPresented={() => setAutoFocus(true)}
       footer={
         <ComposeSheetFooterBar
           variant={isWeb ? 'web' : 'native'}
@@ -101,6 +105,7 @@ export function ComposeSheet({
           attachments={composer.attachments}
           submitting={composer.submitting}
           onRemoveAttachment={composer.handleRemoveAttachment}
+          autoFocus={autoFocus}
         />
       </Sheet.Content>
     </Sheet>

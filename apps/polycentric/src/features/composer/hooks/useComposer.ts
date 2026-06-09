@@ -89,8 +89,12 @@ export function useComposer({
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const handleClose = useCallback(() => {
-    if (!submitting) onClose();
-  }, [submitting, onClose]);
+    if (submitting) return;
+    onClose();
+    // Reset here too: the native compose tab stays mounted after closing,
+    // so the unmount reset below wouldn't fire for it.
+    resetComposer();
+  }, [submitting, onClose, resetComposer]);
 
   const handleAttachImage = useCallback(async () => {
     if (attachDisabled) return;
@@ -109,12 +113,33 @@ export function useComposer({
         height: asset.height,
       }));
     addAttachments(additions);
-  }, [attachDisabled, attachments.length, addAttachments]);
+    setError(null);
+  }, [attachDisabled, attachments.length, addAttachments, setError]);
 
   const handleRemoveAttachment = useCallback(
-    (id: string) => removeAttachment(id),
-    [removeAttachment],
+    (id: string) => {
+      removeAttachment(id);
+      setError(null);
+    },
+    [removeAttachment, setError],
   );
+
+  // Editing the draft (text or images) clears any prior post error.
+  const handleTextChange = useCallback(
+    (next: string) => {
+      setText(next);
+      setError(null);
+    },
+    [setText, setError],
+  );
+
+  // Reset the entire composer (text, attachments, submitting, error) when
+  // it closes (unmounts), so nothing carries over to the next open.
+  useEffect(() => {
+    return () => {
+      resetComposer();
+    };
+  }, [resetComposer]);
 
   // Auto-open the image picker once when the caller requested it
   // (e.g. tapping the attach icon in the inline composer).
@@ -236,7 +261,7 @@ export function useComposer({
   return {
     // state
     text,
-    setText,
+    setText: handleTextChange,
     attachments,
     submitting,
     error,
