@@ -181,8 +181,9 @@ export default function PairIdentityIssuerScreen() {
     return (
       <Sheet
         open={!!claimerStr}
-        detents={['auto', 1]}
+        detents={[0.6, 1]}
         dismissible
+        scrollable
         onClose={closeAndDeny}
       >
         {(() => {
