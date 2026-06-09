@@ -442,6 +442,7 @@ mod tests {
             db,
             notification_manager: NotificationManager::new(expo),
             polycentric,
+            main_server: String::new(),
         }
     }
 

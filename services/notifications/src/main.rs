@@ -16,7 +16,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
+use common_kafka::{BorrowedMessage, CommitMode, Consumer, Headers, Message, Offset};
 use expo_push_notification_client::{Expo, ExpoClientOptions};
 use polycentric_common::models::protos_v2::EventBundle;
 use prost::Message as _;
@@ -59,10 +59,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let polycentric = PolycentricClient::from_env()?;
 
+    // The server events must originate from for this service to fire
+    // notifications.
+    let main_server = std::env::var("POLYCENTRIC_MAIN_SERVER")
+        .map_err(|_| "POLYCENTRIC_MAIN_SERVER is not set".to_string())?;
+
     let ctx = Arc::new(Context {
         db,
         notification_manager,
         polycentric,
+        main_server,
     });
 
     // Address the gRPC `NotificationService` (push-token register/unregister)
@@ -158,6 +164,16 @@ async fn run_consumer(ctx: Arc<Context>) {
 
 /// Handle a single consumed message.
 async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
+    // Only events published by the main server should produce
+    // notifications. Skip (commit past) anything from another source.
+    let source_server = message
+        .headers()
+        .and_then(|headers| headers.iter().find(|h| h.key == "SOURCE_SERVER"))
+        .and_then(|header| header.value);
+    if source_server != Some(ctx.main_server.as_bytes()) {
+        return Outcome::Commit;
+    }
+
     let bundle = match message.payload() {
         Some(bytes) => match EventBundle::decode(bytes) {
             Ok(b) => b,

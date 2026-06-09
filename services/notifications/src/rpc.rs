@@ -74,6 +74,7 @@ mod tests {
             db: MockDatabase::new(DbBackend::Postgres).into_connection(),
             notification_manager: NotificationManager::new(test_expo()),
             polycentric: PolycentricClient::new(vec![]),
+            main_server: String::new(),
         });
         NotificationServiceImpl { ctx }
     }
@@ -157,6 +158,7 @@ mod tests {
             db,
             notification_manager: NotificationManager::new(test_expo()),
             polycentric: PolycentricClient::new(vec![]),
+            main_server: String::new(),
         });
         let service = NotificationServiceImpl { ctx };
 
