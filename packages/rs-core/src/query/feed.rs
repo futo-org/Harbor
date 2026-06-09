@@ -112,7 +112,7 @@ fn validated_thread_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClie
 /// Return posts for an identity.
 pub fn get_identity_feed(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetIdentityFeedArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -155,7 +155,7 @@ pub fn get_identity_feed(
 /// Returns posts an identity is following
 pub fn get_following_feed(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetFollowingFeedArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -198,7 +198,7 @@ pub fn get_following_feed(
 /// Server-curated explore feed of posts relevant to `identity`.
 pub fn get_explore_feed(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetExploreFeedArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -277,7 +277,7 @@ fn merge_thread_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricCli
 /// don't need to be re-fetched later.
 pub fn get_post_thread(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetPostThreadArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {

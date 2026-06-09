@@ -54,9 +54,7 @@ pub async fn handle(
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         match process_event(ctx, event_bundle).await {
             Ok(blobs) => {
-                blobs.into_iter().for_each(|blob| {
-                    all_blobs.insert(blob);
-                });
+                all_blobs.extend(blobs);
             }
 
             Err(status) => {

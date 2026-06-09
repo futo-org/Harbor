@@ -23,9 +23,12 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
-import { bytesToHex, toDigestKey } from './utils/hex';
+import { toDigestKey } from './utils/hex';
 
-import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
+import type {
+  PolycentricCoreLike,
+  EventKey,
+} from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -437,6 +440,8 @@ export class PolycentricClient {
     sequenceGt?: number | bigint | null;
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
+    heads?: Proto.EventKey[] | null;
+    queryKey?: string[] | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -454,21 +459,11 @@ export class PolycentricClient {
         }
       : undefined;
 
-    const queryKey = [
-      'list_events',
-      String(options?.limit ?? ''),
-      options?.identity ?? '',
-      String(options?.collection ?? ''),
-      options?.signedBy
-        ? `${options.signedBy.keyType}:${bytesToHex(options.signedBy.key)}`
-        : '',
-      String(sequenceGt ?? ''),
-      String(sequenceLt ?? ''),
-    ];
+    const heads = this.getFilterHeads(options?.heads ?? []);
 
     return new Promise<Proto.EventBundle[]>((resolve, reject) => {
       const observable = this.core.fetchQuery(
-        queryKey,
+        options?.queryKey ?? undefined,
         new Query.ListEvents({
           size: options?.limit ?? undefined,
           identity: options?.identity ?? undefined,
@@ -476,6 +471,7 @@ export class PolycentricClient {
           signedBy,
           sequenceGt,
           sequenceLt,
+          heads,
         }),
         undefined,
       );
@@ -503,6 +499,27 @@ export class PolycentricClient {
         complete: () => {},
       });
     });
+  }
+
+  /** Convert to FFI types */
+  private getFilterHeads(heads: Proto.EventKey[]): EventKey[] {
+    let out: EventKey[] = [];
+
+    for (const head of heads) {
+      if (!head.signedBy) continue;
+
+      out.push({
+        collection: head.collection,
+        identity: head.identity,
+        signedBy: {
+          keyType: head.signedBy.keyType,
+          key: head.signedBy.key.slice().buffer as ArrayBuffer,
+        },
+        sequence: head.sequence,
+      });
+    }
+
+    return out;
   }
 
   /**
@@ -670,19 +687,33 @@ export class PolycentricClient {
    *
    * @returns The number of new events persisted
    */
-  private async pull(): Promise<number> {
+  private async pull(partial: boolean): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
+    const identity = this.activeIdentityKey;
+
+    // Only send filter using heads when doing a partial pull
+    let heads = undefined;
+
+    if (partial) {
+      const head_events = await this.storage.events.getByIdentity(identity, {
+        headsOnly: true,
+      });
+      heads = head_events
+        .map((signed_event) => {
+          const event = Proto.Event.fromBinary(signed_event.eventBytes);
+          return event.key;
+        })
+        .filter((head) => !!head);
+    }
 
     const bundles = await this.listEvents({
-      identity: this.activeIdentityKey,
+      identity,
+      heads,
     });
 
+    let blobPullTasks = [];
+
     let newCount = 0;
-    const signedEvents: Proto.SignedEvent[] = [];
-    const contents: {
-      digest: Proto.ContentDigest;
-      content: Proto.Content;
-    }[] = [];
     for (const bundle of bundles) {
       if (!bundle.signedEvent) continue;
 
@@ -699,7 +730,7 @@ export class PolycentricClient {
             if (!existing) {
               await this.storage.content.save(event.contentDigest, content);
             }
-            contents.push({ digest: event.contentDigest, content });
+            blobPullTasks.push(this.contentManager.pullBlobs(content));
           }
         } catch {
           // content decode failed, skip
@@ -712,18 +743,10 @@ export class PolycentricClient {
       } catch {
         // duplicate event, skip
       }
-      signedEvents.push(bundle.signedEvent);
     }
 
-    // mirror into rs-core
-    await this.copyEvents(signedEvents);
-    await this.copyContents(contents);
-
     // Catch any of our own referenced blobs so they persist locally.
-    await Promise.all(
-      contents.map(({ content }) => this.contentManager.pullBlobs(content)),
-    );
-
+    await Promise.all(blobPullTasks);
     return newCount;
   }
 
@@ -732,9 +755,10 @@ export class PolycentricClient {
     switch (strategy) {
       case SyncStrategy.FULL:
       case SyncStrategy.FULL_PULL:
+        return () => this.pull(false);
       case SyncStrategy.PARTIAL:
       case SyncStrategy.PARTIAL_PULL:
-        return () => this.pull();
+        return () => this.pull(true);
       case SyncStrategy.FULL_PUSH:
       case SyncStrategy.PARTIAL_PUSH:
         return async () => 0;

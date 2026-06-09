@@ -20,7 +20,7 @@ impl Content {
         if let Some(ref body) = self.content_body {
             match body {
                 Post(post) => {
-                    post.images.iter().for_each(|set| image_sets.push(set));
+                    image_sets.extend(&post.images);
                 }
                 ProfileUpdate(update) => {
                     if let Some(ref avatar) = update.avatar {

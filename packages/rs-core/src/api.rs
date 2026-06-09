@@ -295,14 +295,15 @@ impl PolycentricCore {
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
-    /// Unified entry point for every observable RPC. `query` selects
-    /// which RPC to run and supplies its parameters; `query_key` is
-    /// the cache key shared across subscribers; `opts` carries the
-    /// optional fetch mode and per-call servers override. Always
-    /// returns a `QueryObservable` regardless of variant.
+    /// Unified entry point for every observable RPC.
+    /// `query` selects which RPC to run and supplies its parameters.
+    /// `query_key` is the cache key shared across subscribers.
+    /// Pass in `None` to bypass the cache.
+    /// `opts` carries the optional fetch mode and per-call servers override.
+    /// Always returns a `QueryObservable` regardless of variant.
     pub fn fetch_query(
         &self,
-        query_key: crate::query::QueryKey,
+        query_key: Option<crate::query::QueryKey>,
         query: Query,
         opts: Option<crate::query::QueryOpts>,
     ) -> Arc<dyn crate::query::QueryObservable> {

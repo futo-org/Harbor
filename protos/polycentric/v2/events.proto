@@ -84,6 +84,9 @@ message ListEventsFilters {
   optional int64 sequence_gt = 4;
   // Return sequences less than
   optional int64 sequence_lt = 5;
+  // When an event matches a head's identity, collection, and signer,
+  // only return it if its sequence number is higher than the head
+  repeated EventKey heads = 6;
 }
 
 message ListEventsRequest {

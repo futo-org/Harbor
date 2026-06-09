@@ -595,6 +595,7 @@ export type ListEventsArgs = {
   signedBy?: PublicKey;
   sequenceGt?: bigint;
   sequenceLt?: bigint;
+  heads?: Array<EventKey>;
 };
 
 /**
@@ -625,6 +626,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         signedBy: FfiConverterOptionalTypePublicKey.read(from),
         sequenceGt: FfiConverterOptionalInt64.read(from),
         sequenceLt: FfiConverterOptionalInt64.read(from),
+        heads: FfiConverterOptionalSequenceTypeEventKey.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
@@ -634,6 +636,7 @@ const FfiConverterTypeListEventsArgs = (() => {
       FfiConverterOptionalTypePublicKey.write(value.signedBy, into);
       FfiConverterOptionalInt64.write(value.sequenceGt, into);
       FfiConverterOptionalInt64.write(value.sequenceLt, into);
+      FfiConverterOptionalSequenceTypeEventKey.write(value.heads, into);
     }
     allocationSize(value: TypeName): number {
       return (
@@ -642,7 +645,8 @@ const FfiConverterTypeListEventsArgs = (() => {
         FfiConverterOptionalInt32.allocationSize(value.collection) +
         FfiConverterOptionalTypePublicKey.allocationSize(value.signedBy) +
         FfiConverterOptionalInt64.allocationSize(value.sequenceGt) +
-        FfiConverterOptionalInt64.allocationSize(value.sequenceLt)
+        FfiConverterOptionalInt64.allocationSize(value.sequenceLt) +
+        FfiConverterOptionalSequenceTypeEventKey.allocationSize(value.heads)
       );
     }
   }
@@ -2713,14 +2717,15 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Unified entry point for every observable RPC. `query` selects
-   * which RPC to run and supplies its parameters; `query_key` is
-   * the cache key shared across subscribers; `opts` carries the
-   * optional fetch mode and per-call servers override. Always
-   * returns a `QueryObservable` regardless of variant.
+   * Unified entry point for every observable RPC.
+   * `query` selects which RPC to run and supplies its parameters.
+   * `query_key` is the cache key shared across subscribers.
+   * Pass in `None` to bypass the cache.
+   * `opts` carries the optional fetch mode and per-call servers override.
+   * Always returns a `QueryObservable` regardless of variant.
    */
   fetchQuery(
-    queryKey: Array<string>,
+    queryKey: Array<string> | undefined,
     query: Query,
     opts: QueryOpts | undefined
   ): QueryObservable;
@@ -3055,14 +3060,15 @@ export class PolycentricCore
   }
 
   /**
-   * Unified entry point for every observable RPC. `query` selects
-   * which RPC to run and supplies its parameters; `query_key` is
-   * the cache key shared across subscribers; `opts` carries the
-   * optional fetch mode and per-call servers override. Always
-   * returns a `QueryObservable` regardless of variant.
+   * Unified entry point for every observable RPC.
+   * `query` selects which RPC to run and supplies its parameters.
+   * `query_key` is the cache key shared across subscribers.
+   * Pass in `None` to bypass the cache.
+   * `opts` carries the optional fetch mode and per-call servers override.
+   * Always returns a `QueryObservable` regardless of variant.
    */
   fetchQuery(
-    queryKey: Array<string>,
+    queryKey: Array<string> | undefined,
     query: Query,
     opts: QueryOpts | undefined
   ): QueryObservable {
@@ -3071,7 +3077,7 @@ export class PolycentricCore
         /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterSequenceString.lower(
+            FfiConverterOptionalSequenceString.lower(
               queryKey,
               nativeModule().rustbuffer_alloc
             ),
@@ -3949,6 +3955,16 @@ const FfiConverterOptionalTypePublicKey = new FfiConverterOptional(
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalInt64 = new FfiConverterOptional(FfiConverterInt64);
 
+// FfiConverter for Array<EventKey>
+const FfiConverterSequenceTypeEventKey = new FfiConverterArray(
+  FfiConverterTypeEventKey
+);
+
+// FfiConverter for Array<EventKey> | undefined
+const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(
+  FfiConverterSequenceTypeEventKey
+);
+
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
@@ -4097,7 +4113,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !==
-    49260
+    52560
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query'
