@@ -7,6 +7,7 @@ use ::entity::{
 use polycentric_common::models::protos_v2::ContentDigest;
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::sea_query::Expr;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::*;
 use sha2::{Digest, Sha256};
@@ -37,21 +38,19 @@ impl Query {
             return Ok(HashSet::new());
         }
 
-        let mut filter = Condition::any();
-
-        for digest in digests {
-            filter = filter.add(
-                Condition::all()
-                    .add(ContentBlobModel::Column::DigestType.eq(digest.r#type))
-                    .add(
-                        ContentBlobModel::Column::DigestBytes
-                            .eq(digest.value.clone()),
-                    ),
-            );
-        }
+        let digest_tuples = digests
+            .iter()
+            .map(|digest| (digest.r#type, digest.value.clone()))
+            .collect::<Vec<_>>();
 
         let present = ContentBlobModel::Entity::find()
-            .filter(filter)
+            .filter(
+                Expr::tuple([
+                    Expr::col(ContentBlobModel::Column::DigestType),
+                    Expr::col(ContentBlobModel::Column::DigestBytes),
+                ])
+                .in_tuples(digest_tuples),
+            )
             .all(db)
             .await?
             .into_iter()
