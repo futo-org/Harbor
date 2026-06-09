@@ -159,6 +159,14 @@ impl PolycentricClient {
         )
     }
 
+    /// Get all local events belonging to `identity`.
+    pub fn get_local_events(
+        &self,
+        identity: &str,
+    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> {
+        self.event_store.by_identity(identity)
+    }
+
     /// Finds the collections and signers referenced by local events of
     /// the given identity.
     /// These values are derived solely from the event keys in the event store

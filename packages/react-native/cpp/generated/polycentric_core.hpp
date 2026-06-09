@@ -19,8 +19,9 @@ class NativePolycentricCore : public jsi::HostObject {
   protected:
     std::map<std::string,jsi::Value> props;
     jsi::Value cpp_uniffi_internal_fn_func_ffi__string_to_byte_length(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
-    jsi::Value cpp_uniffi_internal_fn_func_ffi__string_to_arraybuffer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
-    jsi::Value cpp_uniffi_internal_fn_func_ffi__arraybuffer_to_string(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_internal_fn_func_ffi__string_to_buffer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_internal_fn_func_ffi__string_from_buffer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_internal_fn_func_ffi__read_string_from_buffer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_clone_polycentriccore(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_free_polycentriccore(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_constructor_polycentriccore_new(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
@@ -41,11 +42,11 @@ class NativePolycentricCore : public jsi::HostObject {
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_put_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_sign_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
-    jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_sync_to_server(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_clone_signeventcallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
@@ -144,11 +145,11 @@ class NativePolycentricCore : public jsi::HostObject {
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
-    jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_sync_to_server(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_signeventcallback_sign(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);

@@ -378,23 +378,26 @@ impl PolycentricCore {
         Ok(response.into_inner().encode_to_vec())
     }
 
-    /// Query servers for their latest known events and push newer local events to them.
-    /// Returns the `PutEventsResponse` if any events were pushed, so that the caller can
-    /// handle any errors and upload any blobs that the server requests.
-    pub async fn sync_to_server(
+    /// Push events belonging to `identity` to remote `server`.
+    /// Pushes all relevant local events if `partial` is false.
+    /// Otherwise, only push events that we believe the server to be missing.
+    /// The server's response is returned (if there is one), so that the caller
+    /// can handle error and/or push blobs.
+    pub async fn push_local_events(
         &self,
         identity: String,
         server: String,
+        partial: bool,
     ) -> Result<Option<Vec<u8>>, CoreError> {
-        let heads = sync::request_heads(&identity, &server).await?;
-
-        // Find events and blobs to send to server
-        let bundles = {
+        let bundles = if partial {
+            let heads = sync::request_heads(&identity, &server).await?;
             let client = self.client.lock().unwrap();
             sync::bundle_unsent_events(&client, &identity, heads)?
+        } else {
+            let client = self.client.lock().unwrap();
+            sync::bundle_local_events(&client, &identity)?
         };
 
-        // Upload events to server and return results
         if !bundles.is_empty() {
             let response = sync::push_bundles(&server, bundles).await?;
             let encoded = PutEventsResponse::encode_to_vec(&response);

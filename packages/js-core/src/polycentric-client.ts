@@ -8,7 +8,12 @@ import {
   KeyPairManager,
   PairingSessionManager,
 } from './client-internal';
-import { COLLECTION, KEY_TYPE, type Collection } from './constants';
+import {
+  COLLECTION,
+  KEY_TYPE,
+  SyncStrategy,
+  type Collection,
+} from './constants';
 import { HTTPClient } from './http';
 import { sha256 } from '@noble/hashes/sha2.js';
 import type {
@@ -660,93 +665,12 @@ export class PolycentricClient {
   }
 
   /**
-   * Push local events for the active key to all configured servers,
-   * including content alongside each event.
-   */
-  async push(): Promise<void> {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const localEvents = await this.storage.events.getByIdentity(
-      this.activeIdentityKey,
-    );
-
-    // Build event bundles with content for events matching the active identity
-    const bundles: Proto.EventBundle[] = [];
-
-    for (const signedEvent of localEvents) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-
-      // Look up content by digest
-      let serializedContent: Proto.SerializedContent | undefined;
-      if (event.contentDigest?.value) {
-        const content = await this.storage.content.get(event.contentDigest);
-
-        const contentBytes = content ? Proto.Content.toBinary(content) : null;
-        if (contentBytes) {
-          serializedContent = Proto.SerializedContent.create({
-            contentBytes,
-          });
-        }
-      }
-
-      bundles.push(
-        Proto.EventBundle.create({
-          signedEvent,
-          serializedContent,
-        }),
-      );
-    }
-
-    if (bundles.length === 0) return;
-
-    const requestBytes = Proto.PutEventsRequest.toBinary(
-      Proto.PutEventsRequest.create({ eventBundles: bundles }),
-    );
-
-    let uploadBlobTasks: Promise<void>[] = [];
-
-    const pushResults = await Promise.allSettled(
-      this.servers.map(async (server) => {
-        const responseBytes = await this.core.putEvents(
-          server,
-          requestBytes.buffer as ArrayBuffer,
-        );
-        const response = Proto.PutEventsResponse.fromBinary(
-          new Uint8Array(responseBytes),
-        );
-
-        for (const error of response.errors) {
-          console.error('Error from event push:', error);
-        }
-
-        for (const blob of response.requestedBlobs) {
-          if (!blob.digest) continue;
-
-          const blobBytes = await this.filestoreDriver.get(blob.digest);
-          if (!blobBytes) continue;
-
-          uploadBlobTasks.push(this.uploadBlob(blob, blobBytes, [server]));
-        }
-      }),
-    );
-
-    for (const result of pushResults) {
-      if (result.status === 'rejected') {
-        console.error('Push failed for a server:', result.reason);
-      }
-    }
-
-    await Promise.allSettled(uploadBlobTasks);
-  }
-
-  /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
    *
    * @returns The number of new events persisted
    */
-  async pull(): Promise<number> {
+  private async pull(): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
 
     const bundles = await this.listEvents({
@@ -803,21 +727,58 @@ export class PolycentricClient {
     return newCount;
   }
 
+  /** Used for syncing */
+  private getPullFn(strategy: SyncStrategy): () => Promise<number> {
+    switch (strategy) {
+      case SyncStrategy.FULL:
+      case SyncStrategy.FULL_PULL:
+      case SyncStrategy.PARTIAL:
+      case SyncStrategy.PARTIAL_PULL:
+        return () => this.pull();
+      case SyncStrategy.FULL_PUSH:
+      case SyncStrategy.PARTIAL_PUSH:
+        return async () => 0;
+    }
+  }
+
+  /** Used for syncing */
+  private getPushFn(
+    strategy: SyncStrategy,
+    identity: string,
+  ): (server: string) => Promise<ArrayBuffer | undefined> {
+    switch (strategy) {
+      case SyncStrategy.FULL:
+      case SyncStrategy.FULL_PUSH:
+        return (server) => this.core.pushLocalEvents(identity, server, false);
+      case SyncStrategy.PARTIAL:
+      case SyncStrategy.PARTIAL_PUSH:
+        return (server) => this.core.pushLocalEvents(identity, server, true);
+      case SyncStrategy.FULL_PULL:
+      case SyncStrategy.PARTIAL_PULL:
+        return async () => undefined;
+    }
+  }
+
   /**
-   * Push "new" local events to servers and pull remote events from all servers
-   *
+   * Sync events for the active identity between this client and
+   * the remote servers.
    * @returns The number of new events pulled
    */
-  async sync(): Promise<number> {
+  async sync(strategy?: SyncStrategy): Promise<number> {
     const identity = this.activeIdentityKey;
     if (!identity) return 0;
 
+    strategy = strategy ?? SyncStrategy.PARTIAL;
+
+    const pullFn = this.getPullFn(strategy);
+    const pushFn = this.getPushFn(strategy, identity);
+
     // Pull concurrently with pushing new events and blobs
-    const pullTask = this.pull();
+    let pullTask = pullFn();
 
     // Push new events and blobs to servers
     const pushTasks = this.servers.map(async (server): Promise<void> => {
-      const responseBytes = await this.core.syncToServer(identity, server);
+      const responseBytes = await pushFn(server);
       if (!responseBytes) return; // Nothing was done
 
       const response = Proto.PutEventsResponse.fromBinary(

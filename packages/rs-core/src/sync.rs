@@ -1,6 +1,6 @@
 use polycentric_common::models::{
     collections,
-    protos_v2::{PutEventsRequest, PutEventsResponse},
+    protos_v2::{PutEventsRequest, PutEventsResponse, SignedEvent},
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -70,26 +70,48 @@ pub fn bundle_unsent_events(
                 client.get_sync_events(identity, col, signer.key_type, &signer.key, server_latest);
 
             for (_, signed_event) in unsent_events {
-                let event_bytes = &signed_event.event_bytes;
-                let event = Event::decode(event_bytes.as_slice())
-                    .map_err(|e| CoreError::Decode(format!("decode local event: {e}")))?;
-
-                let serialized_content = event
-                    .content_digest
-                    .and_then(|digest| client.find_content_from_digest(&digest));
-
-                let bundle = EventBundle {
-                    signed_event: Some(signed_event.clone()),
-                    serialized_content,
-                    event_proofs: vec![],
-                };
-
+                let bundle = bundle_from_signed_event(client, signed_event.clone())?;
                 bundles.push(bundle);
             }
         }
     }
 
     Ok(bundles)
+}
+
+/// Gather all local events for an identity and prepare them for sending to servers
+pub fn bundle_local_events(
+    client: &PolycentricClient,
+    identity: &str,
+) -> Result<Vec<EventBundle>, CoreError> {
+    let local_events = client.get_local_events(identity);
+
+    let mut bundles = vec![];
+    for (_, signed_event) in local_events {
+        let bundle = bundle_from_signed_event(client, signed_event.clone())?;
+        bundles.push(bundle);
+    }
+
+    Ok(bundles)
+}
+
+fn bundle_from_signed_event(
+    client: &PolycentricClient,
+    signed_event: SignedEvent,
+) -> Result<EventBundle, CoreError> {
+    let event_bytes = &signed_event.event_bytes;
+    let event = Event::decode(event_bytes.as_slice())
+        .map_err(|e| CoreError::Decode(format!("decode local event: {e}")))?;
+
+    let serialized_content = event
+        .content_digest
+        .and_then(|digest| client.find_content_from_digest(&digest));
+
+    Ok(EventBundle {
+        signed_event: Some(signed_event),
+        serialized_content,
+        event_proofs: vec![],
+    })
 }
 
 /// Send event bundles to server
