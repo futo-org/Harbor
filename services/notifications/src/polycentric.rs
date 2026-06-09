@@ -25,17 +25,17 @@ impl PolycentricClient {
         Self { servers }
     }
 
-    /// Build from `POLYCENTRIC_NOTIFICATIONS_SERVERS` — a comma-separated
+    /// Build from `POLYCENTRIC_QUERY_SERVERS` — a comma-separated
     /// list of gRPC server URLs.
     pub fn from_env() -> Result<Self, String> {
-        let servers: Vec<String> = std::env::var("POLYCENTRIC_NOTIFICATIONS_SERVERS")
-            .map_err(|_| "POLYCENTRIC_NOTIFICATIONS_SERVERS is not set".to_string())?
+        let servers: Vec<String> = std::env::var("POLYCENTRIC_QUERY_SERVERS")
+            .map_err(|_| "POLYCENTRIC_QUERY_SERVERS is not set".to_string())?
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
         if servers.is_empty() {
-            return Err("POLYCENTRIC_NOTIFICATIONS_SERVERS is empty".to_string());
+            return Err("POLYCENTRIC_QUERY_SERVERS is empty".to_string());
         }
 
         Ok(Self::new(servers))
