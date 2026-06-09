@@ -139,6 +139,12 @@ impl NotificationManager {
             return Ok(());
         };
 
+        let collapse_id: String = signed
+            .signature
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
         // Title is the author's display name, fetched over gRPC.
         let title = ctx
             .polycentric
@@ -146,8 +152,14 @@ impl NotificationManager {
             .await
             .unwrap_or_else(|| "Anonymous".to_string());
 
-        self.send_to_identity(ctx, &recipient, title, "Replied to your post".to_string())
-            .await?;
+        self.send_to_identity(
+            ctx,
+            &recipient,
+            "REPLY_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
+            title,
+            "Replied to your post".to_string(),
+        )
+        .await?;
 
         Ok(())
     }
@@ -159,6 +171,7 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         identity: &str,
+        collapse_id: String,
         title: String,
         body: String,
     ) -> Result<(), NotificationError> {
