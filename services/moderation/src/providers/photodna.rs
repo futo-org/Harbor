@@ -96,6 +96,13 @@ impl PhotoDnaClient {
 
     /// Submit a single image to the `Match` endpoint and return whether
     /// PhotoDNA matched it against the known-CSAM dataset.
+    ///
+    /// Note that the `Match` endpoint is deprecated, and that Microsoft
+    /// recommends using `MatchHash`. The `Match` API better suits our
+    /// use case (the image has already been sent to our servers--it's
+    /// too late to compute a hash at the edge to prevent it from getting
+    /// to the server). We may want to switch to the `MatchHash` endpoint
+    /// at some point in the future.
     pub async fn is_match(&self, image: &[u8]) -> Result<bool, PhotoDnaError> {
         let url = format!("{}/Match", self.endpoint);
 
