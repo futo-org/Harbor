@@ -17,7 +17,8 @@ use polycentric::{PolycentricClient, PublishError};
 use polycentric_common::models::{
     collections,
     protos_v2::{
-        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
+        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, ReportCategory,
+        content::ContentBody,
     },
 };
 use providers::{
@@ -163,6 +164,19 @@ async fn fetch_images(ctx: &Context, content: &Content) -> Vec<Vec<u8>> {
         }
     }
     images
+}
+
+/// Purge every image blob referenced by `content` from the object store.
+async fn purge_images(ctx: &Context, content: &Content) -> Result<(), ()> {
+    let store = &ctx.blobs;
+    let mut ok = true;
+    for digest in image_digests(content) {
+        if let Err(e) = store.delete_blob(digest).await {
+            warn!("failed to purge CSAM image blob: {}", e);
+            ok = false;
+        }
+    }
+    if ok { Ok(()) } else { Err(()) }
 }
 
 /// Run the content through Azure and return its raw response(s). Every
@@ -379,10 +393,13 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
             Ok(Some(row)) => match row.azure_response {
                 Some(response) => response,
                 None => {
+                    // Content flagged as CSAM skips Azure responses. Re-run purging/reporting
+                    // just in case.
                     if row.is_csam == Some(true) {
-                        info!("content already flagged as CSAM, skipping");
-                    } else {
-                        info!("content already seen without an Azure result, skipping");
+                        if purge_images(ctx, &content).await.is_err() {
+                            return Outcome::Retry;
+                        }
+                        report_csam(ctx, &key).await;
                     }
                     return Outcome::Commit;
                 }
@@ -399,7 +416,8 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                 let images = fetch_images(ctx, &content).await;
 
                 match photodna_filter(ctx, &images).await {
-                    // If content is CSAM, mark it for purging and return early.
+                    // CSAM: record it, then purge the image blobs and report it.
+                    // Do not run Azure or labels.
                     Ok(true) => {
                         // If we get an error, retry (CSAM should not be ignored).
                         if let Err(e) =
@@ -408,9 +426,11 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                             warn!("mark_csam error: {}", e);
                             return Outcome::Retry;
                         }
-                        // TODO: publish a CHILD_SAFETY report so the
-                        // server purges the content, and notify the report sink.
                         warn!("CSAM match for key {:?}", key);
+                        if purge_images(ctx, &content).await.is_err() {
+                            return Outcome::Retry;
+                        }
+                        report_csam(ctx, &key).await;
                         return Outcome::Commit;
                     }
                     Ok(false) => {}
@@ -524,6 +544,72 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         Err(PublishError::Transient(e)) => {
             warn!("labels publish failed: {}", e);
             Outcome::Retry
+        }
+    }
+}
+
+/// Ensure a CHILD_SAFETY report event exists for CSAM `key`. The report records
+/// and propagates the violation, but images should be purged before this runs.
+async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
+    let Some(target) = key.clone() else {
+        warn!("cannot report CSAM: message had no decodable event key");
+        return;
+    };
+
+    // Check if the report already exists
+    let additional_info = "PhotoDNA service reported image as CSAM";
+    let (_, digest) =
+        polycentric::report_content(&target, ReportCategory::ChildSafety, additional_info);
+    match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await {
+        Ok(true) => {
+            info!("CSAM report already created, skipping");
+            return;
+        }
+        Ok(false) => {}
+        Err(e) => {
+            warn!("created_content_exists error, skipping report: {}", e);
+            return;
+        }
+    }
+
+    let signer = ctx.polycentric.public_key();
+    let head = match repository::chain_head(
+        &ctx.db,
+        collections::REPORTS,
+        ctx.polycentric.identity(),
+        signer.key_type,
+        &signer.key,
+    )
+    .await
+    {
+        Ok(head) => head,
+        Err(e) => {
+            warn!("chain_head error, skipping report: {}", e);
+            return;
+        }
+    };
+
+    match ctx
+        .polycentric
+        .publish_report(
+            target.clone(),
+            ReportCategory::ChildSafety,
+            additional_info.to_string(),
+            head,
+        )
+        .await
+    {
+        Ok(created) => {
+            if let Err(e) = repository::persist_created(&ctx.db, &created).await {
+                warn!("persist_created error: {}", e);
+            }
+            // TODO: report confirmed CSAM to authorities (PhotoDNA? NCMEC?)
+        }
+        Err(PublishError::NotReady(e)) => {
+            warn!("report publish not ready, skipping: {}", e);
+        }
+        Err(PublishError::Transient(e)) => {
+            warn!("report publish failed, skipping: {}", e);
         }
     }
 }
