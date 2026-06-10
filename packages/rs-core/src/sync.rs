@@ -23,7 +23,7 @@ pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>
     let response = rpc_client
         .list_heads(request)
         .await
-        .map_err(|e| CoreError::Network(format!("sync_to_servers: list_heads: {e}")))?;
+        .map_err(|e| CoreError::Network(format!("push_local_events: list_heads: {e}")))?;
 
     Ok(response.into_inner().heads)
 }
