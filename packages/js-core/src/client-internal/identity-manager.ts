@@ -82,7 +82,8 @@ export class IdentityManager {
     rotationKeys: Proto.PublicKey[],
     signingKeys: Proto.PublicKey[],
   ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
-    if (!this.client.currentKeyPair) {
+    const activePublicKey = this.client.keyPairManager.activePublicKey;
+    if (!activePublicKey) {
       throw new Error('No active key pair');
     }
 
@@ -96,10 +97,7 @@ export class IdentityManager {
       if (
         rotationKeys.length !== 1 ||
         signingKeys.length !== 0 ||
-        !IdentityManager.keysEqual(
-          rotationKeys[0],
-          this.client.currentKeyPair.publicKey,
-        )
+        !IdentityManager.keysEqual(rotationKeys[0], activePublicKey)
       ) {
         throw new Error(
           'Initial identity must have exactly one rotation key (the current key) and no signing keys',
@@ -122,7 +120,7 @@ export class IdentityManager {
         key: Proto.EventKey.create({
           collection: COLLECTION.IDENTITY,
           identity: resolvedIdentityKey,
-          signedBy: this.client.currentKeyPair.publicKey,
+          signedBy: activePublicKey,
           sequence: 1n,
         }),
         identitySequence: 1n,
@@ -240,10 +238,10 @@ export class IdentityManager {
    * sets it active and pulls the full identity event history.
    */
   async claim(identityKey: string): Promise<IdentityState> {
-    if (!this.client.currentKeyPair) throw new Error('No active key pair');
+    const publicKey = this.client.keyPairManager.activePublicKey;
+    if (!publicKey) throw new Error('No active key pair');
 
     const state = await this.fetchIdentityState(identityKey);
-    const publicKey = this.client.currentKeyPair.publicKey;
     const isAuthorized =
       state.rotationKeys.some((k) => IdentityManager.keysEqual(k, publicKey)) ||
       state.signingKeys.some((k) => IdentityManager.keysEqual(k, publicKey));

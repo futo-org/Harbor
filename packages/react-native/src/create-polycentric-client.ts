@@ -3,9 +3,9 @@ import { PolycentricCore, setLogger } from './generated/rn/polycentric_core';
 import { createReactNativeStorageDriver } from './datastore/expo-sqlite';
 import { createReactNativeFileStoreDriver } from './filestore/expo-file-system';
 import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
+import { ReactNativeKeyPairManager } from './key-manager/react-native-key-manager';
 import {
   createBatchingLogSink,
-  createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
 } from './create-polycentric-client.shared';
@@ -31,9 +31,9 @@ export async function createPolycentricClient(
       `${databaseName}-blobs`,
     ),
     cryptoManager,
+    createKeyPairManager: (client) => new ReactNativeKeyPairManager(client),
     seedServers: config.seedServers,
   });
 }
 
-export { createIdentity };
 export type { CreatePolycentricClientConfig };

@@ -101,7 +101,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     setPairingSessionLoading(true);
     setPairingSessionError(null);
     try {
-      const currentKey = client.currentKeyPair?.publicKey;
+      const currentKey = client.keyPairManager.activePublicKey;
       if (!currentKey) throw new Error('No active key pair');
       const isRotationKey =
         await client.identityManager.isRotationKeyForIdentity(

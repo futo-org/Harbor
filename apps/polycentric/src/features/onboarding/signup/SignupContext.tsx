@@ -2,12 +2,8 @@ import type { Href } from 'expo-router';
 import { router, usePathname } from 'expo-router';
 import { create } from 'zustand';
 import { Routes } from '@/src/common/constants';
-import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
-import {
-  DEFAULT_SERVER,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { publishProfileUpdate } from '@/src/features/profile/lib/publishProfileUpdate';
 
 type ModerationLevel = 1 | 2 | 3;
@@ -85,7 +81,9 @@ export function useSignup() {
     }
 
     try {
-      await createIdentity(client, DEFAULT_SERVER);
+      const activePublicKey = client.keyPairManager.activePublicKey;
+      if (!activePublicKey) throw new Error('No active keypair');
+      await client.identityManager.publish(null, [activePublicKey], []);
       await publishProfileUpdate(client, {
         name: data.displayName,
         description: data.about,

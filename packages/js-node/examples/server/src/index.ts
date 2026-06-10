@@ -84,9 +84,8 @@ async function loadFeed(): Promise<PostRow[]> {
 }
 
 async function renderIndex() {
-  const publicKeyHex = client.currentKeyPair
-    ? toHex(client.currentKeyPair.publicKey.key)
-    : '';
+  const activePublicKey = client.keyPairManager.activePublicKey;
+  const publicKeyHex = activePublicKey ? toHex(activePublicKey.key) : '';
   const posts = await loadFeed();
   return ejs.renderFile(path.join(VIEWS, 'index.ejs'), {
     publicKeyHex,
@@ -126,7 +125,8 @@ route('GET', /^\/$/, async (_req, res) => {
 });
 
 route('POST', /^\/identity$/, async (_req, res) => {
-  if (!client.currentKeyPair) {
+  const activePublicKey = client.keyPairManager.activePublicKey;
+  if (!activePublicKey) {
     res.statusCode = 400;
     res.end('no key pair');
     return;
@@ -137,11 +137,7 @@ route('POST', /^\/identity$/, async (_req, res) => {
     res.end();
     return;
   }
-  await client.identityManager.publish(
-    null,
-    [client.currentKeyPair.publicKey],
-    [],
-  );
+  await client.identityManager.publish(null, [activePublicKey], []);
   res.statusCode = 303;
   res.setHeader('Location', '/');
   res.end();

@@ -20,21 +20,14 @@ import { Platform, Text, View } from 'react-native';
 import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
 import { useNotificationNavigation } from '../notifications/useNotificationNavigation';
-import {
-  createPolycentricStore,
-  useStore,
-  type PolycentricStoreApi,
-} from './store';
 import useReactions from '@/src/features/reaction/useReactions';
 
 export interface PolycentricContextValue {
   client: PolycentricClient;
-  store: PolycentricStoreApi;
   isLoading: boolean;
   isReady: boolean;
   error: Error | null;
   currentIdentity: IdentityState | null;
-  switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
   refreshCurrentIdentity: () => Promise<void>;
 }
 
@@ -132,7 +125,6 @@ export function PolycentricProvider({
   onInitialized,
 }: PolycentricProviderProps) {
   const [client, setClient] = useState<PolycentricClient | null>(null);
-  const [store, setStore] = useState<PolycentricStoreApi | null>(null);
   const [currentIdentity, setCurrentIdentity] = useState<IdentityState | null>(
     null,
   );
@@ -180,11 +172,7 @@ export function PolycentricProvider({
 
         if (cancelled) return;
 
-        const s = createPolycentricStore(c);
-        await s.getState().refreshIdentities();
-
         setClient(c);
-        setStore(s);
         setCurrentIdentity(await resolveIdentity(c));
 
         // Only sync when we already have an identity to sync for.
@@ -214,7 +202,6 @@ export function PolycentricProvider({
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
           setCurrentIdentity(await resolveIdentity(c));
-          await s.getState().refreshIdentities();
           // TODO: Cleanup this up
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
@@ -242,40 +229,22 @@ export function PolycentricProvider({
     };
   }, []);
 
-  const switchIdentity = useCallback(
-    async (publicKey: types.PublicKey) => {
-      if (!client) return;
-      await client.keyPairManager.switchKeyPair(publicKey);
-      await client.sync().catch(() => {});
-    },
-    [client],
-  );
-
   const refreshCurrentIdentity = useCallback(async () => {
     if (!client) return;
     setCurrentIdentity(await resolveIdentity(client));
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
+    if (!client) return null;
     return {
       client,
-      store,
       isLoading,
       isReady: !isLoading && !error,
       error,
       currentIdentity,
-      switchIdentity,
       refreshCurrentIdentity,
     };
-  }, [
-    client,
-    store,
-    isLoading,
-    error,
-    currentIdentity,
-    switchIdentity,
-    refreshCurrentIdentity,
-  ]);
+  }, [client, isLoading, error, currentIdentity, refreshCurrentIdentity]);
 
   if (error) {
     return <DefaultErrorComponent error={error} />;
@@ -307,13 +276,8 @@ export function usePolycentric(): PolycentricClient {
   return client;
 }
 
-export function useIdentities() {
-  const { store } = usePolycentricContext();
-  return useStore(store, (s) => s.identities);
-}
-
 export function useCurrentIdentity() {
-  const { client, currentIdentity, switchIdentity } = usePolycentricContext();
+  const { client, currentIdentity } = usePolycentricContext();
 
   const activeIdentityKey = currentIdentity?.identityKey ?? null;
 
@@ -330,7 +294,6 @@ export function useCurrentIdentity() {
     identityKey: activeIdentityKey,
     client,
     isCurrentIdentity,
-    switchIdentity,
   };
 }
 

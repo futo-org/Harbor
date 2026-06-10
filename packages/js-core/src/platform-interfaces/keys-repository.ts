@@ -1,49 +1,25 @@
-import type { PrivateKey } from '../polycentric-client';
-import { PublicKey } from '../proto/v2';
+import type { KeyType, PublicKey } from '../proto/v2';
 
 /**
- * KeysRepository interface for storing and retrieving cryptographic keys in a database
+ * One persisted key in the local key store.
+ * If `private_key` is absent, the private key may be stored as
+ * `encrypted_private_key` (browser) or in expo-secure-store (React Native).
+ */
+export interface PersistedKey {
+  public_key: Uint8Array;
+  key_type: KeyType;
+  private_key?: Uint8Array;
+  encrypted_private_key?: Uint8Array;
+  credential_id?: Uint8Array;
+}
+
+/**
+ * KeysRepository interface for storing and retrieving cryptographic keys.
  */
 export interface IKeysRepository {
-  /**
-   * Store a key pair
-   *
-   * @param keys - A key pair containing private and public keys
-   * @throws {Error} If the keys are invalid or storing fails
-   */
-  storeKeys(keys: {
-    privateKey: PrivateKey;
-    publicKey: PublicKey;
-  }): Promise<void>;
+  getAllKeys(): Promise<PersistedKey[]>;
 
-  /**
-   * Retrieve a key pair by public key
-   *
-   * @param publicKey - The public key to look up
-   * @returns Promise that resolves to the key pair, or null if not found
-   */
-  retrieveKeysByPublicKey(publicKey: PublicKey): Promise<{
-    privateKey: PrivateKey;
-    publicKey: PublicKey;
-  } | null>;
-
-  /**
-   * Removes a key pair from storage
-   *
-   * @param publicKey The public key of the key pair to be removed
-   * @throws {Error} If the keys are invalid or removal fails
-   */
-  removeKeys(publicKey: PublicKey): Promise<void>;
-
-  /**
-   * Gets all stored key pairs
-   *
-   * @returns Promise that resolves to a list of all stored key pairs
-   */
-  getAllKeys(): Promise<
-    {
-      privateKey: PrivateKey;
-      publicKey: PublicKey;
-    }[]
-  >;
+  get(publicKey: PublicKey): Promise<PersistedKey | null>;
+  insert(key: PersistedKey): Promise<void>;
+  delete(publicKey: PublicKey): Promise<void>;
 }

@@ -20,8 +20,5 @@ export type {
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';
 
-export {
-  createPolycentricClient,
-  createIdentity,
-} from './create-polycentric-client.web';
+export { createPolycentricClient } from './create-polycentric-client.web';
 export type { CreatePolycentricClientConfig } from './create-polycentric-client.shared';

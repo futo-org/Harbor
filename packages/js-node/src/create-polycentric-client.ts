@@ -3,6 +3,7 @@ import { PolycentricClient } from '@polycentric/js-core';
 import { NodeCryptoManager } from './crypto/node-crypto-manager.js';
 import { createNodeStorageDriver } from './datastore/better-sqlite3/index.js';
 import { createNodeFileStoreDriver } from './filestore/fs/index.js';
+import { NodeKeyPairManager } from './key-manager/node-key-manager.js';
 import { PolycentricCore, uniffiInitAsync } from './uniffi-init.js';
 
 export interface CreatePolycentricNodeClientConfig {
@@ -24,6 +25,7 @@ export async function createPolycentricNodeClient(
     storageDriver: driver,
     filestoreDriver,
     cryptoManager,
+    createKeyPairManager: (client) => new NodeKeyPairManager(client),
     seedServers: config.seedServers,
   });
 }

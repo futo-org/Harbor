@@ -5,7 +5,6 @@ import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
   useCurrentIdentity,
   usePolycentric,
-  usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
@@ -14,7 +13,6 @@ import { ActivityIndicator, View } from 'react-native';
 
 export function ServersSettingsSheet() {
   const client = usePolycentric();
-  const { store } = usePolycentricContext();
   const { identity } = useCurrentIdentity();
   const { theme } = useTheme();
 
@@ -40,7 +38,6 @@ export function ServersSettingsSheet() {
       client.servers.push(url);
       setNewServerUrl('');
       refreshServers();
-      store.getState().clearFeed('explore');
       client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to add server:', err);
@@ -61,7 +58,6 @@ export function ServersSettingsSheet() {
       // TODO: Remove server not yet implemented in v2
       console.warn('Remove server not yet implemented in v2');
       refreshServers();
-      store.getState().clearFeed('explore');
       client.sync().catch(() => {});
     } catch (err) {
       console.error('Failed to remove server:', err);

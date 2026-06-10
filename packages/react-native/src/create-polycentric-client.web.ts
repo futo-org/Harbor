@@ -1,6 +1,7 @@
 import { PolycentricClient } from '@polycentric/js-core';
 import {
   BrowserCryptoManager,
+  BrowserKeyPairManager,
   IndexedDBStorageDriver,
   OpfsFileStoreDriver,
 } from '@polycentric/js-browser';
@@ -11,7 +12,6 @@ import {
 } from '@polycentric/rs-core-uniffi-web';
 import {
   createBatchingLogSink,
-  createIdentity,
   normalizeDatabaseName,
   type CreatePolycentricClientConfig,
 } from './create-polycentric-client.shared';
@@ -38,9 +38,9 @@ export async function createPolycentricClient(
     storageDriver: await IndexedDBStorageDriver.create(databaseName),
     filestoreDriver: await OpfsFileStoreDriver.create(`${databaseName}-blobs`),
     cryptoManager,
+    createKeyPairManager: (client) => new BrowserKeyPairManager(client),
     seedServers: config.seedServers,
   });
 }
 
-export { createIdentity };
 export type { CreatePolycentricClientConfig };

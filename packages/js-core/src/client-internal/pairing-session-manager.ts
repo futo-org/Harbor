@@ -30,16 +30,13 @@ export class PairingSessionManager {
   private async signMessage(
     messageBytes: Uint8Array,
   ): Promise<Proto.SignedMessage> {
-    if (!this.client.currentKeyPair) throw new Error('No active key pair');
-    const signature = await this.client.crypto.sign(
-      this.client.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.client.currentKeyPair.keyType,
-    );
+    const publicKey = this.client.keyPairManager.activePublicKey;
+    if (!publicKey) throw new Error('No active key pair');
+    const signature = await this.client.keyPairManager.sign(messageBytes);
     return Proto.SignedMessage.create({
       signature,
       messageBytes,
-      publicKey: this.client.currentKeyPair.publicKey,
+      publicKey,
     });
   }
 

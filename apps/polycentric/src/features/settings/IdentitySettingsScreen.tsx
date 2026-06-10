@@ -7,7 +7,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -22,8 +22,8 @@ export function IdentitySettingsSheet({
 
   const [nameExpanded, setNameExpanded] = useState(false);
 
-  const signingKey = client.currentKeyPair?.publicKey
-    ? publicKeyToString(client.currentKeyPair.publicKey)
+  const signingKey = client.keyPairManager.activePublicKey
+    ? publicKeyToString(client.keyPairManager.activePublicKey)
     : '';
   const displayName = profile.name;
 
@@ -36,9 +36,14 @@ export function IdentitySettingsSheet({
       <Sheet.Content style={[Atoms.gap_xl]}>
         {/* Hero: avatar + name */}
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
-          <Link href={'/feed/compose'}>
-            <ProfileAvatar identityKey={identityKey} size="massive" />
-          </Link>
+          <ProfileAvatar
+            identityKey={identityKey}
+            size="massive"
+            onPress={() => {
+              // TODO: remove this hidden demo when protected keys are actually used.
+              void client.keyPairManager.runProtectedKeyPairDemo();
+            }}
+          />
 
           <View style={[Atoms.items_center, Atoms.gap_xs]}>
             <Text

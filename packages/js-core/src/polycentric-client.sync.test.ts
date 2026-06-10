@@ -525,11 +525,27 @@ function makeClient(args: MakeClientArgs = {}) {
     loadActiveIdentityKey: vi.fn(async () => null),
   } as any;
 
+  const keyPairManager = {
+    activePublicKey: args.signer?.publicKey ?? null,
+    loadActive: vi.fn(async () => {}),
+    isProtectedAvailable: vi.fn(async () => false),
+    generate: vi.fn(),
+    sign: vi.fn(async (bytes: Uint8Array) => {
+      if (!args.signer) {
+        throw new Error('No keypair set');
+      }
+      return ed25519.sign(bytes, args.signer.privateKey);
+    }),
+    delete: vi.fn(async () => {}),
+    runProtectedKeyPairDemo: vi.fn(async () => {}),
+  } as any;
+
   const client = new PolycentricClient({
     core,
     storageDriver,
     filestoreDriver: fileStore,
     cryptoManager,
+    createKeyPairManager: () => keyPairManager,
   });
 
   (client as any).storageHandle = new StorageHandle({
@@ -540,16 +556,6 @@ function makeClient(args: MakeClientArgs = {}) {
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;
-  if (args.signer) {
-    client.currentKeyPair = {
-      keyType: Proto.KeyType.ED25519,
-      privateKey: {
-        keyType: Proto.KeyType.ED25519,
-        key: args.signer.privateKey,
-      },
-      publicKey: args.signer.publicKey,
-    };
-  }
 
   return { client, core, eventRepository, contentRepository, fileStore };
 }

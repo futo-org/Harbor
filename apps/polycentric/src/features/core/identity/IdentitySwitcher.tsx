@@ -10,20 +10,14 @@ import { Sheet } from '@/src/common/components/sheet';
 import { useFadeIn } from '@/src/common/lib/animation';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
-  DEFAULT_SERVER,
   pubkeyStr,
   useCurrentIdentity,
-  useIdentities,
   useIdentityKeyFor,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import {
-  createIdentity,
-  KEY_TYPE,
-  type KeyPair,
-} from '@polycentric/react-native';
+import { type KeyPair } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import {
   createContext,
@@ -70,7 +64,7 @@ function useIdentitySwitcher() {
 
 export function IdentitySwitcherSheet() {
   const client = usePolycentric();
-  const identities = useIdentities();
+  const identities: KeyPair[] = [];
   const [isEditing, setIsEditing] = useState(false);
 
   const dismiss = useCallback(() => {
@@ -78,16 +72,8 @@ export function IdentitySwitcherSheet() {
   }, []);
 
   const handleCreateIdentity = useCallback(async () => {
-    // Adding a second identity on this device means generating a fresh
-    // keypair for it; the initial device-wide keypair stays paired with
-    // whatever identity it currently owns.
-    await client.keyPairManager.createKeyPair({
-      keyType: KEY_TYPE.ED25519,
-      setAsCurrent: true,
-    });
-    await createIdentity(client, DEFAULT_SERVER);
-    await client.sync().catch(() => {});
-  }, [client]);
+    // TODO: multi-identity flow not implemented
+  }, []);
 
   const handleDeleteIdentity = useCallback(
     async (_keyPair: IdentityKeyPair) => {
@@ -226,7 +212,7 @@ function IdentityListItemContent({
 }
 
 function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
-  const { isCurrentIdentity, switchIdentity } = useCurrentIdentity();
+  const { isCurrentIdentity } = useCurrentIdentity();
   const { dismiss } = useIdentitySwitcher();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
@@ -234,13 +220,7 @@ function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
   const isCurrent = isCurrentIdentity(identityKey);
 
   const handleSwitchIdentity = async () => {
-    // Start dismiss animation, then switch identity after animation begins
-    // TrueSheet needs time to register the dismiss before state changes
-    // TODO: use truesheet events instead of a timeout
     dismiss();
-    setTimeout(() => {
-      switchIdentity(item.publicKey);
-    }, 215);
   };
 
   return (

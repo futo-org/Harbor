@@ -81,6 +81,7 @@
   },
   "peerDependencies": {
     "expo-file-system": ">=18.0.0",
+    "expo-secure-store": ">=55.0.0",
     "expo-sqlite": ">=14.0.0",
     "react": ">=19.0.0",
     "react-native": ">=0.83.0"

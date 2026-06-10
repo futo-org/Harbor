@@ -11,3 +11,6 @@ export {
 } from './datastore/indexeddb/database';
 export { IndexedDBStorageDriver } from './datastore/indexeddb/storage-driver';
 export { OpfsFileStoreDriver } from './filestore/opfs/file-store-driver';
+
+// key pair manager
+export { BrowserKeyPairManager } from './key-manager/browser-key-manager';

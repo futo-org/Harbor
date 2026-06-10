@@ -24,8 +24,7 @@ export type {
   QueryOpts,
 } from './generated/rn/polycentric_core';
 
-export {
-  createPolycentricClient,
-  createIdentity,
-} from './create-polycentric-client';
+export { createPolycentricClient } from './create-polycentric-client';
 export type { CreatePolycentricClientConfig } from './create-polycentric-client';
+
+export { ReactNativeKeyPairManager } from './key-manager/react-native-key-manager';

@@ -39,8 +39,8 @@ export default function PairIdentityClaimerScreen() {
     pairingSessionServer,
   });
 
-  const pubKeyStr = client.currentKeyPair
-    ? publicKeyToString(client.currentKeyPair.publicKey)
+  const pubKeyStr = client.keyPairManager.activePublicKey
+    ? publicKeyToString(client.keyPairManager.activePublicKey)
     : '';
   const pubKeyEmoji = pubKeyStr
     ? publicKeyEmojiFingerprint(pubKeyStr).join(' ')

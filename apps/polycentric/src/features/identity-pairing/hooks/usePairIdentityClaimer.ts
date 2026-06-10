@@ -67,7 +67,7 @@ export function usePairIdentityClaimer(
           pairingSessionServer,
         );
         if (cancelled) return;
-        const currentKey = client.currentKeyPair?.publicKey;
+        const currentKey = client.keyPairManager.activePublicKey;
         if (!currentKey) return;
 
         const keys = new Set<string>();
