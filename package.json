@@ -10,6 +10,7 @@
     "generate": "turbo run generate",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
     "run:ios": "pnpm -C apps/polycentric run ios",
     "run:android": "pnpm -C apps/polycentric run android",
     "run:web": "pnpm -C apps/polycentric run web",

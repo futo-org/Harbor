@@ -10,16 +10,16 @@ export type ComposeSheetFooterBarProps = {
   onPost: () => void;
   /** Optional hook for the "attach image" button. Button is hidden when omitted. */
   onAttachImage?: () => void;
+  /** Optional hook for the "take photo" button (mobile). Hidden when omitted. */
+  onCaptureImage?: () => void;
   attachDisabled?: boolean;
   variant: 'native' | 'web';
 };
 
 export function ComposeSheetFooterBar({
   charCount,
-  submitting,
-  canPost,
-  onPost,
   onAttachImage,
+  onCaptureImage,
   attachDisabled = false,
   variant,
 }: ComposeSheetFooterBarProps) {
@@ -41,9 +41,26 @@ export function ComposeSheetFooterBar({
     </Pressable>
   ) : null;
 
+  const captureButton = onCaptureImage ? (
+    <Pressable
+      onPress={onCaptureImage}
+      disabled={attachDisabled}
+      hitSlop={10}
+      accessibilityLabel="Take photo"
+      style={[
+        Atoms.p_xs,
+        Atoms.rounded_md,
+        { opacity: attachDisabled ? 0.4 : 1 },
+      ]}
+    >
+      <Icon name="camera" size={22} color="neutral_700" />
+    </Pressable>
+  ) : null;
+
   const leading = (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       {attachButton}
+      {captureButton}
       <Text variant="small" color="neutral_500">
         {charCount}/2000
       </Text>

@@ -1,10 +1,17 @@
 import { create } from 'zustand';
 
+/**
+ * `processing` — being resized/uploaded; `ready` — blobs are on the server;
+ * `error` — processing failed (post will retry from scratch).
+ */
+export type AttachmentStatus = 'processing' | 'ready' | 'error';
+
 export type ComposerAttachment = {
   id: string;
   uri: string;
   width: number;
   height: number;
+  status: AttachmentStatus;
 };
 
 type ComposerState = {
@@ -17,6 +24,7 @@ type ComposerState = {
 type ComposerActions = {
   setText: (text: string) => void;
   addAttachments: (additions: ComposerAttachment[]) => void;
+  setAttachmentStatus: (id: string, status: AttachmentStatus) => void;
   removeAttachment: (id: string) => void;
   setSubmitting: (value: boolean) => void;
   setError: (error: string | null) => void;
@@ -37,6 +45,12 @@ export const useComposerStore = create<ComposerState & ComposerActions>(
     setText: (text) => set({ text }),
     addAttachments: (additions) =>
       set((s) => ({ attachments: [...s.attachments, ...additions] })),
+    setAttachmentStatus: (id, status) =>
+      set((s) => ({
+        attachments: s.attachments.map((a) =>
+          a.id === id ? { ...a, status } : a,
+        ),
+      })),
     removeAttachment: (id) =>
       set((s) => ({
         attachments: s.attachments.filter((a) => a.id !== id),
