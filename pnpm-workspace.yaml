@@ -10,6 +10,13 @@ catalog:
   '@noble/hashes': ^1.8.0
   typescript: ^5.9.3
 
+overrides:
+  shell-quote@<1.8.4: '>=1.8.4'
+  serialize-javascript@<7.0.5: '>=7.0.5'
+  postcss@<8.5.10: '>=8.5.10'
+  ws@>=8.0.0 <8.20.1: '>=8.20.1'
+  uuid@<11.1.1: '>=11.1.1'
+
 linkWorkspacePackages: true
 
 onlyBuiltDependencies:

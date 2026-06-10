@@ -37,11 +37,11 @@
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
-    "@vitest/browser": "^3.1.2",
+    "@vitest/browser": "^3.2.6",
     "globals": "^17.4.0",
     "playwright": "^1.52.0",
     "ts-loader": "^9.5.2",
-    "vitest": "^3.1.2",
+    "vitest": "^3.2.6",
     "webpack": "^5.100.1",
     "webpack-cli": "^6.0.1",
     "typescript": "catalog:"
