@@ -691,63 +691,121 @@ export class PolycentricClient {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
-    // Only send filter using heads when doing a partial pull
+    // Only filter by heads when doing a partial pull
     let heads = undefined;
 
     if (partial) {
-      const head_events = await this.storage.events.getByIdentity(identity, {
+      // Partial pulls will skip events at or before each event stream head.
+      // Find each head event and then map it to the filter format.
+      const headEvents = await this.storage.events.getByIdentity(identity, {
         headsOnly: true,
       });
-      heads = head_events
-        .map((signed_event) => {
-          const event = Proto.Event.fromBinary(signed_event.eventBytes);
+      heads = headEvents
+        .map((signedEvent) => {
+          const event = Proto.Event.fromBinary(signedEvent.eventBytes);
           return event.key;
         })
         .filter((head) => !!head);
     }
 
+    // Fetch new bundles from server
     const bundles = await this.listEvents({
       identity,
       heads,
     });
 
-    let blobPullTasks = [];
+    // Collect blobs referenced by the events
+    let blobs: Proto.Blob[] = [];
 
+    // Save new events and content
     let newCount = 0;
     for (const bundle of bundles) {
-      if (!bundle.signedEvent) continue;
+      const isNew = await this.trySaveBundle(bundle, blobs);
+      if (isNew) newCount++;
+    }
 
-      if (bundle.serializedContent?.contentBytes) {
-        try {
-          const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
-          if (event.contentDigest?.value) {
-            const existing = await this.storage.content.get(
-              event.contentDigest,
-            );
-            const content = Proto.Content.fromBinary(
-              bundle.serializedContent.contentBytes,
-            );
-            if (!existing) {
-              await this.storage.content.save(event.contentDigest, content);
-            }
-            blobPullTasks.push(this.contentManager.pullBlobs(content));
-          }
-        } catch {
-          // content decode failed, skip
-        }
-      }
+    // Remove duplicate blobs
+    let blobMap: Map<string, Proto.Blob> = new Map();
 
-      try {
-        await this.storage.events.save(bundle.signedEvent);
-        newCount++;
-      } catch {
-        // duplicate event, skip
-      }
+    for (const blob of blobs) {
+      if (!blob.digest) continue;
+      blobMap.set(toDigestKey(blob.digest), blob);
+    }
+
+    blobs = [];
+
+    for (const blob of blobMap.values()) {
+      blobs.push(blob);
     }
 
     // Catch any of our own referenced blobs so they persist locally.
-    await Promise.all(blobPullTasks);
+    await this.contentManager.pullBlobs(blobs);
     return newCount;
+  }
+
+  /**
+   * Absorb errors and return true only when the event is new and added.
+   * Any discovered blobs are added to `blobs`.
+   */
+  private async trySaveBundle(
+    bundle: Proto.EventBundle,
+    blobs: Proto.Blob[],
+  ): Promise<boolean> {
+    try {
+      if (!bundle.signedEvent) return false;
+
+      const bytes = bundle.signedEvent.eventBytes;
+
+      const event = Proto.Event.fromBinary(bytes);
+      if (!event.key) return false;
+      if (!event.key.signedBy) return false;
+
+      // Try saving content for any event that seems valid, even if it may already exist.
+      await this.trySaveContent(event, bundle, blobs);
+
+      const existing = await this.storage.events.getByEventKey(event.key);
+      if (existing) return false;
+
+      await this.storage.events.save(bundle.signedEvent);
+      return true;
+    } catch (e) {
+      console.warn('Pull event:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Absorb errors and return true only when the content is new and added
+   * Any discovered blobs are added to `blobs`.
+   */
+  private async trySaveContent(
+    event: Proto.Event,
+    bundle: Proto.EventBundle,
+    blobs: Proto.Blob[],
+  ): Promise<boolean> {
+    try {
+      const bytes = bundle.serializedContent?.contentBytes;
+      if (!bytes) return false;
+
+      const content = Proto.Content.fromBinary(bytes);
+
+      const digest = event.contentDigest;
+      if (!digest) return false;
+
+      // Try finding blobs before checking content existence,
+      // since we might be missing a blob referenced by content
+      // that we already have.
+      blobs.push(...ContentManager.collectBlobs(content));
+
+      const existing = await this.storage.content.get(digest);
+      if (existing) return false;
+
+      await this.storage.content.save(digest, content);
+      return true;
+    } catch (e) {
+      console.warn('Pull event content:', e);
+      return false;
+    }
   }
 
   /** Used for syncing */
@@ -826,14 +884,22 @@ export class PolycentricClient {
       );
     });
 
-    const pushResults = await Promise.allSettled(pushTasks);
+    const [pullResult, ...pushResults] = await Promise.allSettled([
+      pullTask,
+      ...pushTasks,
+    ]);
+
     for (const result of pushResults) {
       if (result.status === 'rejected') {
         console.error('Sync failed for a server:', result.reason);
       }
     }
 
-    return await pullTask;
+    if (pullResult.status === 'fulfilled') {
+      return pullResult.value;
+    } else {
+      throw pullResult.reason;
+    }
   }
 
   public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {

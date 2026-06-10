@@ -33,14 +33,12 @@ export class ContentManager {
   }
 
   /**
-   * Download any blobs that we don't have locally from this content.
+   * Download any blobs in the array that we don't have locally.
    * This is used so that blobs of an identity will eventually
    * persist on other devices in that identity.
    */
-  async pullBlobs(content: Proto.Content): Promise<void> {
-    const digests = ContentManager.collectBlobs(content)
-      .map((b) => b.digest)
-      .filter((d) => !!d);
+  async pullBlobs(blobs: Proto.Blob[]): Promise<void> {
+    const digests = blobs.map((b) => b.digest).filter((d) => !!d);
 
     if (digests.length === 0) return;
 
