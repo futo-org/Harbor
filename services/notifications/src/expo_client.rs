@@ -47,6 +47,7 @@ impl ExpoClient {
         }
     }
 
+    #[cfg(test)]
     pub fn with_custom_push_url(access_token: Option<String>, push_url: String) -> Self {
         ExpoClient {
             http: reqwest::Client::new(),

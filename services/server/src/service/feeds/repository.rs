@@ -1,4 +1,3 @@
-use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
@@ -10,7 +9,6 @@ pub use crate::service::events::tombstone::EventWithContentRow;
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
-const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
 
 pub struct Query;
 
@@ -29,38 +27,6 @@ impl Query {
             .limit(limit)
             .all(db)
             .await
-    }
-
-    /// Return the list of identities that follow `target` (as recorded
-    /// by Follow events in the GRAPH collection authored by each follower).
-    ///
-    /// Unfollow (Delete) tombstones are not yet applied server-side, so a
-    /// follower who later unfollowed still appears here.
-    pub async fn list_followers(
-        db: &DbConn,
-        target: &str,
-    ) -> Result<Vec<String>, DbErr> {
-        // Deduplicate because a single follower may have produced multiple
-        // Follow events targeting `target` (e.g. follow → unfollow → follow).
-        let rows = EventModel::Entity::find()
-            .select_only()
-            .column(EventModel::Column::Identity)
-            .distinct()
-            .join(JoinType::InnerJoin, content_join())
-            .join(
-                JoinType::InnerJoin,
-                ContentModel::Entity::belongs_to(ContentFollowModel::Entity)
-                    .from(ContentModel::Column::Id)
-                    .to(ContentFollowModel::Column::ContentId)
-                    .into(),
-            )
-            .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
-            .filter(ContentFollowModel::Column::IdentityId.eq(target))
-            .into_tuple::<String>()
-            .all(db)
-            .await?;
-
-        Ok(rows)
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
