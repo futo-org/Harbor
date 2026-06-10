@@ -134,6 +134,21 @@ impl NotificationManager {
             return Ok(());
         };
 
+        let collapse_id: String = signed
+            .signature
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        // The followee target, when this is a follow of someone other than the
+        // author (self-follows don't notify).
+        let followed_profile: Option<String> = match &content.content_body {
+            Some(ContentBody::Follow(follow)) => {
+                Some(follow.identity.clone()).filter(|target| target != &author)
+            }
+            _ => None,
+        };
+
         // The reply target, when this is a post replying to someone other
         // than the author (self-replies don't notify).
         let reply_recipient: Option<String> = match &content.content_body {
@@ -146,31 +161,41 @@ impl NotificationManager {
             _ => None,
         };
 
-        let Some(recipient) = reply_recipient else {
-            return Ok(());
+        if let Some(recipient) = reply_recipient {
+            // Title is the author's display name, fetched over gRPC.
+            let title = ctx
+                .polycentric
+                .display_name(&author)
+                .await
+                .unwrap_or_else(|| "Anonymous".to_string());
+
+            self.send_to_identity(
+                ctx,
+                &recipient,
+                "REPLY_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
+                title,
+                "Replied to your post".to_string(),
+            )
+            .await?;
         };
 
-        let collapse_id: String = signed
-            .signature
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        if let Some(followee) = followed_profile {
+            // Title is the author's display name, fetched over gRPC.
+            let title = ctx
+                .polycentric
+                .display_name(&author)
+                .await
+                .unwrap_or_else(|| "Anonymous".to_string());
 
-        // Title is the author's display name, fetched over gRPC.
-        let title = ctx
-            .polycentric
-            .display_name(&author)
-            .await
-            .unwrap_or_else(|| "Anonymous".to_string());
-
-        self.send_to_identity(
-            ctx,
-            &recipient,
-            "REPLY_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
-            title,
-            "Replied to your post".to_string(),
-        )
-        .await?;
+            self.send_to_identity(
+                ctx,
+                &followee,
+                "FOLLOW_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
+                title,
+                "Followed you".to_string(),
+            )
+            .await?;
+        };
 
         Ok(())
     }
