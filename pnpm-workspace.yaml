@@ -23,3 +23,4 @@ overrides:
 
 patchedDependencies:
   '@expo/cli': patches/@expo__cli.patch
+  uniffi-bindgen-react-native@0.31.0-3: patches/uniffi-bindgen-react-native@0.31.0-3.patch
