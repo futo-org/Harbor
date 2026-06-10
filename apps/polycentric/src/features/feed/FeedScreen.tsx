@@ -9,8 +9,9 @@ import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
+import type { ListRef } from '@/src/common/components/List';
 import FeedList from './FeedList';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 
@@ -29,6 +30,7 @@ export default function FeedScreen() {
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const feed = useFollowingFeed({ enabled });
+  const listRef = useRef<ListRef>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,7 +38,14 @@ export default function FeedScreen() {
     }, [setEnabled]),
   );
 
-  useFocusedRefresh(feed.refresh);
+  // Re-tapping the active tab scrolls to the top and refreshes.
+  const { refresh } = feed;
+  useFocusedRefresh(
+    useCallback(() => {
+      listRef.current?.scrollToTop();
+      refresh();
+    }, [refresh]),
+  );
 
   if (feed.error) {
     return (
@@ -60,7 +69,7 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList feed={feed} HeaderComponent={ListHeader} />
+        <FeedList ref={listRef} feed={feed} HeaderComponent={ListHeader} />
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

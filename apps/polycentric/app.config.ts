@@ -1,6 +1,8 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import fs from 'fs';
 
+const { version: PKG_VERSION } = require('./package.json');
+
 const IS_DEV = process.env.APP_VARIANT === 'dev';
 
 const NAME = IS_DEV ? 'Polycentric Dev' : 'Polycentric';
@@ -14,8 +16,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: NAME,
   slug: 'polycentric',
-  version: process.env.APP_VERSION ?? '0.0.1',
-  orientation: 'portrait',
+  version: process.env.APP_VERSION ?? PKG_VERSION ?? '0.0.1',
+  orientation: 'default',
   icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
   scheme: 'polycentric',
   web: {
@@ -28,10 +30,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       light: './src/common/assets/images/app-icons/ios-icon-default.png',
       tinted: './src/common/assets/images/app-icons/ios-icon-monochrome.png',
     },
+    requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
+      ITSAppUsesNonExemptEncryption: false,
     },
     entitlements: {
       'aps-environment': 'production',
@@ -88,6 +92,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-image',
     'expo-notifications',
+    [
+      'expo-screen-orientation',
+      {
+        initialOrientation: 'DEFAULT',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

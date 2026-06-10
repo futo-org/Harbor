@@ -1,7 +1,9 @@
+import { forwardRef } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import {
   List,
   type ListProps,
+  type ListRef,
   type ListRenderItem,
 } from '../../common/components/List';
 import type { FeedHookResult } from './hooks/types';
@@ -25,19 +27,23 @@ const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} />
 );
 
-export default function FeedList({
-  feed,
-  emptyMessage = 'No posts yet',
-  renderItem = defaultRenderItem,
-  keyExtractor = defaultKeyExtractor,
-  ...rest
-}: FeedListProps) {
+const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
+  {
+    feed,
+    emptyMessage = 'No posts yet',
+    renderItem = defaultRenderItem,
+    keyExtractor = defaultKeyExtractor,
+    ...rest
+  },
+  ref,
+) {
   const { theme } = useTheme();
 
   const insets = useSafeAreaInsets();
 
   return (
     <List<PostData>
+      ref={ref}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       data={feed.items}
@@ -84,4 +90,6 @@ export default function FeedList({
       {...rest}
     />
   );
-}
+});
+
+export default FeedList;

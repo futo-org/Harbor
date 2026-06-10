@@ -1,9 +1,0 @@
-_default:
-    @just --list
-
-clean:
-    rm -rf verifiers-server/state
-
-# Run server tests inside container
-test:
-    docker compose -f ../../compose.yml exec legacy-server cargo test

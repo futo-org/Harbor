@@ -9,28 +9,23 @@ import {
 } from '@shopify/flash-list';
 import React, {
   cloneElement,
+  forwardRef,
   isValidElement,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
 } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Atoms } from '../theme';
+import { HidingHeader, renderNode, useHidingHeader } from './HidingHeader';
 
 // A reanimated-compatible FlashList.
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
 
 const WEB_INITIAL_VISIBLE = 12;
 const WEB_PAGE_SIZE = 12;
-
-// Keep the sticky header fully visible until the user has scrolled past
-// this distance; only then does scroll-driven hiding kick in.
-const HEADER_HIDE_THRESHOLD = 50;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
@@ -43,75 +38,41 @@ export type ListProps<T> = FlashListProps<T> & {
     | undefined;
 };
 
-export function List<T extends PostData = PostData>(props: ListProps<T>) {
+/** Imperative handle exposed by `List` (and `FeedList`). */
+export type ListRef = { scrollToTop: () => void };
+
+export const List = forwardRef(function List<T extends PostData = PostData>(
+  props: ListProps<T>,
+  ref: React.Ref<ListRef>,
+) {
   if (isWeb) {
-    return <WebFeedViewer<T> {...props} />;
+    return <WebFeedViewer<T> {...props} listRef={ref} />;
   }
 
-  return <NativeList<T> {...props} />;
-}
+  return <NativeList<T> {...props} listRef={ref} />;
+}) as <T extends PostData = PostData>(
+  props: ListProps<T> & { ref?: React.Ref<ListRef> },
+) => React.ReactElement;
 
 function NativeList<T>({
   HeaderComponent,
   contentContainerStyle,
   refreshControl,
   onScroll: _ignoredOnScroll,
+  listRef,
   ...rest
-}: ListProps<T>) {
+}: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const lastScrollY = useSharedValue(0);
-  const headerTranslate = useSharedValue(0);
-  const headerHeightShared = useSharedValue(0);
-  const isDragging = useSharedValue(false);
-  const isMomentum = useSharedValue(false);
-  const [headerHeight, setHeaderHeight] = useState(0);
-
-  const onScroll = useAnimatedScrollHandler({
-    onBeginDrag: () => {
-      isDragging.value = true;
-    },
-    onEndDrag: () => {
-      isDragging.value = false;
-    },
-    onMomentumBegin: () => {
-      isMomentum.value = true;
-    },
-    onMomentumEnd: () => {
-      isMomentum.value = false;
-    },
-    onScroll: (event) => {
-      const currentY = event.contentOffset.y;
-      const h = headerHeightShared.value;
-
-      if (currentY <= HEADER_HIDE_THRESHOLD) {
-        headerTranslate.value = 0;
-      } else if (isDragging.value || isMomentum.value) {
-        // Compute delta relative to the threshold so movement past it
-        // starts the hide from translate 0 instead of snapping.
-        const lastEffective = Math.max(
-          0,
-          lastScrollY.value - HEADER_HIDE_THRESHOLD,
-        );
-        const currentEffective = currentY - HEADER_HIDE_THRESHOLD;
-        const delta = currentEffective - lastEffective;
-        const next = headerTranslate.value - delta;
-        headerTranslate.value = Math.min(0, Math.max(-h, next));
-      }
-      // Always update so the next user-driven event computes the
-      // correct delta — even if we skipped animating this tick.
-      lastScrollY.value = currentY;
-    },
-  });
-
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: headerTranslate.value }],
-  }));
-
-  const onHeaderLayout = (event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.height;
-    headerHeightShared.value = next;
-    if (next !== headerHeight) setHeaderHeight(next);
-  };
+  useImperativeHandle(
+    listRef,
+    () => ({
+      scrollToTop: () =>
+        ref.current?.scrollToOffset({ offset: 0, animated: true }),
+    }),
+    [],
+  );
+  const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
+    useHidingHeader();
 
   const renderedHeader = renderNode(HeaderComponent);
 
@@ -130,15 +91,13 @@ function NativeList<T>({
   return (
     <View style={[Atoms.flex_1]}>
       {renderedHeader ? (
-        <Animated.View
-          onLayout={onHeaderLayout}
-          style={[Atoms.absolute, styles.stickyHeader, headerAnimatedStyle]}
-        >
+        <HidingHeader style={headerAnimatedStyle} onLayout={onHeaderLayout}>
           {renderedHeader}
-        </Animated.View>
+        </HidingHeader>
       ) : null}
 
       <AnimatedFlashList
+        ref={ref as React.Ref<FlashListRef<unknown>>}
         {...(rest as FlashListProps<unknown>)}
         refreshControl={adjustedRefreshControl}
         onScroll={onScroll}
@@ -166,8 +125,20 @@ function WebFeedViewer<T>({
   onEndReached,
   contentContainerStyle,
   stickyHeaderIndices,
-}: ListProps<T>) {
+  listRef,
+}: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const sentinelRef = useRef<View>(null);
+  useImperativeHandle(
+    listRef,
+    () => ({
+      scrollToTop: () => {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+    }),
+    [],
+  );
   const items = (data as readonly T[] | null | undefined) ?? [];
   const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
 
@@ -229,25 +200,3 @@ function WebFeedViewer<T>({
     </View>
   );
 }
-
-type ReactNodeOrComponent =
-  | React.ReactElement
-  | React.ComponentType
-  | null
-  | undefined;
-
-function renderNode(node: ReactNodeOrComponent) {
-  if (node == null) return null;
-  if (isValidElement(node)) return node;
-  const Component = node as React.ComponentType;
-  return <Component />;
-}
-
-const styles = StyleSheet.create({
-  stickyHeader: {
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
-  },
-});

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Resolves the app version for EAS builds and prints it to stdout.
+// Resolves the app version for EAS builds, writes it into
+// apps/polycentric/package.json, and prints it to stdout.
 //
 //   * On a SemVer release tag (e.g. v2.0.0-alpha.1) -> that version
 //     (2.0.0-alpha.1).
@@ -7,13 +8,37 @@
 //     (e.g. latest 2.0.0 -> 2.0.1), so develop/MR builds sit one patch ahead
 //     of the last release.
 //
+// The version is baked into package.json (not just exported as APP_VERSION)
+// because EAS evaluates app.config.ts on a remote build worker that does not
+// receive the CI runner's environment variables. app.config.ts reads the
+// version from package.json, which travels with the project upload.
+//
 // Reads CI_COMMIT_TAG, CI_API_V4_URL, CI_PROJECT_ID and CI_JOB_TOKEN.
+
+const fs = require('fs');
+const path = require('path');
+
+const PKG_PATH = path.join(
+  __dirname,
+  '..',
+  '..',
+  'apps',
+  'polycentric',
+  'package.json',
+);
+
+const apply = (version) => {
+  const pkg = JSON.parse(fs.readFileSync(PKG_PATH, 'utf8'));
+  pkg.version = version;
+  fs.writeFileSync(PKG_PATH, `${JSON.stringify(pkg, null, 2)}\n`);
+  process.stdout.write(version);
+};
 
 const tag = process.env.CI_COMMIT_TAG || '';
 const tagMatch = tag.match(/^v(\d+\.\d+\.\d+.*)$/);
 
 if (tagMatch) {
-  process.stdout.write(tagMatch[1]);
+  apply(tagMatch[1]);
 } else {
   const api = process.env.CI_API_V4_URL;
   const projectId = process.env.CI_PROJECT_ID;
@@ -41,6 +66,6 @@ if (tagMatch) {
     } catch {
       // Fall back to the default below.
     }
-    process.stdout.write(bumpPatch(latest));
+    apply(bumpPatch(latest));
   })();
 }

@@ -1,10 +1,19 @@
 import {
   forwardRef,
+  useCallback,
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
 } from 'react';
-import { Platform, TextInput as RNTextInput } from 'react-native';
+import {
+  Platform,
+  TextInput as RNTextInput,
+  type TextInputContentSizeChangeEventData,
+  type NativeSyntheticEvent,
+  TextInputContentSizeChangeEvent,
+} from 'react-native';
 import { TextInput, type TextInputProps } from './primitives/TextInput';
 
 export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
@@ -32,8 +41,7 @@ export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
       <TextInput
         ref={innerRef}
         multiline
-        numberOfLines={1}
-        scrollEnabled={scrollEnabled ?? false}
+        textAlignVertical="top"
         value={value}
         style={[
           { minHeight },
@@ -41,7 +49,7 @@ export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
             ? // Suppress the corner resize grip and the vertical
               // scrollbar — we drive height via scrollHeight.
               ({ resize: 'none', overflow: 'hidden' } as object)
-            : null,
+            : {},
           style,
         ]}
         {...props}
