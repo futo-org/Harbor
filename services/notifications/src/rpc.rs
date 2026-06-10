@@ -72,18 +72,11 @@ mod tests {
     async fn impl_for_testing() -> NotificationServiceImpl {
         let ctx = Arc::new(Context {
             db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-            notification_manager: NotificationManager::new(test_expo()),
+            notification_manager: NotificationManager::new(None),
             polycentric: PolycentricClient::new(vec![]),
             main_server: String::new(),
         });
         NotificationServiceImpl { ctx }
-    }
-
-    /// Expo client pointed at an unused base URL. These tests exercise
-    /// only the register path, which never calls the push service, so
-    /// the client is never actually invoked.
-    fn test_expo() -> expo_push_notification_client::Expo {
-        expo_push_notification_client::Expo::new_with_base_url(None, "http://127.0.0.1:0")
     }
 
     #[tokio::test]
@@ -156,7 +149,7 @@ mod tests {
 
         let ctx = Arc::new(Context {
             db,
-            notification_manager: NotificationManager::new(test_expo()),
+            notification_manager: NotificationManager::new(None),
             polycentric: PolycentricClient::new(vec![]),
             main_server: String::new(),
         });

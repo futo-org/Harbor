@@ -1,10 +1,13 @@
 use std::{error::Error, fmt};
 
-use expo_push_notification_client::{DetailsErrorType, Expo, ExpoPushMessage, ExpoPushTicket};
+use log::warn;
 use sea_orm::{DbConn, DbErr, EnumIter};
 
 use super::repository as token_repository;
-use crate::context::Context;
+use crate::{
+    context::Context,
+    expo_client::{ExpoClient, ExpoPushRequest},
+};
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, PublicKey, content::ContentBody,
 };
@@ -60,12 +63,20 @@ impl From<DbErr> for NotificationError {
 }
 
 pub struct NotificationManager {
-    expo: Expo,
+    expo_client: ExpoClient,
 }
 
 impl NotificationManager {
-    pub fn new(expo: Expo) -> Self {
-        NotificationManager { expo }
+    pub fn new(access_token: Option<String>) -> Self {
+        NotificationManager {
+            expo_client: ExpoClient::new(access_token),
+        }
+    }
+
+    pub fn with_custom_push_url(access_token: Option<String>, push_url: String) -> Self {
+        NotificationManager {
+            expo_client: ExpoClient::with_custom_push_url(access_token, push_url),
+        }
     }
 
     /// Registers a push token for a public key after verifying that the
@@ -211,36 +222,50 @@ impl NotificationManager {
             return Ok(());
         }
 
-        let message = ExpoPushMessage::builder(expo_tokens.iter().map(|item| item.1.clone()))
-            .title(title)
-            .body(body)
-            .build()
-            .map_err(|e| NotificationError::PushService(e.to_string()))?;
+        let expo_tokens_raw: Vec<String> = expo_tokens.iter().map(|item| item.1.clone()).collect();
 
-        let tickets = self
-            .expo
-            .send_push_notifications(message)
-            .await
-            .map_err(|e| NotificationError::PushService(e.to_string()))?;
+        let expo_push_request = ExpoPushRequest {
+            to: expo_tokens_raw,
+            title,
+            body,
+            collapse_id: Some(collapse_id),
+        };
 
-        for (key_and_token, ticket) in expo_tokens.iter().zip(tickets.iter()) {
-            if let ExpoPushTicket::Error(err) = ticket
-                && matches!(
-                    err.details.as_ref().and_then(|d| d.error.as_ref()),
-                    Some(DetailsErrorType::DeviceNotRegistered)
-                )
-            {
-                let public_key = &key_and_token.0;
-                let token = &key_and_token.1;
+        let response = self
+            .expo_client
+            .post_requests(vec![expo_push_request])
+            .await?;
 
-                // Remove invalid tokens
+        if response.data.len() != expo_tokens.len() {
+            warn!(
+                "expo ticket count ({}) != token count ({}); skipping token cleanup",
+                response.data.len(),
+                expo_tokens.len()
+            );
+            return Ok(());
+        }
+
+        for (key_and_token, ticket) in expo_tokens.iter().zip(response.data.iter()) {
+            if ticket.status != "error" {
+                continue;
+            }
+
+            let error = ticket.details.as_ref().and_then(|d| d.error.as_deref());
+
+            if error == Some("DeviceNotRegistered") {
+                // The device's token is no longer valid — remove it.
                 token_repository::Mutation::unregister(
                     &ctx.db,
-                    public_key,
+                    &key_and_token.0,
                     PushService::Expo.as_ref(),
-                    token,
+                    &key_and_token.1,
                 )
                 .await?;
+            } else {
+                warn!(
+                    "expo push ticket error (token kept): {}",
+                    error.unwrap_or("unknown error")
+                );
             }
         }
 
@@ -267,7 +292,6 @@ mod tests {
     use super::{NotificationManager, PushService};
     use crate::context::Context;
     use crate::polycentric::PolycentricClient;
-    use expo_push_notification_client::Expo;
     use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::collections;
     use polycentric_common::models::protos_v2::{
@@ -450,10 +474,14 @@ mod tests {
         }
     }
 
-    fn make_ctx(db: DatabaseConnection, expo: Expo, polycentric: PolycentricClient) -> Context {
+    fn make_ctx(
+        db: DatabaseConnection,
+        expo_push_url: String,
+        polycentric: PolycentricClient,
+    ) -> Context {
         Context {
             db,
-            notification_manager: NotificationManager::new(expo),
+            notification_manager: NotificationManager::with_custom_push_url(None, expo_push_url),
             polycentric,
             main_server: String::new(),
         }
@@ -468,7 +496,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post"}"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"REPLY_"}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -479,7 +507,7 @@ mod tests {
             .expect(1)
             .create_async()
             .await;
-        let expo = Expo::new_with_base_url(None, &expo_server.url());
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
 
         let pk = test_public_key(1);
         let polycentric = spawn_polycentric(MockEventSync {
@@ -493,7 +521,7 @@ mod tests {
             .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
             .into_connection();
 
-        let ctx = make_ctx(db, expo, polycentric);
+        let ctx = make_ctx(db, expo_push_url, polycentric);
         let bundle = reply_post_bundle("id-author", "id-recipient");
 
         ctx.notification_manager
@@ -502,6 +530,19 @@ mod tests {
             .expect("process_event should succeed");
 
         send_mock.assert_async().await;
+    }
+
+    /// A `DeviceNotRegistered` ticket from Expo removes the token via a
+    /// DELETE on `push_token`.
+    /// Whether the mock DB recorded a DELETE against `push_token`. Consumes
+    /// the connection (it drains the transaction log).
+    fn saw_push_token_delete(db: DatabaseConnection) -> bool {
+        db.into_transaction_log().iter().any(|tx| {
+            tx.statements().iter().any(|stmt| {
+                let sql = stmt.sql.to_ascii_uppercase();
+                sql.starts_with("DELETE") && sql.contains("PUSH_TOKEN")
+            })
+        })
     }
 
     /// A `DeviceNotRegistered` ticket from Expo removes the token via a
@@ -519,7 +560,7 @@ mod tests {
             .expect(1)
             .create_async()
             .await;
-        let expo = Expo::new_with_base_url(None, &expo_server.url());
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
 
         let pk = test_public_key(5);
         let polycentric = spawn_polycentric(MockEventSync {
@@ -537,7 +578,7 @@ mod tests {
             }])
             .into_connection();
 
-        let ctx = make_ctx(db.clone(), expo, polycentric);
+        let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
         let bundle = reply_post_bundle("id-author", "id-recipient");
 
         ctx.notification_manager
@@ -547,18 +588,9 @@ mod tests {
 
         send_mock.assert_async().await;
 
-        // Confirm the unregister DELETE was issued. Consuming the connection
-        // here is fine — we're done with the DB.
-        let log = db.into_transaction_log();
-        let saw_delete = log.iter().any(|tx| {
-            tx.statements().iter().any(|stmt| {
-                let sql = stmt.sql.to_ascii_uppercase();
-                sql.starts_with("DELETE") && sql.contains("PUSH_TOKEN")
-            })
-        });
         assert!(
-            saw_delete,
-            "expected an unregister DELETE on push_token, got: {log:?}"
+            saw_push_token_delete(db),
+            "expected an unregister DELETE on push_token"
         );
     }
 
@@ -573,7 +605,7 @@ mod tests {
             .expect(0)
             .create_async()
             .await;
-        let expo = Expo::new_with_base_url(None, &expo_server.url());
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
 
         let polycentric = spawn_polycentric(MockEventSync {
             profile_name: Some("Alice".to_string()),
@@ -582,7 +614,7 @@ mod tests {
         .await;
 
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = make_ctx(db, expo, polycentric);
+        let ctx = make_ctx(db, expo_push_url, polycentric);
         let bundle = plain_post_bundle("id-author");
 
         ctx.notification_manager
@@ -604,7 +636,7 @@ mod tests {
             .expect(0)
             .create_async()
             .await;
-        let expo = Expo::new_with_base_url(None, &expo_server.url());
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
 
         let polycentric = spawn_polycentric(MockEventSync {
             profile_name: Some("Alice".to_string()),
@@ -613,7 +645,7 @@ mod tests {
         .await;
 
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = make_ctx(db, expo, polycentric);
+        let ctx = make_ctx(db, expo_push_url, polycentric);
         // Author replies to themselves → filtered out.
         let bundle = reply_post_bundle("id-author", "id-author");
 
@@ -623,5 +655,98 @@ mod tests {
             .expect("process_event should succeed");
 
         send_mock.assert_async().await;
+    }
+
+    /// When Expo returns a ticket count that doesn't match the number of
+    /// tokens sent, positional correlation is unreliable, so the unregister
+    /// pass is skipped entirely — no token is removed (even though the
+    /// tickets say `DeviceNotRegistered`).
+    #[tokio::test]
+    async fn process_event_skips_token_cleanup_on_ticket_count_mismatch() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            // Two tickets for a single token → count mismatch.
+            .with_body(
+                r#"{"data":[{"status":"error","details":{"error":"DeviceNotRegistered"}},{"status":"error","details":{"error":"DeviceNotRegistered"}}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let pk = test_public_key(6);
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![pk.clone()],
+        })
+        .await;
+
+        // Only the token lookup is queued. If the guard failed and an
+        // unregister were attempted, MockDatabase would error on the missing
+        // exec result and the test would fail.
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            .into_connection();
+
+        let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
+        let bundle = reply_post_bundle("id-author", "id-recipient");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+        assert!(
+            !saw_push_token_delete(db),
+            "a ticket/token count mismatch must skip token cleanup"
+        );
+    }
+
+    /// A ticket error other than `DeviceNotRegistered` (e.g. a transient
+    /// `MessageRateExceeded`) must not unregister the token.
+    #[tokio::test]
+    async fn process_event_keeps_token_on_non_device_not_registered_error() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"error","message":"rate limited","details":{"error":"MessageRateExceeded"}}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let pk = test_public_key(7);
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![pk.clone()],
+        })
+        .await;
+
+        // No exec result queued: an erroneous unregister would error out.
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[rate-limited]")]])
+            .into_connection();
+
+        let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
+        let bundle = reply_post_bundle("id-author", "id-recipient");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+        assert!(
+            !saw_push_token_delete(db),
+            "non-DeviceNotRegistered errors must not unregister the token"
+        );
     }
 }

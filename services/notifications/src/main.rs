@@ -1,5 +1,6 @@
 mod context;
 mod db;
+mod expo_client;
 mod manager;
 mod polycentric;
 mod repository;
@@ -17,7 +18,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use common_kafka::{BorrowedMessage, CommitMode, Consumer, Headers, Message, Offset};
-use expo_push_notification_client::{Expo, ExpoClientOptions};
 use polycentric_common::models::protos_v2::EventBundle;
 use prost::Message as _;
 use tonic::transport::Server;
@@ -51,11 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::connect().await?;
     db::run_migrations(&db).await?;
 
-    let expo = Expo::new(ExpoClientOptions {
-        access_token: std::env::var("EXPO_ACCESS_TOKEN").ok(),
-    });
-
-    let notification_manager = NotificationManager::new(expo);
+    let notification_manager = NotificationManager::new(std::env::var("EXPO_ACCESS_TOKEN").ok());
 
     let polycentric = PolycentricClient::from_env()?;
 
