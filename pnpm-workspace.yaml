@@ -9,6 +9,8 @@ packages:
 catalog:
   '@noble/hashes': ^1.8.0
   typescript: ^5.9.3
+  '@ubjs/core': 0.31.0-3
+  uniffi-bindgen-react-native: 0.31.0-3
 
 linkWorkspacePackages: true
 
