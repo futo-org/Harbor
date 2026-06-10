@@ -21,9 +21,6 @@ patchedDependencies:
   '@expo/cli':
     hash: ea4184e1326d9513b8d8a8cfef27ec609848ff92f41989ef50b71c4c3b2d0b9f
     path: patches/@expo__cli.patch
-  uniffi-bindgen-react-native@0.31.0-2:
-    hash: 8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319
-    path: patches/uniffi-bindgen-react-native@0.31.0-2.patch
 
 importers:
 
@@ -533,8 +530,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0(react-native@0.83.0(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.0))
       uniffi-bindgen-react-native:
-        specifier: 0.31.0-2
-        version: 0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319)
+        specifier: 0.31.0-3
+        version: 0.31.0-3
     devDependencies:
       '@eslint/compat':
         specifier: ^1.3.2
@@ -591,8 +588,8 @@ importers:
   packages/rs-core-uniffi-web:
     dependencies:
       uniffi-bindgen-react-native:
-        specifier: 0.31.0-2
-        version: 0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319)
+        specifier: 0.31.0-3
+        version: 0.31.0-3
 
   tools/tsconfig: {}
 
@@ -10893,8 +10890,8 @@ packages:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
 
-  uniffi-bindgen-react-native@0.31.0-2:
-    resolution: {integrity: sha512-kcmW4/ayEEQH3mg4r3wJAgDoBd7Ix7Y/4E2npS51ydUKuHMzLsTU+lgzanZVAwC+yQsDduEK63TFXq54imJWsA==}
+  uniffi-bindgen-react-native@0.31.0-3:
+    resolution: {integrity: sha512-br7giBJRr/j00rdMXhOZGMGuDWMAVUcxC9O3lco0KRqzEAxUz00+gegPW5tKamvKbrnj7NB682XUCYrcagtxFA==}
     hasBin: true
 
   unified@11.0.5:
@@ -25007,7 +25004,7 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
-  uniffi-bindgen-react-native@0.31.0-2(patch_hash=8c03d6cf0d041bdd045ecdc5704f61a8a03971fd404ecf874616314cd7313319): {}
+  uniffi-bindgen-react-native@0.31.0-3: {}
 
   unified@11.0.5:
     dependencies:

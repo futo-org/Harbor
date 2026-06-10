@@ -123,6 +123,6 @@
     "drizzle-orm": "^0.45.2",
     "fast-text-encoding": "^1.0.6",
     "react-native-get-random-values": "^1.11.0",
-    "uniffi-bindgen-react-native": "0.31.0-2"
+    "uniffi-bindgen-react-native": "0.31.0-3"
   }
 }

@@ -22,6 +22,6 @@
     "clean": "rm -rfv dist/ rust_modules/"
   },
   "dependencies": {
-    "uniffi-bindgen-react-native": "0.31.0-2"
+    "uniffi-bindgen-react-native": "0.31.0-3"
   }
 }
