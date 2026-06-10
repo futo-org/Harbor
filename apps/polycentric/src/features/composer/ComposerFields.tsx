@@ -113,7 +113,13 @@ export function ComposerFields({
             maxLength={2000}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
-            style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
+            style={[
+              Atoms.px_0,
+              Atoms.py_0,
+              Atoms.pt_sm,
+              Atoms.text_lg,
+              attachments.length === 0 && !quote && { minHeight: 200 },
+            ]}
           />
           {attachments.length > 0 && (
             <AttachmentGrid
@@ -122,11 +128,10 @@ export function ComposerFields({
               onRemoveAttachment={onRemoveAttachment}
             />
           )}
+          {/* Quote preview */}
+          {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
         </View>
       </View>
-
-      {/* Quote preview */}
-      {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
     </ScrollView>
   );
 }

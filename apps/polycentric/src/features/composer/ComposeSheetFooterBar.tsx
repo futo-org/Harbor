@@ -1,7 +1,14 @@
 import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
+import { useKeyboardOffset } from '@/src/common/lib/animation';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Pressable, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -24,6 +31,19 @@ export function ComposeSheetFooterBar({
   variant,
 }: ComposeSheetFooterBarProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { keyboardHeight } = useKeyboardOffset();
+
+  // Pad the bar by the bottom safe-area inset while the keyboard is closed;
+  // once the keyboard opens it provides the spacing instead.
+  const bottomInsetStyle = useAnimatedStyle(() => ({
+    height: interpolate(
+      keyboardHeight.value,
+      [0, insets.bottom],
+      [insets.bottom, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
   const attachButton = onAttachImage ? (
     <Pressable
@@ -91,18 +111,19 @@ export function ComposeSheetFooterBar({
   }
 
   return (
-    <View
-      style={[
-        Atoms.flex_row,
-        Atoms.justify_between,
-        Atoms.items_center,
-        Atoms.py_md,
-        Atoms.px_lg,
-        theme.atoms.bg,
-        borderTop,
-      ]}
-    >
-      {leading}
+    <View style={[theme.atoms.bg, borderTop]}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_center,
+          Atoms.py_md,
+          Atoms.px_lg,
+        ]}
+      >
+        {leading}
+      </View>
+      <Animated.View style={bottomInsetStyle} />
     </View>
   );
 }

@@ -10,19 +10,10 @@ import { ActivityIndicator, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
 import { useComposer } from './hooks/useComposer';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useKeyboardOffset } from '@/src/common/lib/animation';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
 
 // Full-screen composer for the detached "compose" native tab item (iOS).
 export default function ComposeTabScreen() {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const { keyboardHeight } = useKeyboardOffset();
 
   const navigation = useNavigation();
 
@@ -43,15 +34,6 @@ export default function ComposeTabScreen() {
   );
 
   const composer = useComposer({ onPostCreated: handlePostCreated, onClose });
-
-  const bottomInsetStyle = useAnimatedStyle(() => ({
-    height: interpolate(
-      keyboardHeight.value,
-      [0, insets.bottom],
-      [insets.bottom, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
 
   return (
     <Screen keyboardAvoiding>
@@ -102,8 +84,6 @@ export default function ComposeTabScreen() {
           onCaptureImage={() => void composer.handleCaptureImage()}
           attachDisabled={composer.attachDisabled}
         />
-
-        <Animated.View style={bottomInsetStyle} />
       </Screen.PrimaryColumn>
     </Screen>
   );
