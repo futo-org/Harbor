@@ -5,12 +5,24 @@ import {
   TextArea,
 } from '@/src/common/components/primitives';
 import { type PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Image, Pressable, View } from 'react-native';
+import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  type LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import ComposerPostEmbed from './ComposerPostEmbed';
+import { singleImageAspectRatio } from './utils/attachmentLayout';
 import type { useComposer } from './hooks/useComposer';
+import { isWeb } from '@/src/common/util/platform';
+import { ScrollView } from '@/src/common/components/ScrollView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const THUMBNAIL_SIZE = 72;
+const ATTACHMENT_GAP = Spacing.sm;
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -50,9 +62,12 @@ export function ComposerFields({
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
-
   return (
-    <>
+    <ScrollView
+      style={[Atoms.flex_1]}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Reply preview */}
       {isReply && replyTo && <ComposerPostEmbed post={replyTo} />}
 
@@ -84,7 +99,7 @@ export function ComposerFields({
             <ProfileAvatar identityKey={currentIdentityKey} size="md" />
           </View>
         ) : null}
-        <View style={Atoms.flex_1}>
+        <View style={[Atoms.flex_1, Atoms.gap_sm]}>
           <TextArea
             // `autoFocus` only fires on mount, so re-key when it flips
             // (false → true after the sheet presents) to actually focus.
@@ -96,38 +111,80 @@ export function ComposerFields({
             onChangeText={setText}
             // disabled={submitting}
             maxLength={2000}
+            numberOfLines={isWeb ? 1 : undefined}
+            scrollEnabled={false}
             style={[
               Atoms.px_0,
               Atoms.py_0,
               Atoms.pt_sm,
               Atoms.text_lg,
-              Atoms.flex_1,
+              attachments.length === 0 && !quote && { minHeight: 200 },
             ]}
           />
           {attachments.length > 0 && (
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.gap_sm,
-                { flexWrap: 'wrap', marginTop: 8 },
-              ]}
-            >
-              {attachments.map((a) => (
-                <AttachmentThumb
-                  key={a.id}
-                  uri={a.uri}
-                  disabled={submitting}
-                  onRemove={() => onRemoveAttachment(a.id)}
-                />
-              ))}
-            </View>
+            <AttachmentGrid
+              attachments={attachments}
+              submitting={submitting}
+              onRemoveAttachment={onRemoveAttachment}
+            />
           )}
+          {/* Quote preview */}
+          {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
         </View>
       </View>
+    </ScrollView>
+  );
+}
 
-      {/* Quote preview */}
-      {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
-    </>
+/**
+ * Lays out 1–4 attachments: a single image spans the full width at its natural
+ * (clamped) aspect ratio, while two or more wrap into a 50%-width square grid
+ * (two per row → 2-up, 3+1, or 2x2).
+ */
+function AttachmentGrid({
+  attachments,
+  submitting,
+  onRemoveAttachment,
+}: {
+  attachments: Attachment[];
+  submitting: boolean;
+  onRemoveAttachment: (id: string) => void;
+}) {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const single = attachments.length === 1;
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    setContainerWidth(e.nativeEvent.layout.width);
+  };
+
+  // Two columns: each item is half the row minus half the inter-item gap.
+  const gridItemWidth = containerWidth
+    ? (containerWidth - ATTACHMENT_GAP) / 2
+    : undefined;
+
+  return (
+    <View
+      onLayout={onLayout}
+      style={[
+        Atoms.flex_grow_1,
+        Atoms.flex_row,
+        Atoms.flex_wrap,
+        Atoms.gap_sm,
+        Atoms.mt_sm,
+      ]}
+    >
+      {attachments.map((a) => (
+        <AttachmentThumb
+          key={a.id}
+          uri={a.uri}
+          status={a.status}
+          width={single ? '100%' : gridItemWidth}
+          aspectRatio={single ? singleImageAspectRatio(a) : 1}
+          disabled={submitting}
+          onRemove={() => onRemoveAttachment(a.id)}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -135,23 +192,57 @@ function AttachmentThumb({
   uri,
   disabled,
   onRemove,
+  width,
+  aspectRatio,
+  status,
 }: {
   uri: string;
   disabled: boolean;
   onRemove: () => void;
+  width?: number | '100%';
+  aspectRatio: number;
+  status: Attachment['status'];
 }) {
   const { theme } = useTheme();
   return (
     <View
       style={{
-        width: THUMBNAIL_SIZE,
-        height: THUMBNAIL_SIZE,
+        width,
+        aspectRatio,
         borderRadius: 8,
         overflow: 'hidden',
         backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
       }}
     >
-      <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
+      <Image
+        source={{ uri }}
+        resizeMode="cover"
+        style={{ width: '100%', height: '100%' }}
+      />
+      {/* Loading / error overlay while the blobs are being processed+uploaded */}
+      {status !== 'ready' && (
+        <View
+          style={[
+            Atoms.items_center,
+            Atoms.justify_center,
+            {
+              ...StyleSheet.absoluteFillObject,
+              backgroundColor: withHexOpacity(
+                status === 'error'
+                  ? theme.palette.negative_500
+                  : theme.palette.black,
+                '40',
+              ),
+            },
+          ]}
+        >
+          {status === 'error' ? (
+            <Icon name="ban" size={22} color="white" />
+          ) : (
+            <ActivityIndicator size="small" color="white" />
+          )}
+        </View>
+      )}
       <Pressable
         onPress={onRemove}
         disabled={disabled}

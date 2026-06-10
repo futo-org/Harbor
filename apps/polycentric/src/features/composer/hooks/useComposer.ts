@@ -16,12 +16,27 @@ import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread'
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef } from 'react';
+import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 
 export const MAX_ATTACHMENTS = 4;
 
 /** Longest edge lengths for post image variants. */
 const POST_VARIANT_SIZES = [512, 1280];
+
+const POST_IMAGE_OPTIONS = {
+  mode: 'fit',
+  sizes: POST_VARIANT_SIZES,
+} as const;
+
+/**
+ * In-flight (or completed) image processing+upload promises, keyed by
+ * attachment id. We start the work as soon as an image is attached so the
+ * blobs are usually on the server by the time the user hits Post; `handlePost`
+ * then just awaits these instead of starting from scratch. Module-level so it
+ * survives the hook remounting (sheet composer vs. full-screen tab).
+ */
+const uploadCache = new Map<string, Promise<v2.ImageSet>>();
 
 export type UseComposerArgs = {
   /** TODO: should be v2 `SignedEvent` */
@@ -77,6 +92,7 @@ export function useComposer({
   const error = useComposerStore((s) => s.error);
   const setText = useComposerStore((s) => s.setText);
   const addAttachments = useComposerStore((s) => s.addAttachments);
+  const setAttachmentStatus = useComposerStore((s) => s.setAttachmentStatus);
   const removeAttachment = useComposerStore((s) => s.removeAttachment);
   const setSubmitting = useComposerStore((s) => s.setSubmitting);
   const setError = useComposerStore((s) => s.setError);
@@ -88,37 +104,94 @@ export function useComposer({
     (text.trim().length > 0 || attachments.length > 0) && !submitting;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
+  // Reset composer state and drop any in-flight/cached uploads so nothing
+  // carries over to the next open.
+  const resetAll = useCallback(() => {
+    uploadCache.clear();
+    resetComposer();
+  }, [resetComposer]);
+
+  // Begin processing + uploading an attachment immediately, caching the
+  // promise by id so `handlePost` can await the already-running work (it waits
+  // here if the user hits Post before processing finishes). The attachment's
+  // `status` drives the thumbnail's loading/error overlay.
+  const startUpload = useCallback(
+    (id: string, uri: string) => {
+      const work = processAndUploadImage(client, uri, POST_IMAGE_OPTIONS);
+      uploadCache.set(id, work);
+      work.then(
+        () => setAttachmentStatus(id, 'ready'),
+        () => {
+          // Drop the failed promise so the post path can retry from scratch,
+          // and surface the failure on the thumbnail.
+          uploadCache.delete(id);
+          setAttachmentStatus(id, 'error');
+        },
+      );
+    },
+    [client, setAttachmentStatus],
+  );
+
   const handleClose = useCallback(() => {
     if (submitting) return;
     onClose();
     // Reset here too: the native compose tab stays mounted after closing,
     // so the unmount reset below wouldn't fire for it.
-    resetComposer();
-  }, [submitting, onClose, resetComposer]);
+    resetAll();
+  }, [submitting, onClose, resetAll]);
 
+  // Turn picked/captured assets into attachments: show the thumbnails
+  const ingestAssets = useCallback(
+    (assets: ImagePicker.ImagePickerAsset[]) => {
+      const numAttachments = MAX_ATTACHMENTS - attachments.length;
+      if (numAttachments <= 0) return;
+      const additions = assets.slice(0, numAttachments).map((asset, i) => ({
+        id: `${Date.now()}-${i}-${asset.uri}`,
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        status: 'processing' as const,
+      }));
+      addAttachments(additions);
+      additions.forEach((a) => startUpload(a.id, a.uri));
+      setError(null);
+    },
+    [attachments.length, addAttachments, startUpload, setError],
+  );
+
+  // Pick existing photo(s) from the media library.
   const handleAttachImage = useCallback(async () => {
     if (attachDisabled) return;
+    // Dismiss the keyboard first so TrueSheet resets its footer keyboard
+    // offset; otherwise the footer keeps the keyboard gap after the picker
+    // closes (the keyboard is gone, but the inset/offset lingers).
+    Keyboard.dismiss();
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
       selectionLimit: MAX_ATTACHMENTS - attachments.length,
     });
     if (result.canceled || !result.assets?.length) return;
+    ingestAssets(result.assets);
+  }, [attachDisabled, attachments.length, ingestAssets]);
 
-    const additions = result.assets
-      .slice(0, MAX_ATTACHMENTS - attachments.length)
-      .map((asset, i) => ({
-        id: `${Date.now()}-${i}-${asset.uri}`,
-        uri: asset.uri,
-        width: asset.width,
-        height: asset.height,
-      }));
-    addAttachments(additions);
-    setError(null);
-  }, [attachDisabled, attachments.length, addAttachments, setError]);
+  // Capture a new photo with the camera (mobile only).
+  const handleCaptureImage = useCallback(async () => {
+    if (attachDisabled) return;
+    Keyboard.dismiss();
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError('Camera permission is required to take a photo.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync();
+    if (result.canceled || !result.assets?.length) return;
+    ingestAssets(result.assets);
+  }, [attachDisabled, ingestAssets, setError]);
 
   const handleRemoveAttachment = useCallback(
     (id: string) => {
       removeAttachment(id);
+      uploadCache.delete(id);
       setError(null);
     },
     [removeAttachment, setError],
@@ -137,9 +210,9 @@ export function useComposer({
   // it closes (unmounts), so nothing carries over to the next open.
   useEffect(() => {
     return () => {
-      resetComposer();
+      resetAll();
     };
-  }, [resetComposer]);
+  }, [resetAll]);
 
   // Auto-open the image picker once when the caller requested it
   // (e.g. tapping the attach icon in the inline composer).
@@ -157,16 +230,17 @@ export function useComposer({
     setError(null);
     setSubmitting(true);
     try {
-      // Process + upload attachments first so every blob body is on
-      // the server before the content that references it.
+      // Attachments started processing/uploading when they were added, so
+      // every blob body is usually already on the server. Await those cached
+      // promises; fall back to a fresh run if one is missing or previously
+      // failed (the catch in `startUpload` evicts failures).
       const imageSets: v2.ImageSet[] =
         attachments.length > 0
           ? await Promise.all(
-              attachments.map((a) =>
-                processAndUploadImage(client, a.uri, {
-                  mode: 'fit',
-                  sizes: POST_VARIANT_SIZES,
-                }),
+              attachments.map(
+                (a) =>
+                  uploadCache.get(a.id) ??
+                  processAndUploadImage(client, a.uri, POST_IMAGE_OPTIONS),
               ),
             )
           : [];
@@ -217,7 +291,7 @@ export function useComposer({
 
       setSubmitting(false);
       onClose();
-      resetComposer();
+      resetAll();
 
       void client
         .sync()
@@ -248,7 +322,7 @@ export function useComposer({
     replyTo,
     replyToEventKey,
     replyRootEventKey,
-    resetComposer,
+    resetAll,
     setSubmitting,
     setError,
     onClose,
@@ -278,6 +352,7 @@ export function useComposer({
     handleClose,
     handlePost,
     handleAttachImage,
+    handleCaptureImage,
     handleRemoveAttachment,
   };
 }

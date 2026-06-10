@@ -57,6 +57,9 @@ export function ComposeSheet({
           canPost={composer.canPost}
           onPost={composer.handlePost}
           onAttachImage={() => void composer.handleAttachImage()}
+          onCaptureImage={
+            isWeb ? undefined : () => void composer.handleCaptureImage()
+          }
           attachDisabled={composer.attachDisabled}
         />
       }

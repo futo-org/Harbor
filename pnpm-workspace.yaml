@@ -10,19 +10,17 @@ catalog:
   '@noble/hashes': ^1.8.0
   typescript: ^5.9.3
 
-overrides:
-  shell-quote@<1.8.4: '>=1.8.4'
-  serialize-javascript@<7.0.5: '>=7.0.5'
-  postcss@<8.5.10: '>=8.5.10'
-  ws@>=8.0.0 <8.20.1: '>=8.20.1'
-  uuid@<11.1.1: '>=11.1.1'
-
 linkWorkspacePackages: true
+
+minimumReleaseAge: 1440
 
 onlyBuiltDependencies:
   - better-sqlite3
 
-patchedDependencies:
-  uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch
+overrides:
+  serialize-javascript@<7.0.5: '>=7.0.5'
+  uuid@<11.1.1: '>=11.1.1'
 
-minimumReleaseAge: 1440
+patchedDependencies:
+  '@expo/cli': patches/@expo__cli.patch
+  uniffi-bindgen-react-native@0.31.0-2: patches/uniffi-bindgen-react-native@0.31.0-2.patch
