@@ -15,6 +15,11 @@
     - cargo clippy --package ${SERVICE_NAME} -- -D warnings
   allow_failure: true
 
+.service-test:
+  extends: .service-rust-base
+  script:
+    - cargo test --package ${SERVICE_NAME}
+
 .service-build:
   extends: .service-rust-base
   stage: build
@@ -182,6 +187,11 @@ notifications-clippy:
   extends:
     - .notifications-workflow
     - .service-clippy
+
+notifications-test:
+  extends:
+    - .notifications-workflow
+    - .service-test
 
 notifications-build:
   extends:
