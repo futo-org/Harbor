@@ -73,6 +73,7 @@ impl NotificationManager {
         }
     }
 
+    #[cfg(test)]
     pub fn with_custom_push_url(access_token: Option<String>, push_url: String) -> Self {
         NotificationManager {
             expo_client: ExpoClient::with_custom_push_url(access_token, push_url),
