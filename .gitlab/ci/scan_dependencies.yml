@@ -1,7 +1,7 @@
 trivy:
   stage: check
   image:
-    name: aquasec/trivy:0.69.3
+    name: aquasec/trivy:0.71.0
     entrypoint: ['']
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
