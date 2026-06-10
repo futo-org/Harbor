@@ -320,7 +320,7 @@ mod tests {
     use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::collections;
     use polycentric_common::models::protos_v2::{
-        Content, Event, EventBundle, EventKey, Identity, KeyType, ListEventsRequest,
+        Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
         ListEventsResponse, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
         PutEventsResponse, SerializedContent, SignedEvent,
         content::ContentBody,
@@ -476,6 +476,18 @@ mod tests {
                     reply: None,
                     images: vec![],
                     quote: None,
+                })),
+            },
+        )
+    }
+
+    /// A follow of `followee` authored by `author`.
+    fn follow_bundle(author: &str, followee: &str) -> EventBundle {
+        authored_bundle(
+            author,
+            Content {
+                content_body: Some(ContentBody::Follow(Follow {
+                    identity: followee.to_string(),
                 })),
             },
         )
@@ -673,6 +685,83 @@ mod tests {
         let ctx = make_ctx(db, expo_push_url, polycentric);
         // Author replies to themselves → filtered out.
         let bundle = reply_post_bundle("id-author", "id-author");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+    }
+
+    /// Follow path end-to-end: a follow triggers exactly one Expo push to the
+    /// followed profile, titled with the follower's RPC-fetched display name.
+    #[tokio::test]
+    async fn process_event_notifies_followed_profile_via_expo() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_header("content-type", "application/json")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"FOLLOW_"}]"#
+                    .to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let pk = test_public_key(1);
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![pk.clone()],
+        })
+        .await;
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            // token_for_public_key(followee's authorized key) → one token
+            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            .into_connection();
+
+        let ctx = make_ctx(db, expo_push_url, polycentric);
+        let bundle = follow_bundle("id-author", "id-followee");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+    }
+
+    /// Following yourself is not a notification to yourself.
+    #[tokio::test]
+    async fn process_event_skips_self_follow() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .with_status(200)
+            .with_body("{}")
+            .expect(0)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![],
+        })
+        .await;
+
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let ctx = make_ctx(db, expo_push_url, polycentric);
+        // Author follows themselves → filtered out.
+        let bundle = follow_bundle("id-author", "id-author");
 
         ctx.notification_manager
             .process_event(&ctx, &bundle)
