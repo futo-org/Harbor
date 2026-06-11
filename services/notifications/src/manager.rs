@@ -204,7 +204,7 @@ impl NotificationManager {
         // author (self-follows don't notify).
         let followed_profile: Option<String> = match &content.content_body {
             Some(ContentBody::Follow(follow)) => {
-                Some(follow.identity.clone()).filter(|target| target != &author)
+                Some(follow.identity.clone()).filter(|target| target != author)
             }
             _ => None,
         };
