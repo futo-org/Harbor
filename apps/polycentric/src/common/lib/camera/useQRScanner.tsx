@@ -20,7 +20,6 @@ export interface UseQRScannerOptions {
 export interface UseQRScannerReturn {
   device: ReturnType<typeof useCameraDevice>;
   hasPermission: boolean | null;
-  isLoading: boolean;
   requestPermission: () => Promise<boolean>;
   isActive: boolean;
   setIsActive: (active: boolean) => void;
@@ -33,7 +32,7 @@ export function useQRScanner(
 ): UseQRScannerReturn {
   const { parseJSON = false, onScan, onError } = options;
 
-  const { hasPermission, isLoading, requestPermission } = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [isActive, setIsActive] = useState(false);
   const [scannedData, setScannedData] = useState<QRScanResult | null>(null);
@@ -91,7 +90,6 @@ export function useQRScanner(
   return {
     device,
     hasPermission,
-    isLoading,
     requestPermission,
     isActive,
     setIsActive,

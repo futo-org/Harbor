@@ -2,7 +2,6 @@ import { useCameraPermission as useVisionCameraPermission } from 'react-native-v
 
 export interface UseCameraPermissionReturn {
   hasPermission: boolean | null;
-  isLoading: boolean;
   requestPermission: () => Promise<boolean>;
   canRequestPermission: boolean;
 }
@@ -13,7 +12,6 @@ export function useCameraPermission(): UseCameraPermissionReturn {
 
   return {
     hasPermission,
-    isLoading: false,
     requestPermission,
     canRequestPermission,
   };
