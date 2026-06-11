@@ -155,8 +155,8 @@ impl NotificationManager {
     async fn process_reply_notifications(
         &self,
         ctx: &Context,
-        collapse_id: &String,
-        author: &String,
+        collapse_id: &str,
+        author: &str,
         content: &Content,
     ) -> Result<(), NotificationError> {
         // The reply target, when this is a post replying to someone other
@@ -175,14 +175,14 @@ impl NotificationManager {
             // Title is the author's display name, fetched over gRPC.
             let title = ctx
                 .polycentric
-                .display_name(&author)
+                .display_name(author)
                 .await
                 .unwrap_or_else(|| "Anonymous".to_string());
 
             self.send_to_identity(
                 ctx,
                 &recipient,
-                collapse_id.clone(),
+                collapse_id.to_owned(),
                 title,
                 "Replied to your post".to_string(),
             )
@@ -196,8 +196,8 @@ impl NotificationManager {
     async fn process_follower_notifications(
         &self,
         ctx: &Context,
-        collapse_id: &String,
-        author: &String,
+        collapse_id: &str,
+        author: &str,
         content: &Content,
     ) -> Result<(), NotificationError> {
         // The followee target, when this is a follow of someone other than the
@@ -213,14 +213,14 @@ impl NotificationManager {
             // Title is the author's display name, fetched over gRPC.
             let title = ctx
                 .polycentric
-                .display_name(&author)
+                .display_name(author)
                 .await
                 .unwrap_or_else(|| "Anonymous".to_string());
 
             self.send_to_identity(
                 ctx,
                 &followee,
-                collapse_id.clone(),
+                collapse_id.to_owned(),
                 title,
                 "Followed you".to_string(),
             )
