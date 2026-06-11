@@ -6,7 +6,7 @@ use sea_orm::{DbConn, DbErr, EnumIter};
 use super::repository as token_repository;
 use crate::{
     context::Context,
-    expo_client::{ExpoClient, ExpoPushRequest},
+    expo_client::{ExpoClient, ExpoPushRequest, ExpoPushResponse},
 };
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, PublicKey, content::ContentBody,
@@ -166,7 +166,7 @@ impl NotificationManager {
                 .as_ref()
                 .and_then(|reply| reply.parent.as_ref())
                 .map(|parent| parent.identity.clone())
-                .filter(|target| target != &author),
+                .filter(|target| target != author),
             _ => return Ok(()),
         };
 
@@ -278,6 +278,18 @@ impl NotificationManager {
             .post_requests(vec![expo_push_request])
             .await?;
 
+        self.clean_unregistered_push_tokens(ctx, response, expo_tokens)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn clean_unregistered_push_tokens(
+        &self,
+        ctx: &Context,
+        response: ExpoPushResponse,
+        expo_tokens: Vec<(PublicKey, String)>,
+    ) -> Result<(), NotificationError> {
         if response.data.len() != expo_tokens.len() {
             warn!(
                 "expo ticket count ({}) != token count ({}); skipping token cleanup",
