@@ -169,6 +169,8 @@ moderation-image:
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - Cargo.toml
+        - Cargo.lock
         - services/notifications/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
