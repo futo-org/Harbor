@@ -138,6 +138,7 @@ impl NotificationManager {
         let collapse_id: String = signed
             .signature
             .iter()
+            .take(28) // APNs has a strict 64 byte limit for the collapseId field
             .map(|b| format!("{b:02x}"))
             .collect();
 
@@ -173,7 +174,7 @@ impl NotificationManager {
             self.send_to_identity(
                 ctx,
                 &recipient,
-                "REPLY_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
+                collapse_id.clone(),
                 title,
                 "Replied to your post".to_string(),
             )
@@ -191,7 +192,7 @@ impl NotificationManager {
             self.send_to_identity(
                 ctx,
                 &followee,
-                "FOLLOW_".to_string() + &collapse_id[..], // A specific notification is identified by its type concatenated with the signature of its associated event
+                collapse_id.clone(),
                 title,
                 "Followed you".to_string(),
             )
