@@ -1,5 +1,10 @@
 import { useState, useCallback } from 'react';
-import { useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
+import {
+  isScannedCode,
+  useCameraDevice,
+  useObjectOutput,
+} from 'react-native-vision-camera';
+import type { ScannedObject } from 'react-native-vision-camera';
 import { useCameraPermission } from './useCameraPermission';
 
 export type QRScanResult =
@@ -20,7 +25,7 @@ export interface UseQRScannerReturn {
   isActive: boolean;
   setIsActive: (active: boolean) => void;
   scannedData: QRScanResult | null;
-  codeScanner: ReturnType<typeof useCodeScanner>;
+  objectOutput: ReturnType<typeof useObjectOutput>;
 }
 
 export function useQRScanner(
@@ -49,12 +54,10 @@ export function useQRScanner(
     [parseJSON],
   );
 
-  const handleCodeScanned = useCallback(
-    (codes: any[]) => {
-      if (codes.length === 0) return;
-
-      const code = codes[0];
-      const rawValue = code.value;
+  const handleObjectsScanned = useCallback(
+    (objects: ScannedObject[]) => {
+      const code = objects.find(isScannedCode);
+      const rawValue = code?.value;
 
       if (!rawValue) return;
 
@@ -80,9 +83,9 @@ export function useQRScanner(
     [parseQRData, onScan, onError],
   );
 
-  const codeScanner = useCodeScanner({
-    codeTypes: ['qr'],
-    onCodeScanned: handleCodeScanned,
+  const objectOutput = useObjectOutput({
+    types: ['qr'],
+    onObjectsScanned: handleObjectsScanned,
   });
 
   return {
@@ -93,6 +96,6 @@ export function useQRScanner(
     isActive,
     setIsActive,
     scannedData,
-    codeScanner,
+    objectOutput,
   };
 }
