@@ -54,6 +54,8 @@
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - Cargo.toml
+        - Cargo.lock
         - services/server/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
@@ -62,6 +64,8 @@
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
+        - Cargo.toml
+        - Cargo.lock
         - services/server/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
@@ -105,6 +109,8 @@ server-image:
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - Cargo.toml
+        - Cargo.lock
         - services/moderation/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
@@ -113,6 +119,8 @@ server-image:
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
+        - Cargo.toml
+        - Cargo.lock
         - services/moderation/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
