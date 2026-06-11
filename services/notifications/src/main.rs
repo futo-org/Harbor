@@ -51,7 +51,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::connect().await?;
     db::run_migrations(&db).await?;
 
-    let notification_manager = NotificationManager::new(std::env::var("EXPO_ACCESS_TOKEN").ok());
+    // Treat a blank EXPO_ACCESS_TOKEN as unset — sending an empty bearer
+    // token makes Expo reject the request with 401, whereas sending no auth
+    // header is accepted for projects without enhanced push security.
+    let expo_access_token = std::env::var("EXPO_ACCESS_TOKEN")
+        .ok()
+        .filter(|t| !t.is_empty());
+    let notification_manager = NotificationManager::new(expo_access_token);
 
     let polycentric = PolycentricClient::from_env()?;
 
