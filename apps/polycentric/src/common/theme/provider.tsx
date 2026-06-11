@@ -3,12 +3,15 @@ import * as ReactNavigation from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
 } from 'react';
 import { useColorScheme } from 'react-native';
+import { loadThemeName, saveThemeName } from './storage';
 import { themes, type Theme, type ThemeKey } from './themes';
 
 export type ThemeContextValue = {
@@ -26,23 +29,39 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     'Inter-Italic': Fonts['Inter-Italic'],
   });
 
+  // useColorScheme returns the system theme preference.
   const colorScheme = useColorScheme();
-  const [activeThemeName, setActiveThemeName] = useState<ThemeKey>(() =>
+  const [activeThemeName, setActiveThemeNameState] = useState<ThemeKey>(
     colorScheme === 'dark' ? 'dark' : 'light',
   );
+  const [themePreferenceLoaded, setThemePreferenceLoaded] = useState(false);
+
+  useEffect(() => {
+    void loadThemeName().then((themeName) => {
+      if (themeName) {
+        setActiveThemeNameState(themeName);
+      }
+      setThemePreferenceLoaded(true);
+    });
+  }, []);
+
+  const setActiveThemeName = useCallback((name: ThemeKey) => {
+    setActiveThemeNameState(name);
+    void saveThemeName(name);
+  }, []);
 
   const theme = useMemo(() => themes[activeThemeName], [activeThemeName]);
 
   const value = useMemo(
     () => ({ theme, activeThemeName, setActiveThemeName }),
-    [theme, activeThemeName],
+    [theme, activeThemeName, setActiveThemeName],
   );
 
   if (fontError) {
     throw fontError;
   }
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !themePreferenceLoaded) {
     return null;
   }
 

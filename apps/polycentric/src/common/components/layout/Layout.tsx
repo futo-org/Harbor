@@ -352,7 +352,7 @@ export const RightSidebar = memo(function RightSidebar({
               style={({ pressed }) => [pressed && { opacity: 0.65 }]}
             >
               <Icon
-                name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+                name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
                 size={typography.fontSize.sm}
                 color="neutral_500"
               />
