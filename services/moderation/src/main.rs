@@ -99,7 +99,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     // Nothing to moderate unless the content yields text or an image
     // (skips no-op posts, reactions, follows, etc.).
     let has_text = content_text(&content).is_some();
-    let has_image = !image_digests(&content).is_empty();
+    let has_image = !image_blobs(&content).is_empty();
     if !has_text && !has_image {
         return None;
     }
@@ -141,25 +141,27 @@ fn image_sets(content: &Content) -> Vec<&ImageSet> {
     }
 }
 
-/// Digest of one variant per distinct image in the content.
-fn image_digests(content: &Content) -> Vec<&ContentDigest> {
+/// Digest and claimed MIME type of one variant per distinct image in the
+/// content. The MIME type is client-supplied (and may be empty), so treat it
+/// only as a hint.
+fn image_blobs(content: &Content) -> Vec<(&ContentDigest, &str)> {
     image_sets(content)
         .into_iter()
         // One variant (size) per image is enough to moderate it.
         .filter_map(|set| set.images.first())
         .filter_map(|image| image.blob.as_ref())
-        .filter_map(|blob| blob.digest.as_ref())
+        .filter_map(|blob| Some((blob.digest.as_ref()?, blob.mime_type.as_str())))
         .collect()
 }
 
 /// Fetch the bytes of every image referenced by the content. Images that
 /// fail to fetch are skipped (logged).
-async fn fetch_images(ctx: &Context, content: &Content) -> Vec<Vec<u8>> {
+async fn fetch_images(ctx: &Context, content: &Content) -> Vec<(Vec<u8>, String)> {
     let store = &ctx.blobs;
     let mut images = Vec::new();
-    for digest in image_digests(content) {
+    for (digest, mime) in image_blobs(content) {
         match store.read_blob(digest).await {
-            Ok(bytes) => images.push(bytes),
+            Ok(bytes) => images.push((bytes, mime.to_string())),
             Err(e) => warn!("failed to fetch image blob: {}", e),
         }
     }
@@ -170,7 +172,7 @@ async fn fetch_images(ctx: &Context, content: &Content) -> Vec<Vec<u8>> {
 async fn purge_images(ctx: &Context, content: &Content) -> Result<(), ()> {
     let store = &ctx.blobs;
     let mut ok = true;
-    for digest in image_digests(content) {
+    for (digest, _mime) in image_blobs(content) {
         if let Err(e) = store.delete_blob(digest).await {
             warn!("failed to purge CSAM image blob: {}", e);
             ok = false;
@@ -185,7 +187,7 @@ async fn purge_images(ctx: &Context, content: &Content) -> Result<(), ()> {
 async fn moderate(
     ctx: &Context,
     content: &Content,
-    images: &[Vec<u8>],
+    images: &[(Vec<u8>, String)],
 ) -> Result<serde_json::Value, ()> {
     let client = &ctx.azure;
 
@@ -200,7 +202,7 @@ async fn moderate(
     // Each image is scanned with the text (multimodal) when text is
     // present, otherwise on its own.
     let mut image_results = Vec::with_capacity(images.len());
-    for image in images {
+    for (image, _mime) in images {
         if let Some(request) = ModerationRequest::from_parts(text.as_deref(), Some(image)) {
             image_results.push(analyze(request).await?);
         }
@@ -228,13 +230,14 @@ async fn moderate(
 /// are no images — both yield `Ok(false)`. A provider error returns `Err(())`
 /// so the caller can retry rather than fall through to Azure: a configured
 /// CSAM gate must never be silently skipped.
-async fn photodna_filter(ctx: &Context, images: &[Vec<u8>]) -> Result<bool, ()> {
+async fn photodna_filter(ctx: &Context, images: &[(Vec<u8>, String)]) -> Result<bool, ()> {
     let Some(photodna) = &ctx.photodna else {
         return Ok(false);
     };
 
-    for image in images {
-        match photodna.is_match(image).await {
+    for (image, mime) in images {
+        let hint = (!mime.is_empty()).then_some(mime.as_str());
+        match photodna.is_match(image, hint).await {
             Ok(true) => return Ok(true),
             Ok(false) => {}
             Err(e) => {
