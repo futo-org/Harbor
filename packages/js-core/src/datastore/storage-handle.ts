@@ -2,16 +2,19 @@ import { EventStore } from './event-store';
 import { ContentStore } from './content.store';
 import { KeysStore } from './keys-store';
 import { EventAckStore } from './event-ack-store';
+import { IdentityStore } from './identity-store';
 import type { IEventRepository } from '../platform-interfaces/event.repository';
 import type { IContentRepository } from '../platform-interfaces/content.repository';
 import type { IKeysRepository } from '../platform-interfaces/keys-repository';
 import type { IEventAckRepository } from '../platform-interfaces/event-ack-repository';
+import type { IIdentityRepository } from '../platform-interfaces/identity-repository';
 
 export interface Repositories {
   eventRepository: IEventRepository;
   contentRepository: IContentRepository;
   keysRepository: IKeysRepository;
   eventAckRepository: IEventAckRepository;
+  identityRepository: IIdentityRepository;
 }
 
 /**
@@ -36,6 +39,7 @@ export class StorageHandle {
   public readonly content: ContentStore;
   public readonly keys: KeysStore;
   public readonly eventAcks: EventAckStore;
+  public readonly identities: IdentityStore;
 
   constructor(repositories: Repositories) {
     this._repositories = repositories;
@@ -43,5 +47,6 @@ export class StorageHandle {
     this.content = new ContentStore(this._repositories.contentRepository);
     this.keys = new KeysStore(this._repositories.keysRepository);
     this.eventAcks = new EventAckStore(this._repositories.eventAckRepository);
+    this.identities = new IdentityStore(this._repositories.identityRepository);
   }
 }

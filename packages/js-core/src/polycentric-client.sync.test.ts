@@ -55,8 +55,9 @@ interface TestIdentity {
 }
 
 /**
- * Build an identity whose key is derived exactly as `IdentityManager.publish()`
- * does: the hex sha256 of the serialized initial Identity document.
+ * Build an identity whose key is derived exactly as
+ * `IdentityManager.commitIdentityEvent()` does: the hex sha256 of the
+ * serialized initial Identity document.
  * All authorized keys live in that single initial document (signed by the first
  * rotation key) — a valid identity state that avoids a long event stream.
  */
@@ -537,7 +538,6 @@ function makeClient(args: MakeClientArgs = {}) {
       return ed25519.sign(bytes, args.signer.privateKey);
     }),
     delete: vi.fn(async () => {}),
-    runProtectedKeyPairDemo: vi.fn(async () => {}),
   } as any;
 
   const client = new PolycentricClient({
@@ -555,7 +555,9 @@ function makeClient(args: MakeClientArgs = {}) {
     eventAckRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
-  client.activeIdentityKey = args.identity ? args.identity.key : null;
+  client.identityManager.activeIdentityKey = args.identity
+    ? args.identity.key
+    : null;
 
   return { client, core, eventRepository, contentRepository, fileStore };
 }

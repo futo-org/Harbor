@@ -23,7 +23,6 @@ export {
 export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 
 export type * from './platform-interfaces';
-export { AbstractKeyPairManager } from './platform-interfaces';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
 
 export { StorageHandle } from './datastore';

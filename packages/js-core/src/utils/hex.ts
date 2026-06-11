@@ -1,5 +1,5 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
-import type * as Proto from '../proto/v2';
+import * as Proto from '../proto/v2';
 
 export { hexToBytes };
 

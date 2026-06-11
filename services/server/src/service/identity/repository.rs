@@ -100,7 +100,11 @@ impl Query {
                 .iter()
                 .filter(|r| {
                     r.sequence == next_seq
-                        && authorizes_rotation(&head, &r.signer)
+                        && (authorizes_rotation(&head, &r.signer)
+                            // TODO: The server and client should share an implementation of this
+                            // Identity events by signing keys are valid iff the content is unchanged.
+                            || (authorizes_signer(&head, &r.signer)
+                                && r.content == head))
                 })
                 .min_by(|a, b| a.signer.key.cmp(&b.signer.key));
             match next {
@@ -167,5 +171,14 @@ fn authorizes_rotation(content: &Identity, signer: &PublicKey) -> bool {
     content
         .rotation_keys
         .iter()
+        .any(|k| k.key_type == signer.key_type && k.key == signer.key)
+}
+
+/// True when `signer` is any member of `content` (rotation or signing).
+fn authorizes_signer(content: &Identity, signer: &PublicKey) -> bool {
+    content
+        .rotation_keys
+        .iter()
+        .chain(content.signing_keys.iter())
         .any(|k| k.key_type == signer.key_type && k.key == signer.key)
 }

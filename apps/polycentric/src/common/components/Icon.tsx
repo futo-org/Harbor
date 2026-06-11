@@ -44,11 +44,15 @@ export const IconsMap = {
   copy: defineIcon(Ionicons, 'copy-outline'),
   dotsVertical: defineIcon(MaterialCommunityIcons, 'dots-vertical'),
   emoji: defineIcon(MaterialIcons, 'emoji-emotions'),
+  eye: defineIcon(Ionicons, 'eye-outline'),
   flag: defineIcon(Ionicons, 'flag-outline'),
   form: defineIcon(MaterialCommunityIcons, 'form-select'),
+  globe: defineIcon(Ionicons, 'globe-outline'),
   home: defineIcon(Ionicons, 'home-outline'),
   image: defineIcon(Ionicons, 'image-outline'),
   images: defineIcon(Ionicons, 'images-outline'),
+  lockClosed: defineIcon(Ionicons, 'lock-closed'),
+  lockOpen: defineIcon(Ionicons, 'lock-open'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
   personAdd: defineIcon(Ionicons, 'person-add'),
@@ -64,6 +68,8 @@ export const IconsMap = {
   search: defineIcon(Ionicons, 'search'),
   searchOutline: defineIcon(Ionicons, 'search-outline'),
   settings: defineIcon(Ionicons, 'settings-outline'),
+  shieldCheckmark: defineIcon(Ionicons, 'shield-checkmark-outline'),
+  pencil: defineIcon(Ionicons, 'pencil-outline'),
   share: defineIcon(Ionicons, 'share-social-outline'),
   themeDark: defineIcon(Ionicons, 'moon'),
   themeLight: defineIcon(Ionicons, 'sunny'),
@@ -71,6 +77,7 @@ export const IconsMap = {
   trash: defineIcon(Ionicons, 'trash-outline'),
   trashBin: defineIcon(Ionicons, 'trash-bin'),
   verify: defineIcon(MaterialCommunityIcons, 'check-decagram-outline'),
+  warning: defineIcon(Ionicons, 'warning-outline'),
 };
 
 export type IconName = keyof typeof IconsMap;

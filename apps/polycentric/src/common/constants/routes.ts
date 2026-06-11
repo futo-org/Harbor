@@ -47,6 +47,8 @@ export const Routes = {
     settings: {
       index: '/settings',
       identity: '/settings/identity',
+      keypair: (publicKey: string) =>
+        `/settings/identity/keypair/${publicKey}` as const,
       pairIdentity: '/settings/pair-identity',
       servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',

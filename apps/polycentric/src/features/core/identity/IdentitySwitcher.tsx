@@ -12,7 +12,6 @@ import { confirm } from '@/src/common/lib/dialogs/alert';
 import {
   pubkeyStr,
   useCurrentIdentity,
-  useIdentityKeyFor,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
@@ -159,7 +158,8 @@ function IdentityListItemContent({
   const { isEditing } = useIdentitySwitcher();
   const { isCurrentIdentity } = useCurrentIdentity();
 
-  const identityKey = useIdentityKeyFor(item);
+  // TODO: Identity switching is not implemented
+  const identityKey: string | null = null;
   const isCurrent = isCurrentIdentity(identityKey);
 
   const hoverSurface =
@@ -216,7 +216,8 @@ function StaticIdentityListItem({ item }: ListRenderItemInfo<IdentityKeyPair>) {
   const { dismiss } = useIdentitySwitcher();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const identityKey = useIdentityKeyFor(item);
+  // TODO: Identity switching is not implemented
+  const identityKey: string | null = null;
   const isCurrent = isCurrentIdentity(identityKey);
 
   const handleSwitchIdentity = async () => {

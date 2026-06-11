@@ -12,7 +12,6 @@ export { useUsername } from './PolycentricProvider';
 
 // Action hooks
 export { useCurrentIdentity } from './PolycentricProvider';
-export { useIdentityKeyFor } from './useIdentityKeyFor';
 
 // Profile screen hooks
 export {
@@ -36,10 +35,6 @@ export {
   bundleEventId,
   hexToBytes,
   truncateName,
-  publicKeyToString,
-  stringToPublicKey,
-  publicKeyToStringURLSafe,
-  stringURLSafeToPublicKey,
   getIdentityId,
   getIdentityIdShort,
   shortenIdentityId,

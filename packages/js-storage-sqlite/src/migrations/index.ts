@@ -1,6 +1,7 @@
 import type { SqliteDb } from '../database.js';
 import * as m20260506_000001_initial from './m20260506_000001_initial.js';
 import * as m20260617_000001_secure_keys from './m20260617_000001_secure_keys.js';
+import * as m20260626_000001_identity_records from './m20260626_000001_identity_records.js';
 
 export interface Migration {
   name: string;
@@ -10,4 +11,5 @@ export interface Migration {
 export const migrations: Migration[] = [
   m20260506_000001_initial,
   m20260617_000001_secure_keys,
+  m20260626_000001_identity_records,
 ];

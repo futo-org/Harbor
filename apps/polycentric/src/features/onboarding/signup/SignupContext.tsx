@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { Routes } from '@/src/common/constants';
 import { getNextStep, isLastStep, SignupRoute } from './flow';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { publishProfileUpdate } from '@/src/features/profile/lib/publishProfileUpdate';
+import { commitProfileUpdate } from '@/src/features/profile/lib/commitProfileUpdate';
 
 type ModerationLevel = 1 | 2 | 3;
 
@@ -19,6 +19,7 @@ interface SignupData {
   about: string;
   avatarUri: string | null;
   moderation: ModerationSettings;
+  shouldSecureRotationKey: boolean;
 }
 
 interface SignupStore {
@@ -27,6 +28,7 @@ interface SignupStore {
   setAbout: (about: string) => void;
   setAvatarUri: (uri: string | null) => void;
   setModeration: (moderation: ModerationSettings) => void;
+  setShouldSecureRotationKey: (shouldSecureRotationKey: boolean) => void;
   reset: () => void;
 }
 
@@ -39,6 +41,7 @@ const defaultData: SignupData = {
     sexual: 2,
     hate: 2,
   },
+  shouldSecureRotationKey: true,
 };
 
 const useSignupStore = create<SignupStore>((set) => ({
@@ -49,14 +52,23 @@ const useSignupStore = create<SignupStore>((set) => ({
   setAvatarUri: (avatarUri) => set((s) => ({ data: { ...s.data, avatarUri } })),
   setModeration: (moderation) =>
     set((s) => ({ data: { ...s.data, moderation } })),
+  setShouldSecureRotationKey: (shouldSecureRotationKey) =>
+    set((s) => ({ data: { ...s.data, shouldSecureRotationKey } })),
   reset: () => set({ data: defaultData }),
 }));
 
 export function useSignup() {
   const pathname = usePathname();
   const { client, refreshCurrentIdentity } = usePolycentricContext();
-  const { data, setDisplayName, setAbout, setAvatarUri, setModeration, reset } =
-    useSignupStore();
+  const {
+    data,
+    setDisplayName,
+    setAbout,
+    setAvatarUri,
+    setModeration,
+    setShouldSecureRotationKey,
+    reset,
+  } = useSignupStore();
 
   const currentStep = pathname as SignupRoute;
   const currentIsLastStep = isLastStep(currentStep);
@@ -81,19 +93,22 @@ export function useSignup() {
     }
 
     try {
-      const activePublicKey = client.keyPairManager.activePublicKey;
-      if (!activePublicKey) throw new Error('No active keypair');
-      await client.identityManager.publish(null, [activePublicKey], []);
-      await publishProfileUpdate(client, {
+      await client.identityManager.createIdentity({
+        protect: data.shouldSecureRotationKey,
+      });
+      await commitProfileUpdate(client, {
         name: data.displayName,
         description: data.about,
         avatarUri: data.avatarUri,
       });
+      // One sync after the identity and profile events are all committed.
+      await client.sync();
       await refreshCurrentIdentity();
       reset();
       router.replace(Routes.tabs.feed.index as Href);
     } catch (error) {
       console.error('Failed to create identity:', error);
+      throw error;
     }
   };
 
@@ -103,6 +118,7 @@ export function useSignup() {
     setAbout,
     setAvatarUri,
     setModeration,
+    setShouldSecureRotationKey,
     currentStep,
     isLastStep: currentIsLastStep,
     goToNextStep,

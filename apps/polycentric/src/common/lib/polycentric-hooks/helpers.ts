@@ -341,30 +341,6 @@ export function pubkeyStr(key: v2.PublicKey): string {
   return Array.from(key.key ?? new Uint8Array()).join(',');
 }
 
-export function publicKeyToString(key: v2.PublicKey): string {
-  const keyType = key.keyType ?? 0;
-  const keyBytes = key.key ?? new Uint8Array();
-  return `${keyType}_${bytesToHex(keyBytes)}`;
-}
-
-export function stringToPublicKey(str: string): v2.PublicKey {
-  const idx = str.indexOf('_');
-  const keyTypeStr = str.slice(0, idx);
-  const keyHex = str.slice(idx + 1);
-  return v2.PublicKey.create({
-    keyType: Number(keyTypeStr),
-    key: hexToBytes(keyHex),
-  });
-}
-
-export function publicKeyToStringURLSafe(key: v2.PublicKey): string {
-  return publicKeyToString(key);
-}
-
-export function stringURLSafeToPublicKey(str: string): v2.PublicKey {
-  return stringToPublicKey(str);
-}
-
 /**
  * @deprecated misnamed — this returns a short base64 form of the signer's
  * public key, not the identity id. Use {@link shortenIdentityId} or render

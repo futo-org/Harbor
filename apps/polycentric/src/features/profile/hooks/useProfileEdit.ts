@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
-import { publishProfileUpdate } from '../lib/publishProfileUpdate';
+import { commitProfileUpdate } from '../lib/commitProfileUpdate';
 
 interface ProfileRef {
   description: string | null;
@@ -44,11 +44,12 @@ export function useProfileEdit(
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await publishProfileUpdate(client, {
+      await commitProfileUpdate(client, {
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
       });
+      await client.sync();
       profile.refresh();
       setEditing(false);
     } catch (err) {

@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Screen,
   ScreenHeader,
   Text,
@@ -11,8 +12,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 export default function SetDisplayNameScreen() {
-  const { data, setDisplayName, close, finish } = useSignup();
+  const { data, setDisplayName, setShouldSecureRotationKey, close, finish } =
+    useSignup();
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const canContinue = data.displayName.trim().length > 0;
 
@@ -23,12 +26,21 @@ export default function SetDisplayNameScreen() {
     setDisplayName(text);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!data.displayName.trim()) {
       setError('Display name is required');
       return;
     }
-    finish();
+    setSubmitting(true);
+    try {
+      await finish();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create identity';
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -53,14 +65,19 @@ export default function SetDisplayNameScreen() {
                 </Text>
               )}
             </View>
+            <Checkbox
+              checked={data.shouldSecureRotationKey}
+              onChange={setShouldSecureRotationKey}
+              label="Protect my key"
+            />
           </View>
           <Button
             style={[Atoms.mt_auto, Atoms.mb_md]}
             title="Continue"
             variant="primary"
-            disabled={!canContinue}
+            disabled={!canContinue || submitting}
             fullWidth
-            onPress={handleContinue}
+            onPress={() => void handleContinue()}
           />
         </View>
       </Screen.PrimaryColumn>

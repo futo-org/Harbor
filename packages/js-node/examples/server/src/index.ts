@@ -137,7 +137,8 @@ route('POST', /^\/identity$/, async (_req, res) => {
     res.end();
     return;
   }
-  await client.identityManager.publish(null, [activePublicKey], []);
+  await client.identityManager.commitIdentityEvent(null, [activePublicKey], []);
+  await client.sync();
   res.statusCode = 303;
   res.setHeader('Location', '/');
   res.end();

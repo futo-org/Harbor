@@ -3,6 +3,7 @@ export * from '../Avatar/ProfileAvatar';
 export * from '../Avatar/ProfileEditAvatar';
 export * from '../TextArea';
 export * from './Button';
+export * from './Checkbox';
 export * from './Chip';
 export * from './HorizontalScrollGroup';
 export * from './IconButton';

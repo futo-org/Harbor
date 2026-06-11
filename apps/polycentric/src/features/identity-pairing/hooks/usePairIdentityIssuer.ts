@@ -1,9 +1,9 @@
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import {
+  type ActivePairingSession,
   publicKeyToString,
   stringToPublicKey,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
-import { type ActivePairingSession } from '@polycentric/react-native';
+} from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function usePairIdentityIssuer(identityKey: string | null | undefined) {
@@ -101,18 +101,8 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     setPairingSessionLoading(true);
     setPairingSessionError(null);
     try {
-      const currentKey = client.keyPairManager.activePublicKey;
-      if (!currentKey) throw new Error('No active key pair');
-      const isRotationKey =
-        await client.identityManager.isRotationKeyForIdentity(
-          identityKey,
-          currentKey,
-        );
-      if (!isRotationKey) {
-        throw new Error(
-          'Only rotation key holders can create pairing sessions',
-        );
-      }
+      // createPairingSessionOnServer signs with a held rotation key and
+      // throws if this client holds none, so no pre-check is needed here.
       const targetServer = client.servers[0];
       if (!targetServer) throw new Error('No servers configured');
       const pairingSession =
@@ -152,6 +142,8 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
         } else {
           await client.identityManager.addSigningKey(claimer);
         }
+        // Push the authorization so the claimer can see it and finish pairing.
+        await client.sync();
       } catch (err) {
         setHiddenClaimers((prev) => {
           const next = new Set(prev);

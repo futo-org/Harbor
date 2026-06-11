@@ -11,6 +11,8 @@ export interface PersistedKey {
   private_key?: Uint8Array;
   encrypted_private_key?: Uint8Array;
   credential_id?: Uint8Array;
+  /** Browser passkey label for the credential protecting this key. */
+  credential_label?: string;
 }
 
 /**

@@ -1,9 +1,4 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
-import {
-  publicKeyToString,
-  usePolycentric,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
@@ -25,8 +20,6 @@ export default function PairIdentityClaimerScreen() {
   const { pairingSessionCode: paramPairingSessionCode } = useLocalSearchParams<{
     pairingSessionCode?: string;
   }>();
-  const client = usePolycentric();
-  const { refreshCurrentIdentity } = usePolycentricContext();
   const [pairingSessionCode, setPairingSessionCode] = useState<
     string | undefined
   >(paramPairingSessionCode);
@@ -34,25 +27,27 @@ export default function PairIdentityClaimerScreen() {
     string | undefined
   >(undefined);
 
-  const { error, approved, claimInProgress } = usePairIdentityClaimer({
+  const {
+    error,
+    pairingAuthorized,
+    claimInProgress,
+    claimerKeyStr,
+    authorizedRole,
+  } = usePairIdentityClaimer({
     pairingSessionCode,
     pairingSessionServer,
   });
 
-  const pubKeyStr = client.keyPairManager.activePublicKey
-    ? publicKeyToString(client.keyPairManager.activePublicKey)
-    : '';
+  const pubKeyStr = claimerKeyStr ?? '';
   const pubKeyEmoji = pubKeyStr
     ? publicKeyEmojiFingerprint(pubKeyStr).join(' ')
     : '';
 
+  // Navigate to the confirmation screen after pairing has been accepted by the issuer.
   useEffect(() => {
-    if (!approved) return;
-    void (async () => {
-      await refreshCurrentIdentity();
-      router.replace('/(onboarding)/login/success');
-    })();
-  }, [approved, refreshCurrentIdentity]);
+    if (!pairingAuthorized) return;
+    router.replace('/(onboarding)/login/confirm');
+  }, [pairingAuthorized]);
 
   const renderBody = () => {
     if (!pairingSessionCode) {
@@ -101,7 +96,7 @@ export default function PairIdentityClaimerScreen() {
           Atoms.gap_xl,
         ]}
       >
-        {approved ? (
+        {pairingAuthorized ? (
           <>
             <Text variant="title" style={{ fontSize: 64, lineHeight: 72 }}>
               ✓

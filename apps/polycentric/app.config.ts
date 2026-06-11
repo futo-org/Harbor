@@ -35,6 +35,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: ID,
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
+      NSFaceIDUsageDescription:
+        'Allow $(PRODUCT_NAME) to use Face ID to secure your keys.',
       ITSAppUsesNonExemptEncryption: false,
     },
   },

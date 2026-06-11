@@ -1,8 +1,6 @@
-import {
-  publicKeyToString,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useEffect, useState } from 'react';
+import { publicKeyToString } from '@polycentric/react-native';
 
 interface UsePairIdentityClaimerOptions {
   pairingSessionCode?: string;
@@ -16,12 +14,17 @@ export function usePairIdentityClaimer(
   const pairingSessionCode = options?.pairingSessionCode;
   const pairingSessionServer = options?.pairingSessionServer;
   const [identityKey, setIdentityKey] = useState<string | null>(null);
+  const [claimerKeyStr, setClaimerKeyStr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [authorized, setAuthorized] = useState(false);
-  const [approved, setApproved] = useState(false);
+  const [pairingAuthorized, setPairingAuthorized] = useState(false);
   const [claimInProgress, setClaimInProgress] = useState(false);
+  const [authorizedRole, setAuthorizedRole] = useState<
+    'rotation' | 'signing' | null
+  >(null);
 
   // Join the pairing session on the server and learn the issuer identity.
+  // startPairingSession generates an in-memory key for this identity and signs the
+  // join with it - nothing is persisted until pairing completes.
   useEffect(() => {
     if (!pairingSessionCode || identityKey) return;
 
@@ -32,7 +35,7 @@ export function usePairIdentityClaimer(
           throw new Error('Pairing session server is required.');
         }
 
-        const status = await client.pairingSessionManager.joinPairingSession(
+        const status = await client.pairingSessionManager.startPairingSession(
           pairingSessionCode,
           pairingSessionServer,
         );
@@ -41,6 +44,8 @@ export function usePairIdentityClaimer(
           throw new Error('Pairing session not found or expired.');
         }
         setIdentityKey(pairingSession.issuerIdentity);
+        const claimerKey = client.pairingSessionManager.pendingClaimKey;
+        if (claimerKey) setClaimerKeyStr(publicKeyToString(claimerKey));
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to join pairing session';
@@ -54,28 +59,21 @@ export function usePairIdentityClaimer(
   }, [pairingSessionCode, pairingSessionServer, identityKey, client]);
 
   // Poll the issuer's identity until the current key is authorized.
-  // Stops once `authorized` flips to true.
+  // Stops once `authorizedRole` is set.
   useEffect(() => {
-    if (!identityKey || !pairingSessionServer || authorized) return;
+    if (!identityKey || !pairingSessionServer || authorizedRole) return;
 
     let cancelled = false;
 
     const pollAuthorization = async () => {
       try {
-        const state = await client.identityManager.fetchIdentityState(
-          identityKey,
-          pairingSessionServer,
-        );
-        if (cancelled) return;
-        const currentKey = client.keyPairManager.activePublicKey;
-        if (!currentKey) return;
-
-        const keys = new Set<string>();
-        state.rotationKeys.forEach((k) => keys.add(publicKeyToString(k)));
-        state.signingKeys.forEach((k) => keys.add(publicKeyToString(k)));
-
-        if (keys.has(publicKeyToString(currentKey))) {
-          setAuthorized(true);
+        const role =
+          await client.pairingSessionManager.checkPairingAuthorization(
+            pairingSessionServer,
+          );
+        if (role && !cancelled) {
+          setAuthorizedRole(role);
+          setPairingAuthorized(true);
         }
       } catch {
         // polling failed, will retry on next interval
@@ -91,38 +89,13 @@ export function usePairIdentityClaimer(
       cancelled = true;
       clearInterval(interval);
     };
-  }, [identityKey, pairingSessionServer, client, authorized]);
-
-  // Claim exactly once when authorization is observed.
-  useEffect(() => {
-    if (!authorized || !identityKey || !pairingSessionServer) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        if (!client.servers.includes(pairingSessionServer)) {
-          client.servers.push(pairingSessionServer);
-        }
-        await client.identityManager.claim(identityKey);
-        if (!cancelled) setApproved(true);
-      } catch (err) {
-        if (!cancelled) {
-          const message =
-            err instanceof Error ? err.message : 'Failed to claim identity';
-          setError(message);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authorized, identityKey, pairingSessionServer, client]);
+  }, [identityKey, pairingSessionServer, client, authorizedRole]);
 
   return {
     error,
-    approved,
+    pairingAuthorized,
     claimInProgress,
+    claimerKeyStr,
+    authorizedRole,
   };
 }
