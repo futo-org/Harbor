@@ -67,9 +67,9 @@ pub struct NotificationManager {
 }
 
 impl NotificationManager {
-    pub fn new(access_token: Option<String>) -> Self {
+    pub fn new(expo_access_token: Option<String>) -> Self {
         NotificationManager {
-            expo_client: ExpoClient::new(access_token),
+            expo_client: ExpoClient::new(expo_access_token),
         }
     }
 
