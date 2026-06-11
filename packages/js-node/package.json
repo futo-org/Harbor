@@ -18,7 +18,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@noble/curves": "^1.9.0",
+    "@noble/curves": "catalog:",
     "@polycentric/js-core": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-uniffi-web": "workspace:*",

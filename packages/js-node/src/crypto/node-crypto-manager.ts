@@ -1,4 +1,4 @@
-import { ed25519 } from '@noble/curves/ed25519';
+import { ed25519 } from '@noble/curves/ed25519.js';
 import type { ICryptoManager } from '@polycentric/js-core';
 import { KEY_TYPE } from '@polycentric/js-core';
 
@@ -7,7 +7,7 @@ import { KEY_TYPE } from '@polycentric/js-core';
 export class NodeCryptoManager implements ICryptoManager {
   async generateKeyPair(keyType: number) {
     this.assertEd25519(keyType);
-    const privateKey = ed25519.utils.randomPrivateKey();
+    const privateKey = ed25519.utils.randomSecretKey();
     const publicKey = ed25519.getPublicKey(privateKey);
     return { privateKey, publicKey };
   }
@@ -33,7 +33,7 @@ export class NodeCryptoManager implements ICryptoManager {
   }
 
   async generateProcessId() {
-    return ed25519.utils.randomPrivateKey().slice(0, 16);
+    return ed25519.utils.randomSecretKey().slice(0, 16);
   }
 
   getSupportedKeyTypes() {

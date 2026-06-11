@@ -19,7 +19,7 @@
     "test": "echo 'No tests'"
   },
   "dependencies": {
-    "@noble/curves": "^1.9.0",
+    "@noble/curves": "catalog:",
     "@noble/hashes": "catalog:",
     "@polycentric/rs-core-uniffi-web": "workspace:*",
     "@protobuf-ts/grpcweb-transport": "^2.11.1",
