@@ -37,9 +37,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
       ITSAppUsesNonExemptEncryption: false,
     },
-    entitlements: {
-      'aps-environment': 'production',
-    },
   },
   android: {
     adaptiveIcon: {
