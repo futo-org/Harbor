@@ -3,6 +3,7 @@ members = [
     "packages/rs-common",
     "packages/rs-core",
     "services/server",
+    "services/server/tests",
     "services/moderation",
     "services/common/*",
     "tools/identity",
@@ -32,6 +33,7 @@ tonic-prost = "0.14"
 ed25519-dalek = "2.2.0"
 sha2 = "0.11"
 hmac-sha256 = "1.1.12"
+getrandom = "0.4"
 
 # Misc shared
 thiserror = "2.0"

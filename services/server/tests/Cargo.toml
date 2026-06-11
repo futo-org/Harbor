@@ -14,9 +14,9 @@ path = "src/tests.rs"
 
 [dependencies]
 entity = { path = "../entity" }
-ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+ed25519-dalek.workspace = true
+getrandom.workspace = true
 prost = "0.14"
-rand = "0.8"
 sha2 = "0.10"
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 tokio = { workspace = true, features = ["full"] }

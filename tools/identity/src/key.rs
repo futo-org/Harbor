@@ -42,7 +42,7 @@ impl KeyPair {
     /// Generate a new keypair from OS entropy.
     pub fn generate() -> Self {
         let mut private_key = [0u8; PRIVATE_KEY_LEN];
-        getrandom::getrandom(&mut private_key).expect("OS random number generator failed");
+        getrandom::fill(&mut private_key).expect("OS random number generator failed");
         Self::from_private_key(private_key)
     }
 

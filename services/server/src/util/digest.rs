@@ -33,7 +33,7 @@ pub fn verify_content_digest(
             hasher.update(content_bytes);
             let computed = hasher.finalize();
 
-            if computed.as_slice() == expected_digest {
+            if computed[..] == *expected_digest {
                 Ok(())
             } else {
                 Err(DigestError::Mismatch)
