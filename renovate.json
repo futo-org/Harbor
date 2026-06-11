@@ -9,6 +9,12 @@
       "matchUpdateTypes": ["patch", "minor"]
     },
     {
+      "description": "The jest major must stay on the version jest-expo supports (its internals are pinned to Jest 29).",
+      "matchPackageNames": ["jest", "@types/jest"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "Expo major versions track the Expo SDK; SDK upgrades go through `npx expo install --fix`, not Renovate.",
       "extends": ["monorepo:expo"],
       "matchUpdateTypes": ["major"],
