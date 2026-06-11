@@ -435,7 +435,10 @@ mod tests {
         };
         EventBundle {
             signed_event: Some(SignedEvent {
-                signature: vec![],
+                // Non-empty 64-byte signature (bytes 0x00..0x3f) so collapse_id
+                // derivation — hex of the first 28 bytes, with no type prefix —
+                // is exercised and assertable by the happy-path tests.
+                signature: (0u8..64).collect(),
                 event_bytes: event.encode_to_vec(),
             }),
             serialized_content: Some(SerializedContent {
@@ -535,7 +538,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"REPLY_"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -705,7 +708,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"FOLLOW_"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
                     .to_string(),
             ))
             .with_status(200)
