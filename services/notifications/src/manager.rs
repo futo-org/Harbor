@@ -74,9 +74,9 @@ impl NotificationManager {
     }
 
     #[cfg(test)]
-    pub fn with_custom_push_url(access_token: Option<String>, push_url: String) -> Self {
+    pub fn with_custom_push_url(expo_access_token: Option<String>, push_url: String) -> Self {
         NotificationManager {
-            expo_client: ExpoClient::with_custom_push_url(access_token, push_url),
+            expo_client: ExpoClient::with_custom_push_url(expo_access_token, push_url),
         }
     }
 
@@ -142,15 +142,22 @@ impl NotificationManager {
             .map(|b| format!("{b:02x}"))
             .collect();
 
-        // The followee target, when this is a follow of someone other than the
-        // author (self-follows don't notify).
-        let followed_profile: Option<String> = match &content.content_body {
-            Some(ContentBody::Follow(follow)) => {
-                Some(follow.identity.clone()).filter(|target| target != &author)
-            }
-            _ => None,
-        };
+        self.process_reply_notifications(ctx, &collapse_id, &author, &content)
+            .await?;
 
+        self.process_follower_notifications(ctx, &collapse_id, &author, &content)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn process_reply_notifications(
+        &self,
+        ctx: &Context,
+        collapse_id: &String,
+        author: &String,
+        content: &Content,
+    ) -> Result<(), NotificationError> {
         // The reply target, when this is a post replying to someone other
         // than the author (self-replies don't notify).
         let reply_recipient: Option<String> = match &content.content_body {
@@ -160,7 +167,7 @@ impl NotificationManager {
                 .and_then(|reply| reply.parent.as_ref())
                 .map(|parent| parent.identity.clone())
                 .filter(|target| target != &author),
-            _ => None,
+            _ => return Ok(()),
         };
 
         if let Some(recipient) = reply_recipient {
@@ -179,6 +186,25 @@ impl NotificationManager {
                 "Replied to your post".to_string(),
             )
             .await?;
+        };
+
+        Ok(())
+    }
+
+    async fn process_follower_notifications(
+        &self,
+        ctx: &Context,
+        collapse_id: &String,
+        author: &String,
+        content: &Content,
+    ) -> Result<(), NotificationError> {
+        // The followee target, when this is a follow of someone other than the
+        // author (self-follows don't notify).
+        let followed_profile: Option<String> = match &content.content_body {
+            Some(ContentBody::Follow(follow)) => {
+                Some(follow.identity.clone()).filter(|target| target != &author)
+            }
+            _ => None,
         };
 
         if let Some(followee) = followed_profile {
