@@ -1,6 +1,57 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "groupName": "Expo Packages",
+      "description": "Group in-SDK (patch/minor) Expo package updates into one MR.",
+      "extends": ["monorepo:expo"],
+      "matchUpdateTypes": ["patch", "minor"]
+    },
+    {
+      "description": "Expo major versions track the Expo SDK; SDK upgrades go through `npx expo install --fix`, not Renovate.",
+      "extends": ["monorepo:expo"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "React versions are dictated by the Expo SDK.",
+      "extends": ["monorepo:react"],
+      "enabled": false
+    },
+    {
+      "description": "React Native versions are dictated by the Expo SDK.",
+      "matchPackageNames": ["react-native", "@react-native/*"],
+      "enabled": false
+    },
+    {
+      "groupName": "React Native Ecosystem Modules",
+      "description": "Group community react-native module updates into one MR.",
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchPackageNames": [
+        "/^@react-native-/",
+        "/^react-native-/",
+        "@shopify/flash-list",
+        "!react-native"
+      ]
+    },
+    {
+      "description": "Third-party packages whose versions the Expo SDK pins (see expo/bundledNativeModules.json); only allow patch updates.",
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false,
+      "matchPackageNames": [
+        "@types/react",
+        "@react-native-async-storage/async-storage",
+        "@shopify/flash-list",
+        "react-native-web",
+        "react-native-gesture-handler",
+        "react-native-get-random-values",
+        "react-native-reanimated",
+        "react-native-safe-area-context",
+        "react-native-screens",
+        "react-native-webview",
+        "react-native-worklets"
+      ]
+    }
   ]
 }
