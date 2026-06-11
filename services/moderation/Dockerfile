@@ -1,4 +1,4 @@
-FROM rust:1.95-slim AS build
+FROM rust:1.96-slim AS build
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN services/common/build-deps.sh
 RUN cargo build --release --package moderation-service
 RUN cargo build --release --package moderation-migration
 
-FROM rust:1.95-slim
+FROM rust:1.96-slim
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
