@@ -76,7 +76,7 @@ release-publish-npm:
       artifacts: true
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends git
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> ~/.npmrc
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc

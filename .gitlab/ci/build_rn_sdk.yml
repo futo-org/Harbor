@@ -99,7 +99,7 @@ rn-ios-tart-prune:
   extends: .rn-sdk-workflow
   image: node:24-slim
   before_script:
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
   needs:

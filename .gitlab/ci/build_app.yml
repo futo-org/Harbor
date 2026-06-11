@@ -22,7 +22,7 @@
   extends: .app-workflow
   image: node:24-slim
   before_script:
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
@@ -78,7 +78,7 @@ app-web-image:
   stage: build
   image: node:24-slim
   before_script:
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
     - apt-get update && apt-get install -y --no-install-recommends git
