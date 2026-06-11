@@ -5,19 +5,21 @@
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - pnpm-lock.yaml
         - packages/js-*/**/*
         - .gitlab/ci/build_js_sdks.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
+        - pnpm-lock.yaml
         - packages/js-*/**/*
         - .gitlab/ci/build_js_sdks.yml
 
 .js-sdks-base:
   extends: .js-sdk-workflow
   before_script:
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 

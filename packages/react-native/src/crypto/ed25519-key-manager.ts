@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import { ed25519 } from '@noble/curves/ed25519';
+import { ed25519 } from '@noble/curves/ed25519.js';
 import {
   InvalidKeyLengthError,
   InvalidSignatureError,
@@ -16,7 +16,7 @@ export interface Ed25519KeyPair {
 
 export class ED25519KeyManager {
   randomPrivateKey(): Uint8Array {
-    return ed25519.utils.randomPrivateKey();
+    return ed25519.utils.randomSecretKey();
   }
 
   getPublicKeyFromPrivate(privateKey: Uint8Array): Uint8Array {

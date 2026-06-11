@@ -1,4 +1,4 @@
-import { ed25519 } from '@noble/curves/ed25519';
+import { ed25519 } from '@noble/curves/ed25519.js';
 import {
   InvalidKeyLengthError,
   InvalidSignatureError,
@@ -23,7 +23,7 @@ export class ED25519KeyManager {
    * @returns A new random 32-byte Ed25519 private key
    */
   randomPrivateKey(): Uint8Array {
-    return ed25519.utils.randomPrivateKey();
+    return ed25519.utils.randomSecretKey();
   }
 
   /**

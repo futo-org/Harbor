@@ -22,7 +22,7 @@
 .docs-base:
   extends: .docs-workflow
   before_script:
-    - npm install -g pnpm@10.19.0
+    - npm install -g pnpm@10
     # Only resolve/install the docs package and its dependencies.
     - pnpm install --filter=polycentric-docs...
 

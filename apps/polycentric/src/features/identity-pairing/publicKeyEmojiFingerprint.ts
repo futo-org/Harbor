@@ -1,4 +1,4 @@
-import { sha256 } from '@noble/hashes/sha2';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { emojis as emojiPickerData } from 'rn-emoji-picker/dist/data';
 
 const FINGERPRINT_EMOJI_CATEGORIES = new Set([
