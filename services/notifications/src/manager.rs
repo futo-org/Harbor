@@ -257,18 +257,7 @@ impl NotificationManager {
                 key_type: row.public_key_type as i32,
             };
 
-            if self.verify_token(&row.service, &row.token).await.is_err() {
-                // Remove any invalid tokens
-                token_repository::Mutation::unregister(
-                    &ctx.db,
-                    &public_key,
-                    &row.service,
-                    &row.token,
-                )
-                .await?;
-            } else {
-                expo_tokens.push((public_key, row.token));
-            }
+            expo_tokens.push((public_key, row.token));
         }
 
         if expo_tokens.is_empty() {
