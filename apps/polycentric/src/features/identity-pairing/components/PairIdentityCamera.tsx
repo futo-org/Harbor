@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
   Camera,
+  isScannedCode,
   useCameraDevice,
   useCameraPermission,
-  useCodeScanner,
+  useObjectOutput,
 } from 'react-native-vision-camera';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 
@@ -26,11 +27,11 @@ export function PairIdentityCamera({
   const { theme } = useTheme();
   const scannedRef = useRef(false);
 
-  const codeScanner = useCodeScanner({
-    codeTypes: ['qr'],
-    onCodeScanned: (codes) => {
+  const objectOutput = useObjectOutput({
+    types: ['qr'],
+    onObjectsScanned: (objects) => {
       if (scannedRef.current) return;
-      const qrCode = codes[0];
+      const qrCode = objects.find(isScannedCode);
       if (qrCode?.value) {
         scannedRef.current = true;
         const { code, server } = parseInput(qrCode.value);
@@ -73,7 +74,7 @@ export function PairIdentityCamera({
             <Camera
               device={device}
               isActive={true}
-              codeScanner={codeScanner}
+              outputs={[objectOutput]}
               style={{ flex: 1 }}
             />
           </View>

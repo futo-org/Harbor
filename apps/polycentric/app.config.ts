@@ -66,13 +66,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-font',
     'expo-web-browser',
     [
-      'react-native-vision-camera',
-      {
-        cameraPermissionText: '$(PRODUCT_NAME) needs access to your Camera.',
-        enableLocation: false,
-      },
-    ],
-    [
       'expo-dev-client',
       {
         launchMode: 'most-recent',

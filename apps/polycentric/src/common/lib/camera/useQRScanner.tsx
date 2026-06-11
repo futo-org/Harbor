@@ -1,5 +1,10 @@
 import { useState, useCallback } from 'react';
-import { useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
+import {
+  isScannedCode,
+  useCameraDevice,
+  useObjectOutput,
+} from 'react-native-vision-camera';
+import type { ScannedObject } from 'react-native-vision-camera';
 import { useCameraPermission } from './useCameraPermission';
 
 export type QRScanResult =
@@ -15,12 +20,11 @@ export interface UseQRScannerOptions {
 export interface UseQRScannerReturn {
   device: ReturnType<typeof useCameraDevice>;
   hasPermission: boolean | null;
-  isLoading: boolean;
   requestPermission: () => Promise<boolean>;
   isActive: boolean;
   setIsActive: (active: boolean) => void;
   scannedData: QRScanResult | null;
-  codeScanner: ReturnType<typeof useCodeScanner>;
+  objectOutput: ReturnType<typeof useObjectOutput>;
 }
 
 export function useQRScanner(
@@ -28,7 +32,7 @@ export function useQRScanner(
 ): UseQRScannerReturn {
   const { parseJSON = false, onScan, onError } = options;
 
-  const { hasPermission, isLoading, requestPermission } = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [isActive, setIsActive] = useState(false);
   const [scannedData, setScannedData] = useState<QRScanResult | null>(null);
@@ -49,12 +53,10 @@ export function useQRScanner(
     [parseJSON],
   );
 
-  const handleCodeScanned = useCallback(
-    (codes: any[]) => {
-      if (codes.length === 0) return;
-
-      const code = codes[0];
-      const rawValue = code.value;
+  const handleObjectsScanned = useCallback(
+    (objects: ScannedObject[]) => {
+      const code = objects.find(isScannedCode);
+      const rawValue = code?.value;
 
       if (!rawValue) return;
 
@@ -80,19 +82,18 @@ export function useQRScanner(
     [parseQRData, onScan, onError],
   );
 
-  const codeScanner = useCodeScanner({
-    codeTypes: ['qr'],
-    onCodeScanned: handleCodeScanned,
+  const objectOutput = useObjectOutput({
+    types: ['qr'],
+    onObjectsScanned: handleObjectsScanned,
   });
 
   return {
     device,
     hasPermission,
-    isLoading,
     requestPermission,
     isActive,
     setIsActive,
     scannedData,
-    codeScanner,
+    objectOutput,
   };
 }
