@@ -66,7 +66,7 @@ impl PolycentricClient {
     }
 
     /// The authorized signing keys for `identity`, taken from the
-    /// `signing_keys` of its latest IDENTITY event. Queries each server in
+    /// `signing_keys` and `rotation_keys` of its latest IDENTITY event. Queries each server in
     /// turn and returns the first non-empty set; an empty vec when none is
     /// found (the caller then has no keys to resolve tokens for).
     pub async fn authorized_keys(&self, identity: &str) -> Vec<PublicKey> {
@@ -79,8 +79,9 @@ impl PolycentricClient {
             {
                 Ok(Some(content)) => {
                     if let Some(ContentBody::Identity(id)) = content.content_body {
-                        if !id.signing_keys.is_empty() {
-                            return id.signing_keys;
+                        let all_keys = [id.signing_keys, id.rotation_keys].concat();
+                        if !all_keys.is_empty() {
+                            return all_keys;
                         }
                     }
                 }
