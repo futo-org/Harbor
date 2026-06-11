@@ -25,24 +25,22 @@ import { Linking, View } from 'react-native';
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
 
-  const onPress = () => {
+  const toggleTheme = () => {
     const next = theme.name === 'dark' ? 'light' : 'dark';
     setActiveThemeName(next);
   };
 
   return (
-    <ListItem onPress={onPress}>
+    <ListItem onPress={toggleTheme}>
       <View
         style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
       >
         <Icon
-          name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+          name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
           size={22}
           color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
         />
-        <Text variant="body" style={theme.atoms.text}>
-          Theme
-        </Text>
+        <Text variant="body">Toggle Theme</Text>
       </View>
     </ListItem>
   );
