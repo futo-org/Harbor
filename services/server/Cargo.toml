@@ -15,7 +15,6 @@ migration = { path = "./migration" }
 axum = { version = "0.8.8", features = ["http2"] }
 chrono.workspace = true
 ed25519-dalek.workspace = true
-expo_push_notification_client = "2.0.1"
 log.workspace = true
 polycentric-common.workspace = true
 prost.workspace = true
@@ -32,4 +31,7 @@ tonic-web = "0.14"
 tower-http = { version = "0.6", features = ["cors"] }
 tower-layer = "0.3"
 http = "1"
+
+[dev-dependencies]
+mockito = "1"
 

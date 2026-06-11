@@ -1,6 +1,7 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::service::content::content_repository as ContentRepository;
@@ -27,11 +28,16 @@ use ::entity::{
 use common_kafka::FutureRecord;
 use polycentric_common::models::collections;
 use prost::Message;
+use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::EntityTrait;
 use sea_orm::TransactionTrait;
 use tonic::Status;
+
+static SERVER_NAME: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("POLYCENTRIC_SERVER_NAME").unwrap_or_default()
+});
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
@@ -87,7 +93,7 @@ async fn process_event(
         Status::invalid_argument("event key missing signed_by")
     })?;
 
-    util::signing::verify_signature(
+    polycentric_common::signing::verify_signature(
         &signed_by.key,
         &signed_event.signature,
         &signed_event.event_bytes,
@@ -214,7 +220,11 @@ async fn process_event(
                     .send(
                         FutureRecord::to("events")
                             .key(&event_key_bytes)
-                            .payload(&event_bundle_bytes),
+                            .payload(&event_bundle_bytes)
+                            .headers(OwnedHeaders::new().insert(Header {
+                                key: "SOURCE_SERVER",
+                                value: Some(SERVER_NAME.as_str()),
+                            })),
                         Duration::from_secs(0),
                     )
                     .await

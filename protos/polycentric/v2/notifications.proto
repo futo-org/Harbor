@@ -10,10 +10,20 @@ message RegisterPushNotificationRequest {
 
 message RegisterPushNotificationResponse {}
 
+message UnregisterPushNotificationRequest {
+  string service = 1;
+  string token = 2;
+}
+
+message UnregisterPushNotificationResponse {}
+
 /**
  * Push notifications provided by polycentric servers
  */
 service NotificationService {
   // This endpoint expects a signed RegisterPushNotificationRequest message
   rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
+
+  // This endpoint expects a signed UnregisterPushNotificationRequest message
+  rpc UnregisterPushNotifications(SignedMessage) returns (UnregisterPushNotificationResponse);
 }

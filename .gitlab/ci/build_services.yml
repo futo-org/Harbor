@@ -15,6 +15,11 @@
     - cargo clippy --package ${SERVICE_NAME} -- -D warnings
   allow_failure: true
 
+.service-test:
+  extends: .service-rust-base
+  script:
+    - cargo test --package ${SERVICE_NAME}
+
 .service-build:
   extends: .service-rust-base
   stage: build
@@ -151,4 +156,62 @@ moderation-image:
     - .service-image
   rules:
     - !reference [.moderation-workflow, rules]
+    - !reference [.release-workflow, rules]
+
+########################################################################
+# notifications
+########################################################################
+
+.notifications-workflow:
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^notifications-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - Cargo.toml
+        - Cargo.lock
+        - services/notifications/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/notifications/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    RUNNER_SCRIPT_TIMEOUT: 179m
+    SERVICE_NAME: notifications-service
+    SERVICE_DIR: notifications
+
+notifications-format-check:
+  extends:
+    - .notifications-workflow
+    - .service-format-check
+
+notifications-clippy:
+  extends:
+    - .notifications-workflow
+    - .service-clippy
+
+notifications-test:
+  extends:
+    - .notifications-workflow
+    - .service-test
+
+notifications-build:
+  extends:
+    - .notifications-workflow
+    - .service-build
+
+notifications-image:
+  extends:
+    - .notifications-workflow
+    - .service-image
+  rules:
+    - !reference [.notifications-workflow, rules]
     - !reference [.release-workflow, rules]

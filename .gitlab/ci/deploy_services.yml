@@ -119,3 +119,46 @@ moderation-deploy-manifest-production:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-east/moderation.yml:polycentriceast
   needs:
     - moderation-deploy-image-production
+
+########################################################################
+# notifications
+########################################################################
+
+.notifications-deploy-workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - services/notifications/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    SERVICE_NAME: notifications-service
+
+########################################
+# Tag the image with environment label #
+########################################
+
+notifications-deploy-image-production:
+  extends:
+    - .notifications-deploy-workflow
+    - .service-deploy-image
+  when: manual
+  variables:
+    ENVIRONMENT: production
+  needs:
+    - job: notifications-image
+      artifacts: false
+
+###############################
+# Rolling restart on Manifest #
+###############################
+
+notifications-deploy-manifest-production:
+  extends:
+    - .notifications-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/notifications.yml:polycentriceast
+  needs:
+    - notifications-deploy-image-production

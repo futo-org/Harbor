@@ -1,0 +1,35 @@
+[package]
+edition      = "2024"
+name         = "notifications-service"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+[dependencies]
+# Workspace
+common-dotenv = { path = "../common/dotenv" }
+common-kafka = { path = "../common/kafka" }
+common-object-store = { path = "../common/object-store" }
+entity = { path = "../server/entity" }
+notifications-entity = { path = "./entity" }
+notifications-migration = { path = "./migration" }
+polycentric-common.workspace = true
+polycentric-core = { path = "../../packages/rs-core" }
+
+# 3rd Party
+ed25519-dalek.workspace = true
+env_logger = "0.11"
+log.workspace = true
+prost.workspace = true
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock"] }
+sha2.workspace = true
+time.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tonic = { workspace = true, features = ["router", "transport"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+
+
+[dev-dependencies]
+mockito = "1"
+tokio-stream = { version = "0.1", features = ["net"] }
