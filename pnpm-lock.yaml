@@ -24,12 +24,8 @@ overrides:
   uuid@<11.1.1: '>=11.1.1'
 
 patchedDependencies:
-  '@expo/cli':
-    hash: ea4184e1326d9513b8d8a8cfef27ec609848ff92f41989ef50b71c4c3b2d0b9f
-    path: patches/@expo__cli.patch
-  uniffi-bindgen-react-native@0.31.0-3:
-    hash: 03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197
-    path: patches/uniffi-bindgen-react-native@0.31.0-3.patch
+  '@expo/cli': ea4184e1326d9513b8d8a8cfef27ec609848ff92f41989ef50b71c4c3b2d0b9f
+  uniffi-bindgen-react-native@0.31.0-3: 03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197
 
 importers:
 
