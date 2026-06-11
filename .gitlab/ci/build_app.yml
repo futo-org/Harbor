@@ -5,6 +5,7 @@
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - pnpm-lock.yaml
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
@@ -12,6 +13,7 @@
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
+        - pnpm-lock.yaml
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
@@ -95,6 +97,7 @@ app-web-image:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
+        - pnpm-lock.yaml
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
@@ -102,6 +105,7 @@ app-web-image:
       allow_failure: true
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
+        - pnpm-lock.yaml
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
