@@ -843,7 +843,7 @@ export class PolycentricClient {
 
   /**
    * Sync events for the active identity between this client and
-   * the remote servers.
+   * the remote servers. Throws only if the pull fails.
    * @returns The number of new events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
