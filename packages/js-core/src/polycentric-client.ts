@@ -732,11 +732,7 @@ export class PolycentricClient {
       blobMap.set(toDigestKey(blob.digest), blob);
     }
 
-    blobs = [];
-
-    for (const blob of blobMap.values()) {
-      blobs.push(blob);
-    }
+    blobs = [...blobMap.values()];
 
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);

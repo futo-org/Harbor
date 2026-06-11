@@ -81,11 +81,17 @@ impl Query {
             // (2) have a larger sequence number than the head
             query = query.filter(
                 Condition::any()
-                    .add(EventModel::Column::Collection.ne(head.collection))
+                    .add(
+                        EventModel::Column::Collection
+                            .ne(head.collection as i16),
+                    )
                     .add(EventModel::Column::Identity.ne(head.identity))
-                    .add(EventModel::Column::PublicKeyType.ne(signer.key_type))
+                    .add(
+                        EventModel::Column::PublicKeyType
+                            .ne(signer.key_type as i16),
+                    )
                     .add(EventModel::Column::PublicKey.ne(signer.key))
-                    .add(EventModel::Column::Sequence.gt(head.sequence)),
+                    .add(EventModel::Column::Sequence.gt(head.sequence as i64)),
             )
         }
 

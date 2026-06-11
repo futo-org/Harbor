@@ -83,7 +83,8 @@ impl EventStore {
             .take_while(move |(k, _)| k.identity == identity_owned && k.collection == collection)
     }
 
-    /// All events for (identity, collection, signer), ordered by sequence.
+    /// All events for (identity, collection, signer), ordered by sequence, where `sequence` > `sequence_gt`.
+    /// Pass in `0` for `sequence_gt` to get the full event stream.
     ///
     /// Returns a `DoubleEndedIterator` so callers can use `.next_back()` to
     /// get the stream's head (max sequence) in O(log n).

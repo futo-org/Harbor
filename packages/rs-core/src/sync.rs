@@ -28,7 +28,7 @@ pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>
     Ok(response.into_inner().heads)
 }
 
-/// Gather all the event bundles and blobs to send to a server based on the
+/// Gather all the event bundles to send to a server based on the
 /// sequence heads it provided to us.
 /// This includes events past the provided heads and blobs referenced by those events.
 /// Gaps or other unsent blobs are not handled.
