@@ -19,7 +19,7 @@ polycentric-core = { path = "../../packages/rs-core" }
 ed25519-dalek.workspace = true
 prost.workspace = true
 sha2.workspace = true
-getrandom = "0.2"
+getrandom.workspace = true
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 hex = "0.4"

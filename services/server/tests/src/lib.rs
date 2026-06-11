@@ -36,8 +36,9 @@ pub async fn connect_event_sync()
 }
 
 pub fn generate_signing_key() -> SigningKey {
-    let mut rng = rand::thread_rng();
-    SigningKey::generate(&mut rng)
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes).expect("OS random number generator failed");
+    SigningKey::from_bytes(&bytes)
 }
 
 pub fn public_key_of(key: &SigningKey) -> PublicKey {
