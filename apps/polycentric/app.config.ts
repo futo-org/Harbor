@@ -83,7 +83,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         android: {
           buildArchs: ['arm64-v8a'],
-          usesCleartextTraffic: true,
         },
       },
     ],
