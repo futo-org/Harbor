@@ -225,11 +225,9 @@ async fn moderate(
 }
 
 /// Run every image through PhotoDNA and report whether any is a CSAM match.
-///
-/// Fails open when PhotoDNA is unconfigured (`ctx.photodna == None`) or there
-/// are no images — both yield `Ok(false)`. A provider error returns `Err(())`
-/// so the caller can retry rather than fall through to Azure: a configured
-/// CSAM gate must never be silently skipped.
+/// When PhotoDNA is unconfigured, it will simply accept all images and
+/// never report a CSAM match. Any other error will return an error result,
+/// to ensure that callers retry rather than silently skipping CSAM.
 async fn photodna_filter(ctx: &Context, images: &[(Vec<u8>, String)]) -> Result<bool, ()> {
     let Some(photodna) = &ctx.photodna else {
         return Ok(false);
