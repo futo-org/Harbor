@@ -28,7 +28,7 @@
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.0.0",
     "typescript": "catalog:"
   }
 }

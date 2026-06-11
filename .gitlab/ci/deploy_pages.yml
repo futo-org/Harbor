@@ -1,6 +1,6 @@
 fusmi-2026-web:
   stage: deploy
-  image: node:20
+  image: node:24
   rules:
     - if: $CI_COMMIT_TAG == "fusmi-2026-web"
   before_script:
