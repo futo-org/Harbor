@@ -1,4 +1,4 @@
-import { sha256 } from '@noble/hashes/sha2';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 import { COLLECTION } from '../constants';
 import type { PolycentricClient } from '../polycentric-client';

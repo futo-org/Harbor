@@ -1,4 +1,4 @@
-import { sha256 } from '@noble/hashes/sha2';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 
