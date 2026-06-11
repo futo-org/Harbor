@@ -151,6 +151,7 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Dispatches a notification to a user whose post has been replied to (if applicable)
     async fn process_reply_notifications(
         &self,
         ctx: &Context,
@@ -191,6 +192,7 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Dispatches a notification to a user who is now being followed (if applicable)
     async fn process_follower_notifications(
         &self,
         ctx: &Context,
@@ -284,6 +286,7 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Removes any tokens from a given batch which are no longer registered from the database
     async fn clean_unregistered_push_tokens(
         &self,
         ctx: &Context,
@@ -332,6 +335,8 @@ impl NotificationManager {
         Ok(())
     }
 
+    /// Verifies that a token/service pair is valid and supported
+    /// Expo is the only currently supported notification service
     async fn verify_token(&self, service: &str, _token: &str) -> Result<(), NotificationError> {
         if service == PushService::Expo.as_ref() {
             Ok(())
