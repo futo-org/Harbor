@@ -1,6 +1,3 @@
-Upstream template emits `opt-level = "3"`, which cargo rejects (strings may
-only be "s" or "z").
-
 diff --git a/crates/ubrn_cli/templates/wasm/Cargo.toml.txt b/crates/ubrn_cli/templates/wasm/Cargo.toml.txt
 index 8fc84ad775cdc115d5d9d9f71cc377de844fa951..5f9cdb3fea916f89ad2c5e54b1e58c10e3217b08 100644
 --- a/crates/ubrn_cli/templates/wasm/Cargo.toml.txt
@@ -14,3 +11,17 @@ index 8fc84ad775cdc115d5d9d9f71cc377de844fa951..5f9cdb3fea916f89ad2c5e54b1e58c10
  
  [workspace]
  {%- endif %}
+diff --git a/package.json b/package.json
+index 16a7d72113e3564eb5fea6e3c9148aa1cd85202c..84cc7629186f09c6b8a224c876ae0c7b3187f991 100644
+--- a/package.json
++++ b/package.json
+@@ -20,7 +20,8 @@
+       "types": "./typescript/dist/esm/index.d.ts",
+       "import": "./typescript/dist/esm/index.js",
+       "require": "./typescript/dist/cjs/index.js"
+-    }
++    },
++    "./package.json": "./package.json"
+   },
+   "bin": {
+     "ubrn": "./bin/cli.cjs",
