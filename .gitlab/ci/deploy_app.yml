@@ -18,21 +18,21 @@
     entrypoint: ['']
   script:
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
-    - crane tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA $ENVIRONMENT
+    - crane tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA $CI_ENVIRONMENT_NAME
   needs:
     - job: app-web-image
       artifacts: false
 
 app-deploy-image-staging:
   extends: .app-deploy-image
-  variables:
-    ENVIRONMENT: staging
+  environment:
+    name: staging
 
 app-deploy-image-production:
   extends: .app-deploy-image
   when: manual
-  variables:
-    ENVIRONMENT: production
+  environment:
+    name: production
 
 ###############################
 # Rolling restart on Manifest #
