@@ -25,6 +25,7 @@ use polycentric_core::query::channel;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use std::{
+    env::var,
     process::Stdio,
     sync::{
         Arc,
@@ -38,9 +39,22 @@ use tokio::{
     time::sleep,
 };
 
-const SERVER: &str = "http://localhost:3000";
 const CREATED_AT: u64 = 1736942400000; // 2025-01-15T12:00:00Z, ms
 const HOUR: u64 = 3_600_000;
+
+fn server_endpoint() -> String {
+    var("POLYCENTRIC_TEST_SERVER").unwrap_or("http://localhost:3000".to_string())
+}
+fn database_endpoint() -> String {
+    var("POLYCENTRIC_TEST_DATABASE_URL")
+        .unwrap_or("postgres://postgres:testing@localhost:5432".to_string())
+}
+fn os_endpoint() -> String {
+    var("POLYCENTRIC_TEST_OS_ENDPOINT").unwrap_or("http://localhost:9000".to_string())
+}
+fn kafka_endpoint() -> String {
+    var("POLYCENTRIC_TEST_KAFKA_BROKERS").unwrap_or("localhost:9092".to_string())
+}
 
 #[tokio::test]
 #[ignore = "spawns the moderation service against a live stack"]
@@ -144,13 +158,13 @@ fn spawn_moderation_service(
     mod_identity: &str,
 ) -> tokio::process::Child {
     tokio::process::Command::new(env!("CARGO_BIN_EXE_moderation-service"))
-        .env("DATABASE_URL", "postgres://postgres:testing@localhost:5432")
+        .env("DATABASE_URL", database_endpoint())
         .env("CONTENT_BLOB_OS_BUCKET", "polycentric-blobs")
-        .env("CONTENT_BLOB_OS_ENDPOINT", "http://localhost:9000")
+        .env("CONTENT_BLOB_OS_ENDPOINT", os_endpoint())
         .env("CONTENT_BLOB_OS_FORCE_PATH_STYLE", "true")
         .env("CONTENT_BLOB_OS_ACCESS_KEY", "rustfsadmin")
         .env("CONTENT_BLOB_OS_SECRET_KEY", "rustfsadmin")
-        .env("POLYCENTRIC_KAFKA_BROKERS", "localhost:9092")
+        .env("POLYCENTRIC_KAFKA_BROKERS", kafka_endpoint())
         .env(
             "POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT",
             "http://127.0.0.1:9",
@@ -160,7 +174,7 @@ fn spawn_moderation_service(
         .env("POLYCENTRIC_PHOTODNA_ENDPOINT", photodna_url)
         .env("POLYCENTRIC_MODERATION_SIGNING_KEY", mod_seed_hex)
         .env("POLYCENTRIC_MODERATION_IDENTITY", mod_identity)
-        .env("POLYCENTRIC_MODERATION_SERVERS", SERVER)
+        .env("POLYCENTRIC_MODERATION_SERVERS", server_endpoint())
         .env("RUST_LOG", "info")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -249,7 +263,7 @@ async fn read_http_request(socket: &mut TcpStream) -> std::io::Result<()> {
 // ───────────────────────────── server clients ───────────────────────────────
 
 async fn put_events(bundles: Vec<EventBundle>) -> Result<(), String> {
-    let mut client = EventSyncServiceClient::new(channel(SERVER)?);
+    let mut client = EventSyncServiceClient::new(channel(&server_endpoint())?);
     let errors = client
         .put_events(PutEventsRequest {
             event_bundles: bundles,
@@ -266,7 +280,7 @@ async fn put_events(bundles: Vec<EventBundle>) -> Result<(), String> {
 }
 
 async fn upload_blob(blob: Blob, body: Vec<u8>) -> Result<(), String> {
-    ContentServiceClient::new(channel(SERVER)?)
+    ContentServiceClient::new(channel(&server_endpoint())?)
         .upload_blob(UploadBlobRequest {
             blob: Some(blob),
             body,
@@ -278,7 +292,7 @@ async fn upload_blob(blob: Blob, body: Vec<u8>) -> Result<(), String> {
 
 /// Whether a CHILD_SAFETY report targeting `target` exists under `identity`.
 async fn report_exists(identity: &str, target: &EventKey) -> Result<bool, String> {
-    let bundles = EventSyncServiceClient::new(channel(SERVER)?)
+    let bundles = EventSyncServiceClient::new(channel(&server_endpoint())?)
         .list_events(ListEventsRequest {
             filters: Some(ListEventsFilters {
                 collection: Some(collections::REPORTS),
@@ -320,7 +334,7 @@ async fn test_object_store() -> ObjectStore {
     ObjectStore::new(ObjectStoreConfig {
         bucket: "polycentric-blobs".to_string(),
         region: "us-east-1".to_string(),
-        endpoint: Some("http://localhost:9000".to_string()),
+        endpoint: Some(os_endpoint()),
         force_path_style: true,
         access_key: Some("rustfsadmin".to_string()),
         secret_key: Some("rustfsadmin".to_string()),
