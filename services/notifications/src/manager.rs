@@ -159,35 +159,37 @@ impl NotificationManager {
         author: &str,
         content: &Content,
     ) -> Result<(), NotificationError> {
+        let Some(ContentBody::Post(post)) = &content.content_body else {
+            return Ok(());
+        };
+
         // The reply target, when this is a post replying to someone other
         // than the author (self-replies don't notify).
-        let reply_recipient: Option<String> = match &content.content_body {
-            Some(ContentBody::Post(post)) => post
-                .reply
-                .as_ref()
-                .and_then(|reply| reply.parent.as_ref())
-                .map(|parent| parent.identity.clone())
-                .filter(|target| target != author),
-            _ => return Ok(()),
+        let Some(reply_recipient) = post
+            .reply
+            .as_ref()
+            .and_then(|reply| reply.parent.as_ref())
+            .map(|parent| parent.identity.clone())
+            .filter(|target| target != author)
+        else {
+            return Ok(());
         };
 
-        if let Some(recipient) = reply_recipient {
-            // Title is the author's display name, fetched over gRPC.
-            let title = ctx
-                .polycentric
-                .display_name(author)
-                .await
-                .unwrap_or_else(|| "Anonymous".to_string());
+        // Title is the author's display name, fetched over gRPC.
+        let title = ctx
+            .polycentric
+            .display_name(author)
+            .await
+            .unwrap_or_else(|| "Anonymous".to_string());
 
-            self.send_to_identity(
-                ctx,
-                &recipient,
-                collapse_id.to_owned(),
-                title,
-                "Replied to your post".to_string(),
-            )
-            .await?;
-        };
+        self.send_to_identity(
+            ctx,
+            &reply_recipient,
+            collapse_id.to_owned(),
+            title,
+            post.text.clone(),
+        )
+        .await?;
 
         Ok(())
     }
@@ -200,32 +202,29 @@ impl NotificationManager {
         author: &str,
         content: &Content,
     ) -> Result<(), NotificationError> {
-        // The followee target, when this is a follow of someone other than the
-        // author (self-follows don't notify).
-        let followed_profile: Option<String> = match &content.content_body {
-            Some(ContentBody::Follow(follow)) => {
-                Some(follow.identity.clone()).filter(|target| target != author)
-            }
-            _ => None,
+        let Some(ContentBody::Follow(follow)) = &content.content_body else {
+            return Ok(());
         };
 
-        if let Some(followee) = followed_profile {
-            // Title is the author's display name, fetched over gRPC.
-            let title = ctx
-                .polycentric
-                .display_name(author)
-                .await
-                .unwrap_or_else(|| "Anonymous".to_string());
+        if follow.identity == author {
+            return Ok(());
+        }
 
-            self.send_to_identity(
-                ctx,
-                &followee,
-                collapse_id.to_owned(),
-                title,
-                "Followed you".to_string(),
-            )
-            .await?;
-        };
+        // Title is the author's display name, fetched over gRPC.
+        let title = ctx
+            .polycentric
+            .display_name(author)
+            .await
+            .unwrap_or_else(|| "Anonymous".to_string());
+
+        self.send_to_identity(
+            ctx,
+            &follow.identity,
+            collapse_id.to_owned(),
+            title,
+            "Followed you".to_string(),
+        )
+        .await?;
 
         Ok(())
     }
