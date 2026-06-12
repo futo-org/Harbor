@@ -114,7 +114,7 @@ app-web-image:
 app-android-apk:
   extends: .app-eas-build
   script:
-    - npx eas-cli build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+    - npx eas-cli build --local --platform android --profile preview --non-interactive --wait --json > eas-build.json
     # eas only builds remotely; download the resulting APK so it is a CI artifact.
     - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json polycentric.apk
   artifacts:
