@@ -478,13 +478,14 @@ mod tests {
         }
     }
 
-    /// A post by `author` replying to a post by `parent_identity`.
-    fn reply_post_bundle(author: &str, parent_identity: &str) -> EventBundle {
+    /// A post by `author` replying to a post by `parent_identity`, carrying
+    /// the given `text` body.
+    fn reply_post_bundle_with_text(author: &str, parent_identity: &str, text: &str) -> EventBundle {
         authored_bundle(
             author,
             Content {
                 content_body: Some(ContentBody::Post(Post {
-                    text: "hi".to_string(),
+                    text: text.to_string(),
                     reply: Some(PostReply {
                         root: None,
                         parent: Some(EventKey {
@@ -499,6 +500,11 @@ mod tests {
                 })),
             },
         )
+    }
+
+    /// A post by `author` replying to a post by `parent_identity` (body "hi").
+    fn reply_post_bundle(author: &str, parent_identity: &str) -> EventBundle {
+        reply_post_bundle_with_text(author, parent_identity, "hi")
     }
 
     /// A plain (non-reply) post by `author`.
@@ -568,7 +574,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -595,6 +601,50 @@ mod tests {
 
         let ctx = make_ctx(db, expo_push_url, polycentric);
         let bundle = reply_post_bundle("id-author", "id-recipient");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+    }
+
+    /// A reply with an empty text body falls back to the generic
+    /// "Replied to your post" body rather than "Replied: ".
+    #[tokio::test]
+    async fn process_event_reply_with_no_text_uses_generic_body() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_header("content-type", "application/json")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                    .to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let pk = test_public_key(1);
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![pk.clone()],
+        })
+        .await;
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            .into_connection();
+
+        let ctx = make_ctx(db, expo_push_url, polycentric);
+        let bundle = reply_post_bundle_with_text("id-author", "id-recipient", "");
 
         ctx.notification_manager
             .process_event(&ctx, &bundle)
