@@ -30,6 +30,13 @@ js-sdks-format-check:
     - pnpm format
   allow_failure: true
 
+js-core-tests-check:
+  extends: .js-sdks-base
+  stage: check
+  allow_failure: true
+  script:
+    - pnpm --filter js-core test:run
+
 js-sdks-build:
   extends: .js-sdks-base
   stage: build
