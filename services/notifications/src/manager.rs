@@ -355,8 +355,8 @@ mod tests {
     use polycentric_common::models::collections;
     use polycentric_common::models::protos_v2::{
         Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
-        ListEventsResponse, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
-        PutEventsResponse, SerializedContent, SignedEvent,
+        ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post, PostReply, ProfileUpdate,
+        PublicKey, PutEventsRequest, PutEventsResponse, SerializedContent, SignedEvent,
         content::ContentBody,
         event_sync_service_server::{EventSyncService, EventSyncServiceServer},
     };
@@ -423,7 +423,17 @@ mod tests {
             &self,
             _request: Request<PutEventsRequest>,
         ) -> Result<Response<PutEventsResponse>, Status> {
-            Ok(Response::new(PutEventsResponse { errors: vec![] }))
+            Ok(Response::new(PutEventsResponse {
+                errors: vec![],
+                requested_blobs: vec![],
+            }))
+        }
+
+        async fn list_heads(
+            &self,
+            _request: Request<ListHeadsRequest>,
+        ) -> Result<Response<ListHeadsResponse>, Status> {
+            Err(Status::unimplemented("not needed for these tests"))
         }
     }
 

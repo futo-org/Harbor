@@ -1,9 +1,8 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
-
-use std::sync::LazyLock;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::service::content::content_repository as ContentRepository;
