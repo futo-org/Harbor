@@ -3,11 +3,10 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
+import { useImageViewer } from '@/src/common/components/ImageViewer';
 import { v2 } from '@polycentric/react-native';
-import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Image, Pressable, View } from 'react-native';
-import { useImageViewerStore } from './ImageViewer';
 
 /** Target pixel size we want for displayed attachments. */
 const POST_IMAGE_TARGET = 512;
@@ -47,12 +46,9 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
     [client, capped],
   );
 
-  const showViewer = useImageViewerStore((s) => s.show);
+  const showViewer = useImageViewer();
   const openViewer = useCallback(
-    (i: number) => {
-      showViewer(capped, i);
-      router.push('/image-viewer');
-    },
+    (i: number) => showViewer(capped, i),
     [showViewer, capped],
   );
 

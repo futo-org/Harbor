@@ -1,1 +1,1 @@
-export { default } from '@/src/features/post/ImageViewer/ImageViewerScreen';
+export { default } from '@/src/common/components/ImageViewer/ImageViewerScreen';
