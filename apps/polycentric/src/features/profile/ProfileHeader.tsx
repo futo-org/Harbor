@@ -1,4 +1,5 @@
 import { BackButton } from '@/src/common/components/composites';
+import { useImageViewer } from '@/src/common/components/ImageViewer';
 import {
   Button,
   ProfileAvatar,
@@ -6,6 +7,7 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import {
+  identiconUrl,
   shortenIdentityId,
   truncateName,
   useUsername,
@@ -41,6 +43,15 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
+
+  const openImageViewer = useImageViewer();
+  const avatar = profile.avatar;
+  const handleAvatarPress = useCallback(() => {
+    if (!identityKey) return;
+    openImageViewer([
+      avatar ?? { uri: identiconUrl(identityKey, 512), aspectRatio: 1 },
+    ]);
+  }, [avatar, identityKey, openImageViewer]);
 
   if (profile.isLoading && !profile.name) return undefined;
 
@@ -82,7 +93,11 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
       <View style={[Atoms.mx_lg, { marginTop: -56 }]}>
         {identityKey ? (
-          <ProfileAvatar identityKey={identityKey} size="xl" />
+          <ProfileAvatar
+            identityKey={identityKey}
+            size="xl"
+            onPress={handleAvatarPress}
+          />
         ) : null}
       </View>
 

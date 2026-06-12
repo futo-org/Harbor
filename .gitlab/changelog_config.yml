@@ -1,6 +1,3 @@
-# Match the SemVer tags this project releases on (v2.0.0, v2.0.0-alpha.1, ...).
-tag_regex: '^v\d+\.\d+\.\d+'
-
 categories:
   feature: 🚀 Features
   fix: 🐛 Bug fixes
