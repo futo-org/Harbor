@@ -1,0 +1,9 @@
+syntax = "proto3";
+package polycentric.v2;
+
+message PageInfo {
+  string end_cursor = 1;
+  bool has_next_page = 2;
+  bool has_previous_page = 3;
+  string start_cursor = 4;
+}
