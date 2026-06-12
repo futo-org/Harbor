@@ -1,12 +1,10 @@
 import { Text } from '@/src/common/components/primitives';
-import {
-  pickImageVariant,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
-import { v2 } from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { resolveImageSources } from './resolveImageSources';
+import { ImageViewerInput } from './useImageViewerStore';
 import {
   Image,
   Platform,
@@ -39,16 +37,9 @@ const MAX_SCALE = 5;
 /** Releasing a pinch below this scale dismisses the viewer. */
 const PINCH_CLOSE_SCALE = 0.8;
 
-/** Pull the largest available variant for the viewer. */
-const VIEWER_TARGET = 2048;
-
-type ViewerSource = {
-  uri: string;
-  aspectRatio: number;
-};
-
 /**
- * Full-screen image viewer for post attachments. Tap the backdrop or
+ * Full-screen viewer for any `ImageSet`s (post attachments, avatars,
+ * ...). Tap the backdrop or
  * the close button to dismiss; pinch in or swipe up/down to close;
  * left/right arrows (and keyboard arrows on web) navigate between images
  * when there's more than one.
@@ -58,7 +49,7 @@ export function ImageViewer({
   initialIndex,
   onClose,
 }: {
-  images: v2.ImageSet[];
+  images: ImageViewerInput[];
   initialIndex: number;
   onClose: () => void;
 }) {
@@ -66,20 +57,8 @@ export function ImageViewer({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const sources = useMemo<ViewerSource[]>(
-    () =>
-      images
-        .map((imageSet) => {
-          const variant = pickImageVariant(imageSet, VIEWER_TARGET);
-          const digest = variant?.blob?.digest;
-          if (!digest) return null;
-          const uri = client.blobUrl(digest);
-          if (!uri) return null;
-          const w = variant.width || 1;
-          const h = variant.height || 1;
-          return { uri, aspectRatio: w / h };
-        })
-        .filter((s): s is ViewerSource => s != null),
+  const sources = useMemo(
+    () => resolveImageSources(images, (digest) => client.blobUrl(digest)),
     [client, images],
   );
 
@@ -286,7 +265,7 @@ export function ImageViewer({
               onPress={(e) => e.stopPropagation?.()}
               style={[
                 Atoms.w_full,
-                { aspectRatio: current.aspectRatio, maxHeight: '100%' },
+                { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
               ]}
             >
               <Image
