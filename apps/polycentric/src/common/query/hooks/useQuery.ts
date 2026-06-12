@@ -69,6 +69,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       status: QueryStatus.Loading,
       error: null,
     });
+
     // Request from rs-core
     const observable = args.client.core.fetchQuery(
       args.queryKey,
@@ -81,7 +82,10 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         updateQueryRef(key, { data: result.data, status: result.status });
       },
       error(message) {
-        updateQueryRef(key, { error: message, status: QueryStatus.Error });
+        console.warn(`useQuery[${key}] error: ${message}`);
+        if (get().queries.get(key)?.status === QueryStatus.Error) {
+          updateQueryRef(key, { error: message });
+        }
       },
       complete() {
         // Terminal status already arrived via the final `next`.
