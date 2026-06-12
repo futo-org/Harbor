@@ -182,14 +182,13 @@ impl NotificationManager {
             .await
             .unwrap_or_else(|| "Anonymous".to_string());
 
-        self.send_to_identity(
-            ctx,
-            &reply_recipient,
-            collapse_id.to_owned(),
-            title,
-            post.text.clone(),
-        )
-        .await?;
+        let body = match post.text.is_empty() {
+            true => "Replied to your post".to_string(),
+            false => "Replied: ".to_string() + &post.text.clone(),
+        };
+
+        self.send_to_identity(ctx, &reply_recipient, collapse_id.to_owned(), title, body)
+            .await?;
 
         Ok(())
     }
