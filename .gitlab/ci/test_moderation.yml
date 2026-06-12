@@ -7,7 +7,7 @@
 ########################################################################
 
 .moderation-integration-workflow:
-  image: $RUST_IMAGE
+  image: $RUST_DIND_IMAGE
   stage: test
   rules:
     - if: $CI_COMMIT_TAG =~ /^moderation-/
@@ -30,11 +30,6 @@
         - .gitlab/ci/scripts/integration-moderation.sh
   variables:
     RUNNER_SCRIPT_TIMEOUT: 30m
-  before_script:
-    # The $RUST_IMAGE does not include a Docker CLI; install one so that
-    # docker compose and docker compose exec work during the test.
-    - apt-get update && apt-get install -y --no-install-recommends docker.io docker-compose-v2
-    - rm -rf /var/lib/apt/lists/*
 
 moderation-integration-csam:
   extends: .moderation-integration-workflow
