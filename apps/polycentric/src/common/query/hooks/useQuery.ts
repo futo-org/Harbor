@@ -84,6 +84,8 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       error(message) {
         if (get().queries.get(key)?.status === QueryStatus.Error) {
           updateQueryRef(key, { error: message });
+        } else {
+          console.warn(`useQuery[${key}] server error: ${message}`);
         }
       },
       complete() {
