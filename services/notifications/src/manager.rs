@@ -6,10 +6,10 @@ use sea_orm::{DbConn, DbErr, EnumIter};
 use super::repository as token_repository;
 use crate::{
     context::Context,
-    expo_client::{ExpoClient, ExpoPushRequest, ExpoPushResponse},
+    expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse},
 };
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, PublicKey, content::ContentBody,
+    Content, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
 };
 use prost::Message;
 
@@ -60,6 +60,14 @@ impl From<DbErr> for NotificationError {
     fn from(e: DbErr) -> Self {
         NotificationError::Database(e)
     }
+}
+
+/// The relevant internal data of a single push notification
+struct NotificationData {
+    collapse_id: String,
+    title: String,
+    body: String,
+    data: Option<ExpoPushData>,
 }
 
 pub struct NotificationManager {
@@ -124,7 +132,7 @@ impl NotificationManager {
         let Ok(decoded) = Event::decode(signed.event_bytes.as_slice()) else {
             return Ok(());
         };
-        let Some(author) = decoded.key.as_ref().map(|key| key.identity.clone()) else {
+        let Some(key) = decoded.key.as_ref() else {
             return Ok(());
         };
 
@@ -142,10 +150,10 @@ impl NotificationManager {
             .map(|b| format!("{b:02x}"))
             .collect();
 
-        self.process_reply_notifications(ctx, &collapse_id, &author, &content)
+        self.process_reply_notifications(ctx, &collapse_id, key, &content)
             .await?;
 
-        self.process_follower_notifications(ctx, &collapse_id, &author, &content)
+        self.process_follower_notifications(ctx, &collapse_id, key, &content)
             .await?;
 
         Ok(())
@@ -156,12 +164,14 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         collapse_id: &str,
-        author: &str,
+        key: &EventKey,
         content: &Content,
     ) -> Result<(), NotificationError> {
         let Some(ContentBody::Post(post)) = &content.content_body else {
             return Ok(());
         };
+
+        let author = &key.identity;
 
         // The reply target, when this is a post replying to someone other
         // than the author (self-replies don't notify).
@@ -187,8 +197,22 @@ impl NotificationManager {
             false => "Replied: ".to_string() + &post.text.clone(),
         };
 
-        self.send_to_identity(ctx, &reply_recipient, collapse_id.to_owned(), title, body)
-            .await?;
+        // Deep link to this reply post, when it carries a signing key.
+        let data = key.signed_by.as_ref().map(|signed_by| ExpoPushData {
+            url: Self::post_url(author, &signed_by.key, key.sequence),
+        });
+
+        self.send_to_identity(
+            ctx,
+            &reply_recipient,
+            NotificationData {
+                collapse_id: collapse_id.to_owned(),
+                title,
+                body,
+                data,
+            },
+        )
+        .await?;
 
         Ok(())
     }
@@ -198,14 +222,16 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         collapse_id: &str,
-        author: &str,
+        key: &EventKey,
         content: &Content,
     ) -> Result<(), NotificationError> {
         let Some(ContentBody::Follow(follow)) = &content.content_body else {
             return Ok(());
         };
 
-        if follow.identity == author {
+        let author = &key.identity;
+
+        if &follow.identity == author {
             return Ok(());
         }
 
@@ -216,16 +242,50 @@ impl NotificationManager {
             .await
             .unwrap_or_else(|| "Anonymous".to_string());
 
+        // Deep link to the follower's profile.
+        let data = Some(ExpoPushData {
+            url: Self::profile_url(author),
+        });
+
         self.send_to_identity(
             ctx,
             &follow.identity,
-            collapse_id.to_owned(),
-            title,
-            "Followed you".to_string(),
+            NotificationData {
+                collapse_id: collapse_id.to_owned(),
+                title,
+                body: "Followed you".to_string(),
+                data,
+            },
         )
         .await?;
 
         Ok(())
+    }
+
+    /// Build an app-openable deep link to a specific post, mirroring the
+    /// client's `Routes.tabs.post(identity, keyFingerprint, sequence)`:
+    /// `polycentric:///{identity}/post/{keyFingerprint}/{sequence}`.
+    ///
+    /// `signing_key` is the post's signing key (`EventKey.signed_by`); its
+    /// first 8 bytes as lowercase hex form the fingerprint, matching the
+    /// client's `getKeyFingerprint`.
+    fn post_url(identity: &str, signing_key: &[u8], sequence: u64) -> String {
+        let key_fingerprint: String = signing_key
+            .iter()
+            .take(8)
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        // `polycentric` is the app's registered URL scheme (app.config.ts).
+        // The empty authority (`:///`) makes expo-router parse the whole tail
+        // as the route path.
+        format!("polycentric:///{identity}/post/{key_fingerprint}/{sequence}")
+    }
+
+    /// Build an app-openable deep link to an identity's profile, mirroring the
+    /// client's `Routes.tabs.profile(identity)`: `polycentric:///{identity}`.
+    fn profile_url(identity: &str) -> String {
+        format!("polycentric:///{identity}")
     }
 
     /// Sends a push notification to every authorized key of an identity that
@@ -235,9 +295,7 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         identity: &str,
-        collapse_id: String,
-        title: String,
-        body: String,
+        notification: NotificationData,
     ) -> Result<(), NotificationError> {
         let authorized_keys = ctx.polycentric.authorized_keys(identity).await;
 
@@ -268,9 +326,10 @@ impl NotificationManager {
 
         let expo_push_request = ExpoPushRequest {
             to: expo_tokens_raw,
-            title,
-            body,
-            collapse_id: Some(collapse_id),
+            title: notification.title,
+            body: notification.body,
+            collapse_id: Some(notification.collapse_id),
+            data: notification.data,
         };
 
         let response = self
