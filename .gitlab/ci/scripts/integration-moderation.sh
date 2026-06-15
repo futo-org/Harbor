@@ -18,7 +18,16 @@ NETWORK="${COMPOSE_PROJECT_NAME}_default"
 SERVER_HOST=localhost
 SERVER_PORT=3000
 
-self_container() { cat /etc/hostname; }
+# The job's own container ID. GitLab sets the build container's hostname to a
+# short predefined name (runner-…-concurrent-N) that the daemon does not know
+# it by, so `docker network connect <hostname>` fails. Recover the real 64-hex
+# ID from the bind mounts Docker sets up for /etc/hostname, /etc/hosts, etc.
+# (sourced from /var/lib/docker/containers/<id>/…), falling back to hostname.
+self_container() {
+  local id
+  id=$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)
+  echo "${id:-$(cat /etc/hostname)}"
+}
 
 cleanup() {
   if [[ "${CI:-}" == "true" ]]; then
