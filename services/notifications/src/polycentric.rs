@@ -7,11 +7,20 @@
 use log::warn;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    Content, Event, ListEventsFilters, ListEventsRequest, PublicKey, content::ContentBody,
-    event_sync_service_client::EventSyncServiceClient,
+    Content, ContentDigest, Event, GetServerInfoRequest, ImageSet, ListEventsFilters,
+    ListEventsRequest, PublicKey, content::ContentBody,
+    event_sync_service_client::EventSyncServiceClient, server_service_client::ServerServiceClient,
 };
 use polycentric_core::query::channel;
 use prost::Message;
+
+/// Summary of an identity's latest PROFILE event.
+pub struct ProfileSummary {
+    /// Non-empty display name, if set.
+    pub name: Option<String>,
+    /// Blob digest of the avatar's smallest image variant, if set.
+    pub avatar: Option<ContentDigest>,
+}
 
 /// Client for querying polycentric servers for identity/profile data.
 pub struct PolycentricClient {
@@ -41,11 +50,11 @@ impl PolycentricClient {
         Ok(Self::new(servers))
     }
 
-    /// Best-effort display name for `identity`, decoded from its latest
-    /// PROFILE event's `ProfileUpdate.name`. Queries each configured
-    /// server in turn and returns the first name found; `None` when no
-    /// server has a profile name (callers fall back to a generic label).
-    pub async fn display_name(&self, identity: &str) -> Option<String> {
+    /// Summarize `identity`'s latest PROFILE event into a display name and
+    /// avatar reference (both live in the same `ProfileUpdate`, so one query
+    /// yields both). Queries each configured server in turn and returns the
+    /// first profile found; an empty summary when none is found.
+    pub async fn profile(&self, identity: &str) -> ProfileSummary {
         for server in &self.servers {
             match self
                 .latest_content(server, collections::PROFILE, identity)
@@ -53,16 +62,48 @@ impl PolycentricClient {
             {
                 Ok(Some(content)) => {
                     if let Some(ContentBody::ProfileUpdate(profile)) = content.content_body {
-                        if let Some(name) = profile.name.filter(|s| !s.is_empty()) {
-                            return Some(name);
+                        let name = profile.name.filter(|s| !s.is_empty());
+                        let avatar = profile.avatar.and_then(|set| smallest_avatar_digest(&set));
+                        if name.is_some() || avatar.is_some() {
+                            return ProfileSummary { name, avatar };
                         }
                     }
                 }
                 Ok(None) => continue,
-                Err(e) => warn!("display_name [{server}]: {e}"),
+                Err(e) => warn!("profile [{server}]: {e}"),
+            }
+        }
+        ProfileSummary {
+            name: None,
+            avatar: None,
+        }
+    }
+
+    /// The CDN base URL reported by `ServerService.GetInfo`, used to build
+    /// public blob/image URLs (e.g. avatars). Queries each server in turn and
+    /// returns the first non-empty `cdn_url`; `None` when none reports one.
+    pub async fn cdn_url(&self) -> Option<String> {
+        for server in &self.servers {
+            match self.fetch_cdn_url(server).await {
+                Ok(Some(url)) => return Some(url),
+                Ok(None) => continue,
+                Err(e) => warn!("cdn_url [{server}]: {e}"),
             }
         }
         None
+    }
+
+    async fn fetch_cdn_url(&self, server: &str) -> Result<Option<String>, String> {
+        let mut client = ServerServiceClient::new(channel(server)?);
+        let response = client
+            .get_info(GetServerInfoRequest {})
+            .await
+            .map_err(|e| format!("get_info: {e}"))?
+            .into_inner();
+        Ok(response
+            .server_info
+            .map(|info| info.cdn_url)
+            .filter(|url| !url.is_empty()))
     }
 
     /// The authorized signing keys for `identity`, taken from the
@@ -140,4 +181,14 @@ impl PolycentricClient {
 
         Ok(best.map(|(_, content)| content))
     }
+}
+
+/// The blob digest of the smallest image variant in an `ImageSet` — the
+/// cheapest one to fetch for a notification thumbnail.
+fn smallest_avatar_digest(set: &ImageSet) -> Option<ContentDigest> {
+    set.images
+        .iter()
+        .min_by_key(|img| i64::from(img.width) * i64::from(img.height))
+        .and_then(|img| img.blob.as_ref())
+        .and_then(|blob| blob.digest.clone())
 }

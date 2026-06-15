@@ -6,10 +6,10 @@ use sea_orm::{DbConn, DbErr, EnumIter};
 use super::repository as token_repository;
 use crate::{
     context::Context,
-    expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse},
+    expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
 };
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
+    Content, ContentDigest, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
 };
 use prost::Message;
 
@@ -68,6 +68,7 @@ struct NotificationData {
     title: String,
     body: String,
     data: Option<ExpoPushData>,
+    rich_content: Option<ExpoRichContent>,
 }
 
 pub struct NotificationManager {
@@ -185,12 +186,9 @@ impl NotificationManager {
             return Ok(());
         };
 
-        // Title is the author's display name, fetched over gRPC.
-        let title = ctx
-            .polycentric
-            .display_name(author)
-            .await
-            .unwrap_or_else(|| "Anonymous".to_string());
+        // Author's profile (display name + avatar), fetched over gRPC.
+        let profile = ctx.polycentric.profile(author).await;
+        let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
 
         let body = match post.text.is_empty() {
             true => "Replied to your post".to_string(),
@@ -202,6 +200,8 @@ impl NotificationManager {
             url: Self::post_url(author, &signed_by.key, key.sequence),
         });
 
+        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
+
         self.send_to_identity(
             ctx,
             &reply_recipient,
@@ -210,6 +210,7 @@ impl NotificationManager {
                 title,
                 body,
                 data,
+                rich_content,
             },
         )
         .await?;
@@ -235,17 +236,16 @@ impl NotificationManager {
             return Ok(());
         }
 
-        // Title is the author's display name, fetched over gRPC.
-        let title = ctx
-            .polycentric
-            .display_name(author)
-            .await
-            .unwrap_or_else(|| "Anonymous".to_string());
+        // Follower's profile (display name + avatar), fetched over gRPC.
+        let profile = ctx.polycentric.profile(author).await;
+        let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
 
         // Deep link to the follower's profile.
         let data = Some(ExpoPushData {
             url: Self::profile_url(author),
         });
+
+        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
 
         self.send_to_identity(
             ctx,
@@ -255,6 +255,7 @@ impl NotificationManager {
                 title,
                 body: "Followed you".to_string(),
                 data,
+                rich_content,
             },
         )
         .await?;
@@ -286,6 +287,27 @@ impl NotificationManager {
     /// client's `Routes.tabs.profile(identity)`: `polycentric:///{identity}`.
     fn profile_url(identity: &str) -> String {
         format!("polycentric:///{identity}")
+    }
+
+    /// Build the rich-content image (avatar) for a notification, when the
+    /// profile has an avatar and a CDN URL can be resolved. Returns `None`
+    /// otherwise — a missing avatar is never an error.
+    async fn avatar_rich_content(
+        ctx: &Context,
+        avatar: Option<ContentDigest>,
+    ) -> Option<ExpoRichContent> {
+        let digest = avatar?;
+        let cdn_url = ctx.polycentric.cdn_url().await?;
+        Some(ExpoRichContent {
+            image: Self::avatar_url(&cdn_url, &digest),
+        })
+    }
+
+    /// Build a public blob URL for `digest`, mirroring the server's
+    /// `/blob/{type}_{hex(value)}` route (and the client's `blobUrl`).
+    fn avatar_url(cdn_url: &str, digest: &ContentDigest) -> String {
+        let hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
+        format!("{cdn_url}/blob/{}_{}", digest.r#type, hex)
     }
 
     /// Sends a push notification to every authorized key of an identity that
@@ -330,6 +352,7 @@ impl NotificationManager {
             body: notification.body,
             collapse_id: Some(notification.collapse_id),
             data: notification.data,
+            rich_content: notification.rich_content,
         };
 
         let response = self
