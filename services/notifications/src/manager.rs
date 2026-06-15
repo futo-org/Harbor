@@ -512,7 +512,12 @@ mod tests {
             key: Some(EventKey {
                 collection: collections::FEED,
                 identity: author.to_string(),
-                signed_by: None,
+                // Known signing key so post_url's fingerprint (first 8 bytes
+                // as hex → "abababababababab") is deterministic/assertable.
+                signed_by: Some(PublicKey {
+                    key_type: KeyType::Ed25519 as i32,
+                    key: vec![0xAB; 32],
+                }),
                 sequence: 1,
             }),
             identity_sequence: 0,
@@ -633,7 +638,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author/post/abababababababab/1"}}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -847,7 +852,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author"}}]"#
                     .to_string(),
             ))
             .with_status(200)
