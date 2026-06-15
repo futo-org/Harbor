@@ -6,14 +6,14 @@ import { FlashList } from '@shopify/flash-list';
 import { View } from 'react-native';
 import { List } from '@/src/common/components/List';
 
-export default function ActivityScreen() {
+export default function NotificationsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
         <List
           data={[]}
           renderItem={() => <></>}
-          HeaderComponent={<Topbar title="Activity" />}
+          HeaderComponent={<Topbar title="Notifications" />}
           ListEmptyComponent={() => (
             <View
               style={[
@@ -23,7 +23,7 @@ export default function ActivityScreen() {
                 Atoms.p_lg,
               ]}
             >
-              <Text color="neutral_500">You have no activity</Text>
+              <Text color="neutral_500">You have no notifications</Text>
             </View>
           )}
         />

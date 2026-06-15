@@ -21,7 +21,7 @@ message GetNotificationsRequest {
 }
 
 message GetNotificationsResponse {
-  repeated Notification notification = 1;
+  repeated Notification notifications = 1;
   // Events that help the client resolve with fewer network calls
   repeated EventHint event_hints = 2;
   PageInfo page_info = 3;
@@ -45,6 +45,8 @@ message UnregisterPushNotificationResponse {}
  * Push notifications provided by polycentric servers
  */
 service NotificationService {
+  // Returns notifications for a user
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
   // This endpoint expects a signed RegisterPushNotificationRequest message
   rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
 
