@@ -10,6 +10,9 @@ common-kafka = { path = "../common/kafka" }
 common-object-store = { path = "../common/object-store" }
 entity = { path = "./entity" }
 migration = { path = "./migration" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64.workspace = true
 
 # 3rd Party
 axum = { version = "0.8.8", features = ["http2"] }

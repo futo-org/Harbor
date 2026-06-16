@@ -37,6 +37,7 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
+        page_info: None,
     })
 }
 
@@ -48,6 +49,8 @@ async fn fetch(
         &ctx.db,
         vec![params.identity.clone()],
         params.limit,
+        None,
+        None,
     )
     .await
     .map_err(map_db_err)

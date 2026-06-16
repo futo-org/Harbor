@@ -5,16 +5,18 @@ use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
-use crate::service::feeds::util::{map_db_err, page_limit};
+use crate::service::feeds::util::{PageCursor, map_db_err, page_limit};
 use crate::service::proto::{GetExploreFeedRequest, GetFeedResponse};
 use tonic::Status;
 
 pub struct Params {
     pub limit: u64,
+    pub backward_token: Option<FeedCursor>,
+    pub forward_token: Option<FeedCursor>,
 }
 
 pub async fn handle(
@@ -23,6 +25,18 @@ pub async fn handle(
 ) -> Result<GetFeedResponse, Status> {
     let params = Params {
         limit: page_limit(&req.page_params),
+        backward_token: req
+            .page_params
+            .as_ref()
+            .and_then(|params| params.backward_token.as_ref())
+            .map(|token| FeedCursor::decode(token))
+            .transpose()?,
+        forward_token: req
+            .page_params
+            .as_ref()
+            .and_then(|params| params.forward_token.as_ref())
+            .map(|token| FeedCursor::decode(token))
+            .transpose()?,
     };
 
     let result =
@@ -32,6 +46,7 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
+        page_info: None,
     })
 }
 
@@ -39,9 +54,15 @@ async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    FeedsRepository::list_feed_events(&ctx.db, params.limit)
-        .await
-        .map_err(map_db_err)
+    FeedsRepository::list_feed_events(
+        &ctx.db,
+        params.limit,
+        // Tokens need to be swapped because the feed is sorted reverse chronologically
+        params.forward_token.clone(),
+        params.backward_token.clone(),
+    )
+    .await
+    .map_err(map_db_err)
 }
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)

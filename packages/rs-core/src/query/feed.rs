@@ -4,8 +4,8 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, FeedPageParams, GetExploreFeedRequest, GetFeedResponse,
-    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
+    EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
+    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams,
     feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
@@ -20,24 +20,24 @@ use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 pub struct GetIdentityFeedArgs {
     pub identity: String,
     pub limit: Option<i32>,
-    pub before_token: Option<String>,
-    pub after_token: Option<String>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetFollowingFeedArgs {
     pub follower_identity: String,
     pub limit: Option<i32>,
-    pub before_token: Option<String>,
-    pub after_token: Option<String>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetExploreFeedArgs {
     pub identity: Option<String>,
     pub limit: Option<i32>,
-    pub before_token: Option<String>,
-    pub after_token: Option<String>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -119,24 +119,24 @@ pub fn get_identity_feed(
     let GetIdentityFeedArgs {
         identity,
         limit,
-        before_token,
-        after_token,
+        backward_token,
+        forward_token,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
-        let before_token = before_token.clone();
-        let after_token = after_token.clone();
+        let backward_token = backward_token.clone();
+        let forward_token = forward_token.clone();
         let client = client.clone();
         async move {
             let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_identity_feed(GetIdentityFeedRequest {
                     identity,
-                    page_params: Some(FeedPageParams {
+                    page_params: Some(PageParams {
                         limit,
-                        before_token,
-                        after_token,
+                        backward_token,
+                        forward_token,
                     }),
                 })
                 .await
@@ -162,24 +162,24 @@ pub fn get_following_feed(
     let GetFollowingFeedArgs {
         follower_identity,
         limit,
-        before_token,
-        after_token,
+        backward_token,
+        forward_token,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
-        let before_token: Option<String> = before_token.clone();
-        let after_token = after_token.clone();
+        let backward_token: Option<String> = backward_token.clone();
+        let forward_token = forward_token.clone();
         let client = client.clone();
         async move {
             let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_following_feed(GetFollowingFeedRequest {
                     follower_identity,
-                    page_params: Some(FeedPageParams {
+                    page_params: Some(PageParams {
                         limit,
-                        before_token,
-                        after_token,
+                        backward_token,
+                        forward_token,
                     }),
                 })
                 .await
@@ -205,24 +205,24 @@ pub fn get_explore_feed(
     let GetExploreFeedArgs {
         identity,
         limit,
-        before_token,
-        after_token,
+        backward_token,
+        forward_token,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
-        let before_token = before_token.clone();
-        let after_token = after_token.clone();
+        let backward_token = backward_token.clone();
+        let forward_token = forward_token.clone();
         let client = client.clone();
         async move {
             let response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_explore_feed(GetExploreFeedRequest {
                     identity,
-                    page_params: Some(FeedPageParams {
+                    page_params: Some(PageParams {
                         limit,
-                        before_token,
-                        after_token,
+                        backward_token,
+                        forward_token,
                     }),
                 })
                 .await
@@ -354,6 +354,7 @@ mod tests {
                     event_bundle: Some(b),
                 })
                 .collect(),
+            page_info: None,
         }
         .encode_to_vec()
     }
