@@ -28,7 +28,7 @@ tonic = { workspace = true, features = ["router", "transport"] }
 tonic-prost.workspace = true
 tonic-reflection = "0.14"
 tonic-web = "0.14"
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.7", features = ["cors"] }
 tower-layer = "0.3"
 http = "1"
 
