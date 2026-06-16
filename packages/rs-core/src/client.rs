@@ -70,9 +70,9 @@ impl PolycentricClient {
         content_bytes: Vec<u8>,
     ) -> Result<(), CoreError> {
         if !content_matches_digest(digest, &content_bytes) {
+            let digest_hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
             return Err(CoreError::InvalidEvent(format!(
-                "content does not match digest {}",
-                hex_short(&digest.value)
+                "content does not match digest {digest_hex}"
             )));
         }
         self.content_store.insert(digest, content_bytes);
