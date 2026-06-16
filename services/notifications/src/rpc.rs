@@ -144,6 +144,7 @@ mod tests {
                 service: PushService::Expo.as_ref().to_string(),
                 token: "ExponentPushToken[abc123]".to_string(),
                 created_at: synced_at,
+                updated_at: synced_at,
             }]])
             .into_connection();
 

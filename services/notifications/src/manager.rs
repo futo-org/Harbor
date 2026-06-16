@@ -639,6 +639,7 @@ mod tests {
             service: PushService::Expo.as_ref().to_string(),
             token: token.to_string(),
             created_at: time::PrimitiveDateTime::MIN,
+            updated_at: time::PrimitiveDateTime::MIN,
         }
     }
 
