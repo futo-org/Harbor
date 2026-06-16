@@ -6,10 +6,10 @@ use sea_orm::{DbConn, DbErr, EnumIter};
 use super::repository as token_repository;
 use crate::{
     context::Context,
-    expo_client::{ExpoClient, ExpoPushRequest, ExpoPushResponse},
+    expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
 };
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, PublicKey, content::ContentBody,
+    Content, ContentDigest, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
 };
 use prost::Message;
 
@@ -60,6 +60,15 @@ impl From<DbErr> for NotificationError {
     fn from(e: DbErr) -> Self {
         NotificationError::Database(e)
     }
+}
+
+/// The relevant internal data of a single push notification
+struct NotificationData {
+    collapse_id: String,
+    title: String,
+    body: String,
+    data: Option<ExpoPushData>,
+    rich_content: Option<ExpoRichContent>,
 }
 
 pub struct NotificationManager {
@@ -124,7 +133,7 @@ impl NotificationManager {
         let Ok(decoded) = Event::decode(signed.event_bytes.as_slice()) else {
             return Ok(());
         };
-        let Some(author) = decoded.key.as_ref().map(|key| key.identity.clone()) else {
+        let Some(key) = decoded.key.as_ref() else {
             return Ok(());
         };
 
@@ -142,10 +151,10 @@ impl NotificationManager {
             .map(|b| format!("{b:02x}"))
             .collect();
 
-        self.process_reply_notifications(ctx, &collapse_id, &author, &content)
+        self.process_reply_notifications(ctx, &collapse_id, key, &content)
             .await?;
 
-        self.process_follower_notifications(ctx, &collapse_id, &author, &content)
+        self.process_follower_notifications(ctx, &collapse_id, key, &content)
             .await?;
 
         Ok(())
@@ -156,38 +165,55 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         collapse_id: &str,
-        author: &str,
+        key: &EventKey,
         content: &Content,
     ) -> Result<(), NotificationError> {
+        let Some(ContentBody::Post(post)) = &content.content_body else {
+            return Ok(());
+        };
+
+        let author = &key.identity;
+
         // The reply target, when this is a post replying to someone other
         // than the author (self-replies don't notify).
-        let reply_recipient: Option<String> = match &content.content_body {
-            Some(ContentBody::Post(post)) => post
-                .reply
-                .as_ref()
-                .and_then(|reply| reply.parent.as_ref())
-                .map(|parent| parent.identity.clone())
-                .filter(|target| target != author),
-            _ => return Ok(()),
+        let Some(reply_recipient) = post
+            .reply
+            .as_ref()
+            .and_then(|reply| reply.parent.as_ref())
+            .map(|parent| parent.identity.clone())
+            .filter(|target| target != author)
+        else {
+            return Ok(());
         };
 
-        if let Some(recipient) = reply_recipient {
-            // Title is the author's display name, fetched over gRPC.
-            let title = ctx
-                .polycentric
-                .display_name(author)
-                .await
-                .unwrap_or_else(|| "Anonymous".to_string());
+        // Author's profile (display name + avatar), fetched over gRPC.
+        let profile = ctx.polycentric.profile(author).await;
+        let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
 
-            self.send_to_identity(
-                ctx,
-                &recipient,
-                collapse_id.to_owned(),
+        let body = match post.text.is_empty() {
+            true => "Replied to your post".to_string(),
+            false => "Replied: ".to_string() + &post.text.clone(),
+        };
+
+        // Deep link to this reply post, when it carries a signing key.
+        let data = key.signed_by.as_ref().map(|signed_by| ExpoPushData {
+            url: Self::post_url(author, &signed_by.key, key.sequence),
+        });
+
+        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
+
+        self.send_to_identity(
+            ctx,
+            &reply_recipient,
+            NotificationData {
+                collapse_id: collapse_id.to_owned(),
                 title,
-                "Replied to your post".to_string(),
-            )
-            .await?;
-        };
+                body,
+                data,
+                rich_content,
+            },
+        )
+        .await?;
 
         Ok(())
     }
@@ -197,37 +223,91 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         collapse_id: &str,
-        author: &str,
+        key: &EventKey,
         content: &Content,
     ) -> Result<(), NotificationError> {
-        // The followee target, when this is a follow of someone other than the
-        // author (self-follows don't notify).
-        let followed_profile: Option<String> = match &content.content_body {
-            Some(ContentBody::Follow(follow)) => {
-                Some(follow.identity.clone()).filter(|target| target != author)
-            }
-            _ => None,
+        let Some(ContentBody::Follow(follow)) = &content.content_body else {
+            return Ok(());
         };
 
-        if let Some(followee) = followed_profile {
-            // Title is the author's display name, fetched over gRPC.
-            let title = ctx
-                .polycentric
-                .display_name(author)
-                .await
-                .unwrap_or_else(|| "Anonymous".to_string());
+        let author = &key.identity;
 
-            self.send_to_identity(
-                ctx,
-                &followee,
-                collapse_id.to_owned(),
+        if &follow.identity == author {
+            return Ok(());
+        }
+
+        // Follower's profile (display name + avatar), fetched over gRPC.
+        let profile = ctx.polycentric.profile(author).await;
+        let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
+
+        // Deep link to the follower's profile.
+        let data = Some(ExpoPushData {
+            url: Self::profile_url(author),
+        });
+
+        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
+
+        self.send_to_identity(
+            ctx,
+            &follow.identity,
+            NotificationData {
+                collapse_id: collapse_id.to_owned(),
                 title,
-                "Followed you".to_string(),
-            )
-            .await?;
-        };
+                body: "Followed you".to_string(),
+                data,
+                rich_content,
+            },
+        )
+        .await?;
 
         Ok(())
+    }
+
+    /// Build an app-openable deep link to a specific post, mirroring the
+    /// client's `Routes.tabs.post(identity, keyFingerprint, sequence)`:
+    /// `polycentric:///{identity}/post/{keyFingerprint}/{sequence}`.
+    ///
+    /// `signing_key` is the post's signing key (`EventKey.signed_by`); its
+    /// first 8 bytes as lowercase hex form the fingerprint, matching the
+    /// client's `getKeyFingerprint`.
+    fn post_url(identity: &str, signing_key: &[u8], sequence: u64) -> String {
+        let key_fingerprint: String = signing_key
+            .iter()
+            .take(8)
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        // `polycentric` is the app's registered URL scheme (app.config.ts).
+        // The empty authority (`:///`) makes expo-router parse the whole tail
+        // as the route path.
+        format!("polycentric:///{identity}/post/{key_fingerprint}/{sequence}")
+    }
+
+    /// Build an app-openable deep link to an identity's profile, mirroring the
+    /// client's `Routes.tabs.profile(identity)`: `polycentric:///{identity}`.
+    fn profile_url(identity: &str) -> String {
+        format!("polycentric:///{identity}")
+    }
+
+    /// Build the rich-content image (avatar) for a notification, when the
+    /// profile has an avatar and a CDN URL can be resolved. Returns `None`
+    /// otherwise — a missing avatar is never an error.
+    async fn avatar_rich_content(
+        ctx: &Context,
+        avatar: Option<ContentDigest>,
+    ) -> Option<ExpoRichContent> {
+        let digest = avatar?;
+        let cdn_url = ctx.polycentric.cdn_url().await?;
+        Some(ExpoRichContent {
+            image: Self::avatar_url(&cdn_url, &digest),
+        })
+    }
+
+    /// Build a public blob URL for `digest`, mirroring the server's
+    /// `/blob/{type}_{hex(value)}` route (and the client's `blobUrl`).
+    fn avatar_url(cdn_url: &str, digest: &ContentDigest) -> String {
+        let hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
+        format!("{cdn_url}/blob/{}_{}", digest.r#type, hex)
     }
 
     /// Sends a push notification to every authorized key of an identity that
@@ -237,9 +317,7 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         identity: &str,
-        collapse_id: String,
-        title: String,
-        body: String,
+        notification: NotificationData,
     ) -> Result<(), NotificationError> {
         let authorized_keys = ctx.polycentric.authorized_keys(identity).await;
 
@@ -270,9 +348,11 @@ impl NotificationManager {
 
         let expo_push_request = ExpoPushRequest {
             to: expo_tokens_raw,
-            title,
-            body,
-            collapse_id: Some(collapse_id),
+            title: notification.title,
+            body: notification.body,
+            collapse_id: Some(notification.collapse_id),
+            data: notification.data,
+            rich_content: notification.rich_content,
         };
 
         let response = self
@@ -455,7 +535,12 @@ mod tests {
             key: Some(EventKey {
                 collection: collections::FEED,
                 identity: author.to_string(),
-                signed_by: None,
+                // Known signing key so post_url's fingerprint (first 8 bytes
+                // as hex → "abababababababab") is deterministic/assertable.
+                signed_by: Some(PublicKey {
+                    key_type: KeyType::Ed25519 as i32,
+                    key: vec![0xAB; 32],
+                }),
                 sequence: 1,
             }),
             identity_sequence: 0,
@@ -480,13 +565,14 @@ mod tests {
         }
     }
 
-    /// A post by `author` replying to a post by `parent_identity`.
-    fn reply_post_bundle(author: &str, parent_identity: &str) -> EventBundle {
+    /// A post by `author` replying to a post by `parent_identity`, carrying
+    /// the given `text` body.
+    fn reply_post_bundle_with_text(author: &str, parent_identity: &str, text: &str) -> EventBundle {
         authored_bundle(
             author,
             Content {
                 content_body: Some(ContentBody::Post(Post {
-                    text: "hi".to_string(),
+                    text: text.to_string(),
                     reply: Some(PostReply {
                         root: None,
                         parent: Some(EventKey {
@@ -501,6 +587,11 @@ mod tests {
                 })),
             },
         )
+    }
+
+    /// A post by `author` replying to a post by `parent_identity` (body "hi").
+    fn reply_post_bundle(author: &str, parent_identity: &str) -> EventBundle {
+        reply_post_bundle_with_text(author, parent_identity, "hi")
     }
 
     /// A plain (non-reply) post by `author`.
@@ -570,7 +661,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author/post/abababababababab/1"}}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -597,6 +688,50 @@ mod tests {
 
         let ctx = make_ctx(db, expo_push_url, polycentric);
         let bundle = reply_post_bundle("id-author", "id-recipient");
+
+        ctx.notification_manager
+            .process_event(&ctx, &bundle)
+            .await
+            .expect("process_event should succeed");
+
+        send_mock.assert_async().await;
+    }
+
+    /// A reply with an empty text body falls back to the generic
+    /// "Replied to your post" body rather than "Replied: ".
+    #[tokio::test]
+    async fn process_event_reply_with_no_text_uses_generic_body() {
+        let mut expo_server = mockito::Server::new_async().await;
+        let send_mock = expo_server
+            .mock("POST", "/--/api/v2/push/send")
+            .match_header("content-type", "application/json")
+            .match_body(mockito::Matcher::PartialJsonString(
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                    .to_string(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json; charset=utf-8")
+            .with_body(
+                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
+
+        let pk = test_public_key(1);
+        let polycentric = spawn_polycentric(MockEventSync {
+            profile_name: Some("Alice".to_string()),
+            identity_keys: vec![pk.clone()],
+        })
+        .await;
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            .into_connection();
+
+        let ctx = make_ctx(db, expo_push_url, polycentric);
+        let bundle = reply_post_bundle_with_text("id-author", "id-recipient", "");
 
         ctx.notification_manager
             .process_event(&ctx, &bundle)
@@ -740,7 +875,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author"}}]"#
                     .to_string(),
             ))
             .with_status(200)
