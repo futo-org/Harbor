@@ -2,6 +2,7 @@ import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 /**
  * Navigate in response to a tapped push notification. The notifications
@@ -32,6 +33,9 @@ function navigateFromResponse(response: Notifications.NotificationResponse) {
 export function useNotificationNavigation(ready: boolean) {
   useEffect(() => {
     if (!ready) return;
+
+    // Push notifications are native-only here.
+    if (Platform.OS === 'web') return;
 
     let cancelled = false;
 
