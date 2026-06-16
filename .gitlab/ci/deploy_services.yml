@@ -5,7 +5,8 @@
     entrypoint: ['']
   script:
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
-    - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT
+    - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
+    - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT_TAG
 
 .service-deploy-manifest:
   stage: deploy
@@ -46,14 +47,14 @@
 
 server-deploy-image-staging:
   extends: .server-deploy-image
-  variables:
-    ENVIRONMENT: staging
+  environment:
+    name: staging/server
 
 server-deploy-image-production:
   extends: .server-deploy-image
   when: manual
-  variables:
-    ENVIRONMENT: production
+  environment:
+    name: production/server
 
 ###############################
 # Rolling restart on Manifest #
@@ -101,8 +102,8 @@ moderation-deploy-image-production:
     - .moderation-deploy-workflow
     - .service-deploy-image
   when: manual
-  variables:
-    ENVIRONMENT: production
+  environment:
+    name: production/moderation-service
   needs:
     - job: moderation-image
       artifacts: false
@@ -144,8 +145,8 @@ notifications-deploy-image-production:
     - .notifications-deploy-workflow
     - .service-deploy-image
   when: manual
-  variables:
-    ENVIRONMENT: production
+  environment:
+    name: production/notifications-service
   needs:
     - job: notifications-image
       artifacts: false
