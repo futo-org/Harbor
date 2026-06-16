@@ -83,6 +83,14 @@ impl PolycentricClient {
             })
     }
 
+    pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {
+        self.content_store
+            .get(digest)
+            .map(|bytes| SerializedContent {
+                content_bytes: Vec::from(bytes),
+            })
+    }
+
     /// Sig-check and insert each bundle. Identity events go first (by
     /// sequence) so downstream validation can find the genesis. Any
     /// `event_proofs` travelling with a bundle are persisted in the
@@ -134,6 +142,39 @@ impl PolycentricClient {
         }
     }
 
+    pub fn get_sync_events(
+        &self,
+        identity: &str,
+        collection: i32,
+        signer_key_type: i32,
+        signer_key: &[u8],
+        sequence_gt: u64,
+    ) -> impl DoubleEndedIterator<Item = (&EventKey, &SignedEvent)> {
+        self.event_store.by_identity_collection_signer(
+            identity,
+            collection,
+            signer_key_type,
+            signer_key,
+            sequence_gt,
+        )
+    }
+
+    /// Get all local events belonging to `identity`.
+    pub fn get_local_events(
+        &self,
+        identity: &str,
+    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> {
+        self.event_store.by_identity(identity)
+    }
+
+    /// Finds the collections and signers referenced by local events of
+    /// the given identity.
+    /// These values are derived solely from the event keys in the event store
+    /// without further aggregation or validity checking.
+    pub fn find_collections_and_signers(&self, identity: &str) -> (Vec<i32>, Vec<PublicKey>) {
+        self.event_store.find_collections_and_signers(identity)
+    }
+
     /// Max `sequence` of identity events signed by `signer` for `identity`,
     /// or `None` if this signer has no identity events.
     pub fn get_identity_sequence(
@@ -147,6 +188,7 @@ impl PolycentricClient {
                 collections::IDENTITY,
                 signer.key_type,
                 &signer.key,
+                0,
             )
             .next_back()
             .map(|(k, _)| k.sequence)
@@ -233,7 +275,13 @@ impl PolycentricClient {
                     current_sequence
                 } else {
                     self.event_store
-                        .by_identity_collection_signer(identity, collection, pk.key_type, &pk.key)
+                        .by_identity_collection_signer(
+                            identity,
+                            collection,
+                            pk.key_type,
+                            &pk.key,
+                            0,
+                        )
                         .rev()
                         .find(|(k, signed)| {
                             self.validate_event(signed, self.event_proofs_store.get(k))

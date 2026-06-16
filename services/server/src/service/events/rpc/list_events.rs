@@ -13,7 +13,7 @@ use crate::service::identity::service::{
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
-    EventHint, ListEventsRequest, ListEventsResponse, PublicKey,
+    EventHint, EventKey, ListEventsRequest, ListEventsResponse, PublicKey,
 };
 use polycentric_common::models::protos_v2::EventBundle;
 use tonic::Status;
@@ -36,6 +36,7 @@ pub struct Params {
     pub signed_by: Option<PublicKey>,
     pub sequence_gt: Option<i64>,
     pub sequence_lt: Option<i64>,
+    pub heads: Vec<EventKey>,
 }
 
 pub async fn handle(
@@ -51,6 +52,7 @@ pub async fn handle(
         signed_by: filters.signed_by,
         sequence_gt: filters.sequence_gt,
         sequence_lt: filters.sequence_lt,
+        heads: filters.heads,
     };
 
     let result =
@@ -75,6 +77,7 @@ async fn fetch(
         params.signed_by.clone(),
         params.sequence_gt,
         params.sequence_lt,
+        params.heads.clone(),
     )
     .await
     .map_err(|e| {

@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { EventSyncService } from "./events";
+import type { ListHeadsResponse } from "./events";
+import type { ListHeadsRequest } from "./events";
 import type { PutEventsResponse } from "./events";
 import type { PutEventsRequest } from "./events";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
@@ -29,6 +31,13 @@ export interface IEventSyncServiceClient {
      * @generated from protobuf rpc: PutEvents
      */
     putEvents(input: PutEventsRequest, options?: RpcOptions): UnaryCall<PutEventsRequest, PutEventsResponse>;
+    /**
+     * Returns the latest sequence number seen by the server for each
+     * (signing key, collection) for the given identity
+     *
+     * @generated from protobuf rpc: ListHeads
+     */
+    listHeads(input: ListHeadsRequest, options?: RpcOptions): UnaryCall<ListHeadsRequest, ListHeadsResponse>;
 }
 /**
  * Sync between clients and servers
@@ -58,5 +67,15 @@ export class EventSyncServiceClient implements IEventSyncServiceClient, ServiceI
     putEvents(input: PutEventsRequest, options?: RpcOptions): UnaryCall<PutEventsRequest, PutEventsResponse> {
         const method = this.methods[1], opt = this._transport.mergeOptions(options);
         return stackIntercept<PutEventsRequest, PutEventsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Returns the latest sequence number seen by the server for each
+     * (signing key, collection) for the given identity
+     *
+     * @generated from protobuf rpc: ListHeads
+     */
+    listHeads(input: ListHeadsRequest, options?: RpcOptions): UnaryCall<ListHeadsRequest, ListHeadsResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ListHeadsRequest, ListHeadsResponse>("unary", this._transport, method, opt, input);
     }
 }

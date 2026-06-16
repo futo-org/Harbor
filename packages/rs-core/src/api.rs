@@ -1,5 +1,6 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
+use crate::sync;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
     GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
@@ -9,6 +10,7 @@ use polycentric_common::models::protos_v2::{
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
 };
+use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
 use std::sync::{Arc, Mutex};
@@ -293,14 +295,15 @@ impl PolycentricCore {
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
-    /// Unified entry point for every observable RPC. `query` selects
-    /// which RPC to run and supplies its parameters; `query_key` is
-    /// the cache key shared across subscribers; `opts` carries the
-    /// optional fetch mode and per-call servers override. Always
-    /// returns a `QueryObservable` regardless of variant.
+    /// Unified entry point for every observable RPC.
+    /// `query` selects which RPC to run and supplies its parameters.
+    /// `query_key` is the cache key shared across subscribers.
+    /// Pass in `None` to bypass the cache.
+    /// `opts` carries the optional fetch mode and per-call servers override.
+    /// Always returns a `QueryObservable` regardless of variant.
     pub fn fetch_query(
         &self,
-        query_key: crate::query::QueryKey,
+        query_key: Option<crate::query::QueryKey>,
         query: Query,
         opts: Option<crate::query::QueryOpts>,
     ) -> Arc<dyn crate::query::QueryObservable> {
@@ -337,19 +340,72 @@ impl PolycentricCore {
     }
 
     /// Push event bundles to a server.
+    /// Returns the response from the server with any errors and missing blobs.
     pub async fn put_events(
         &self,
         server_url: String,
         event_bundles_bytes: Vec<u8>,
-    ) -> Result<(), CoreError> {
+    ) -> Result<Vec<u8>, CoreError> {
         let request = PutEventsRequest::decode(event_bundles_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode PutEventsRequest: {e}")))?;
+
         let mut client = EventSyncServiceClient::new(channel(&server_url)?);
-        client
+        let response = client
             .put_events(request)
             .await
-            .map_err(|e| CoreError::Network(format!("put_events: {e}")))?;
-        Ok(())
+            .map_err(|e| CoreError::Network(format!("put_events: {e}")))?
+            .into_inner();
+
+        let response_bytes = PutEventsResponse::encode_to_vec(&response);
+        Ok(response_bytes)
+    }
+
+    /// List latest known sequence numbers from a server for a single identity.
+    pub async fn list_heads(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = ListHeadsRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode ListHeadsRequest: {e}")))?;
+
+        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
+
+        let response = client
+            .list_heads(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("list_heads: {e}")))?;
+
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Push events belonging to `identity` to remote `server`.
+    /// Pushes all relevant local events if `partial` is false.
+    /// Otherwise, only push events that we believe the server to be missing.
+    /// The server's response is returned (if there is one), so that the caller
+    /// can handle error and/or push blobs.
+    pub async fn push_local_events(
+        &self,
+        identity: String,
+        server: String,
+        partial: bool,
+    ) -> Result<Option<Vec<u8>>, CoreError> {
+        let bundles = if partial {
+            let heads = sync::request_heads(&identity, &server).await?;
+            let client = self.client.lock().unwrap();
+            sync::bundle_unsent_events(&client, &identity, heads)?
+        } else {
+            let client = self.client.lock().unwrap();
+            sync::bundle_local_events(&client, &identity)?
+        };
+
+        if !bundles.is_empty() {
+            let response = sync::push_bundles(&server, bundles).await?;
+            let encoded = PutEventsResponse::encode_to_vec(&response);
+            Ok(Some(encoded))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Fetch a server's public info. Returns serialized

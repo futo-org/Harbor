@@ -11,6 +11,7 @@ import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { Blob } from "./content";
 import { PublicKey } from "./keypair";
 import { SerializedContent } from "./content";
 import { ContentDigest } from "./content";
@@ -263,6 +264,34 @@ export interface PutEventsResponse {
      * @generated from protobuf field: repeated polycentric.v2.PutEventError errors = 1
      */
     errors: PutEventError[];
+    /**
+     * Blobs referenced by the events that the server does not have.
+     * Client should upload these.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.Blob requested_blobs = 2
+     */
+    requestedBlobs: Blob[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListHeadsRequest
+ */
+export interface ListHeadsRequest {
+    /**
+     * @generated from protobuf field: string identity = 1
+     */
+    identity: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListHeadsResponse
+ */
+export interface ListHeadsResponse {
+    /**
+     * Each event key represents the greatest sequence number
+     * with the same (identity, public key, collection) known by this server
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventKey heads = 1
+     */
+    heads: EventKey[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class VectorClock$Type extends MessageType<VectorClock> {
@@ -924,12 +953,14 @@ export const PutEventError = new PutEventError$Type();
 class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
     constructor() {
         super("polycentric.v2.PutEventsResponse", [
-            { no: 1, name: "errors", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError }
+            { no: 1, name: "errors", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError },
+            { no: 2, name: "requested_blobs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Blob }
         ]);
     }
     create(value?: PartialMessage<PutEventsResponse>): PutEventsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.errors = [];
+        message.requestedBlobs = [];
         if (value !== undefined)
             reflectionMergePartial<PutEventsResponse>(this, message, value);
         return message;
@@ -941,6 +972,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
             switch (fieldNo) {
                 case /* repeated polycentric.v2.PutEventError errors */ 1:
                     message.errors.push(PutEventError.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.Blob requested_blobs */ 2:
+                    message.requestedBlobs.push(Blob.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -957,6 +991,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
         /* repeated polycentric.v2.PutEventError errors = 1; */
         for (let i = 0; i < message.errors.length; i++)
             PutEventError.internalBinaryWrite(message.errors[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.Blob requested_blobs = 2; */
+        for (let i = 0; i < message.requestedBlobs.length; i++)
+            Blob.internalBinaryWrite(message.requestedBlobs[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -967,10 +1004,105 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
  * @generated MessageType for protobuf message polycentric.v2.PutEventsResponse
  */
 export const PutEventsResponse = new PutEventsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListHeadsRequest$Type extends MessageType<ListHeadsRequest> {
+    constructor() {
+        super("polycentric.v2.ListHeadsRequest", [
+            { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ListHeadsRequest>): ListHeadsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = "";
+        if (value !== undefined)
+            reflectionMergePartial<ListHeadsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListHeadsRequest): ListHeadsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListHeadsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string identity = 1; */
+        if (message.identity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListHeadsRequest
+ */
+export const ListHeadsRequest = new ListHeadsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListHeadsResponse$Type extends MessageType<ListHeadsResponse> {
+    constructor() {
+        super("polycentric.v2.ListHeadsResponse", [
+            { no: 1, name: "heads", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventKey }
+        ]);
+    }
+    create(value?: PartialMessage<ListHeadsResponse>): ListHeadsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.heads = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListHeadsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListHeadsResponse): ListHeadsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.EventKey heads */ 1:
+                    message.heads.push(EventKey.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListHeadsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.EventKey heads = 1; */
+        for (let i = 0; i < message.heads.length; i++)
+            EventKey.internalBinaryWrite(message.heads[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListHeadsResponse
+ */
+export const ListHeadsResponse = new ListHeadsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.EventSyncService
  */
 export const EventSyncService = new ServiceType("polycentric.v2.EventSyncService", [
     { name: "ListEvents", options: {}, I: ListEventsRequest, O: ListEventsResponse },
-    { name: "PutEvents", options: {}, I: PutEventsRequest, O: PutEventsResponse }
+    { name: "PutEvents", options: {}, I: PutEventsRequest, O: PutEventsResponse },
+    { name: "ListHeads", options: {}, I: ListHeadsRequest, O: ListHeadsResponse }
 ]);

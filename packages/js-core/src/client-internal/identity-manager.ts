@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
-import { COLLECTION } from '../constants';
+import { COLLECTION, SyncStrategy } from '../constants';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
@@ -137,7 +137,7 @@ export class IdentityManager {
 
     const signedEvent = await this.client.signEvent(event);
     await this.client.commitEvent(signedEvent, content);
-    await this.client.push();
+    await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
     return { identityKey: resolvedIdentityKey, signedEvent };
   }
@@ -252,7 +252,7 @@ export class IdentityManager {
     }
 
     await this.client.setActiveIdentityKey(identityKey);
-    await this.client.pull();
+    await this.client.sync(SyncStrategy.PARTIAL_PULL);
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.

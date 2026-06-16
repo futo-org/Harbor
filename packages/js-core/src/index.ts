@@ -43,7 +43,12 @@ export * from './errors';
 export * as Errors from './errors';
 export * from './utils';
 
-export { KEY_TYPE, COLLECTION, HydrationStrategy } from './constants';
+export {
+  KEY_TYPE,
+  COLLECTION,
+  HydrationStrategy,
+  SyncStrategy,
+} from './constants';
 
 export {
   ClientState,
