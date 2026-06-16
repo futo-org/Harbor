@@ -25,6 +25,17 @@ pub struct FeedCursor {
 
 impl PageCursor for FeedCursor {}
 
+impl Default for FeedCursor {
+    /// "Null" cursor for when the feed is empty.
+    /// This value may allow newer events to be returned but never older.
+    fn default() -> Self {
+        Self {
+            created_at: PrimitiveDateTime::MIN,
+            id: 0,
+        }
+    }
+}
+
 impl FeedCursor {
     /// Get the database columns to compare against a cursor as a rust tuple.
     fn cols() -> impl IdentityOf<EventModel::Entity> {

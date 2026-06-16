@@ -7,12 +7,13 @@ use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
-use crate::service::feeds::repository::Query as FeedsRepository;
-use crate::service::feeds::util::map_db_err;
+use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
+use crate::service::feeds::util::{PageInfo, map_db_err};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
     rows_to_bundles,
 };
+
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, EventBundle, EventHint, EventKey};
@@ -20,16 +21,72 @@ use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
 
+pub struct Params {
+    pub limit: u64,
+    pub backward_token: Option<FeedCursor>,
+    pub forward_token: Option<FeedCursor>,
+}
+
+pub struct Fetched {
+    pub rows: Vec<EventWithContentRow>,
+    pub page_info: PageInfo<FeedCursor>,
+}
+
 #[derive(Default)]
 pub struct GetFeedResponseFilter {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
+    pub page_info: PageInfo<FeedCursor>,
 }
 
 #[derive(Default)]
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
+    pub page_info: PageInfo<FeedCursor>,
+}
+
+/// Remove the extra row (for checking next page existence) and extract page info.
+/// Return the final fetch stage result.
+pub fn finalize_fetch(
+    mut rows: Vec<EventWithContentRow>,
+    params: &Params,
+) -> Fetched {
+    // We tried fetching more rows than the client limit.
+    // If we got more back, then there is more data past the page we will return.
+    let has_next_page = rows.len() as u64 > params.limit;
+
+    // Simple heuristic: if a forward token was used, then there was a previous page.
+    // False negative when going forward then backward that we do not handle.
+    let has_previous_page = params.forward_token.is_some();
+
+    // Remove extra row before processing the page's rows
+    rows.truncate(params.limit as usize);
+
+    let backward_cursor = rows
+        .first()
+        .map(|(event, _)| FeedCursor {
+            created_at: event.created_at,
+            id: event.id,
+        })
+        .unwrap_or_default();
+
+    let forward_cursor = rows
+        .last()
+        .map(|(event, _)| FeedCursor {
+            created_at: event.created_at,
+            id: event.id,
+        })
+        .unwrap_or_default();
+
+    let page_info = PageInfo {
+        backward_cursor,
+        forward_cursor,
+        has_previous_page,
+        has_next_page,
+    };
+
+    Fetched { rows, page_info }
 }
 
 /// Return relevant content such as:
@@ -40,8 +97,10 @@ pub struct GetFeedResponseView {
 ///   identity referenced
 pub async fn hydrate(
     ctx: &ServiceContext,
-    rows: &[EventWithContentRow],
+    fetched: &Fetched,
 ) -> Result<HydrationState, Status> {
+    let rows = &fetched.rows;
+
     let keys: Vec<TargetEventKey> =
         rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
     let identities = collect_identities(rows);
@@ -147,12 +206,15 @@ fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
 
 /// Remove all rows that have been marked as deleted.
 pub async fn filter(
-    rows: Vec<EventWithContentRow>,
+    fetched: Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
+    let Fetched { rows, page_info } = fetched;
+
     let mut live_rows: Vec<EventWithContentRow> =
         Vec::with_capacity(rows.len());
     let mut tombstone_bundles: Vec<EventBundle> = Vec::new();
+
     for row in rows {
         let key = TargetEventKey::of(&row.0);
         if let Some(bundles) = hydration.deletes_by_target.get(&key) {
@@ -164,6 +226,7 @@ pub async fn filter(
     Ok(GetFeedResponseFilter {
         live_rows,
         tombstone_bundles,
+        page_info,
     })
 }
 
@@ -177,6 +240,7 @@ pub async fn view(
     let GetFeedResponseFilter {
         live_rows,
         mut tombstone_bundles,
+        page_info,
     } = filtered;
     let HydrationState {
         identity_events,
@@ -213,5 +277,6 @@ pub async fn view(
     Ok(GetFeedResponseView {
         event_bundles,
         event_hints,
+        page_info,
     })
 }
