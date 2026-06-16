@@ -5023,6 +5023,7 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-prost",
+ "tonic-prost-build",
  "tonic-reflection",
  "tonic-web",
  "tower-http",
