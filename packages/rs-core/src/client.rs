@@ -1226,4 +1226,48 @@ mod tests {
             vc.err()
         );
     }
+
+    #[test]
+    fn copy_content_stores_matching_content() {
+        let mut client = PolycentricClient::default();
+        let bytes = b"hello content".to_vec();
+        let digest = sha256_digest(&bytes);
+
+        client
+            .copy_content(&digest, bytes.clone())
+            .expect("content matching its digest is accepted");
+
+        let stored = client.find_content_from_digest(&digest);
+        assert_eq!(stored.map(|c| c.content_bytes), Some(bytes));
+    }
+
+    #[test]
+    fn copy_content_rejects_mismatched_content() {
+        let mut client = PolycentricClient::default();
+        // Digest is computed over different bytes than we try to insert.
+        let digest = sha256_digest(b"the real content");
+        let tampered = b"tampered content".to_vec();
+
+        assert!(
+            client.copy_content(&digest, tampered).is_err(),
+            "content that does not hash to its digest must be rejected"
+        );
+        // Rejected content is never stored.
+        assert!(client.find_content_from_digest(&digest).is_none());
+    }
+
+    #[test]
+    fn copy_content_rejects_unsupported_digest_type() {
+        let mut client = PolycentricClient::default();
+        let bytes = b"hello content".to_vec();
+        // Correct hash value, but a digest type we can't verify.
+        let mut digest = sha256_digest(&bytes);
+        digest.r#type = ContentDigestType::Sha256 as i32 + 1;
+
+        assert!(
+            client.copy_content(&digest, bytes).is_err(),
+            "unsupported digest types must be rejected"
+        );
+        assert!(client.find_content_from_digest(&digest).is_none());
+    }
 }
