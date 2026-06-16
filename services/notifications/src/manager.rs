@@ -1,6 +1,6 @@
 use std::{error::Error, fmt};
 
-use log::warn;
+use log::{debug, warn};
 use sea_orm::{DbConn, DbErr, EnumIter};
 
 use super::repository as token_repository;
@@ -202,18 +202,27 @@ impl NotificationManager {
 
         let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
 
-        self.send_to_identity(
-            ctx,
-            &reply_recipient,
-            NotificationData {
-                collapse_id: collapse_id.to_owned(),
-                title,
-                body,
-                data,
-                rich_content,
-            },
-        )
-        .await?;
+        debug!("Firing reply notification: from={author} to={reply_recipient} key={key:?}");
+
+        let response = self
+            .send_to_identity(
+                ctx,
+                &reply_recipient,
+                NotificationData {
+                    collapse_id: collapse_id.to_owned(),
+                    title,
+                    body,
+                    data,
+                    rich_content,
+                },
+            )
+            .await?;
+
+        if let Some(errors) = Self::ticket_errors(&response) {
+            warn!(
+                "Reply notification errors: from={author} to={reply_recipient} key={key:?} errors=[{errors}]"
+            );
+        }
 
         Ok(())
     }
@@ -247,18 +256,31 @@ impl NotificationManager {
 
         let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
 
-        self.send_to_identity(
-            ctx,
-            &follow.identity,
-            NotificationData {
-                collapse_id: collapse_id.to_owned(),
-                title,
-                body: "Followed you".to_string(),
-                data,
-                rich_content,
-            },
-        )
-        .await?;
+        debug!(
+            "Firing follow notification: from={author} to={} key={key:?}",
+            follow.identity
+        );
+
+        let response = self
+            .send_to_identity(
+                ctx,
+                &follow.identity,
+                NotificationData {
+                    collapse_id: collapse_id.to_owned(),
+                    title,
+                    body: "Followed you".to_string(),
+                    data,
+                    rich_content,
+                },
+            )
+            .await?;
+
+        if let Some(errors) = Self::ticket_errors(&response) {
+            warn!(
+                "Follow notification errors: from={author} to={} key={key:?} errors=[{errors}]",
+                follow.identity
+            );
+        }
 
         Ok(())
     }
@@ -310,6 +332,29 @@ impl NotificationManager {
         format!("{cdn_url}/blob/{}_{}", digest.r#type, hex)
     }
 
+    /// The error details of any failed tickets in a push response,
+    /// comma-separated, or `None` when every ticket succeeded. Lets callers
+    /// log failures while staying silent on success.
+    fn ticket_errors(response: &ExpoPushResponse) -> Option<String> {
+        let errors: Vec<&str> = response
+            .data
+            .iter()
+            .filter(|ticket| ticket.status == "error")
+            .map(|ticket| {
+                ticket
+                    .details
+                    .as_ref()
+                    .and_then(|details| details.error.as_deref())
+                    .unwrap_or("unknown error")
+            })
+            // DeviceNotRegistered is already handled by
+            // clean_unregistered_push_tokens
+            .filter(|error| *error != "DeviceNotRegistered")
+            .collect();
+
+        (!errors.is_empty()).then(|| errors.join(","))
+    }
+
     /// Sends a push notification to every authorized key of an identity that
     /// has a registered token. Tokens reported as invalid by the push service
     /// are unregistered as part of the send.
@@ -318,7 +363,7 @@ impl NotificationManager {
         ctx: &Context,
         identity: &str,
         notification: NotificationData,
-    ) -> Result<(), NotificationError> {
+    ) -> Result<ExpoPushResponse, NotificationError> {
         let authorized_keys = ctx.polycentric.authorized_keys(identity).await;
 
         let mut rows = vec![];
@@ -341,7 +386,7 @@ impl NotificationManager {
         }
 
         if expo_tokens.is_empty() {
-            return Ok(());
+            return Ok(ExpoPushResponse { data: vec![] });
         }
 
         let expo_tokens_raw: Vec<String> = expo_tokens.iter().map(|item| item.1.clone()).collect();
@@ -360,17 +405,17 @@ impl NotificationManager {
             .post_requests(vec![expo_push_request])
             .await?;
 
-        self.clean_unregistered_push_tokens(ctx, response, expo_tokens)
+        self.clean_unregistered_push_tokens(ctx, &response, expo_tokens)
             .await?;
 
-        Ok(())
+        Ok(response)
     }
 
     /// Removes any tokens from a given batch which are no longer registered from the database
     async fn clean_unregistered_push_tokens(
         &self,
         ctx: &Context,
-        response: ExpoPushResponse,
+        response: &ExpoPushResponse,
         expo_tokens: Vec<(PublicKey, String)>,
     ) -> Result<(), NotificationError> {
         if response.data.len() != expo_tokens.len() {
@@ -639,6 +684,7 @@ mod tests {
             service: PushService::Expo.as_ref().to_string(),
             token: token.to_string(),
             created_at: time::PrimitiveDateTime::MIN,
+            updated_at: time::PrimitiveDateTime::MIN,
         }
     }
 

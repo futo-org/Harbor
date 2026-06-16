@@ -15,6 +15,7 @@ pub struct Model {
     pub token: String,
 
     pub created_at: TimeDateTime,
+    pub updated_at: TimeDateTime,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
