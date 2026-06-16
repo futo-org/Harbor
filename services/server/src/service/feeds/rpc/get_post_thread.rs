@@ -167,7 +167,6 @@ async fn fetch(
     })
 }
 
-#[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
     ctx: &ServiceContext,
     _params: &Params,

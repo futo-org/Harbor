@@ -7,8 +7,12 @@ use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
-use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
-use crate::service::feeds::util::{PageInfo, map_db_err};
+use crate::service::feeds::repository::{
+    CursorFilter, FeedCursor, Query as FeedsRepository,
+};
+use crate::service::feeds::util::{
+    PageCursor, PageInfo, map_db_err, page_limit,
+};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
     rows_to_bundles,
@@ -16,34 +20,69 @@ use crate::service::identity::service::{
 
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
-use crate::service::proto::{Content, EventBundle, EventHint, EventKey};
+use crate::service::proto::{
+    Content, EventBundle, EventHint, EventKey, PageParams,
+};
 use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
 
+/// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
 pub struct Params {
     pub limit: u64,
-    pub backward_token: Option<FeedCursor>,
-    pub forward_token: Option<FeedCursor>,
+    pub cursor_filter: Option<CursorFilter>,
+}
+
+impl Params {
+    /// Extract values from the client request's page params.
+    pub fn from_req_params(
+        params: &Option<PageParams>,
+    ) -> Result<Params, Status> {
+        let limit = page_limit(params);
+
+        let tokens = params
+            .as_ref()
+            .map(|p| (&p.backward_token, &p.forward_token));
+
+        let cursor_filter = match tokens {
+            Some((Some(_), Some(_))) => {
+                return Err(Status::invalid_argument(
+                    "Only one cursor is allowed",
+                ));
+            }
+            Some((Some(token), None)) => {
+                Option::<FeedCursor>::decode(token)?.map(CursorFilter::Backward)
+            }
+            Some((None, Some(token))) => {
+                Option::<FeedCursor>::decode(token)?.map(CursorFilter::Forward)
+            }
+            _ => None,
+        };
+
+        Ok(Params {
+            limit,
+            cursor_filter,
+        })
+    }
 }
 
 pub struct Fetched {
     pub rows: Vec<EventWithContentRow>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo<Option<FeedCursor>>,
 }
 
 #[derive(Default)]
 pub struct GetFeedResponseFilter {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo<Option<FeedCursor>>,
 }
 
 #[derive(Default)]
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo<Option<FeedCursor>>,
 }
 
 /// Remove the extra row (for checking next page existence) and extract page info.
@@ -54,30 +93,41 @@ pub fn finalize_fetch(
 ) -> Fetched {
     // We tried fetching more rows than the client limit.
     // If we got more back, then there is more data past the page we will return.
-    let has_next_page = rows.len() as u64 > params.limit;
+    let has_extra_row = rows.len() as u64 > params.limit;
 
     // Simple heuristic: if a forward token was used, then there was a previous page.
     // False negative when going forward then backward that we do not handle.
-    let has_previous_page = params.forward_token.is_some();
+    // Other direction applies as well.
+    let cursor_was_used = params.cursor_filter.is_some();
 
-    // Remove extra row before processing the page's rows
-    rows.truncate(params.limit as usize);
+    let (has_previous_page, has_next_page) = match params.cursor_filter {
+        Some(CursorFilter::Backward(_)) => {
+            // Backwards queries have a cursor if there is a page following this one
+            // and the extra row would be preceding the current page.
+            (has_extra_row, cursor_was_used)
+        }
+        _ => (cursor_was_used, has_extra_row),
+    };
 
-    let backward_cursor = rows
-        .first()
-        .map(|(event, _)| FeedCursor {
-            created_at: event.created_at,
-            id: event.id,
-        })
-        .unwrap_or_default();
+    // Remove from the end if we fetched extra rows at the end
+    // and remove from the beginning if we are doing a backwards query
+    match params.cursor_filter {
+        Some(CursorFilter::Backward(_)) => {
+            let drop = rows.len().saturating_sub(params.limit as usize);
+            rows.drain(0..drop);
+        }
+        _ => rows.truncate(params.limit as usize),
+    }
 
-    let forward_cursor = rows
-        .last()
-        .map(|(event, _)| FeedCursor {
-            created_at: event.created_at,
-            id: event.id,
-        })
-        .unwrap_or_default();
+    let backward_cursor = rows.first().map(|(event, _)| FeedCursor {
+        created_at: event.created_at,
+        id: event.id,
+    });
+
+    let forward_cursor = rows.last().map(|(event, _)| FeedCursor {
+        created_at: event.created_at,
+        id: event.id,
+    });
 
     let page_info = PageInfo {
         backward_cursor,

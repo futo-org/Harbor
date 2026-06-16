@@ -14,8 +14,6 @@ use crate::service::feeds::util::PageCursor;
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
-pub struct Query;
-
 /// Exclusive lowerbound/upperbound for a feed query
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FeedCursor {
@@ -23,18 +21,9 @@ pub struct FeedCursor {
     pub id: i64,
 }
 
-impl PageCursor for FeedCursor {}
-
-impl Default for FeedCursor {
-    /// "Null" cursor for when the feed is empty.
-    /// This value may allow newer events to be returned but never older.
-    fn default() -> Self {
-        Self {
-            created_at: PrimitiveDateTime::MIN,
-            id: 0,
-        }
-    }
-}
+/// The cursor we send to the client should be optional
+/// so that we can represent empty feeds properly.
+impl PageCursor for Option<FeedCursor> {}
 
 impl FeedCursor {
     /// Get the database columns to compare against a cursor as a rust tuple.
@@ -48,16 +37,23 @@ impl FeedCursor {
     }
 }
 
+/// Retrieve items in the feed relative to a cursor.
+pub enum CursorFilter {
+    Forward(FeedCursor),
+    Backward(FeedCursor),
+}
+
+pub struct Query;
+
 impl Query {
     /// Recent Feed events (with joined content) newest first,
     /// including those that have been tombstoned.
     pub async fn list_feed_events(
         db: &DbConn,
         limit: u64,
-        only_older: Option<FeedCursor>,
-        only_newer: Option<FeedCursor>,
+        cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, None, only_older, only_newer).await
+        Self::do_list_feed_events(db, limit, None, cursor_filter).await
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
@@ -67,25 +63,17 @@ impl Query {
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
-        only_older: Option<FeedCursor>,
-        only_newer: Option<FeedCursor>,
+        cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(
-            db,
-            limit,
-            Some(identities),
-            only_older,
-            only_newer,
-        )
-        .await
+        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
+            .await
     }
 
     async fn do_list_feed_events(
         db: &DbConn,
         limit: u64,
         only_identities: Option<Vec<String>>,
-        only_older: Option<FeedCursor>,
-        only_newer: Option<FeedCursor>,
+        cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
@@ -104,15 +92,19 @@ impl Query {
         let mut cursor = query.cursor_by(FeedCursor::cols());
         cursor.desc();
 
-        if let Some(c) = only_older {
-            cursor.after(c.values());
+        match cursor_filter {
+            Some(CursorFilter::Forward(cur)) => {
+                cursor.after(cur.values()).first(limit);
+            }
+            Some(CursorFilter::Backward(cur)) => {
+                cursor.before(cur.values()).last(limit);
+            }
+            None => {
+                cursor = cursor.limit(limit);
+            }
         }
 
-        if let Some(c) = only_newer {
-            cursor.before(c.values());
-        }
-
-        cursor.first(limit).all(db).await
+        cursor.all(db).await
     }
 
     /// Bulk-fetch events (with joined content) by their EventKey
