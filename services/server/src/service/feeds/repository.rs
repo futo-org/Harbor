@@ -91,16 +91,16 @@ impl Query {
         }
 
         let mut cursor = query.cursor_by(FeedCursor::cols());
+        cursor.desc();
 
         if let Some(c) = only_older {
-            cursor.before(c.values());
-        }
-
-        if let Some(c) = only_newer {
             cursor.after(c.values());
         }
 
-        cursor.desc();
+        if let Some(c) = only_newer {
+            cursor.before(c.values());
+        }
+
         cursor.first(limit).all(db).await
     }
 
