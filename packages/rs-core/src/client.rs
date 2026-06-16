@@ -3,8 +3,8 @@ use polycentric_common::{
     models::{
         Serializable, collections,
         protos_v2::{
-            self, Content, ContentDigest, Event, EventBundle, EventProof, Identity, PublicKey,
-            SerializedContent, SignedEvent, VectorClock, content::ContentBody,
+            self, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventProof,
+            Identity, PublicKey, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
         },
     },
 };
@@ -20,6 +20,17 @@ use std::sync::Mutex;
 
 fn hex_short(bytes: &[u8]) -> String {
     bytes.iter().take(4).map(|b| format!("{:02x}", b)).collect()
+}
+
+/// True when `content_bytes` actually hash to `digest`. Only SHA-256 digests
+/// are supported; any other type fails verification (can't verify ⇒ reject).
+fn content_matches_digest(digest: &ContentDigest, content_bytes: &[u8]) -> bool {
+    use sha2::{Digest, Sha256};
+
+    if digest.r#type != ContentDigestType::Sha256 as i32 {
+        return false;
+    }
+    Sha256::digest(content_bytes).as_slice() == digest.value.as_slice()
 }
 
 #[derive(Default)]
@@ -50,9 +61,22 @@ impl PolycentricClient {
         self.event_store.insert(signed_event)
     }
 
-    /// Copy content bytes into the content store, keyed by digest.
-    pub fn copy_content(&mut self, digest: &ContentDigest, content_bytes: Vec<u8>) {
+    /// Copy content bytes into the content store, keyed by digest, after
+    /// verifying the bytes hash to that digest. Mismatched (or
+    /// unsupported-digest) content is rejected and not stored.
+    pub fn copy_content(
+        &mut self,
+        digest: &ContentDigest,
+        content_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        if !content_matches_digest(digest, &content_bytes) {
+            return Err(CoreError::InvalidEvent(format!(
+                "content does not match digest {}",
+                hex_short(&digest.value)
+            )));
+        }
         self.content_store.insert(digest, content_bytes);
+        Ok(())
     }
 
     /// First locally-valid bundle at `(identity, collection, sequence)`.
@@ -130,8 +154,11 @@ impl PolycentricClient {
         });
 
         for (signed_event, event, serialized, proofs) in prepared {
-            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized) {
-                self.copy_content(digest, content.content_bytes);
+            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized)
+                && let Err(e) = self.copy_content(digest, content.content_bytes)
+            {
+                // Keep the validly-signed event; just drop the bad content.
+                crate::logging::log_warn(|| format!("dropping content: {e}"));
             }
             if !proofs.is_empty()
                 && let Ok(key) = EventKey::from_event(event)
@@ -754,7 +781,9 @@ mod tests {
             }
         }
 
-        client.copy_content(&digest, content_bytes);
+        client
+            .copy_content(&digest, content_bytes)
+            .expect("content matches its computed digest");
         let signed = sign_event(
             signer,
             &id_string,
