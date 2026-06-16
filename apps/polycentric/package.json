@@ -82,7 +82,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^8.0.0",
     "@testing-library/react-native": "^14.0.0",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.17",

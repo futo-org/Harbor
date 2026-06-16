@@ -114,7 +114,7 @@
     "modulePathIgnorePatterns": ["<rootDir>/lib/"]
   },
   "dependencies": {
-    "@babel/runtime": "^7.28.6",
+    "@babel/runtime": "^8.0.0",
     "@noble/curves": "catalog:",
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
