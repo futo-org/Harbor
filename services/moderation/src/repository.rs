@@ -195,6 +195,26 @@ pub async fn store_azure_result<C: ConnectionTrait>(
     .await
 }
 
+/// Mark content as CSAM, moving the row to `SUCCESS` with `is_csam = true`.
+/// Used when PhotoDNA matches before Azure runs, so `azure_response` stays empty
+pub async fn mark_csam<C: ConnectionTrait>(
+    db: &C,
+    digest_type: i32,
+    digest_bytes: Vec<u8>,
+) -> Result<ProcessedContentModel, DbErr> {
+    ActiveModel {
+        digest_type: Set(digest_type),
+        digest_bytes: Set(digest_bytes),
+        created_at: NotSet,
+        updated_at: Set(now()),
+        status: Set(Status::Success),
+        is_csam: Set(Some(true)),
+        azure_response: NotSet,
+    }
+    .update(db)
+    .await
+}
+
 /// Mark an existing row as `FAILED` (e.g. the provider call errored).
 pub async fn mark_failed<C: ConnectionTrait>(
     db: &C,

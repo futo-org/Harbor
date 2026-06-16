@@ -133,6 +133,26 @@ Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 
 See [Protocol → gRPC](/protocol/grpc) for the gRPC services.
 
+## Content moderation & removal
+
+Moderation on Polycentric is per-server: each server decides what it serves and
+curates its own discovery feeds, while signed content stays reachable from other
+servers.
+
+The server stores blob bodies (images and other media) in the object store, and
+never truly deletes them. A [`Delete`](/protocol/data-model#delete) event
+acts as a *tombstone*: clients stop showing the content, but the blob bytes
+remain in the object store.
+
+Removing blob bodies can be done by a separate moderation service. FUTO runs
+one, and you can
+[run your own](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/moderation/README.md).
+It scans images (for example, matching against PhotoDNA to detect known CSAM),
+deletes matching blobs directly from the object store, and publishes a
+[`Report`](/protocol/data-model#report) event recording the violation. Because it
+deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
+delete permission on the bucket, while the server's own credentials do not.
+
 ## TLS and production
 
 The server speaks cleartext h2c and HTTP; it has no built-in TLS. For a public
