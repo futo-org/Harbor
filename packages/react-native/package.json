@@ -8,6 +8,8 @@
   "react-native": "./src/index.tsx",
   "exports": {
     ".": {
+      "react-server": "./src/index.web.ts",
+      "node": "./src/index.web.ts",
       "browser": "./src/index.web.ts",
       "react-native": "./src/index.tsx",
       "source": "./src/index.tsx",

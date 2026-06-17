@@ -34,4 +34,5 @@ http = "1"
 
 [dev-dependencies]
 mockito = "1"
+tonic-prost-build = "*"
 
