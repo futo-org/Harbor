@@ -226,6 +226,21 @@ export class PolycentricClient {
   }
 
   /**
+   * Build a URL that proxies a remote image through the first server's
+   * SSRF-guarded `/image_proxy` endpoint. Used for link-preview thumbnails so
+   * the client never hotlinks third-party hosts (avoids leaking reader IPs and
+   * mixed-content/CORS issues). Returns `null` if no server is configured.
+   *
+   * Note: this targets the server itself, not the blob CDN — `/image_proxy`
+   * is a dynamic endpoint, not CDN-served like `/blob`.
+   */
+  imageProxyUrl(imageUrl: string): string | null {
+    const server = this.servers[0];
+    if (!server) return null;
+    return `${server}/image_proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
+  /**
    * Fetch link-preview metadata for `url` from the configured servers'
    * unfurl endpoint (`ContentService.UrlInfo`). Tries each server in turn
    * and returns the first successful `Link`; returns `null` if every server
