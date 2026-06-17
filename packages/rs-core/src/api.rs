@@ -176,7 +176,10 @@ impl PolycentricCore {
         for entry in contents {
             let digest = ContentDigest::decode(entry.digest_bytes.as_slice())
                 .map_err(|e| CoreError::Decode(format!("Failed to decode ContentDigest: {e}")))?;
-            client.copy_content(&digest, entry.content_bytes);
+            if let Err(e) = client.copy_content(&digest, entry.content_bytes) {
+                // Skip content that doesn't match its digest; keep the rest.
+                crate::logging::log_warn(|| format!("dropping content: {e}"));
+            }
         }
         Ok(())
     }
