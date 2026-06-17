@@ -1,30 +1,26 @@
 import { Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { v2 } from '@polycentric/react-native';
 import { Image, Linking, Pressable, View } from 'react-native';
-
-export type LinkPreview = {
-  url: string;
-  title: string;
-  description?: string;
-  /** Already resolved to a displayable URI (raw URL or blob URL). */
-  imageUrl?: string;
-};
 
 const IMAGE_BG = 'rgba(0,0,0,0.04)';
 /** Open-Graph standard image ratio (1200×630). */
 const OG_ASPECT = 1.91;
 
 /**
- * Open-Graph style preview card for a link in a post. Tapping opens the
- * URL; the tap is stopped from also triggering the surrounding post-card
- * press (same pattern as PostImages).
+ * Open-Graph style preview card for a `Link` attached to a post (built by the
+ * server's `url_info` unfurl). Tapping opens the URL; the tap is stopped from
+ * also triggering the surrounding post-card press (same pattern as PostImages).
+ *
+ * Metadata fields are best-effort — proto3 leaves unset strings empty, so each
+ * is rendered only when present.
  */
-export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
+export function LinkPreviewCard({ link }: { link: v2.Link }) {
   const { theme } = useTheme();
 
-  let host = preview.url;
+  let host = link.url;
   try {
-    host = new URL(preview.url).hostname;
+    host = new URL(link.url).hostname;
   } catch {
     // Leave host as the raw URL if it doesn't parse.
   }
@@ -33,7 +29,7 @@ export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
     <Pressable
       onPress={(e) => {
         e.stopPropagation?.();
-        void Linking.openURL(preview.url).catch(() => {});
+        void Linking.openURL(link.url).catch(() => {});
       }}
       style={({ pressed }) => [
         Atoms.rounded_md,
@@ -46,9 +42,9 @@ export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
         pressed && { opacity: 0.8 },
       ]}
     >
-      {preview.imageUrl ? (
+      {link.image ? (
         <Image
-          source={{ uri: preview.imageUrl }}
+          source={{ uri: link.image }}
           resizeMode="cover"
           style={[
             Atoms.w_full,
@@ -60,22 +56,24 @@ export function LinkPreviewCard({ preview }: { preview: LinkPreview }) {
         <Text variant="small" color="neutral_500">
           {host}
         </Text>
-        <Text
-          variant="secondary"
-          fontWeight="bold"
-          numberOfLines={2}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
-        >
-          {preview.title}
-        </Text>
-        {preview.description ? (
+        {link.title ? (
+          <Text
+            variant="secondary"
+            fontWeight="bold"
+            numberOfLines={2}
+            style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
+          >
+            {link.title}
+          </Text>
+        ) : null}
+        {link.description ? (
           <Text
             variant="secondary"
             color="neutral_500"
             numberOfLines={2}
             style={Atoms.mt_xs}
           >
-            {preview.description}
+            {link.description}
           </Text>
         ) : null}
       </View>

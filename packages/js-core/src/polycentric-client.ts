@@ -226,6 +226,24 @@ export class PolycentricClient {
   }
 
   /**
+   * Fetch link-preview metadata for `url` from the configured servers'
+   * unfurl endpoint (`ContentService.UrlInfo`). Tries each server in turn
+   * and returns the first successful `Link`; returns `null` if every server
+   * fails — so callers can fall back to a plain link rather than erroring.
+   */
+  async urlInfo(url: string): Promise<Proto.Link | null> {
+    for (const server of this.servers) {
+      try {
+        const bytes = await this.core.urlInfo(server, url);
+        return Proto.Link.fromBinary(new Uint8Array(bytes));
+      } catch {
+        // Try the next server.
+      }
+    }
+    return null;
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {

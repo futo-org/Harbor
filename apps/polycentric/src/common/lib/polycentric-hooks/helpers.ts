@@ -27,6 +27,9 @@ export type PostData = {
   /** Attached image sets, in author-provided order. */
   images: v2.ImageSet[];
 
+  /** Attached link previews (Open Graph metadata), in author-provided order. */
+  links: v2.Link[];
+
   /** Set when the underlying `v2.Post` carried a `reply`. */
   reply?: {
     /** Hex of the root post's EventKey — same encoding as `PostData.id`. */
@@ -149,6 +152,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       content: post.text,
       createdAt: Number(event.createdAt ?? 0),
       images: post.images,
+      links: post.links,
       reply,
       quoteId,
       signedEvent: v2.SignedEvent.create({

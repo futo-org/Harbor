@@ -8,6 +8,7 @@ import {
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
+import { parseTextLinks } from '@/src/common/util/parseTextLinks';
 import {
   feedQueryKeys,
   injectPostIntoFeedCache,
@@ -245,9 +246,17 @@ export function useComposer({
             )
           : [];
 
+      // Unfurl the first URL in the text into a link preview, embedding it in
+      // the signed post. Best-effort: a failed/empty fetch just yields no card.
+      const firstUrl = parseTextLinks(text.trim()).find(
+        (s) => s.type === 'link',
+      )?.url;
+      const link = firstUrl ? await client.urlInfo(firstUrl) : null;
+
       const post: types.v2.Post = {
         text: text.trim(),
         images: imageSets,
+        links: link ? [link] : [],
       };
 
       if (isReply) {
