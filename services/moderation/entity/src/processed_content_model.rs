@@ -21,8 +21,8 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub digest_bytes: Vec<u8>,
 
-    pub created_at: TimeDateTime,
-    pub updated_at: TimeDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub updated_at: TimeDateTimeWithTimeZone,
 
     pub status: Status,
 

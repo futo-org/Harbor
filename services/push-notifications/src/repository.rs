@@ -2,6 +2,7 @@ use polycentric_common::models::protos_v2::PublicKey;
 use push_notifications_entity::push_token_model as PushTokenModel;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::*;
+use time::OffsetDateTime;
 
 pub struct Query;
 
@@ -27,16 +28,15 @@ impl Mutation {
         service: String,
         token: String,
     ) -> Result<(), DbErr> {
-        let now = time::OffsetDateTime::now_utc();
-        let timestamp = time::PrimitiveDateTime::new(now.date(), now.time());
+        let now = OffsetDateTime::now_utc();
 
         let active = PushTokenModel::ActiveModel {
             public_key_type: Set(public_key.key_type as i16),
             public_key: Set(public_key.key.clone()),
             service: Set(service),
             token: Set(token),
-            created_at: Set(timestamp),
-            updated_at: Set(timestamp),
+            created_at: Set(now),
+            updated_at: Set(now),
         };
 
         PushTokenModel::Entity::insert(active)

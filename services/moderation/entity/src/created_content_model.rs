@@ -16,7 +16,7 @@ pub struct Model {
     // Serialized `Content` proto (the bytes the digest is taken over).
     pub serialized_bytes: Vec<u8>,
 
-    pub created_at: TimeDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
