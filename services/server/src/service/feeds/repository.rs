@@ -14,18 +14,31 @@ use crate::service::feeds::util::PageCursor;
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
+/// Cursor type for paginated feed queries.
+#[derive(Clone, Serialize, Deserialize)]
+pub enum FeedCursor {
+    /// Marks the start of the feed.
+    /// Forward queries return the first items and backward queries return nothing.
+    Start,
+    /// Marks somewhere in the feed.
+    /// Forward queries return items following this point and
+    /// backward queries return items preceding this point.
+    Mid(FeedMarker),
+    /// Marks the end of the feed.
+    /// Forward queries return nothing and backward queries return the last items.
+    End,
+}
+
 /// Exclusive lowerbound/upperbound for a feed query
 #[derive(Clone, Serialize, Deserialize)]
-pub struct FeedCursor {
+pub struct FeedMarker {
     pub created_at: PrimitiveDateTime,
     pub id: i64,
 }
 
-/// The cursor we send to the client should be optional
-/// so that we can represent empty feeds properly.
-impl PageCursor for Option<FeedCursor> {}
+impl PageCursor for FeedCursor {}
 
-impl FeedCursor {
+impl FeedMarker {
     /// Get the database columns to compare against a cursor as a rust tuple.
     fn cols() -> impl IdentityOf<EventModel::Entity> {
         (EventModel::Column::CreatedAt, EventModel::Column::Id)
@@ -75,6 +88,10 @@ impl Query {
         only_identities: Option<Vec<String>>,
         cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let cursor_filter = cursor_filter
+            .as_ref()
+            .unwrap_or(&CursorFilter::Forward(FeedCursor::Start));
+
         let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
             .join(JoinType::LeftJoin, content_join())
@@ -89,22 +106,34 @@ impl Query {
                 query.filter(EventModel::Column::Identity.is_in(identities));
         }
 
-        let mut cursor = query.cursor_by(FeedCursor::cols());
-        cursor.desc();
+        let mut sea_cursor = query.cursor_by(FeedMarker::cols());
+        sea_cursor.desc();
 
         match cursor_filter {
-            Some(CursorFilter::Forward(cur)) => {
-                cursor.after(cur.values()).first(limit);
+            CursorFilter::Forward(cur) => {
+                match cur {
+                    FeedCursor::Start => {}
+                    FeedCursor::Mid(marker) => {
+                        sea_cursor.after(marker.values());
+                    }
+                    FeedCursor::End => return Ok(vec![]),
+                }
+
+                sea_cursor.first(limit);
             }
-            Some(CursorFilter::Backward(cur)) => {
-                cursor.before(cur.values()).last(limit);
-            }
-            None => {
-                cursor = cursor.limit(limit);
+            CursorFilter::Backward(cur) => {
+                match cur {
+                    FeedCursor::Start => return Ok(vec![]),
+                    FeedCursor::Mid(marker) => {
+                        sea_cursor.before(marker.values());
+                    }
+                    FeedCursor::End => {}
+                }
+                sea_cursor.last(limit);
             }
         }
 
-        cursor.all(db).await
+        sea_cursor.all(db).await
     }
 
     /// Bulk-fetch events (with joined content) by their EventKey

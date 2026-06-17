@@ -28,7 +28,7 @@ pub fn map_db_err(e: DbErr) -> Status {
 /// Client should "refresh" by querying again without providing a cursor
 /// when fresh data is required.
 /// Otherwise, fresh data may or may not be included.
-pub trait PageCursor: Serialize + for<'de> Deserialize<'de> + Default {
+pub trait PageCursor: Serialize + for<'de> Deserialize<'de> {
     fn encode(&self) -> Result<String, Status> {
         let bytes = serde_json::to_vec(self).map_err(|e| {
             eprintln!("encode pagination token: {e}");
@@ -54,7 +54,6 @@ pub trait PageCursor: Serialize + for<'de> Deserialize<'de> + Default {
 
 /// `PageInfo` to return to the client, except with our types
 /// instead of opaque cursor strings.
-#[derive(Default)]
 pub struct PageInfo<Cursor: PageCursor> {
     pub backward_cursor: Cursor,
     pub forward_cursor: Cursor,

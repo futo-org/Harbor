@@ -8,7 +8,7 @@ use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
 use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, Query as FeedsRepository,
+    CursorFilter, FeedCursor, FeedMarker, Query as FeedsRepository,
 };
 use crate::service::feeds::util::{
     PageCursor, PageInfo, map_db_err, page_limit,
@@ -51,10 +51,10 @@ impl Params {
                 ));
             }
             Some((Some(token), None)) => {
-                Option::<FeedCursor>::decode(token)?.map(CursorFilter::Backward)
+                Some(CursorFilter::Backward(FeedCursor::decode(token)?))
             }
             Some((None, Some(token))) => {
-                Option::<FeedCursor>::decode(token)?.map(CursorFilter::Forward)
+                Some(CursorFilter::Forward(FeedCursor::decode(token)?))
             }
             _ => None,
         };
@@ -68,24 +68,22 @@ impl Params {
 
 pub struct Fetched {
     pub rows: Vec<EventWithContentRow>,
-    pub page_info: PageInfo<Option<FeedCursor>>,
+    pub page_info: PageInfo<FeedCursor>,
 }
 
-#[derive(Default)]
 pub struct GetFeedResponseFilter {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
-    pub page_info: PageInfo<Option<FeedCursor>>,
+    pub page_info: PageInfo<FeedCursor>,
 }
 
-#[derive(Default)]
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    pub page_info: PageInfo<Option<FeedCursor>>,
+    pub page_info: PageInfo<FeedCursor>,
 }
 
-/// Remove the extra row (for checking next page existence) and extract page info.
+/// Remove any extra rows (for checking next page existence) and extract page info.
 /// Return the final fetch stage result.
 pub fn finalize_fetch(
     mut rows: Vec<EventWithContentRow>,
@@ -96,17 +94,23 @@ pub fn finalize_fetch(
     let has_extra_row = rows.len() as u64 > params.limit;
 
     // Simple heuristic: if a forward token was used, then there was a previous page.
-    // False negative when going forward then backward that we do not handle.
-    // Other direction applies as well.
-    let cursor_was_used = params.cursor_filter.is_some();
+    // Unless the forward token was a start token.
+    // False negatives when going forward then backward or querying forward from an
+    // end token. We do not handle these cases.
+    // Similar logic applies for backward queries as well.
+    let mid_cursor_was_used = match params.cursor_filter {
+        Some(CursorFilter::Forward(FeedCursor::Mid(_))) => true,
+        Some(CursorFilter::Backward(FeedCursor::Mid(_))) => true,
+        _ => false,
+    };
 
     let (has_previous_page, has_next_page) = match params.cursor_filter {
         Some(CursorFilter::Backward(_)) => {
             // Backwards queries have a cursor if there is a page following this one
             // and the extra row would be preceding the current page.
-            (has_extra_row, cursor_was_used)
+            (has_extra_row, mid_cursor_was_used)
         }
-        _ => (cursor_was_used, has_extra_row),
+        _ => (mid_cursor_was_used, has_extra_row),
     };
 
     // Remove from the end if we fetched extra rows at the end
@@ -119,15 +123,41 @@ pub fn finalize_fetch(
         _ => rows.truncate(params.limit as usize),
     }
 
-    let backward_cursor = rows.first().map(|(event, _)| FeedCursor {
+    let backward_marker = rows.first().map(|(event, _)| FeedMarker {
         created_at: event.created_at,
         id: event.id,
     });
 
-    let forward_cursor = rows.last().map(|(event, _)| FeedCursor {
+    let forward_marker = rows.last().map(|(event, _)| FeedMarker {
         created_at: event.created_at,
         id: event.id,
     });
+
+    let backward_cursor = match (backward_marker, &params.cursor_filter) {
+        // We have non-zero rows: navigating backward will skip the first row we fetched.
+        (Some(marker), _) => FeedCursor::Mid(marker),
+        // There are zero rows preceding the previous cursor: we stay here.
+        (None, Some(CursorFilter::Backward(cur))) => cur.clone(),
+        // Truly empty feed: we are at the end and new items will be
+        // placed preceding our cursor.
+        // OR
+        // Forward query from the end of the feed: we get the last items
+        // if we navigate backward.
+        _ => FeedCursor::End,
+    };
+
+    let forward_cursor = match (forward_marker, &params.cursor_filter) {
+        // We have non-zero rows: navigating forward will skip the last row we fetched.
+        (Some(marker), _) => FeedCursor::Mid(marker),
+        // There are zero rows preceding the previous cursor: a forward query
+        // should return the first items in the feed.
+        (None, Some(CursorFilter::Backward(_))) => FeedCursor::Start,
+        // There are zero rows following the previous cursor: we stay here.
+        (None, Some(CursorFilter::Forward(cur))) => cur.clone(),
+        // Truly empty feed: we are at the end and a forward query will continue
+        // to return no items.
+        _ => FeedCursor::End,
+    };
 
     let page_info = PageInfo {
         backward_cursor,

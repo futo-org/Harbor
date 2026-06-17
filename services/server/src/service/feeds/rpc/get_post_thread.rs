@@ -5,7 +5,7 @@ use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
@@ -163,7 +163,12 @@ async fn fetch(
     }
     Ok(feeds_pipeline::Fetched {
         rows: thread,
-        page_info: PageInfo::default(),
+        page_info: PageInfo {
+            backward_cursor: FeedCursor::Start,
+            forward_cursor: FeedCursor::End,
+            has_previous_page: false,
+            has_next_page: false,
+        },
     })
 }
 
