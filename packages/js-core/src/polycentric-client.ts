@@ -227,7 +227,7 @@ export class PolycentricClient {
 
   /**
    * Build a URL that proxies a remote image through the first server's
-   * SSRF-guarded `/image_proxy` endpoint. Used for link-preview thumbnails so
+   * `/image_proxy` endpoint. Used for link-preview thumbnails so
    * the client never hotlinks third-party hosts (avoids leaking reader IPs and
    * mixed-content/CORS issues). Returns `null` if no server is configured.
    *

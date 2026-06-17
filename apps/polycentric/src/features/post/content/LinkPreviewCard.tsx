@@ -20,7 +20,7 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
   const { theme } = useTheme();
   const client = usePolycentric();
 
-  // Load the thumbnail through the server's SSRF-guarded image proxy rather
+  // Load the thumbnail through the server's image proxy rather
   // than hotlinking the third-party host directly.
   const imageUri = link.image ? client.imageProxyUrl(link.image) : null;
 
@@ -48,9 +48,9 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
         pressed && { opacity: 0.8 },
       ]}
     >
-      {imageUri ? (
+      {link.image ? (
         <Image
-          source={{ uri: imageUri }}
+          source={{ uri: link.image }}
           resizeMode="cover"
           style={[
             Atoms.w_full,
