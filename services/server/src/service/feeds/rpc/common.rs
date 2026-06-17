@@ -98,11 +98,11 @@ pub fn finalize_fetch(
     // False negatives when going forward then backward or querying forward from an
     // end token. We do not handle these cases.
     // Similar logic applies for backward queries as well.
-    let mid_cursor_was_used = match params.cursor_filter {
-        Some(CursorFilter::Forward(FeedCursor::Mid(_))) => true,
-        Some(CursorFilter::Backward(FeedCursor::Mid(_))) => true,
-        _ => false,
-    };
+    let mid_cursor_was_used = matches!(
+        params.cursor_filter,
+        Some(CursorFilter::Forward(FeedCursor::Mid(_)))
+            | Some(CursorFilter::Backward(FeedCursor::Mid(_)))
+    );
 
     let (has_previous_page, has_next_page) = match params.cursor_filter {
         Some(CursorFilter::Backward(_)) => {
