@@ -30,9 +30,6 @@ The following commands will get you up and running:
 nvm install
 
 # Check you have the correct dependencies
-
-```
-
 apt-get install \
  protobuf-compiler \
  cmake \
@@ -40,8 +37,6 @@ apt-get install \
  pkg-config \
  libssl-dev \
  libsasl2-dev
-
-```
 
 # Add the WASM target to the rust toolchain
 rustup target add wasm32-unknown-unknown
@@ -66,6 +61,24 @@ pnpm dev
 If you're using Podman, ensure `docker compose` resolves to Compose v2.
 
 To run the server from source instead, see [`services/server/README.md`](services/server/README.md).
+
+### Clearing stale build caches
+
+Builds are cached by [Turbo](https://turborepo.com). The cache key does not
+track changes to installed dependencies, so after switching branches or updating
+deps (e.g. a `uniffi-bindgen-react-native` / `@ubjs/core` bump) `pnpm build` can
+restore a stale cached output and fail with mismatched generated bindings — for
+example a TypeScript error that two `Query` / `UniffiEnum` types "are unrelated".
+
+If that happens, clear the build cache and rebuild:
+
+```sh
+pnpm clean:cache
+pnpm build
+```
+
+If the generated uniffi bindings themselves are stale (not just their cache),
+also regenerate them with `pnpm ubrn:clean` followed by `pnpm build`.
 
 ## Project Structure
 
