@@ -5,7 +5,7 @@ members = [
     "services/server",
     "services/server/tests",
     "services/moderation",
-    "services/notifications",
+    "services/push-notifications",
     "services/common/*",
     "tools/identity",
 ]

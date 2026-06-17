@@ -1,5 +1,5 @@
-use notifications_entity::push_token_model as PushTokenModel;
 use polycentric_common::models::protos_v2::PublicKey;
+use push_notifications_entity::push_token_model as PushTokenModel;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::*;
 

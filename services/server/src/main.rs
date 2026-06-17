@@ -4,6 +4,7 @@ mod grpc;
 mod routes;
 mod service;
 mod util;
+mod workers;
 
 use crate::db::client::build_db_client;
 use crate::grpc::server::build_grpc_router;
@@ -11,6 +12,7 @@ use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
+use crate::service::context::ServiceContext;
 use crate::service::server::rpc::ServerConfig;
 use common_kafka::build_producer;
 use sea_orm::DatabaseConnection;
@@ -47,6 +49,22 @@ fn server_config() -> ServerConfig {
 async fn main() {
     common_dotenv::load(".env");
 
+    // `server`          -> run the API (gRPC + HTTP) server (default)
+    // `server workers`  -> run all background workers
+    match std::env::args().nth(1).as_deref() {
+        None | Some("serve") => run_server().await,
+        Some("workers") => run_workers().await,
+        Some(other) => {
+            eprintln!(
+                "unknown subcommand: {other}\nusage: server [serve|workers]"
+            );
+            std::process::exit(2);
+        }
+    }
+}
+
+/// Run the API server: gRPC + HTTP merged onto a single port.
+async fn run_server() {
     let db = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await
@@ -71,4 +89,16 @@ async fn main() {
     println!("Server listening on http://0.0.0.0:3000");
     println!("API docs available at http://0.0.0.0:3000/docs");
     axum::serve(listener, app).await.unwrap();
+}
+
+/// Run every background worker concurrently in one process.
+async fn run_workers() {
+    let db = connect_db_with_retry().await;
+    let kafka_producer = build_producer()
+        .await
+        .expect("failed to build Kafka producer");
+    let ctx = ServiceContext::new(db, kafka_producer);
+
+    println!("Starting workers...");
+    workers::run_all_workers(ctx).await;
 }

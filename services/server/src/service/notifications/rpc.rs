@@ -1,13 +1,13 @@
 //! gRPC `ServerService` impl. Each method delegates to a handler
 //! under `server/rpc/`.
 
-pub mod get_notifications;
+pub mod list_notifications;
 
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
 use polycentric_common::models::protos_v2::{
-    GetNotificationsRequest, GetNotificationsResponse,
+    ListNotificationsRequest, ListNotificationsResponse,
     RegisterPushNotificationResponse, SignedMessage,
     UnregisterPushNotificationResponse,
 };
@@ -18,12 +18,12 @@ pub struct NotificationServiceImpl {}
 
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
-    async fn get_notifications(
+    async fn list_notifications(
         &self,
-        request: Request<GetNotificationsRequest>,
-    ) -> Result<Response<GetNotificationsResponse>, Status> {
+        request: Request<ListNotificationsRequest>,
+    ) -> Result<Response<ListNotificationsResponse>, Status> {
         Ok(Response::new(
-            get_notifications::handle(request.into_inner()).await?,
+            list_notifications::handle(request.into_inner()).await?,
         ))
     }
     async fn register_push_notifications(

@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use common_kafka::{BorrowedMessage, CommitMode, Consumer, Headers, Message, Offset};
-use polycentric_common::models::protos_v2::EventBundle;
+use polycentric_common::models::protos_v2::Notification;
 use prost::Message as _;
 use tonic::transport::Server;
 
@@ -102,10 +102,10 @@ async fn serve_grpc(ctx: Arc<Context>, addr: SocketAddr) -> Result<(), tonic::tr
         .await
 }
 
-/// Consume the `events` Kafka topic and drive notification processing.
+/// Consume the `notifications` Kafka topic and drive push processing.
 async fn run_consumer(ctx: Arc<Context>) {
-    // Listen to a Kafka topic of all events.
-    let consumer = common_kafka::build_consumer("notifications", &["events"]).await;
+    // Listen to the materialized notifications produced by the server.
+    let consumer = common_kafka::build_consumer("push-notifications", &["notifications"]).await;
 
     // Failure counts for messages currently being retried.
     let mut attempts: HashMap<(i32, i64), u32> = HashMap::new();
@@ -166,8 +166,8 @@ async fn run_consumer(ctx: Arc<Context>) {
 
 /// Handle a single consumed message.
 async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
-    // Only events published by the main server should produce
-    // notifications. Skip (commit past) anything from another source.
+    // Only notifications published by the main server should fire pushes.
+    // Skip (commit past) anything from another source.
     let source_server = message
         .headers()
         .and_then(|headers| headers.iter().find(|h| h.key == "SOURCE_SERVER"))
@@ -176,18 +176,24 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         return Outcome::Commit;
     }
 
-    let bundle = match message.payload() {
-        Some(bytes) => match EventBundle::decode(bytes) {
-            Ok(b) => b,
+    let notification = match message.payload() {
+        Some(bytes) => match Notification::decode(bytes) {
+            Ok(n) => n,
             Err(e) => {
-                warn!("failed to decode EventBundle: {:?}", e);
+                warn!("failed to decode Notification: {:?}", e);
                 return Outcome::Commit;
             }
         },
         None => return Outcome::Commit,
     };
 
-    match ctx.notification_manager.process_event(ctx, &bundle).await {
+    // The triggering event drives the push — its content determines the
+    // reply/follow message. A notification without one is a no-op.
+    let Some(trigger) = notification.trigger_event else {
+        return Outcome::Commit;
+    };
+
+    match ctx.notification_manager.process_event(ctx, &trigger).await {
         Ok(_) => Outcome::Commit,
         Err(e) => {
             warn!("Push notification processing error: {}", e);

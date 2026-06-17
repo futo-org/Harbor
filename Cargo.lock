@@ -3376,51 +3376,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
 
 [[package]]
-name = "notifications-entity"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "sea-orm",
-]
-
-[[package]]
-name = "notifications-migration"
-version = "0.1.0"
-dependencies = [
- "notifications-entity",
- "sea-orm",
- "sea-orm-migration",
- "tokio",
-]
-
-[[package]]
-name = "notifications-service"
-version = "0.1.0"
-dependencies = [
- "common-dotenv",
- "common-kafka",
- "common-object-store",
- "ed25519-dalek",
- "entity",
- "env_logger",
- "log",
- "mockito",
- "notifications-entity",
- "notifications-migration",
- "polycentric-common",
- "polycentric-core",
- "prost",
- "reqwest",
- "sea-orm",
- "serde",
- "sha2 0.11.0",
- "time",
- "tokio",
- "tokio-stream",
- "tonic",
-]
-
-[[package]]
 name = "num-bigint"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4030,6 +3985,51 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50793def1b900256624a709439404384204a5dc3a6ec580281bfaac35e882e90"
 dependencies = [
  "pulldown-cmark",
+]
+
+[[package]]
+name = "push-notifications-entity"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "sea-orm",
+]
+
+[[package]]
+name = "push-notifications-migration"
+version = "0.1.0"
+dependencies = [
+ "push-notifications-entity",
+ "sea-orm",
+ "sea-orm-migration",
+ "tokio",
+]
+
+[[package]]
+name = "push-notifications-service"
+version = "0.1.0"
+dependencies = [
+ "common-dotenv",
+ "common-kafka",
+ "common-object-store",
+ "ed25519-dalek",
+ "entity",
+ "env_logger",
+ "log",
+ "mockito",
+ "polycentric-common",
+ "polycentric-core",
+ "prost",
+ "push-notifications-entity",
+ "push-notifications-migration",
+ "reqwest",
+ "sea-orm",
+ "serde",
+ "sha2 0.11.0",
+ "time",
+ "tokio",
+ "tokio-stream",
+ "tonic",
 ]
 
 [[package]]

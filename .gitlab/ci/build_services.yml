@@ -162,16 +162,16 @@ moderation-image:
 # notifications
 ########################################################################
 
-.notifications-workflow:
+.push-notifications-workflow:
   image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
   rules:
-    - if: $CI_COMMIT_TAG =~ /^notifications-/
+    - if: $CI_COMMIT_TAG =~ /^push-notifications-/
       when: always
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - Cargo.toml
         - Cargo.lock
-        - services/notifications/**/*
+        - services/push-notifications/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
@@ -179,39 +179,39 @@ moderation-image:
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - services/notifications/**/*
+        - services/push-notifications/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
-    SERVICE_NAME: notifications-service
-    SERVICE_DIR: notifications
+    SERVICE_NAME: push-notifications-service
+    SERVICE_DIR: push-notifications
 
-notifications-format-check:
+push-notifications-format-check:
   extends:
-    - .notifications-workflow
+    - .push-notifications-workflow
     - .service-format-check
 
-notifications-clippy:
+push-notifications-clippy:
   extends:
-    - .notifications-workflow
+    - .push-notifications-workflow
     - .service-clippy
 
-notifications-test:
+push-notifications-test:
   extends:
-    - .notifications-workflow
+    - .push-notifications-workflow
     - .service-test
 
-notifications-build:
+push-notifications-build:
   extends:
-    - .notifications-workflow
+    - .push-notifications-workflow
     - .service-build
 
-notifications-image:
+push-notifications-image:
   extends:
-    - .notifications-workflow
+    - .push-notifications-workflow
     - .service-image
   rules:
-    - !reference [.notifications-workflow, rules]
+    - !reference [.push-notifications-workflow, rules]
     - !reference [.release-workflow, rules]

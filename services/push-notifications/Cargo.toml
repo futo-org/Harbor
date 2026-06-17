@@ -1,6 +1,6 @@
 [package]
 edition      = "2024"
-name         = "notifications-service"
+name         = "push-notifications-service"
 publish      = false
 rust-version = "1.85.0"
 version      = "0.1.0"
@@ -11,8 +11,8 @@ common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
 common-object-store = { path = "../common/object-store" }
 entity = { path = "../server/entity" }
-notifications-entity = { path = "./entity" }
-notifications-migration = { path = "./migration" }
+push-notifications-entity = { path = "./entity" }
+push-notifications-migration = { path = "./migration" }
 polycentric-common.workspace = true
 polycentric-core = { path = "../../packages/rs-core" }
 

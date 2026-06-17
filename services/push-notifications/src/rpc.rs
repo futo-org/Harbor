@@ -9,7 +9,8 @@ use polycentric_common::models::protos_v2::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
 use polycentric_common::models::protos_v2::{
-    RegisterPushNotificationResponse, SignedMessage, UnregisterPushNotificationResponse,
+    ListNotificationsRequest, ListNotificationsResponse, RegisterPushNotificationResponse,
+    SignedMessage, UnregisterPushNotificationResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -21,6 +22,17 @@ pub struct NotificationServiceImpl {
 
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
+    async fn list_notifications(
+        &self,
+        _request: Request<ListNotificationsRequest>,
+    ) -> Result<Response<ListNotificationsResponse>, Status> {
+        // The notification feed is served by the main server, not the push
+        // service.
+        Err(Status::not_found(
+            "Not implemented here. Use the main server.",
+        ))
+    }
+
     async fn register_push_notifications(
         &self,
         request: Request<SignedMessage>,
@@ -62,10 +74,10 @@ mod tests {
     use crate::manager::{NotificationManager, PushService};
     use crate::polycentric::PolycentricClient;
     use ed25519_dalek::{Signer, SigningKey};
-    use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
     use polycentric_common::models::protos_v2::{KeyType, PublicKey};
     use prost::Message;
+    use push_notifications_entity::push_token_model as PushTokenModel;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 

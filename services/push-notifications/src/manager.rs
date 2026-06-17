@@ -476,7 +476,6 @@ mod tests {
     use super::{NotificationManager, PushService};
     use crate::context::Context;
     use crate::polycentric::PolycentricClient;
-    use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::collections;
     use polycentric_common::models::protos_v2::{
         Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
@@ -486,6 +485,7 @@ mod tests {
         event_sync_service_server::{EventSyncService, EventSyncServiceServer},
     };
     use prost::Message;
+    use push_notifications_entity::push_token_model as PushTokenModel;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockExecResult};
     use tokio_stream::wrappers::TcpListenerStream;
     use tonic::{Request, Response, Status};

@@ -1,12 +1,12 @@
 use polycentric_common::models::protos_v2::{
-    GetNotificationsRequest, GetNotificationsResponse, PageInfo,
+    ListNotificationsRequest, ListNotificationsResponse, PageInfo,
 };
 use tonic::Status;
 
 pub async fn handle(
-    _req: GetNotificationsRequest,
-) -> Result<GetNotificationsResponse, Status> {
-    Ok(GetNotificationsResponse {
+    _req: ListNotificationsRequest,
+) -> Result<ListNotificationsResponse, Status> {
+    Ok(ListNotificationsResponse {
         notifications: [].to_vec(),
         event_hints: [].to_vec(),
         page_info: Some(PageInfo {
