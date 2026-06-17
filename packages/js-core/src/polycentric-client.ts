@@ -229,7 +229,7 @@ export class PolycentricClient {
    * Fetch link-preview metadata for `url` from the configured servers'
    * unfurl endpoint (`ContentService.UrlInfo`). Tries each server in turn
    * and returns the first successful `Link`; returns `null` if every server
-   * fails — so callers can fall back to a plain link rather than erroring.
+   * fails.
    */
   async urlInfo(url: string): Promise<Proto.Link | null> {
     for (const server of this.servers) {
