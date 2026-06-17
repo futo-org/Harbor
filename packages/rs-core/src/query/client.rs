@@ -155,7 +155,7 @@ where
     /// - `complete()` once every server in the fan-out has finished
     pub fn fetch<F, Fut, M>(
         &self,
-        query_key: QueryKey,
+        query_key: Option<QueryKey>,
         query_fn: F,
         merge_fn: M,
         opts: Option<QueryOpts>,
@@ -251,17 +251,21 @@ fn resolve_servers(
 
 fn get_or_create_state<T>(
     queries: &Mutex<HashMap<QueryKey, QueryStateHandle<T>>>,
-    query_key: &QueryKey,
+    query_key: &Option<QueryKey>,
 ) -> QueryStateHandle<T>
 where
     T: Send + Sync + 'static,
 {
-    queries
-        .lock()
-        .unwrap()
-        .entry(query_key.clone())
-        .or_insert_with(|| Arc::new(Mutex::new(QueryState::new())))
-        .clone()
+    if let Some(query_key) = query_key {
+        queries
+            .lock()
+            .unwrap()
+            .entry(query_key.clone())
+            .or_insert_with(|| Arc::new(Mutex::new(QueryState::new())))
+            .clone()
+    } else {
+        Arc::new(Mutex::new(QueryState::new()))
+    }
 }
 
 /// Calls each server in parallel and emits onto `subscriber` as

@@ -1,5 +1,5 @@
 import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
 import { useState } from 'react';
 
 export default function useReportAction() {
@@ -36,7 +36,7 @@ export default function useReportAction() {
       });
 
       // Persist the content first: the event references it by digest, and
-      // `push()` looks the content up from the local store to attach it.
+      // `sync()` looks the content up from the local store to attach it.
       await client.contentManager.save(content);
 
       const event = await client.buildEvent(content, COLLECTION.REPORTS);
@@ -48,7 +48,7 @@ export default function useReportAction() {
       // Delivery to servers is best-effort — the report is already saved
       // locally and will be pushed on the next sync if this fails.
       try {
-        await client.push();
+        await client.sync(SyncStrategy.PARTIAL_PUSH);
       } catch (e) {
         console.warn('Failed to push report to servers:', e);
       } finally {

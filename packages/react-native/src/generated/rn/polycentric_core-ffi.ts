@@ -325,6 +325,11 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
+    uniffiSelf: bigint,
+    serverUrl: Uint8Array,
+    requestBytes: Uint8Array
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events(
     uniffiSelf: bigint,
     identity: Uint8Array,
@@ -357,6 +362,12 @@ interface NativeModuleInterface {
     mode: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus
   ): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(
+    uniffiSelf: bigint,
+    identity: Uint8Array,
+    server: Uint8Array,
+    partial: number
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_events(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
@@ -437,11 +448,13 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;

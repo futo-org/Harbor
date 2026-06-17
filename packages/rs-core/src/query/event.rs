@@ -4,6 +4,7 @@ pub mod key;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use polycentric_common::models::protos_v2;
 use polycentric_common::models::protos_v2::{
     EventBundle, ListEventsFilters, ListEventsRequest, ListEventsResponse,
     event_sync_service_client::EventSyncServiceClient,
@@ -11,7 +12,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
-use crate::query::event::key::PublicKey;
+use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
     QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
@@ -26,6 +27,7 @@ pub struct ListEventsArgs {
     pub signed_by: Option<PublicKey>,
     pub sequence_gt: Option<i64>,
     pub sequence_lt: Option<i64>,
+    pub heads: Option<Vec<EventKey>>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -74,7 +76,7 @@ fn merge_list_events_responses(
 /// `event_bundles` deduped by `EventKey`.
 pub fn list_events(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: ListEventsArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -85,7 +87,29 @@ pub fn list_events(
         signed_by,
         sequence_gt,
         sequence_lt,
+        heads,
     } = args;
+
+    let heads = heads
+        .unwrap_or_default()
+        .into_iter()
+        .map(
+            |EventKey {
+                 collection,
+                 identity,
+                 signed_by,
+                 sequence,
+             }| {
+                let PublicKey { key_type, key } = signed_by;
+                protos_v2::EventKey {
+                    collection,
+                    identity,
+                    signed_by: Some(protos_v2::PublicKey { key_type, key }),
+                    sequence,
+                }
+            },
+        )
+        .collect();
 
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
@@ -94,6 +118,7 @@ pub fn list_events(
             signed_by: signed_by.map(Into::into),
             sequence_gt,
             sequence_lt,
+            heads,
         }),
         size,
     };
@@ -164,7 +189,7 @@ fn merge_event(
 /// Return a single event based on its key (or partial key)
 pub fn get_event(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetEventArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -199,6 +224,7 @@ pub fn get_event(
             signed_by: None,
             sequence_gt: Some(sequence_i64.saturating_sub(1)),
             sequence_lt: Some(sequence_i64.saturating_add(1)),
+            heads: vec![],
         }),
         size: Some(1),
     };

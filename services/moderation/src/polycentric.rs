@@ -6,8 +6,9 @@ use log::{info, warn};
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, KeyType, Labels,
-    ListEventsFilters, ListEventsRequest, PublicKey, PutEventsRequest, SerializedContent,
-    SignedEvent, content::ContentBody, event_sync_service_client::EventSyncServiceClient,
+    ListEventsFilters, ListEventsRequest, PublicKey, PutEventsRequest, Report, ReportCategory,
+    SerializedContent, SignedEvent, content::ContentBody,
+    event_sync_service_client::EventSyncServiceClient,
 };
 // rs-core's client manages the local event/content stores and chain math.
 use polycentric_core::client::PolycentricClient as CoreClient;
@@ -184,14 +185,40 @@ impl PolycentricClient {
         label_values: Vec<String>,
         head: ChainHead,
     ) -> Result<CreatedEvent, PublishError> {
+        let (content_bytes, digest) = labels_content(&target, &label_values);
+        self.publish_content(collections::LABELS, content_bytes, digest, head)
+            .await
+    }
+
+    /// Build, sign, and push a `Report` event for `target`.
+    pub async fn publish_report(
+        &self,
+        target: EventKey,
+        category: ReportCategory,
+        additional_info: String,
+        head: ChainHead,
+    ) -> Result<CreatedEvent, PublishError> {
+        let (content_bytes, digest) = report_content(&target, category, &additional_info);
+        self.publish_content(collections::REPORTS, content_bytes, digest, head)
+            .await
+    }
+
+    /// Build, sign, and push an event carrying already-serialized `content`
+    /// (with its `digest`) on `collection`, extending the chain at `head`.
+    /// Shared by the labels and reports publishers.
+    async fn publish_content(
+        &self,
+        collection: i32,
+        content_bytes: Vec<u8>,
+        digest: ContentDigest,
+        head: ChainHead,
+    ) -> Result<CreatedEvent, PublishError> {
         let identity_sequence = self.identity_sequence.load(Ordering::Relaxed);
         if identity_sequence == 0 {
             return Err(PublishError::NotReady(
                 "identity state not loaded".to_string(),
             ));
         }
-
-        let (content_bytes, digest) = labels_content(&target, &label_values);
 
         // The sequence and prior-chain references come from the durable
         // Postgres store (`head`); only the vector clock is derived locally,
@@ -201,7 +228,7 @@ impl PolycentricClient {
             let core = self.core.lock().unwrap();
             core.build_vector_clock(
                 &self.identity,
-                collections::LABELS,
+                collection,
                 identity_sequence,
                 &self.public_key,
                 sequence,
@@ -212,7 +239,7 @@ impl PolycentricClient {
 
         let event = Event {
             key: Some(EventKey {
-                collection: collections::LABELS,
+                collection,
                 identity: self.identity.clone(),
                 signed_by: Some(self.public_key.clone()),
                 sequence,
@@ -253,7 +280,7 @@ impl PolycentricClient {
         }
         if !pushed {
             return Err(PublishError::Transient(
-                "failed to push labels event to any server".to_string(),
+                "failed to push event to any server".to_string(),
             ));
         }
 
@@ -305,6 +332,28 @@ pub fn labels_content(target: &EventKey, label_values: &[String]) -> (Vec<u8>, C
         content_body: Some(ContentBody::Labels(Labels {
             event_key: Some(target.clone()),
             label_values: label_values.to_vec(),
+        })),
+    };
+    let content_bytes = content.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256 as i32,
+        value: sha256(&content_bytes),
+    };
+    (content_bytes, digest)
+}
+
+/// Build the serialized `Report` content for `target`/`category` and its
+/// digest.
+pub fn report_content(
+    target: &EventKey,
+    category: ReportCategory,
+    additional_info: &str,
+) -> (Vec<u8>, ContentDigest) {
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(target.clone()),
+            category: category as i32,
+            additional_info: additional_info.to_string(),
         })),
     };
     let content_bytes = content.encode_to_vec();

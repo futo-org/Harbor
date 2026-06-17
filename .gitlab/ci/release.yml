@@ -82,34 +82,7 @@ release-publish-npm:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - pnpm install --frozen-lockfile
   script:
-    - VERSION="${CI_COMMIT_TAG#v}"
-    - echo "Publishing @polycentric packages at version ${VERSION}"
-    # Keep prereleases (e.g. 2.0.0-alpha.1) off the `latest` dist-tag.
-    - |
-      DIST_TAG=latest
-      if echo "$VERSION" | grep -q '-'; then
-        DIST_TAG=$(echo "$VERSION" | sed -E 's/.*-([a-zA-Z]+).*/\1/')
-        [ "$DIST_TAG" = "$VERSION" ] && DIST_TAG=next
-      fi
-      echo "Using npm dist-tag: ${DIST_TAG}"
-    # Bump every @polycentric package to the release version.
-    - pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-version --allow-same-version
-    # Publish to the GitLab registry and to public npm. pnpm topologically
-    # orders the packages and rewrites workspace:* -> ${VERSION} on publish.
-    - |
-      FILTERS="--filter @polycentric/rs-core-uniffi-web --filter @polycentric/js-storage-sqlite --filter @polycentric/js-core --filter @polycentric/js-browser --filter @polycentric/js-node --filter @polycentric/react-native"
-
-      echo "Publishing to the GitLab package registry"
-      pnpm config set @polycentric:registry "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/"
-      pnpm $FILTERS -r publish --no-git-checks --access public --tag "$DIST_TAG"
-
-      if [ -n "$NPM_TOKEN" ]; then
-        echo "Publishing to public npm (registry.npmjs.org)"
-        pnpm config set @polycentric:registry "https://registry.npmjs.org/"
-        pnpm $FILTERS -r publish --no-git-checks --access public --tag "$DIST_TAG"
-      else
-        echo "NPM_TOKEN is not set; skipping public npm publish" >&2
-      fi
+    - .gitlab/ci/scripts/npm_publish.sh
 
 #################
 # rs-core crate #

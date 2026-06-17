@@ -1,5 +1,6 @@
 variables:
   RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust'
+  RUST_DIND_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust-dind'
 
 .setup-images-workflow:
   stage: setup
@@ -32,3 +33,17 @@ setup-image-rust:
         --import-cache type=registry,ref=$RUST_IMAGE \
         --export-cache type=inline \
         --output type=image,name=$RUST_IMAGE,push=true
+
+setup-image-rust-dind:
+  extends: .setup-images-workflow
+  needs: ['setup-image-rust']
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --opt build-arg:RUST_IMAGE=$RUST_IMAGE \
+        --local context=.gitlab/images/rust-dind \
+        --local dockerfile=.gitlab/images/rust-dind \
+        --import-cache type=registry,ref=$RUST_DIND_IMAGE \
+        --export-cache type=inline \
+        --output type=image,name=$RUST_DIND_IMAGE,push=true

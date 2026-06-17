@@ -24,7 +24,7 @@ pub fn verify_vector_clock(
         }
         let other = dedup[pos];
         let seen = store
-            .by_identity_collection_signer(identity, collection, other.key_type, &other.key)
+            .by_identity_collection_signer(identity, collection, other.key_type, &other.key, 0)
             .any(|(k, _)| k.sequence == observed);
         if !seen {
             return Err(CoreError::InvalidEvent(format!(

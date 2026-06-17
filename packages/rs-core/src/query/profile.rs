@@ -88,7 +88,7 @@ fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> O
 ///   while the server fan-out runs in the background.
 pub fn get_profile(
     query_client: &QueryClient<Vec<u8>>,
-    query_key: QueryKey,
+    query_key: Option<QueryKey>,
     args: GetProfileArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
@@ -132,6 +132,7 @@ pub fn get_profile(
                         signed_by: None,
                         sequence_gt: None,
                         sequence_lt: None,
+                        heads: vec![],
                     }),
                     size: None,
                 })

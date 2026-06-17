@@ -14,11 +14,17 @@ use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, content::ContentBody,
+use polycentric_common::models::{
+    collections,
+    protos_v2::{
+        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, ReportCategory,
+        content::ContentBody,
+    },
 };
-use providers::azure::{AzureClient, ModerationRequest};
+use providers::{
+    azure::{AzureClient, ModerationRequest},
+    photodna::PhotoDnaClient,
+};
 // Aliased: `Message` above is rdkafka's message trait; this brings the
 // prost decode trait into scope without shadowing it.
 use prost::Message as ProstMessage;
@@ -93,7 +99,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     // Nothing to moderate unless the content yields text or an image
     // (skips no-op posts, reactions, follows, etc.).
     let has_text = content_text(&content).is_some();
-    let has_image = !image_digests(&content).is_empty();
+    let has_image = !image_blobs(&content).is_empty();
     if !has_text && !has_image {
         return None;
     }
@@ -135,39 +141,57 @@ fn image_sets(content: &Content) -> Vec<&ImageSet> {
     }
 }
 
-/// Digest of one variant per distinct image in the content.
-fn image_digests(content: &Content) -> Vec<&ContentDigest> {
+/// Digest and claimed MIME type of one variant per distinct image in the
+/// content. The MIME type is client-supplied (and may be empty), so treat it
+/// only as a hint.
+fn image_blobs(content: &Content) -> Vec<(&ContentDigest, &str)> {
     image_sets(content)
         .into_iter()
         // One variant (size) per image is enough to moderate it.
         .filter_map(|set| set.images.first())
         .filter_map(|image| image.blob.as_ref())
-        .filter_map(|blob| blob.digest.as_ref())
+        .filter_map(|blob| Some((blob.digest.as_ref()?, blob.mime_type.as_str())))
         .collect()
 }
 
 /// Fetch the bytes of every image referenced by the content. Images that
 /// fail to fetch are skipped (logged).
-async fn fetch_images(ctx: &Context, content: &Content) -> Vec<Vec<u8>> {
+async fn fetch_images(ctx: &Context, content: &Content) -> Vec<(Vec<u8>, String)> {
     let store = &ctx.blobs;
     let mut images = Vec::new();
-    for digest in image_digests(content) {
+    for (digest, mime) in image_blobs(content) {
         match store.read_blob(digest).await {
-            Ok(bytes) => images.push(bytes),
+            Ok(bytes) => images.push((bytes, mime.to_string())),
             Err(e) => warn!("failed to fetch image blob: {}", e),
         }
     }
     images
 }
 
+/// Purge every image blob referenced by `content` from the object store.
+async fn purge_images(ctx: &Context, content: &Content) -> Result<(), ()> {
+    let store = &ctx.blobs;
+    let mut ok = true;
+    for (digest, _mime) in image_blobs(content) {
+        if let Err(e) = store.delete_blob(digest).await {
+            warn!("failed to purge CSAM image blob: {}", e);
+            ok = false;
+        }
+    }
+    if ok { Ok(()) } else { Err(()) }
+}
+
 /// Run the content through Azure and return its raw response(s). Every
 /// image is scanned (with the post text when present). `Err` signals a
 /// provider failure so the row can be marked `FAILED`.
-async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value, ()> {
+async fn moderate(
+    ctx: &Context,
+    content: &Content,
+    images: &[(Vec<u8>, String)],
+) -> Result<serde_json::Value, ()> {
     let client = &ctx.azure;
 
     let text = content_text(content);
-    let images = fetch_images(ctx, content).await;
 
     let analyze = |request| async {
         client.analyze(request).await.map_err(|e| {
@@ -178,7 +202,7 @@ async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value,
     // Each image is scanned with the text (multimodal) when text is
     // present, otherwise on its own.
     let mut image_results = Vec::with_capacity(images.len());
-    for image in &images {
+    for (image, _mime) in images {
         if let Some(request) = ModerationRequest::from_parts(text.as_deref(), Some(image)) {
             image_results.push(analyze(request).await?);
         }
@@ -200,6 +224,30 @@ async fn moderate(ctx: &Context, content: &Content) -> Result<serde_json::Value,
     }))
 }
 
+/// Run every image through PhotoDNA and report whether any is a CSAM match.
+/// When PhotoDNA is unconfigured, it will simply accept all images and
+/// never report a CSAM match. Any other error will return an error result,
+/// to ensure that callers retry rather than silently skipping CSAM.
+async fn photodna_filter(ctx: &Context, images: &[(Vec<u8>, String)]) -> Result<bool, ()> {
+    let Some(photodna) = &ctx.photodna else {
+        return Ok(false);
+    };
+
+    for (image, mime) in images {
+        let hint = (!mime.is_empty()).then_some(mime.as_str());
+        match photodna.is_match(image, hint).await {
+            Ok(true) => return Ok(true),
+            Ok(false) => {}
+            Err(e) => {
+                warn!("photodna match error: {}", e);
+                return Err(());
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
@@ -217,6 +265,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let azure = AzureClient::from_env()?;
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
+    // PhotoDNA is optional: if it is not configured, warn and moderate
+    // with Azure alone
+    let photodna = match PhotoDnaClient::from_env() {
+        Ok(client) => Some(client),
+        Err(e) => {
+            warn!(
+                "PhotoDNA not configured ({e}) for content moderation, continuing with Azure only"
+            );
+            None
+        }
+    };
+
     // Our own Polycentric identity, used to sign + publish labels events.
     let polycentric = PolycentricClient::from_env()?;
     // Pull our identity state from the remote servers before consuming, so
@@ -226,6 +286,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = Context {
         db,
         azure,
+        photodna,
         blobs,
         polycentric,
     };
@@ -332,10 +393,15 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
             // stored result (we still confirm the labels event below).
             Ok(Some(row)) => match row.azure_response {
                 Some(response) => response,
-                // Row exists but Azure never completed (pending/failed) — nothing
-                // to label; skip to avoid reprocessing.
                 None => {
-                    info!("content already seen without an Azure result, skipping");
+                    // Content flagged as CSAM skips Azure responses. Re-run purging/reporting
+                    // just in case.
+                    if row.is_csam == Some(true) {
+                        if purge_images(ctx, &content).await.is_err() {
+                            return Outcome::Retry;
+                        }
+                        report_csam(ctx, &key).await;
+                    }
                     return Outcome::Commit;
                 }
             },
@@ -348,10 +414,32 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                     return Outcome::Retry;
                 }
 
-                // TODO: if an image, check CSAM first and immediately delete the
-                // content on a positive match (short-circuit before Azure).
+                let images = fetch_images(ctx, &content).await;
 
-                match moderate(ctx, &content).await {
+                match photodna_filter(ctx, &images).await {
+                    // CSAM: record it, then purge the image blobs and report it.
+                    // Do not run Azure or labels.
+                    Ok(true) => {
+                        // If we get an error, retry (CSAM should not be ignored).
+                        if let Err(e) =
+                            repository::mark_csam(&ctx.db, digest_type, digest_bytes.clone()).await
+                        {
+                            warn!("mark_csam error: {}", e);
+                            return Outcome::Retry;
+                        }
+                        warn!("CSAM match for key {:?}", key);
+                        if purge_images(ctx, &content).await.is_err() {
+                            return Outcome::Retry;
+                        }
+                        report_csam(ctx, &key).await;
+                        return Outcome::Commit;
+                    }
+                    Ok(false) => {}
+                    // Retry on error, so that we don't skip the CSAM check.
+                    Err(()) => return Outcome::Retry,
+                }
+
+                match moderate(ctx, &content, &images).await {
                     Ok(response) => {
                         if let Err(e) = repository::store_azure_result(
                             &ctx.db,
@@ -457,6 +545,72 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         Err(PublishError::Transient(e)) => {
             warn!("labels publish failed: {}", e);
             Outcome::Retry
+        }
+    }
+}
+
+/// Ensure a CHILD_SAFETY report event exists for CSAM `key`. The report records
+/// and propagates the violation, but images should be purged before this runs.
+async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
+    let Some(target) = key.clone() else {
+        warn!("cannot report CSAM: message had no decodable event key");
+        return;
+    };
+
+    // Check if the report already exists
+    let additional_info = "PhotoDNA service reported image as CSAM";
+    let (_, digest) =
+        polycentric::report_content(&target, ReportCategory::ChildSafety, additional_info);
+    match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await {
+        Ok(true) => {
+            info!("CSAM report already created, skipping");
+            return;
+        }
+        Ok(false) => {}
+        Err(e) => {
+            warn!("created_content_exists error, skipping report: {}", e);
+            return;
+        }
+    }
+
+    let signer = ctx.polycentric.public_key();
+    let head = match repository::chain_head(
+        &ctx.db,
+        collections::REPORTS,
+        ctx.polycentric.identity(),
+        signer.key_type,
+        &signer.key,
+    )
+    .await
+    {
+        Ok(head) => head,
+        Err(e) => {
+            warn!("chain_head error, skipping report: {}", e);
+            return;
+        }
+    };
+
+    match ctx
+        .polycentric
+        .publish_report(
+            target.clone(),
+            ReportCategory::ChildSafety,
+            additional_info.to_string(),
+            head,
+        )
+        .await
+    {
+        Ok(created) => {
+            if let Err(e) = repository::persist_created(&ctx.db, &created).await {
+                warn!("persist_created error: {}", e);
+            }
+            // TODO: report confirmed CSAM to authorities (PhotoDNA? NCMEC?)
+        }
+        Err(PublishError::NotReady(e)) => {
+            warn!("report publish not ready, skipping: {}", e);
+        }
+        Err(PublishError::Transient(e)) => {
+            warn!("report publish failed, skipping: {}", e);
         }
     }
 }

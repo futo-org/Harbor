@@ -4,7 +4,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
 import { router, useSegments } from 'expo-router';
 import { feedQueryKeys } from '../../feed/hooks/feedCache';
 
@@ -44,7 +44,7 @@ export default function usePostActions(post: PostData): PostActions {
     await client.commitEvent(signedDelete, deleteContent);
 
     // TODO: do we care if push failed?
-    await client.push();
+    await client.sync(SyncStrategy.PARTIAL_PUSH);
   };
 
   const invalidateFeeds = (identity: string) => {

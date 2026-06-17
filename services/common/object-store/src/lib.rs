@@ -125,6 +125,19 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Delete a blob by its digest. Deleting an absent blob is a no-op.
+    pub async fn delete_blob(&self, digest: &ContentDigest) -> io::Result<()> {
+        let key = blob_key(digest);
+        self.client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .map_err(sdk_err)?;
+        Ok(())
+    }
+
     /// Read a blob body by its digest. Returns `NotFound` when the
     /// object does not exist in the bucket.
     pub async fn read_blob(&self, digest: &ContentDigest) -> io::Result<Vec<u8>> {

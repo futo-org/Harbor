@@ -9,4 +9,5 @@ pub mod media;
 pub mod query;
 pub mod rx;
 pub mod store;
+pub mod sync;
 pub mod vector_clock;

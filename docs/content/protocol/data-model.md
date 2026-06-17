@@ -221,6 +221,7 @@ message Content {
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
     Repost repost = 9;
+    Report report = 10;
   }
 }
 
@@ -295,6 +296,33 @@ message ProfileUpdate {
   optional ImageSet avatar = 2;
   optional ImageSet banner = 3;
   optional string description = 4;
+}
+```
+
+### Report
+
+A `Report` flags another event for a category of policy violation. Reports are
+themselves signed events, so a server can record who reported what and respond
+according to its own moderation policy (moderation is per-server). `additional_info`
+carries optional free-text context.
+
+```protobuf
+message Report {
+  // Event being reported
+  EventKey event_key = 1;
+  ReportCategory category = 2;
+  string additional_info = 3;
+}
+
+enum ReportCategory {
+  REPORT_CATEGORY_UNSPECIFIED = 0;
+  REPORT_CATEGORY_SPAM = 1;
+  REPORT_CATEGORY_ABUSE = 2;
+  REPORT_CATEGORY_CHILD_SAFETY = 3;
+  REPORT_CATEGORY_TERRORISM = 4;
+  REPORT_CATEGORY_ILLEGAL = 5;
+  REPORT_CATEGORY_COPYRIGHT = 6;
+  REPORT_CATEGORY_SERVER_POLICY = 7;
 }
 ```
 

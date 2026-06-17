@@ -595,6 +595,7 @@ export type ListEventsArgs = {
   signedBy?: PublicKey;
   sequenceGt?: bigint;
   sequenceLt?: bigint;
+  heads?: Array<EventKey>;
 };
 
 /**
@@ -625,6 +626,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         signedBy: FfiConverterOptionalTypePublicKey.read(from),
         sequenceGt: FfiConverterOptionalInt64.read(from),
         sequenceLt: FfiConverterOptionalInt64.read(from),
+        heads: FfiConverterOptionalSequenceTypeEventKey.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
@@ -634,6 +636,7 @@ const FfiConverterTypeListEventsArgs = (() => {
       FfiConverterOptionalTypePublicKey.write(value.signedBy, into);
       FfiConverterOptionalInt64.write(value.sequenceGt, into);
       FfiConverterOptionalInt64.write(value.sequenceLt, into);
+      FfiConverterOptionalSequenceTypeEventKey.write(value.heads, into);
     }
     allocationSize(value: TypeName): number {
       return (
@@ -642,7 +645,8 @@ const FfiConverterTypeListEventsArgs = (() => {
         FfiConverterOptionalInt32.allocationSize(value.collection) +
         FfiConverterOptionalTypePublicKey.allocationSize(value.signedBy) +
         FfiConverterOptionalInt64.allocationSize(value.sequenceGt) +
-        FfiConverterOptionalInt64.allocationSize(value.sequenceLt)
+        FfiConverterOptionalInt64.allocationSize(value.sequenceLt) +
+        FfiConverterOptionalSequenceTypeEventKey.allocationSize(value.heads)
       );
     }
   }
@@ -2713,14 +2717,15 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Unified entry point for every observable RPC. `query` selects
-   * which RPC to run and supplies its parameters; `query_key` is
-   * the cache key shared across subscribers; `opts` carries the
-   * optional fetch mode and per-call servers override. Always
-   * returns a `QueryObservable` regardless of variant.
+   * Unified entry point for every observable RPC.
+   * `query` selects which RPC to run and supplies its parameters.
+   * `query_key` is the cache key shared across subscribers.
+   * Pass in `None` to bypass the cache.
+   * `opts` carries the optional fetch mode and per-call servers override.
+   * Always returns a `QueryObservable` regardless of variant.
    */
   fetchQuery(
-    queryKey: Array<string>,
+    queryKey: Array<string> | undefined,
     query: Query,
     opts: QueryOpts | undefined
   ): QueryObservable;
@@ -2770,6 +2775,14 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal }
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
+   * List latest known sequence numbers from a server for a single identity.
+   */
+  listHeads(
+    serverUrl: string,
+    requestBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
    * Returns serialized `ListEventsResponse` proto bytes for the
    * non-tombstoned events on (identity, collection).
    */
@@ -2799,13 +2812,27 @@ export interface PolycentricCoreLike {
     mode: string
   ) /*throws*/ : ProcessedImage;
   /**
+   * Push events belonging to `identity` to remote `server`.
+   * Pushes all relevant local events if `partial` is false.
+   * Otherwise, only push events that we believe the server to be missing.
+   * The server's response is returned (if there is one), so that the caller
+   * can handle error and/or push blobs.
+   */
+  pushLocalEvents(
+    identity: string,
+    server: string,
+    partial: boolean,
+    asyncOpts_?: { signal: AbortSignal }
+  ) /*throws*/ : Promise<ArrayBuffer | undefined>;
+  /**
    * Push event bundles to a server.
+   * Returns the response from the server with any errors and missing blobs.
    */
   putEvents(
     serverUrl: string,
     eventBundlesBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal }
-  ) /*throws*/ : Promise<void>;
+  ) /*throws*/ : Promise<ArrayBuffer>;
   /**
    * Register a push notification token. `signed_message_bytes` is a
    * serialized `SignedMessage` wrapping a
@@ -3033,14 +3060,15 @@ export class PolycentricCore
   }
 
   /**
-   * Unified entry point for every observable RPC. `query` selects
-   * which RPC to run and supplies its parameters; `query_key` is
-   * the cache key shared across subscribers; `opts` carries the
-   * optional fetch mode and per-call servers override. Always
-   * returns a `QueryObservable` regardless of variant.
+   * Unified entry point for every observable RPC.
+   * `query` selects which RPC to run and supplies its parameters.
+   * `query_key` is the cache key shared across subscribers.
+   * Pass in `None` to bypass the cache.
+   * `opts` carries the optional fetch mode and per-call servers override.
+   * Always returns a `QueryObservable` regardless of variant.
    */
   fetchQuery(
-    queryKey: Array<string>,
+    queryKey: Array<string> | undefined,
     query: Query,
     opts: QueryOpts | undefined
   ): QueryObservable {
@@ -3049,7 +3077,7 @@ export class PolycentricCore
         /*caller:*/ (callStatus) => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterSequenceString.lower(
+            FfiConverterOptionalSequenceString.lower(
               queryKey,
               nativeModule().rustbuffer_alloc
             ),
@@ -3307,6 +3335,61 @@ export class PolycentricCore
   }
 
   /**
+   * List latest known sequence numbers from a server for a single identity.
+   */
+  async listHeads(
+    serverUrl: string,
+    requestBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(
+              serverUrl,
+              nativeModule().rustbuffer_alloc
+            ),
+            FfiConverterArrayBuffer.lower(
+              requestBytes,
+              nativeModule().rustbuffer_alloc
+            )
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
+        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
    * Returns serialized `ListEventsResponse` proto bytes for the
    * non-tombstoned events on (identity, collection).
    */
@@ -3458,13 +3541,69 @@ export class PolycentricCore
   }
 
   /**
+   * Push events belonging to `identity` to remote `server`.
+   * Pushes all relevant local events if `partial` is false.
+   * Otherwise, only push events that we believe the server to be missing.
+   * The server's response is returned (if there is one), so that the caller
+   * can handle error and/or push blobs.
+   */
+  async pushLocalEvents(
+    identity: string,
+    server: string,
+    partial: boolean,
+    asyncOpts_?: { signal: AbortSignal }
+  ): Promise<ArrayBuffer | undefined> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+            FfiConverterString.lower(server, nativeModule().rustbuffer_alloc),
+            FfiConverterBool.lower(partial, nativeModule().rustbuffer_alloc)
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterOptionalBytes.lift.bind(
+          FfiConverterOptionalBytes
+        ),
+        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError
+        )
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
    * Push event bundles to a server.
+   * Returns the response from the server with any errors and missing blobs.
    */
   async putEvents(
     serverUrl: string,
     eventBundlesBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal }
-  ): Promise<void> /*throws*/ {
+  ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
     try {
       return await uniffiRustCallAsync(
@@ -3483,14 +3622,21 @@ export class PolycentricCore
           );
         },
         /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_void,
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
         /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_void,
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
         /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_void,
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
         /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_void,
-        /*liftFunc:*/ (_v) => {},
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer
+        ),
         /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
         /*asyncOpts:*/ asyncOpts_,
         /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -3809,6 +3955,16 @@ const FfiConverterOptionalTypePublicKey = new FfiConverterOptional(
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalInt64 = new FfiConverterOptional(FfiConverterInt64);
 
+// FfiConverter for Array<EventKey>
+const FfiConverterSequenceTypeEventKey = new FfiConverterArray(
+  FfiConverterTypeEventKey
+);
+
+// FfiConverter for Array<EventKey> | undefined
+const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(
+  FfiConverterSequenceTypeEventKey
+);
+
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
@@ -3957,7 +4113,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !==
-    49260
+    52560
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query'
@@ -4012,6 +4168,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads() !==
+    64966
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_list_heads'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events() !==
     62657
   ) {
@@ -4052,8 +4216,16 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !==
+    13223
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events'
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events() !==
-    53201
+    16446
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_put_events'

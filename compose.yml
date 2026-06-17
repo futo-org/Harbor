@@ -28,11 +28,16 @@ services:
       - CONTENT_BLOB_OS_FORCE_PATH_STYLE=true
       - CONTENT_BLOB_OS_ACCESS_KEY=rustfsadmin
       - CONTENT_BLOB_OS_SECRET_KEY=rustfsadmin
+      # In-network listener: the default (localhost:9092) points at the server
+      # container itself, making Kafka unreachable
+      - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
     depends_on:
       postgres:
         condition: service_healthy
       rustfs-init:
         condition: service_completed_successfully
+      kafka:
+        condition: service_started
 
   rustfs:
     image: rustfs/rustfs:latest

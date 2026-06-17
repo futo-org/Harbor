@@ -19,6 +19,7 @@ import {
 import { Platform, Text, View } from 'react-native';
 import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
+import { useNotificationNavigation } from '../notifications/useNotificationNavigation';
 import {
   createPolycentricStore,
   useStore,
@@ -138,6 +139,10 @@ export function PolycentricProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Route to the deep link carried by a tapped push notification, once the
+  // router is mounted (provider initialized without error).
+  useNotificationNavigation(!isLoading && !error);
+
   useEffect(() => {
     if (!isLoading) {
       onInitialized?.();
@@ -174,8 +179,6 @@ export function PolycentricProvider({
         });
 
         if (cancelled) return;
-
-        c.servers = [DEFAULT_SERVER];
 
         const s = createPolycentricStore(c);
         await s.getState().refreshIdentities();

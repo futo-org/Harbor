@@ -12,6 +12,22 @@ pub struct ExpoPushRequest {
     // struct is camelCase via the field name already; rename to be explicit.
     #[serde(rename = "collapseId", skip_serializing_if = "Option::is_none")]
     pub collapse_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<ExpoPushData>,
+    #[serde(rename = "richContent", skip_serializing_if = "Option::is_none")]
+    pub rich_content: Option<ExpoRichContent>,
+}
+
+#[derive(Serialize)]
+pub struct ExpoPushData {
+    pub url: String,
+}
+
+/// Rich media attached to a push — the expanded notification image (e.g. the
+/// author's avatar). `image` is a public, fetchable URL.
+#[derive(Serialize)]
+pub struct ExpoRichContent {
+    pub image: String,
 }
 
 #[derive(Deserialize)]

@@ -23,6 +23,31 @@ export enum HydrationStrategy {
   LAZY = 'lazy',
 }
 
+/**
+ * Specifies how to sync events and blobs for an identity between the local store
+ * and the remote servers.
+ */
+export enum SyncStrategy {
+  /** Push and pull all events. */
+  FULL,
+  /** Push all events. */
+  FULL_PUSH,
+  /** Pull all events. */
+  FULL_PULL,
+  /** Push and pull only events believed to be missing. */
+  PARTIAL,
+  /**
+   * Push only events believed to be missing.
+   * No events are pulled.
+   */
+  PARTIAL_PUSH,
+  /**
+   * Pull only events believed to be missing.
+   * No events are pushed.
+   */
+  PARTIAL_PULL,
+}
+
 export const Defaults = {
   DB_NAME: 'polycentric-database',
   HYDRATION: {

@@ -1,7 +1,7 @@
 {
   "extends": "@polycentric/tsconfig/compiled-package.json",
   "include": ["src"],
-  "exclude": ["src/proto"],
+  "exclude": ["src/proto", "src/**/*.test.ts"],
   "references": [{ "path": "./src/proto" }],
   "compilerOptions": {
     "emitDeclarationOnly": false,

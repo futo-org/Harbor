@@ -3,8 +3,8 @@ use polycentric_common::{
     models::{
         Serializable, collections,
         protos_v2::{
-            self, Content, ContentDigest, Event, EventBundle, EventProof, Identity, PublicKey,
-            SerializedContent, SignedEvent, VectorClock, content::ContentBody,
+            self, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventProof,
+            Identity, PublicKey, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
         },
     },
 };
@@ -20,6 +20,17 @@ use std::sync::Mutex;
 
 fn hex_short(bytes: &[u8]) -> String {
     bytes.iter().take(4).map(|b| format!("{:02x}", b)).collect()
+}
+
+/// True when `content_bytes` actually hash to `digest`. Only SHA-256 digests
+/// are supported; any other type fails verification (can't verify ⇒ reject).
+fn content_matches_digest(digest: &ContentDigest, content_bytes: &[u8]) -> bool {
+    use sha2::{Digest, Sha256};
+
+    if digest.r#type != ContentDigestType::Sha256 as i32 {
+        return false;
+    }
+    Sha256::digest(content_bytes).as_slice() == digest.value.as_slice()
 }
 
 #[derive(Default)]
@@ -50,9 +61,22 @@ impl PolycentricClient {
         self.event_store.insert(signed_event)
     }
 
-    /// Copy content bytes into the content store, keyed by digest.
-    pub fn copy_content(&mut self, digest: &ContentDigest, content_bytes: Vec<u8>) {
+    /// Copy content bytes into the content store, keyed by digest, after
+    /// verifying the bytes hash to that digest. Mismatched (or
+    /// unsupported-digest) content is rejected and not stored.
+    pub fn copy_content(
+        &mut self,
+        digest: &ContentDigest,
+        content_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        if !content_matches_digest(digest, &content_bytes) {
+            let digest_hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
+            return Err(CoreError::InvalidEvent(format!(
+                "content does not match digest {digest_hex}"
+            )));
+        }
         self.content_store.insert(digest, content_bytes);
+        Ok(())
     }
 
     /// First locally-valid bundle at `(identity, collection, sequence)`.
@@ -80,6 +104,14 @@ impl PolycentricClient {
                         .map(|c| SerializedContent { content_bytes: c }),
                     event_proofs: proofs.to_vec(),
                 })
+            })
+    }
+
+    pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {
+        self.content_store
+            .get(digest)
+            .map(|bytes| SerializedContent {
+                content_bytes: Vec::from(bytes),
             })
     }
 
@@ -122,8 +154,11 @@ impl PolycentricClient {
         });
 
         for (signed_event, event, serialized, proofs) in prepared {
-            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized) {
-                self.copy_content(digest, content.content_bytes);
+            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized)
+                && let Err(e) = self.copy_content(digest, content.content_bytes)
+            {
+                // Keep the validly-signed event; just drop the bad content.
+                crate::logging::log_warn(|| format!("dropping content: {e}"));
             }
             if !proofs.is_empty()
                 && let Ok(key) = EventKey::from_event(event)
@@ -132,6 +167,39 @@ impl PolycentricClient {
             }
             let _ = self.copy_event(signed_event);
         }
+    }
+
+    pub fn get_sync_events(
+        &self,
+        identity: &str,
+        collection: i32,
+        signer_key_type: i32,
+        signer_key: &[u8],
+        sequence_gt: u64,
+    ) -> impl DoubleEndedIterator<Item = (&EventKey, &SignedEvent)> {
+        self.event_store.by_identity_collection_signer(
+            identity,
+            collection,
+            signer_key_type,
+            signer_key,
+            sequence_gt,
+        )
+    }
+
+    /// Get all local events belonging to `identity`.
+    pub fn get_local_events(
+        &self,
+        identity: &str,
+    ) -> impl Iterator<Item = (&EventKey, &SignedEvent)> {
+        self.event_store.by_identity(identity)
+    }
+
+    /// Finds the collections and signers referenced by local events of
+    /// the given identity.
+    /// These values are derived solely from the event keys in the event store
+    /// without further aggregation or validity checking.
+    pub fn find_collections_and_signers(&self, identity: &str) -> (Vec<i32>, Vec<PublicKey>) {
+        self.event_store.find_collections_and_signers(identity)
     }
 
     /// Max `sequence` of identity events signed by `signer` for `identity`,
@@ -147,6 +215,7 @@ impl PolycentricClient {
                 collections::IDENTITY,
                 signer.key_type,
                 &signer.key,
+                0,
             )
             .next_back()
             .map(|(k, _)| k.sequence)
@@ -233,7 +302,13 @@ impl PolycentricClient {
                     current_sequence
                 } else {
                     self.event_store
-                        .by_identity_collection_signer(identity, collection, pk.key_type, &pk.key)
+                        .by_identity_collection_signer(
+                            identity,
+                            collection,
+                            pk.key_type,
+                            &pk.key,
+                            0,
+                        )
                         .rev()
                         .find(|(k, signed)| {
                             self.validate_event(signed, self.event_proofs_store.get(k))
@@ -706,7 +781,9 @@ mod tests {
             }
         }
 
-        client.copy_content(&digest, content_bytes);
+        client
+            .copy_content(&digest, content_bytes)
+            .expect("content matches its computed digest");
         let signed = sign_event(
             signer,
             &id_string,
@@ -1148,5 +1225,49 @@ mod tests {
             "building a VC for an identity event that references its own sequence should succeed, got {:?}",
             vc.err()
         );
+    }
+
+    #[test]
+    fn copy_content_stores_matching_content() {
+        let mut client = PolycentricClient::default();
+        let bytes = b"hello content".to_vec();
+        let digest = sha256_digest(&bytes);
+
+        client
+            .copy_content(&digest, bytes.clone())
+            .expect("content matching its digest is accepted");
+
+        let stored = client.find_content_from_digest(&digest);
+        assert_eq!(stored.map(|c| c.content_bytes), Some(bytes));
+    }
+
+    #[test]
+    fn copy_content_rejects_mismatched_content() {
+        let mut client = PolycentricClient::default();
+        // Digest is computed over different bytes than we try to insert.
+        let digest = sha256_digest(b"the real content");
+        let tampered = b"tampered content".to_vec();
+
+        assert!(
+            client.copy_content(&digest, tampered).is_err(),
+            "content that does not hash to its digest must be rejected"
+        );
+        // Rejected content is never stored.
+        assert!(client.find_content_from_digest(&digest).is_none());
+    }
+
+    #[test]
+    fn copy_content_rejects_unsupported_digest_type() {
+        let mut client = PolycentricClient::default();
+        let bytes = b"hello content".to_vec();
+        // Correct hash value, but a digest type we can't verify.
+        let mut digest = sha256_digest(&bytes);
+        digest.r#type = ContentDigestType::Sha256 as i32 + 1;
+
+        assert!(
+            client.copy_content(&digest, bytes).is_err(),
+            "unsupported digest types must be rejected"
+        );
+        assert!(client.find_content_from_digest(&digest).is_none());
     }
 }

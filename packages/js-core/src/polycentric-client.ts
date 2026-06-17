@@ -8,7 +8,12 @@ import {
   KeyPairManager,
   PairingSessionManager,
 } from './client-internal';
-import { COLLECTION, KEY_TYPE, type Collection } from './constants';
+import {
+  COLLECTION,
+  KEY_TYPE,
+  SyncStrategy,
+  type Collection,
+} from './constants';
 import { HTTPClient } from './http';
 import { sha256 } from '@noble/hashes/sha2.js';
 import type {
@@ -18,9 +23,12 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
-import { bytesToHex, toDigestKey } from './utils/hex';
+import { toDigestKey } from './utils/hex';
 
-import type { PolycentricCoreLike } from '@polycentric/rs-core-uniffi-web';
+import type {
+  PolycentricCoreLike,
+  EventKey,
+} from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -432,6 +440,8 @@ export class PolycentricClient {
     sequenceGt?: number | bigint | null;
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
+    heads?: Proto.EventKey[] | null;
+    queryKey?: string[] | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -449,21 +459,11 @@ export class PolycentricClient {
         }
       : undefined;
 
-    const queryKey = [
-      'list_events',
-      String(options?.limit ?? ''),
-      options?.identity ?? '',
-      String(options?.collection ?? ''),
-      options?.signedBy
-        ? `${options.signedBy.keyType}:${bytesToHex(options.signedBy.key)}`
-        : '',
-      String(sequenceGt ?? ''),
-      String(sequenceLt ?? ''),
-    ];
+    const heads = this.getFilterHeads(options?.heads ?? []);
 
     return new Promise<Proto.EventBundle[]>((resolve, reject) => {
       const observable = this.core.fetchQuery(
-        queryKey,
+        options?.queryKey ?? undefined,
         new Query.ListEvents({
           size: options?.limit ?? undefined,
           identity: options?.identity ?? undefined,
@@ -471,6 +471,7 @@ export class PolycentricClient {
           signedBy,
           sequenceGt,
           sequenceLt,
+          heads,
         }),
         undefined,
       );
@@ -498,6 +499,27 @@ export class PolycentricClient {
         complete: () => {},
       });
     });
+  }
+
+  /** Convert to FFI types */
+  private getFilterHeads(heads: Proto.EventKey[]): EventKey[] {
+    let out: EventKey[] = [];
+
+    for (const head of heads) {
+      if (!head.signedBy) continue;
+
+      out.push({
+        collection: head.collection,
+        identity: head.identity,
+        signedBy: {
+          keyType: head.signedBy.keyType,
+          key: head.signedBy.key.slice().buffer as ArrayBuffer,
+        },
+        sequence: head.sequence,
+      });
+    }
+
+    return out;
   }
 
   /**
@@ -635,13 +657,19 @@ export class PolycentricClient {
    * that `body` hashes to `blob.digest` before persisting. Rejections
    * from individual servers are logged but do not throw.
    */
-  async uploadBlob(blob: Proto.Blob, body: Uint8Array): Promise<void> {
+  async uploadBlob(
+    blob: Proto.Blob,
+    body: Uint8Array,
+    servers?: string[],
+  ): Promise<void> {
+    servers = servers ?? this.servers;
+
     const requestBytes = Proto.UploadBlobRequest.toBinary(
       Proto.UploadBlobRequest.create({ blob, body }),
     );
 
     const results = await Promise.allSettled(
-      this.servers.map((server) =>
+      servers.map((server) =>
         this.core.uploadBlob(server, requestBytes.buffer as ArrayBuffer),
       ),
     );
@@ -654,134 +682,220 @@ export class PolycentricClient {
   }
 
   /**
-   * Push local events for the active key to all configured servers,
-   * including content alongside each event.
-   */
-  async push(): Promise<void> {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const localEvents = await this.storage.events.getAll();
-
-    // Build event bundles with content for events matching the active identity
-    const bundles: Proto.EventBundle[] = [];
-    for (const signedEvent of localEvents) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-
-      // Only push events belonging to the active identity
-      if (event.key?.identity !== this.activeIdentityKey) continue;
-
-      // Look up content by digest
-      let serializedContent: Proto.SerializedContent | undefined;
-      if (event.contentDigest?.value) {
-        const content = await this.storage.content.get(event.contentDigest);
-
-        const contentBytes = content ? Proto.Content.toBinary(content) : null;
-        if (contentBytes) {
-          serializedContent = Proto.SerializedContent.create({
-            contentBytes,
-          });
-        }
-      }
-
-      bundles.push(
-        Proto.EventBundle.create({
-          signedEvent,
-          serializedContent,
-        }),
-      );
-    }
-
-    if (bundles.length === 0) return;
-
-    const requestBytes = Proto.PutEventsRequest.toBinary(
-      Proto.PutEventsRequest.create({ eventBundles: bundles }),
-    );
-
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.putEvents(server, requestBytes.buffer as ArrayBuffer),
-      ),
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('Push failed for a server:', result.reason);
-      }
-    }
-  }
-
-  /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
    *
    * @returns The number of new events persisted
    */
-  async pull(): Promise<number> {
+  private async pull(partial: boolean): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
+    const identity = this.activeIdentityKey;
 
-    const bundles = await this.listEvents({
-      identity: this.activeIdentityKey,
-    });
+    // Only filter by heads when doing a partial pull
+    let heads = undefined;
 
-    let newCount = 0;
-    const signedEvents: Proto.SignedEvent[] = [];
-    const contents: {
-      digest: Proto.ContentDigest;
-      content: Proto.Content;
-    }[] = [];
-    for (const bundle of bundles) {
-      if (!bundle.signedEvent) continue;
-
-      if (bundle.serializedContent?.contentBytes) {
-        try {
-          const event = Proto.Event.fromBinary(bundle.signedEvent.eventBytes);
-          if (event.contentDigest?.value) {
-            const existing = await this.storage.content.get(
-              event.contentDigest,
-            );
-            const content = Proto.Content.fromBinary(
-              bundle.serializedContent.contentBytes,
-            );
-            if (!existing) {
-              await this.storage.content.save(event.contentDigest, content);
-            }
-            contents.push({ digest: event.contentDigest, content });
-          }
-        } catch {
-          // content decode failed, skip
-        }
-      }
-
-      try {
-        await this.storage.events.save(bundle.signedEvent);
-        newCount++;
-      } catch {
-        // duplicate event, skip
-      }
-      signedEvents.push(bundle.signedEvent);
+    if (partial) {
+      // Partial pulls will skip events at or before each event stream head.
+      // Find each head event and then map it to the filter format.
+      const headEvents = await this.storage.events.getByIdentity(identity, {
+        headsOnly: true,
+      });
+      heads = headEvents
+        .map((signedEvent) => {
+          const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+          return event.key;
+        })
+        .filter((head) => !!head);
     }
 
-    // mirror into rs-core
-    await this.copyEvents(signedEvents);
-    await this.copyContents(contents);
+    // Fetch new bundles from server
+    const bundles = await this.listEvents({
+      identity,
+      heads,
+    });
+
+    // Collect blobs referenced by the events
+    let blobs: Proto.Blob[] = [];
+
+    // Save new events and content
+    let newCount = 0;
+    for (const bundle of bundles) {
+      const isNew = await this.trySaveBundle(bundle, blobs);
+      if (isNew) newCount++;
+    }
+
+    // Remove duplicate blobs
+    let blobMap: Map<string, Proto.Blob> = new Map();
+
+    for (const blob of blobs) {
+      if (!blob.digest) continue;
+      blobMap.set(toDigestKey(blob.digest), blob);
+    }
+
+    blobs = [...blobMap.values()];
 
     // Catch any of our own referenced blobs so they persist locally.
-    await Promise.all(
-      contents.map(({ content }) => this.contentManager.pullBlobs(content)),
-    );
-
+    await this.contentManager.pullBlobs(blobs);
     return newCount;
   }
 
   /**
-   * Push local events then pull remote events from all configured servers.
-   *
+   * Absorb errors and return true only when the event is new and added.
+   * Any discovered blobs are added to `blobs`.
+   */
+  private async trySaveBundle(
+    bundle: Proto.EventBundle,
+    blobs: Proto.Blob[],
+  ): Promise<boolean> {
+    try {
+      if (!bundle.signedEvent) return false;
+
+      const bytes = bundle.signedEvent.eventBytes;
+
+      const event = Proto.Event.fromBinary(bytes);
+      if (!event.key) return false;
+      if (!event.key.signedBy) return false;
+
+      // Try saving content for any event that seems valid, even if it may already exist.
+      await this.trySaveContent(event, bundle, blobs);
+
+      const existing = await this.storage.events.getByEventKey(event.key);
+      if (existing) return false;
+
+      await this.storage.events.save(bundle.signedEvent);
+      return true;
+    } catch (e) {
+      console.warn('Pull event:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Absorb errors and return true only when the content is new and added
+   * Any discovered blobs are added to `blobs`.
+   */
+  private async trySaveContent(
+    event: Proto.Event,
+    bundle: Proto.EventBundle,
+    blobs: Proto.Blob[],
+  ): Promise<boolean> {
+    try {
+      const bytes = bundle.serializedContent?.contentBytes;
+      if (!bytes) return false;
+
+      const content = Proto.Content.fromBinary(bytes);
+
+      const digest = event.contentDigest;
+      if (!digest) return false;
+
+      // Try finding blobs before checking content existence,
+      // since we might be missing a blob referenced by content
+      // that we already have.
+      blobs.push(...ContentManager.collectBlobs(content));
+
+      const existing = await this.storage.content.get(digest);
+      if (existing) return false;
+
+      await this.storage.content.save(digest, content);
+      return true;
+    } catch (e) {
+      console.warn('Pull event content:', e);
+      return false;
+    }
+  }
+
+  /** Used for syncing */
+  private getPullFn(strategy: SyncStrategy): () => Promise<number> {
+    switch (strategy) {
+      case SyncStrategy.FULL:
+      case SyncStrategy.FULL_PULL:
+        return () => this.pull(false);
+      case SyncStrategy.PARTIAL:
+      case SyncStrategy.PARTIAL_PULL:
+        return () => this.pull(true);
+      case SyncStrategy.FULL_PUSH:
+      case SyncStrategy.PARTIAL_PUSH:
+        return async () => 0;
+    }
+  }
+
+  /** Used for syncing */
+  private getPushFn(
+    strategy: SyncStrategy,
+    identity: string,
+  ): (server: string) => Promise<ArrayBuffer | undefined> {
+    switch (strategy) {
+      case SyncStrategy.FULL:
+      case SyncStrategy.FULL_PUSH:
+        return (server) => this.core.pushLocalEvents(identity, server, false);
+      case SyncStrategy.PARTIAL:
+      case SyncStrategy.PARTIAL_PUSH:
+        return (server) => this.core.pushLocalEvents(identity, server, true);
+      case SyncStrategy.FULL_PULL:
+      case SyncStrategy.PARTIAL_PULL:
+        return async () => undefined;
+    }
+  }
+
+  /**
+   * Sync events for the active identity between this client and
+   * the remote servers. Throws only if the pull fails.
    * @returns The number of new events pulled
    */
-  async sync(): Promise<number> {
-    await this.push();
-    return this.pull();
+  async sync(strategy?: SyncStrategy): Promise<number> {
+    const identity = this.activeIdentityKey;
+    if (!identity) return 0;
+
+    strategy = strategy ?? SyncStrategy.PARTIAL;
+
+    const pullFn = this.getPullFn(strategy);
+    const pushFn = this.getPushFn(strategy, identity);
+
+    // Pull concurrently with pushing new events and blobs
+    let pullTask = pullFn();
+
+    // Push new events and blobs to servers
+    const pushTasks = this.servers.map(async (server): Promise<void> => {
+      const responseBytes = await pushFn(server);
+      if (!responseBytes) return; // Nothing was done
+
+      const response = Proto.PutEventsResponse.fromBinary(
+        new Uint8Array(responseBytes),
+      );
+      const blobs = response.requestedBlobs;
+
+      for (const error of response.errors) {
+        console.error('Error from event push:', error);
+      }
+
+      await Promise.allSettled(
+        blobs.map(async (blob) => {
+          if (!blob.digest) return;
+
+          const blobData = await this.filestoreDriver.get(blob.digest);
+          if (!blobData) return;
+
+          await this.uploadBlob(blob, blobData, [server]);
+        }),
+      );
+    });
+
+    const [pullResult, ...pushResults] = await Promise.allSettled([
+      pullTask,
+      ...pushTasks,
+    ]);
+
+    for (const result of pushResults) {
+      if (result.status === 'rejected') {
+        console.error('Sync failed for a server:', result.reason);
+      }
+    }
+
+    if (pullResult.status === 'fulfilled') {
+      return pullResult.value;
+    } else {
+      throw pullResult.reason;
+    }
   }
 
   public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {

@@ -24,9 +24,24 @@ You will need:
 - [`docker compose`](https://github.com/docker/compose)
 
 The following commands will get you up and running:
+
 ```sh
 # Use node version manager to install the pinned version of node
 nvm install
+
+# Check you have the correct dependencies
+
+```
+
+apt-get install \
+ protobuf-compiler \
+ cmake \
+ g++ \
+ pkg-config \
+ libssl-dev \
+ libsasl2-dev
+
+```
 
 # Add the WASM target to the rust toolchain
 rustup target add wasm32-unknown-unknown
@@ -56,27 +71,27 @@ To run the server from source instead, see [`services/server/README.md`](service
 
 ### Packages
 
-| Package | Description |
-|---------|-------------|
-| `packages/js-core` | Core JavaScript library containing the main Polycentric protocol logic |
-| `packages/js-browser` | Browser SDK using SQLite WASM for local storage |
-| `packages/js-node` | Node.js SDK using sqlite3 for local storage |
-| `packages/js-storage-sqlite` | Shared SQLite (Drizzle ORM) storage layer for the JS SDKs |
-| `packages/react-native` | React Native SDK for mobile applications |
-| `packages/rs-common` | Shared Rust code used by rs-core |
-| `packages/rs-core` | Rust core library - the underlying protocol implementation |
-| `packages/rs-core-uniffi-web` | rs-core on WASM with `uniffi-bindgen-react-native` bindings |
+| Package                       | Description                                                            |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `packages/js-core`            | Core JavaScript library containing the main Polycentric protocol logic |
+| `packages/js-browser`         | Browser SDK using SQLite WASM for local storage                        |
+| `packages/js-node`            | Node.js SDK using sqlite3 for local storage                            |
+| `packages/js-storage-sqlite`  | Shared SQLite (Drizzle ORM) storage layer for the JS SDKs              |
+| `packages/react-native`       | React Native SDK for mobile applications                               |
+| `packages/rs-common`          | Shared Rust code used by rs-core                                       |
+| `packages/rs-core`            | Rust core library - the underlying protocol implementation             |
+| `packages/rs-core-uniffi-web` | rs-core on WASM with `uniffi-bindgen-react-native` bindings            |
 
 ### Apps
 
-| App | Description |
-|-----|-------------|
+| App                | Description                                                         |
+| ------------------ | ------------------------------------------------------------------- |
 | `apps/polycentric` | The main Polycentric social network application (Expo/React Native) |
 
 ### Services
 
-| Service | Description |
-|---------|-------------|
-| `services/server` | Polycentric server |
-| `legacy/services/polycentric-server` | Legacy server  |
-| `legacy/services/verifiers-server` | Legacy Server for verifying claims and signatures in the protocol |
+| Service                              | Description                                                       |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `services/server`                    | Polycentric server                                                |
+| `legacy/services/polycentric-server` | Legacy server                                                     |
+| `legacy/services/verifiers-server`   | Legacy Server for verifying claims and signatures in the protocol |
