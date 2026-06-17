@@ -209,9 +209,9 @@ export const Post = memo(function Post({
               suffix={isTruncatedPreview ? '...' : ''}
             />
           ) : null}
-          {post.links?.map((link, i) => (
-            <LinkPreviewCard key={link.url || i} link={link} />
-          ))}
+          {/* Render only the first link preview. A post may carry multiple
+              `links` (e.g. from another client), but we cap the UI at one. */}
+          {post.links?.[0] ? <LinkPreviewCard link={post.links[0]} /> : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
           {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
           {showContentExpandToggle && (
