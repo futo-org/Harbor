@@ -16,7 +16,7 @@ import {
 import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
 import { COLLECTION, types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 
@@ -98,6 +98,39 @@ export function useComposer({
   const setSubmitting = useComposerStore((s) => s.setSubmitting);
   const setError = useComposerStore((s) => s.setError);
   const resetComposer = useComposerStore((s) => s.reset);
+
+  // Live link preview: debounce-detect the first URL in the draft and unfurl
+  // it via the server. The resolved Link is shown in the composer and reused
+  // at post time (see handlePost) so we don't fetch it twice.
+  const [linkPreview, setLinkPreview] = useState<v2.Link | null>(null);
+  const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+
+  const previewUrl = useMemo(
+    () => parseTextLinks(text).find((s) => s.type === 'link')?.url ?? null,
+    [text],
+  );
+
+  useEffect(() => {
+    if (!previewUrl) {
+      setLinkPreview(null);
+      setLinkPreviewLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLinkPreviewLoading(true);
+    // Debounce so we don't unfurl every intermediate URL while typing.
+    const handle = setTimeout(() => {
+      void client.urlInfo(previewUrl).then((result) => {
+        if (cancelled) return;
+        setLinkPreview(result);
+        setLinkPreviewLoading(false);
+      });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [previewUrl, client]);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
@@ -246,12 +279,14 @@ export function useComposer({
             )
           : [];
 
-      // Unfurl the first URL in the text into a link preview, embedding it in
-      // the signed post. Best-effort: a failed/empty fetch just yields no card.
-      const firstUrl = parseTextLinks(text.trim()).find(
-        (s) => s.type === 'link',
-      )?.url;
-      const link = firstUrl ? await client.urlInfo(firstUrl) : null;
+      // Embed the first URL's preview in the signed post. Reuse the live
+      // preview when it matches the current URL; otherwise fetch fresh (e.g.
+      // posted before the preview resolved). Best-effort — null yields no card.
+      let link =
+        linkPreview && linkPreview.url === previewUrl ? linkPreview : null;
+      if (!link && previewUrl) {
+        link = await client.urlInfo(previewUrl);
+      }
 
       const post: types.v2.Post = {
         text: text.trim(),
@@ -331,6 +366,8 @@ export function useComposer({
     replyTo,
     replyToEventKey,
     replyRootEventKey,
+    linkPreview,
+    previewUrl,
     resetAll,
     setSubmitting,
     setError,
@@ -348,6 +385,8 @@ export function useComposer({
     attachments,
     submitting,
     error,
+    linkPreview,
+    linkPreviewLoading,
     // computed
     isReply,
     title,

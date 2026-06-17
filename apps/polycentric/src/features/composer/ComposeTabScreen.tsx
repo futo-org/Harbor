@@ -72,6 +72,8 @@ export default function ComposeTabScreen() {
             attachments={composer.attachments}
             submitting={composer.submitting}
             onRemoveAttachment={composer.handleRemoveAttachment}
+            linkPreview={composer.linkPreview}
+            linkPreviewLoading={composer.linkPreviewLoading}
           />
         </View>
         <ComposeSheetFooterBar
