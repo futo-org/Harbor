@@ -25,7 +25,11 @@ COPY services/scraper services/scraper
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @polycentric/scraper build
 # Flatten into a self-contained, non-symlinked prod node_modules + package.json.
-RUN pnpm --filter @polycentric/scraper --prod --legacy deploy /deploy
+# `allowUnusedPatches`: the workspace's patchedDependencies target frontend
+# packages (expo, uniffi-bindgen-react-native) not present in this slim build,
+# which `deploy` would otherwise reject.
+RUN pnpm --filter @polycentric/scraper --prod --legacy \
+  --config.allowUnusedPatches=true deploy /deploy
 
 # Stage 3: Run
 FROM base AS runner
