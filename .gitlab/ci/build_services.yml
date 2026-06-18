@@ -1,4 +1,3 @@
-
 .service-rust-base:
   image: ${RUST_IMAGE}
   stage: check
@@ -20,20 +19,10 @@
   script:
     - cargo test --package ${SERVICE_NAME}
 
-.service-build:
-  extends: .service-rust-base
-  stage: build
-  script:
-    - cargo build --release --package ${SERVICE_NAME}
-  artifacts:
-    paths:
-      - target/release/${SERVICE_NAME}
-    expire_in: 1 week
-
 .service-image:
   image:
     name: moby/buildkit:rootless
-    entrypoint: ['']
+    entrypoint: [""]
   before_script:
     - mkdir -p ~/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
@@ -42,10 +31,11 @@
     - |
       buildctl-daemonless.sh build \
         --frontend dockerfile.v0 \
-        --local context=. \
+        --local context=target/release/${SERVICE_NAME} \
         --local dockerfile=./services/${SERVICE_DIR} \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache,mode=max \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_DEFAULT_BRANCH \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA,push=true
 
 ########################################################################
@@ -90,11 +80,6 @@ server-clippy:
     - .server-workflow
     - .service-clippy
 
-server-build:
-  extends:
-    - .server-workflow
-    - .service-build
-
 server-image:
   extends:
     - .server-workflow
@@ -102,6 +87,9 @@ server-image:
   rules:
     - !reference [.server-workflow, rules]
     - !reference [.release-workflow, rules]
+  needs:
+    - job: serer-build
+      artifacts: true
 
 ########################################################################
 # moderation
@@ -144,11 +132,6 @@ moderation-clippy:
   extends:
     - .moderation-workflow
     - .service-clippy
-
-moderation-build:
-  extends:
-    - .moderation-workflow
-    - .service-build
 
 moderation-image:
   extends:
@@ -202,11 +185,6 @@ push-notifications-test:
   extends:
     - .push-notifications-workflow
     - .service-test
-
-push-notifications-build:
-  extends:
-    - .push-notifications-workflow
-    - .service-build
 
 push-notifications-image:
   extends:

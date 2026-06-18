@@ -2,6 +2,11 @@ FROM rust:1.96-slim AS build
 
 WORKDIR /app
 
+# Install build dependencies before copying the source so this (slow) layer
+# stays cached when only source changes.
+COPY services/common/build-deps.sh build-deps.sh
+RUN sh build-deps.sh
+
 COPY Cargo.toml Cargo.toml
 COPY Cargo.lock Cargo.lock
 COPY protos protos
@@ -9,10 +14,9 @@ COPY packages packages
 COPY services services
 COPY tools tools
 
-RUN services/common/build-deps.sh
-
-RUN cargo build --release --package server
-RUN cargo build --release --package migration
+RUN cargo build --release \
+    --package server \
+    --package migration
 
 FROM rust:1.96-slim
 WORKDIR /app
