@@ -35,7 +35,7 @@
     "@protobuf-ts/plugin": "^2.11.1",
     "ts-loader": "^9.5.4",
     "typescript": "catalog:",
-    "vitest": "^3.2.6",
+    "vitest": "^4.0.0",
     "webpack": "^5.100.1",
     "webpack-cli": "^7.0.0"
   }
