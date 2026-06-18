@@ -4,10 +4,11 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
-import { View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
 import { NotificationData } from './utils';
+import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
   const { items, isLoading, refresh } = useListNotifications();
@@ -19,9 +20,16 @@ export default function NotificationsScreen() {
         <List<NotificationData>
           data={items}
           refreshing={isLoading}
+          refreshControl={
+            isWeb ? undefined : (
+              <RefreshControl refreshing={isLoading} onRefresh={refresh} />
+            )
+          }
           keyExtractor={(notification) => notification.id}
           renderItem={({ item }) => <Notification notification={item} />}
-          HeaderComponent={<Topbar title="Notifications" left={<></>} />}
+          HeaderComponent={
+            <Topbar title="Notifications" left={isWeb ? <></> : undefined} />
+          }
           ListEmptyComponent={() =>
             !isLoading && (
               <View
