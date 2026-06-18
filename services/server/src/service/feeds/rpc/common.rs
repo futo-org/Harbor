@@ -95,9 +95,10 @@ pub fn finalize_fetch(
 
     // Simple heuristic: if a forward token was used, then there was a previous page.
     // Unless the forward token was a start token.
-    // False negatives when going forward then backward or querying forward from an
-    // end token. We do not handle these cases.
-    // Similar logic applies for backward queries as well.
+    // Similar logic applies for backward tokens.
+    // There are false negatives when navigating forward from an
+    // end token or backward from a start token.
+    // We do not handle these cases.
     let mid_cursor_was_used = matches!(
         params.cursor_filter,
         Some(CursorFilter::Forward(FeedCursor::Mid(_)))
