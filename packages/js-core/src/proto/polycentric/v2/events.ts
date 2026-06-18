@@ -191,6 +191,13 @@ export interface ListEventsFilters {
      * @generated from protobuf field: optional int64 sequence_lt = 5
      */
     sequenceLt?: bigint;
+    /**
+     * When an event matches a head's identity, collection, and signer,
+     * only return it if its sequence number is higher than the head
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventKey heads = 6
+     */
+    heads: EventKey[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListEventsRequest
@@ -673,11 +680,13 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
             { no: 2, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "signed_by", kind: "message", T: () => PublicKey },
             { no: 4, name: "sequence_gt", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 5, name: "sequence_lt", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+            { no: 5, name: "sequence_lt", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 6, name: "heads", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventKey }
         ]);
     }
     create(value?: PartialMessage<ListEventsFilters>): ListEventsFilters {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.heads = [];
         if (value !== undefined)
             reflectionMergePartial<ListEventsFilters>(this, message, value);
         return message;
@@ -701,6 +710,9 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
                     break;
                 case /* optional int64 sequence_lt */ 5:
                     message.sequenceLt = reader.int64().toBigInt();
+                    break;
+                case /* repeated polycentric.v2.EventKey heads */ 6:
+                    message.heads.push(EventKey.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -729,6 +741,9 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
         /* optional int64 sequence_lt = 5; */
         if (message.sequenceLt !== undefined)
             writer.tag(5, WireType.Varint).int64(message.sequenceLt);
+        /* repeated polycentric.v2.EventKey heads = 6; */
+        for (let i = 0; i < message.heads.length; i++)
+            EventKey.internalBinaryWrite(message.heads[i], writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

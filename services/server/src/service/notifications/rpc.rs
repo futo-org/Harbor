@@ -3,6 +3,9 @@
 
 pub mod list_notifications;
 
+use std::sync::Arc;
+
+use crate::service::context::ServiceContext;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
@@ -13,8 +16,9 @@ use polycentric_common::models::protos_v2::{
 };
 use tonic::{Request, Response, Status};
 
-#[derive(Debug)]
-pub struct NotificationServiceImpl {}
+pub struct NotificationServiceImpl {
+    ctx: Arc<ServiceContext>,
+}
 
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
@@ -23,7 +27,7 @@ impl NotificationService for NotificationServiceImpl {
         request: Request<ListNotificationsRequest>,
     ) -> Result<Response<ListNotificationsResponse>, Status> {
         Ok(Response::new(
-            list_notifications::handle(request.into_inner()).await?,
+            list_notifications::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
     async fn register_push_notifications(
@@ -44,7 +48,8 @@ impl NotificationService for NotificationServiceImpl {
     }
 }
 
-pub fn build_notifications_service()
--> NotificationServiceServer<NotificationServiceImpl> {
-    NotificationServiceServer::new(NotificationServiceImpl {})
+pub fn build_notifications_service(
+    ctx: Arc<ServiceContext>,
+) -> NotificationServiceServer<NotificationServiceImpl> {
+    NotificationServiceServer::new(NotificationServiceImpl { ctx })
 }

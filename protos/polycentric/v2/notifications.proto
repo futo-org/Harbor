@@ -5,12 +5,13 @@ import "polycentric/v2/common.proto";
 import "polycentric/v2/events.proto";
 import "polycentric/v2/server.proto";
 
-enum NotificationType {
-  NOTIFICATION_TYPE_TYPE_UNSPECIFIED = 0;
-  NOTIFICATION_TYPE_FOLLOW = 1;
-  NOTIFICATION_TYPE_REPLY = 2;
-  NOTIFICATION_TYPE_REPOST = 3;
-  NOTIFICATION_TYPE_REACTION = 4;
+enum NotificationKind {
+  NOTIFICATION_KIND_UNSPECIFIED = 0;
+  NOTIFICATION_KIND_FOLLOW = 1;
+  NOTIFICATION_KIND_REPLY = 2;
+  NOTIFICATION_KIND_REPOST = 3;
+  NOTIFICATION_KIND_REACTION = 4;
+  NOTIFICATION_KIND_QUOTE = 5;
 }
 
 message Notification {
@@ -18,8 +19,8 @@ message Notification {
   EventBundle trigger_event = 1;
   // Event that the notification is in relation to
   EventBundle target_event = 2;
-  // Type of the notification
-  NotificationType type = 3;
+  // Kind of the notification
+  NotificationKind kind = 3;
 }
 
 message ListNotificationsRequest {

@@ -48,7 +48,7 @@ pub fn build_grpc_router(
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
-    let notifications_service = build_notifications_service();
+    let notifications_service = build_notifications_service(ctx.clone());
     let grpc_web = GrpcWebLayer::new();
 
     let routes = Routes::default()

@@ -33,8 +33,8 @@ impl MigrationTrait for Migration {
             .table(Alias::new("notification"))
             .if_not_exists()
             .col(big_integer(Alias::new("id")).auto_increment().primary_key())
-            // polycentric.v2.NotificationType discriminant.
-            .col(integer(Alias::new("type")))
+            // polycentric.v2.NotificationKind discriminant.
+            .col(integer(Alias::new("kind")))
             .col(string(Alias::new("from_identity")))
             .col(string(Alias::new("to_identity")));
         event_key_columns(&mut notification, "trigger_event_key_");

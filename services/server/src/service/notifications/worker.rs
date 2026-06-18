@@ -10,7 +10,7 @@ use ::entity::notification;
 use chrono::Utc;
 use common_kafka::{BorrowedMessage, FutureRecord, Message};
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, EventKey, Notification, NotificationType,
+    Content, Event, EventBundle, EventKey, Notification, NotificationKind,
     content::ContentBody,
 };
 use prost::Message as _;
@@ -85,14 +85,14 @@ impl NotificationWorker {
     async fn emit(
         &self,
         to_identity: &str,
-        notification_type: NotificationType,
+        notification_type: NotificationKind,
         trigger: EventBundle,
         target_event: Option<EventBundle>,
     ) -> Result<(), WorkerError> {
         let payload = Notification {
             trigger_event: Some(trigger),
             target_event,
-            r#type: notification_type as i32,
+            kind: notification_type as i32,
         }
         .encode_to_vec();
 
@@ -170,7 +170,7 @@ impl MessageHandler for NotificationWorker {
         // this an upsert.
         let row = notification::ActiveModel {
             id: NotSet,
-            r#type: Set(notification_type as i32),
+            kind: Set(notification_type as i32),
             from_identity: Set(trigger.identity.clone()),
             to_identity: Set(to_identity.clone()),
             trigger_event_key_collection: Set(trigger.collection),
@@ -227,7 +227,7 @@ impl MessageHandler for NotificationWorker {
 /// A derived notification: its type, the recipient, and the event it refers
 /// to (absent for follows).
 struct Derived {
-    notification_type: NotificationType,
+    notification_type: NotificationKind,
     to_identity: String,
     target: Option<EventKey>,
 }
@@ -246,32 +246,44 @@ fn derive(author: &str, content: &Content) -> Option<Derived> {
         };
 
     match content.content_body.as_ref()? {
-        // Reply -> notify the author of the parent post.
+        // A post is a reply (notify the parent's author) or a quote (notify
+        // the quoted post's author). Reply takes precedence when both are set.
         ContentBody::Post(post) => {
-            let parent = post.reply.as_ref()?.parent.as_ref()?;
-            make(
-                NotificationType::Reply,
-                &parent.identity,
-                Some(parent.clone()),
-            )
+            if let Some(parent) =
+                post.reply.as_ref().and_then(|reply| reply.parent.as_ref())
+            {
+                make(
+                    NotificationKind::Reply,
+                    &parent.identity,
+                    Some(parent.clone()),
+                )
+            } else if let Some(quote) = post.quote.as_ref() {
+                make(
+                    NotificationKind::Quote,
+                    &quote.identity,
+                    Some(quote.clone()),
+                )
+            } else {
+                None
+            }
         }
         // Repost -> notify the author of the reposted post.
         ContentBody::Repost(repost) => {
             let post = repost.post.as_ref()?;
-            make(NotificationType::Repost, &post.identity, Some(post.clone()))
+            make(NotificationKind::Repost, &post.identity, Some(post.clone()))
         }
         // Reaction -> notify the author of the reacted-to event.
         ContentBody::Reaction(reaction) => {
             let target = reaction.event_key.as_ref()?;
             make(
-                NotificationType::Reaction,
+                NotificationKind::Reaction,
                 &target.identity,
                 Some(target.clone()),
             )
         }
         // Follow -> notify the followed identity (no target event).
         ContentBody::Follow(follow) => {
-            make(NotificationType::Follow, &follow.identity, None)
+            make(NotificationKind::Follow, &follow.identity, None)
         }
         _ => None,
     }
@@ -344,7 +356,7 @@ mod tests {
         }));
 
         let derived = derive("alice", &c).expect("reply should notify");
-        assert_eq!(derived.notification_type, NotificationType::Reply);
+        assert_eq!(derived.notification_type, NotificationKind::Reply);
         assert_eq!(derived.to_identity, "bob");
         assert_eq!(derived.target, Some(parent));
     }
@@ -368,6 +380,20 @@ mod tests {
     }
 
     #[test]
+    fn quote_notifies_the_quoted_author() {
+        let quoted = event_key("bob");
+        let c = content(ContentBody::Post(Post {
+            quote: Some(quoted.clone()),
+            ..Default::default()
+        }));
+
+        let derived = derive("alice", &c).expect("quote should notify");
+        assert_eq!(derived.notification_type, NotificationKind::Quote);
+        assert_eq!(derived.to_identity, "bob");
+        assert_eq!(derived.target, Some(quoted));
+    }
+
+    #[test]
     fn repost_notifies_the_reposted_author() {
         let target = event_key("bob");
         let c = content(ContentBody::Repost(Repost {
@@ -375,7 +401,7 @@ mod tests {
         }));
 
         let derived = derive("alice", &c).expect("repost should notify");
-        assert_eq!(derived.notification_type, NotificationType::Repost);
+        assert_eq!(derived.notification_type, NotificationKind::Repost);
         assert_eq!(derived.to_identity, "bob");
         assert_eq!(derived.target, Some(target));
     }
@@ -390,7 +416,7 @@ mod tests {
         }));
 
         let derived = derive("alice", &c).expect("reaction should notify");
-        assert_eq!(derived.notification_type, NotificationType::Reaction);
+        assert_eq!(derived.notification_type, NotificationKind::Reaction);
         assert_eq!(derived.to_identity, "bob");
         assert_eq!(derived.target, Some(target));
     }
@@ -402,7 +428,7 @@ mod tests {
         }));
 
         let derived = derive("alice", &c).expect("follow should notify");
-        assert_eq!(derived.notification_type, NotificationType::Follow);
+        assert_eq!(derived.notification_type, NotificationKind::Follow);
         assert_eq!(derived.to_identity, "bob");
         assert_eq!(derived.target, None);
     }

@@ -7,9 +7,8 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: i64,
 
-    // protobuf: `polycentric.v2.NotificationType`.
-    #[sea_orm(column_name = "type")]
-    pub r#type: i32,
+    // protobuf: `polycentric.v2.NotificationKind` discriminant.
+    pub kind: i32,
 
     // Derived from the triggering event
     pub from_identity: String,
