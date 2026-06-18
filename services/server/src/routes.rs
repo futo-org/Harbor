@@ -14,7 +14,7 @@ use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::proto::ContentDigest;
 use crate::util;
-use crate::util::safe_http;
+use crate::util::http_client;
 
 #[derive(Clone)]
 struct AppState {
@@ -77,55 +77,49 @@ async fn get_blob(
     Ok(([(header::CONTENT_TYPE, row.mime_type)], body).into_response())
 }
 
-/// Max image we'll proxy. Preview thumbnails are small; this bounds memory.
-const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
-
-/// Proxy an image from an untrusted URL (`?url=`), for link-preview display.
-/// Fetches through the SSRF-protected client, verifies the response is an
-/// image, and streams it back with the upstream content type. This keeps
-/// reader IPs off third-party hosts and sidesteps mixed-content/CORS issues
-/// that arise when the client loads remote images directly.
+/// Proxy a preview image from an untrusted URL (`?url=`) for display. The
+/// actual fetch is delegated to the scraper service — the single SSRF surface —
+/// so this just pre-validates the target and streams the result back. Keeps
+/// reader IPs off third-party hosts and avoids mixed-content/CORS on the client.
 async fn image_proxy(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Response, StatusCode> {
     let url = params.get("url").ok_or(StatusCode::BAD_REQUEST)?;
 
-    let mut resp = safe_http::get(url).await.map_err(|e| match e {
-        // Bad/blocked URL is a client error; a fetch failure is upstream's.
-        safe_http::FetchError::InvalidUrl(_) => StatusCode::BAD_REQUEST,
-        safe_http::FetchError::Request(_) => StatusCode::BAD_GATEWAY,
-    })?;
+    let resp = http_client::client()
+        .get(format!(
+            "{}/image",
+            http_client::scraper_service_base_url().trim_end_matches('/')
+        ))
+        .query(&[("url", url.as_str())])
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
 
     if !resp.status().is_success() {
         return Err(StatusCode::BAD_GATEWAY);
     }
 
-    // Only proxy images — never echo back arbitrary content typed as one.
+    // Pass through the content type the scraper validated, plus caching.
     let content_type = resp
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
+        .unwrap_or("application/octet-stream")
         .to_string();
-    if !content_type.starts_with("image/") {
-        return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
-    }
+    let cache_control = resp
+        .headers()
+        .get(reqwest::header::CACHE_CONTROL)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("public, max-age=86400")
+        .to_string();
 
-    // Read at most MAX_IMAGE_BYTES; reject anything larger rather than truncate.
-    let mut body: Vec<u8> = Vec::new();
-    while let Some(chunk) =
-        resp.chunk().await.map_err(|_| StatusCode::BAD_GATEWAY)?
-    {
-        body.extend_from_slice(&chunk);
-        if body.len() > MAX_IMAGE_BYTES {
-            return Err(StatusCode::PAYLOAD_TOO_LARGE);
-        }
-    }
+    let body = resp.bytes().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
 
     Ok((
         [
             (header::CONTENT_TYPE, content_type),
-            (header::CACHE_CONTROL, "public, max-age=86400".to_string()),
+            (header::CACHE_CONTROL, cache_control),
         ],
         body,
     )

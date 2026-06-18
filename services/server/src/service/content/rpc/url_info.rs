@@ -6,9 +6,8 @@
 //! `Link`.
 
 use crate::service::proto::{Link, UrlInfoRequest};
-use crate::util::safe_http;
+use crate::util::http_client;
 use serde::Deserialize;
-use std::sync::OnceLock;
 use tonic::Status;
 
 /// JSON returned by the scraper service's `/scrape` endpoint.
@@ -19,33 +18,13 @@ struct ScrapedMetadata {
     image: Option<String>,
 }
 
-/// Base URL of the internal scraper service, overridable via `SCRAPER_URL`.
-fn scraper_base_url() -> String {
-    std::env::var("SCRAPER_URL")
-        .unwrap_or_else(|_| "http://localhost:3002".to_string())
-}
-
-/// Plain HTTP client for talking to the scraper. Deliberately *not*
-/// `safe_http` — the scraper is a trusted internal host, and the SSRF guard
-/// would reject its internal address.
-fn scraper_client() -> &'static reqwest::Client {
-    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(reqwest::Client::new)
-}
-
 pub async fn handle(req: UrlInfoRequest) -> Result<Link, Status> {
-    // Validate the target up front: http/https only, and reject internal hosts
-    // so we never ask the scraper to fetch our own network. (The scraper does
-    // the real fetch; its egress must also be constrained — see its notes.)
-    let url =
-        safe_http::validate_url(&req.url).map_err(Status::invalid_argument)?;
-
-    let resp = scraper_client()
+    let resp = http_client::client()
         .get(format!(
             "{}/scrape",
-            scraper_base_url().trim_end_matches('/')
+            http_client::scraper_service_base_url().trim_end_matches('/')
         ))
-        .query(&[("url", url.as_str())])
+        .query(&[("url", req.url.as_str())])
         .send()
         .await
         .map_err(|e| {

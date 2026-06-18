@@ -65,27 +65,33 @@ export const scrape = async (targetUrl: string): Promise<LinkMetadata> => {
 
 const PORT = Number(process.env.PORT ?? 3002);
 
+/** Largest image we'll proxy. Preview thumbnails are small; this bounds memory. */
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   res.writeHead(status, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
 };
 
+const isValidHttpUrl = (target: string): boolean => {
+  try {
+    const { protocol } = new URL(target);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+// NOTE: scheme validation only — this service is the one place outbound
+// fetching happens, so real SSRF protection is its network egress boundary
+// (the browser fetches a page + every subresource, so per-request filtering
+// here is impractical). Keep it constrained at the network layer.
+
 const handleScrape = async (
   target: string,
   res: ServerResponse,
 ): Promise<void> => {
-  // Basic input validation only. NOTE: this is *not* SSRF protection — the
-  // headless browser fetches `target` and every subresource it references, so
-  // per-request filtering here is impractical. A deployment must constrain
-  // egress at the network layer (allowlist / firewall).
-  let parsed: URL;
-  try {
-    parsed = new URL(target);
-  } catch {
-    sendJson(res, 400, { error: 'invalid url' });
-    return;
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+  if (!isValidHttpUrl(target)) {
     sendJson(res, 400, { error: 'url must be http or https' });
     return;
   }
@@ -95,6 +101,48 @@ const handleScrape = async (
   } catch (error) {
     console.error('scrape failed:', error);
     sendJson(res, 502, { error: 'failed to scrape url' });
+  }
+};
+
+/** Fetch a remote image and stream it back — the image-proxy counterpart to
+ *  `/scrape`. No browser needed; a plain fetch suffices. */
+const handleImage = async (
+  target: string,
+  res: ServerResponse,
+): Promise<void> => {
+  if (!isValidHttpUrl(target)) {
+    sendJson(res, 400, { error: 'url must be http or https' });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(target);
+    if (!upstream.ok) {
+      sendJson(res, 502, { error: `upstream returned ${upstream.status}` });
+      return;
+    }
+    const contentType = upstream.headers.get('content-type') ?? '';
+    if (!contentType.startsWith('image/')) {
+      sendJson(res, 415, { error: 'not an image' });
+      return;
+    }
+    if (Number(upstream.headers.get('content-length') ?? 0) > MAX_IMAGE_BYTES) {
+      sendJson(res, 413, { error: 'image too large' });
+      return;
+    }
+    const body = Buffer.from(await upstream.arrayBuffer());
+    if (body.length > MAX_IMAGE_BYTES) {
+      sendJson(res, 413, { error: 'image too large' });
+      return;
+    }
+    res.writeHead(200, {
+      'content-type': contentType,
+      'cache-control': 'public, max-age=86400',
+    });
+    res.end(body);
+  } catch (error) {
+    console.error('image fetch failed:', error);
+    sendJson(res, 502, { error: 'failed to fetch image' });
   }
 };
 
@@ -118,6 +166,16 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
       return;
     }
     void handleScrape(target, res);
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/image') {
+    const target = searchParams.get('url');
+    if (!target) {
+      sendJson(res, 400, { error: 'missing url parameter' });
+      return;
+    }
+    void handleImage(target, res);
     return;
   }
 

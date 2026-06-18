@@ -1,3 +1,3 @@
 pub mod digest;
 pub mod hex;
-pub mod safe_http;
+pub mod http_client;
