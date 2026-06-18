@@ -87,9 +87,6 @@ server-image:
   rules:
     - !reference [.server-workflow, rules]
     - !reference [.release-workflow, rules]
-  needs:
-    - job: serer-build
-      artifacts: true
 
 ########################################################################
 # moderation
