@@ -12,8 +12,7 @@ pub fn scraper_service_base_url() -> String {
         .unwrap_or_else(|_| "http://localhost:3002".to_string())
 }
 
-/// Shared HTTP client for talking to the scraper. Deliberately a plain client,
-/// not a SSRF-guarded one: the scraper is a trusted internal host.
+/// Shared HTTP client for talking to the scraper.
 pub fn client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(reqwest::Client::new)
