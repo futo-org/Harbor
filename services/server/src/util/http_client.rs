@@ -1,8 +1,4 @@
 //! HTTP client for the internal scraper service (`services/scraper`).
-//!
-//! All outbound fetching of untrusted URLs (page metadata *and* preview images)
-//! is delegated to that service, so SSRF is constrained in **one** place — its
-//! network egress — rather than spread across the Rust server.
 
 use std::sync::OnceLock;
 

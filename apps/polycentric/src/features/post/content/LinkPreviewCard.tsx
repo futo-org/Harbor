@@ -9,9 +9,9 @@ const IMAGE_BG = 'rgba(0,0,0,0.04)';
 const OG_ASPECT = 1.91;
 
 /**
- * Open-Graph style preview card for a `Link` attached to a post (built by the
- * server's `url_info` unfurl). Tapping opens the URL; the tap is stopped from
- * also triggering the surrounding post-card press (same pattern as PostImages).
+ * Open-Graph style preview card for a `Link` attached to a post.
+ * Tapping opens the URL; the tap is stopped from also triggering the surrounding
+ * post-card press (same pattern as PostImages).
  *
  * Metadata fields are best-effort — proto3 leaves unset strings empty, so each
  * is rendered only when present.
