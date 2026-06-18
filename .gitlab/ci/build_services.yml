@@ -31,11 +31,10 @@
     - |
       buildctl-daemonless.sh build \
         --frontend dockerfile.v0 \
-        --local context=target/release/${SERVICE_NAME} \
+        --local context=. \
         --local dockerfile=./services/${SERVICE_DIR} \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG,mode=max \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA-cache,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA,push=true
 
 ########################################################################
