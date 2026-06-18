@@ -1,4 +1,4 @@
-use notifications_migration::{Migrator, MigratorTrait};
+use push_notifications_migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbErr};
 
 /// Connect to Postgres with the notifications schema as the search path,

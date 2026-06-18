@@ -4,9 +4,12 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { NotificationService } from "./notifications";
-import { stackIntercept } from "@protobuf-ts/runtime-rpc";
+import type { UnregisterPushNotificationResponse } from "./notifications";
 import type { RegisterPushNotificationResponse } from "./notifications";
 import type { SignedMessage } from "./server";
+import { stackIntercept } from "@protobuf-ts/runtime-rpc";
+import type { ListNotificationsResponse } from "./notifications";
+import type { ListNotificationsRequest } from "./notifications";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
@@ -17,11 +20,23 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface INotificationServiceClient {
     /**
+     * Returns notifications for a user
+     *
+     * @generated from protobuf rpc: ListNotifications
+     */
+    listNotifications(input: ListNotificationsRequest, options?: RpcOptions): UnaryCall<ListNotificationsRequest, ListNotificationsResponse>;
+    /**
      * This endpoint expects a signed RegisterPushNotificationRequest message
      *
      * @generated from protobuf rpc: RegisterPushNotifications
      */
     registerPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, RegisterPushNotificationResponse>;
+    /**
+     * This endpoint expects a signed UnregisterPushNotificationRequest message
+     *
+     * @generated from protobuf rpc: UnregisterPushNotifications
+     */
+    unregisterPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, UnregisterPushNotificationResponse>;
 }
 /**
  * *
@@ -36,12 +51,30 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
+     * Returns notifications for a user
+     *
+     * @generated from protobuf rpc: ListNotifications
+     */
+    listNotifications(input: ListNotificationsRequest, options?: RpcOptions): UnaryCall<ListNotificationsRequest, ListNotificationsResponse> {
+        const method = this.methods[0], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ListNotificationsRequest, ListNotificationsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * This endpoint expects a signed RegisterPushNotificationRequest message
      *
      * @generated from protobuf rpc: RegisterPushNotifications
      */
     registerPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, RegisterPushNotificationResponse> {
-        const method = this.methods[0], opt = this._transport.mergeOptions(options);
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
         return stackIntercept<SignedMessage, RegisterPushNotificationResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * This endpoint expects a signed UnregisterPushNotificationRequest message
+     *
+     * @generated from protobuf rpc: UnregisterPushNotifications
+     */
+    unregisterPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, UnregisterPushNotificationResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SignedMessage, UnregisterPushNotificationResponse>("unary", this._transport, method, opt, input);
     }
 }

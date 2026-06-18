@@ -1,4 +1,4 @@
-use notifications_entity::push_token_model;
+use push_notifications_entity::push_token_model;
 use sea_orm::Schema;
 use sea_orm_migration::prelude::*;
 

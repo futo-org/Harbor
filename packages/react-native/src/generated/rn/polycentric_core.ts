@@ -653,6 +653,62 @@ const FfiConverterTypeListEventsArgs = (() => {
   return new FFIConverter();
 })();
 
+export type ListNotificationsArgs = {
+  identity: string;
+  /**
+   * Return at most this many notifications.
+   */
+  first?: number;
+  /**
+   * Return notifications after this cursor.
+   */
+  after?: string;
+};
+
+/**
+ * Generated factory for {@link ListNotificationsArgs} record objects.
+ */
+export const ListNotificationsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      ListNotificationsArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListNotificationsArgs>,
+  });
+})();
+
+const FfiConverterTypeListNotificationsArgs = (() => {
+  type TypeName = ListNotificationsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        first: FfiConverterOptionalUInt32.read(from),
+        after: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalUInt32.write(value.first, into);
+      FfiConverterOptionalString.write(value.after, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalUInt32.allocationSize(value.first) +
+        FfiConverterOptionalString.allocationSize(value.after)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * JPEG bytes plus the exact output dimensions of the resized image.
  */
@@ -1229,6 +1285,7 @@ export enum Query_Tags {
   GetIdentityFeed = 'GetIdentityFeed',
   GetFollowingFeed = 'GetFollowingFeed',
   GetExploreFeed = 'GetExploreFeed',
+  ListNotifications = 'ListNotifications',
   ListEvents = 'ListEvents',
 }
 /**
@@ -1403,6 +1460,35 @@ export const Query = (() => {
     }
   }
 
+  type ListNotifications__interface = {
+    tag: Query_Tags.ListNotifications;
+    inner: Readonly<[ListNotificationsArgs]>;
+  };
+  class ListNotifications_
+    extends UniffiEnum
+    implements ListNotifications__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListNotifications;
+    readonly inner: Readonly<[ListNotificationsArgs]>;
+    constructor(v0: ListNotificationsArgs) {
+      super('Query', 'ListNotifications');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListNotificationsArgs): ListNotifications_ {
+      return new ListNotifications_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListNotifications_ {
+      return obj.tag === Query_Tags.ListNotifications;
+    }
+  }
+
   type ListEvents__interface = {
     tag: Query_Tags.ListEvents;
     inner: Readonly<[ListEventsArgs]>;
@@ -1441,6 +1527,7 @@ export const Query = (() => {
     GetIdentityFeed: GetIdentityFeed_,
     GetFollowingFeed: GetFollowingFeed_,
     GetExploreFeed: GetExploreFeed_,
+    ListNotifications: ListNotifications_,
     ListEvents: ListEvents_,
   });
 })();
@@ -1458,6 +1545,7 @@ export type Query = InstanceType<
     | 'GetIdentityFeed'
     | 'GetFollowingFeed'
     | 'GetExploreFeed'
+    | 'ListNotifications'
     | 'ListEvents']
 >;
 
@@ -1491,6 +1579,10 @@ const FfiConverterTypeQuery = (() => {
             FfiConverterTypeGetExploreFeedArgs.read(from)
           );
         case 7:
+          return new Query.ListNotifications(
+            FfiConverterTypeListNotificationsArgs.read(from)
+          );
+        case 8:
           return new Query.ListEvents(
             FfiConverterTypeListEventsArgs.read(from)
           );
@@ -1536,8 +1628,14 @@ const FfiConverterTypeQuery = (() => {
           FfiConverterTypeGetExploreFeedArgs.write(inner[0], into);
           return;
         }
-        case Query_Tags.ListEvents: {
+        case Query_Tags.ListNotifications: {
           ordinalConverter.write(7, into);
+          const inner = value.inner;
+          FfiConverterTypeListNotificationsArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListEvents: {
+          ordinalConverter.write(8, into);
           const inner = value.inner;
           FfiConverterTypeListEventsArgs.write(inner[0], into);
           return;
@@ -1585,9 +1683,17 @@ const FfiConverterTypeQuery = (() => {
           size += FfiConverterTypeGetExploreFeedArgs.allocationSize(inner[0]);
           return size;
         }
-        case Query_Tags.ListEvents: {
+        case Query_Tags.ListNotifications: {
           const inner = value.inner;
           let size = ordinalConverter.allocationSize(7);
+          size += FfiConverterTypeListNotificationsArgs.allocationSize(
+            inner[0]
+          );
+          return size;
+        }
+        case Query_Tags.ListEvents: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(8);
           size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
           return size;
         }
@@ -3965,6 +4071,9 @@ const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(
   FfiConverterSequenceTypeEventKey
 );
 
+// FfiConverter for number | undefined
+const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
+
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
@@ -4348,6 +4457,7 @@ export default Object.freeze({
     FfiConverterTypeGetPostThreadArgs,
     FfiConverterTypeGetProfileArgs,
     FfiConverterTypeListEventsArgs,
+    FfiConverterTypeListNotificationsArgs,
     FfiConverterTypeLogLevel,
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,

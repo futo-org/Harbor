@@ -12,6 +12,72 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { PageInfo } from "./common";
+import { EventHint } from "./events";
+import { EventBundle } from "./events";
+/**
+ * @generated from protobuf message polycentric.v2.Notification
+ */
+export interface Notification {
+    /**
+     * Event that triggered the notification
+     *
+     * @generated from protobuf field: polycentric.v2.EventBundle trigger_event = 1
+     */
+    triggerEvent?: EventBundle;
+    /**
+     * Event that the notification is in relation to
+     *
+     * @generated from protobuf field: polycentric.v2.EventBundle target_event = 2
+     */
+    targetEvent?: EventBundle;
+    /**
+     * Kind of the notification
+     *
+     * @generated from protobuf field: polycentric.v2.NotificationKind kind = 3
+     */
+    kind: NotificationKind;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListNotificationsRequest
+ */
+export interface ListNotificationsRequest {
+    /**
+     * @generated from protobuf field: string identity = 1
+     */
+    identity: string;
+    /**
+     * Return the 1 X number of notifications
+     *
+     * @generated from protobuf field: optional uint32 first = 2
+     */
+    first?: number;
+    /**
+     * Return notifications after a cursor
+     *
+     * @generated from protobuf field: optional string after = 3
+     */
+    after?: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListNotificationsResponse
+ */
+export interface ListNotificationsResponse {
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.Notification notifications = 1
+     */
+    notifications: Notification[];
+    /**
+     * Events that help the client resolve with fewer network calls
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+    /**
+     * @generated from protobuf field: polycentric.v2.PageInfo page_info = 3
+     */
+    pageInfo?: PageInfo;
+}
 /**
  * @generated from protobuf message polycentric.v2.RegisterPushNotificationRequest
  */
@@ -30,6 +96,237 @@ export interface RegisterPushNotificationRequest {
  */
 export interface RegisterPushNotificationResponse {
 }
+/**
+ * @generated from protobuf message polycentric.v2.UnregisterPushNotificationRequest
+ */
+export interface UnregisterPushNotificationRequest {
+    /**
+     * @generated from protobuf field: string service = 1
+     */
+    service: string;
+    /**
+     * @generated from protobuf field: string token = 2
+     */
+    token: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.UnregisterPushNotificationResponse
+ */
+export interface UnregisterPushNotificationResponse {
+}
+/**
+ * @generated from protobuf enum polycentric.v2.NotificationKind
+ */
+export enum NotificationKind {
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_FOLLOW = 1;
+     */
+    FOLLOW = 1,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REPLY = 2;
+     */
+    REPLY = 2,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REPOST = 3;
+     */
+    REPOST = 3,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REACTION = 4;
+     */
+    REACTION = 4,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_QUOTE = 5;
+     */
+    QUOTE = 5
+}
+// @generated message type with reflection information, may provide speed optimized methods
+class Notification$Type extends MessageType<Notification> {
+    constructor() {
+        super("polycentric.v2.Notification", [
+            { no: 1, name: "trigger_event", kind: "message", T: () => EventBundle },
+            { no: 2, name: "target_event", kind: "message", T: () => EventBundle },
+            { no: 3, name: "kind", kind: "enum", T: () => ["polycentric.v2.NotificationKind", NotificationKind, "NOTIFICATION_KIND_"] }
+        ]);
+    }
+    create(value?: PartialMessage<Notification>): Notification {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.kind = 0;
+        if (value !== undefined)
+            reflectionMergePartial<Notification>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Notification): Notification {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventBundle trigger_event */ 1:
+                    message.triggerEvent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.triggerEvent);
+                    break;
+                case /* polycentric.v2.EventBundle target_event */ 2:
+                    message.targetEvent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.targetEvent);
+                    break;
+                case /* polycentric.v2.NotificationKind kind */ 3:
+                    message.kind = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Notification, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventBundle trigger_event = 1; */
+        if (message.triggerEvent)
+            EventBundle.internalBinaryWrite(message.triggerEvent, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.EventBundle target_event = 2; */
+        if (message.targetEvent)
+            EventBundle.internalBinaryWrite(message.targetEvent, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.NotificationKind kind = 3; */
+        if (message.kind !== 0)
+            writer.tag(3, WireType.Varint).int32(message.kind);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.Notification
+ */
+export const Notification = new Notification$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListNotificationsRequest$Type extends MessageType<ListNotificationsRequest> {
+    constructor() {
+        super("polycentric.v2.ListNotificationsRequest", [
+            { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "first", kind: "scalar", opt: true, T: 13 /*ScalarType.UINT32*/ },
+            { no: 3, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ListNotificationsRequest>): ListNotificationsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = "";
+        if (value !== undefined)
+            reflectionMergePartial<ListNotificationsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListNotificationsRequest): ListNotificationsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                case /* optional uint32 first */ 2:
+                    message.first = reader.uint32();
+                    break;
+                case /* optional string after */ 3:
+                    message.after = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListNotificationsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string identity = 1; */
+        if (message.identity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        /* optional uint32 first = 2; */
+        if (message.first !== undefined)
+            writer.tag(2, WireType.Varint).uint32(message.first);
+        /* optional string after = 3; */
+        if (message.after !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.after);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListNotificationsRequest
+ */
+export const ListNotificationsRequest = new ListNotificationsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListNotificationsResponse$Type extends MessageType<ListNotificationsResponse> {
+    constructor() {
+        super("polycentric.v2.ListNotificationsResponse", [
+            { no: 1, name: "notifications", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Notification },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint },
+            { no: 3, name: "page_info", kind: "message", T: () => PageInfo }
+        ]);
+    }
+    create(value?: PartialMessage<ListNotificationsResponse>): ListNotificationsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.notifications = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListNotificationsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListNotificationsResponse): ListNotificationsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.Notification notifications */ 1:
+                    message.notifications.push(Notification.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* polycentric.v2.PageInfo page_info */ 3:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListNotificationsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.Notification notifications = 1; */
+        for (let i = 0; i < message.notifications.length; i++)
+            Notification.internalBinaryWrite(message.notifications[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.PageInfo page_info = 3; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListNotificationsResponse
+ */
+export const ListNotificationsResponse = new ListNotificationsResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotificationRequest> {
     constructor() {
@@ -123,9 +420,104 @@ class RegisterPushNotificationResponse$Type extends MessageType<RegisterPushNoti
  * @generated MessageType for protobuf message polycentric.v2.RegisterPushNotificationResponse
  */
 export const RegisterPushNotificationResponse = new RegisterPushNotificationResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class UnregisterPushNotificationRequest$Type extends MessageType<UnregisterPushNotificationRequest> {
+    constructor() {
+        super("polycentric.v2.UnregisterPushNotificationRequest", [
+            { no: 1, name: "service", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "token", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<UnregisterPushNotificationRequest>): UnregisterPushNotificationRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.service = "";
+        message.token = "";
+        if (value !== undefined)
+            reflectionMergePartial<UnregisterPushNotificationRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: UnregisterPushNotificationRequest): UnregisterPushNotificationRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string service */ 1:
+                    message.service = reader.string();
+                    break;
+                case /* string token */ 2:
+                    message.token = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: UnregisterPushNotificationRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string service = 1; */
+        if (message.service !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.service);
+        /* string token = 2; */
+        if (message.token !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.token);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.UnregisterPushNotificationRequest
+ */
+export const UnregisterPushNotificationRequest = new UnregisterPushNotificationRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class UnregisterPushNotificationResponse$Type extends MessageType<UnregisterPushNotificationResponse> {
+    constructor() {
+        super("polycentric.v2.UnregisterPushNotificationResponse", []);
+    }
+    create(value?: PartialMessage<UnregisterPushNotificationResponse>): UnregisterPushNotificationResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<UnregisterPushNotificationResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: UnregisterPushNotificationResponse): UnregisterPushNotificationResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: UnregisterPushNotificationResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.UnregisterPushNotificationResponse
+ */
+export const UnregisterPushNotificationResponse = new UnregisterPushNotificationResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.NotificationService
  */
 export const NotificationService = new ServiceType("polycentric.v2.NotificationService", [
-    { name: "RegisterPushNotifications", options: {}, I: SignedMessage, O: RegisterPushNotificationResponse }
+    { name: "ListNotifications", options: {}, I: ListNotificationsRequest, O: ListNotificationsResponse },
+    { name: "RegisterPushNotifications", options: {}, I: SignedMessage, O: RegisterPushNotificationResponse },
+    { name: "UnregisterPushNotifications", options: {}, I: SignedMessage, O: UnregisterPushNotificationResponse }
 ]);

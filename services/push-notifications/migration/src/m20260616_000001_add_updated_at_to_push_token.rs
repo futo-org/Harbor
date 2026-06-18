@@ -1,4 +1,4 @@
-use notifications_entity::push_token_model as push_token;
+use push_notifications_entity::push_token_model as push_token;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]

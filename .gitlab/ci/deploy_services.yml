@@ -125,41 +125,41 @@ moderation-deploy-manifest-production:
 # notifications
 ########################################################################
 
-.notifications-deploy-workflow:
+.push-notifications-deploy-workflow:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - services/notifications/**/*
+        - services/push-notifications/**/*
         - services/common/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
   variables:
-    SERVICE_NAME: notifications-service
+    SERVICE_NAME: push-notifications-service
 
 ########################################
 # Tag the image with environment label #
 ########################################
 
-notifications-deploy-image-production:
+push-notifications-deploy-image-production:
   extends:
-    - .notifications-deploy-workflow
+    - .push-notifications-deploy-workflow
     - .service-deploy-image
   when: manual
   environment:
-    name: production/notifications-service
+    name: production/push-notifications-service
   needs:
-    - job: notifications-image
+    - job: push-notifications-image
       artifacts: false
 
 ###############################
 # Rolling restart on Manifest #
 ###############################
 
-notifications-deploy-manifest-production:
+push-notifications-deploy-manifest-production:
   extends:
-    - .notifications-deploy-workflow
+    - .push-notifications-deploy-workflow
     - .service-deploy-manifest
   variables:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-east/notifications.yml:polycentriceast
   needs:
-    - notifications-deploy-image-production
+    - push-notifications-deploy-image-production
