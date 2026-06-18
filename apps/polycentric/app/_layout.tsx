@@ -32,7 +32,12 @@ function RootStack() {
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
-          contentStyle: [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
+          contentStyle: [
+            theme.atoms.bg,
+            Atoms.flex_1,
+            // On web keep the content from scrolling so there's no second scrollbar
+            isWeb ? Atoms.overflow_hidden : Atoms.overflow_auto,
+          ],
           ...(isWeb
             ? { animation: 'none' as const }
             : { orientation: 'portrait_up' }),

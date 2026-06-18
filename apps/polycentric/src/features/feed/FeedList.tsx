@@ -86,7 +86,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
           />
         ) : undefined
       }
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={isWeb}
       {...rest}
     />
   );
