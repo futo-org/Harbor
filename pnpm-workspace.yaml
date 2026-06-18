@@ -3,6 +3,7 @@ packages:
   - packages/*
   - packages/js-browser/examples/*
   - packages/js-node/examples/*
+  - services/scraper
   - tools/*
   - docs/
 
