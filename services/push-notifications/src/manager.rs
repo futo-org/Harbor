@@ -473,7 +473,6 @@ impl NotificationManager {
 mod tests {
     use super::{NotificationManager, PushService};
     use crate::{context::Context, polycentric::PolycentricClient};
-    use notifications_entity::push_token_model as PushTokenModel;
     use polycentric_common::models::{
         collections,
         protos_v2::{
