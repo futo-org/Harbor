@@ -18,8 +18,17 @@
 
 .js-sdks-base:
   extends: .js-sdk-workflow
+  variables:
+    PNPM_STORE_DIR: ${CI_PROJECT_DIR}/.pnpm-store
+  cache:
+    key: js-sdks-pnpm-${CI_COMMIT_REF_SLUG}
+    fallback_keys:
+      - js-sdks-pnpm-${CI_DEFAULT_BRANCH}
+    paths:
+      - .pnpm-store
   before_script:
     - npm install -g pnpm@10
+    - pnpm config set store-dir ${PNPM_STORE_DIR}
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
