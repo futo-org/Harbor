@@ -2,8 +2,6 @@ FROM rust:1.96-slim AS build
 
 WORKDIR /app
 
-# Install build dependencies before copying the source so this (slow) layer
-# stays cached when only source changes.
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
 

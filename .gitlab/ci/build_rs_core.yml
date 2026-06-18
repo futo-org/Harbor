@@ -20,18 +20,16 @@
   variables:
     RUST_CORE_PATH: packages/rs-core
   cache:
-    - key:
-        files:
-          - packages/rs-core/Cargo.lock
-        prefix: rs-core-cargo-deps
+    - key: rs-core-cargo-deps-${CI_COMMIT_REF_SLUG}
+      fallback_keys:
+        - rs-core-cargo-deps-${CI_DEFAULT_BRANCH}
       paths:
         - .cargo/registry/index
         - .cargo/registry/cache
         - .cargo/git/db
-    - key:
-        files:
-          - packages/rs-core/Cargo.lock
-        prefix: rs-core-target-${CI_JOB_NAME}
+    - key: rs-core-target-${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}
+      fallback_keys:
+        - rs-core-target-${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}
       paths:
         - target
 
@@ -92,22 +90,6 @@ rs-core-uniffi-web-build:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
-  cache:
-    - key:
-        files:
-          - packages/rs-core/Cargo.lock
-        prefix: rs-core-cargo-deps
-      paths:
-        - .cargo/registry/index
-        - .cargo/registry/cache
-        - .cargo/git/db
-    - key:
-        files:
-          - packages/rs-core/Cargo.lock
-          - pnpm-lock.yaml
-        prefix: rs-core-target-${CI_JOB_NAME}
-      paths:
-        - target
   script:
     - cd packages/rs-core-uniffi-web
     - |

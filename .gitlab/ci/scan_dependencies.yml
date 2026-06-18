@@ -18,6 +18,9 @@ trivy:
     # Console output
     - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity CRITICAL .
   cache:
+    key: trivy-${CI_COMMIT_REF_SLUG}
+    fallback_keys:
+      - trivy-${CI_DEFAULT_BRANCH}
     paths:
       - .trivycache/
   artifacts:
