@@ -11,8 +11,17 @@ import metascraperImage from 'metascraper-image';
 import metascraperTitle from 'metascraper-title';
 import metascraperUrl from 'metascraper-url';
 
-// Spawn the Chromium process once for the lifetime of the service.
-const browserlessFactory = await createBrowserless();
+// A real desktop Chrome UA. Headless Chromium's default `HeadlessChrome` UA
+// gets some sites (e.g. YouTube) to redirect to an "unsupported browser" gate
+// instead of serving the page, so we present a normal browser identity.
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+// Spawn the Chromium process once for the lifetime of the service. The
+// `--user-agent` flag sets the UA browser-wide for the prerender path.
+const browserlessFactory = await createBrowserless({
+  launchOpts: { args: [`--user-agent=${USER_AGENT}`] },
+});
 
 // Tear the Chromium process down when Node exits.
 process.on('exit', () => {
@@ -50,6 +59,8 @@ export const scrape = async (targetUrl: string): Promise<LinkMetadata> => {
     // prerendered) HTML; metascraper needs both.
     const { html, url } = await getHTML(targetUrl, {
       getBrowserless: () => context,
+      // Same UA on the plain-fetch path (html-get may skip the browser).
+      headers: { 'user-agent': USER_AGENT },
     });
     const meta = await scrapeMetadata({ html, url });
     return {
