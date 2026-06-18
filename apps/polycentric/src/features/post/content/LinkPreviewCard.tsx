@@ -48,9 +48,9 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
         pressed && { opacity: 0.8 },
       ]}
     >
-      {link.image ? (
+      {imageUri ? (
         <Image
-          source={{ uri: link.image }}
+          source={{ uri: imageUri }}
           resizeMode="cover"
           style={[
             Atoms.w_full,
