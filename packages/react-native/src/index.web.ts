@@ -9,6 +9,7 @@ export {
   PolycentricCore,
   Query,
   QueryStatus,
+  UpdateMode,
 } from '@polycentric/rs-core-uniffi-web';
 export type {
   EventKey,

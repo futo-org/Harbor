@@ -20,10 +20,22 @@ pub enum FetchMode {
     OfflineOnly,
 }
 
+/// Specifies how cached data and newly fetched data should be handled
+/// after fetching.
+#[derive(Clone, Copy, Default, Debug, uniffi::Enum)]
+pub enum UpdateMode {
+    /// Data we fetched from the remote replaces any cached data.
+    #[default]
+    Replace,
+    /// Data we fetched from the remote is merged with any cached data.
+    Merge,
+}
+
 /// Options for the query such as the fetch mode or a list of servers
 #[derive(Clone, Debug, Default, uniffi::Record)]
 pub struct QueryOpts {
     pub fetch_mode: Option<FetchMode>,
+    pub update_mode: Option<UpdateMode>,
     /// Optional list of servers the query should call. `None` uses
     /// `client.servers()`.
     pub servers: Option<Vec<String>>,
@@ -173,6 +185,10 @@ where
             .as_ref()
             .and_then(|o| o.fetch_mode)
             .unwrap_or(FetchMode::Default);
+        let update_mode = opts
+            .as_ref()
+            .and_then(|opts| opts.update_mode)
+            .unwrap_or_default();
         let servers = opts.and_then(|o| o.servers);
 
         Observable::new(move |subscriber| {
@@ -220,6 +236,7 @@ where
             spawn_fanout(
                 state,
                 target_servers,
+                update_mode,
                 query_fn.clone(),
                 merge_fn.clone(),
                 client.clone(),
@@ -274,6 +291,7 @@ where
 fn spawn_fanout<T>(
     state: QueryStateHandle<T>,
     servers: Vec<String>,
+    update_mode: UpdateMode,
     query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
     client: Arc<Mutex<PolycentricClient>>,
@@ -301,7 +319,18 @@ fn spawn_fanout<T>(
 
                 let error_msg = match result {
                     Ok(value) => {
-                        s.data.insert(server_url, value);
+                        let new_value = match update_mode {
+                            UpdateMode::Merge => {
+                                if let Some(old) = s.data.remove(&server_url) {
+                                    merge_fn(&[old, value], &client)
+                                } else {
+                                    value
+                                }
+                            }
+                            UpdateMode::Replace => value,
+                        };
+
+                        s.data.insert(server_url, new_value);
                         None
                     }
                     Err(msg) => Some(msg),

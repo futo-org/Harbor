@@ -12,25 +12,10 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventKey } from "./event_key";
+import { PageInfo } from "./common";
 import { EventHint } from "./events";
 import { EventBundle } from "./events";
-/**
- * @generated from protobuf message polycentric.v2.FeedPageParams
- */
-export interface FeedPageParams {
-    /**
-     * @generated from protobuf field: optional int32 limit = 1
-     */
-    limit?: number;
-    /**
-     * @generated from protobuf field: optional string before_token = 2
-     */
-    beforeToken?: string;
-    /**
-     * @generated from protobuf field: optional string after_token = 3
-     */
-    afterToken?: string;
-}
+import { PageParams } from "./common";
 /**
  * @generated from protobuf message polycentric.v2.GetIdentityFeedRequest
  */
@@ -42,9 +27,9 @@ export interface GetIdentityFeedRequest {
      */
     identity: string;
     /**
-     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 2
      */
-    pageParams?: FeedPageParams;
+    pageParams?: PageParams;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFollowingFeedRequest
@@ -57,9 +42,9 @@ export interface GetFollowingFeedRequest {
      */
     followerIdentity: string;
     /**
-     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 2
      */
-    pageParams?: FeedPageParams;
+    pageParams?: PageParams;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetExploreFeedRequest
@@ -72,9 +57,9 @@ export interface GetExploreFeedRequest {
      */
     identity?: string;
     /**
-     * @generated from protobuf field: optional polycentric.v2.FeedPageParams page_params = 2
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 2
      */
-    pageParams?: FeedPageParams;
+    pageParams?: PageParams;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFeedResponse
@@ -88,6 +73,10 @@ export interface GetFeedResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
     eventHints: EventHint[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 3
+     */
+    pageInfo?: PageInfo;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetPostThreadRequest
@@ -135,71 +124,11 @@ export enum FeedAlgorithm {
     SUGGESTED = 2
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class FeedPageParams$Type extends MessageType<FeedPageParams> {
-    constructor() {
-        super("polycentric.v2.FeedPageParams", [
-            { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "before_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "after_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<FeedPageParams>): FeedPageParams {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        if (value !== undefined)
-            reflectionMergePartial<FeedPageParams>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FeedPageParams): FeedPageParams {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* optional int32 limit */ 1:
-                    message.limit = reader.int32();
-                    break;
-                case /* optional string before_token */ 2:
-                    message.beforeToken = reader.string();
-                    break;
-                case /* optional string after_token */ 3:
-                    message.afterToken = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: FeedPageParams, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* optional int32 limit = 1; */
-        if (message.limit !== undefined)
-            writer.tag(1, WireType.Varint).int32(message.limit);
-        /* optional string before_token = 2; */
-        if (message.beforeToken !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.beforeToken);
-        /* optional string after_token = 3; */
-        if (message.afterToken !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.afterToken);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.FeedPageParams
- */
-export const FeedPageParams = new FeedPageParams$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class GetIdentityFeedRequest$Type extends MessageType<GetIdentityFeedRequest> {
     constructor() {
         super("polycentric.v2.GetIdentityFeedRequest", [
             { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+            { no: 2, name: "page_params", kind: "message", T: () => PageParams }
         ]);
     }
     create(value?: PartialMessage<GetIdentityFeedRequest>): GetIdentityFeedRequest {
@@ -217,8 +146,8 @@ class GetIdentityFeedRequest$Type extends MessageType<GetIdentityFeedRequest> {
                 case /* string identity */ 1:
                     message.identity = reader.string();
                     break;
-                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
-                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                case /* optional polycentric.v2.PageParams page_params */ 2:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -235,9 +164,9 @@ class GetIdentityFeedRequest$Type extends MessageType<GetIdentityFeedRequest> {
         /* string identity = 1; */
         if (message.identity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.identity);
-        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        /* optional polycentric.v2.PageParams page_params = 2; */
         if (message.pageParams)
-            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -253,7 +182,7 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
     constructor() {
         super("polycentric.v2.GetFollowingFeedRequest", [
             { no: 1, name: "follower_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+            { no: 2, name: "page_params", kind: "message", T: () => PageParams }
         ]);
     }
     create(value?: PartialMessage<GetFollowingFeedRequest>): GetFollowingFeedRequest {
@@ -271,8 +200,8 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
                 case /* string follower_identity */ 1:
                     message.followerIdentity = reader.string();
                     break;
-                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
-                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                case /* optional polycentric.v2.PageParams page_params */ 2:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -289,9 +218,9 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         /* string follower_identity = 1; */
         if (message.followerIdentity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.followerIdentity);
-        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        /* optional polycentric.v2.PageParams page_params = 2; */
         if (message.pageParams)
-            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -307,7 +236,7 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
     constructor() {
         super("polycentric.v2.GetExploreFeedRequest", [
             { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "page_params", kind: "message", T: () => FeedPageParams }
+            { no: 2, name: "page_params", kind: "message", T: () => PageParams }
         ]);
     }
     create(value?: PartialMessage<GetExploreFeedRequest>): GetExploreFeedRequest {
@@ -324,8 +253,8 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
                 case /* optional string identity */ 1:
                     message.identity = reader.string();
                     break;
-                case /* optional polycentric.v2.FeedPageParams page_params */ 2:
-                    message.pageParams = FeedPageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                case /* optional polycentric.v2.PageParams page_params */ 2:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -342,9 +271,9 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
         /* optional string identity = 1; */
         if (message.identity !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.identity);
-        /* optional polycentric.v2.FeedPageParams page_params = 2; */
+        /* optional polycentric.v2.PageParams page_params = 2; */
         if (message.pageParams)
-            FeedPageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -360,7 +289,8 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
     constructor() {
         super("polycentric.v2.GetFeedResponse", [
             { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
-            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint },
+            { no: 3, name: "page_info", kind: "message", T: () => PageInfo }
         ]);
     }
     create(value?: PartialMessage<GetFeedResponse>): GetFeedResponse {
@@ -382,6 +312,9 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
                 case /* repeated polycentric.v2.EventHint event_hints */ 2:
                     message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
+                case /* optional polycentric.v2.PageInfo page_info */ 3:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -400,6 +333,9 @@ class GetFeedResponse$Type extends MessageType<GetFeedResponse> {
         /* repeated polycentric.v2.EventHint event_hints = 2; */
         for (let i = 0; i < message.eventHints.length; i++)
             EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PageInfo page_info = 3; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

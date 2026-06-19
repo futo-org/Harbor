@@ -758,10 +758,56 @@ const FfiConverterTypeFetchMode = (() => {
 })();
 
 /**
+ * Specifies how cached data and newly fetched data should be handled
+ * after fetching.
+ */
+export enum UpdateMode {
+  /**
+   * Data we fetched from the remote replaces any cached data.
+   * This is the default behavior.
+   */
+  Replace,
+  /**
+   * Data we fetched from the remote is merged with any cached data.
+   */
+  Merge,
+}
+
+const FfiConverterTypeUpdateMode = (() => {
+  const ordinalConverter = FfiConverterInt32;
+  type TypeName = UpdateMode;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      switch (ordinalConverter.read(from)) {
+        case 1:
+          return UpdateMode.Replace;
+        case 2:
+          return UpdateMode.Merge;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      switch (value) {
+        case UpdateMode.Replace:
+          return ordinalConverter.write(1, into);
+        case UpdateMode.Merge:
+          return ordinalConverter.write(2, into);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return ordinalConverter.allocationSize(0);
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * Options for the query such as the fetch mode or a list of servers
  */
 export type QueryOpts = {
   fetchMode?: FetchMode;
+  updateMode?: UpdateMode;
   /**
    * Optional list of servers the query should call. `None` uses
    * `client.servers()`.
@@ -790,16 +836,19 @@ const FfiConverterTypeQueryOpts = (() => {
     read(from: RustBuffer): TypeName {
       return {
         fetchMode: FfiConverterOptionalTypeFetchMode.read(from),
+        updateMode: FfiConverterOptionalTypeUpdateMode.read(from),
         servers: FfiConverterOptionalSequenceString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterOptionalTypeFetchMode.write(value.fetchMode, into);
+      FfiConverterOptionalTypeUpdateMode.write(value.updateMode, into);
       FfiConverterOptionalSequenceString.write(value.servers, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterOptionalTypeFetchMode.allocationSize(value.fetchMode) +
+        FfiConverterOptionalTypeUpdateMode.allocationSize(value.updateMode) +
         FfiConverterOptionalSequenceString.allocationSize(value.servers)
       );
     }
@@ -3970,6 +4019,11 @@ const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
 );
 
+// FfiConverter for UpdateMode | undefined
+const FfiConverterOptionalTypeUpdateMode = new FfiConverterOptional(
+  FfiConverterTypeUpdateMode
+);
+
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
@@ -4362,5 +4416,6 @@ export default Object.freeze({
     FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
     FfiConverterTypeSubscription,
+    FfiConverterTypeUpdateMode,
   },
 });

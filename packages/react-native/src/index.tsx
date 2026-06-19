@@ -11,6 +11,7 @@ export {
   PolycentricCore,
   Query,
   QueryStatus,
+  UpdateMode,
   setLogger,
 } from './generated/rn/polycentric_core';
 export type {
