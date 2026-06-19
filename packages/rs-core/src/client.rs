@@ -510,6 +510,10 @@ impl PolycentricClient {
             }
         }
 
+        // Content is valid once its signature and signer authorization check
+        // out. The vector clock still has to be structurally sound, but a
+        // referenced event we haven't synced is a gap to backfill, not grounds
+        // to reject — so the missing list is allowed to be non-empty here.
         crate::vector_clock::verify_vector_clock(
             &self.event_store,
             vc,
@@ -1149,7 +1153,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_event_referencing_unseen_co_signer_event() {
+    fn keeps_content_event_referencing_unsynced_event() {
         let mut client = PolycentricClient::new();
         let a = keypair(1);
         let b = keypair(2);
@@ -1162,13 +1166,16 @@ mod tests {
             vec![b.public.clone()],
         );
 
-        // B claims to have observed A at seq=7 in collection 2 — we have none.
+        // B's event references A at seq=7 in collection 2, which we haven't
+        // synced. The event is still valid — the gap is ours to fetch.
         let event = sign_event(&b, &identity, 2, 1, 1, vec![7, 1], dummy_post_digest());
-        assert_invalid_contains(client.validate_event(&event, &[]), "unseen event");
+        client
+            .validate_event(&event, &[])
+            .expect("content event with an unsynced referenced event should validate");
     }
 
     #[test]
-    fn validates_event_with_observed_co_signer_event_present() {
+    fn validates_event_when_referenced_event_present() {
         let mut client = PolycentricClient::new();
         let a = keypair(1);
         let b = keypair(2);
