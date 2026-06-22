@@ -143,6 +143,33 @@ impl Default for FakeCursorToken {
     }
 }
 
+/// Replace server's cursor tokens with fake ones, so that they
+/// can be merged with other server responses.
+fn prepare_page_info(
+    response: &mut GetFeedResponse,
+    server_url: &str,
+    backward_offset: i32,
+    forward_offset: i32,
+) -> Result<(), String> {
+    if let Some(i) = response.page_info.as_mut() {
+        i.start_cursor = FakeCursorToken::encode_new(
+            server_url,
+            &i.start_cursor,
+            backward_offset - 1,
+            i.has_previous_page,
+        )?;
+
+        i.end_cursor = FakeCursorToken::encode_new(
+            server_url,
+            &i.end_cursor,
+            forward_offset + 1,
+            i.has_next_page,
+        )?;
+    }
+
+    Ok(())
+}
+
 /// Expects two encoded fake cursors as input.
 /// Returns (encoded fake cursor, more_data).
 /// Defaults to the first cursor and false if an error occurs.
@@ -302,11 +329,14 @@ pub fn get_identity_feed(
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
-        let backward_token = backward_token.clone();
-        let forward_token = forward_token.clone();
         let client = client.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
         async move {
-            let response = FeedsServiceClient::new(channel(&server_url)?)
+            let mut response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_identity_feed(GetIdentityFeedRequest {
                     identity,
                     page_params: Some(PageParams {
@@ -318,7 +348,10 @@ pub fn get_identity_feed(
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
                 .into_inner();
+
+            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
             let bytes = response.encode_to_vec();
+
             copy_hints(&client, response.event_hints);
             client.lock().unwrap().copy_bundles(response.event_bundles);
             Ok(bytes)
@@ -345,11 +378,14 @@ pub fn get_following_feed(
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
-        let backward_token: Option<String> = backward_token.clone();
-        let forward_token = forward_token.clone();
         let client = client.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
         async move {
-            let response = FeedsServiceClient::new(channel(&server_url)?)
+            let mut response = FeedsServiceClient::new(channel(&server_url)?)
                 .get_following_feed(GetFollowingFeedRequest {
                     follower_identity,
                     page_params: Some(PageParams {
@@ -361,7 +397,10 @@ pub fn get_following_feed(
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
                 .into_inner();
+
+            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
             let bytes = response.encode_to_vec();
+
             copy_hints(&client, response.event_hints);
             client.lock().unwrap().copy_bundles(response.event_bundles);
             Ok(bytes)
@@ -408,23 +447,7 @@ pub fn get_explore_feed(
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?
                 .into_inner();
 
-            // Fake cursor tokens to prepare for merging
-            if let Some(i) = response.page_info.as_mut() {
-                i.start_cursor = FakeCursorToken::encode_new(
-                    &server_url,
-                    &i.start_cursor,
-                    backward_offset - 1,
-                    i.has_previous_page,
-                )?;
-
-                i.end_cursor = FakeCursorToken::encode_new(
-                    &server_url,
-                    &i.end_cursor,
-                    forward_offset + 1,
-                    i.has_next_page,
-                )?;
-            }
-
+            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
