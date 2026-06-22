@@ -29,6 +29,8 @@ export {
   decodeBundle,
   decodePostBundle as decodeV2PostBundle,
   decodeFeedItems,
+  decodeFeedQueryResult,
+  extractFeedToken,
   pubkeyStr,
   identiconUrl,
   pickImageVariant,

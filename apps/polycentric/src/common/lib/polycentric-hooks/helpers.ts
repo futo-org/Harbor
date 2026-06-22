@@ -1,4 +1,5 @@
-import { v2 } from '@polycentric/react-native';
+import { QueryStatus, v2 } from '@polycentric/react-native';
+import { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
 export function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode.apply(null, Array.from(bytes)));
@@ -220,6 +221,39 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
     }
   }
   return items;
+}
+
+/** Extract the items and next page indicator from the feed response. */
+export function decodeFeedQueryResult(
+  query: UseQueryResult,
+): [PostData[], boolean] {
+  if (!query.data) {
+    return [[], false];
+  }
+
+  const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+  let hasNext = false;
+
+  if (query.status == QueryStatus.Success) {
+    hasNext = !!response.pageInfo?.hasNextPage;
+  }
+
+  return [decodeFeedItems(response), hasNext];
+}
+
+/** Get the forward cursor token from a previous feed query result */
+export function extractFeedToken(
+  status: QueryStatus | undefined,
+  data: ArrayBuffer | undefined,
+): string | undefined {
+  let forwardToken: string | undefined = undefined;
+
+  if (status == QueryStatus.Success && data) {
+    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
+    forwardToken = response.pageInfo?.endCursor;
+  }
+
+  return forwardToken;
 }
 
 /**

@@ -35,9 +35,8 @@ export function injectPostIntoFeedCache(
     if (bundleEventId(b) === newId) return;
   }
 
-  const updated = v2.GetFeedResponse.create({
-    eventBundles: [newBundle, ...response.eventBundles],
-  });
-  const bytes = v2.GetFeedResponse.toBinary(updated);
+  response.eventBundles.unshift(newBundle);
+
+  const bytes = v2.GetFeedResponse.toBinary(response);
   setQueryCache(queryKey, { data: bytes.slice().buffer });
 }
