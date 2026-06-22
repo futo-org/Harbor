@@ -1,20 +1,19 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
-use std::collections::HashSet;
-use std::sync::LazyLock;
-use std::time::Duration;
-
-use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::ServiceContext;
-use crate::service::events::repository as EventsRepository;
-use crate::service::identity::service::authorize_event_signer;
-use crate::service::proto::content::ContentBody;
-use crate::service::proto::{
-    Content, Event, EventBundle, PublicKey, PutEventError, PutEventsRequest,
-    PutEventsResponse,
+use crate::{
+    service::{
+        content::content_repository as ContentRepository,
+        context::ServiceContext,
+        events::repository as EventsRepository,
+        identity::service::authorize_event_signer,
+        proto::{
+            Content, Event, EventBundle, PublicKey, PutEventError,
+            PutEventsRequest, PutEventsResponse, content::ContentBody,
+        },
+    },
+    util,
 };
-use crate::util;
 use ::entity::{
     content_block_model as ContentBlockModel,
     content_delete_model as ContentDeleteModel,
@@ -27,14 +26,16 @@ use ::entity::{
     content_repost_model as ContentRepostModel, event_model as EventModel,
 };
 use common_kafka::FutureRecord;
-use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::Blob;
+use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
-use sea_orm::ActiveModelTrait;
-use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::EntityTrait;
-use sea_orm::TransactionTrait;
+use sea_orm::{
+    ActiveModelTrait,
+    ActiveValue::{NotSet, Set},
+    EntityTrait, TransactionTrait,
+};
+use std::{collections::HashSet, sync::LazyLock, time::Duration};
+use time::OffsetDateTime;
 use tonic::Status;
 
 static SERVER_NAME: LazyLock<String> = LazyLock::new(|| {
@@ -147,18 +148,6 @@ async fn process_event(
         .await?;
     }
 
-    let now = time::OffsetDateTime::now_utc();
-    let synced_at = time::PrimitiveDateTime::new(now.date(), now.time());
-
-    let created_at_offset = time::OffsetDateTime::from_unix_timestamp(
-        (event.created_at / 1000) as i64,
-    )
-    .unwrap_or(now);
-    let created_at = time::PrimitiveDateTime::new(
-        created_at_offset.date(),
-        created_at_offset.time(),
-    );
-
     let content_digest = event.content_digest;
 
     if let (Some(serialized_content), Some(digest)) =
@@ -195,7 +184,7 @@ async fn process_event(
                 digest_type: Set(digest.r#type),
                 digest_bytes: Set(digest.value.clone()),
                 serialized_bytes: Set(serialized_content.content_bytes.clone()),
-                synced_at: Set(synced_at),
+                synced_at: Set(OffsetDateTime::now_utc()),
             },
         )
         .await
@@ -233,8 +222,11 @@ async fn process_event(
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
         event_bytes: Set(signed_event.event_bytes),
-        created_at: Set(created_at),
-        synced_at: Set(synced_at),
+        created_at: Set(OffsetDateTime::from_unix_timestamp(
+            (event.created_at / 1000) as i64,
+        )
+        .unwrap_or(OffsetDateTime::now_utc())),
+        synced_at: Set(OffsetDateTime::now_utc()),
     };
 
     match EventsRepository::Mutation::add_event(&ctx.db, active_model).await {

@@ -36,7 +36,7 @@ pub struct Model {
     pub blob: HasOne<super::content_blob_model::Entity>,
 
     // Timestamp the server received the content
-    pub synced_at: TimeDateTime,
+    pub synced_at: TimeDateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

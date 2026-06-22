@@ -5,26 +5,12 @@ use moderation_entity::{created_content_model, created_event_model};
 use polycentric_common::merkle;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ColumnTrait, ConnectionTrait,
-    DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait, prelude::TimeDateTime,
-    sea_query::OnConflict, sea_query::value::prelude::serde_json,
+    DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait, sea_query::OnConflict,
+    sea_query::value::prelude::serde_json,
 };
 use time::OffsetDateTime;
 
 use crate::polycentric::{ChainHead, CreatedEvent};
-
-/// Current wall-clock time as the `TimeDateTime` (naive) the schema uses.
-fn now() -> TimeDateTime {
-    let now = OffsetDateTime::now_utc();
-    TimeDateTime::new(now.date(), now.time())
-}
-
-/// Convert a millisecond Unix timestamp into the naive `TimeDateTime` the
-/// schema uses, falling back to now on overflow.
-fn millis_to_datetime(ms: u64) -> TimeDateTime {
-    let offset = OffsetDateTime::from_unix_timestamp_nanos((ms as i128) * 1_000_000)
-        .unwrap_or_else(|_| OffsetDateTime::now_utc());
-    TimeDateTime::new(offset.date(), offset.time())
-}
 
 /// Persist an event we created (and its content) to the moderation DB, in
 /// a single transaction. Re-publishing the same event is a no-op via the
@@ -37,7 +23,7 @@ pub async fn persist_created(db: &DatabaseConnection, created: &CreatedEvent) ->
             digest_type: Set(digest.r#type),
             digest_bytes: Set(digest.value.clone()),
             serialized_bytes: Set(created.content_bytes.clone()),
-            created_at: Set(now()),
+            created_at: Set(OffsetDateTime::now_utc()),
         };
         // Ignore a duplicate content row (already stored under this digest).
         created_content_model::Entity::insert(content)
@@ -79,7 +65,10 @@ pub async fn persist_created(db: &DatabaseConnection, created: &CreatedEvent) ->
         previous_signature: Set(created.event.previous_signature.clone()),
         previous_root: Set(created.event.previous_root.clone()),
         event_bytes: Set(created.event_bytes.clone()),
-        created_at: Set(millis_to_datetime(created.event.created_at)),
+        created_at: Set(OffsetDateTime::from_unix_timestamp_nanos(
+            (created.event.created_at as i128) * 1_000_000,
+        )
+        .unwrap_or_else(|_| OffsetDateTime::now_utc())),
     };
     // A duplicate event key means we authored the same sequence twice —
     // surface it as an error (rolls back the content insert above too).
@@ -161,12 +150,11 @@ pub async fn create_pending<C: ConnectionTrait>(
     digest_type: i32,
     digest_bytes: Vec<u8>,
 ) -> Result<ProcessedContentModel, DbErr> {
-    let now = now();
     ActiveModel {
         digest_type: Set(digest_type),
         digest_bytes: Set(digest_bytes),
-        created_at: Set(now),
-        updated_at: Set(now),
+        created_at: Set(OffsetDateTime::now_utc()),
+        updated_at: Set(OffsetDateTime::now_utc()),
         status: Set(Status::Pending),
         is_csam: Set(None),
         azure_response: Set(None),
@@ -186,7 +174,7 @@ pub async fn store_azure_result<C: ConnectionTrait>(
         digest_type: Set(digest_type),
         digest_bytes: Set(digest_bytes),
         created_at: NotSet,
-        updated_at: Set(now()),
+        updated_at: Set(OffsetDateTime::now_utc()),
         status: Set(Status::Success),
         is_csam: Set(Some(false)),
         azure_response: Set(Some(azure_response)),
@@ -206,7 +194,7 @@ pub async fn mark_csam<C: ConnectionTrait>(
         digest_type: Set(digest_type),
         digest_bytes: Set(digest_bytes),
         created_at: NotSet,
-        updated_at: Set(now()),
+        updated_at: Set(OffsetDateTime::now_utc()),
         status: Set(Status::Success),
         is_csam: Set(Some(true)),
         azure_response: NotSet,
@@ -225,7 +213,7 @@ pub async fn mark_failed<C: ConnectionTrait>(
         digest_type: Set(digest_type),
         digest_bytes: Set(digest_bytes),
         created_at: NotSet,
-        updated_at: Set(now()),
+        updated_at: Set(OffsetDateTime::now_utc()),
         status: Set(Status::Failed),
         is_csam: NotSet,
         azure_response: NotSet,

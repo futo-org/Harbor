@@ -1,17 +1,15 @@
-use std::{error::Error, fmt};
-
-use log::{debug, warn};
-use sea_orm::{DbConn, DbErr, EnumIter};
-
 use super::repository as token_repository;
 use crate::{
     context::Context,
     expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
 };
+use log::{debug, warn};
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
 };
 use prost::Message;
+use sea_orm::{DbConn, DbErr, EnumIter};
+use std::{error::Error, fmt};
 
 #[derive(EnumIter)]
 pub enum PushService {
@@ -474,19 +472,22 @@ impl NotificationManager {
 #[cfg(test)]
 mod tests {
     use super::{NotificationManager, PushService};
-    use crate::context::Context;
-    use crate::polycentric::PolycentricClient;
-    use polycentric_common::models::collections;
-    use polycentric_common::models::protos_v2::{
-        Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
-        ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post, PostReply, ProfileUpdate,
-        PublicKey, PutEventsRequest, PutEventsResponse, SerializedContent, SignedEvent,
-        content::ContentBody,
-        event_sync_service_server::{EventSyncService, EventSyncServiceServer},
+    use crate::{context::Context, polycentric::PolycentricClient};
+    use polycentric_common::models::{
+        collections,
+        protos_v2::{
+            Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
+            ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post, PostReply,
+            ProfileUpdate, PublicKey, PutEventsRequest, PutEventsResponse, SerializedContent,
+            SignedEvent,
+            content::ContentBody,
+            event_sync_service_server::{EventSyncService, EventSyncServiceServer},
+        },
     };
     use prost::Message;
     use push_notifications_entity::push_token_model as PushTokenModel;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockExecResult};
+    use time::OffsetDateTime;
     use tokio_stream::wrappers::TcpListenerStream;
     use tonic::{Request, Response, Status};
 
@@ -683,8 +684,8 @@ mod tests {
             public_key: public_key.to_vec(),
             service: PushService::Expo.as_ref().to_string(),
             token: token.to_string(),
-            created_at: time::PrimitiveDateTime::MIN,
-            updated_at: time::PrimitiveDateTime::MIN,
+            created_at: OffsetDateTime::UNIX_EPOCH,
+            updated_at: OffsetDateTime::UNIX_EPOCH,
         }
     }
 

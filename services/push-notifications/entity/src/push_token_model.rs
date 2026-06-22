@@ -14,8 +14,8 @@ pub struct Model {
     pub service: String,
     pub token: String,
 
-    pub created_at: TimeDateTime,
-    pub updated_at: TimeDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub updated_at: TimeDateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
