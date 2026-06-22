@@ -246,11 +246,11 @@ export class PolycentricClient {
    * and returns the first successful `Link`; returns `null` if every server
    * fails.
    */
-  async urlInfo(url: string): Promise<Proto.Link | null> {
+  async urlInfo(url: string): Promise<Proto.UrlInfoResponse | null> {
     for (const server of this.servers) {
       try {
         const bytes = await this.core.urlInfo(server, url);
-        return Proto.Link.fromBinary(new Uint8Array(bytes));
+        return Proto.UrlInfoResponse.fromBinary(new Uint8Array(bytes));
       } catch {
         // Try the next server.
       }

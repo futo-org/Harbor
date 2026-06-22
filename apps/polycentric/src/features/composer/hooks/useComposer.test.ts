@@ -61,6 +61,7 @@ jest.mock('@polycentric/react-native', () => ({
     EventKey: { create: jest.fn(() => ({})), fromBinary: jest.fn(() => ({})) },
     EventBundle: { create: jest.fn((x: unknown) => x) },
     Content: { toBinary: jest.fn(() => new Uint8Array()) },
+    Link: { create: jest.fn((x: unknown) => x) },
   },
 }));
 

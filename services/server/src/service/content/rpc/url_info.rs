@@ -1,11 +1,10 @@
-//! `url_info`: fetch link-preview metadata for a URL and return it as a `Link`.
+//! `url_info`: fetch link-preview metadata for a URL.
 //!
 //! The actual fetching, JS prerendering, and Open Graph / HTML extraction are
 //! delegated to the internal scraper service (`services/scraper`); this handler
-//! just validates the target, calls that service, and maps its JSON onto a
-//! `Link`.
+//! just calls that service and maps its JSON onto a `UrlInfoResponse`.
 
-use crate::service::proto::{Link, UrlInfoRequest};
+use crate::service::proto::{UrlInfoRequest, UrlInfoResponse};
 use crate::util::{http_client, scraper};
 use serde::Deserialize;
 use tonic::Status;
@@ -18,7 +17,7 @@ struct ScrapedMetadata {
     image: Option<String>,
 }
 
-pub async fn handle(req: UrlInfoRequest) -> Result<Link, Status> {
+pub async fn handle(req: UrlInfoRequest) -> Result<UrlInfoResponse, Status> {
     let resp = http_client::client()
         .get(scraper::scrape_url())
         .query(&[("url", req.url.as_str())])
@@ -39,12 +38,9 @@ pub async fn handle(req: UrlInfoRequest) -> Result<Link, Status> {
         Status::internal(format!("invalid scraper response: {e}"))
     })?;
 
-    Ok(Link {
+    Ok(UrlInfoResponse {
         title: meta.title.unwrap_or_default(),
         description: meta.description.unwrap_or_default(),
         image: meta.image.unwrap_or_default(),
-        // Echo the requested URL (not the scraper's canonical one) so the
-        // Link's displayed host matches what the user posted.
-        url: req.url,
     })
 }

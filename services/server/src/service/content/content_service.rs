@@ -7,8 +7,8 @@ use crate::service::proto::content_service_server::{
     ContentService, ContentServiceServer,
 };
 use crate::service::proto::{
-    Link, SyncContentRequest, SyncContentResponse, UploadBlobRequest,
-    UploadBlobResponse, UrlInfoRequest,
+    SyncContentRequest, SyncContentResponse, UploadBlobRequest,
+    UploadBlobResponse, UrlInfoRequest, UrlInfoResponse,
 };
 use sea_orm::DatabaseConnection;
 use tonic::{Request, Response, Status};
@@ -52,7 +52,7 @@ impl ContentService for ContentServiceImpl {
     async fn url_info(
         &self,
         request: Request<UrlInfoRequest>,
-    ) -> Result<Response<Link>, Status> {
+    ) -> Result<Response<UrlInfoResponse>, Status> {
         Ok(Response::new(url_info::handle(request.into_inner()).await?))
     }
 }

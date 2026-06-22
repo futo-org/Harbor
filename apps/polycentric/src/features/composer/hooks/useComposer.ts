@@ -124,9 +124,12 @@ export function useComposer({
     setLinkPreviewLoading(true);
     // Debounce so we don't unfurl every intermediate URL while typing.
     const handle = setTimeout(() => {
-      void client.urlInfo(previewUrl).then((result) => {
+      void client.urlInfo(previewUrl).then((info) => {
         if (cancelled) return;
-        setLinkPreview(result);
+        // The endpoint returns metadata only; attach the URL we requested.
+        setLinkPreview(
+          info ? v2.Link.create({ ...info, url: previewUrl }) : null,
+        );
         setLinkPreviewLoading(false);
       });
     }, 500);
@@ -292,7 +295,9 @@ export function useComposer({
           ? linkPreview
           : null;
       if (linkPreviewsEnabled && !link && previewUrl) {
-        link = await client.urlInfo(previewUrl);
+        const info = await client.urlInfo(previewUrl);
+        // Metadata-only response; populate the URL we requested.
+        link = info ? v2.Link.create({ ...info, url: previewUrl }) : null;
       }
 
       const post: types.v2.Post = {
