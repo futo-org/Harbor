@@ -33,8 +33,8 @@ export function useFollowingFeed(options?: {
   );
 
   const [items, hasNext] = useMemo(
-    () => decodeFeedQueryResult(query.status, query.data),
-    [query.status, query.data],
+    () => decodeFeedQueryResult(query.data),
+    [query.data],
   );
 
   return {
@@ -42,7 +42,7 @@ export function useFollowingFeed(options?: {
     isLoading: query.status === QueryStatus.Loading,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
-      if (hasNext) {
+      if (hasNext && query.status !== QueryStatus.Loading) {
         query.extend();
       }
     },

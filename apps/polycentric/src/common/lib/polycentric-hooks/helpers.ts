@@ -225,7 +225,6 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
 
 /** Extract the items and next page indicator from the feed response. */
 export function decodeFeedQueryResult(
-  status: QueryStatus,
   data: ArrayBuffer | undefined,
 ): [PostData[], boolean] {
   if (!data) {
@@ -233,12 +232,7 @@ export function decodeFeedQueryResult(
   }
 
   const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
-  let hasNext = false;
-
-  if (status === QueryStatus.Success) {
-    hasNext = !!response.pageInfo?.hasNextPage;
-  }
-
+  let hasNext = !!response.pageInfo?.hasNextPage;
   return [decodeFeedItems(response), hasNext];
 }
 

@@ -2,11 +2,11 @@ use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
 use sea_orm::FromQueryResult;
+use sea_orm::entity::prelude::*;
 use sea_orm::sea_query::{Expr, IntoCondition, IntoValueTuple};
 use sea_orm::*;
 use serde::Deserialize;
 use serde::Serialize;
-use time::PrimitiveDateTime;
 
 pub use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::util::PageCursor;
@@ -32,7 +32,7 @@ pub enum FeedCursor {
 /// Exclusive lowerbound/upperbound for a feed query
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FeedMarker {
-    pub created_at: PrimitiveDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
     pub id: i64,
 }
 
