@@ -13,7 +13,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "generate": "mkdir -p ./src/proto && protoc --ts_out=./src/proto --proto_path=../../protos --experimental_allow_proto3_optional ../../protos/polycentric.proto ../../protos/polycentric/v2/keypair.proto ../../protos/polycentric/v2/event_key.proto ../../protos/polycentric/v2/common.proto ../../protos/polycentric/v2/identity.proto ../../protos/polycentric/v2/content.proto ../../protos/polycentric/v2/events.proto ../../protos/polycentric/v2/feeds.proto ../../protos/polycentric/v2/server.proto ../../protos/polycentric/v2/pairing_service.proto ../../protos/polycentric/v2/notifications.proto",
+    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-core/scripts/generate-proto-barrel.mjs",
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",
     "test": "vitest",
@@ -31,6 +31,7 @@
     "js-base64": "^3.7.8"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
     "@polycentric/tsconfig": "workspace:*",
     "@protobuf-ts/plugin": "^2.11.1",
     "ts-loader": "^9.5.4",
