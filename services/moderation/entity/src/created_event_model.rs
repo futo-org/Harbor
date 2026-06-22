@@ -37,7 +37,7 @@ pub struct Model {
     pub event_bytes: Vec<u8>,
 
     // Timestamp the event was created (from the event's created_at).
-    pub created_at: TimeDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

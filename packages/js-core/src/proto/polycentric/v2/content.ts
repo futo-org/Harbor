@@ -11,23 +11,11 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
+import { VerificationVerify } from "./verifications";
+import { VerificationClaim } from "./verifications";
 import { Identity } from "./identity";
-/**
- * @generated from protobuf message polycentric.v2.ContentDigest
- */
-export interface ContentDigest {
-    /**
-     * @generated from protobuf field: polycentric.v2.ContentDigestType type = 1
-     */
-    type: ContentDigestType;
-    /**
-     * We hash the serialized bytes
-     *
-     * @generated from protobuf field: bytes value = 2
-     */
-    value: Uint8Array;
-}
 /**
  * Content of the event
  *
@@ -97,6 +85,20 @@ export interface Content {
          * @generated from protobuf field: polycentric.v2.Labels labels = 11
          */
         labels: Labels;
+    } | {
+        oneofKind: "verificationClaim";
+        /**
+         * Verifications (see verifications.proto)
+         *
+         * @generated from protobuf field: polycentric.v2.VerificationClaim verification_claim = 12
+         */
+        verificationClaim: VerificationClaim;
+    } | {
+        oneofKind: "verificationVerify";
+        /**
+         * @generated from protobuf field: polycentric.v2.VerificationVerify verification_verify = 13
+         */
+        verificationVerify: VerificationVerify;
     } | {
         oneofKind: undefined;
     };
@@ -386,19 +388,6 @@ export interface UploadBlobRequest {
 export interface UploadBlobResponse {
 }
 /**
- * @generated from protobuf enum polycentric.v2.ContentDigestType
- */
-export enum ContentDigestType {
-    /**
-     * @generated from protobuf enum value: CONTENT_DIGEST_TYPE_UNSPECIFIED = 0;
-     */
-    UNSPECIFIED = 0,
-    /**
-     * @generated from protobuf enum value: CONTENT_DIGEST_TYPE_SHA256 = 1;
-     */
-    SHA256 = 1
-}
-/**
  * @generated from protobuf enum polycentric.v2.ReportCategory
  */
 export enum ReportCategory {
@@ -436,61 +425,6 @@ export enum ReportCategory {
     SERVER_POLICY = 7
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class ContentDigest$Type extends MessageType<ContentDigest> {
-    constructor() {
-        super("polycentric.v2.ContentDigest", [
-            { no: 1, name: "type", kind: "enum", T: () => ["polycentric.v2.ContentDigestType", ContentDigestType, "CONTENT_DIGEST_TYPE_"] },
-            { no: 2, name: "value", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
-        ]);
-    }
-    create(value?: PartialMessage<ContentDigest>): ContentDigest {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.type = 0;
-        message.value = new Uint8Array(0);
-        if (value !== undefined)
-            reflectionMergePartial<ContentDigest>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ContentDigest): ContentDigest {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* polycentric.v2.ContentDigestType type */ 1:
-                    message.type = reader.int32();
-                    break;
-                case /* bytes value */ 2:
-                    message.value = reader.bytes();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ContentDigest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.ContentDigestType type = 1; */
-        if (message.type !== 0)
-            writer.tag(1, WireType.Varint).int32(message.type);
-        /* bytes value = 2; */
-        if (message.value.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.value);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.ContentDigest
- */
-export const ContentDigest = new ContentDigest$Type();
-// @generated message type with reflection information, may provide speed optimized methods
 class Content$Type extends MessageType<Content> {
     constructor() {
         super("polycentric.v2.Content", [
@@ -503,7 +437,9 @@ class Content$Type extends MessageType<Content> {
             { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
             { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost },
             { no: 10, name: "report", kind: "message", oneof: "contentBody", T: () => Report },
-            { no: 11, name: "labels", kind: "message", oneof: "contentBody", T: () => Labels }
+            { no: 11, name: "labels", kind: "message", oneof: "contentBody", T: () => Labels },
+            { no: 12, name: "verification_claim", kind: "message", oneof: "contentBody", T: () => VerificationClaim },
+            { no: 13, name: "verification_verify", kind: "message", oneof: "contentBody", T: () => VerificationVerify }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -578,6 +514,18 @@ class Content$Type extends MessageType<Content> {
                         labels: Labels.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).labels)
                     };
                     break;
+                case /* polycentric.v2.VerificationClaim verification_claim */ 12:
+                    message.contentBody = {
+                        oneofKind: "verificationClaim",
+                        verificationClaim: VerificationClaim.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).verificationClaim)
+                    };
+                    break;
+                case /* polycentric.v2.VerificationVerify verification_verify */ 13:
+                    message.contentBody = {
+                        oneofKind: "verificationVerify",
+                        verificationVerify: VerificationVerify.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).verificationVerify)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -620,6 +568,12 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.Labels labels = 11; */
         if (message.contentBody.oneofKind === "labels")
             Labels.internalBinaryWrite(message.contentBody.labels, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.VerificationClaim verification_claim = 12; */
+        if (message.contentBody.oneofKind === "verificationClaim")
+            VerificationClaim.internalBinaryWrite(message.contentBody.verificationClaim, writer.tag(12, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.VerificationVerify verification_verify = 13; */
+        if (message.contentBody.oneofKind === "verificationVerify")
+            VerificationVerify.internalBinaryWrite(message.contentBody.verificationVerify, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

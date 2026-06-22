@@ -30,8 +30,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="activity">
-        <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="notifications">
+        <NativeTabs.Trigger.Label>Notifications</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="bell" md="notifications" />
       </NativeTabs.Trigger>
 

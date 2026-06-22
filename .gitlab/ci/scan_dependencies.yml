@@ -1,7 +1,7 @@
 trivy:
   stage: check
   image:
-    name: aquasec/trivy:0.71.1
+    name: aquasec/trivy:0.71.2
     entrypoint: ['']
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -18,6 +18,9 @@ trivy:
     # Console output
     - trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity CRITICAL .
   cache:
+    key: trivy-${CI_COMMIT_REF_SLUG}
+    fallback_keys:
+      - trivy-${CI_DEFAULT_BRANCH}
     paths:
       - .trivycache/
   artifacts:

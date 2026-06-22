@@ -1,10 +1,11 @@
 {
   "name": "polycentric",
   "author": "FUTO",
-  "packageManager": "pnpm@10.34.3",
+  "packageManager": "pnpm@10.34.4",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "clean:cache": "rm -rf .turbo node_modules/.cache/turbo",
     "format": "biome check",
     "format:fix": "biome check --write",
     "generate": "turbo run generate",

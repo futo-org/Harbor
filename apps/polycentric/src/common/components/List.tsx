@@ -1,4 +1,3 @@
-import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import {
   FlashList,
@@ -41,7 +40,7 @@ export type ListProps<T> = FlashListProps<T> & {
 /** Imperative handle exposed by `List` (and `FeedList`). */
 export type ListRef = { scrollToTop: () => void };
 
-export const List = forwardRef(function List<T extends PostData = PostData>(
+export const List = forwardRef(function List<T>(
   props: ListProps<T>,
   ref: React.Ref<ListRef>,
 ) {
@@ -50,7 +49,7 @@ export const List = forwardRef(function List<T extends PostData = PostData>(
   }
 
   return <NativeList<T> {...props} listRef={ref} />;
-}) as <T extends PostData = PostData>(
+}) as <T>(
   props: ListProps<T> & { ref?: React.Ref<ListRef> },
 ) => React.ReactElement;
 

@@ -24,3 +24,14 @@ message PageParams {
   // Request data following this end cursor in the feed.
   optional string forward_token = 3;
 }
+
+enum ContentDigestType {
+  CONTENT_DIGEST_TYPE_UNSPECIFIED = 0;
+  CONTENT_DIGEST_TYPE_SHA256 = 1;
+}
+
+message ContentDigest {
+  ContentDigestType type = 1;
+  // We hash the serialized bytes
+  bytes value = 2;
+}

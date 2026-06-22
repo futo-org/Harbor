@@ -28,14 +28,20 @@ export interface Notification {
     /**
      * Event that the notification is in relation to
      *
-     * @generated from protobuf field: polycentric.v2.EventBundle subject_event = 2
+     * @generated from protobuf field: polycentric.v2.EventBundle target_event = 2
      */
-    subjectEvent?: EventBundle;
+    targetEvent?: EventBundle;
+    /**
+     * Kind of the notification
+     *
+     * @generated from protobuf field: polycentric.v2.NotificationKind kind = 3
+     */
+    kind: NotificationKind;
 }
 /**
- * @generated from protobuf message polycentric.v2.GetNotificationsRequest
+ * @generated from protobuf message polycentric.v2.ListNotificationsRequest
  */
-export interface GetNotificationsRequest {
+export interface ListNotificationsRequest {
     /**
      * @generated from protobuf field: string identity = 1
      */
@@ -54,13 +60,13 @@ export interface GetNotificationsRequest {
     after?: string;
 }
 /**
- * @generated from protobuf message polycentric.v2.GetNotificationsResponse
+ * @generated from protobuf message polycentric.v2.ListNotificationsResponse
  */
-export interface GetNotificationsResponse {
+export interface ListNotificationsResponse {
     /**
-     * @generated from protobuf field: repeated polycentric.v2.Notification notification = 1
+     * @generated from protobuf field: repeated polycentric.v2.Notification notifications = 1
      */
-    notification: Notification[];
+    notifications: Notification[];
     /**
      * Events that help the client resolve with fewer network calls
      *
@@ -108,16 +114,47 @@ export interface UnregisterPushNotificationRequest {
  */
 export interface UnregisterPushNotificationResponse {
 }
+/**
+ * @generated from protobuf enum polycentric.v2.NotificationKind
+ */
+export enum NotificationKind {
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_FOLLOW = 1;
+     */
+    FOLLOW = 1,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REPLY = 2;
+     */
+    REPLY = 2,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REPOST = 3;
+     */
+    REPOST = 3,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_REACTION = 4;
+     */
+    REACTION = 4,
+    /**
+     * @generated from protobuf enum value: NOTIFICATION_KIND_QUOTE = 5;
+     */
+    QUOTE = 5
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class Notification$Type extends MessageType<Notification> {
     constructor() {
         super("polycentric.v2.Notification", [
             { no: 1, name: "trigger_event", kind: "message", T: () => EventBundle },
-            { no: 2, name: "subject_event", kind: "message", T: () => EventBundle }
+            { no: 2, name: "target_event", kind: "message", T: () => EventBundle },
+            { no: 3, name: "kind", kind: "enum", T: () => ["polycentric.v2.NotificationKind", NotificationKind, "NOTIFICATION_KIND_"] }
         ]);
     }
     create(value?: PartialMessage<Notification>): Notification {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.kind = 0;
         if (value !== undefined)
             reflectionMergePartial<Notification>(this, message, value);
         return message;
@@ -130,8 +167,11 @@ class Notification$Type extends MessageType<Notification> {
                 case /* polycentric.v2.EventBundle trigger_event */ 1:
                     message.triggerEvent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.triggerEvent);
                     break;
-                case /* polycentric.v2.EventBundle subject_event */ 2:
-                    message.subjectEvent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.subjectEvent);
+                case /* polycentric.v2.EventBundle target_event */ 2:
+                    message.targetEvent = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.targetEvent);
+                    break;
+                case /* polycentric.v2.NotificationKind kind */ 3:
+                    message.kind = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -148,9 +188,12 @@ class Notification$Type extends MessageType<Notification> {
         /* polycentric.v2.EventBundle trigger_event = 1; */
         if (message.triggerEvent)
             EventBundle.internalBinaryWrite(message.triggerEvent, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.EventBundle subject_event = 2; */
-        if (message.subjectEvent)
-            EventBundle.internalBinaryWrite(message.subjectEvent, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.EventBundle target_event = 2; */
+        if (message.targetEvent)
+            EventBundle.internalBinaryWrite(message.targetEvent, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.NotificationKind kind = 3; */
+        if (message.kind !== 0)
+            writer.tag(3, WireType.Varint).int32(message.kind);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -162,22 +205,22 @@ class Notification$Type extends MessageType<Notification> {
  */
 export const Notification = new Notification$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GetNotificationsRequest$Type extends MessageType<GetNotificationsRequest> {
+class ListNotificationsRequest$Type extends MessageType<ListNotificationsRequest> {
     constructor() {
-        super("polycentric.v2.GetNotificationsRequest", [
+        super("polycentric.v2.ListNotificationsRequest", [
             { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "first", kind: "scalar", opt: true, T: 13 /*ScalarType.UINT32*/ },
             { no: 3, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<GetNotificationsRequest>): GetNotificationsRequest {
+    create(value?: PartialMessage<ListNotificationsRequest>): ListNotificationsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.identity = "";
         if (value !== undefined)
-            reflectionMergePartial<GetNotificationsRequest>(this, message, value);
+            reflectionMergePartial<ListNotificationsRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetNotificationsRequest): GetNotificationsRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListNotificationsRequest): ListNotificationsRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -202,7 +245,7 @@ class GetNotificationsRequest$Type extends MessageType<GetNotificationsRequest> 
         }
         return message;
     }
-    internalBinaryWrite(message: GetNotificationsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: ListNotificationsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string identity = 1; */
         if (message.identity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.identity);
@@ -219,33 +262,33 @@ class GetNotificationsRequest$Type extends MessageType<GetNotificationsRequest> 
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.GetNotificationsRequest
+ * @generated MessageType for protobuf message polycentric.v2.ListNotificationsRequest
  */
-export const GetNotificationsRequest = new GetNotificationsRequest$Type();
+export const ListNotificationsRequest = new ListNotificationsRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GetNotificationsResponse$Type extends MessageType<GetNotificationsResponse> {
+class ListNotificationsResponse$Type extends MessageType<ListNotificationsResponse> {
     constructor() {
-        super("polycentric.v2.GetNotificationsResponse", [
-            { no: 1, name: "notification", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Notification },
+        super("polycentric.v2.ListNotificationsResponse", [
+            { no: 1, name: "notifications", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Notification },
             { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint },
             { no: 3, name: "page_info", kind: "message", T: () => PageInfo }
         ]);
     }
-    create(value?: PartialMessage<GetNotificationsResponse>): GetNotificationsResponse {
+    create(value?: PartialMessage<ListNotificationsResponse>): ListNotificationsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.notification = [];
+        message.notifications = [];
         message.eventHints = [];
         if (value !== undefined)
-            reflectionMergePartial<GetNotificationsResponse>(this, message, value);
+            reflectionMergePartial<ListNotificationsResponse>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetNotificationsResponse): GetNotificationsResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListNotificationsResponse): ListNotificationsResponse {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated polycentric.v2.Notification notification */ 1:
-                    message.notification.push(Notification.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated polycentric.v2.Notification notifications */ 1:
+                    message.notifications.push(Notification.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 case /* repeated polycentric.v2.EventHint event_hints */ 2:
                     message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
@@ -264,10 +307,10 @@ class GetNotificationsResponse$Type extends MessageType<GetNotificationsResponse
         }
         return message;
     }
-    internalBinaryWrite(message: GetNotificationsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated polycentric.v2.Notification notification = 1; */
-        for (let i = 0; i < message.notification.length; i++)
-            Notification.internalBinaryWrite(message.notification[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+    internalBinaryWrite(message: ListNotificationsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.Notification notifications = 1; */
+        for (let i = 0; i < message.notifications.length; i++)
+            Notification.internalBinaryWrite(message.notifications[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         /* repeated polycentric.v2.EventHint event_hints = 2; */
         for (let i = 0; i < message.eventHints.length; i++)
             EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
@@ -281,9 +324,9 @@ class GetNotificationsResponse$Type extends MessageType<GetNotificationsResponse
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.GetNotificationsResponse
+ * @generated MessageType for protobuf message polycentric.v2.ListNotificationsResponse
  */
-export const GetNotificationsResponse = new GetNotificationsResponse$Type();
+export const ListNotificationsResponse = new ListNotificationsResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotificationRequest> {
     constructor() {
@@ -474,6 +517,7 @@ export const UnregisterPushNotificationResponse = new UnregisterPushNotification
  * @generated ServiceType for protobuf service polycentric.v2.NotificationService
  */
 export const NotificationService = new ServiceType("polycentric.v2.NotificationService", [
+    { name: "ListNotifications", options: {}, I: ListNotificationsRequest, O: ListNotificationsResponse },
     { name: "RegisterPushNotifications", options: {}, I: SignedMessage, O: RegisterPushNotificationResponse },
     { name: "UnregisterPushNotifications", options: {}, I: SignedMessage, O: UnregisterPushNotificationResponse }
 ]);

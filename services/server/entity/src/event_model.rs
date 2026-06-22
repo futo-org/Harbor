@@ -43,9 +43,9 @@ pub struct Model {
     pub event_bytes: Vec<u8>,
 
     // Timestamp the client created the event
-    pub created_at: TimeDateTime,
+    pub created_at: TimeDateTimeWithTimeZone,
     // Timestamp the server received the event
-    pub synced_at: TimeDateTime,
+    pub synced_at: TimeDateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -31,6 +31,11 @@ export function VerticalNav({ style }: VerticalNavProps) {
         icon={<Icon name="searchOutline" size={24} />}
         href="/explore"
       />
+      <NavItem
+        label="Notifications"
+        icon={<Icon name="notification" size={24} />}
+        href="/notifications"
+      />
       {identity?.identityKey && (
         <NavItem
           label="Profile"

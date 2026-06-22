@@ -74,6 +74,7 @@ pub enum Query {
     GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
     GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
+    ListNotifications(crate::query::notification::ListNotificationsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
 }
 
@@ -329,6 +330,12 @@ impl PolycentricCore {
             Query::GetExploreFeed(args) => {
                 crate::query::feed::get_explore_feed(&self.query_client, query_key, args, opts)
             }
+            Query::ListNotifications(args) => crate::query::notification::list_notifications(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
             Query::ListEvents(args) => {
                 crate::query::event::list_events(&self.query_client, query_key, args, opts)
             }

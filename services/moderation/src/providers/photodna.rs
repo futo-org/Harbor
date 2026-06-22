@@ -256,6 +256,7 @@ mod tests {
 
         let client = PhotoDnaClient::from_env().expect("PhotoDnaClient::from_env");
 
+        let mut attempted = 0usize;
         for path in &images {
             let image = match std::fs::read(path) {
                 Ok(data) => data,
@@ -282,7 +283,7 @@ mod tests {
             };
 
             // Sleep after every request so that we don't trigger rate limits
-            sleep(Duration::from_secs(0.5)).await;
+            sleep(Duration::from_millis(500)).await;
         }
 
         panic!("PhotoDNA did not match any of the images!");

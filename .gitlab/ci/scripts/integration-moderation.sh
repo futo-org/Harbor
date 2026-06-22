@@ -39,6 +39,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Clear any stack left behind by a previous job that was hard-killed before its
+# cleanup trap could run (a stale broker/volume would otherwise be reused).
+echo "==> Clearing any stale stack…"
+docker compose down -v >/dev/null 2>&1 || true
+
 echo "==> Bringing up the server stack…"
 docker compose up -d --build --wait postgres rustfs kafka server
 

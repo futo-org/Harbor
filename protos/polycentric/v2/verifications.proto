@@ -1,0 +1,65 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+import "polycentric/v2/event_key.proto";
+
+// Schema that defines the verification
+// These are self describing schemas and are intended to be specified in 
+// a `VerificationClaim`.
+message VerificationSchema {
+  // Human readable name of the schema (ie. X Verification).
+  string name = 1;
+  string description = 2;
+  repeated FieldDef fields = 3;
+}
+
+message FieldDef {
+  // Key used in VerificationClaim.fields, e.g. "handle", "proof_url".
+  string key = 1;
+  // How to decode this field's bytes.
+  FieldKind kind = 2;
+  // Semantic refinement of kind: "url", "email", "iso8601-date", "hex".
+  // Free-form so new formats need no proto change.
+  string format = 3;
+  bool required = 4;
+  string description = 5;
+  optional string regex = 6;
+  optional uint32 max_len = 7;
+}
+
+// Canonical byte encoding per kind (claims are hashed, so reject non-canonical):
+//   STRING -> UTF-8        INT   -> int64 little-endian, 8 bytes
+//   BOOL   -> 0x00 / 0x01  BYTES -> verbatim
+enum FieldKind {
+  FIELD_KIND_UNSPECIFIED = 0;
+  FIELD_KIND_STRING = 1;
+  FIELD_KIND_INT = 2;
+  FIELD_KIND_BOOL = 3;
+  FIELD_KIND_BYTES = 4;
+}
+
+// Protobuf serialization is non-deteministic. We hash the serialized schema
+// so we have the canonical hash - this aids with grouping of claims. 
+message SerializedVerificationSchema {
+  // Serialized VerificationSchema.
+  bytes schema_bytes = 1;
+  // Digest over schema_bytes. Verify digest == hash(schema_bytes).
+  ContentDigest digest = 2;
+}
+
+// Claim a user makes
+message VerificationClaim {
+  // The schema this claim instantiates, carried inline.
+  SerializedVerificationSchema schema = 1;
+  // Values keyed by FieldDef.key, decoded per the schema's FieldKind.
+  map<string, bytes> fields = 2;
+  // Identities this claim is intended for
+  repeated string target_identities = 3;
+}
+
+// ── A verifier's attestation ──
+message VerificationVerify {
+  // The claim event being attested to. The event's signer is the verifier.
+  EventKey claim_event_key = 1;
+}

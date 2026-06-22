@@ -14,7 +14,7 @@ import { MessageType } from "@protobuf-ts/runtime";
 import { Blob } from "./content";
 import { PublicKey } from "./keypair";
 import { SerializedContent } from "./content";
-import { ContentDigest } from "./content";
+import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
 /**
  * Contains the sequences (of the same event collection) that the current KeyPair is aware of.
