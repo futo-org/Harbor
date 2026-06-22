@@ -19,8 +19,21 @@ const USER_AGENT =
 
 // Spawn the Chromium process once for the lifetime of the service. The
 // `--user-agent` flag sets the UA browser-wide for the prerender path.
+//
+// Passing `args` replaces browserless's defaultArgs entirely, so we must
+// re-add the sandbox flags it would otherwise supply. Without `--no-sandbox` /
+// `--disable-setuid-sandbox`, Chromium can't launch as our non-root user in a
+// container that lacks CAP_SYS_ADMIN or unprivileged user namespaces.
+// `--disable-dev-shm-usage` avoids crashes when `/dev/shm` is small.
 const browserlessFactory = await createBrowserless({
-  launchOpts: { args: [`--user-agent=${USER_AGENT}`] },
+  launchOpts: {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      `--user-agent=${USER_AGENT}`,
+    ],
+  },
 });
 
 // Tear the Chromium process down when Node exits.
