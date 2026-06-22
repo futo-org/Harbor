@@ -4,6 +4,24 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
+# Stage: Bogon snapshot — fetch the Team Cymru aggregated IPv4 bogon list at
+# build time and emit it as an nft `define` ($BOGON4). Baking the snapshot into
+# the image keeps the egress firewall free of any runtime network dependency.
+# `test -s` + the RFC1918 grep fail the BUILD (never the running container) if
+# the feed is unreachable or returns garbage, so the egress set can't silently
+# ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
+# bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
+FROM debian:bookworm-slim AS bogons
+ARG BOGONS_REV=2026-06-22
+RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && curl -fsSL https://www.team-cymru.org/Services/Bogons/bogon-bn-agg.txt -o /tmp/bogon4.txt \
+  && test -s /tmp/bogon4.txt \
+  && awk 'BEGIN { print "define BOGON4 = {" } /^[0-9]+\./ { printf "  %s,\n", $0 } END { print "}" }' \
+       /tmp/bogon4.txt > /bogons.nft \
+  && grep -q '^  10.0.0.0/8,' /bogons.nft
+
 # Stage 2: Dependencies + Build
 FROM base AS build
 WORKDIR /app
@@ -40,18 +58,23 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # PORT is supplied at runtime (compose / `docker run -e PORT=…`); the service
 # falls back to 3002 when unset.
 
-# Headless Chromium for prerendering. The Debian `chromium` package installs
-# to /usr/bin/chromium and pulls in the shared libs it needs.
+# Headless Chromium for prerendering (Debian `chromium` → /usr/bin/chromium),
+# plus nftables for the startup egress firewall.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium \
+  && apt-get install -y --no-install-recommends chromium nftables \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json
 COPY --from=build /app/services/scraper/dist ./dist
+COPY services/scraper/egress.nft /etc/scraper-egress.nft
+COPY --from=bogons /bogons.nft /etc/scraper-bogons.nft
+COPY services/scraper/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Drop root for the service (and the Chromium it spawns).
-USER node
-
+# The entrypoint runs as root to apply the egress firewall, then drops to the
+# unprivileged `node` user to run the service. REQUIRES `--cap-add=NET_ADMIN`
+# (and `--init` is recommended so the headless-Chromium children get reaped).
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 EXPOSE 3002
 CMD ["node", "dist/index.js"]

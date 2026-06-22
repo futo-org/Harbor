@@ -1,0 +1,78 @@
+#!/usr/sbin/nft -f
+# Egress firewall applied inside the scraper container's network namespace at
+# startup (see docker-entrypoint.sh). Allows the public internet; drops NEW
+# connections to internal/reserved ranges. Because every connection the
+# headless browser makes is locally generated, the output hook covers it too.
+#
+# Do NOT `flush ruleset`: that would wipe Docker's embedded-DNS NAT rules in
+# this netns and break name resolution. Replace only our own table (the
+# declare-then-delete pair makes that idempotent across restarts).
+
+# $BOGON4: the IPv4 reserved/bogon ranges, generated at image build time from a
+# snapshot of the Team Cymru aggregated bogon feed (see the `bogons` stage in
+# Dockerfile). Kept out-of-band so a rebuild refreshes it without touching this
+# file. The build fails closed if the snapshot is missing, so this include can
+# always resolve.
+include "/etc/scraper-bogons.nft"
+
+table inet egress
+delete table inet egress
+table inet egress {
+  # IPv4 reserved/bogon ranges — the Team Cymru aggregated bogon list (the
+  # reserved/martian set, NOT "fullbogons", which also lists currently-
+  # unallocated public space that churns and would block legitimate hosts).
+  # The element list is $BOGON4, generated from a build-time snapshot (above).
+  set blocked4 {
+    type ipv4_addr
+    flags interval
+    elements = $BOGON4
+  }
+
+  # IPv6 special-purpose ranges per the IANA IPv6 Special-Purpose Address
+  # Registry (RFC 6890). Team Cymru only ships a churning v6 *fullbogon* list
+  # (no reserved-only feed), so this set tracks the registry directly.
+  set blocked6 {
+    type ipv6_addr
+    flags interval
+    elements = {
+      ::1/128,          # loopback
+      ::/128,           # unspecified
+      ::ffff:0:0/96,    # IPv4-mapped (don't tunnel a blocked v4 over v6)
+      64:ff9b::/96,     # NAT64
+      100::/64,         # discard-only (RFC 6666)
+      2001:db8::/32,    # documentation (RFC 3849)
+      fc00::/7,         # unique-local (incl. AWS metadata fd00:ec2::254)
+      fe80::/10,        # link-local
+      ff00::/8,         # multicast
+    }
+  }
+
+  # The configured DNS resolver(s) often live in a blocked range (e.g. a VPC
+  # resolver in 10/8, or Docker's 127.0.0.11). The entrypoint populates these
+  # from /etc/resolv.conf so DNS is allowed to exactly those hosts, nothing more.
+  set resolvers { type ipv4_addr; }
+  set resolvers6 { type ipv6_addr; }
+
+  chain output {
+    type filter hook output priority 0; policy accept;
+
+    # Intra-namespace traffic, incl. Docker's embedded DNS at 127.0.0.11.
+    oifname "lo" accept
+
+    # Replies to inbound (responding to the polycentric server, which is on an
+    # internal IP) + return traffic for our own outbound. MUST precede the
+    # drops, or it would also kill server<->scraper replies.
+    ct state established,related accept
+
+    # DNS to the configured resolver(s) only — must precede the drops.
+    ip daddr @resolvers udp dport 53 accept
+    ip daddr @resolvers tcp dport 53 accept
+    ip6 daddr @resolvers6 udp dport 53 accept
+    ip6 daddr @resolvers6 tcp dport 53 accept
+
+    # Block NEW outbound connections to internal/reserved space.
+    ip daddr @blocked4 drop
+    ip6 daddr @blocked6 drop
+    # policy accept -> NEW connections to public addresses pass.
+  }
+}
