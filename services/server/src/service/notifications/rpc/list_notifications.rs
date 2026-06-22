@@ -69,21 +69,14 @@ async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
 ) -> Result<Vec<notification::Model>, Status> {
-    let rows = NotificationRepository::list_for_identity(
+    NotificationRepository::list_for_identity(
         &ctx.db,
         &params.identity,
         params.limit,
         params.after_id,
     )
     .await
-    .map_err(map_db_err)?;
-    // TEMP DEBUG: what did sea-orm actually read for `kind`?
-    eprintln!(
-        "[list_notifications] identity={} kinds={:?}",
-        params.identity,
-        rows.iter().map(|r| (r.id, r.kind)).collect::<Vec<_>>()
-    );
-    Ok(rows)
+    .map_err(map_db_err)
 }
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)

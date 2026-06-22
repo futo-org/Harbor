@@ -159,6 +159,12 @@ impl MessageHandler for NotificationWorker {
             return Outcome::Commit;
         };
 
+        println!(
+            "[{}] processing {notification_type:?} notification: from={} to={to_identity}",
+            Self::NAME,
+            trigger_key.identity,
+        );
+
         let trigger = KeyColumns::from(trigger_key);
         // Follows have no target event; store an empty key for them.
         let target_cols =
@@ -212,7 +218,13 @@ impl MessageHandler for NotificationWorker {
             .emit(&to_identity, notification_type, bundle, target_event)
             .await
         {
-            Ok(()) => Outcome::Commit,
+            Ok(()) => {
+                println!(
+                    "[{}] created {notification_type:?} notification for {to_identity}",
+                    Self::NAME
+                );
+                Outcome::Commit
+            }
             Err(e) => {
                 eprintln!(
                     "[{}] failed to produce notification: {e}",

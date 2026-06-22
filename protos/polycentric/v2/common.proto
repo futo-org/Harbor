@@ -7,3 +7,14 @@ message PageInfo {
   bool has_previous_page = 3;
   string start_cursor = 4;
 }
+
+enum ContentDigestType {
+  CONTENT_DIGEST_TYPE_UNSPECIFIED = 0;
+  CONTENT_DIGEST_TYPE_SHA256 = 1;
+}
+
+message ContentDigest {
+  ContentDigestType type = 1;
+  // We hash the serialized bytes
+  bytes value = 2;
+}
