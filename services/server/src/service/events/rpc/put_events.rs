@@ -522,6 +522,9 @@ async fn save_content_child<C: sea_orm::ConnectionTrait>(
             }
         }
 
+        Some(ContentBody::VerificationClaim(_))
+        | Some(ContentBody::VerificationVerify(_)) => {}
+
         None => {}
     }
 

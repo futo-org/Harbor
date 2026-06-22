@@ -13,7 +13,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate",
+    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-core/scripts/generate-proto-barrel.mjs",
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",
     "test": "vitest",
