@@ -1,3 +1,4 @@
+import { useLinkPreviews } from '@/src/common/link-previews';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -68,6 +69,7 @@ export function useComposer({
 }: UseComposerArgs) {
   const client = usePolycentric();
   const { identityKey: currentIdentityKey } = useCurrentIdentity();
+  const { enabled: linkPreviewsEnabled } = useLinkPreviews();
 
   const onPostCreatedRef = useRef(onPostCreated);
   onPostCreatedRef.current = onPostCreated;
@@ -111,7 +113,9 @@ export function useComposer({
   );
 
   useEffect(() => {
-    if (!previewUrl) {
+    // No URL, or the user disabled preview generation: show nothing (and clear
+    // any card already shown if they toggle it off mid-draft).
+    if (!previewUrl || !linkPreviewsEnabled) {
       setLinkPreview(null);
       setLinkPreviewLoading(false);
       return;
@@ -130,7 +134,7 @@ export function useComposer({
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [previewUrl, client]);
+  }, [previewUrl, client, linkPreviewsEnabled]);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
@@ -279,12 +283,15 @@ export function useComposer({
             )
           : [];
 
-      // Embed the first URL's preview in the signed post. Reuse the live
-      // preview when it matches the current URL; otherwise fetch fresh (e.g.
-      // posted before the preview resolved). Best-effort — null yields no card.
+      // Embed the first URL's preview in the signed post, unless the user
+      // disabled preview generation. Reuse the live preview when it matches the
+      // current URL; otherwise fetch fresh (e.g. posted before the preview
+      // resolved). Best-effort — null yields no card.
       let link =
-        linkPreview && linkPreview.url === previewUrl ? linkPreview : null;
-      if (!link && previewUrl) {
+        linkPreviewsEnabled && linkPreview && linkPreview.url === previewUrl
+          ? linkPreview
+          : null;
+      if (linkPreviewsEnabled && !link && previewUrl) {
         link = await client.urlInfo(previewUrl);
       }
 
@@ -367,6 +374,7 @@ export function useComposer({
     replyToEventKey,
     replyRootEventKey,
     linkPreview,
+    linkPreviewsEnabled,
     previewUrl,
     resetAll,
     setSubmitting,
