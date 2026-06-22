@@ -260,6 +260,7 @@ export function useQuery(
   // imperative handlers below always see them without needing the
   // effect to re-run.
   const argsRef = useRef<QueryArgs>({ client, queryKey, query, opts });
+  argsRef.current = { client, queryKey, query, opts };
 
   useEffect(() => {
     if (!enabled) return;

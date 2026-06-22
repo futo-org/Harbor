@@ -33,8 +33,8 @@ export function useFollowingFeed(options?: {
   );
 
   const [items, hasNext] = useMemo(
-    () => decodeFeedQueryResult(query),
-    [query.data, query.status],
+    () => decodeFeedQueryResult(query.status, query.data),
+    [query.status, query.data],
   );
 
   return {

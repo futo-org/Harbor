@@ -225,16 +225,17 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
 
 /** Extract the items and next page indicator from the feed response. */
 export function decodeFeedQueryResult(
-  query: UseQueryResult,
+  status: QueryStatus,
+  data: ArrayBuffer | undefined,
 ): [PostData[], boolean] {
-  if (!query.data) {
+  if (!data) {
     return [[], false];
   }
 
-  const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
+  const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
   let hasNext = false;
 
-  if (query.status == QueryStatus.Success) {
+  if (status === QueryStatus.Success) {
     hasNext = !!response.pageInfo?.hasNextPage;
   }
 
@@ -248,7 +249,7 @@ export function extractFeedToken(
 ): string | undefined {
   let forwardToken: string | undefined = undefined;
 
-  if (status == QueryStatus.Success && data) {
+  if (status === QueryStatus.Success && data) {
     const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
     forwardToken = response.pageInfo?.endCursor;
   }
