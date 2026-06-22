@@ -50,6 +50,7 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
     >
       {imageUri ? (
         <Image
+          testID="linkPreviewImage"
           source={{ uri: imageUri }}
           resizeMode="cover"
           style={[
