@@ -427,6 +427,26 @@ export interface UrlInfoRequest {
     url: string;
 }
 /**
+ * *
+ * Response for UrlInfo: the fetched link-preview metadata.
+ *
+ * @generated from protobuf message polycentric.v2.UrlInfoResponse
+ */
+export interface UrlInfoResponse {
+    /**
+     * @generated from protobuf field: string title = 1
+     */
+    title: string;
+    /**
+     * @generated from protobuf field: string description = 2
+     */
+    description: string;
+    /**
+     * @generated from protobuf field: string image = 3
+     */
+    image: string;
+}
+/**
  * @generated from protobuf enum polycentric.v2.ContentDigestType
  */
 export enum ContentDigestType {
@@ -1751,11 +1771,74 @@ class UrlInfoRequest$Type extends MessageType<UrlInfoRequest> {
  * @generated MessageType for protobuf message polycentric.v2.UrlInfoRequest
  */
 export const UrlInfoRequest = new UrlInfoRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class UrlInfoResponse$Type extends MessageType<UrlInfoResponse> {
+    constructor() {
+        super("polycentric.v2.UrlInfoResponse", [
+            { no: 1, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "image", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<UrlInfoResponse>): UrlInfoResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.title = "";
+        message.description = "";
+        message.image = "";
+        if (value !== undefined)
+            reflectionMergePartial<UrlInfoResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: UrlInfoResponse): UrlInfoResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string title */ 1:
+                    message.title = reader.string();
+                    break;
+                case /* string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* string image */ 3:
+                    message.image = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: UrlInfoResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string title = 1; */
+        if (message.title !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.title);
+        /* string description = 2; */
+        if (message.description !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* string image = 3; */
+        if (message.image !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.image);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.UrlInfoResponse
+ */
+export const UrlInfoResponse = new UrlInfoResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.ContentService
  */
 export const ContentService = new ServiceType("polycentric.v2.ContentService", [
     { name: "SyncContent", options: {}, I: SyncContentRequest, O: SyncContentResponse },
     { name: "UploadBlob", options: {}, I: UploadBlobRequest, O: UploadBlobResponse },
-    { name: "UrlInfo", options: {}, I: UrlInfoRequest, O: Link }
+    { name: "UrlInfo", options: {}, I: UrlInfoRequest, O: UrlInfoResponse }
 ]);
