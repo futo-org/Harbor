@@ -14,7 +14,7 @@ use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::proto::ContentDigest;
 use crate::util;
-use crate::util::http_client;
+use crate::util::{http_client, scraper};
 
 #[derive(Clone)]
 struct AppState {
@@ -87,10 +87,7 @@ async fn image_proxy(
     let url = params.get("url").ok_or(StatusCode::BAD_REQUEST)?;
 
     let resp = http_client::client()
-        .get(format!(
-            "{}/image",
-            http_client::scraper_service_base_url().trim_end_matches('/')
-        ))
+        .get(scraper::image_url())
         .query(&[("url", url.as_str())])
         .send()
         .await

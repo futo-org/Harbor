@@ -6,7 +6,7 @@
 //! `Link`.
 
 use crate::service::proto::{Link, UrlInfoRequest};
-use crate::util::http_client;
+use crate::util::{http_client, scraper};
 use serde::Deserialize;
 use tonic::Status;
 
@@ -20,10 +20,7 @@ struct ScrapedMetadata {
 
 pub async fn handle(req: UrlInfoRequest) -> Result<Link, Status> {
     let resp = http_client::client()
-        .get(format!(
-            "{}/scrape",
-            http_client::scraper_service_base_url().trim_end_matches('/')
-        ))
+        .get(scraper::scrape_url())
         .query(&[("url", req.url.as_str())])
         .send()
         .await
