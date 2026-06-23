@@ -183,12 +183,20 @@ export const LeftSidebar = memo(function LeftSidebar({
   const narrowSidebar = deviceWidth <= Breakpoints.xl;
 
   return (
+    // The feed's full-bleed scroller (see List.tsx) covers the whole viewport
+    // and, as a later-painted positioned sibling, would otherwise sit above
+    // this nav and swallow its clicks. Lifting the sidebar at the sibling level
+    // (where it and `Main` share a stacking context) paints the whole nav above
+    // the scroller — the equivalent of "rendering it after the main content".
+    // `box-none` keeps the wide, empty reservation column click-through so the
+    // gutter still scrolls the feed; only the nav rail itself captures input.
     <View
       role="navigation"
+      pointerEvents="box-none"
       style={[
         Atoms.flex_shrink_0,
         Atoms.flex_grow_1,
-        { alignItems: 'flex-end' },
+        { alignItems: 'flex-end', zIndex: 1 },
       ]}
     >
       <View style={{ width: narrowSidebar ? 88 : 275 }}>
