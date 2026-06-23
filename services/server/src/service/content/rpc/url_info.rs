@@ -18,9 +18,18 @@ struct ScrapedMetadata {
 }
 
 pub async fn handle(req: UrlInfoRequest) -> Result<UrlInfoResponse, Status> {
+    fetch_metadata(&scraper::scrape_url(), &req.url).await
+}
+
+/// Call the scraper's `/scrape` endpoint and map its JSON onto a
+/// `UrlInfoResponse`.
+async fn fetch_metadata(
+    scrape_url: &str,
+    target_url: &str,
+) -> Result<UrlInfoResponse, Status> {
     let resp = http_client::client()
-        .get(scraper::scrape_url())
-        .query(&[("url", req.url.as_str())])
+        .get(scrape_url)
+        .query(&[("url", target_url)])
         .send()
         .await
         .map_err(|e| {
@@ -43,4 +52,103 @@ pub async fn handle(req: UrlInfoRequest) -> Result<UrlInfoResponse, Status> {
         description: meta.description.unwrap_or_default(),
         image: meta.image.unwrap_or_default(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Code;
+
+    // Each test gets its own mock server (own port) and passes its URL
+    // directly, so there's no shared global state — they run in parallel.
+
+    #[tokio::test]
+    async fn maps_scraper_metadata_onto_response() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/scrape")
+            // Confirms `handle` forwards the requested URL as the `url` param.
+            .match_query(mockito::Matcher::UrlEncoded(
+                "url".into(),
+                "https://example.com".into(),
+            ))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{"title":"Example","description":"Desc","image":"https://img/x.png"}"#,
+            )
+            .create_async()
+            .await;
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let resp = fetch_metadata(&scrape_url, "https://example.com")
+            .await
+            .expect("should map metadata");
+
+        assert_eq!(resp.title, "Example");
+        assert_eq!(resp.description, "Desc");
+        assert_eq!(resp.image, "https://img/x.png");
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn missing_fields_default_to_empty_strings() {
+        let mut server = mockito::Server::new_async().await;
+        // Bound to a variable: a dropped Mock is removed from the server.
+        let _mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"title":"Only title"}"#)
+            .create_async()
+            .await;
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let resp = fetch_metadata(&scrape_url, "https://x.test")
+            .await
+            .expect("should map metadata");
+
+        assert_eq!(resp.title, "Only title");
+        assert_eq!(resp.description, "");
+        assert_eq!(resp.image, "");
+    }
+
+    #[tokio::test]
+    async fn non_success_status_is_unavailable() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(502)
+            .create_async()
+            .await;
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let err = fetch_metadata(&scrape_url, "https://x.test")
+            .await
+            .expect_err("non-2xx should error");
+
+        assert_eq!(err.code(), Code::Unavailable);
+    }
+
+    #[tokio::test]
+    async fn malformed_body_is_internal() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body("not json")
+            .create_async()
+            .await;
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let err = fetch_metadata(&scrape_url, "https://x.test")
+            .await
+            .expect_err("invalid JSON should error");
+
+        assert_eq!(err.code(), Code::Internal);
+    }
 }
