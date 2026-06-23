@@ -90,16 +90,6 @@ server-clippy:
     - .server-workflow
     - .service-clippy
 
-server-test:
-  extends:
-    - .server-workflow
-    - .service-test
-
-server-build:
-  extends:
-    - .server-workflow
-    - .service-build
-
 server-image:
   extends:
     - .server-workflow
