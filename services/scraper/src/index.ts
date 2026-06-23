@@ -92,6 +92,12 @@ const PORT = Number(process.env.PORT ?? 3002);
 /** Largest image we'll proxy. Preview thumbnails are small; this bounds memory. */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
+/** Abort an image fetch that stalls. This bounds the scraper's hop to the
+ *  arbitrary third-party host — the Rust caller's timeout only covers the
+ *  server→scraper hop and does not cancel this outbound fetch, so without it a
+ *  slow host would pin a socket here indefinitely. */
+const IMAGE_FETCH_TIMEOUT_MS = 10_000;
+
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   res.writeHead(status, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
@@ -140,7 +146,9 @@ const handleImage = async (
   }
 
   try {
-    const upstream = await fetch(target);
+    const upstream = await fetch(target, {
+      signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
+    });
     if (!upstream.ok) {
       sendJson(res, 502, { error: `upstream returned ${upstream.status}` });
       return;
@@ -150,20 +158,35 @@ const handleImage = async (
       sendJson(res, 415, { error: 'not an image' });
       return;
     }
+    // Reject early on an honest oversized content-length.
     if (Number(upstream.headers.get('content-length') ?? 0) > MAX_IMAGE_BYTES) {
       sendJson(res, 413, { error: 'image too large' });
       return;
     }
-    const body = Buffer.from(await upstream.arrayBuffer());
-    if (body.length > MAX_IMAGE_BYTES) {
-      sendJson(res, 413, { error: 'image too large' });
-      return;
+    // A missing/lying content-length (e.g. chunked) can't make us buffer past
+    // the cap: read the body with a running total and bail the moment it's
+    // exceeded. Bounds peak memory to MAX_IMAGE_BYTES regardless of the upstream.
+    const chunks: Buffer[] = [];
+    let total = 0;
+    const reader = upstream.body?.getReader();
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_IMAGE_BYTES) {
+          await reader.cancel(); // release the upstream socket promptly
+          sendJson(res, 413, { error: 'image too large' });
+          return;
+        }
+        chunks.push(Buffer.from(value));
+      }
     }
     res.writeHead(200, {
       'content-type': contentType,
       'cache-control': 'public, max-age=86400',
     });
-    res.end(body);
+    res.end(Buffer.concat(chunks));
   } catch (error) {
     console.error('image fetch failed:', error);
     sendJson(res, 502, { error: 'failed to fetch image' });
