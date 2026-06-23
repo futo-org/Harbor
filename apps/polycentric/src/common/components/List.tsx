@@ -122,6 +122,7 @@ function WebFeedViewer<T>({
   ListFooterComponent,
   ListEmptyComponent,
   onEndReached,
+  onLoad,
   contentContainerStyle,
   stickyHeaderIndices,
   listRef,
@@ -140,6 +141,14 @@ function WebFeedViewer<T>({
   );
   const items = (data as readonly T[] | null | undefined) ?? [];
   const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
+
+  // Keep parity with native `FlashList` by calling `onLoad`.
+  const hasFiredOnLoad = useRef(false);
+  useEffect(() => {
+    if (hasFiredOnLoad.current) return;
+    hasFiredOnLoad.current = true;
+    onLoad?.({ elapsedTimeInMs: 0 });
+  }, [onLoad]);
 
   // Reset window when the underlying list shrinks (refresh, identity
   // switch, etc.) so we don't keep stale slicing offsets.
