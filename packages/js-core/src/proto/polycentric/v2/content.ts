@@ -415,6 +415,40 @@ export interface UploadBlobRequest {
 export interface UploadBlobResponse {
 }
 /**
+ * *
+ * Request message for fetching link metadata for a URL.
+ *
+ * @generated from protobuf message polycentric.v2.UrlInfoRequest
+ */
+export interface UrlInfoRequest {
+    /**
+     * The URL to fetch metadata for.
+     *
+     * @generated from protobuf field: string url = 1
+     */
+    url: string;
+}
+/**
+ * *
+ * Response for UrlInfo: the fetched link-preview metadata.
+ *
+ * @generated from protobuf message polycentric.v2.UrlInfoResponse
+ */
+export interface UrlInfoResponse {
+    /**
+     * @generated from protobuf field: string title = 1
+     */
+    title: string;
+    /**
+     * @generated from protobuf field: string description = 2
+     */
+    description: string;
+    /**
+     * @generated from protobuf field: string image = 3
+     */
+    image: string;
+}
+/**
  * @generated from protobuf enum polycentric.v2.ReportCategory
  */
 export enum ReportCategory {
