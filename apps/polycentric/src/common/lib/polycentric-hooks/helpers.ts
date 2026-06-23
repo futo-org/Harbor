@@ -1,5 +1,5 @@
 import { QueryStatus, v2 } from '@polycentric/react-native';
-import { UseQueryResult } from '@/src/common/query/hooks/useQuery';
+import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
 export function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode.apply(null, Array.from(bytes)));
@@ -238,17 +238,25 @@ export function decodeFeedQueryResult(
 
 /** Get the forward cursor token from a previous feed query result */
 export function extractFeedToken(
-  status: QueryStatus | undefined,
+  _status: QueryStatus | undefined,
   data: ArrayBuffer | undefined,
 ): string | undefined {
   let forwardToken: string | undefined = undefined;
 
-  if (status === QueryStatus.Success && data) {
+  if (data) {
     const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
     forwardToken = response.pageInfo?.endCursor;
   }
 
   return forwardToken;
+}
+
+/** Check whether it's reasonable to fetch more feed data from servers */
+export function shouldExtend(
+  hasNextPage: boolean,
+  query: UseQueryResult,
+): boolean {
+  return hasNextPage && query.successfulServers > 0;
 }
 
 /**

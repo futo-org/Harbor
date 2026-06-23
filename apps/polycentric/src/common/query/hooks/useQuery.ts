@@ -21,6 +21,8 @@ export type QueryRef = {
   data: ArrayBuffer | undefined;
   status: QueryStatus;
   error: string | null;
+  successfulServers: number;
+  pendingServers: number | undefined;
 };
 
 type QueryArgs = {
@@ -52,6 +54,8 @@ const EMPTY_ENTRY: QueryRef = Object.freeze({
   data: undefined,
   status: QueryStatus.Loading,
   error: null,
+  successfulServers: 0,
+  pendingServers: undefined,
 });
 
 export const useQueryStore = create<QueryStoreState>((set, get) => {
@@ -62,7 +66,9 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       if (
         merged.data === prev.data &&
         merged.status === prev.status &&
-        merged.error === prev.error
+        merged.error === prev.error &&
+        merged.successfulServers === prev.successfulServers &&
+        merged.pendingServers === prev.pendingServers
       ) {
         return {};
       }
@@ -77,6 +83,8 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     updateQueryRef(key, {
       status: QueryStatus.Loading,
       error: null,
+      successfulServers: 0,
+      pendingServers: undefined,
     });
 
     // Request from rs-core
@@ -88,7 +96,12 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     // Listen for outputs from relevant servers
     const sub = observable.subscribe({
       next(result) {
-        updateQueryRef(key, { data: result.data, status: result.status });
+        updateQueryRef(key, {
+          data: result.data,
+          status: result.status,
+          successfulServers: result.successfulServers,
+          pendingServers: result.pendingServers,
+        });
       },
       error(message) {
         console.warn(`useQuery[${key}] error: ${message}`);
@@ -217,7 +230,9 @@ export function setQueryCache(
     if (
       merged.data === prev.data &&
       merged.status === prev.status &&
-      merged.error === prev.error
+      merged.error === prev.error &&
+      merged.successfulServers === prev.successfulServers &&
+      merged.pendingServers === prev.pendingServers
     ) {
       return {};
     }

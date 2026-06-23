@@ -3,6 +3,7 @@ import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
   decodeFeedQueryResult,
   extractFeedToken,
+  shouldExtend,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult } from './types';
@@ -42,7 +43,7 @@ export function useExploreFeed(options?: {
     isLoading: query.status === QueryStatus.Loading,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
-      if (hasNext && query.status !== QueryStatus.Loading) {
+      if (shouldExtend(hasNext, query)) {
         query.extend();
       }
     },

@@ -6,6 +6,7 @@ import { feedQueryKeys } from './feedCache';
 import {
   decodeFeedQueryResult,
   extractFeedToken,
+  shouldExtend,
 } from '@/src/common/lib/polycentric-hooks';
 
 export function useIdentityFeed(
@@ -36,7 +37,7 @@ export function useIdentityFeed(
     isLoading: query.status === QueryStatus.Loading,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
-      if (hasNext && query.status !== QueryStatus.Loading) {
+      if (shouldExtend(hasNext, query)) {
         query.extend();
       }
     },

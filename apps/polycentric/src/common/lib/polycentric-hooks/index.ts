@@ -31,6 +31,7 @@ export {
   decodeFeedItems,
   decodeFeedQueryResult,
   extractFeedToken,
+  shouldExtend,
   pubkeyStr,
   identiconUrl,
   pickImageVariant,

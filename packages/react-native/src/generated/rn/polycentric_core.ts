@@ -820,7 +820,6 @@ const FfiConverterTypeFetchMode = (() => {
 export enum UpdateMode {
   /**
    * Data we fetched from the remote replaces any cached data.
-   * This is the default behavior.
    */
   Replace,
   /**
@@ -958,6 +957,8 @@ const FfiConverterTypeQueryStatus = (() => {
 export type QueryResultFfi = {
   data?: ArrayBuffer;
   status: QueryStatus;
+  successfulServers: number;
+  pendingServers: number;
 };
 
 /**
@@ -984,16 +985,22 @@ const FfiConverterTypeQueryResultFfi = (() => {
       return {
         data: FfiConverterOptionalBytes.read(from),
         status: FfiConverterTypeQueryStatus.read(from),
+        successfulServers: FfiConverterUInt32.read(from),
+        pendingServers: FfiConverterUInt32.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterOptionalBytes.write(value.data, into);
       FfiConverterTypeQueryStatus.write(value.status, into);
+      FfiConverterUInt32.write(value.successfulServers, into);
+      FfiConverterUInt32.write(value.pendingServers, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterOptionalBytes.allocationSize(value.data) +
-        FfiConverterTypeQueryStatus.allocationSize(value.status)
+        FfiConverterTypeQueryStatus.allocationSize(value.status) +
+        FfiConverterUInt32.allocationSize(value.successfulServers) +
+        FfiConverterUInt32.allocationSize(value.pendingServers)
       );
     }
   }

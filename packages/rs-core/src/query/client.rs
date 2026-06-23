@@ -318,6 +318,8 @@ where
                     } else {
                         QueryStatus::Success
                     },
+                    successful_servers: 0,
+                    pending_servers: if will_fetch { target_servers.len() } else { 0 },
                 });
             }
 
@@ -400,8 +402,8 @@ fn spawn_fanout<T>(
         state.next_fanout()
     };
 
-    let server_count = servers.len();
-    let pending = Arc::new(AtomicUsize::new(server_count));
+    let pending = Arc::new(AtomicUsize::new(servers.len()));
+    let successful = Arc::new(AtomicUsize::new(0));
 
     for server_url in servers {
         // Copy any state we need for each server's query task
@@ -410,6 +412,7 @@ fn spawn_fanout<T>(
         let merge_fn = merge_fn.clone();
         let client = client.clone();
         let pending = pending.clone();
+        let successful = successful.clone();
         let subscriber = subscriber.clone();
 
         spawn(async move {
@@ -421,7 +424,13 @@ fn spawn_fanout<T>(
                 let mut s = state.lock().unwrap();
 
                 // Update state
-                let remaining = pending.fetch_sub(1, Ordering::SeqCst) - 1;
+                let pending_servers = pending.fetch_sub(1, Ordering::SeqCst) - 1;
+
+                let successful_servers = if result.is_ok() {
+                    successful.fetch_add(1, Ordering::SeqCst) + 1
+                } else {
+                    successful.load(Ordering::SeqCst)
+                };
 
                 let error_msg = match result {
                     Ok(value) => {
@@ -432,11 +441,18 @@ fn spawn_fanout<T>(
                 };
 
                 // Gather results
-                let data = compute_merged(&s.data, &merge_fn, &client);
-                let status = s.status(remaining);
-                let is_last = remaining == 0;
+                let is_last = pending_servers == 0;
 
-                (QueryResult { status, data }, error_msg, is_last)
+                let data = compute_merged(&s.data, &merge_fn, &client);
+                let status = s.status(pending_servers);
+                let snapshot = QueryResult {
+                    data,
+                    status,
+                    successful_servers,
+                    pending_servers,
+                };
+
+                (snapshot, error_msg, is_last)
             };
 
             // Publish results
