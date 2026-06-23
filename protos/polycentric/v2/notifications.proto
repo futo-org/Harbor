@@ -5,14 +5,25 @@ import "polycentric/v2/common.proto";
 import "polycentric/v2/events.proto";
 import "polycentric/v2/server.proto";
 
+enum NotificationKind {
+  NOTIFICATION_KIND_UNSPECIFIED = 0;
+  NOTIFICATION_KIND_FOLLOW = 1;
+  NOTIFICATION_KIND_REPLY = 2;
+  NOTIFICATION_KIND_REPOST = 3;
+  NOTIFICATION_KIND_REACTION = 4;
+  NOTIFICATION_KIND_QUOTE = 5;
+}
+
 message Notification {
   // Event that triggered the notification
   EventBundle trigger_event = 1;
   // Event that the notification is in relation to
-  EventBundle subject_event = 2;
+  EventBundle target_event = 2;
+  // Kind of the notification
+  NotificationKind kind = 3;
 }
 
-message GetNotificationsRequest {
+message ListNotificationsRequest {
   string identity = 1;
   // Return the 1 X number of notifications
   optional uint32 first = 2;
@@ -20,8 +31,8 @@ message GetNotificationsRequest {
   optional string after = 3;
 }
 
-message GetNotificationsResponse {
-  repeated Notification notification = 1;
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
   // Events that help the client resolve with fewer network calls
   repeated EventHint event_hints = 2;
   PageInfo page_info = 3;
@@ -45,6 +56,8 @@ message UnregisterPushNotificationResponse {}
  * Push notifications provided by polycentric servers
  */
 service NotificationService {
+  // Returns notifications for a user
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
   // This endpoint expects a signed RegisterPushNotificationRequest message
   rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
 

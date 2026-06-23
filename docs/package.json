@@ -3,7 +3,7 @@
   "author": "FUTO",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.34.3",
+  "packageManager": "pnpm@10.34.4",
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",

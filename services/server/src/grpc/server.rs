@@ -1,7 +1,7 @@
-use crate::service;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
 use crate::service::server::rpc::ServerConfig;
+use crate::service::{self, notifications::rpc::build_notifications_service};
 use axum::Router;
 use common_kafka::FutureProducer;
 use http::header::HeaderName;
@@ -48,7 +48,7 @@ pub fn build_grpc_router(
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
     let reflection_service = build_reflection_service()?;
-
+    let notifications_service = build_notifications_service(ctx.clone());
     let grpc_web = GrpcWebLayer::new();
 
     let routes = Routes::default()
@@ -56,6 +56,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(events_service))
         .add_service(grpc_web.layer(feeds_service))
         .add_service(grpc_web.layer(content_service))
+        .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
         .add_service(grpc_web.layer(server_info_service));
 

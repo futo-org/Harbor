@@ -165,6 +165,10 @@ fn spawn_moderation_service(
         .env("CONTENT_BLOB_OS_ACCESS_KEY", "rustfsadmin")
         .env("CONTENT_BLOB_OS_SECRET_KEY", "rustfsadmin")
         .env("POLYCENTRIC_KAFKA_BROKERS", kafka_endpoint())
+        // Read from the start of the topic so a consumer that finishes joining
+        // the group after the post is produced still sees it, rather than
+        // racing partition assignment against the test's fixed startup delay.
+        .env("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET", "earliest")
         .env(
             "POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT",
             "http://127.0.0.1:9",

@@ -79,6 +79,9 @@ impl IdentityDirectory {
                             && e.content == current.content)
                 })
                 .filter(|e| match &e.vc {
+                    // Chain building needs the full causal history: only accept
+                    // a candidate whose vector clock verifies and references no
+                    // unsynced events.
                     Some(vc) => vector_clock::verify_vector_clock(
                         store,
                         vc,
@@ -88,7 +91,8 @@ impl IdentityDirectory {
                         &e.signer,
                         e.sequence,
                     )
-                    .is_ok(),
+                    .map(|missing| missing.is_empty())
+                    .unwrap_or(false),
                     None => true,
                 })
                 .collect();

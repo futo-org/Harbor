@@ -1,19 +1,10 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/identity.proto";
-
-enum ContentDigestType {
-  CONTENT_DIGEST_TYPE_UNSPECIFIED = 0;
-  CONTENT_DIGEST_TYPE_SHA256 = 1;
-}
-
-message ContentDigest {
-  ContentDigestType type = 1;
-  // We hash the serialized bytes
-  bytes value = 2;
-}
+import "polycentric/v2/verifications.proto";
 
 // Content of the event
 message Content {
@@ -28,6 +19,9 @@ message Content {
     Repost repost = 9;
     Report report = 10;
     Labels labels = 11;
+    // Verifications (see verifications.proto)
+    VerificationClaim verification_claim = 12;
+    VerificationVerify verification_verify = 13;
   }
 }
 

@@ -4,6 +4,7 @@ pub mod events;
 pub mod feeds;
 pub mod graph;
 pub mod identity;
+pub mod notifications;
 pub mod proofs;
 pub mod proto;
 pub mod server;

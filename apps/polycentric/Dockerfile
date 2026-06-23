@@ -26,9 +26,9 @@ COPY packages packages
 COPY tools tools
 RUN pnpm install --frozen-lockfile
 RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
-RUN cd apps/polycentric && npx expo export --platform web
 # Non symlinked packages and node_modules
 RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy
+RUN cd /deploy && npx expo export --platform web
 
 # Stage 3: Run
 FROM base AS runner
@@ -36,10 +36,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-COPY --from=build /deploy/node_modules ./node_modules
-COPY --from=build /deploy/package.json ./package.json
-COPY --from=build /app/apps/polycentric/dist ./dist
-COPY --from=build /app/apps/polycentric/server.js ./server.js
+COPY --from=build /deploy .
 
 EXPOSE 8080
 CMD ["node", "server.js"]
