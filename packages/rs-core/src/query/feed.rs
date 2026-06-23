@@ -192,7 +192,7 @@ fn merge_cursors(t1: String, t2: String) -> (String, bool) {
         if let Some(other) = c2.map.remove(&server) {
             // If the offsets are opposite in sign, then a forward cursor is
             // being compared against a backward cursor.
-            assert!(
+            debug_assert!(
                 (info.offset >= 0 && other.offset >= 0) || (info.offset <= 0 && other.offset <= 0)
             );
 
