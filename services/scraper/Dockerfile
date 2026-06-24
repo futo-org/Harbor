@@ -56,10 +56,11 @@ ENV NODE_ENV=production
 # System Chromium provided below; puppeteer/browserless launch it.
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # PORT is supplied at runtime (compose / `docker run -e PORT=…`); the service
-# falls back to 3002 when unset.
+# falls back to 8855 when unset.
 
 # Headless Chromium for prerendering (Debian `chromium` → /usr/bin/chromium),
-# plus nftables for the startup egress firewall.
+# nftables for the startup egress firewall, and curl for in-container debugging
+# (e.g. testing egress rules from inside the scraper's netns).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium nftables \
   && rm -rf /var/lib/apt/lists/*
@@ -76,5 +77,5 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # unprivileged `node` user to run the service. REQUIRES `--cap-add=NET_ADMIN`
 # (and `--init` is recommended so the headless-Chromium children get reaped).
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-EXPOSE 3002
+EXPOSE 8855
 CMD ["node", "dist/index.js"]
