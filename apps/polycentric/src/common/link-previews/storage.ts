@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'polycentric:link-previews-enabled';
+const STORAGE_KEY = 'polycentric:generate-link-previews-enabled';
 
 export async function loadLinkPreviewsEnabled(): Promise<boolean | undefined> {
   try {

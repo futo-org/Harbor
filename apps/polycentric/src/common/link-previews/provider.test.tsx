@@ -4,7 +4,7 @@ import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import { LinkPreviewsProvider, useLinkPreviews } from './';
 
-const KEY = 'polycentric:link-previews-enabled';
+const KEY = 'polycentric:generate-link-previews-enabled';
 
 type Api = ReturnType<typeof useLinkPreviews>;
 

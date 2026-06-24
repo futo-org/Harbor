@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadLinkPreviewsEnabled, saveLinkPreviewsEnabled } from './storage';
 
-const KEY = 'polycentric:link-previews-enabled';
+const KEY = 'polycentric:generate-link-previews-enabled';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
