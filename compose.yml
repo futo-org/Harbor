@@ -32,7 +32,7 @@ services:
       # container itself, making Kafka unreachable
       - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
       # Reached over the isolated `scraper_link` network (see below).
-      - SCRAPER_URL=http://scraper:3002
+      - POLYCENTRIC_SCRAPER_URL=http://scraper:3002
     # On both the shared app network and the isolated scraper link, so it can
     # talk to postgres/kafka/etc. AND to the scraper.
     networks:
