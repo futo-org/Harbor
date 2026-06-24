@@ -22,6 +22,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Text } from './Text';
+import Icon, { IconName } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 
@@ -38,8 +39,8 @@ interface ButtonProps extends Omit<PressableProps, 'style'> {
   title: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  style?: StyleProp<ViewStyle>;
-  icon?: IconRenderFn;
+  style?: PressableProps['style'];
+  icon?: IconRenderFn | IconName;
   fullWidth?: boolean;
   disabled?: boolean;
 }
@@ -109,7 +110,7 @@ export function Button({
         onHoverOut={isDisabled ? undefined : onHoverOut}
         disabled={isDisabled}
         hitSlop={8}
-        style={[
+        style={(state) => [
           styles.base,
           fullWidth && Atoms.w_full,
           !fullWidth && styles.fitContent,
@@ -120,16 +121,17 @@ export function Button({
           },
           surfaceStyle,
           hoverStyle,
-          style,
+          typeof style === 'function' ? style(state) : style,
         ]}
         {...props}
       >
         <View style={[styles.content]}>
           {icon &&
-            icon({
-              size: sizeConfig.iconSize,
-              color: iconColor,
-            })}
+            (typeof icon === 'function' ? (
+              icon({ size: sizeConfig.iconSize, color: iconColor })
+            ) : (
+              <Icon name={icon} size={sizeConfig.iconSize} color={iconColor} />
+            ))}
           {!iconOnly && (
             <Text
               fontSize={size}
