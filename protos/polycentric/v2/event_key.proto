@@ -14,6 +14,7 @@ message EventKey {
   // 5 -> Polycentric social graph (follows)
   // 6 -> Polycentric reports
   // 7 -> Polycentric labels
+  // 8 -> Polycentric verifications
   int32 collection = 1;
 
   // Identity Key (sha256 hash of the initial Identity content)
