@@ -200,3 +200,63 @@ push-notifications-image:
   rules:
     - !reference [.push-notifications-workflow, rules]
     - !reference [.release-workflow, rules]
+
+########################################################################
+# scraper (Node/TypeScript)
+########################################################################
+
+.scraper-workflow:
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^scraper-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - services/scraper/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - services/scraper/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    SERVICE_NAME: scraper
+    SERVICE_DIR: scraper
+
+# Fast-feedback typecheck. The scraper's `build` script is `tsc -p .`; the image
+# build also compiles, so this just surfaces type errors before the heavier
+# image job. PUPPETEER_SKIP_DOWNLOAD stops `pnpm install` from fetching Chromium
+# (the runtime image provides a system one).
+scraper-typecheck:
+  extends: .scraper-workflow
+  image: node:24-slim
+  stage: check
+  variables:
+    PUPPETEER_SKIP_DOWNLOAD: '1'
+  before_script:
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+  script:
+    - pnpm --filter @polycentric/scraper build
+
+scraper-image:
+  extends:
+    - .scraper-workflow
+    - .service-image
+  rules:
+    - !reference [.scraper-workflow, rules]
+    - !reference [.release-workflow, rules]

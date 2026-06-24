@@ -28,6 +28,12 @@ const mockClient = {
   signEvent: jest.fn(async () => ({ signed: true })),
   commitEvent: jest.fn(async () => undefined),
   sync: jest.fn(async () => undefined),
+  urlInfo: jest.fn(async () => ({
+    url: 'https://example.com',
+    title: 't',
+    description: 'd',
+    image: 'i',
+  })),
 };
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
@@ -38,6 +44,16 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   hexToBytes: () => new Uint8Array(),
 }));
 
+// Controllable per test; reset to enabled in beforeEach (the pre-toggle default
+// most tests assume). `mock`-prefixed so jest's hoisted factory may close over it.
+let mockLinkPreviewsEnabled = true;
+jest.mock('@/src/common/link-previews', () => ({
+  useLinkPreviews: () => ({
+    enabled: mockLinkPreviewsEnabled,
+    setEnabled: jest.fn(),
+  }),
+}));
+
 jest.mock('@polycentric/react-native', () => ({
   COLLECTION: { FEED: 1 },
   types: {},
@@ -45,6 +61,7 @@ jest.mock('@polycentric/react-native', () => ({
     EventKey: { create: jest.fn(() => ({})), fromBinary: jest.fn(() => ({})) },
     EventBundle: { create: jest.fn((x: unknown) => x) },
     Content: { toBinary: jest.fn(() => new Uint8Array()) },
+    Link: { create: jest.fn((x: unknown) => x) },
   },
 }));
 
@@ -120,6 +137,7 @@ const flush = () => act(async () => {});
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockLinkPreviewsEnabled = true;
   useComposerStore.getState().reset();
   // Default: uploads succeed immediately.
   mockProcess.mockResolvedValue({ images: [] });
@@ -375,5 +393,39 @@ describe('useComposer handlePost', () => {
     expect(result.current.error).toBe('commit boom');
     expect(result.current.submitting).toBe(false);
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('useComposer link previews', () => {
+  const draftWithUrl = 'check https://example.com out';
+
+  it('embeds a link preview when enabled and the draft has a url', async () => {
+    const { result } = await renderComposer();
+    act(() => result.current.setText(draftWithUrl));
+
+    await act(async () => {
+      await result.current.handlePost();
+    });
+
+    expect(mockClient.urlInfo).toHaveBeenCalledWith('https://example.com');
+    const built = mockClient.contentManager.build.mock.calls[0][0];
+    expect(built.post.links).toHaveLength(1);
+  });
+
+  it('skips link preview generation when disabled', async () => {
+    mockLinkPreviewsEnabled = false;
+    const { result } = await renderComposer();
+    act(() => result.current.setText(draftWithUrl));
+
+    // The disabled setting clears any live preview rather than fetching one.
+    expect(result.current.linkPreview).toBeNull();
+
+    await act(async () => {
+      await result.current.handlePost();
+    });
+
+    expect(mockClient.urlInfo).not.toHaveBeenCalled();
+    const built = mockClient.contentManager.build.mock.calls[0][0];
+    expect(built.post.links).toHaveLength(0);
   });
 });

@@ -381,6 +381,7 @@ fn make_image_post(key: &SigningKey, identity: &str, blob: &Blob) -> (EventKey, 
             }],
         }],
         quote: None,
+        links: vec![],
     };
     let bundle = signed_bundle(
         identity,

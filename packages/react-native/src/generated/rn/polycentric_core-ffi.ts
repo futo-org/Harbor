@@ -393,6 +393,11 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     requestBytes: Uint8Array
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_url_info(
+    uniffiSelf: bigint,
+    serverUrl: Uint8Array,
+    url: Uint8Array
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(
     uniffiSelf: bigint,
     signedEvent: Uint8Array,
@@ -460,6 +465,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_url_info(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobservable_subscribe(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next(): number;

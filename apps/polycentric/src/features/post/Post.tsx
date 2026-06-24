@@ -20,6 +20,7 @@ import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { LinkPreviewCard } from './content/LinkPreviewCard';
 import { PostContentQuote } from './content/PostContentQuote';
 import { PostHeader } from './PostHeader';
 import { PostImages } from './PostImages';
@@ -208,6 +209,9 @@ export const Post = memo(function Post({
               suffix={isTruncatedPreview ? '...' : ''}
             />
           ) : null}
+          {/* Render only the first link preview. A post may carry multiple
+              `links` (e.g. from another client), but we cap the UI at one. */}
+          {post.links?.[0] ? <LinkPreviewCard link={post.links[0]} /> : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
           {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
           {showContentExpandToggle && (

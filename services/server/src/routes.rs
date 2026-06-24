@@ -1,11 +1,12 @@
 use axum::{
     Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{Method, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
 };
 use sea_orm::DatabaseConnection;
+use std::collections::HashMap;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::grpc::reflection_ui::reflection_ui;
@@ -13,6 +14,7 @@ use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::proto::ContentDigest;
 use crate::util;
+use crate::util::{http_client, scraper};
 
 #[derive(Clone)]
 struct AppState {
@@ -37,6 +39,7 @@ pub fn build_routes(
         .route("/status", get(|| async { "OK." }))
         .route("/docs", get(reflection_ui))
         .route("/blob/{digest_id}", get(get_blob))
+        .route("/image_proxy", get(image_proxy))
         .with_state(state)
         .layer(cors)
 }
@@ -72,6 +75,52 @@ async fn get_blob(
     })?;
 
     Ok(([(header::CONTENT_TYPE, row.mime_type)], body).into_response())
+}
+
+/// Proxy a preview image from an untrusted URL (`?url=`) for display. The
+/// actual fetch is delegated to the scraper service — the single SSRF surface —
+/// so this just pre-validates the target and streams the result back. Keeps
+/// reader IPs off third-party hosts and avoids mixed-content/CORS on the client.
+async fn image_proxy(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Response, StatusCode> {
+    let url = params.get("url").ok_or(StatusCode::BAD_REQUEST)?;
+
+    let resp = http_client::client()
+        .get(scraper::image_url())
+        .query(&[("url", url.as_str())])
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+
+    if !resp.status().is_success() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+
+    // Pass through the content type the scraper validated, plus caching.
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream")
+        .to_string();
+    let cache_control = resp
+        .headers()
+        .get(reqwest::header::CACHE_CONTROL)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("public, max-age=86400")
+        .to_string();
+
+    let body = resp.bytes().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+
+    Ok((
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::CACHE_CONTROL, cache_control),
+        ],
+        body,
+    )
+        .into_response())
 }
 
 fn parse_digest_id(id: &str) -> Option<ContentDigest> {

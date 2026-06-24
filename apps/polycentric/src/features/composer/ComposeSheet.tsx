@@ -108,6 +108,8 @@ export function ComposeSheet({
           attachments={composer.attachments}
           submitting={composer.submitting}
           onRemoveAttachment={composer.handleRemoveAttachment}
+          linkPreview={composer.linkPreview}
+          linkPreviewLoading={composer.linkPreviewLoading}
           autoFocus={autoFocus}
         />
       </Sheet.Content>

@@ -114,7 +114,21 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
 /// User-supplied text carried by the content, if any.
 fn content_text(content: &Content) -> Option<String> {
     match content.content_body.as_ref()? {
-        ContentBody::Post(post) => Some(post.text.clone()),
+        ContentBody::Post(post) => {
+            let mut parts = Vec::new();
+            if !post.text.is_empty() {
+                parts.push(post.text.as_str());
+            }
+            // Link previews carry user-/site-supplied text worth moderating.
+            for link in &post.links {
+                for field in [&link.title, &link.description, &link.url] {
+                    if !field.is_empty() {
+                        parts.push(field.as_str());
+                    }
+                }
+            }
+            Some(parts.join("\n"))
+        }
         ContentBody::ProfileUpdate(profile) => {
             let mut parts = Vec::new();
             if let Some(name) = &profile.name {

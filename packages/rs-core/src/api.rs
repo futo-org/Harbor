@@ -4,7 +4,7 @@ use crate::sync;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
     GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -444,6 +444,17 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("upload_blob: {e}")))?;
         Ok(())
+    }
+
+    /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
+    /// Returns serialized `Link` proto bytes.
+    pub async fn url_info(&self, server_url: String, url: String) -> Result<Vec<u8>, CoreError> {
+        let mut client = ContentServiceClient::new(channel(&server_url)?);
+        let response = client
+            .url_info(UrlInfoRequest { url })
+            .await
+            .map_err(|e| CoreError::Network(format!("url_info: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
     }
 
     /// Create a pairing session on the server. `signed_message_bytes` is a
