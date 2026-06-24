@@ -1,3 +1,4 @@
+import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
@@ -90,12 +91,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={Atoms.flex_1}>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <ThemeProvider>
-          <PolycentricProvider onInitialized={onInitialized}>
-            <TrueSheetProvider>
-              <RootStack />
-              <PortalHost />
-            </TrueSheetProvider>
-          </PolycentricProvider>
+          <LinkPreviewsProvider>
+            <PolycentricProvider onInitialized={onInitialized}>
+              <TrueSheetProvider>
+                <RootStack />
+                <PortalHost />
+              </TrueSheetProvider>
+            </PolycentricProvider>
+          </LinkPreviewsProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

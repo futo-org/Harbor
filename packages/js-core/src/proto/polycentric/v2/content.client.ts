@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { ContentService } from "./content";
+import type { UrlInfoResponse } from "./content";
+import type { UrlInfoRequest } from "./content";
 import type { UploadBlobResponse } from "./content";
 import type { UploadBlobRequest } from "./content";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
@@ -27,6 +29,12 @@ export interface IContentServiceClient {
      * @generated from protobuf rpc: UploadBlob
      */
     uploadBlob(input: UploadBlobRequest, options?: RpcOptions): UnaryCall<UploadBlobRequest, UploadBlobResponse>;
+    /**
+     * Fetches a URL server-side and returns its link preview metadata.
+     *
+     * @generated from protobuf rpc: UrlInfo
+     */
+    urlInfo(input: UrlInfoRequest, options?: RpcOptions): UnaryCall<UrlInfoRequest, UrlInfoResponse>;
 }
 /**
  * @generated from protobuf service polycentric.v2.ContentService
@@ -54,5 +62,14 @@ export class ContentServiceClient implements IContentServiceClient, ServiceInfo 
     uploadBlob(input: UploadBlobRequest, options?: RpcOptions): UnaryCall<UploadBlobRequest, UploadBlobResponse> {
         const method = this.methods[1], opt = this._transport.mergeOptions(options);
         return stackIntercept<UploadBlobRequest, UploadBlobResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Fetches a URL server-side and returns its link preview metadata.
+     *
+     * @generated from protobuf rpc: UrlInfo
+     */
+    urlInfo(input: UrlInfoRequest, options?: RpcOptions): UnaryCall<UrlInfoRequest, UrlInfoResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<UrlInfoRequest, UrlInfoResponse>("unary", this._transport, method, opt, input);
     }
 }

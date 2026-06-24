@@ -37,6 +37,8 @@ message Post {
   // Multiple images
   repeated ImageSet images = 3;
   optional EventKey quote = 4;
+  // Link previews for URLs in the post text
+  repeated Link links = 5;
 }
 
 message PostReply {
@@ -44,6 +46,13 @@ message PostReply {
   EventKey root = 1;
   // Post that is being replied to
   EventKey parent = 2;
+}
+
+message Link {
+  string title = 1;
+  string description = 2;
+  string image = 3;
+  string url = 4;
 }
 
 message Repost {
@@ -156,9 +165,28 @@ message UploadBlobRequest {
 
 message UploadBlobResponse {}
 
+/**
+ * Request message for fetching link metadata for a URL.
+ */
+message UrlInfoRequest {
+  // The URL to fetch metadata for.
+  string url = 1;
+}
+
+/**
+ * Response for UrlInfo: the fetched link-preview metadata.
+ */
+message UrlInfoResponse {
+  string title = 1;
+  string description = 2;
+  string image = 3;
+}
+
 service ContentService {
   // Synchronises events from a client to the server
   rpc SyncContent(SyncContentRequest) returns (SyncContentResponse);
   // Uploads a blob. If the blob is not referenced in a time window, it will be deleted.
   rpc UploadBlob(UploadBlobRequest) returns (UploadBlobResponse);
+  // Fetches a URL server-side and returns its link preview metadata.
+  rpc UrlInfo(UrlInfoRequest) returns (UrlInfoResponse);
 }

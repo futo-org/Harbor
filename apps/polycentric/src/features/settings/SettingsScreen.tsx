@@ -16,11 +16,12 @@ import {
   SOURCE_CODE_URL,
   TAB_BAR_HEIGHT,
 } from '@/src/common/constants';
+import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
-import { Linking, View } from 'react-native';
+import { Linking, Switch, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -41,6 +42,29 @@ function AppearanceSettingRow() {
           color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
         />
         <Text variant="body">Toggle Theme</Text>
+      </View>
+    </ListItem>
+  );
+}
+
+function LinkPreviewSettingRow() {
+  const { enabled, setEnabled } = useLinkPreviews();
+
+  return (
+    <ListItem onPress={() => setEnabled(!enabled)}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
+      >
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+          <Icon name="image" size={22} color="primary_600" />
+          <Text variant="body">Generate Link Previews</Text>
+        </View>
+        <Switch value={enabled} onValueChange={setEnabled} />
       </View>
     </ListItem>
   );
@@ -71,6 +95,10 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="Appearance">
                 <AppearanceSettingRow />
+              </ListItemGroup>
+
+              <ListItemGroup label="Posting">
+                <LinkPreviewSettingRow />
               </ListItemGroup>
 
               <ListItemGroup label="Identity">

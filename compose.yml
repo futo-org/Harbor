@@ -31,6 +31,13 @@ services:
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable
       - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
+      # Reached over the isolated `scraper_link` network (see below).
+      - POLYCENTRIC_SCRAPER_URL=http://scraper:3002
+    # On both the shared app network and the isolated scraper link, so it can
+    # talk to postgres/kafka/etc. AND to the scraper.
+    networks:
+      - default
+      - scraper_link
     depends_on:
       postgres:
         condition: service_healthy
@@ -38,6 +45,38 @@ services:
         condition: service_completed_successfully
       kafka:
         condition: service_started
+      scraper:
+        condition: service_started
+
+  scraper:
+    build:
+      context: .
+      dockerfile: services/scraper/Dockerfile
+    # The entrypoint programs an nftables egress firewall inside the container's
+    # network namespace before dropping privileges, so it needs NET_ADMIN.
+    # `init` reaps the headless-Chromium child processes the scraper spawns.
+    cap_add:
+      - NET_ADMIN
+    init: true
+    # Isolation: attached ONLY to `scraper_link` (shared with the server), never
+    # to `default`. So even if its in-container egress firewall is bypassed, it
+    # has no route to postgres/kafka/rustfs/etc. — they sit on a network it
+    # cannot see. Deliberately no `ports:` — it must not be published to the
+    # host, as it fetches arbitrary user-supplied URLs.
+    networks:
+      - scraper_link
+    healthcheck:
+      # node:24 ships global fetch; avoids needing curl/wget in the image.
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Generous: the first check waits for the headless browser to come up.
+      start_period: 20s
 
   rustfs:
     image: rustfs/rustfs:latest
@@ -101,6 +140,15 @@ services:
     volumes:
       - ./kafka-ui.yml:/etc/console/config.yaml
       - ./protos:/proto
+
+networks:
+  # The implicit network all the app services share (postgres, kafka, …).
+  default:
+  # Isolated bridge shared ONLY by the server and the scraper. The scraper is
+  # deliberately not attached to `default`, so a compromised scraper has no
+  # network route to the other containers regardless of its in-container
+  # firewall — they are not reachable on any network it is a member of.
+  scraper_link:
 
 volumes:
   postgres-data:

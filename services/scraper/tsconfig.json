@@ -1,0 +1,10 @@
+{
+  "extends": "@polycentric/tsconfig/compiled-package.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "emitDeclarationOnly": false,
+    "declaration": false,
+    "declarationMap": false,
+    "lib": ["ES2022"]
+  }
+}

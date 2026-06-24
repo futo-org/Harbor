@@ -163,3 +163,54 @@ push-notifications-deploy-manifest-production:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-east/notifications.yml:polycentriceast
   needs:
     - push-notifications-deploy-image-production
+
+########################################################################
+# scraper
+#
+# Runtime needs (NET_ADMIN, --init, internal-only networking) must be set in
+# the production manifest (inventory/.../scraper.yml in devops/manifest), not
+# here — compose.yml only covers local dev.
+########################################################################
+
+.scraper-deploy-workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - services/scraper/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    SERVICE_NAME: scraper
+
+########################################
+# Tag the image with environment label #
+########################################
+
+scraper-deploy-image-production:
+  extends:
+    - .scraper-deploy-workflow
+    - .service-deploy-image
+  when: manual
+  environment:
+    name: production/scraper
+  needs:
+    - job: scraper-image
+      artifacts: false
+
+###############################
+# Rolling restart on Manifest #
+###############################
+
+scraper-deploy-manifest-production:
+  extends:
+    - .scraper-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast
+  needs:
+    - scraper-deploy-image-production

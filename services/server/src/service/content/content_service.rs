@@ -2,13 +2,13 @@
 //! handler under `content/rpc/`.
 
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::content::rpc::{sync_content, upload_blob};
+use crate::service::content::rpc::{sync_content, upload_blob, url_info};
 use crate::service::proto::content_service_server::{
     ContentService, ContentServiceServer,
 };
 use crate::service::proto::{
     SyncContentRequest, SyncContentResponse, UploadBlobRequest,
-    UploadBlobResponse,
+    UploadBlobResponse, UrlInfoRequest, UrlInfoResponse,
 };
 use sea_orm::DatabaseConnection;
 use tonic::{Request, Response, Status};
@@ -47,6 +47,13 @@ impl ContentService for ContentServiceImpl {
             )
             .await?,
         ))
+    }
+
+    async fn url_info(
+        &self,
+        request: Request<UrlInfoRequest>,
+    ) -> Result<Response<UrlInfoResponse>, Status> {
+        Ok(Response::new(url_info::handle(request.into_inner()).await?))
     }
 }
 

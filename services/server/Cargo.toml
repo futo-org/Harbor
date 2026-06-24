@@ -20,7 +20,9 @@ polycentric-common.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 rdkafka = { workspace = true, features = ["cmake-build", "curl", "sasl"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
 sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
+serde = { version = "1", features = ["derive"] }
 sha2.workspace = true
 time.workspace = true
 tokio = { workspace = true, features = ["full"] }

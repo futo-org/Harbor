@@ -138,6 +138,12 @@ export interface Post {
      * @generated from protobuf field: optional polycentric.v2.EventKey quote = 4
      */
     quote?: EventKey;
+    /**
+     * Link previews for URLs in the post text
+     *
+     * @generated from protobuf field: repeated polycentric.v2.Link links = 5
+     */
+    links: Link[];
 }
 /**
  * @generated from protobuf message polycentric.v2.PostReply
@@ -155,6 +161,27 @@ export interface PostReply {
      * @generated from protobuf field: polycentric.v2.EventKey parent = 2
      */
     parent?: EventKey;
+}
+/**
+ * @generated from protobuf message polycentric.v2.Link
+ */
+export interface Link {
+    /**
+     * @generated from protobuf field: string title = 1
+     */
+    title: string;
+    /**
+     * @generated from protobuf field: string description = 2
+     */
+    description: string;
+    /**
+     * @generated from protobuf field: string image = 3
+     */
+    image: string;
+    /**
+     * @generated from protobuf field: string url = 4
+     */
+    url: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.Repost
@@ -386,6 +413,40 @@ export interface UploadBlobRequest {
  * @generated from protobuf message polycentric.v2.UploadBlobResponse
  */
 export interface UploadBlobResponse {
+}
+/**
+ * *
+ * Request message for fetching link metadata for a URL.
+ *
+ * @generated from protobuf message polycentric.v2.UrlInfoRequest
+ */
+export interface UrlInfoRequest {
+    /**
+     * The URL to fetch metadata for.
+     *
+     * @generated from protobuf field: string url = 1
+     */
+    url: string;
+}
+/**
+ * *
+ * Response for UrlInfo: the fetched link-preview metadata.
+ *
+ * @generated from protobuf message polycentric.v2.UrlInfoResponse
+ */
+export interface UrlInfoResponse {
+    /**
+     * @generated from protobuf field: string title = 1
+     */
+    title: string;
+    /**
+     * @generated from protobuf field: string description = 2
+     */
+    description: string;
+    /**
+     * @generated from protobuf field: string image = 3
+     */
+    image: string;
 }
 /**
  * @generated from protobuf enum polycentric.v2.ReportCategory
@@ -638,13 +699,15 @@ class Post$Type extends MessageType<Post> {
             { no: 1, name: "text", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "reply", kind: "message", T: () => PostReply },
             { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet },
-            { no: 4, name: "quote", kind: "message", T: () => EventKey }
+            { no: 4, name: "quote", kind: "message", T: () => EventKey },
+            { no: 5, name: "links", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Link }
         ]);
     }
     create(value?: PartialMessage<Post>): Post {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.text = "";
         message.images = [];
+        message.links = [];
         if (value !== undefined)
             reflectionMergePartial<Post>(this, message, value);
         return message;
@@ -665,6 +728,9 @@ class Post$Type extends MessageType<Post> {
                     break;
                 case /* optional polycentric.v2.EventKey quote */ 4:
                     message.quote = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.quote);
+                    break;
+                case /* repeated polycentric.v2.Link links */ 5:
+                    message.links.push(Link.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -690,6 +756,9 @@ class Post$Type extends MessageType<Post> {
         /* optional polycentric.v2.EventKey quote = 4; */
         if (message.quote)
             EventKey.internalBinaryWrite(message.quote, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.Link links = 5; */
+        for (let i = 0; i < message.links.length; i++)
+            Link.internalBinaryWrite(message.links[i], writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -753,6 +822,77 @@ class PostReply$Type extends MessageType<PostReply> {
  * @generated MessageType for protobuf message polycentric.v2.PostReply
  */
 export const PostReply = new PostReply$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Link$Type extends MessageType<Link> {
+    constructor() {
+        super("polycentric.v2.Link", [
+            { no: 1, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "image", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<Link>): Link {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.title = "";
+        message.description = "";
+        message.image = "";
+        message.url = "";
+        if (value !== undefined)
+            reflectionMergePartial<Link>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Link): Link {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string title */ 1:
+                    message.title = reader.string();
+                    break;
+                case /* string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* string image */ 3:
+                    message.image = reader.string();
+                    break;
+                case /* string url */ 4:
+                    message.url = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Link, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string title = 1; */
+        if (message.title !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.title);
+        /* string description = 2; */
+        if (message.description !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* string image = 3; */
+        if (message.image !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.image);
+        /* string url = 4; */
+        if (message.url !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.url);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.Link
+ */
+export const Link = new Link$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Repost$Type extends MessageType<Repost> {
     constructor() {
@@ -1538,10 +1678,121 @@ class UploadBlobResponse$Type extends MessageType<UploadBlobResponse> {
  * @generated MessageType for protobuf message polycentric.v2.UploadBlobResponse
  */
 export const UploadBlobResponse = new UploadBlobResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class UrlInfoRequest$Type extends MessageType<UrlInfoRequest> {
+    constructor() {
+        super("polycentric.v2.UrlInfoRequest", [
+            { no: 1, name: "url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<UrlInfoRequest>): UrlInfoRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.url = "";
+        if (value !== undefined)
+            reflectionMergePartial<UrlInfoRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: UrlInfoRequest): UrlInfoRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string url */ 1:
+                    message.url = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: UrlInfoRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string url = 1; */
+        if (message.url !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.url);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.UrlInfoRequest
+ */
+export const UrlInfoRequest = new UrlInfoRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class UrlInfoResponse$Type extends MessageType<UrlInfoResponse> {
+    constructor() {
+        super("polycentric.v2.UrlInfoResponse", [
+            { no: 1, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "image", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<UrlInfoResponse>): UrlInfoResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.title = "";
+        message.description = "";
+        message.image = "";
+        if (value !== undefined)
+            reflectionMergePartial<UrlInfoResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: UrlInfoResponse): UrlInfoResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string title */ 1:
+                    message.title = reader.string();
+                    break;
+                case /* string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* string image */ 3:
+                    message.image = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: UrlInfoResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string title = 1; */
+        if (message.title !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.title);
+        /* string description = 2; */
+        if (message.description !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* string image = 3; */
+        if (message.image !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.image);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.UrlInfoResponse
+ */
+export const UrlInfoResponse = new UrlInfoResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.ContentService
  */
 export const ContentService = new ServiceType("polycentric.v2.ContentService", [
     { name: "SyncContent", options: {}, I: SyncContentRequest, O: SyncContentResponse },
-    { name: "UploadBlob", options: {}, I: UploadBlobRequest, O: UploadBlobResponse }
+    { name: "UploadBlob", options: {}, I: UploadBlobRequest, O: UploadBlobResponse },
+    { name: "UrlInfo", options: {}, I: UrlInfoRequest, O: UrlInfoResponse }
 ]);

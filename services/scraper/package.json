@@ -1,0 +1,28 @@
+{
+  "name": "@polycentric/scraper",
+  "version": "0.0.0",
+  "description": "Polycentric link-metadata scraper service",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsc -p . --watch",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@polycentric/tsconfig": "workspace:*",
+    "@types/node": "^24.0.0",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "browserless": "^13.1.6",
+    "html-get": "^2.24.6",
+    "metascraper": "^5.50.6",
+    "metascraper-description": "^5.50.6",
+    "metascraper-image": "^5.50.6",
+    "metascraper-title": "^5.50.6",
+    "metascraper-url": "^5.50.6",
+    "puppeteer": "^25.1.0"
+  }
+}

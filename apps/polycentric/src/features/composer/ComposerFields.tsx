@@ -16,6 +16,8 @@ import {
   View,
 } from 'react-native';
 import ComposerPostEmbed from './ComposerPostEmbed';
+import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
+import { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import type { useComposer } from './hooks/useComposer';
 import { isWeb } from '@/src/common/util/platform';
@@ -38,6 +40,10 @@ type ComposerFieldsProps = {
   attachments: Attachment[];
   submitting: boolean;
   onRemoveAttachment: (id: string) => void;
+  /** Live link preview for the first URL in the draft, once resolved. */
+  linkPreview: v2.Link | null;
+  /** True while the link preview is being fetched. */
+  linkPreviewLoading: boolean;
   /** Auto-focus the text field.**/
   autoFocus?: boolean;
 };
@@ -59,6 +65,8 @@ export function ComposerFields({
   attachments,
   submitting,
   onRemoveAttachment,
+  linkPreview,
+  linkPreviewLoading,
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
@@ -93,7 +101,9 @@ export function ComposerFields({
       )}
 
       {/* Main block */}
-      <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1]}>
+      <View
+        style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1, { minHeight: 200 }]}
+      >
         {currentIdentityKey ? (
           <View style={[Atoms.self_start]}>
             <ProfileAvatar identityKey={currentIdentityKey} size="md" />
@@ -113,13 +123,7 @@ export function ComposerFields({
             maxLength={2000}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
-            style={[
-              Atoms.px_0,
-              Atoms.py_0,
-              Atoms.pt_sm,
-              Atoms.text_lg,
-              attachments.length === 0 && !quote && { minHeight: 200 },
-            ]}
+            style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
           />
           {attachments.length > 0 && (
             <AttachmentGrid
@@ -128,11 +132,56 @@ export function ComposerFields({
               onRemoveAttachment={onRemoveAttachment}
             />
           )}
+          {/* Live link preview for the first URL in the draft */}
+          <ComposerLinkPreview
+            link={linkPreview}
+            loading={linkPreviewLoading}
+          />
           {/* Quote preview */}
           {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+/**
+ * Live link preview shown while composing: a loading row until the unfurl
+ * resolves, then the same `LinkPreviewCard` used in the feed (so the composer
+ * preview matches what the post will look like).
+ */
+function ComposerLinkPreview({
+  link,
+  loading,
+}: {
+  link: v2.Link | null;
+  loading: boolean;
+}) {
+  const { theme } = useTheme();
+
+  if (link) return <LinkPreviewCard link={link} />;
+  if (!loading) return null;
+
+  return (
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.gap_sm,
+        Atoms.p_md,
+        Atoms.rounded_md,
+        Atoms.mt_md,
+        {
+          borderWidth: 1,
+          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
+        },
+      ]}
+    >
+      <ActivityIndicator size="small" color={theme.palette.neutral_500} />
+      <Text variant="secondary" color="neutral_500">
+        Loading preview…
+      </Text>
+    </View>
   );
 }
 
