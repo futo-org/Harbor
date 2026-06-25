@@ -263,7 +263,10 @@ function WebFingerProfile({ handle }: { handle: string }) {
       return <WebFingerStatus message={`Couldn't verify ${handle}`} />;
     case 'verified':
       return (
-        <ProfileProvider identityKey={resolution.identity}>
+        <ProfileProvider
+          identityKey={resolution.identity}
+          webfingerAlias={normalizeWebFingerHandle(handle) ?? handle}
+        >
           <ProfileScreenContent />
         </ProfileProvider>
       );

@@ -30,7 +30,7 @@ export interface ProfileHeaderProps {
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
-  const { identityKey, isSelf, activeFeed, setActiveFeed } =
+  const { identityKey, isSelf, activeFeed, setActiveFeed, webfingerAlias } =
     useProfileContext();
 
   const fallbackUsername = useUsername(identityKey);
@@ -116,6 +116,11 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           <Text variant="secondary" color="neutral_500">
             {short}
           </Text>
+          {webfingerAlias ? (
+            <Text variant="secondary" color="neutral_500">
+              {webfingerAlias}
+            </Text>
+          ) : null}
           {profile.description ? (
             <View style={Atoms.mt_sm}>
               <Text variant="body" fontSize="sm" color="neutral_1000">
