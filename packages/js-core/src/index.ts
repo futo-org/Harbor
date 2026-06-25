@@ -55,3 +55,6 @@ export {
   InitializationStep,
   HydrationStatus,
 } from './client-internal/event-service';
+
+export { resolveWebFinger, WEBFINGER_PROP_IDENTITY } from './http/webfinger';
+export type { WebFingerResult } from './http/webfinger';
