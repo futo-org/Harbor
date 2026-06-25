@@ -4,6 +4,7 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { ReactNode, useState } from 'react';
 import { View } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { SelectChip } from './SelectChip';
 
 // A platform a claim can be verified against. `logo` matches SelectChip's icon
@@ -104,7 +105,9 @@ function isProfileUrl(value: string): boolean {
 }
 
 // Pick a platform, then link the account by pasting a pairing token into it.
-export function PlatformPicker() {
+// `onSelect` fires after a platform is chosen so the parent can scroll the
+// freshly revealed link form into view.
+export function PlatformPicker({ onSelect }: { onSelect?: () => void }) {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const [selected, setSelected] = useState<Platform>();
@@ -118,6 +121,7 @@ export function PlatformPicker() {
   const onSelectPlatform = (platform: Platform) => {
     setSelected(platform);
     setProfileUrl('');
+    onSelect?.();
   };
 
   return (
@@ -131,20 +135,29 @@ export function PlatformPicker() {
       </Text>
 
       <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_wrap]}>
-        {PLATFORMS.map((platform) => (
-          <SelectChip
+        {PLATFORMS.map((platform, i) => (
+          <Animated.View
             key={platform.name}
-            title={platform.name}
-            icon={platform.logo}
-            color={platform.color}
-            selected={selected?.name === platform.name}
-            onPress={() => onSelectPlatform(platform)}
-          />
+            entering={FadeInDown.delay(i * 40).duration(200)}
+          >
+            <SelectChip
+              title={platform.name}
+              icon={platform.logo}
+              color={platform.color}
+              selected={selected?.name === platform.name}
+              onPress={() => onSelectPlatform(platform)}
+            />
+          </Animated.View>
         ))}
       </View>
 
       {selected && (
-        <View style={[Atoms.gap_sm, Atoms.mt_sm]}>
+        <Animated.View
+          key={selected.name}
+          entering={FadeInDown.duration(200)}
+          exiting={FadeOutDown.duration(150)}
+          style={[Atoms.gap_sm, Atoms.mt_sm]}
+        >
           <Text
             variant="small"
             style={theme.atoms.text_neutral_medium}
@@ -194,7 +207,7 @@ export function PlatformPicker() {
             // TODO: start the platform loop-back verification flow.
             onPress={() => {}}
           />
-        </View>
+        </Animated.View>
       )}
     </View>
   );
