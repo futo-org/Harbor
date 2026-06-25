@@ -115,6 +115,9 @@ type WebFingerResolution =
   | { status: 'loading' }
   // Resolved to a candidate identity, now confirming it claims `handle` back.
   | { status: 'verifying'; identity: string }
+  // Candidate confirmed; render its profile.
+  | { status: 'verified'; identity: string }
+  | { status: 'unverified' }
   | { status: 'not-found' };
 
 /**
@@ -150,38 +153,44 @@ function WebFingerProfile({ handle }: { handle: string }) {
   }, [handle]);
 
   // Load the candidate's profile to read the alias it claims for itself.
-  // Disabled (null identity) until resolution produces a candidate; fetched
-  // over the network so the check doesn't pass/fail on a stale cache.
+  // Fetched over the network so the check doesn't pass/fail on a stale cache.
   const candidate =
     resolution.status === 'verifying' ? resolution.identity : null;
   const profile = useProfile(candidate, { fetchMode: FetchMode.Default });
 
-  if (resolution.status === 'loading') {
-    return <WebFingerStatus message={`Resolving ${handle}…`} loading />;
-  }
-  if (resolution.status === 'not-found') {
-    return <WebFingerStatus message={`Couldn't find ${handle}`} />;
-  }
+  // Latch the verdict exactly once, when the candidate's profile first loads.
+  useEffect(() => {
+    if (resolution.status !== 'verifying' || profile.isLoading) return;
+    // Both sides go through the same canonicaliser so a leading `@` or
+    // differing case can't cause a false mismatch; a null on either side
+    // fails closed.
+    const expected = normalizeWebFingerHandle(handle);
+    const claimed = profile.webfingerAlias
+      ? normalizeWebFingerHandle(profile.webfingerAlias)
+      : null;
+    setResolution(
+      expected && claimed === expected
+        ? { status: 'verified', identity: resolution.identity }
+        : { status: 'unverified' },
+    );
+  }, [resolution, profile.isLoading, profile.webfingerAlias, handle]);
 
-  if (profile.isLoading) {
-    return <WebFingerStatus message={`Verifying ${handle}…`} loading />;
+  switch (resolution.status) {
+    case 'loading':
+      return <WebFingerStatus message={`Resolving ${handle}…`} loading />;
+    case 'verifying':
+      return <WebFingerStatus message={`Verifying ${handle}…`} loading />;
+    case 'not-found':
+      return <WebFingerStatus message={`Couldn't find ${handle}`} />;
+    case 'unverified':
+      return <WebFingerStatus message={`Couldn't verify ${handle}`} />;
+    case 'verified':
+      return (
+        <ProfileProvider identityKey={resolution.identity}>
+          <ProfileScreenContent />
+        </ProfileProvider>
+      );
   }
-
-  // Both sides go through the same canonicaliser so a leading `@` or differing
-  // case can't cause a false mismatch; a null on either side fails closed.
-  const expected = normalizeWebFingerHandle(handle);
-  const claimed = profile.webfingerAlias
-    ? normalizeWebFingerHandle(profile.webfingerAlias)
-    : null;
-  if (!expected || claimed !== expected) {
-    return <WebFingerStatus message={`Couldn't verify ${handle}`} />;
-  }
-
-  return (
-    <ProfileProvider identityKey={resolution.identity}>
-      <ProfileScreenContent />
-    </ProfileProvider>
-  );
 }
 
 function WebFingerStatus({

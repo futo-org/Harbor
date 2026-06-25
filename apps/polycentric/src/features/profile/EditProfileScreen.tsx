@@ -78,6 +78,20 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               numberOfLines={3}
             />
           </View>
+
+          <View style={Atoms.gap_xs}>
+            <Text variant="small" color="neutral_500">
+              WEBFINGER ALIAS
+            </Text>
+            <TextInput
+              value={edit.webfingerAliasDraft}
+              onChangeText={edit.setWebfingerAliasDraft}
+              placeholder="user@domain.com"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+          </View>
         </View>
       </Sheet.Content>
     </Sheet>

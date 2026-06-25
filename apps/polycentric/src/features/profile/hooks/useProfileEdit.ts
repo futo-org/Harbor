@@ -4,6 +4,7 @@ import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 
 interface ProfileRef {
   description: string | null;
+  webfingerAlias: string | null;
   refresh: () => void;
 }
 
@@ -14,6 +15,8 @@ export type ProfileEditState = {
   setNameDraft: (value: string) => void;
   descriptionDraft: string;
   setDescriptionDraft: (value: string) => void;
+  webfingerAliasDraft: string;
+  setWebfingerAliasDraft: (value: string) => void;
   avatarUri: string | null;
   setAvatarUri: (value: string | null) => void;
   saving: boolean;
@@ -30,6 +33,7 @@ export function useProfileEdit(
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [webfingerAliasDraft, setWebfingerAliasDraft] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +45,10 @@ export function useProfileEdit(
     setDescriptionDraft(profile.description ?? '');
   }, [profile.description]);
 
+  useEffect(() => {
+    setWebfingerAliasDraft(profile.webfingerAlias ?? '');
+  }, [profile.webfingerAlias]);
+
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
@@ -48,6 +56,7 @@ export function useProfileEdit(
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
+        webfingerAlias: webfingerAliasDraft,
       });
       profile.refresh();
       setEditing(false);
@@ -56,14 +65,22 @@ export function useProfileEdit(
     } finally {
       setSaving(false);
     }
-  }, [client, nameDraft, descriptionDraft, avatarUri, profile]);
+  }, [
+    client,
+    nameDraft,
+    descriptionDraft,
+    webfingerAliasDraft,
+    avatarUri,
+    profile,
+  ]);
 
   const handleCancel = useCallback(() => {
     setNameDraft(username);
     setDescriptionDraft(profile.description ?? '');
+    setWebfingerAliasDraft(profile.webfingerAlias ?? '');
     setAvatarUri(null);
     setEditing(false);
-  }, [username, profile.description]);
+  }, [username, profile.description, profile.webfingerAlias]);
 
   return {
     editing,
@@ -72,6 +89,8 @@ export function useProfileEdit(
     setNameDraft,
     descriptionDraft,
     setDescriptionDraft,
+    webfingerAliasDraft,
+    setWebfingerAliasDraft,
     avatarUri,
     setAvatarUri,
     saving,
