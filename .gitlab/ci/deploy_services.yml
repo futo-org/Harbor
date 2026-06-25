@@ -227,5 +227,5 @@ scraper-deploy-manifest-staging:
   variables:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/app.yml:staging
   needs:
-    - scraper-deploy-image-production
+    - scraper-deploy-image-staging
 
