@@ -1,4 +1,4 @@
-import { toast } from '@/src/common/components/toast';
+import { toast } from '@/src/common/components/toast/useToast';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
