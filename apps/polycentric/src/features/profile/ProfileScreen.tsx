@@ -1,14 +1,17 @@
+import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
-import { useTheme } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
+import { resolveWebFinger } from '@polycentric/react-native';
 import {
   router,
   useFocusEffect,
   useIsFocused,
   useLocalSearchParams,
 } from 'expo-router';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
@@ -16,6 +19,12 @@ import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh
 
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
+
+  // A WebFinger handle (user@domain) rather than a polycentric identity key —
+  // resolve it to a key first.
+  if (identityId?.includes('@')) {
+    return <WebFingerProfile handle={identityId} />;
+  }
 
   return (
     <ProfileProvider identityKey={identityId ?? null}>
@@ -92,6 +101,89 @@ function ProfileScreenContent() {
           activeKey={activeFeed}
           HeaderComponent={profileHeader}
         />
+      </Screen.PrimaryColumn>
+    </Screen>
+  );
+}
+
+type WebFingerResolution =
+  | { status: 'loading' }
+  | { status: 'found'; identity: string }
+  | { status: 'not-found' };
+
+/**
+ * Resolve a WebFinger handle (`user@domain`) to a polycentric identity, then
+ * render the profile for it. The handle stays in the URL; resolution happens
+ * in place rather than redirecting to the canonical `/[identityId]`.
+ */
+function WebFingerProfile({ handle }: { handle: string }) {
+  const [resolution, setResolution] = useState<WebFingerResolution>({
+    status: 'loading',
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setResolution({ status: 'loading' });
+    // resolveWebFinger resolves to null on any failure (it never rejects); the
+    // catch is defensive so the loading state can't wedge.
+    void resolveWebFinger(handle)
+      .then((result) => {
+        if (cancelled) return;
+        setResolution(
+          result
+            ? { status: 'found', identity: result }
+            : { status: 'not-found' },
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setResolution({ status: 'not-found' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [handle]);
+
+  if (resolution.status === 'loading') {
+    return <WebFingerStatus message={`Resolving ${handle}…`} loading />;
+  }
+  if (resolution.status === 'not-found') {
+    return <WebFingerStatus message={`Couldn't find ${handle}`} />;
+  }
+
+  return (
+    <ProfileProvider identityKey={resolution.identity}>
+      <ProfileScreenContent />
+    </ProfileProvider>
+  );
+}
+
+function WebFingerStatus({
+  message,
+  loading,
+}: {
+  message: string;
+  loading?: boolean;
+}) {
+  const { theme } = useTheme();
+  return (
+    <Screen>
+      <Screen.PrimaryColumn>
+        <View
+          style={[
+            Atoms.flex_1,
+            Atoms.items_center,
+            Atoms.justify_center,
+            Atoms.gap_md,
+            Atoms.p_lg,
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color={theme.palette.primary_500} />
+          ) : null}
+          <Text variant="body" color="neutral_500">
+            {message}
+          </Text>
+        </View>
       </Screen.PrimaryColumn>
     </Screen>
   );
