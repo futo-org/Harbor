@@ -1,3 +1,4 @@
+import { Toaster } from '@/src/common/components/toast';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -96,6 +97,7 @@ export default function RootLayout() {
               <TrueSheetProvider>
                 <RootStack />
                 <PortalHost />
+                <Toaster />
               </TrueSheetProvider>
             </PolycentricProvider>
           </LinkPreviewsProvider>

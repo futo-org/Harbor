@@ -1,3 +1,4 @@
+import { toast } from '@/src/common/components/toast';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
@@ -346,6 +347,7 @@ export function useComposer({
       await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
+      toast.success(isReply ? 'Reply posted' : 'Post published');
       onClose();
       resetAll();
 
