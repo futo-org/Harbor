@@ -216,6 +216,15 @@ scraper-deploy-image-staging:
 # Rolling restart on Manifest #
 ###############################
 
+scraper-deploy-manifest-production:
+  extends:
+    - .scraper-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast
+  needs:
+    - scraper-deploy-image-production
+
 scraper-deploy-manifest-staging:
   extends:
     - .scraper-deploy-workflow
