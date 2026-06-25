@@ -2,17 +2,19 @@ import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { CreateClaim } from './CreateClaim';
 import { SelectChip } from './SelectChip';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Mode = 'create' | 'verify';
 
 export default function VerificationsScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>();
 
   const select = (next: Mode) =>
@@ -27,7 +29,15 @@ export default function VerificationsScreen() {
           )}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[Atoms.p_lg, Atoms.gap_2xl]}>
+          <View
+            style={[
+              Atoms.p_lg,
+              Atoms.gap_2xl,
+              {
+                paddingBottom: insets.bottom + Spacing['lg'],
+              },
+            ]}
+          >
             <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_wrap]}>
               <SelectChip
                 title="Create a claim"

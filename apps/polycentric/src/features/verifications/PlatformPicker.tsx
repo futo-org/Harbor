@@ -62,7 +62,7 @@ const PLATFORMS: Platform[] = [
     placeholder: 'discord.gg/futo',
   },
   {
-    name: 'HackerNews',
+    name: 'Hacker News',
     logo: brandLogo('hacker-news'),
     color: 'warning_500',
     location: 'about section',
