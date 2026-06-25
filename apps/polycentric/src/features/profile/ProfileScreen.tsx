@@ -3,7 +3,11 @@ import { Screen } from '@/src/common/components/layout';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
-import { resolveWebFinger } from '@polycentric/react-native';
+import {
+  FetchMode,
+  normalizeWebFingerHandle,
+  resolveWebFinger,
+} from '@polycentric/react-native';
 import {
   router,
   useFocusEffect,
@@ -13,6 +17,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ProfileHeader } from './ProfileHeader';
+import { useProfile } from './hooks/useProfile';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
@@ -108,7 +113,8 @@ function ProfileScreenContent() {
 
 type WebFingerResolution =
   | { status: 'loading' }
-  | { status: 'found'; identity: string }
+  // Resolved to a candidate identity, now confirming it claims `handle` back.
+  | { status: 'verifying'; identity: string }
   | { status: 'not-found' };
 
 /**
@@ -131,7 +137,7 @@ function WebFingerProfile({ handle }: { handle: string }) {
         if (cancelled) return;
         setResolution(
           result
-            ? { status: 'found', identity: result }
+            ? { status: 'verifying', identity: result }
             : { status: 'not-found' },
         );
       })
@@ -143,11 +149,32 @@ function WebFingerProfile({ handle }: { handle: string }) {
     };
   }, [handle]);
 
+  // Load the candidate's profile to read the alias it claims for itself.
+  // Disabled (null identity) until resolution produces a candidate; fetched
+  // over the network so the check doesn't pass/fail on a stale cache.
+  const candidate =
+    resolution.status === 'verifying' ? resolution.identity : null;
+  const profile = useProfile(candidate, { fetchMode: FetchMode.Default });
+
   if (resolution.status === 'loading') {
     return <WebFingerStatus message={`Resolving ${handle}…`} loading />;
   }
   if (resolution.status === 'not-found') {
     return <WebFingerStatus message={`Couldn't find ${handle}`} />;
+  }
+
+  if (profile.isLoading) {
+    return <WebFingerStatus message={`Verifying ${handle}…`} loading />;
+  }
+
+  // Both sides go through the same canonicaliser so a leading `@` or differing
+  // case can't cause a false mismatch; a null on either side fails closed.
+  const expected = normalizeWebFingerHandle(handle);
+  const claimed = profile.webfingerAlias
+    ? normalizeWebFingerHandle(profile.webfingerAlias)
+    : null;
+  if (!expected || claimed !== expected) {
+    return <WebFingerStatus message={`Couldn't verify ${handle}`} />;
   }
 
   return (

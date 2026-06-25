@@ -81,6 +81,16 @@ function parseHandle(handle: string): { acct: string; domain: string } | null {
 }
 
 /**
+ * Canonicalise a handle for equality comparison: its parsed `acct`
+ * (`local@domain`, no leading `@`), lowercased. Returns null when the handle is
+ * malformed.
+ */
+export function normalizeWebFingerHandle(handle: string): string | null {
+  const parsed = parseHandle(handle);
+  return parsed ? parsed.acct.toLowerCase() : null;
+}
+
+/**
  * Resolve a WebFinger handle (`user@domain.com`) to a polycentric identity.
  *
  * Returns null when the handle is malformed, the lookup fails (network error,
