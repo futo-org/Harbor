@@ -202,6 +202,16 @@ scraper-deploy-image-production:
     - job: scraper-image
       artifacts: false
 
+scraper-deploy-image-staging:
+  extends:
+    - .scraper-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/scraper
+  needs:
+    - job: scraper-image
+      artifacts: false
+
 ###############################
 # Rolling restart on Manifest #
 ###############################
@@ -214,3 +224,12 @@ scraper-deploy-manifest-production:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast
   needs:
     - scraper-deploy-image-production
+
+scraper-deploy-manifest-staging:
+  extends:
+    - .scraper-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/app.yml:staging
+  needs:
+    - scraper-deploy-image-staging
