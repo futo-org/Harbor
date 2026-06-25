@@ -31,8 +31,53 @@ export default function ProfileScreen() {
     return <WebFingerProfile handle={identityId} />;
   }
 
+  return <IdentityProfile identityKey={identityId ?? null} />;
+}
+
+/**
+ * Render a profile addressed by its identity key. If that profile claims a
+ * WebFinger alias that *verifiably* resolves back to this same identity,
+ * redirect to the canonical alias URL (`/user@domain`).
+ *
+ * Verification happens before the redirect: `resolveWebFinger(alias)` must
+ * return this exact identity, so a profile can't bounce us to an alias it
+ * doesn't actually own. The alias URL renders `WebFingerProfile` (not this
+ * component), so there's no redirect loop.
+ */
+function IdentityProfile({ identityKey }: { identityKey: string | null }) {
+  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
+
+  // Redirect at most once per identity, even though the shared profile query
+  // may briefly re-enter its loading state and re-run this effect.
+  const redirectedRef = useRef(false);
+  useEffect(() => {
+    redirectedRef.current = false;
+  }, [identityKey]);
+
+  useEffect(() => {
+    if (!identityKey || profile.isLoading || redirectedRef.current) return;
+    const alias = profile.webfingerAlias;
+    if (!alias) return;
+
+    let cancelled = false;
+    void resolveWebFinger(alias).then((resolved) => {
+      if (cancelled || redirectedRef.current || !resolved) return;
+      // Only redirect when the alias points back to THIS identity.
+      if (resolved.toLowerCase() === identityKey.toLowerCase()) {
+        redirectedRef.current = true;
+        router.replace({
+          pathname: '/[identityId]',
+          params: { identityId: alias },
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [identityKey, profile.isLoading, profile.webfingerAlias]);
+
   return (
-    <ProfileProvider identityKey={identityId ?? null}>
+    <ProfileProvider identityKey={identityKey}>
       <ProfileScreenContent />
     </ProfileProvider>
   );
