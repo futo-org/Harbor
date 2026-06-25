@@ -18,6 +18,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ProfileHeader } from './ProfileHeader';
 import { useProfile } from './hooks/useProfile';
+import {
+  getVerifiedAlias,
+  getVerifiedIdentity,
+  recordVerifiedAlias,
+} from './lib/webfingerVerificationCache';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
@@ -55,7 +60,21 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
   }, [identityKey]);
 
   useEffect(() => {
-    if (!identityKey || profile.isLoading || redirectedRef.current) return;
+    if (!identityKey || redirectedRef.current) return;
+
+    // Fast path: a relationship verified earlier this session redirects
+    // without waiting for the profile to load or hitting the network.
+    const cachedAlias = getVerifiedAlias(identityKey);
+    if (cachedAlias) {
+      redirectedRef.current = true;
+      router.replace({
+        pathname: '/[identityId]',
+        params: { identityId: cachedAlias },
+      });
+      return;
+    }
+
+    if (profile.isLoading) return;
     const alias = profile.webfingerAlias;
     if (!alias) return;
 
@@ -64,6 +83,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
       if (cancelled || redirectedRef.current || !resolved) return;
       // Only redirect when the alias points back to THIS identity.
       if (resolved.toLowerCase() === identityKey.toLowerCase()) {
+        recordVerifiedAlias(alias, identityKey);
         redirectedRef.current = true;
         router.replace({
           pathname: '/[identityId]',
@@ -176,6 +196,14 @@ function WebFingerProfile({ handle }: { handle: string }) {
   });
 
   useEffect(() => {
+    // Fast path: skip the resolve + profile round-trip when this handle was
+    // already verified this session.
+    const cachedIdentity = getVerifiedIdentity(handle);
+    if (cachedIdentity) {
+      setResolution({ status: 'verified', identity: cachedIdentity });
+      return;
+    }
+
     let cancelled = false;
     setResolution({ status: 'loading' });
     // resolveWebFinger resolves to null on any failure (it never rejects); the
@@ -213,8 +241,12 @@ function WebFingerProfile({ handle }: { handle: string }) {
     const claimed = profile.webfingerAlias
       ? normalizeWebFingerHandle(profile.webfingerAlias)
       : null;
+    const verified = !!expected && claimed === expected;
+    if (verified) {
+      recordVerifiedAlias(handle, resolution.identity);
+    }
     setResolution(
-      expected && claimed === expected
+      verified
         ? { status: 'verified', identity: resolution.identity }
         : { status: 'unverified' },
     );
