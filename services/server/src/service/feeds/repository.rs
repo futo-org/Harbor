@@ -1,15 +1,17 @@
-use ::entity::content_model as ContentModel;
-use ::entity::event_model as EventModel;
-use polycentric_common::models::collections;
-use sea_orm::FromQueryResult;
-use sea_orm::entity::prelude::*;
-use sea_orm::sea_query::{Expr, IntoCondition, IntoValueTuple};
-use sea_orm::*;
-use serde::Deserialize;
-use serde::Serialize;
-
 pub use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::util::PageCursor;
+use crate::service::{events::TargetEventKey, feeds::util::PageCursor};
+use ::entity::{
+    content_label_model as ContentLabelModel, content_model as ContentModel,
+    event_model as EventModel,
+};
+use polycentric_common::models::collections;
+use sea_orm::{
+    FromQueryResult,
+    entity::prelude::*,
+    sea_query::{Expr, IntoCondition, IntoValueTuple},
+    *,
+};
+use serde::{Deserialize, Serialize};
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
@@ -175,6 +177,71 @@ impl Query {
             .select_also(ContentModel::Entity)
             .join(JoinType::LeftJoin, content_join())
             .filter(filter)
+            .all(db)
+            .await
+    }
+
+    /// Fetch label events that target any of `keys`. Only labels that
+    /// come from the server's trusted moderation service are returned.
+    pub async fn list_labels_for_event_keys(
+        db: &DbConn,
+        keys: &[TargetEventKey],
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        if keys.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut filter = Condition::any();
+        for key in keys {
+            filter = filter.add(
+                Condition::all()
+                    .add(
+                        ContentLabelModel::Column::EventKeyCollection
+                            .eq(key.collection),
+                    )
+                    .add(
+                        ContentLabelModel::Column::EventKeyIdentity
+                            .eq(key.identity.clone()),
+                    )
+                    .add(
+                        ContentLabelModel::Column::EventKeyPublicKeyType
+                            .eq(key.public_key_type),
+                    )
+                    .add(
+                        ContentLabelModel::Column::EventKeyPublicKey
+                            .eq(key.public_key.clone()),
+                    )
+                    .add(
+                        ContentLabelModel::Column::EventKeySequence
+                            .eq(key.sequence),
+                    ),
+            );
+        }
+
+        // Note that we're obtaining labels from the `content_labels` table,
+        // which separates each label onto its own row, even though the
+        // `Labels` event in the protocol may describe multiple for a single
+        // target event.
+        let label_rows = ContentLabelModel::Entity::find()
+            .filter(filter)
+            .all(db)
+            .await?;
+
+        // Get every content ID that has a label
+        let mut content_ids: Vec<i64> =
+            label_rows.into_iter().map(|row| row.content_id).collect();
+        content_ids.sort_unstable();
+        content_ids.dedup();
+
+        if content_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Turn content IDs into `EventWithContentRow` entries
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::LeftJoin, content_join())
+            .filter(ContentModel::Column::Id.is_in(content_ids))
             .all(db)
             .await
     }

@@ -80,6 +80,8 @@ pub struct GetFeedResponseFilter {
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
+    /// Label events that target events in `event_bundles`.
+    pub label_events: Vec<EventBundle>,
     pub page_info: PageInfo<FeedCursor>,
 }
 
@@ -190,6 +192,17 @@ pub async fn hydrate(
     );
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
 
+    let quote_set = to_target_event_keys(&quote_keys);
+    let repost_set = to_target_event_keys(&repost_keys);
+
+    // Include quote and repost events in label look-up
+    let label_keys: Vec<TargetEventKey> = {
+        let mut set: HashSet<TargetEventKey> = keys.iter().cloned().collect();
+        set.extend(quote_set.iter().cloned());
+        set.extend(repost_set.iter().cloned());
+        set.into_iter().collect()
+    };
+
     // Returns valid (as far as the server is concerned) tombstones related to queried events
     let tombstones_fut = async {
         let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
@@ -208,16 +221,26 @@ pub async fn hydrate(
             .await
             .map_err(map_db_err)
     };
+    let labels_fut = async {
+        FeedsRepository::list_labels_for_event_keys(&ctx.db, &label_keys)
+            .await
+            .map_err(map_db_err)
+    };
 
-    let (deletes_by_target, identity_events, profile_events, referenced) = tokio::try_join!(
+    let (
+        deletes_by_target,
+        identity_events,
+        profile_events,
+        referenced,
+        label_events,
+    ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
         profile_events_fut,
         referenced_fut,
+        labels_fut,
     )?;
 
-    let quote_set = to_target_event_keys(&quote_keys);
-    let repost_set = to_target_event_keys(&repost_keys);
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
     for row in referenced {
@@ -235,6 +258,7 @@ pub async fn hydrate(
         profile_events,
         quote_post_events,
         repost_events,
+        label_events,
     })
 }
 
@@ -331,13 +355,19 @@ pub async fn view(
         profile_events,
         quote_post_events,
         repost_events,
+        label_events,
         ..
     } = hydration;
 
     let mut event_bundles = rows_to_bundles(live_rows);
+    // Labels ship as first-class events the client ingests and verifies
+    // against the moderation identity, so attach their signing-key proofs
+    // just like primary content (unlike the contextual hints below).
+    let mut label_events = rows_to_bundles(label_events);
     tokio::try_join!(
         attach_proofs(ctx, &mut event_bundles),
         attach_proofs(ctx, &mut tombstone_bundles),
+        attach_proofs(ctx, &mut label_events),
     )?;
 
     // Identity, profile and referenced (quote / repost) posts all ship
@@ -354,6 +384,7 @@ pub async fn view(
     Ok(GetFeedResponseView {
         event_bundles,
         event_hints,
+        label_events,
         page_info,
     })
 }

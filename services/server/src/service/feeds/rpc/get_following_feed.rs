@@ -1,16 +1,22 @@
 //! `get_following_feed`: posts from identities the caller follows
 //! (plus the caller's own posts), newest first.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
-use crate::service::context::ServiceContext;
-use crate::service::feeds::repository::Query as FeedsRepository;
-use crate::service::feeds::rpc::common::{
-    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+use crate::{
+    data::{hydration::HydrationState, pipeline},
+    service::{
+        context::ServiceContext,
+        feeds::{
+            repository::Query as FeedsRepository,
+            rpc::common::{
+                self as feeds_pipeline, GetFeedResponseFilter,
+                GetFeedResponseView,
+            },
+            util::map_db_err,
+        },
+        graph::repository as GraphRepository,
+        proto::{GetFeedResponse, GetFollowingFeedRequest},
+    },
 };
-use crate::service::feeds::util::map_db_err;
-use crate::service::graph::repository as GraphRepository;
-use crate::service::proto::{GetFeedResponse, GetFollowingFeedRequest};
 use tonic::Status;
 
 pub struct Params {
@@ -45,6 +51,7 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
+        label_events: result.label_events,
         page_info: Some(result.page_info.proto()?),
     })
 }
