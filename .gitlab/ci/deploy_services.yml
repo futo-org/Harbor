@@ -7,6 +7,10 @@
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
     - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT_TAG
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:latest $ENVIRONMENT_TAG
+      fi
 
 .service-deploy-manifest:
   stage: deploy

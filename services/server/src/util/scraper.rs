@@ -3,7 +3,7 @@
 /// Base URL of the scraper service, overridable via `POLYCENTRIC_SCRAPER_URL`.
 fn base_url() -> String {
     std::env::var("POLYCENTRIC_SCRAPER_URL")
-        .unwrap_or_else(|_| "http://localhost:3002".to_string())
+        .unwrap_or_else(|_| "http://localhost:8855".to_string())
 }
 
 /// URL of the `/scrape` endpoint (link-preview metadata).

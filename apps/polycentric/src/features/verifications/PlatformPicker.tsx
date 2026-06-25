@@ -2,9 +2,16 @@ import { Button, Text, TextInput } from '@/src/common/components';
 import { Atoms, PaletteColorToken, useTheme } from '@/src/common/theme';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useRef, useState } from 'react';
 import { View } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  useAnimatedRef,
+} from 'react-native-reanimated';
+import { CopyLinkComponent } from './CopyLinkComponent';
 import { SelectChip } from './SelectChip';
+import { useScrollIntoView } from './VerificationsScrollContext';
 
 // A platform a claim can be verified against. `logo` matches SelectChip's icon
 // render-prop; `color` tints the logo and its chip; `location` is where the
@@ -62,7 +69,7 @@ const PLATFORMS: Platform[] = [
     placeholder: 'discord.gg/futo',
   },
   {
-    name: 'HackerNews',
+    name: 'Hacker News',
     logo: brandLogo('hacker-news'),
     color: 'warning_500',
     location: 'about section',
@@ -110,6 +117,10 @@ export function PlatformPicker() {
   const [selected, setSelected] = useState<Platform>();
   const [profileUrl, setProfileUrl] = useState('');
 
+  const scrollIntoView = useScrollIntoView();
+  const linkFormRef = useAnimatedRef<Animated.View>();
+  const pendingScroll = useRef(false);
+
   // Loop-back link the user adds to their profile to prove ownership.
   const loopbackLink = identityKey
     ? `https://polycentric.io/${identityKey}`
@@ -118,6 +129,13 @@ export function PlatformPicker() {
   const onSelectPlatform = (platform: Platform) => {
     setSelected(platform);
     setProfileUrl('');
+    pendingScroll.current = true;
+  };
+
+  const onLinkFormLayout = () => {
+    if (!pendingScroll.current) return;
+    pendingScroll.current = false;
+    scrollIntoView(linkFormRef);
   };
 
   return (
@@ -131,20 +149,31 @@ export function PlatformPicker() {
       </Text>
 
       <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_wrap]}>
-        {PLATFORMS.map((platform) => (
-          <SelectChip
+        {PLATFORMS.map((platform, i) => (
+          <Animated.View
             key={platform.name}
-            title={platform.name}
-            icon={platform.logo}
-            color={platform.color}
-            selected={selected?.name === platform.name}
-            onPress={() => onSelectPlatform(platform)}
-          />
+            entering={FadeInDown.delay(i * 40).duration(200)}
+          >
+            <SelectChip
+              title={platform.name}
+              icon={platform.logo}
+              color={platform.color}
+              selected={selected?.name === platform.name}
+              onPress={() => onSelectPlatform(platform)}
+            />
+          </Animated.View>
         ))}
       </View>
 
       {selected && (
-        <View style={[Atoms.gap_sm, Atoms.mt_sm]}>
+        <Animated.View
+          ref={linkFormRef}
+          key={selected.name}
+          entering={FadeInDown.duration(200)}
+          exiting={FadeOutDown.duration(150)}
+          onLayout={onLinkFormLayout}
+          style={[Atoms.gap_sm, Atoms.mt_sm]}
+        >
           <Text
             variant="small"
             style={theme.atoms.text_neutral_medium}
@@ -164,20 +193,7 @@ export function PlatformPicker() {
           />
 
           {/* Loop-back link the user adds to their profile. */}
-          <View
-            style={[
-              Atoms.p_md,
-              Atoms.rounded_md,
-              { backgroundColor: theme.palette.neutral_100 },
-            ]}
-          >
-            <Text
-              variant="body"
-              style={[theme.atoms.text, { fontFamily: 'monospace' }]}
-            >
-              {loopbackLink}
-            </Text>
-          </View>
+          <CopyLinkComponent link={loopbackLink} />
           <Text variant="small" style={theme.atoms.text_neutral_medium}>
             {selected.generic
               ? 'Add this link anywhere on your website.'
@@ -194,7 +210,7 @@ export function PlatformPicker() {
             // TODO: start the platform loop-back verification flow.
             onPress={() => {}}
           />
-        </View>
+        </Animated.View>
       )}
     </View>
   );

@@ -35,8 +35,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="bell" md="notifications" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="verify">
-        <NativeTabs.Trigger.Label>Verify</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="verifications">
+        <NativeTabs.Trigger.Label>Verifications</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="checkmark.seal" md="verified" />
       </NativeTabs.Trigger>
 
