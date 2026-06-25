@@ -87,7 +87,7 @@ export const scrape = async (targetUrl: string): Promise<LinkMetadata> => {
   }
 };
 
-const PORT = Number(process.env.PORT ?? 3002);
+const PORT = Number(process.env.PORT ?? 8855);
 
 /** Largest image we'll proxy. Preview thumbnails are small; this bounds memory. */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
