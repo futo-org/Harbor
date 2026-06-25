@@ -4,13 +4,19 @@
  */
 
 // JRD `properties` key carrying the polycentric identity.
-export const WEBFINGER_PROP_IDENTITY = 'https://polycentric.io/identity';
+const WEBFINGER_PROP_IDENTITY = 'https://polycentric.io/identity';
 
 /** Give up on a slow/unresponsive domain rather than hang the resolver. */
 const RESOLVE_TIMEOUT_MS = 10_000;
 
-/** A polycentric identity key string is `<keyType>_<hexBytes>` (publicKeyToString). */
-const IDENTITY_KEY_PATTERN = /^\d+_[0-9a-fA-F]+$/;
+const HEX_CHARS = new Set('0123456789abcdefABCDEF');
+
+/**
+ * Whether `s` is a polycentric identity string.
+ */
+function isIdentityKey(s: string): boolean {
+  return s.length > 0 && Array.from(s).every((c) => HEX_CHARS.has(c));
+}
 
 interface Jrd {
   subject?: string;
@@ -116,7 +122,7 @@ export async function resolveWebFinger(handle: string): Promise<string | null> {
   }
 
   const identity = jrd.properties?.[WEBFINGER_PROP_IDENTITY];
-  if (!identity || !IDENTITY_KEY_PATTERN.test(identity)) {
+  if (!identity || !isIdentityKey(identity)) {
     return null;
   }
 
