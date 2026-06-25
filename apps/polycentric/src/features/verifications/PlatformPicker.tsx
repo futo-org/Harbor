@@ -9,6 +9,7 @@ import Animated, {
   FadeOutDown,
   useAnimatedRef,
 } from 'react-native-reanimated';
+import { CopyLinkComponent } from './CopyLinkComponent';
 import { SelectChip } from './SelectChip';
 import { useScrollIntoView } from './VerificationsScrollContext';
 
@@ -192,21 +193,7 @@ export function PlatformPicker() {
           />
 
           {/* Loop-back link the user adds to their profile. */}
-          <View
-            style={[
-              Atoms.p_md,
-              Atoms.rounded_md,
-              { backgroundColor: theme.palette.neutral_100 },
-            ]}
-          >
-            <Text
-              variant="body"
-              style={[theme.atoms.text, { fontFamily: 'monospace' }]}
-              selectable={true}
-            >
-              {loopbackLink}
-            </Text>
-          </View>
+          <CopyLinkComponent link={loopbackLink} />
           <Text variant="small" style={theme.atoms.text_neutral_medium}>
             {selected.generic
               ? 'Add this link anywhere on your website.'
