@@ -4,46 +4,60 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { useRef, useState } from 'react';
+import { type Ref, useCallback, useState } from 'react';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, {
+  type AnimatedRef,
+  measure,
+  scrollTo,
+  useAnimatedRef,
+  useScrollOffset,
+} from 'react-native-reanimated';
+import { scheduleOnUI } from 'react-native-worklets';
 import { CreateClaim } from './CreateClaim';
 import { SelectChip } from './SelectChip';
+import { VerificationsScrollProvider } from './VerificationsScrollContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Mode = 'create' | 'verify';
+
+const MARGIN = Spacing.lg;
 
 export default function VerificationsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>();
-  const scrollRef = useRef<Animated.ScrollView>(null);
-  // Set when something below the fold is revealed; the scroll happens once the
-  // content actually grows (see onContentSizeChange), so we measure the new
-  // height rather than the old one.
-  const pendingScroll = useRef(false);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollOffset = useScrollOffset(scrollRef);
 
   const select = (next: Mode) =>
     setMode((prev) => (prev === next ? undefined : next));
 
-  const scrollToBottom = () => {
-    pendingScroll.current = true;
-  };
+  // Align a revealed form section to the top of the viewport.
+  const scrollIntoView = useCallback(
+    (target: AnimatedRef<Animated.View>) => {
+      scheduleOnUI(() => {
+        'worklet';
+        const el = measure(target);
+        const scroll = measure(scrollRef);
+        if (el === null || scroll === null) return;
+        const y = scrollOffset.value + el.pageY - scroll.pageY - MARGIN;
+        scrollTo(scrollRef, 0, Math.max(0, y), true);
+      });
+    },
+    [scrollRef, scrollOffset],
+  );
 
   return (
-    <Screen>
+    <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
         <ScrollView
-          ref={scrollRef}
+          // useAnimatedRef works as a ref at runtime but isn't typed as one.
+          ref={scrollRef as Ref<Animated.ScrollView>}
           HeaderComponent={() => (
             <Topbar title="Verifications" left={isWeb ? <></> : undefined} />
           )}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => {
-            if (!pendingScroll.current) return;
-            pendingScroll.current = false;
-            scrollRef.current?.scrollToEnd({ animated: true });
-          }}
         >
           <View
             style={[
@@ -72,7 +86,9 @@ export default function VerificationsScreen() {
             </View>
 
             {mode === 'create' && (
-              <CreateClaim onPlatformSelected={scrollToBottom} />
+              <VerificationsScrollProvider value={scrollIntoView}>
+                <CreateClaim />
+              </VerificationsScrollProvider>
             )}
 
             {mode === 'verify' && (

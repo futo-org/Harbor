@@ -2,10 +2,15 @@ import { Button, Text, TextInput } from '@/src/common/components';
 import { Atoms, PaletteColorToken, useTheme } from '@/src/common/theme';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useRef, useState } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  useAnimatedRef,
+} from 'react-native-reanimated';
 import { SelectChip } from './SelectChip';
+import { useScrollIntoView } from './VerificationsScrollContext';
 
 // A platform a claim can be verified against. `logo` matches SelectChip's icon
 // render-prop; `color` tints the logo and its chip; `location` is where the
@@ -105,13 +110,15 @@ function isProfileUrl(value: string): boolean {
 }
 
 // Pick a platform, then link the account by pasting a pairing token into it.
-// `onSelect` fires after a platform is chosen so the parent can scroll the
-// freshly revealed link form into view.
-export function PlatformPicker({ onSelect }: { onSelect?: () => void }) {
+export function PlatformPicker() {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const [selected, setSelected] = useState<Platform>();
   const [profileUrl, setProfileUrl] = useState('');
+
+  const scrollIntoView = useScrollIntoView();
+  const linkFormRef = useAnimatedRef<Animated.View>();
+  const pendingScroll = useRef(false);
 
   // Loop-back link the user adds to their profile to prove ownership.
   const loopbackLink = identityKey
@@ -121,7 +128,13 @@ export function PlatformPicker({ onSelect }: { onSelect?: () => void }) {
   const onSelectPlatform = (platform: Platform) => {
     setSelected(platform);
     setProfileUrl('');
-    onSelect?.();
+    pendingScroll.current = true;
+  };
+
+  const onLinkFormLayout = () => {
+    if (!pendingScroll.current) return;
+    pendingScroll.current = false;
+    scrollIntoView(linkFormRef);
   };
 
   return (
@@ -153,9 +166,11 @@ export function PlatformPicker({ onSelect }: { onSelect?: () => void }) {
 
       {selected && (
         <Animated.View
+          ref={linkFormRef}
           key={selected.name}
           entering={FadeInDown.duration(200)}
           exiting={FadeOutDown.duration(150)}
+          onLayout={onLinkFormLayout}
           style={[Atoms.gap_sm, Atoms.mt_sm]}
         >
           <Text
@@ -187,6 +202,7 @@ export function PlatformPicker({ onSelect }: { onSelect?: () => void }) {
             <Text
               variant="body"
               style={[theme.atoms.text, { fontFamily: 'monospace' }]}
+              selectable={true}
             >
               {loopbackLink}
             </Text>
