@@ -2,13 +2,59 @@ use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
 use sea_orm::FromQueryResult;
-use sea_orm::sea_query::{Expr, IntoCondition};
+use sea_orm::entity::prelude::*;
+use sea_orm::sea_query::{Expr, IntoCondition, IntoValueTuple};
 use sea_orm::*;
+use serde::Deserialize;
+use serde::Serialize;
 
 pub use crate::service::events::tombstone::EventWithContentRow;
+use crate::service::feeds::util::PageCursor;
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
+
+/// Cursor type for paginated feed queries.
+#[derive(Clone, Serialize, Deserialize)]
+pub enum FeedCursor {
+    /// Marks the start of the feed.
+    /// Forward queries return the first items and backward queries return nothing.
+    Start,
+    /// Marks somewhere in the feed.
+    /// Forward queries return items following this point and
+    /// backward queries return items preceding this point.
+    Mid(FeedMarker),
+    /// Marks the end of the feed.
+    /// Forward queries return nothing and backward queries return the last items.
+    End,
+}
+
+/// Exclusive lowerbound/upperbound for a feed query
+#[derive(Clone, Serialize, Deserialize)]
+pub struct FeedMarker {
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub id: i64,
+}
+
+impl PageCursor for FeedCursor {}
+
+impl FeedMarker {
+    /// Get the database columns to compare against a cursor as a rust tuple.
+    fn cols() -> impl IdentityOf<EventModel::Entity> {
+        (EventModel::Column::CreatedAt, EventModel::Column::Id)
+    }
+
+    /// Get a rust tuple of this cursor's fields.
+    fn values(&self) -> impl IntoValueTuple {
+        (self.created_at, self.id)
+    }
+}
+
+/// Retrieve items in the feed relative to a cursor.
+pub enum CursorFilter {
+    Forward(FeedCursor),
+    Backward(FeedCursor),
+}
 
 pub struct Query;
 
@@ -18,15 +64,9 @@ impl Query {
     pub async fn list_feed_events(
         db: &DbConn,
         limit: u64,
+        cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        EventModel::Entity::find()
-            .select_also(ContentModel::Entity)
-            .join(JoinType::LeftJoin, content_join())
-            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .order_by_desc(EventModel::Column::CreatedAt)
-            .limit(limit)
-            .all(db)
-            .await
+        Self::do_list_feed_events(db, limit, None, cursor_filter).await
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
@@ -36,20 +76,64 @@ impl Query {
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
+        cursor_filter: &Option<CursorFilter>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        if identities.is_empty() {
-            return Ok(Vec::new());
-        }
+        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
+            .await
+    }
 
-        EventModel::Entity::find()
+    async fn do_list_feed_events(
+        db: &DbConn,
+        limit: u64,
+        only_identities: Option<Vec<String>>,
+        cursor_filter: &Option<CursorFilter>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let cursor_filter = cursor_filter
+            .as_ref()
+            .unwrap_or(&CursorFilter::Forward(FeedCursor::Start));
+
+        let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
             .join(JoinType::LeftJoin, content_join())
-            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(EventModel::Column::Identity.is_in(identities))
-            .order_by_desc(EventModel::Column::CreatedAt)
-            .limit(limit)
-            .all(db)
-            .await
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION));
+
+        if let Some(identities) = only_identities {
+            if identities.is_empty() {
+                return Ok(Vec::new());
+            }
+
+            query =
+                query.filter(EventModel::Column::Identity.is_in(identities));
+        }
+
+        let mut sea_cursor = query.cursor_by(FeedMarker::cols());
+        sea_cursor.desc();
+
+        match cursor_filter {
+            CursorFilter::Forward(cur) => {
+                match cur {
+                    FeedCursor::Start => {}
+                    FeedCursor::Mid(marker) => {
+                        sea_cursor.after(marker.values());
+                    }
+                    FeedCursor::End => return Ok(vec![]),
+                }
+
+                sea_cursor.first(limit);
+            }
+            CursorFilter::Backward(cur) => {
+                match cur {
+                    FeedCursor::Start => return Ok(vec![]),
+                    FeedCursor::Mid(marker) => {
+                        sea_cursor.before(marker.values());
+                    }
+                    FeedCursor::End => {}
+                }
+                sea_cursor.last(limit);
+            }
+        }
+
+        sea_cursor.all(db).await
     }
 
     /// Bulk-fetch events (with joined content) by their EventKey

@@ -17,6 +17,8 @@ pub enum QueryStatus {
 pub struct QueryResult<T> {
     pub data: Option<T>,
     pub status: QueryStatus,
+    pub successful_servers: usize,
+    pub pending_servers: usize,
 }
 
 /// Convert a query payload into the FFI-facing `Vec<u8>` representation
@@ -35,6 +37,8 @@ impl ToFfiBytes for Vec<u8> {
 pub struct QueryResultFfi {
     pub data: Option<Vec<u8>>,
     pub status: QueryStatus,
+    pub successful_servers: u32,
+    pub pending_servers: u32,
 }
 
 #[uniffi::export(with_foreign)]
@@ -63,6 +67,8 @@ where
                 next.next(QueryResultFfi {
                     data: result.data.as_ref().map(ToFfiBytes::to_ffi_bytes),
                     status: result.status,
+                    successful_servers: result.successful_servers as u32,
+                    pending_servers: result.pending_servers as u32,
                 });
             },
             move |message| error.error(message),

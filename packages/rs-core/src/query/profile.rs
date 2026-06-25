@@ -112,6 +112,8 @@ pub fn get_profile(
             subscriber.next(QueryResult {
                 data: Some(bytes.clone()),
                 status: QueryStatus::Success,
+                successful_servers: 0,
+                pending_servers: 0,
             });
             subscriber.complete();
         });
@@ -181,6 +183,8 @@ pub fn get_profile(
                 next_subscriber.next(QueryResult {
                     data,
                     status: r.status,
+                    successful_servers: r.successful_servers,
+                    pending_servers: r.pending_servers,
                 });
             },
             move |msg: String| error_subscriber.error(msg),

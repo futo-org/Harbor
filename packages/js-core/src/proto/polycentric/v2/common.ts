@@ -11,25 +11,62 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
+ * Returned by paginated feeds to aid in future queries.
+ *
  * @generated from protobuf message polycentric.v2.PageInfo
  */
 export interface PageInfo {
     /**
-     * @generated from protobuf field: string end_cursor = 1
+     * Opaque string that can be included in a request to the server to receive
+     * the previous page of data.
+     *
+     * @generated from protobuf field: string start_cursor = 1
+     */
+    startCursor: string;
+    /**
+     * Opaque string that can be included in a request to the server to receive
+     * the next page of data.
+     *
+     * @generated from protobuf field: string end_cursor = 2
      */
     endCursor: string;
     /**
-     * @generated from protobuf field: bool has_next_page = 2
-     */
-    hasNextPage: boolean;
-    /**
+     * True if there is likely more data preceding `start_cursor`.
+     *
      * @generated from protobuf field: bool has_previous_page = 3
      */
     hasPreviousPage: boolean;
     /**
-     * @generated from protobuf field: string start_cursor = 4
+     * True if there is likely more data following `end_cursor`.
+     *
+     * @generated from protobuf field: bool has_next_page = 4
      */
-    startCursor: string;
+    hasNextPage: boolean;
+}
+/**
+ * Sent by clients to servers for fetching paginated data.
+ *
+ * @generated from protobuf message polycentric.v2.PageParams
+ */
+export interface PageParams {
+    /**
+     * Max events to return.
+     *
+     * @generated from protobuf field: optional int32 limit = 1
+     */
+    limit?: number;
+    /**
+     * Request data preceding this start cursor in the feed.
+     *
+     * @generated from protobuf field: optional string backward_token = 2
+     */
+    backwardToken?: string;
+    /**
+     * Request data following this end cursor in the feed.
+     *
+     * @generated from protobuf field: optional string forward_token = 3
+     */
+    forwardToken?: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.ContentDigest
@@ -63,18 +100,18 @@ export enum ContentDigestType {
 class PageInfo$Type extends MessageType<PageInfo> {
     constructor() {
         super("polycentric.v2.PageInfo", [
-            { no: 1, name: "end_cursor", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "has_next_page", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 1, name: "start_cursor", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "end_cursor", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "has_previous_page", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 4, name: "start_cursor", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 4, name: "has_next_page", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<PageInfo>): PageInfo {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.endCursor = "";
-        message.hasNextPage = false;
-        message.hasPreviousPage = false;
         message.startCursor = "";
+        message.endCursor = "";
+        message.hasPreviousPage = false;
+        message.hasNextPage = false;
         if (value !== undefined)
             reflectionMergePartial<PageInfo>(this, message, value);
         return message;
@@ -84,17 +121,17 @@ class PageInfo$Type extends MessageType<PageInfo> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string end_cursor */ 1:
-                    message.endCursor = reader.string();
+                case /* string start_cursor */ 1:
+                    message.startCursor = reader.string();
                     break;
-                case /* bool has_next_page */ 2:
-                    message.hasNextPage = reader.bool();
+                case /* string end_cursor */ 2:
+                    message.endCursor = reader.string();
                     break;
                 case /* bool has_previous_page */ 3:
                     message.hasPreviousPage = reader.bool();
                     break;
-                case /* string start_cursor */ 4:
-                    message.startCursor = reader.string();
+                case /* bool has_next_page */ 4:
+                    message.hasNextPage = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -108,18 +145,18 @@ class PageInfo$Type extends MessageType<PageInfo> {
         return message;
     }
     internalBinaryWrite(message: PageInfo, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string end_cursor = 1; */
+        /* string start_cursor = 1; */
+        if (message.startCursor !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.startCursor);
+        /* string end_cursor = 2; */
         if (message.endCursor !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.endCursor);
-        /* bool has_next_page = 2; */
-        if (message.hasNextPage !== false)
-            writer.tag(2, WireType.Varint).bool(message.hasNextPage);
+            writer.tag(2, WireType.LengthDelimited).string(message.endCursor);
         /* bool has_previous_page = 3; */
         if (message.hasPreviousPage !== false)
             writer.tag(3, WireType.Varint).bool(message.hasPreviousPage);
-        /* string start_cursor = 4; */
-        if (message.startCursor !== "")
-            writer.tag(4, WireType.LengthDelimited).string(message.startCursor);
+        /* bool has_next_page = 4; */
+        if (message.hasNextPage !== false)
+            writer.tag(4, WireType.Varint).bool(message.hasNextPage);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -130,6 +167,66 @@ class PageInfo$Type extends MessageType<PageInfo> {
  * @generated MessageType for protobuf message polycentric.v2.PageInfo
  */
 export const PageInfo = new PageInfo$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class PageParams$Type extends MessageType<PageParams> {
+    constructor() {
+        super("polycentric.v2.PageParams", [
+            { no: 1, name: "limit", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "backward_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "forward_token", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PageParams>): PageParams {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<PageParams>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PageParams): PageParams {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional int32 limit */ 1:
+                    message.limit = reader.int32();
+                    break;
+                case /* optional string backward_token */ 2:
+                    message.backwardToken = reader.string();
+                    break;
+                case /* optional string forward_token */ 3:
+                    message.forwardToken = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PageParams, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional int32 limit = 1; */
+        if (message.limit !== undefined)
+            writer.tag(1, WireType.Varint).int32(message.limit);
+        /* optional string backward_token = 2; */
+        if (message.backwardToken !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.backwardToken);
+        /* optional string forward_token = 3; */
+        if (message.forwardToken !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.forwardToken);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.PageParams
+ */
+export const PageParams = new PageParams$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ContentDigest$Type extends MessageType<ContentDigest> {
     constructor() {

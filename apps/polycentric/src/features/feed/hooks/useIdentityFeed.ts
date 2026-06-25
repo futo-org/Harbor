@@ -1,13 +1,17 @@
 import { useMemo } from 'react';
-import { Query, QueryStatus, v2 } from '@polycentric/react-native';
-import { decodeFeedItems } from '@/src/common/lib/polycentric-hooks';
-import { type FeedHookResult, NOOP } from './types';
+import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
+import { type FeedHookResult } from './types';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
+import {
+  decodeFeedQueryResult,
+  extractFeedToken,
+  shouldExtend,
+} from '@/src/common/lib/polycentric-hooks';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
-  _limit?: number,
+  limit?: number,
   options?: { getIsAborted?: () => boolean; enabled?: boolean },
 ): FeedHookResult {
   const enabled = options?.enabled ?? true;
@@ -15,23 +19,29 @@ export function useIdentityFeed(
 
   const query = useQuery(
     feedQueryKeys.identity(identity),
-    new Query.GetIdentityFeed({ identity }),
+    (status, data) => {
+      const forwardToken = extractFeedToken(status, data);
+      return new Query.GetIdentityFeed({ identity, limit, forwardToken });
+    },
+    { updateMode: UpdateMode.Merge },
+    enabled,
   );
 
-  const items = useMemo(() => {
-    if (!query.data) {
-      return [];
-    }
-    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
-    return decodeFeedItems(response);
-  }, [query.data]);
+  const [items, hasNext] = useMemo(
+    () => decodeFeedQueryResult(query.data),
+    [query.data],
+  );
 
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
     error: query.error ? new Error(query.error) : null,
-    loadMore: NOOP,
-    hasMore: false,
+    loadMore: async () => {
+      if (shouldExtend(hasNext, query)) {
+        query.extend();
+      }
+    },
+    hasMore: hasNext,
     refresh: query.refresh,
   };
 }

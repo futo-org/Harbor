@@ -141,6 +141,7 @@ function WebFeedViewer<T>({
   );
   const items = (data as readonly T[] | null | undefined) ?? [];
   const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
+  const [atEnd, setAtEnd] = useState(false);
 
   // Keep parity with native `FlashList` by calling `onLoad`.
   const hasFiredOnLoad = useRef(false);
@@ -163,20 +164,27 @@ function WebFeedViewer<T>({
     if (!node || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        setVisibleCount((c) => {
-          // First grow the local window; only delegate to the
-          // consumer's onEndReached once we've exhausted the data.
-          if (c < items.length) return c + WEB_PAGE_SIZE;
-          onEndReached?.();
-          return c;
-        });
+        const intersecting = entries.some((e) => e.isIntersecting);
+        setAtEnd(intersecting);
+        if (!intersecting) return;
+        // Grow the local window; the effect below delegates to the
+        // consumer's onEndReached once we've exhausted the data.
+        setVisibleCount((c) => (c < items.length ? c + WEB_PAGE_SIZE : c));
       },
       { rootMargin: '400px' },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [onEndReached, items.length]);
+  }, [items.length]);
+
+  // Fetch more from the consumer once the local window is exhausted and
+  // the sentinel is in view. Kept out of the setVisibleCount updater so
+  // we never trigger a parent setState during render.
+  useEffect(() => {
+    if (atEnd && visibleCount >= items.length) {
+      onEndReached?.();
+    }
+  }, [atEnd, visibleCount, items.length, onEndReached]);
 
   const isEmpty = items.length === 0;
   const visibleItems = isEmpty ? items : items.slice(0, visibleCount);

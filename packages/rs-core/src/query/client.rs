@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
@@ -20,10 +21,22 @@ pub enum FetchMode {
     OfflineOnly,
 }
 
+/// Specifies how cached data and newly fetched data should be handled
+/// after fetching.
+#[derive(Clone, Copy, Default, Debug, uniffi::Enum)]
+pub enum UpdateMode {
+    /// Data we fetched from the remote replaces any cached data.
+    #[default]
+    Replace,
+    /// Data we fetched from the remote is merged with any cached data.
+    Merge,
+}
+
 /// Options for the query such as the fetch mode or a list of servers
 #[derive(Clone, Debug, Default, uniffi::Record)]
 pub struct QueryOpts {
     pub fetch_mode: Option<FetchMode>,
+    pub update_mode: Option<UpdateMode>,
     /// Optional list of servers the query should call. `None` uses
     /// `client.servers()`.
     pub servers: Option<Vec<String>>,
@@ -93,17 +106,105 @@ pub type QueryKey = Vec<String>;
 /// (subscriber, pending count) is local to each subscribe call.
 pub type QueryStateHandle<T> = Arc<Mutex<QueryState<T>>>;
 
+/// Contains all of the per-server info we need in the query state.
+pub struct QueryResponseInfo<T> {
+    response: T,
+    epoch: u64,
+}
+
+impl<T> QueryResponseInfo<T> {
+    /// Update this server's state info with newly received data.
+    pub fn update(
+        mut self,
+        response: T,
+        epoch: u64,
+        merge_fn: &MergeFn<T>,
+        client: &Arc<Mutex<PolycentricClient>>,
+        update_mode: UpdateMode,
+    ) -> Self {
+        match update_mode {
+            UpdateMode::Replace => {
+                // Only replace with responses from a newer fan-out
+                if self.epoch >= epoch {
+                    return self;
+                }
+
+                self.response = response;
+                self.epoch = epoch;
+            }
+            UpdateMode::Merge => {
+                self.response = merge_fn(&[self.response, response], client);
+                self.epoch = max(self.epoch, epoch);
+            }
+        }
+
+        self
+    }
+}
+
 /// Per-key cache of each server's most-recent successful response.
 pub struct QueryState<T> {
     /// Each server's most-recent successful response, keyed by
     /// `server_url`.
-    pub data: HashMap<String, T>,
+    pub data: HashMap<String, QueryResponseInfo<T>>,
+
+    /// Incrementing integer for each fan-out for this state instance.
+    /// Prevents a slow server from overriding data from a newer fan-out
+    /// with a response that arrives really late.
+    pub epoch: u64,
+}
+
+impl<T> Default for QueryState<T> {
+    /// Empty query state with no ongoing fan-out.
+    fn default() -> Self {
+        Self {
+            data: HashMap::new(),
+            epoch: 0,
+        }
+    }
 }
 
 impl<T> QueryState<T> {
-    fn new() -> Self {
-        Self {
-            data: HashMap::new(),
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Start a new fan-out epoch.
+    pub fn next_fanout(&mut self) -> u64 {
+        self.epoch += 1;
+        self.epoch
+    }
+
+    /// Update the query state with new newly received data.
+    pub fn update(
+        &mut self,
+        server: &str,
+        value: T,
+        epoch: u64,
+        merge_fn: &MergeFn<T>,
+        client: &Arc<Mutex<PolycentricClient>>,
+        update_mode: UpdateMode,
+    ) {
+        if let Some((server, mut info)) = self.data.remove_entry(server) {
+            info = info.update(value, epoch, merge_fn, client, update_mode);
+            self.data.insert(server, info);
+        } else {
+            self.data.insert(
+                server.to_string(),
+                QueryResponseInfo {
+                    response: value,
+                    epoch,
+                },
+            );
+        }
+    }
+
+    /// Derive the query status from the current state data.
+    pub fn status(&self, pending: usize) -> QueryStatus {
+        match (pending == 0, self.data.is_empty()) {
+            (true, true) => QueryStatus::Error,
+            (true, false) => QueryStatus::Success,
+            (false, _) => QueryStatus::Loading,
         }
     }
 }
@@ -111,14 +212,16 @@ impl<T> QueryState<T> {
 /// Reduce the per-server cache into a single emitted value via
 /// `merge_fn`. Returns `None` when no server has responded yet.
 fn compute_merged<T: Clone>(
-    data: &HashMap<String, T>,
+    data: &HashMap<String, QueryResponseInfo<T>>,
     merge_fn: &MergeFn<T>,
     client: &Arc<Mutex<PolycentricClient>>,
 ) -> Option<T> {
     if data.is_empty() {
         return None;
     }
-    let values: Vec<T> = data.values().cloned().collect();
+
+    let values: Vec<T> = data.values().map(|info| info.response.clone()).collect();
+
     Some(merge_fn(&values, client))
 }
 
@@ -173,12 +276,17 @@ where
             .as_ref()
             .and_then(|o| o.fetch_mode)
             .unwrap_or(FetchMode::Default);
+        let update_mode = opts
+            .as_ref()
+            .and_then(|opts| opts.update_mode)
+            .unwrap_or_default();
         let servers = opts.and_then(|o| o.servers);
 
         Observable::new(move |subscriber| {
             if subscriber.is_closed() {
                 return;
             }
+
             let subscriber = Arc::new(subscriber);
 
             let state = get_or_create_state(&queries, &query_key);
@@ -199,6 +307,7 @@ where
             } else {
                 Vec::new()
             };
+
             let will_fetch = needs_fetch && !target_servers.is_empty();
 
             if cached.is_some() {
@@ -209,6 +318,8 @@ where
                     } else {
                         QueryStatus::Success
                     },
+                    successful_servers: 0,
+                    pending_servers: if will_fetch { target_servers.len() } else { 0 },
                 });
             }
 
@@ -220,6 +331,7 @@ where
             spawn_fanout(
                 state,
                 target_servers,
+                update_mode,
                 query_fn.clone(),
                 merge_fn.clone(),
                 client.clone(),
@@ -256,15 +368,17 @@ fn get_or_create_state<T>(
 where
     T: Send + Sync + 'static,
 {
+    let make_new_state = || Arc::new(Mutex::new(QueryState::new()));
+
     if let Some(query_key) = query_key {
         queries
             .lock()
             .unwrap()
             .entry(query_key.clone())
-            .or_insert_with(|| Arc::new(Mutex::new(QueryState::new())))
+            .or_insert_with(make_new_state)
             .clone()
     } else {
-        Arc::new(Mutex::new(QueryState::new()))
+        make_new_state()
     }
 }
 
@@ -274,6 +388,7 @@ where
 fn spawn_fanout<T>(
     state: QueryStateHandle<T>,
     servers: Vec<String>,
+    update_mode: UpdateMode,
     query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
     client: Arc<Mutex<PolycentricClient>>,
@@ -281,52 +396,66 @@ fn spawn_fanout<T>(
 ) where
     T: Clone + Send + Sync + 'static,
 {
+    // Initialize fan-out state
+    let epoch = {
+        let mut state = state.lock().unwrap();
+        state.next_fanout()
+    };
+
     let pending = Arc::new(AtomicUsize::new(servers.len()));
+    let successful = Arc::new(AtomicUsize::new(0));
 
     for server_url in servers {
+        // Copy any state we need for each server's query task
         let state = state.clone();
         let query_fn = query_fn.clone();
         let merge_fn = merge_fn.clone();
         let client = client.clone();
         let pending = pending.clone();
+        let successful = successful.clone();
         let subscriber = subscriber.clone();
 
         spawn(async move {
+            // Do the query
             let result = query_fn(server_url.clone()).await;
 
+            // Lock the query state mutex and do what we need with it
             let (snapshot, error_msg, is_last) = {
                 let mut s = state.lock().unwrap();
-                let remaining = pending.fetch_sub(1, Ordering::SeqCst) - 1;
-                let is_last = remaining == 0;
+
+                // Update state
+                let pending_servers = pending.fetch_sub(1, Ordering::SeqCst) - 1;
+
+                let successful_servers = if result.is_ok() {
+                    successful.fetch_add(1, Ordering::SeqCst) + 1
+                } else {
+                    successful.load(Ordering::SeqCst)
+                };
 
                 let error_msg = match result {
                     Ok(value) => {
-                        s.data.insert(server_url, value);
+                        s.update(&server_url, value, epoch, &merge_fn, &client, update_mode);
                         None
                     }
                     Err(msg) => Some(msg),
                 };
 
-                let status = if is_last {
-                    if s.data.is_empty() {
-                        QueryStatus::Error
-                    } else {
-                        QueryStatus::Success
-                    }
-                } else {
-                    QueryStatus::Loading
+                // Gather results
+                let is_last = pending_servers == 0;
+
+                let data = compute_merged(&s.data, &merge_fn, &client);
+                let status = s.status(pending_servers);
+                let snapshot = QueryResult {
+                    data,
+                    status,
+                    successful_servers,
+                    pending_servers,
                 };
 
-                (
-                    QueryResult {
-                        data: compute_merged(&s.data, &merge_fn, &client),
-                        status,
-                    },
-                    error_msg,
-                    is_last,
-                )
+                (snapshot, error_msg, is_last)
             };
 
+            // Publish results
             if subscriber.is_closed() {
                 return;
             }

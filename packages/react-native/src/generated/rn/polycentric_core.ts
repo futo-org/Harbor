@@ -347,8 +347,8 @@ const FfiConverterTypeGetEventArgs = (() => {
 export type GetExploreFeedArgs = {
   identity?: string;
   limit?: number;
-  beforeToken?: string;
-  afterToken?: string;
+  backwardToken?: string;
+  forwardToken?: string;
 };
 
 /**
@@ -375,22 +375,22 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
       return {
         identity: FfiConverterOptionalString.read(from),
         limit: FfiConverterOptionalInt32.read(from),
-        beforeToken: FfiConverterOptionalString.read(from),
-        afterToken: FfiConverterOptionalString.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterOptionalString.write(value.identity, into);
       FfiConverterOptionalInt32.write(value.limit, into);
-      FfiConverterOptionalString.write(value.beforeToken, into);
-      FfiConverterOptionalString.write(value.afterToken, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterOptionalString.allocationSize(value.identity) +
         FfiConverterOptionalInt32.allocationSize(value.limit) +
-        FfiConverterOptionalString.allocationSize(value.beforeToken) +
-        FfiConverterOptionalString.allocationSize(value.afterToken)
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
       );
     }
   }
@@ -400,8 +400,8 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
 export type GetFollowingFeedArgs = {
   followerIdentity: string;
   limit?: number;
-  beforeToken?: string;
-  afterToken?: string;
+  backwardToken?: string;
+  forwardToken?: string;
 };
 
 /**
@@ -429,22 +429,22 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
       return {
         followerIdentity: FfiConverterString.read(from),
         limit: FfiConverterOptionalInt32.read(from),
-        beforeToken: FfiConverterOptionalString.read(from),
-        afterToken: FfiConverterOptionalString.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterString.write(value.followerIdentity, into);
       FfiConverterOptionalInt32.write(value.limit, into);
-      FfiConverterOptionalString.write(value.beforeToken, into);
-      FfiConverterOptionalString.write(value.afterToken, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterString.allocationSize(value.followerIdentity) +
         FfiConverterOptionalInt32.allocationSize(value.limit) +
-        FfiConverterOptionalString.allocationSize(value.beforeToken) +
-        FfiConverterOptionalString.allocationSize(value.afterToken)
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
       );
     }
   }
@@ -454,8 +454,8 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
 export type GetIdentityFeedArgs = {
   identity: string;
   limit?: number;
-  beforeToken?: string;
-  afterToken?: string;
+  backwardToken?: string;
+  forwardToken?: string;
 };
 
 /**
@@ -482,22 +482,22 @@ const FfiConverterTypeGetIdentityFeedArgs = (() => {
       return {
         identity: FfiConverterString.read(from),
         limit: FfiConverterOptionalInt32.read(from),
-        beforeToken: FfiConverterOptionalString.read(from),
-        afterToken: FfiConverterOptionalString.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterString.write(value.identity, into);
       FfiConverterOptionalInt32.write(value.limit, into);
-      FfiConverterOptionalString.write(value.beforeToken, into);
-      FfiConverterOptionalString.write(value.afterToken, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterString.allocationSize(value.identity) +
         FfiConverterOptionalInt32.allocationSize(value.limit) +
-        FfiConverterOptionalString.allocationSize(value.beforeToken) +
-        FfiConverterOptionalString.allocationSize(value.afterToken)
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
       );
     }
   }
@@ -814,10 +814,55 @@ const FfiConverterTypeFetchMode = (() => {
 })();
 
 /**
+ * Specifies how cached data and newly fetched data should be handled
+ * after fetching.
+ */
+export enum UpdateMode {
+  /**
+   * Data we fetched from the remote replaces any cached data.
+   */
+  Replace,
+  /**
+   * Data we fetched from the remote is merged with any cached data.
+   */
+  Merge,
+}
+
+const FfiConverterTypeUpdateMode = (() => {
+  const ordinalConverter = FfiConverterInt32;
+  type TypeName = UpdateMode;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      switch (ordinalConverter.read(from)) {
+        case 1:
+          return UpdateMode.Replace;
+        case 2:
+          return UpdateMode.Merge;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      switch (value) {
+        case UpdateMode.Replace:
+          return ordinalConverter.write(1, into);
+        case UpdateMode.Merge:
+          return ordinalConverter.write(2, into);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return ordinalConverter.allocationSize(0);
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * Options for the query such as the fetch mode or a list of servers
  */
 export type QueryOpts = {
   fetchMode?: FetchMode;
+  updateMode?: UpdateMode;
   /**
    * Optional list of servers the query should call. `None` uses
    * `client.servers()`.
@@ -846,16 +891,19 @@ const FfiConverterTypeQueryOpts = (() => {
     read(from: RustBuffer): TypeName {
       return {
         fetchMode: FfiConverterOptionalTypeFetchMode.read(from),
+        updateMode: FfiConverterOptionalTypeUpdateMode.read(from),
         servers: FfiConverterOptionalSequenceString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterOptionalTypeFetchMode.write(value.fetchMode, into);
+      FfiConverterOptionalTypeUpdateMode.write(value.updateMode, into);
       FfiConverterOptionalSequenceString.write(value.servers, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterOptionalTypeFetchMode.allocationSize(value.fetchMode) +
+        FfiConverterOptionalTypeUpdateMode.allocationSize(value.updateMode) +
         FfiConverterOptionalSequenceString.allocationSize(value.servers)
       );
     }
@@ -909,6 +957,8 @@ const FfiConverterTypeQueryStatus = (() => {
 export type QueryResultFfi = {
   data?: ArrayBuffer;
   status: QueryStatus;
+  successfulServers: number;
+  pendingServers: number;
 };
 
 /**
@@ -935,16 +985,22 @@ const FfiConverterTypeQueryResultFfi = (() => {
       return {
         data: FfiConverterOptionalBytes.read(from),
         status: FfiConverterTypeQueryStatus.read(from),
+        successfulServers: FfiConverterUInt32.read(from),
+        pendingServers: FfiConverterUInt32.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterOptionalBytes.write(value.data, into);
       FfiConverterTypeQueryStatus.write(value.status, into);
+      FfiConverterUInt32.write(value.successfulServers, into);
+      FfiConverterUInt32.write(value.pendingServers, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterOptionalBytes.allocationSize(value.data) +
-        FfiConverterTypeQueryStatus.allocationSize(value.status)
+        FfiConverterTypeQueryStatus.allocationSize(value.status) +
+        FfiConverterUInt32.allocationSize(value.successfulServers) +
+        FfiConverterUInt32.allocationSize(value.pendingServers)
       );
     }
   }
@@ -4141,6 +4197,11 @@ const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
 );
 
+// FfiConverter for UpdateMode | undefined
+const FfiConverterOptionalTypeUpdateMode = new FfiConverterOptional(
+  FfiConverterTypeUpdateMode
+);
+
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
@@ -4542,5 +4603,6 @@ export default Object.freeze({
     FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
     FfiConverterTypeSubscription,
+    FfiConverterTypeUpdateMode,
   },
 });

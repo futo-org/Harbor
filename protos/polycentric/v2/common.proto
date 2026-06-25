@@ -1,11 +1,28 @@
 syntax = "proto3";
 package polycentric.v2;
 
+// Returned by paginated feeds to aid in future queries.
 message PageInfo {
-  string end_cursor = 1;
-  bool has_next_page = 2;
+  // Opaque string that can be included in a request to the server to receive
+  // the previous page of data.
+  string start_cursor = 1;
+  // Opaque string that can be included in a request to the server to receive
+  // the next page of data.
+  string end_cursor = 2;
+  // True if there is likely more data preceding `start_cursor`.
   bool has_previous_page = 3;
-  string start_cursor = 4;
+  // True if there is likely more data following `end_cursor`.
+  bool has_next_page = 4;
+}
+
+// Sent by clients to servers for fetching paginated data.
+message PageParams {
+  // Max events to return.
+  optional int32 limit = 1;
+  // Request data preceding this start cursor in the feed.
+  optional string backward_token = 2;
+  // Request data following this end cursor in the feed.
+  optional string forward_token = 3;
 }
 
 enum ContentDigestType {
