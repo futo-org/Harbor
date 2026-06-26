@@ -21,8 +21,15 @@ export type QueryRef = {
   data: ArrayBuffer | undefined;
   status: QueryStatus;
   error: string | null;
+  // The number of servers from the latest fan-out that have returned a
+  // success response.
   successfulServers: number;
+  // The number of servers from the latest fan-out for which we are
+  // still awaiting a response.
   pendingServers: number | undefined;
+  // Set to true when `refresh()` is called and reset to false
+  // once any new data is received.
+  pendingRefresh: boolean;
 };
 
 type QueryArgs = {
@@ -56,6 +63,7 @@ const EMPTY_ENTRY: QueryRef = Object.freeze({
   error: null,
   successfulServers: 0,
   pendingServers: undefined,
+  pendingRefresh: false,
 });
 
 export const useQueryStore = create<QueryStoreState>((set, get) => {
@@ -68,7 +76,8 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         merged.status === prev.status &&
         merged.error === prev.error &&
         merged.successfulServers === prev.successfulServers &&
-        merged.pendingServers === prev.pendingServers
+        merged.pendingServers === prev.pendingServers &&
+        merged.pendingRefresh === prev.pendingRefresh
       ) {
         return {};
       }
@@ -101,6 +110,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
           status: result.status,
           successfulServers: result.successfulServers,
           pendingServers: result.pendingServers,
+          pendingRefresh: false,
         });
       },
       error(message) {
@@ -159,6 +169,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       sub.dispose();
       sub.args = next;
       sub.dispose = fetch(key, next);
+      updateQueryRef(key, { pendingRefresh: true });
     },
 
     extend(key, args) {
@@ -232,7 +243,8 @@ export function setQueryCache(
       merged.status === prev.status &&
       merged.error === prev.error &&
       merged.successfulServers === prev.successfulServers &&
-      merged.pendingServers === prev.pendingServers
+      merged.pendingServers === prev.pendingServers &&
+      merged.pendingRefresh === prev.pendingRefresh
     ) {
       return {};
     }

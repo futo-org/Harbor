@@ -7,7 +7,7 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult } from './types';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { invalidateQuery, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 
 export function useExploreFeed(options?: {
@@ -41,6 +41,7 @@ export function useExploreFeed(options?: {
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
+    isRefreshing: query.pendingRefresh,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
       if (shouldExtend(hasNext, query)) {
@@ -48,6 +49,8 @@ export function useExploreFeed(options?: {
       }
     },
     hasMore: hasNext,
-    refresh: query.refresh,
+    refresh: () => {
+      invalidateQuery(client, feedQueryKeys.explore(identity));
+    },
   };
 }
