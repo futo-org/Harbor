@@ -7,7 +7,7 @@ import { normalizeWebFingerAlias } from '@polycentric/react-native';
  * profile claims the alias back).
  *
  * Caching only verified pairs lets repeat navigations skip both the network
- * lookup and the profile round-trip. Both directions are stored together, so a
+ * lookup and the profile round-trip. Both directions are stored together, so an
  * alias->identity verification also satisfies a later identity->alias lookup
  * (and vice versa). Entries live for the app session only; a profile that later
  * changes its alias won't be reflected until restart.
