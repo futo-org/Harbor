@@ -631,7 +631,7 @@ importers:
         version: 2.24.6(@noble/hashes@2.2.0)(debug@4.4.3)
       metascraper:
         specifier: ^5.50.6
-        version: 5.50.6(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
       metascraper-description:
         specifier: ^5.50.6
         version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -9215,8 +9215,8 @@ packages:
     resolution: {integrity: sha512-SOPzvmhO4SRV7SzrEFhK+m6/8ZAqQeISaAudKr5qo1Mt4EZ7GJT7eWSqYECgPuXo7qGh6e60G5qomaEcIYpMKw==}
     engines: {node: '>= 22'}
 
-  metascraper@5.50.6:
-    resolution: {integrity: sha512-CAsa4/sDtDiDZHDY6x6JlCmCTFlerDoTc5B+gMvVP3WeispCmuTv7XzTdbMaFmoUjVfwFErqh1hSX1RCvgda5A==}
+  metascraper@5.51.1:
+    resolution: {integrity: sha512-7ZmGn0EBv0oNxwaaUuxeUge/GkpCfuuuMV6/0aXgfU4WQ60yJj+/u13A2tqSe0otQq640YkEXua90uKsAwlWdA==}
     engines: {node: '>= 22'}
 
   methods@1.1.2:
@@ -24581,11 +24581,11 @@ snapshots:
       - canvas
       - debug
 
-  metascraper@5.50.6(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.50.6(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
       cheerio: 1.2.0
-      debug-logfmt: 1.4.12(debug@4.4.3)
+      debug-logfmt: 1.4.13(debug@4.4.3)
       whoops: 5.1.2
     transitivePeerDependencies:
       - '@noble/hashes'
