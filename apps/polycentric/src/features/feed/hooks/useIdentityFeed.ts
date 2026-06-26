@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import { type FeedHookResult } from './types';
-import { invalidateQuery, useQuery } from '@/src/common/query/hooks/useQuery';
+import { useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 import {
   decodeFeedQueryResult,
   extractFeedToken,
   shouldExtend,
-  usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 
 export function useIdentityFeed(
@@ -15,7 +14,6 @@ export function useIdentityFeed(
   limit?: number,
   options?: { getIsAborted?: () => boolean; enabled?: boolean },
 ): FeedHookResult {
-  const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
   const identity = identityId ?? '';
 
@@ -37,7 +35,7 @@ export function useIdentityFeed(
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
-    isRefreshing: query.pendingRefresh,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
       if (shouldExtend(hasNext, query)) {
@@ -45,8 +43,6 @@ export function useIdentityFeed(
       }
     },
     hasMore: hasNext,
-    refresh: () => {
-      invalidateQuery(client, feedQueryKeys.identity(identity));
-    },
+    refresh: query.update,
   };
 }

@@ -34,6 +34,6 @@ export default function useListNotifications(): UseListNotificationsResult {
     items,
     isLoading: query.isLoading,
     error: query.error,
-    refresh: query.refresh,
+    refresh: query.update,
   };
 }

@@ -366,7 +366,7 @@ where
             // Clear cached server responses
             state.data.clear();
 
-            // Create a dummy replace epoch so that any pending requests have
+            // Create a dummy replace epoch so that any pending merge requests have
             // their responses discarded.
             state.next_fanout(UpdateMode::Replace);
         }

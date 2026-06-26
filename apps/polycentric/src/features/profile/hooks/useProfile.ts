@@ -55,7 +55,6 @@ export function useProfile(
     banner: decoded.banner,
     isLoading: query.isLoading,
     error: query.error ? new Error(query.error) : null,
-    // Force a network re-fetch regardless of the original `fetchMode`.
-    refresh: () => query.invalidate({ fetchMode: FetchMode.Default }),
+    refresh: query.pull,
   };
 }
