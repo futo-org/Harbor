@@ -26,7 +26,10 @@ pub async fn handle(
     ctx: &ServiceContext,
     req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
-    let common = feeds_pipeline::Params::from_req_params(&req.page_params)?;
+    let common = feeds_pipeline::Params::from_req_params(
+        &req.page_params,
+        req.omit_labels,
+    )?;
 
     let params = Params { common };
 
@@ -50,6 +53,7 @@ async fn fetch(
         &ctx.db,
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
+        &params.common.omit_labels,
     )
     .await
     .map_err(map_db_err)?;

@@ -8,7 +8,7 @@ use polycentric_common::models::collections;
 use sea_orm::{
     FromQueryResult,
     entity::prelude::*,
-    sea_query::{Expr, IntoCondition, IntoValueTuple},
+    sea_query::{Expr, IntoCondition, IntoValueTuple, Query as SeaQuery},
     *,
 };
 use serde::{Deserialize, Serialize};
@@ -62,26 +62,37 @@ pub struct Query;
 
 impl Query {
     /// Recent Feed events (with joined content) newest first,
-    /// including those that have been tombstoned.
+    /// including those that have been tombstoned. Events with a
+    /// moderation label in `omit_labels` are excluded.
     pub async fn list_feed_events(
         db: &DbConn,
         limit: u64,
         cursor_filter: &Option<CursorFilter>,
+        omit_labels: &[String],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, None, cursor_filter).await
+        Self::do_list_feed_events(db, limit, None, cursor_filter, omit_labels)
+            .await
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
     /// any of `identities`. Short-circuits with an empty Vec when
-    /// the identity list is empty.
+    /// the identity list is empty. Events with a moderation label
+    /// in `omit_labels` are excluded.
     pub async fn list_feed_events_by_identities(
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
         cursor_filter: &Option<CursorFilter>,
+        omit_labels: &[String],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
-            .await
+        Self::do_list_feed_events(
+            db,
+            limit,
+            Some(identities),
+            cursor_filter,
+            omit_labels,
+        )
+        .await
     }
 
     async fn do_list_feed_events(
@@ -89,6 +100,7 @@ impl Query {
         limit: u64,
         only_identities: Option<Vec<String>>,
         cursor_filter: &Option<CursorFilter>,
+        omit_labels: &[String],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let cursor_filter = cursor_filter
             .as_ref()
@@ -106,6 +118,11 @@ impl Query {
 
             query =
                 query.filter(EventModel::Column::Identity.is_in(identities));
+        }
+
+        // Drop any events with omitted labels before pagination
+        if !omit_labels.is_empty() {
+            query = query.filter(omit_feed_event_if_label_present(omit_labels));
         }
 
         let mut sea_cursor = query.cursor_by(FeedMarker::cols());
@@ -422,6 +439,60 @@ impl Query {
         );
         DescendantRef::find_by_statement(stmt).all(db).await
     }
+}
+
+/// Creates a sub-expression to include in a feed query which first selects all
+/// label events targeting any given feed event, then checks whether the label
+/// value is included in `omit_labels`, and will filter the feed event as
+/// appropriate. Caller must ensure `omit_labels` is not empty.
+fn omit_feed_event_if_label_present(omit_labels: &[String]) -> Expr {
+    let mut sub = SeaQuery::select();
+    sub.expr(Expr::val(1))
+        .from(ContentLabelModel::Entity)
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::EventKeyCollection,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Collection)),
+        )
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::EventKeyIdentity,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Identity)),
+        )
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::EventKeyPublicKeyType,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::PublicKeyType)),
+        )
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::EventKeyPublicKey,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::PublicKey)),
+        )
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::EventKeySequence,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Sequence)),
+        )
+        .and_where(
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::LabelValue,
+            ))
+            .is_in(omit_labels.iter().cloned()),
+        );
+
+    Expr::not_exists(sub)
 }
 
 /// Relation joining an event to its content row on (digest_type, digest_bytes).

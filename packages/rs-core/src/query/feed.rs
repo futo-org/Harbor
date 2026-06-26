@@ -351,6 +351,7 @@ pub fn get_identity_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
@@ -400,6 +401,7 @@ pub fn get_following_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
@@ -449,6 +451,7 @@ pub fn get_explore_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?

@@ -31,12 +31,14 @@ use tonic::Status;
 pub struct Params {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter>,
+    pub omit_labels: Vec<String>,
 }
 
 impl Params {
-    /// Extract values from the client request's page params.
+    /// Extract values from the client request's page params and `omit_labels` set.
     pub fn from_req_params(
         params: &Option<PageParams>,
+        omit_labels: Vec<String>,
     ) -> Result<Params, Status> {
         let limit = page_limit(params);
 
@@ -62,6 +64,7 @@ impl Params {
         Ok(Params {
             limit,
             cursor_filter,
+            omit_labels,
         })
     }
 }
