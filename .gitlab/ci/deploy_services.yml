@@ -221,7 +221,7 @@ scraper-deploy-manifest-production:
     - .scraper-deploy-workflow
     - .service-deploy-manifest
   variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast,inventory/polycentric-east/scraper.yml:polycentricwest
   needs:
     - scraper-deploy-image-production
 
@@ -230,6 +230,6 @@ scraper-deploy-manifest-staging:
     - .scraper-deploy-workflow
     - .service-deploy-manifest
   variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/app.yml:staging
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/scraper.yml:staging
   needs:
     - scraper-deploy-image-staging
