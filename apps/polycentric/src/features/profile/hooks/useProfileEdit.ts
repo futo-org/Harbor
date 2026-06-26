@@ -72,7 +72,7 @@ export function useProfileEdit(
       if (alias && alias !== original) {
         const resolved = await resolveWebFinger(alias);
         if (!resolved || resolved.toLowerCase() !== identityKey.toLowerCase()) {
-          setAliasError("This alias doesn't point to your profile.");
+          setAliasError("This alias isn't linked to your profile.");
           return false;
         }
       }
