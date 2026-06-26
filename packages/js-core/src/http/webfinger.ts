@@ -1,5 +1,5 @@
 /**
- * WebFinger (RFC 7033) resolution: maps an `acct` handle like `user@domain.com`
+ * WebFinger (RFC 7033) resolution: maps an `acct` alias like `user@domain.com`
  * to the polycentric identity it points at.
  */
 
@@ -24,7 +24,7 @@ interface Jrd {
   properties?: Record<string, string | null>;
 }
 
-// Conservative allow-list for a handle's local part — deliberately tighter than
+// Conservative allow-list for an alias's local part — deliberately tighter than
 // RFC 7565's `userpart` (which also permits `!$&'()*+,;=` and %-encoding):
 // letters, digits, dot, underscore, hyphen.
 const LOCAL_CHARS = new Set(
@@ -46,14 +46,14 @@ function isHostLabel(label: string): boolean {
 }
 
 /**
- * Parse a handle into its `acct` form and domain. Accepts `user@domain.com`
+ * Parse an alias into its `acct` form and domain. Accepts `user@domain.com`
  * with an optional leading `@`, validated with conservative allow-lists: the
  * local part is limited to letters/digits/`._-`, and the domain must be a
  * dotted hostname (two or more LDH labels). Returns null otherwise.
  */
-function parseHandle(handle: string): { acct: string; domain: string } | null {
+function parseAlias(alias: string): { acct: string; domain: string } | null {
   // Trim, then drop a single optional leading '@' (e.g. "@user@domain.com").
-  let acct = handle.trim();
+  let acct = alias.trim();
   if (acct.startsWith('@')) {
     acct = acct.slice(1);
   }
@@ -81,24 +81,24 @@ function parseHandle(handle: string): { acct: string; domain: string } | null {
 }
 
 /**
- * Canonicalise a handle for equality comparison: its parsed `acct`
- * (`local@domain`, no leading `@`), lowercased. Returns null when the handle is
+ * Canonicalise an alias for equality comparison: its parsed `acct`
+ * (`local@domain`, no leading `@`), lowercased. Returns null when the alias is
  * malformed.
  */
-export function normalizeWebFingerHandle(handle: string): string | null {
-  const parsed = parseHandle(handle);
+export function normalizeWebFingerAlias(alias: string): string | null {
+  const parsed = parseAlias(alias);
   return parsed ? parsed.acct.toLowerCase() : null;
 }
 
 /**
- * Resolve a WebFinger handle (`user@domain.com`) to a polycentric identity.
+ * Resolve a WebFinger alias (`user@domain.com`) to a polycentric identity.
  *
- * Returns null when the handle is malformed, the lookup fails (network error,
+ * Returns null when the alias is malformed, the lookup fails (network error,
  * timeout, non-2xx, unparseable body), or the domain's WebFinger document
  * carries no polycentric identity property.
  */
-export async function resolveWebFinger(handle: string): Promise<string | null> {
-  const parsed = parseHandle(handle);
+export async function resolveWebFinger(alias: string): Promise<string | null> {
+  const parsed = parseAlias(alias);
   if (!parsed) {
     return null;
   }

@@ -65,7 +65,7 @@ export function useProfileEdit(
     try {
       // Verify a non-empty alias actually points back to this identity before
       // committing — otherwise the saved alias would never verify on view, and
-      // we'd be publishing an unusable handle. An empty
+      // we'd be publishing an unusable alias. An empty
       // alias just clears it, no verification needed.
       const alias = webfingerAliasDraft.trim();
       const original = (profile.webfingerAlias ?? '').trim();

@@ -5,7 +5,7 @@ import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
 import {
   FetchMode,
-  normalizeWebFingerHandle,
+  normalizeWebFingerAlias,
   resolveWebFinger,
 } from '@polycentric/react-native';
 import {
@@ -30,10 +30,10 @@ import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 
-  // A WebFinger handle (user@domain) rather than a polycentric identity key —
+  // A WebFinger alias (user@domain) rather than a polycentric identity key —
   // resolve it to a key first.
   if (identityId?.includes('@')) {
-    return <WebFingerProfile handle={identityId} />;
+    return <WebFingerProfile alias={identityId} />;
   }
 
   return <IdentityProfile identityKey={identityId ?? null} />;
@@ -178,7 +178,7 @@ function ProfileScreenContent() {
 
 type WebFingerResolution =
   | { status: 'loading' }
-  // Resolved to a candidate identity, now confirming it claims `handle` back.
+  // Resolved to a candidate identity, now confirming it claims `alias` back.
   | { status: 'verifying'; identity: string }
   // Candidate confirmed; render its profile.
   | { status: 'verified'; identity: string }
@@ -186,19 +186,19 @@ type WebFingerResolution =
   | { status: 'not-found' };
 
 /**
- * Resolve a WebFinger handle (`user@domain`) to a polycentric identity, then
- * render the profile for it. The handle stays in the URL; resolution happens
+ * Resolve a WebFinger alias (`user@domain`) to a polycentric identity, then
+ * render the profile for it. The alias stays in the URL; resolution happens
  * in place rather than redirecting to the canonical `/[identityId]`.
  */
-function WebFingerProfile({ handle }: { handle: string }) {
+function WebFingerProfile({ alias }: { alias: string }) {
   const [resolution, setResolution] = useState<WebFingerResolution>({
     status: 'loading',
   });
 
   useEffect(() => {
-    // Fast path: skip the resolve + profile round-trip when this handle was
+    // Fast path: skip the resolve + profile round-trip when this alias was
     // already verified this session.
-    const cachedIdentity = getVerifiedIdentity(handle);
+    const cachedIdentity = getVerifiedIdentity(alias);
     if (cachedIdentity) {
       setResolution({ status: 'verified', identity: cachedIdentity });
       return;
@@ -208,7 +208,7 @@ function WebFingerProfile({ handle }: { handle: string }) {
     setResolution({ status: 'loading' });
     // resolveWebFinger resolves to null on any failure (it never rejects); the
     // catch is defensive so the loading state can't wedge.
-    void resolveWebFinger(handle)
+    void resolveWebFinger(alias)
       .then((result) => {
         if (cancelled) return;
         setResolution(
@@ -223,7 +223,7 @@ function WebFingerProfile({ handle }: { handle: string }) {
     return () => {
       cancelled = true;
     };
-  }, [handle]);
+  }, [alias]);
 
   // Load the candidate's profile to read the alias it claims for itself.
   // Fetched over the network so the check doesn't pass/fail on a stale cache.
@@ -237,35 +237,35 @@ function WebFingerProfile({ handle }: { handle: string }) {
     // Both sides go through the same canonicaliser so a leading `@` or
     // differing case can't cause a false mismatch; a null on either side
     // fails closed.
-    const expected = normalizeWebFingerHandle(handle);
+    const expected = normalizeWebFingerAlias(alias);
     const claimed = profile.webfingerAlias
-      ? normalizeWebFingerHandle(profile.webfingerAlias)
+      ? normalizeWebFingerAlias(profile.webfingerAlias)
       : null;
     const verified = !!expected && claimed === expected;
     if (verified) {
-      recordVerifiedAlias(handle, resolution.identity);
+      recordVerifiedAlias(alias, resolution.identity);
     }
     setResolution(
       verified
         ? { status: 'verified', identity: resolution.identity }
         : { status: 'unverified' },
     );
-  }, [resolution, profile.isLoading, profile.webfingerAlias, handle]);
+  }, [resolution, profile.isLoading, profile.webfingerAlias, alias]);
 
   switch (resolution.status) {
     case 'loading':
-      return <WebFingerStatus message={`Resolving ${handle}…`} loading />;
+      return <WebFingerStatus message={`Resolving ${alias}…`} loading />;
     case 'verifying':
-      return <WebFingerStatus message={`Verifying ${handle}…`} loading />;
+      return <WebFingerStatus message={`Verifying ${alias}…`} loading />;
     case 'not-found':
-      return <WebFingerStatus message={`Couldn't find ${handle}`} />;
+      return <WebFingerStatus message={`Couldn't find ${alias}`} />;
     case 'unverified':
-      return <WebFingerStatus message={`Couldn't verify ${handle}`} />;
+      return <WebFingerStatus message={`Couldn't verify ${alias}`} />;
     case 'verified':
       return (
         <ProfileProvider
           identityKey={resolution.identity}
-          webfingerAlias={normalizeWebFingerHandle(handle) ?? handle}
+          webfingerAlias={normalizeWebFingerAlias(alias) ?? alias}
         >
           <ProfileScreenContent />
         </ProfileProvider>
