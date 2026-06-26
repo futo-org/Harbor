@@ -3,7 +3,6 @@ export {
   NodeFileStoreDriver,
   createNodeFileStoreDriver,
 } from './filestore/fs/index.js';
-export { NodeCryptoManager } from './crypto/node-crypto-manager.js';
 export {
   createPolycentricNodeClient,
   type CreatePolycentricNodeClientConfig,

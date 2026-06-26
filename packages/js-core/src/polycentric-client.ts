@@ -24,6 +24,7 @@ import type {
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { toDigestKey } from './utils/hex';
+import { CryptoManager } from './crypto/crypto-manager';
 
 import type {
   PolycentricCoreLike,
@@ -63,7 +64,6 @@ export interface PolycentricClientConfig {
   core: CoreType;
   storageDriver: IStorageDriver;
   filestoreDriver: IFileStoreDriver;
-  cryptoManager: ICryptoManager;
   /**
    * gRPC-web URLs the client should start with. Used to seed
    * `client.servers` before `initialize()` fetches each server's
@@ -100,7 +100,7 @@ export class PolycentricClient {
   /** CDN URL per server, populated by `fetchServerInfo` during init. */
   private cdnUrlByServer = new Map<string, string>();
 
-  public readonly cryptoManager: ICryptoManager;
+  public readonly cryptoManager: ICryptoManager = new CryptoManager();
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
@@ -108,7 +108,6 @@ export class PolycentricClient {
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
-    this.cryptoManager = config.cryptoManager;
     this.storageDriver = config.storageDriver;
     this.filestoreDriver = config.filestoreDriver;
     if (config.seedServers && config.seedServers.length > 0) {
