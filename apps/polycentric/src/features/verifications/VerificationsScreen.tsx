@@ -4,7 +4,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { type Ref, useCallback, useState } from 'react';
+import { type Ref, useCallback } from 'react';
 import { View } from 'react-native';
 import Animated, {
   type AnimatedRef,
@@ -14,24 +14,28 @@ import Animated, {
   useScrollOffset,
 } from 'react-native-reanimated';
 import { scheduleOnUI } from 'react-native-worklets';
-import { CreateClaim } from './CreateClaim';
+import { ClaimCreate } from './claims/ClaimCreate';
+import { ClaimList } from './claims/ClaimList';
 import { SelectChip } from './SelectChip';
 import { VerificationsScrollProvider } from './VerificationsScrollContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type Mode = 'create' | 'verify';
+import {
+  useVerificationsStore,
+  VerificationScreenMode,
+} from './hooks/useVerificationsStore';
 
 const MARGIN = Spacing.lg;
 
 export default function VerificationsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [mode, setMode] = useState<Mode>();
+  const mode = useVerificationsStore((s) => s.mode);
+  const setMode = useVerificationsStore((s) => s.setMode);
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollOffset(scrollRef);
 
-  const select = (next: Mode) =>
-    setMode((prev) => (prev === next ? undefined : next));
+  const select = (next: VerificationScreenMode) =>
+    setMode(mode === next ? undefined : next);
 
   // Align a revealed form section to the top of the viewport.
   const scrollIntoView = useCallback(
@@ -61,41 +65,44 @@ export default function VerificationsScreen() {
         >
           <View
             style={[
-              Atoms.p_lg,
               Atoms.gap_2xl,
               {
                 paddingBottom: insets.bottom + Spacing['lg'],
               },
             ]}
           >
-            <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_wrap]}>
-              <SelectChip
-                title="Create a claim"
-                icon="addOutline"
-                color="primary_500"
-                selected={mode === 'create'}
-                onPress={() => select('create')}
-              />
-              <SelectChip
-                title="Verify a claim"
-                icon="verify"
-                color="positive_500"
-                selected={mode === 'verify'}
-                onPress={() => select('verify')}
-              />
+            <View style={[Atoms.p_lg, Atoms.gap_2xl]}>
+              <View style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_wrap]}>
+                <SelectChip
+                  title="Create a claim"
+                  icon="addOutline"
+                  color="primary_500"
+                  selected={mode === 'claim'}
+                  onPress={() => select('claim')}
+                />
+                <SelectChip
+                  title="Verify a claim"
+                  icon="verify"
+                  color="positive_500"
+                  selected={mode === 'verify'}
+                  onPress={() => select('verify')}
+                />
+              </View>
+
+              {mode === 'claim' && (
+                <VerificationsScrollProvider value={scrollIntoView}>
+                  <ClaimCreate onSubmitted={() => setMode(undefined)} />
+                </VerificationsScrollProvider>
+              )}
+
+              {mode === 'verify' && (
+                <Text variant="body" style={theme.atoms.text_neutral_medium}>
+                  Coming soon
+                </Text>
+              )}
             </View>
-
-            {mode === 'create' && (
-              <VerificationsScrollProvider value={scrollIntoView}>
-                <CreateClaim />
-              </VerificationsScrollProvider>
-            )}
-
-            {mode === 'verify' && (
-              <Text variant="body" style={theme.atoms.text_neutral_medium}>
-                Coming soon
-              </Text>
-            )}
+            {/* Resting state: the current identity's created claims. */}
+            {!mode && <ClaimList />}
           </View>
         </ScrollView>
       </Screen.PrimaryColumn>

@@ -9,9 +9,9 @@ import Animated, {
   FadeOutDown,
   useAnimatedRef,
 } from 'react-native-reanimated';
-import { CopyLinkComponent } from './CopyLinkComponent';
-import { SelectChip } from './SelectChip';
-import { useScrollIntoView } from './VerificationsScrollContext';
+import { CopyLinkComponent } from '../CopyLinkComponent';
+import { SelectChip } from '../SelectChip';
+import { useScrollIntoView } from '../VerificationsScrollContext';
 
 // A platform a claim can be verified against. `logo` matches SelectChip's icon
 // render-prop; `color` tints the logo and its chip; `location` is where the
@@ -111,7 +111,7 @@ function isProfileUrl(value: string): boolean {
 }
 
 // Pick a platform, then link the account by pasting a pairing token into it.
-export function PlatformPicker() {
+export function ClaimCreatePlatformPicker() {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const [selected, setSelected] = useState<Platform>();

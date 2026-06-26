@@ -2,15 +2,13 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms } from '@/src/common/theme';
-import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { CreateClaim } from './CreateClaim';
+import { ClaimCreate } from './claims/ClaimCreate';
 
 // Standalone route for creating a claim. The content also appears inline on
 // the main Verifications screen; this just wraps it in its own screen.
+// Submitting navigates to the new claim's view (handled inside CreateClaim).
 export default function VerificationsCreateClaimScreen() {
-  const router = useRouter();
-
   return (
     <Screen>
       <Screen.PrimaryColumn>
@@ -19,7 +17,7 @@ export default function VerificationsCreateClaimScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={Atoms.p_lg}>
-            <CreateClaim onSubmitted={() => router.back()} />
+            <ClaimCreate />
           </View>
         </ScrollView>
       </Screen.PrimaryColumn>

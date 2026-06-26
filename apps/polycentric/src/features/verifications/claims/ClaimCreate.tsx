@@ -7,14 +7,19 @@ import Animated, {
   FadeOutDown,
   useAnimatedRef,
 } from 'react-native-reanimated';
-import { ClaimForm } from './ClaimForm';
-import { CLAIM_TYPES, ClaimType } from './utils/forms';
-import { PlatformPicker } from './PlatformPicker';
-import { SelectChip } from './SelectChip';
-import { useScrollIntoView } from './VerificationsScrollContext';
+import { useToast } from '@/src/common/components/toast';
+import { Routes } from '@/src/common/constants/routes';
+import { router } from 'expo-router';
+import { ClaimCreateForm } from './ClaimCreateForm';
+import { ClaimRef } from '../hooks/useCreateClaim';
+import { CLAIM_TYPES, ClaimType } from '../utils/forms';
+import { ClaimCreatePlatformPicker } from './ClaimCreatePlatformPicker';
+import { SelectChip } from '../SelectChip';
+import { useScrollIntoView } from '../VerificationsScrollContext';
 
-export function CreateClaim({ onSubmitted }: { onSubmitted?: () => void }) {
+export function ClaimCreate({ onSubmitted }: { onSubmitted?: () => void }) {
   const { theme } = useTheme();
+  const toast = useToast();
   const [selectedClaimType, setSelectedClaimType] =
     useState<ClaimType['name']>();
 
@@ -40,7 +45,12 @@ export function CreateClaim({ onSubmitted }: { onSubmitted?: () => void }) {
     scrollIntoView(formRef);
   };
 
-  const handleSubmitted = () => {
+  const handleSubmitted = (ref: ClaimRef) => {
+    // Toast first, then navigate to the new claim's view.
+    toast.success('Claim created');
+    router.push(
+      Routes.tabs.verification(ref.identity, ref.keyFingerprint, ref.sequence),
+    );
     setSelectedClaimType(undefined);
     onSubmitted?.();
   };
@@ -84,9 +94,12 @@ export function CreateClaim({ onSubmitted }: { onSubmitted?: () => void }) {
           onLayout={onFormLayout}
         >
           {selected.platform ? (
-            <PlatformPicker />
+            <ClaimCreatePlatformPicker />
           ) : (
-            <ClaimForm claimType={selected} onSubmitted={handleSubmitted} />
+            <ClaimCreateForm
+              claimType={selected}
+              onSubmitted={handleSubmitted}
+            />
           )}
         </Animated.View>
       )}
