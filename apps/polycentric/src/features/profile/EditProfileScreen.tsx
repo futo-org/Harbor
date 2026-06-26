@@ -17,15 +17,16 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
-  const edit = useProfileEdit(username, profile);
+  const edit = useProfileEdit(username, profile, identityKey);
 
   const close = useCallback(() => {
     if (router.canGoBack()) router.back();
   }, []);
 
   const handleSave = useCallback(async () => {
-    await edit.handleSave();
-    close();
+    // Keep the sheet open on a rejected save (e.g. alias failed verification)
+    // so the error stays visible.
+    if (await edit.handleSave()) close();
   }, [edit, close]);
 
   return (
@@ -91,6 +92,11 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               autoCorrect={false}
               keyboardType="email-address"
             />
+            {edit.aliasError ? (
+              <Text variant="small" color="negative_500">
+                {edit.aliasError}
+              </Text>
+            ) : null}
           </View>
         </View>
       </Sheet.Content>
