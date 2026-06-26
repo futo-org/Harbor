@@ -49,6 +49,7 @@ export const IconsMap = {
   home: defineIcon(Ionicons, 'home-outline'),
   image: defineIcon(Ionicons, 'image-outline'),
   images: defineIcon(Ionicons, 'images-outline'),
+  infoOutline: defineIcon(Ionicons, 'information-circle-outline'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
   personAdd: defineIcon(Ionicons, 'person-add'),

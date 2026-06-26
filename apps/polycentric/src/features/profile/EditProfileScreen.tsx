@@ -1,4 +1,5 @@
 import { Button, Text, TextInput } from '@/src/common/components';
+import { InfoTooltip } from '@/src/common/components/InfoTooltip';
 import { Sheet } from '@/src/common/components/sheet';
 import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
 import {
@@ -81,9 +82,19 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
           </View>
 
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
-              WEBFINGER ALIAS
-            </Text>
+            <View
+              style={[
+                Atoms.flex_row,
+                Atoms.items_center,
+                Atoms.gap_xs,
+                { zIndex: 1 },
+              ]}
+            >
+              <Text variant="small" color="neutral_500">
+                WEBFINGER ALIAS
+              </Text>
+              <InfoTooltip text="A handle like you@yourdomain.com that points to this profile. Your domain must be set up to link back here before it can be saved." />
+            </View>
             <TextInput
               value={edit.webfingerAliasDraft}
               onChangeText={edit.setWebfingerAliasDraft}
