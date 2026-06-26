@@ -117,7 +117,7 @@ moderation-deploy-manifest-production:
     - .moderation-deploy-workflow
     - .service-deploy-manifest
   variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/moderation.yml:polycentriceast
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-moderation/moderation-east.yml:polycentriceast,inventory/polycentric-moderation/moderation-west.yml:polycentriceast
   needs:
     - moderation-deploy-image-production
 
@@ -160,7 +160,7 @@ push-notifications-deploy-manifest-production:
     - .push-notifications-deploy-workflow
     - .service-deploy-manifest
   variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/notifications.yml:polycentriceast
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-push-notifications/push-notifications.yml:polycentriceast
   needs:
     - push-notifications-deploy-image-production
 
