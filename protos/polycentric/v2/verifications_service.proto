@@ -1,0 +1,25 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/events.proto";
+
+// RPC surface for verification claims. Kept separate from
+// verifications.proto because the response references EventBundle
+// (events.proto), and events.proto -> content.proto -> verifications.proto
+// already form a chain; importing events.proto from verifications.proto
+// would create a cyclic import.
+
+message ListClaimsRequest {
+  // Identity whose verification claims to list.
+  string claimed_by_identity = 1;
+}
+
+message ListClaimsResponse {
+  // Claim events created by the identity, newest first.
+  repeated EventBundle event_bundles = 1;
+}
+
+service VerificationsService {
+  // List the verification claims created by an identity.
+  rpc ListClaims(ListClaimsRequest) returns (ListClaimsResponse);
+}

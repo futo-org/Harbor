@@ -80,11 +80,7 @@ export default function useCreateClaim() {
 
         // Refresh the creator's claim list so the new claim shows up.
         if (identityKey) {
-          invalidateQuery(client, [
-            'claims-list',
-            String(COLLECTION.VERIFICATIONS),
-            identityKey,
-          ]);
+          invalidateQuery(client, ['claims-list', identityKey]);
         }
 
         const key = event.key;
