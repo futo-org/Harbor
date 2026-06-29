@@ -12,6 +12,12 @@ const linkValues = (text: string) => links(text).map((l) => l.value);
 /** Resolved URLs of the link segments. */
 const linkUrls = (text: string) => links(text).map((l) => l.url);
 
+/** Just the alias segments. */
+const aliases = (text: string) =>
+  parseTextLinks(text).filter(
+    (s): s is Extract<TextSegment, { type: 'alias' }> => s.type === 'alias',
+  );
+
 describe('parseTextLinks', () => {
   describe('no links', () => {
     it('returns a single text segment for plain text', () => {
@@ -143,6 +149,54 @@ describe('parseTextLinks', () => {
     });
   });
 
+  describe('alias mentions', () => {
+    it('detects an `@user@domain.com` mention', () => {
+      expect(parseTextLinks('@user@domain.com')).toEqual([
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+      ]);
+    });
+
+    it('detects a mention within surrounding text', () => {
+      expect(parseTextLinks('hey @user@domain.com bye')).toEqual([
+        { type: 'text', value: 'hey ' },
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+        { type: 'text', value: ' bye' },
+      ]);
+    });
+
+    it('excludes trailing punctuation from the mention', () => {
+      expect(parseTextLinks('see @user@domain.com.')).toEqual([
+        { type: 'text', value: 'see ' },
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+        { type: 'text', value: '.' },
+      ]);
+    });
+
+    it('preserves case (normalisation happens downstream)', () => {
+      expect(aliases('@User@Domain.com')).toEqual([
+        { type: 'alias', value: '@User@Domain.com', alias: 'User@Domain.com' },
+      ]);
+    });
+
+    it('allows dotted/underscored local parts', () => {
+      expect(aliases('@first.last_1@domain.io')).toEqual([
+        {
+          type: 'alias',
+          value: '@first.last_1@domain.io',
+          alias: 'first.last_1@domain.io',
+        },
+      ]);
+    });
+
+    it('does not treat a plain email as a mention', () => {
+      expect(aliases('reach me@example.com please')).toEqual([]);
+    });
+
+    it('does not match `@user@` with no TLD', () => {
+      expect(aliases('@user@localhost here')).toEqual([]);
+    });
+  });
+
   describe('multiple links & surrounding text', () => {
     it('detects several links with text between them', () => {
       const segs = parseTextLinks(
@@ -185,6 +239,7 @@ describe('parseTextLinks', () => {
       'see https://example.com/path?x=1#y now',
       '(www.example.com), and example.org. done',
       'email a@b.com plus https://c.io end',
+      'hey @user@domain.com and a@b.com and example.net',
       'multi https://x.com www.y.org example.net z',
       '',
     ])('rejoining all segment values reproduces the input: %s', (input) => {
