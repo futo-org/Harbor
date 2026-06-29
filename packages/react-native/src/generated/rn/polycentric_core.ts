@@ -588,6 +588,45 @@ const FfiConverterTypeGetProfileArgs = (() => {
   return new FFIConverter();
 })();
 
+export type ListClaimsArgs = {
+  claimedByIdentity: string;
+};
+
+/**
+ * Generated factory for {@link ListClaimsArgs} record objects.
+ */
+export const ListClaimsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListClaimsArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListClaimsArgs>,
+  });
+})();
+
+const FfiConverterTypeListClaimsArgs = (() => {
+  type TypeName = ListClaimsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        claimedByIdentity: FfiConverterString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.claimedByIdentity, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterString.allocationSize(value.claimedByIdentity);
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type ListEventsArgs = {
   size?: number;
   identity?: string;
@@ -1343,6 +1382,7 @@ export enum Query_Tags {
   GetExploreFeed = 'GetExploreFeed',
   ListNotifications = 'ListNotifications',
   ListEvents = 'ListEvents',
+  ListClaims = 'ListClaims',
 }
 /**
  * Discriminated union over every observable RPC. `fetch_query`
@@ -1571,6 +1611,32 @@ export const Query = (() => {
     }
   }
 
+  type ListClaims__interface = {
+    tag: Query_Tags.ListClaims;
+    inner: Readonly<[ListClaimsArgs]>;
+  };
+  class ListClaims_ extends UniffiEnum implements ListClaims__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListClaims;
+    readonly inner: Readonly<[ListClaimsArgs]>;
+    constructor(v0: ListClaimsArgs) {
+      super('Query', 'ListClaims');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListClaimsArgs): ListClaims_ {
+      return new ListClaims_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListClaims_ {
+      return obj.tag === Query_Tags.ListClaims;
+    }
+  }
+
   function instanceOf(obj: any): obj is Query {
     return obj[uniffiTypeNameSymbol] === 'Query';
   }
@@ -1585,6 +1651,7 @@ export const Query = (() => {
     GetExploreFeed: GetExploreFeed_,
     ListNotifications: ListNotifications_,
     ListEvents: ListEvents_,
+    ListClaims: ListClaims_,
   });
 })();
 /**
@@ -1602,7 +1669,8 @@ export type Query = InstanceType<
     | 'GetFollowingFeed'
     | 'GetExploreFeed'
     | 'ListNotifications'
-    | 'ListEvents']
+    | 'ListEvents'
+    | 'ListClaims']
 >;
 
 // FfiConverter for enum Query
@@ -1641,6 +1709,10 @@ const FfiConverterTypeQuery = (() => {
         case 8:
           return new Query.ListEvents(
             FfiConverterTypeListEventsArgs.read(from)
+          );
+        case 9:
+          return new Query.ListClaims(
+            FfiConverterTypeListClaimsArgs.read(from)
           );
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -1694,6 +1766,12 @@ const FfiConverterTypeQuery = (() => {
           ordinalConverter.write(8, into);
           const inner = value.inner;
           FfiConverterTypeListEventsArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListClaims: {
+          ordinalConverter.write(9, into);
+          const inner = value.inner;
+          FfiConverterTypeListClaimsArgs.write(inner[0], into);
           return;
         }
         default:
@@ -1751,6 +1829,12 @@ const FfiConverterTypeQuery = (() => {
           const inner = value.inner;
           let size = ordinalConverter.allocationSize(8);
           size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.ListClaims: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(9);
+          size += FfiConverterTypeListClaimsArgs.allocationSize(inner[0]);
           return size;
         }
         default:
@@ -4587,6 +4671,7 @@ export default Object.freeze({
     FfiConverterTypeGetIdentityFeedArgs,
     FfiConverterTypeGetPostThreadArgs,
     FfiConverterTypeGetProfileArgs,
+    FfiConverterTypeListClaimsArgs,
     FfiConverterTypeListEventsArgs,
     FfiConverterTypeListNotificationsArgs,
     FfiConverterTypeLogLevel,
