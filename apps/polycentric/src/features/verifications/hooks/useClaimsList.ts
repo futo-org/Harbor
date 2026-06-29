@@ -14,7 +14,7 @@ export function useClaimsList(identity: string | undefined): {
   const enabled = !!identity;
 
   const query = useQuery(
-    ['list-events', String(COLLECTION.VERIFICATIONS), identity ?? ''],
+    ['claims-list', String(COLLECTION.VERIFICATIONS), identity ?? ''],
     new Query.ListEvents({
       identity: identity ?? '',
       collection: COLLECTION.VERIFICATIONS,

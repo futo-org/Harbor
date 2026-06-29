@@ -1,5 +1,9 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  useCurrentIdentity,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
@@ -13,6 +17,7 @@ export interface ClaimRef {
 
 export default function useCreateClaim() {
   const client = usePolycentric();
+  const { identityKey } = useCurrentIdentity();
 
   const [isPending, setPending] = useState<boolean>(false);
 
@@ -71,6 +76,15 @@ export default function useCreateClaim() {
           await client.sync(SyncStrategy.PARTIAL_PUSH);
         } catch (e) {
           console.warn('Failed to push claim to servers:', e);
+        }
+
+        // Refresh the creator's claim list so the new claim shows up.
+        if (identityKey) {
+          invalidateQuery(client, [
+            'claims-list',
+            String(COLLECTION.VERIFICATIONS),
+            identityKey,
+          ]);
         }
 
         const key = event.key;

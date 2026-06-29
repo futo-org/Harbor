@@ -46,6 +46,7 @@ export const ClaimList = forwardRef<ListRef, ClaimListProps>(function ClaimList(
           <RefreshControl refreshing={isLoading} onRefresh={refresh} />
         )
       }
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     />
   );
