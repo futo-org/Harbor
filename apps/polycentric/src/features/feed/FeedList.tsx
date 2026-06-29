@@ -9,7 +9,7 @@ import {
 import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
-import { Text } from '@/src/common/components/primitives';
+import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
 import { PostSkeletonList } from '../post/PostSkeleton';
@@ -51,16 +51,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
         feed.isLoading ? (
           <PostSkeletonList />
         ) : (
-          <View
-            style={[
-              Atoms.flex_1,
-              Atoms.items_center,
-              Atoms.justify_center,
-              Atoms.p_lg,
-            ]}
-          >
-            <Text color="neutral_500">{emptyMessage}</Text>
-          </View>
+          <ListEmpty>{emptyMessage}</ListEmpty>
         )
       }
       ListFooterComponent={

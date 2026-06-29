@@ -9,6 +9,7 @@ import { DecodedClaim, decodeClaimBundle } from './useClaimById';
 export function useClaimsList(identity: string | undefined): {
   claims: DecodedClaim[];
   isLoading: boolean;
+  refresh: () => void;
 } {
   const enabled = !!identity;
 
@@ -38,5 +39,5 @@ export function useClaimsList(identity: string | undefined): {
     }
   }, [enabled, query.data]);
 
-  return { claims, isLoading: query.isLoading };
+  return { claims, isLoading: query.isLoading, refresh: query.refresh };
 }

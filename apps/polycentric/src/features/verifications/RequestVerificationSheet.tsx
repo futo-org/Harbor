@@ -2,7 +2,7 @@ import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { POLYCENTRIC_APP_URL } from '@/src/common/constants/app';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { Platform, Share, View } from 'react-native';
+import { Platform, Share } from 'react-native';
 import { CopyLinkComponent } from './CopyLinkComponent';
 
 // Native gets the OS share sheet; web only if the browser supports navigator.share.
@@ -38,11 +38,14 @@ export function RequestVerificationSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose}>
-      <View style={[Atoms.p_lg, Atoms.gap_md]}>
-        <Text variant="title" style={theme.atoms.text}>
-          Request verification
-        </Text>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      detents={[0.5]}
+      scrollable
+      header={<Sheet.Header title="Request verification" onClose={onClose} />}
+    >
+      <Sheet.Content style={Atoms.gap_md}>
         <Text variant="body" style={theme.atoms.text_neutral_medium}>
           Share this link to request verification of your claim.
         </Text>
@@ -57,7 +60,7 @@ export function RequestVerificationSheet({
             onPress={onShare}
           />
         )}
-      </View>
+      </Sheet.Content>
     </Sheet>
   );
 }

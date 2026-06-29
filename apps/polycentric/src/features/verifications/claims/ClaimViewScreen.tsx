@@ -11,9 +11,11 @@ import { ClaimField, useClaimById } from '../hooks/useClaimById';
 import { RequestVerificationSheet } from '../RequestVerificationSheet';
 import { resolveClaimTitle } from '../utils/render';
 import { Toolbar } from './toolbar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ViewClaimScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     identityId,
     keyFingerprint,
@@ -49,7 +51,10 @@ export default function ViewClaimScreen() {
         <ScrollView
           HeaderComponent={<Topbar title="Claim" />}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[Atoms.flex_1]}
+          contentContainerStyle={[
+            Atoms.flex_1,
+            { paddingBottom: insets.bottom },
+          ]}
         >
           <View style={[Atoms.p_lg, Atoms.gap_lg, Atoms.flex_1]}>
             {isLoading && !claim && (
