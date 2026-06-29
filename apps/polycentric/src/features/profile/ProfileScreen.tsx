@@ -83,11 +83,13 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
       if (cancelled || redirectedRef.current || !resolved) return;
       // Only redirect when the alias points back to THIS identity.
       if (resolved.toLowerCase() === identityKey.toLowerCase()) {
+        const canonical = normalizeAlias(alias);
+        if (!canonical) return;
         recordVerifiedAlias(alias, identityKey);
         redirectedRef.current = true;
         router.replace({
           pathname: '/[identityId]',
-          params: { identityId: alias },
+          params: { identityId: canonical },
         });
       }
     });
