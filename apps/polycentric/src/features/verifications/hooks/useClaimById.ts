@@ -1,4 +1,7 @@
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  bytesToHex,
+  getKeyFingerprint,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
@@ -11,6 +14,8 @@ export interface ClaimField {
 }
 
 export interface DecodedClaim {
+  // Hex-encoded event key, used to report or delete the claim.
+  id: string;
   schemaName: string;
   fields: ClaimField[];
   identity: string;
@@ -49,6 +54,7 @@ export function decodeClaimBundle(bundle: v2.EventBundle): DecodedClaim | null {
     }));
 
     return {
+      id: bytesToHex(v2.EventKey.toBinary(ev.key)),
       schemaName: schema.name,
       fields,
       identity: ev.key.identity,
