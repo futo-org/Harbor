@@ -1,10 +1,8 @@
 /**
- * WebFinger (RFC 7033) resolution: maps an `acct` alias like `user@domain.com`
- * to the polycentric identity it points at.
+ * Alias resolution: maps an alias like `user@domain.com` to the polycentric
+ * identity it points at, by looking it up at the domain's
+ * `/.well-known/polycentric.json`.
  */
-
-// JRD `properties` key carrying the polycentric identity.
-const WEBFINGER_PROP_IDENTITY = 'https://polycentric.dev/identity';
 
 /** Give up on a slow/unresponsive domain rather than hang the resolver. */
 const RESOLVE_TIMEOUT_MS = 10_000;
@@ -18,10 +16,13 @@ function isIdentityKey(s: string): boolean {
   return s.length > 0 && Array.from(s).every((c) => HEX_CHARS.has(c));
 }
 
-interface Jrd {
-  subject?: string;
-  // RFC 7033: property values are a string or null.
-  properties?: Record<string, string | null>;
+/**
+ * The `/.well-known/polycentric.json` document: a map of alias local-parts to
+ * the polycentric identity (hex) each points at. A domain may list every alias
+ * it serves here; the client looks up the one it queried.
+ */
+interface AliasDocument {
+  names?: Record<string, string>;
 }
 
 // Conservative allow-list for an alias's local part — deliberately tighter than
@@ -51,7 +52,9 @@ function isHostLabel(label: string): boolean {
  * local part is limited to letters/digits/`._-`, and the domain must be a
  * dotted hostname (two or more LDH labels). Returns null otherwise.
  */
-function parseAlias(alias: string): { acct: string; domain: string } | null {
+function parseAlias(
+  alias: string,
+): { acct: string; local: string; domain: string } | null {
   // Trim, then drop a single optional leading '@' (e.g. "@user@domain.com").
   let acct = alias.trim();
   if (acct.startsWith('@')) {
@@ -63,7 +66,9 @@ function parseAlias(alias: string): { acct: string; domain: string } | null {
   if (at <= 0 || acct.indexOf('@', at + 1) !== -1) {
     return null;
   }
-  const local = acct.slice(0, at);
+  // Lowercase the local part so the query, the names-map lookup, and alias
+  // comparison are all case-insensitive on a single canonical form.
+  const local = acct.slice(0, at).toLowerCase();
   const domain = acct.slice(at + 1);
 
   // Local part: every character must be in the conservative allow-list.
@@ -77,7 +82,7 @@ function parseAlias(alias: string): { acct: string; domain: string } | null {
     return null;
   }
 
-  return { acct, domain };
+  return { acct, local, domain };
 }
 
 /**
@@ -91,10 +96,10 @@ export function normalizeWebFingerAlias(alias: string): string | null {
 }
 
 /**
- * Resolve a WebFinger alias (`user@domain.com`) to a polycentric identity.
+ * Resolve an alias (`user@domain.com`) to a polycentric identity.
  *
  * Returns null when the alias is malformed, the lookup fails (network error,
- * timeout, non-2xx, unparseable body), or the domain's WebFinger document
+ * timeout, non-2xx, unparseable body), or the domain's `polycentric.json`
  * carries no polycentric identity property.
  */
 export async function resolveWebFinger(alias: string): Promise<string | null> {
@@ -104,34 +109,34 @@ export async function resolveWebFinger(alias: string): Promise<string | null> {
   }
 
   const url =
-    `https://${parsed.domain}/.well-known/webfinger` +
-    `?resource=${encodeURIComponent(`acct:${parsed.acct}`)}`;
+    `https://${parsed.domain}/.well-known/polycentric.json` +
+    `?alias=${encodeURIComponent(parsed.local)}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), RESOLVE_TIMEOUT_MS);
 
-  let jrd: Jrd;
+  let doc: AliasDocument;
   try {
     const response = await fetch(url, {
-      headers: { accept: 'application/jrd+json, application/json' },
+      headers: { accept: 'application/json' },
       signal: controller.signal,
     });
     if (!response.ok) {
-      // A 404 here just means the domain doesn't know this account — expected,
+      // A 404 here just means the domain doesn't know this alias — expected,
       // not worth a warning.
       return null;
     }
-    jrd = (await response.json()) as Jrd;
+    doc = (await response.json()) as AliasDocument;
   } catch (error) {
     // Network error / timeout / unparseable body: surface for debugging rather
     // than swallowing silently, but still resolve to "not found".
-    console.warn(`webfinger lookup failed for ${parsed.acct}:`, error);
+    console.warn(`alias lookup failed for ${parsed.acct}:`, error);
     return null;
   } finally {
     clearTimeout(timeoutId);
   }
 
-  const identity = jrd.properties?.[WEBFINGER_PROP_IDENTITY];
+  const identity = doc.names?.[parsed.local];
   if (!identity || !isIdentityKey(identity)) {
     return null;
   }
