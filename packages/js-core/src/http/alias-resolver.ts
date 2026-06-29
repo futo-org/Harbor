@@ -100,7 +100,7 @@ export function normalizeAlias(alias: string): string | null {
  *
  * Returns null when the alias is malformed, the lookup fails (network error,
  * timeout, non-2xx, unparseable body), or the domain's `polycentric.json`
- * carries no polycentric identity property.
+ * carries no entry for the alias.
  */
 export async function resolveAlias(alias: string): Promise<string | null> {
   const parsed = parseAlias(alias);
