@@ -56,4 +56,4 @@ export {
   HydrationStatus,
 } from './client-internal/event-service';
 
-export { resolveWebFinger, normalizeWebFingerAlias } from './http/webfinger';
+export { resolveAlias, normalizeAlias } from './http/alias-resolver';

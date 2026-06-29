@@ -1,4 +1,4 @@
-import { normalizeWebFingerAlias } from '@polycentric/react-native';
+import { normalizeAlias } from '@polycentric/react-native';
 
 /**
  * Process-lifetime, in-memory cache of WebFinger alias <-> identity
@@ -23,7 +23,7 @@ const aliasByIdentity = new Map<string, string>();
  * it hasn't been verified yet (or the alias is malformed).
  */
 export function getVerifiedIdentity(alias: string): string | null {
-  const key = normalizeWebFingerAlias(alias);
+  const key = normalizeAlias(alias);
   return key ? (identityByAlias.get(key) ?? null) : null;
 }
 
@@ -40,7 +40,7 @@ export function getVerifiedAlias(identity: string): string | null {
  * both directions; a malformed alias is ignored.
  */
 export function recordVerifiedAlias(alias: string, identity: string): void {
-  const key = normalizeWebFingerAlias(alias);
+  const key = normalizeAlias(alias);
   if (!key) return;
   identityByAlias.set(key, identity);
   aliasByIdentity.set(identity.toLowerCase(), key);

@@ -5,8 +5,8 @@ import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
 import {
   FetchMode,
-  normalizeWebFingerAlias,
-  resolveWebFinger,
+  normalizeAlias,
+  resolveAlias,
 } from '@polycentric/react-native';
 import {
   router,
@@ -44,7 +44,7 @@ export default function ProfileScreen() {
  * WebFinger alias that *verifiably* resolves back to this same identity,
  * redirect to the canonical alias URL (`/user@domain`).
  *
- * Verification happens before the redirect: `resolveWebFinger(alias)` must
+ * Verification happens before the redirect: `resolveAlias(alias)` must
  * return this exact identity, so a profile can't bounce us to an alias it
  * doesn't actually own. The alias URL renders `WebFingerProfile` (not this
  * component), so there's no redirect loop.
@@ -79,7 +79,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
     if (!alias) return;
 
     let cancelled = false;
-    void resolveWebFinger(alias).then((resolved) => {
+    void resolveAlias(alias).then((resolved) => {
       if (cancelled || redirectedRef.current || !resolved) return;
       // Only redirect when the alias points back to THIS identity.
       if (resolved.toLowerCase() === identityKey.toLowerCase()) {
@@ -206,9 +206,9 @@ function WebFingerProfile({ alias }: { alias: string }) {
 
     let cancelled = false;
     setResolution({ status: 'loading' });
-    // resolveWebFinger resolves to null on any failure (it never rejects); the
+    // resolveAlias resolves to null on any failure (it never rejects); the
     // catch is defensive so the loading state can't wedge.
-    void resolveWebFinger(alias)
+    void resolveAlias(alias)
       .then((result) => {
         if (cancelled) return;
         setResolution(
@@ -237,9 +237,9 @@ function WebFingerProfile({ alias }: { alias: string }) {
     // Both sides go through the same canonicaliser so a leading `@` or
     // differing case can't cause a false mismatch; a null on either side
     // fails closed.
-    const expected = normalizeWebFingerAlias(alias);
+    const expected = normalizeAlias(alias);
     const claimed = profile.webfingerAlias
-      ? normalizeWebFingerAlias(profile.webfingerAlias)
+      ? normalizeAlias(profile.webfingerAlias)
       : null;
     const verified = !!expected && claimed === expected;
     if (verified) {
@@ -265,7 +265,7 @@ function WebFingerProfile({ alias }: { alias: string }) {
       return (
         <ProfileProvider
           identityKey={resolution.identity}
-          webfingerAlias={normalizeWebFingerAlias(alias) ?? alias}
+          webfingerAlias={normalizeAlias(alias) ?? alias}
         >
           <ProfileScreenContent />
         </ProfileProvider>

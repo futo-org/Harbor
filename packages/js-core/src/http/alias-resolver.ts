@@ -90,7 +90,7 @@ function parseAlias(
  * (`local@domain`, no leading `@`), lowercased. Returns null when the alias is
  * malformed.
  */
-export function normalizeWebFingerAlias(alias: string): string | null {
+export function normalizeAlias(alias: string): string | null {
   const parsed = parseAlias(alias);
   return parsed ? parsed.acct.toLowerCase() : null;
 }
@@ -102,7 +102,7 @@ export function normalizeWebFingerAlias(alias: string): string | null {
  * timeout, non-2xx, unparseable body), or the domain's `polycentric.json`
  * carries no polycentric identity property.
  */
-export async function resolveWebFinger(alias: string): Promise<string | null> {
+export async function resolveAlias(alias: string): Promise<string | null> {
   const parsed = parseAlias(alias);
   if (!parsed) {
     return null;

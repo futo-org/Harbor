@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { resolveWebFinger } from '@polycentric/react-native';
+import { resolveAlias } from '@polycentric/react-native';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 
@@ -70,7 +70,7 @@ export function useProfileEdit(
       const alias = webfingerAliasDraft.trim();
       const original = (profile.webfingerAlias ?? '').trim();
       if (alias && alias !== original) {
-        const resolved = await resolveWebFinger(alias);
+        const resolved = await resolveAlias(alias);
         if (!resolved || resolved.toLowerCase() !== identityKey.toLowerCase()) {
           setAliasError("This alias isn't linked to your profile.");
           return false;
