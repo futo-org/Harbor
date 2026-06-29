@@ -4,7 +4,7 @@
  */
 
 // JRD `properties` key carrying the polycentric identity.
-const WEBFINGER_PROP_IDENTITY = 'https://polycentric.io/identity';
+const WEBFINGER_PROP_IDENTITY = 'https://polycentric.dev/identity';
 
 /** Give up on a slow/unresponsive domain rather than hang the resolver. */
 const RESOLVE_TIMEOUT_MS = 10_000;
