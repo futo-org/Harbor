@@ -628,7 +628,7 @@ importers:
         version: 13.4.1(debug@4.4.3)(puppeteer@25.1.0)
       html-get:
         specifier: ^2.24.6
-        version: 2.24.6(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 2.24.7(@noble/hashes@2.2.0)(debug@4.4.3)
       metascraper:
         specifier: ^5.50.6
         version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -6487,12 +6487,6 @@ packages:
   debounce@1.2.1:
     resolution: {integrity: sha512-XRRe6Glud4rd/ZGQfiV1ruXSfbvfJedlV9Y6zOlP+2K04vBYiJEte6stfFkCP03aMnY5tsipamumUjL14fofug==}
 
-  debug-logfmt@1.4.12:
-    resolution: {integrity: sha512-qWsSb25WvSgwLyWpEF/qMOXXQHQlOPhU/xgRzjfUqwXF9z2X+jLp5wIKTyjMrvJ56FIERaEegUIb54jCAC6XGg==}
-    engines: {node: '>= 8'}
-    peerDependencies:
-      debug: '*'
-
   debug-logfmt@1.4.13:
     resolution: {integrity: sha512-LF2JDEigILRayrszaLwXq1UX8sC2hbDRfbV29kfq5r6u6haBAxKWAECb2e7fWmivKe+AoC4u5/Z/gxQOwVEyMA==}
     engines: {node: '>= 8'}
@@ -8072,8 +8066,8 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
-  html-get@2.24.6:
-    resolution: {integrity: sha512-DFjtrrUJN7StO4/rpPHcH0X4wggqnILn/Yi0sqIu+i7X06ZBd4ZZ5EnciPjzfTHhkD4i7z91N7wHCAdOkSVyKA==}
+  html-get@2.24.7:
+    resolution: {integrity: sha512-N79n+lSpCK7+1a6Ec8pbmblBs6U+8qr/ZN0+MyMLZvDKaib8tAoaLudvlXspDvpFDehdC9uTfe/aqS7atW+vFQ==}
     engines: {node: '>= 10'}
     hasBin: true
 
@@ -11832,8 +11826,8 @@ packages:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
 
-  top-sites@1.1.224:
-    resolution: {integrity: sha512-11YDgfBRJqAIODFdkl+Q4lcgowkWDCMZPKfgK5MDYGqrpKAbitON0MOUzGo7fosxbKV8nuMwL2gkPPMXIvYqtA==}
+  top-sites@1.1.225:
+    resolution: {integrity: sha512-JWew/ziJt9BPYWMcXbj2+GxZVZ8W6IMOyWeakoRHEspywkNaRAROS+UVFxha7SaKcX6oaV7+2JykznqHqEwO7w==}
     engines: {node: '>= 6'}
 
   toqr@0.1.1:
@@ -16975,7 +16969,7 @@ snapshots:
       chrono-node: 2.9.1
       condense-whitespace: 2.0.0
       data-uri-utils: 1.0.13
-      debug-logfmt: 1.4.12(debug@4.4.3)
+      debug-logfmt: 1.4.13(debug@4.4.3)
       entities: 7.0.1
       file-extension: 4.0.5
       has-values: 2.0.1
@@ -20784,13 +20778,6 @@ snapshots:
 
   debounce@1.2.1: {}
 
-  debug-logfmt@1.4.12(debug@4.4.3):
-    dependencies:
-      '@kikobeats/time-span': 1.0.13
-      debug: 4.4.3
-      null-prototype-object: 1.2.7
-      pretty-ms: 7.0.1
-
   debug-logfmt@1.4.13(debug@4.4.3):
     dependencies:
       '@kikobeats/time-span': 1.0.13
@@ -23193,14 +23180,14 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html-get@2.24.6(@noble/hashes@2.2.0)(debug@4.4.3):
+  html-get@2.24.7(@noble/hashes@2.2.0)(debug@4.4.3):
     dependencies:
       '@kikobeats/time-span': 1.0.13
-      '@metascraper/helpers': 5.50.6(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
       cheerio: 1.2.0
       content-type: 1.0.5
       css-url-regex: 4.0.0
-      debug-logfmt: 1.4.12(debug@4.4.3)
+      debug-logfmt: 1.4.13(debug@4.4.3)
       execall: 2.0.0
       got: 11.8.6
       html-encode: 2.1.15
@@ -23213,7 +23200,7 @@ snapshots:
       p-cancelable: 2.1.1
       p-retry: 4.6.2
       tinyspawn: 1.5.7
-      top-sites: 1.1.224
+      top-sites: 1.1.225
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
@@ -24231,7 +24218,7 @@ snapshots:
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 26.0.1
+      '@types/node': 24.13.1
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -28090,7 +28077,7 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
-  top-sites@1.1.224: {}
+  top-sites@1.1.225: {}
 
   toqr@0.1.1: {}
 
