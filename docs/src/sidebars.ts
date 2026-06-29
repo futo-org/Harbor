@@ -6,6 +6,7 @@ const sidebars: SidebarsConfig = {
   docsSidebar: [
     'intro',
     'running-a-server',
+    'setting-up-an-alias',
     {
       type: 'category',
       label: 'Protocol',
