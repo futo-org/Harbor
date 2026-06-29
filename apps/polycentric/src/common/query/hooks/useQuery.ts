@@ -40,7 +40,7 @@ export type QueryRef = {
   pendingServers: number | undefined;
 
   /**
-   * Set to true when `pull()`, `update()`, or `reload()` are called and reset
+   * Set to true when `refresh()` is called and reset
    * to false once any server responds or the query completes.
    * This helps listeners distinguish between extending with more data versus
    * refreshing with fresh data in the cases where the existing data is not
@@ -48,6 +48,25 @@ export type QueryRef = {
    */
   hasPendingRefresh: boolean;
 };
+
+export enum RefreshStrategy {
+  /**
+   * Leave existing cached data as-is and start a new fan-out.
+   * The cached response for each server will be replaced as new responses arrive.
+   */
+  Fetch,
+
+  /**
+   * Clear rust-side cache, but keep the data in the javascript-side cache
+   * until any new data arrives.
+   */
+  Lazy,
+
+  /**
+   * Clear all cached data and start a fan-out.
+   */
+  Eager,
+}
 
 type QueryArgs = {
   client: PolycentricClient;
@@ -69,9 +88,7 @@ type QueryStoreState = {
   subscriptions: Map<string, SubscriptionRef>;
   subscribe: (key: string, args: QueryArgs) => void;
   unsubscribe: (key: string) => void;
-  pull: (key: string, args?: QueryArgs) => void;
-  update: (key: string, args?: QueryArgs) => void;
-  reload: (key: string, args?: QueryArgs) => void;
+  refresh: (strategy: RefreshStrategy, key: string, args?: QueryArgs) => void;
   extend: (key: string, args: QueryArgs) => void;
 };
 
@@ -210,53 +227,30 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       }
     },
 
-    pull(key, args) {
+    refresh(strategy, key, args) {
       const sub = get().subscriptions.get(key);
       if (!sub) return;
 
-      // Start new fan-out
+      // Invalidate rust-side cache
+      if (strategy !== RefreshStrategy.Fetch) {
+        sub.args.client.core.invalidateQuery(sub.args.queryKey);
+      }
+
+      // Update javascript-side query store entry
+      let patch: Partial<QueryRef> = {
+        ...LOADING_ENTRY,
+        hasPendingRefresh: true,
+      };
+
+      if (strategy === RefreshStrategy.Eager) {
+        patch.data = undefined;
+      }
+
+      // Fan-out
       const next = forceRemote(args ?? sub.args);
       sub.dispose();
       sub.args = next;
-      sub.dispose = fetch(key, next, {
-        ...LOADING_ENTRY,
-        hasPendingRefresh: true,
-      });
-    },
-
-    update(key, args) {
-      const sub = get().subscriptions.get(key);
-      if (!sub) return;
-
-      // Invalidate data in rs-core
-      sub.args.client.core.invalidateQuery(sub.args.queryKey);
-
-      // Start new fan-out
-      const next = forceRemote(args ?? sub.args);
-      sub.dispose();
-      sub.args = next;
-      sub.dispose = fetch(key, next, {
-        ...LOADING_ENTRY,
-        hasPendingRefresh: true,
-      });
-    },
-
-    reload(key, args) {
-      const sub = get().subscriptions.get(key);
-      if (!sub) return;
-
-      // Invalidate data in rs-core
-      sub.args.client.core.invalidateQuery(sub.args.queryKey);
-
-      // Start new fan-out and immediately invalidate cached data
-      const next = forceRemote(args ?? sub.args);
-      sub.dispose();
-      sub.args = next;
-      sub.dispose = fetch(key, next, {
-        ...LOADING_ENTRY,
-        hasPendingRefresh: true,
-        data: undefined,
-      });
+      sub.dispose = fetch(key, next, patch);
     },
 
     extend(key, args) {
@@ -278,21 +272,10 @@ export type UseQueryResult = QueryRef & {
   isLoading: boolean;
 
   /**
-   * Fetch new data with the existing subscription's args.
-   * New data is applied according to the query's update mode.
+   * Flush local caches as specified by `strategy` and then start a fan-out
+   * query.
    */
-  pull: () => void;
-
-  /**
-   * Invalidate rust-side cache and pull in new data.
-   * This subscription's existing data remains available until new data arrives.
-   */
-  update: () => void;
-
-  /**
-   * Immediately invalidate existing data and pull in new data.
-   */
-  reload: () => void;
+  refresh: (strategy: RefreshStrategy) => void;
 
   /**
    * Pull in new data after generating args from the query source, but without
@@ -317,18 +300,17 @@ export function invalidateQuery(
   lazy = lazy ?? true;
   const key = queryKey.join('\0');
 
-  // Both update() and reload() will be a no-op if no subscription is found for `key`.
-  // However, we want to invalidate the rust-side cache even if there is no subscription.
+  // `refresh()` will be a no-op if no subscription is found for `key`.
+  // However, we want to invalidate the rust-side cache even if there is no
+  // subscription.
   const sub = useQueryStore.getState().subscriptions.get(key);
   if (!sub) {
     client.core.invalidateQuery(queryKey);
   }
 
-  if (lazy) {
-    useQueryStore.getState().update(key);
-  } else {
-    useQueryStore.getState().reload(key);
-  }
+  const strat = lazy ? RefreshStrategy.Lazy : RefreshStrategy.Eager;
+
+  useQueryStore.getState().refresh(strat, key);
 }
 
 /**
@@ -409,9 +391,8 @@ export function useQuery(
   return {
     ...entry,
     isLoading: enabled && entry.status === QueryStatus.Loading,
-    pull: () => useQueryStore.getState().pull(cacheKey, argsRef.current),
-    update: () => useQueryStore.getState().update(cacheKey, argsRef.current),
-    reload: () => useQueryStore.getState().reload(cacheKey, argsRef.current),
+    refresh: (strategy) =>
+      useQueryStore.getState().refresh(strategy, cacheKey, argsRef.current),
     extend: () => {
       const query =
         typeof querySource === 'function'

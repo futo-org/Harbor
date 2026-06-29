@@ -7,7 +7,7 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { type FeedHookResult } from './types';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 
 export function useExploreFeed(options?: {
@@ -49,6 +49,6 @@ export function useExploreFeed(options?: {
       }
     },
     hasMore: hasNext,
-    refresh: query.update,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }

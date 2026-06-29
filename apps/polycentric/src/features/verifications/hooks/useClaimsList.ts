@@ -1,4 +1,4 @@
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { DecodedClaim, decodeClaimBundle } from './useClaimById';
@@ -39,5 +39,9 @@ export function useClaimsList(identity: string | undefined): {
     }
   }, [enabled, query.data]);
 
-  return { claims, isLoading: query.isLoading, refresh: query.refresh };
+  return {
+    claims,
+    isLoading: query.isLoading,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
+  };
 }
