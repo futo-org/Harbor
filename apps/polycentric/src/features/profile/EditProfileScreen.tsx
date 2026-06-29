@@ -10,7 +10,7 @@ import {
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
@@ -108,6 +108,14 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
                 {edit.aliasError}
               </Text>
             ) : null}
+            <Link
+              href="https://polycentric.dev/setting-up-an-alias"
+              accessibilityRole="link"
+            >
+              <Text variant="small" color="neutral_500">
+                How to set up an alias ↗
+              </Text>
+            </Link>
           </View>
         </View>
       </Sheet.Content>
