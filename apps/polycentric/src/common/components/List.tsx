@@ -102,6 +102,7 @@ function NativeList<T>({
         onScroll={onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{
+          ...Atoms.flex_grow_1,
           paddingTop: headerHeight,
           ...(typeof contentContainerStyle === 'object' &&
           contentContainerStyle !== null
@@ -190,7 +191,7 @@ function WebFeedViewer<T>({
   const visibleItems = isEmpty ? items : items.slice(0, visibleCount);
 
   return (
-    <View style={contentContainerStyle}>
+    <View style={[Atoms.flex_1, contentContainerStyle]}>
       {renderNode(HeaderComponent)}
       {renderNode(ListHeaderComponent)}
       {isEmpty

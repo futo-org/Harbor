@@ -1,10 +1,23 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  useCurrentIdentity,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
 
+// Identifies a created claim event for routing to its view.
+export interface ClaimRef {
+  identity: string;
+  keyFingerprint: string;
+  sequence: string;
+}
+
 export default function useCreateClaim() {
   const client = usePolycentric();
+  const { identityKey } = useCurrentIdentity();
 
   const [isPending, setPending] = useState<boolean>(false);
 
@@ -18,7 +31,7 @@ export default function useCreateClaim() {
       schema: v2.VerificationSchema;
       values: Record<string, string>;
       targetIdentities?: string[];
-    }) => {
+    }): Promise<ClaimRef | undefined> => {
       if (isPending) {
         throw 'Already pending';
       }
@@ -64,6 +77,23 @@ export default function useCreateClaim() {
         } catch (e) {
           console.warn('Failed to push claim to servers:', e);
         }
+
+        // Refresh the creator's claim list so the new claim shows up.
+        if (identityKey) {
+          invalidateQuery(client, [
+            'claims-list',
+            String(COLLECTION.VERIFICATIONS),
+            identityKey,
+          ]);
+        }
+
+        const key = event.key;
+        if (!key?.signedBy) return undefined;
+        return {
+          identity: key.identity,
+          keyFingerprint: getKeyFingerprint(key.signedBy) ?? '',
+          sequence: key.sequence.toString(),
+        };
       } finally {
         setPending(false);
       }
