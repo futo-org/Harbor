@@ -47,6 +47,8 @@ pub fn build_grpc_router(
         service::identity::pairing::rpc::build_pairing_service(db.clone());
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
+    let verifications_service =
+        service::verifications::rpc::build_verifications_service(ctx.clone());
     let reflection_service = build_reflection_service()?;
     let notifications_service = build_notifications_service(ctx.clone());
     let grpc_web = GrpcWebLayer::new();
@@ -58,7 +60,8 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(content_service))
         .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
-        .add_service(grpc_web.layer(server_info_service));
+        .add_service(grpc_web.layer(server_info_service))
+        .add_service(grpc_web.layer(verifications_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())

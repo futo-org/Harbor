@@ -29,11 +29,7 @@ export default function useClaimActions(claim: DecodedClaim) {
       console.warn('Failed to push claim deletion to servers:', e);
     }
 
-    invalidateQuery(client, [
-      'claims-list',
-      String(COLLECTION.VERIFICATIONS),
-      claim.identity,
-    ]);
+    invalidateQuery(client, ['claims-list', claim.identity]);
 
     if (router.canGoBack()) router.back();
   };

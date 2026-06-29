@@ -1,10 +1,11 @@
 import { useQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native';
+import { Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { DecodedClaim, decodeClaimBundle } from './useClaimById';
 
 /**
  * List the verification claims created by an identity, newest first.
+ * Backed by the dedicated `VerificationsService.ListClaims` RPC.
  */
 export function useClaimsList(identity: string | undefined): {
   claims: DecodedClaim[];
@@ -14,11 +15,9 @@ export function useClaimsList(identity: string | undefined): {
   const enabled = !!identity;
 
   const query = useQuery(
-    ['claims-list', String(COLLECTION.VERIFICATIONS), identity ?? ''],
-    new Query.ListEvents({
-      identity: identity ?? '',
-      collection: COLLECTION.VERIFICATIONS,
-      size: 100,
+    ['claims-list', identity ?? ''],
+    new Query.ListClaims({
+      claimedByIdentity: identity ?? '',
     }),
     undefined,
     enabled,
@@ -27,7 +26,7 @@ export function useClaimsList(identity: string | undefined): {
   const claims = useMemo<DecodedClaim[]>(() => {
     if (!enabled || !query.data || query.data.byteLength === 0) return [];
     try {
-      const response = v2.ListEventsResponse.fromBinary(
+      const response = v2.ListClaimsResponse.fromBinary(
         new Uint8Array(query.data),
       );
       return response.eventBundles
