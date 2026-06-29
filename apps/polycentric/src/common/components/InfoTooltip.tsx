@@ -13,11 +13,13 @@ const EDGE_MARGIN = 8;
  * A small information icon that reveals an explanatory bubble. Opens on hover
  * (web) and on tap (native).
  *
- * On web the bubble is rendered through a Portal (to the app-root PortalHost)
- * and positioned against the icon's measured screen coordinates, so it escapes
- * the edit sheet's `overflow: hidden` card instead of being clipped at its
- * edge. On native the sheet doesn't clip absolute children that way (and a
- * root portal would sit behind the native sheet), so it renders in place.
+ * NOTE: this deliberately does not use the shared HoverCard. HoverCard portals
+ * its content to the app-root host and positions it in absolute window
+ * coordinates — but this tooltip lives inside the edit-profile TrueSheet, whose
+ * content is offset from the window origin, so a portaled card would render
+ * either behind the sheet (root host) or mispositioned (sheet-local host).
+ * Instead: web portals out (to clear the sheet's `overflow: hidden`), native
+ * renders the bubble in place relative to the icon (within the sheet).
  */
 export function InfoTooltip({
   text,
@@ -30,12 +32,7 @@ export function InfoTooltip({
   const portalName = `info-tooltip-${useId()}`;
   const triggerRef = useRef<View>(null);
   const [open, setOpen] = useState(false);
-  // Icon position in window coords; only needed for the web portal.
-  const [anchor, setAnchor] = useState<{ x: number; y: number; h: number }>({
-    x: 0,
-    y: 0,
-    h: 0,
-  });
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, h: 0 });
 
   const show = () => {
     if (isWeb && triggerRef.current) {
@@ -86,8 +83,6 @@ export function InfoTooltip({
             style={[
               bubbleStyle,
               {
-                // Window-fixed so it ignores the clipping card; clamped so the
-                // bubble can't run off either screen edge.
                 position: 'fixed' as 'absolute',
                 top: anchor.y + anchor.h + 6,
                 left: Math.max(
@@ -97,7 +92,6 @@ export function InfoTooltip({
                     Dimensions.get('window').width - BUBBLE_WIDTH - EDGE_MARGIN,
                   ),
                 ),
-                // Above the sheet's web overlay (zIndex 9999).
                 zIndex: 10000,
               },
             ]}
