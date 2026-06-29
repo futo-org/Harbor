@@ -91,7 +91,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               ]}
             >
               <Text variant="small" color="neutral_500">
-                WEBFINGER ALIAS
+                ALIAS
               </Text>
               <InfoTooltip text="An alias like you@yourdomain.com that points to this profile. Your domain must be set up to link back here before it can be saved." />
             </View>
