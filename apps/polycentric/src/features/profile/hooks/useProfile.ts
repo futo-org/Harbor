@@ -8,7 +8,7 @@ export interface ProfileHookResult {
   description: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
-  webfingerAlias: string | null;
+  alias: string | null;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -29,7 +29,7 @@ const EMPTY_PROFILE: Omit<
   description: null,
   avatar: null,
   banner: null,
-  webfingerAlias: null,
+  alias: null,
 };
 
 export function useProfile(
@@ -55,7 +55,7 @@ export function useProfile(
     description: decoded.description,
     avatar: decoded.avatar,
     banner: decoded.banner,
-    webfingerAlias: decoded.webfingerAlias,
+    alias: decoded.alias,
     isLoading: query.isLoading,
     error: query.error ? new Error(query.error) : null,
     // Force a network re-fetch regardless of the original `fetchMode`.

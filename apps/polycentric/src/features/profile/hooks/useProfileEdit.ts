@@ -5,7 +5,7 @@ import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 
 interface ProfileRef {
   description: string | null;
-  webfingerAlias: string | null;
+  alias: string | null;
   refresh: () => void;
 }
 
@@ -16,8 +16,8 @@ export type ProfileEditState = {
   setNameDraft: (value: string) => void;
   descriptionDraft: string;
   setDescriptionDraft: (value: string) => void;
-  webfingerAliasDraft: string;
-  setWebfingerAliasDraft: (value: string) => void;
+  aliasDraft: string;
+  setAliasDraft: (value: string) => void;
   avatarUri: string | null;
   setAvatarUri: (value: string | null) => void;
   saving: boolean;
@@ -38,7 +38,7 @@ export function useProfileEdit(
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
-  const [webfingerAliasDraft, setWebfingerAliasDraft] = useState('');
+  const [aliasDraft, setAliasDraft] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [aliasError, setAliasError] = useState<string | null>(null);
@@ -52,13 +52,13 @@ export function useProfileEdit(
   }, [profile.description]);
 
   useEffect(() => {
-    setWebfingerAliasDraft(profile.webfingerAlias ?? '');
-  }, [profile.webfingerAlias]);
+    setAliasDraft(profile.alias ?? '');
+  }, [profile.alias]);
 
   // Editing the alias clears any stale verification error.
   useEffect(() => {
     setAliasError(null);
-  }, [webfingerAliasDraft]);
+  }, [aliasDraft]);
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     setSaving(true);
@@ -67,8 +67,8 @@ export function useProfileEdit(
       // committing — otherwise the saved alias would never verify on view, and
       // we'd be publishing an unusable alias. An empty
       // alias just clears it, no verification needed.
-      const alias = webfingerAliasDraft.trim();
-      const original = (profile.webfingerAlias ?? '').trim();
+      const alias = aliasDraft.trim();
+      const original = (profile.alias ?? '').trim();
       if (alias && alias !== original) {
         const resolved = await resolveAlias(alias);
         if (!resolved || resolved.toLowerCase() !== identityKey.toLowerCase()) {
@@ -81,7 +81,7 @@ export function useProfileEdit(
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
-        webfingerAlias: webfingerAliasDraft,
+        alias: aliasDraft,
       });
       profile.refresh();
       setEditing(false);
@@ -97,7 +97,7 @@ export function useProfileEdit(
     identityKey,
     nameDraft,
     descriptionDraft,
-    webfingerAliasDraft,
+    aliasDraft,
     avatarUri,
     profile,
   ]);
@@ -105,10 +105,10 @@ export function useProfileEdit(
   const handleCancel = useCallback(() => {
     setNameDraft(username);
     setDescriptionDraft(profile.description ?? '');
-    setWebfingerAliasDraft(profile.webfingerAlias ?? '');
+    setAliasDraft(profile.alias ?? '');
     setAvatarUri(null);
     setEditing(false);
-  }, [username, profile.description, profile.webfingerAlias]);
+  }, [username, profile.description, profile.alias]);
 
   return {
     editing,
@@ -117,8 +117,8 @@ export function useProfileEdit(
     setNameDraft,
     descriptionDraft,
     setDescriptionDraft,
-    webfingerAliasDraft,
-    setWebfingerAliasDraft,
+    aliasDraft,
+    setAliasDraft,
     avatarUri,
     setAvatarUri,
     saving,

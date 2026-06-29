@@ -96,8 +96,8 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               <InfoTooltip text="An alias like you@yourdomain.com that points to this profile. Your domain must be set up to link back here before it can be saved." />
             </View>
             <TextInput
-              value={edit.webfingerAliasDraft}
-              onChangeText={edit.setWebfingerAliasDraft}
+              value={edit.aliasDraft}
+              onChangeText={edit.setAliasDraft}
               placeholder="user@domain.com"
               autoCapitalize="none"
               autoCorrect={false}

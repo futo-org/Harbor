@@ -32,7 +32,7 @@ export interface ProfileHeaderProps {
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
-  const { identityKey, isSelf, activeFeed, setActiveFeed, webfingerAlias } =
+  const { identityKey, isSelf, activeFeed, setActiveFeed, alias } =
     useProfileContext();
 
   const fallbackUsername = useUsername(identityKey);
@@ -127,9 +127,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
               {short}
             </Text>
           </View>
-          {webfingerAlias ? (
-            <WebfingerAliasLabel alias={webfingerAlias} />
-          ) : null}
+          {alias ? <AliasLabel alias={alias} /> : null}
           {profile.description ? (
             <View style={Atoms.mt_sm}>
               <Text variant="body" fontSize="sm" color="neutral_1000">
@@ -157,11 +155,11 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 }
 
 /**
- * The verified WebFinger alias, truncated to one line so it can't push the
+ * The verified alias, truncated to one line so it can't push the
  * action button off-screen. Built on the shared HoverCard (hover on web, tap on
  * native), which portals + positions the reveal bubble correctly here.
  */
-function WebfingerAliasLabel({ alias }: { alias: string }) {
+function AliasLabel({ alias }: { alias: string }) {
   const { theme } = useTheme();
 
   return (

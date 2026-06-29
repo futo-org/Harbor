@@ -1,9 +1,9 @@
 import { normalizeAlias } from '@polycentric/react-native';
 
 /**
- * Process-lifetime, in-memory cache of WebFinger alias <-> identity
+ * Process-lifetime, in-memory cache of alias <-> identity
  * relationships that have already passed bidirectional verification (the
- * domain's WebFinger document resolves to the identity, *and* that identity's
+ * domain's lookup document resolves to the identity, *and* that identity's
  * profile claims the alias back).
  *
  * Caching only verified pairs lets repeat navigations skip both the network

@@ -15,20 +15,20 @@ interface ProfileContextValue {
   isSelf: boolean;
   activeFeed: ActiveFeed;
   setActiveFeed: (tab: ActiveFeed) => void;
-  // A WebFinger alias that has been verified to belong to this identity, when
+  // An alias that has been verified to belong to this identity, when
   // the profile was reached via one. Null otherwise.
-  webfingerAlias: string | null;
+  alias: string | null;
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 export function ProfileProvider({
   identityKey,
-  webfingerAlias = null,
+  alias = null,
   children,
 }: {
   identityKey: string | null;
-  webfingerAlias?: string | null;
+  alias?: string | null;
   children: ReactNode;
 }) {
   const { identity: selfIdentity } = useCurrentIdentity();
@@ -40,8 +40,8 @@ export function ProfileProvider({
   }, [isSelf]);
 
   const value = useMemo<ProfileContextValue>(
-    () => ({ identityKey, isSelf, activeFeed, setActiveFeed, webfingerAlias }),
-    [identityKey, isSelf, activeFeed, webfingerAlias],
+    () => ({ identityKey, isSelf, activeFeed, setActiveFeed, alias }),
+    [identityKey, isSelf, activeFeed, alias],
   );
 
   return (

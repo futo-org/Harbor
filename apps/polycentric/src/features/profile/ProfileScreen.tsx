@@ -22,7 +22,7 @@ import {
   getVerifiedAlias,
   getVerifiedIdentity,
   recordVerifiedAlias,
-} from './lib/webfingerVerificationCache';
+} from './lib/aliasVerificationCache';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
@@ -30,23 +30,23 @@ import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 
-  // A WebFinger alias (user@domain) rather than a polycentric identity key —
+  // An alias (user@domain) rather than a polycentric identity key —
   // resolve it to a key first.
   if (identityId?.includes('@')) {
-    return <WebFingerProfile alias={identityId} />;
+    return <AliasProfile alias={identityId} />;
   }
 
   return <IdentityProfile identityKey={identityId ?? null} />;
 }
 
 /**
- * Render a profile addressed by its identity key. If that profile claims a
- * WebFinger alias that *verifiably* resolves back to this same identity,
+ * Render a profile addressed by its identity key. If that profile claims an
+ * alias that *verifiably* resolves back to this same identity,
  * redirect to the canonical alias URL (`/user@domain`).
  *
  * Verification happens before the redirect: `resolveAlias(alias)` must
  * return this exact identity, so a profile can't bounce us to an alias it
- * doesn't actually own. The alias URL renders `WebFingerProfile` (not this
+ * doesn't actually own. The alias URL renders `AliasProfile` (not this
  * component), so there's no redirect loop.
  */
 function IdentityProfile({ identityKey }: { identityKey: string | null }) {
@@ -75,7 +75,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
     }
 
     if (profile.isLoading) return;
-    const alias = profile.webfingerAlias;
+    const alias = profile.alias;
     if (!alias) return;
 
     let cancelled = false;
@@ -94,7 +94,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [identityKey, profile.isLoading, profile.webfingerAlias]);
+  }, [identityKey, profile.isLoading, profile.alias]);
 
   return (
     <ProfileProvider identityKey={identityKey}>
@@ -176,7 +176,7 @@ function ProfileScreenContent() {
   );
 }
 
-type WebFingerResolution =
+type AliasResolution =
   | { status: 'loading' }
   // Resolved to a candidate identity, now confirming it claims `alias` back.
   | { status: 'verifying'; identity: string }
@@ -186,12 +186,12 @@ type WebFingerResolution =
   | { status: 'not-found' };
 
 /**
- * Resolve a WebFinger alias (`user@domain`) to a polycentric identity, then
+ * Resolve an alias (`user@domain`) to a polycentric identity, then
  * render the profile for it. The alias stays in the URL; resolution happens
  * in place rather than redirecting to the canonical `/[identityId]`.
  */
-function WebFingerProfile({ alias }: { alias: string }) {
-  const [resolution, setResolution] = useState<WebFingerResolution>({
+function AliasProfile({ alias }: { alias: string }) {
+  const [resolution, setResolution] = useState<AliasResolution>({
     status: 'loading',
   });
 
@@ -238,9 +238,7 @@ function WebFingerProfile({ alias }: { alias: string }) {
     // differing case can't cause a false mismatch; a null on either side
     // fails closed.
     const expected = normalizeAlias(alias);
-    const claimed = profile.webfingerAlias
-      ? normalizeAlias(profile.webfingerAlias)
-      : null;
+    const claimed = profile.alias ? normalizeAlias(profile.alias) : null;
     const verified = !!expected && claimed === expected;
     if (verified) {
       recordVerifiedAlias(alias, resolution.identity);
@@ -250,22 +248,22 @@ function WebFingerProfile({ alias }: { alias: string }) {
         ? { status: 'verified', identity: resolution.identity }
         : { status: 'unverified' },
     );
-  }, [resolution, profile.isLoading, profile.webfingerAlias, alias]);
+  }, [resolution, profile.isLoading, profile.alias, alias]);
 
   switch (resolution.status) {
     case 'loading':
-      return <WebFingerStatus message={`Resolving ${alias}…`} loading />;
+      return <AliasStatus message={`Resolving ${alias}…`} loading />;
     case 'verifying':
-      return <WebFingerStatus message={`Verifying ${alias}…`} loading />;
+      return <AliasStatus message={`Verifying ${alias}…`} loading />;
     case 'not-found':
-      return <WebFingerStatus message={`Couldn't find ${alias}`} />;
+      return <AliasStatus message={`Couldn't find ${alias}`} />;
     case 'unverified':
-      return <WebFingerStatus message={`Couldn't verify ${alias}`} />;
+      return <AliasStatus message={`Couldn't verify ${alias}`} />;
     case 'verified':
       return (
         <ProfileProvider
           identityKey={resolution.identity}
-          webfingerAlias={normalizeAlias(alias) ?? alias}
+          alias={normalizeAlias(alias) ?? alias}
         >
           <ProfileScreenContent />
         </ProfileProvider>
@@ -273,7 +271,7 @@ function WebFingerProfile({ alias }: { alias: string }) {
   }
 }
 
-function WebFingerStatus({
+function AliasStatus({
   message,
   loading,
 }: {

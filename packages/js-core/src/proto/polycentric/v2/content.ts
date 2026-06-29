@@ -278,11 +278,11 @@ export interface ProfileUpdate {
      */
     description?: string;
     /**
-     * WebFinger (RFC 7033) alias
+     * A domain-based alias (e.g. user@domain.com) the profile claims for itself.
      *
-     * @generated from protobuf field: optional string webfinger_alias = 5
+     * @generated from protobuf field: optional string alias = 5
      */
-    webfingerAlias?: string;
+    alias?: string;
 }
 /**
  * If an uploaded Blob is uploaded to the servers Object Storage and not
@@ -1154,7 +1154,7 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
             { no: 2, name: "avatar", kind: "message", T: () => ImageSet },
             { no: 3, name: "banner", kind: "message", T: () => ImageSet },
             { no: 4, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "webfinger_alias", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 5, name: "alias", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<ProfileUpdate>): ProfileUpdate {
@@ -1180,8 +1180,8 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
                 case /* optional string description */ 4:
                     message.description = reader.string();
                     break;
-                case /* optional string webfinger_alias */ 5:
-                    message.webfingerAlias = reader.string();
+                case /* optional string alias */ 5:
+                    message.alias = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1207,9 +1207,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
         /* optional string description = 4; */
         if (message.description !== undefined)
             writer.tag(4, WireType.LengthDelimited).string(message.description);
-        /* optional string webfinger_alias = 5; */
-        if (message.webfingerAlias !== undefined)
-            writer.tag(5, WireType.LengthDelimited).string(message.webfingerAlias);
+        /* optional string alias = 5; */
+        if (message.alias !== undefined)
+            writer.tag(5, WireType.LengthDelimited).string(message.alias);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
