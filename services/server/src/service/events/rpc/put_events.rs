@@ -17,6 +17,7 @@ use crate::{
 };
 use ::entity::{content_model as ContentModel, event_model as EventModel};
 use common_kafka::FutureRecord;
+use log;
 use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -48,7 +49,7 @@ pub async fn handle(
             }
 
             Err(status) => {
-                eprintln!(
+                log::debug!(
                     "put_events[{idx}] skipped: {} {}",
                     status.code(),
                     status.message()
