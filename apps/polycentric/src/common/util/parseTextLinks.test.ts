@@ -18,6 +18,16 @@ const aliases = (text: string) =>
     (s): s is Extract<TextSegment, { type: 'alias' }> => s.type === 'alias',
   );
 
+/** Just the identity segments. */
+const identities = (text: string) =>
+  parseTextLinks(text).filter(
+    (s): s is Extract<TextSegment, { type: 'identity' }> =>
+      s.type === 'identity',
+  );
+
+const HEX64 =
+  '0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722';
+
 describe('parseTextLinks', () => {
   describe('no links', () => {
     it('returns a single text segment for plain text', () => {
@@ -197,6 +207,42 @@ describe('parseTextLinks', () => {
     });
   });
 
+  describe('identity mentions', () => {
+    it('detects an `@<64-hex>` mention', () => {
+      expect(parseTextLinks(`@${HEX64}`)).toEqual([
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+      ]);
+    });
+
+    it('detects a mention within surrounding text', () => {
+      expect(parseTextLinks(`hi @${HEX64} ok`)).toEqual([
+        { type: 'text', value: 'hi ' },
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+        { type: 'text', value: ' ok' },
+      ]);
+    });
+
+    it('excludes trailing punctuation from the mention', () => {
+      expect(parseTextLinks(`see @${HEX64}.`)).toEqual([
+        { type: 'text', value: 'see ' },
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+        { type: 'text', value: '.' },
+      ]);
+    });
+
+    it('does not match fewer than 64 hex chars', () => {
+      expect(identities('@deadbeef here')).toEqual([]);
+    });
+
+    it('does not match a longer hex run (not exactly 64)', () => {
+      expect(identities(`@${HEX64}ab`)).toEqual([]);
+    });
+
+    it('does not match 64 non-hex chars', () => {
+      expect(identities(`@${'g'.repeat(64)} here`)).toEqual([]);
+    });
+  });
+
   describe('multiple links & surrounding text', () => {
     it('detects several links with text between them', () => {
       const segs = parseTextLinks(
@@ -240,6 +286,7 @@ describe('parseTextLinks', () => {
       '(www.example.com), and example.org. done',
       'email a@b.com plus https://c.io end',
       'hey @user@domain.com and a@b.com and example.net',
+      `mention @${HEX64} mid sentence`,
       'multi https://x.com www.y.org example.net z',
       '',
     ])('rejoining all segment values reproduces the input: %s', (input) => {
