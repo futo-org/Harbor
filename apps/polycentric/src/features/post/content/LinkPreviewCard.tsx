@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { v2 } from '@polycentric/react-native';
-import { Image } from 'expo-image';
+import { Image } from '@/src/common/components/Image';
 import { Linking, Pressable, View } from 'react-native';
 
 const IMAGE_BG = 'rgba(0,0,0,0.04)';
@@ -21,9 +21,9 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
   const { theme } = useTheme();
   const client = usePolycentric();
 
-  // Load the thumbnail through the server's image proxy rather
+  // Load the thumbnail through the server image proxy rather
   // than hotlinking the third-party host directly.
-  const imageUri = link.image ? client.imageProxyUrl(link.image) : null;
+  const imageUris = link.image ? client.imageProxyUrls(link.image) : [];
 
   let host = link.url;
   try {
@@ -49,11 +49,10 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
         pressed && { opacity: 0.8 },
       ]}
     >
-      {imageUri ? (
+      {imageUris.length > 0 ? (
         <Image
           testID="linkPreviewImage"
-          source={{ uri: imageUri }}
-          recyclingKey={imageUri}
+          uris={imageUris}
           contentFit="cover"
           style={[
             Atoms.w_full,

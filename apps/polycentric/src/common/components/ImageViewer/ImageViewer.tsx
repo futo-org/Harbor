@@ -5,7 +5,7 @@ import Icon from '@/src/common/components/Icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { resolveImageSources } from './resolveImageSources';
 import { ImageViewerInput } from './useImageViewerStore';
-import { Image } from 'expo-image';
+import { Image } from '@/src/common/components/Image';
 import {
   Platform,
   Pressable,
@@ -58,7 +58,7 @@ export function ImageViewer({
   const insets = useSafeAreaInsets();
 
   const sources = useMemo(
-    () => resolveImageSources(images, (digest) => client.blobUrl(digest)),
+    () => resolveImageSources(images, (digest) => client.blobUrls(digest)),
     [client, images],
   );
 
@@ -269,8 +269,7 @@ export function ImageViewer({
               ]}
             >
               <Image
-                source={{ uri: current.uri }}
-                recyclingKey={current.uri}
+                uris={current.uris}
                 contentFit="contain"
                 style={[Atoms.w_full, Atoms.h_full]}
               />

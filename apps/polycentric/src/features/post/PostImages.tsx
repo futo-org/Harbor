@@ -6,7 +6,7 @@ import { Atoms } from '@/src/common/theme';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
 import { v2 } from '@polycentric/react-native';
 import { useCallback, useMemo } from 'react';
-import { Image } from 'expo-image';
+import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';
 
 /** Target pixel size we want for displayed attachments. */
@@ -18,7 +18,7 @@ const GRID_GAP = 2;
 const TILE_BG = 'rgba(0,0,0,0.04)';
 
 type PostImageSource = {
-  uri: string;
+  uris: string[];
   aspectRatio: number;
 };
 
@@ -37,11 +37,11 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
           const variant = pickImageVariant(imageSet, POST_IMAGE_TARGET);
           const digest = variant?.blob?.digest;
           if (!digest) return null;
-          const uri = client.blobUrl(digest);
-          if (!uri) return null;
+          const uris = client.blobUrls(digest);
+          if (uris.length === 0) return null;
           const w = variant.width || 1;
           const h = variant.height || 1;
-          return { uri, aspectRatio: w / h };
+          return { uris, aspectRatio: w / h };
         })
         .filter((s): s is PostImageSource => s != null),
     [client, capped],
@@ -73,8 +73,7 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
         ]}
       >
         <Image
-          source={{ uri: sources[0].uri }}
-          recyclingKey={sources[0].uri}
+          uris={sources[0].uris}
           contentFit="cover"
           style={[
             Atoms.w_full,
@@ -109,26 +108,26 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
     >
       {sources.length === 2 ? (
         <>
-          <GridTile uri={sources[0].uri} index={0} onOpen={openViewer} />
-          <GridTile uri={sources[1].uri} index={1} onOpen={openViewer} />
+          <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
+          <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
         </>
       ) : sources.length === 3 ? (
         <>
-          <GridTile uri={sources[0].uri} index={0} onOpen={openViewer} />
+          <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uri={sources[1].uri} index={1} onOpen={openViewer} />
-            <GridTile uri={sources[2].uri} index={2} onOpen={openViewer} />
+            <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
+            <GridTile uris={sources[2].uris} index={2} onOpen={openViewer} />
           </View>
         </>
       ) : (
         <>
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uri={sources[0].uri} index={0} onOpen={openViewer} />
-            <GridTile uri={sources[2].uri} index={2} onOpen={openViewer} />
+            <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
+            <GridTile uris={sources[2].uris} index={2} onOpen={openViewer} />
           </View>
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uri={sources[1].uri} index={1} onOpen={openViewer} />
-            <GridTile uri={sources[3].uri} index={3} onOpen={openViewer} />
+            <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
+            <GridTile uris={sources[3].uris} index={3} onOpen={openViewer} />
           </View>
         </>
       )}
@@ -137,11 +136,11 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
 }
 
 function GridTile({
-  uri,
+  uris,
   index,
   onOpen,
 }: {
-  uri: string;
+  uris: string[];
   index: number;
   onOpen: (index: number) => void;
 }) {
@@ -155,8 +154,7 @@ function GridTile({
       style={({ pressed }) => [Atoms.flex_1, pressed && { opacity: 0.8 }]}
     >
       <Image
-        source={{ uri }}
-        recyclingKey={uri}
+        uris={uris}
         contentFit="cover"
         style={[Atoms.w_full, Atoms.h_full, { backgroundColor: TILE_BG }]}
       />

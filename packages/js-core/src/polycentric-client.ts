@@ -97,9 +97,6 @@ export class PolycentricClient {
   public activeIdentityKey: string | null = null;
   public servers: string[] = ['http://localhost:3000'];
 
-  /** CDN URL per server, populated by `fetchServerInfo` during init. */
-  private cdnUrlByServer = new Map<string, string>();
-
   public readonly cryptoManager: ICryptoManager = new CryptoManager();
 
   public storageHandle: StorageHandle | undefined;
@@ -158,10 +155,6 @@ export class PolycentricClient {
         });
       }
 
-      // Resolve each server's CDN URL. Failures are tolerated — clients
-      // still work without a CDN, they just can't fetch blob bodies.
-      await this.fetchServerInfo();
-
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
       // `getIdentityFeed`) actually have somewhere to call.
@@ -175,68 +168,31 @@ export class PolycentricClient {
     }
   }
 
-  /**
-   * Call `ServerService.GetInfo` on every configured server and cache
-   * each server's `cdn_url`. Failures are logged, not thrown.
-   */
-  private async fetchServerInfo(): Promise<void> {
-    const results = await Promise.allSettled(
-      this.servers.map(async (server) => {
-        const bytes = await this.core.getServerInfo(server);
-        const response = Proto.GetServerInfoResponse.fromBinary(
-          new Uint8Array(bytes),
-        );
-        return { server, info: response.serverInfo };
-      }),
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('fetchServerInfo failed:', result.reason);
-        continue;
-      }
-      const { server, info } = result.value;
-      if (info?.cdnUrl) {
-        this.cdnUrlByServer.set(server, info.cdnUrl);
-      }
-    }
+  /** Blob URL for each configured server, in order, for fallback. */
+  blobUrls(digest: Proto.ContentDigest): string[] {
+    const key = toDigestKey(digest);
+    return this.servers.map((server) => `${server}/blob/${key}`);
   }
 
-  /**
-   * Return the CDN base URL for `server`, as reported by
-   * `ServerService.GetInfo`. Returns `null` if info hasn't been
-   * fetched yet or the server didn't report one.
-   */
-  cdnUrlFor(server: string): string | null {
-    return this.cdnUrlByServer.get(server) ?? null;
-  }
-
-  /**
-   * Build the HTTP URL for a blob by its content digest, using the
-   * first server's reported CDN URL. Returns `null` when no CDN is
-   * known.
-   */
+  /** First server's blob URL, or `null` if no servers are configured. */
   blobUrl(digest: Proto.ContentDigest): string | null {
-    const server = this.servers[0];
-    if (!server) return null;
-    const cdn = this.cdnUrlByServer.get(server);
-    if (!cdn) return null;
-    return `${cdn}/blob/${toDigestKey(digest)}`;
+    return this.blobUrls(digest)[0] ?? null;
   }
 
   /**
-   * Build a URL that proxies a remote image through the first server's
-   * `/image_proxy` endpoint. Used for link-preview thumbnails so
-   * the client never hotlinks third-party hosts (avoids leaking reader IPs and
-   * mixed-content/CORS issues). Returns `null` if no server is configured.
-   *
-   * Note: this targets the server itself, not the blob CDN — `/image_proxy`
-   * is a dynamic endpoint, not CDN-served like `/blob`.
+   * Proxy a remote image through each server's `/image_proxy` endpoint, in
+   * order, for fallback. Used for link-preview thumbnails so the client never
+   * hotlinks third-party hosts (avoids leaking reader IPs and
+   * mixed-content/CORS issues).
    */
+  imageProxyUrls(imageUrl: string): string[] {
+    const q = encodeURIComponent(imageUrl);
+    return this.servers.map((server) => `${server}/image_proxy?url=${q}`);
+  }
+
+  /** First server's image-proxy URL, or `null` if no servers are configured. */
   imageProxyUrl(imageUrl: string): string | null {
-    const server = this.servers[0];
-    if (!server) return null;
-    return `${server}/image_proxy?url=${encodeURIComponent(imageUrl)}`;
+    return this.imageProxyUrls(imageUrl)[0] ?? null;
   }
 
   /**
@@ -663,18 +619,15 @@ export class PolycentricClient {
   }
 
   /**
-   * Fetch a blob body by digest from any server CDN that has it.
-   * Returns null if no configured server's CDN serves it.
+   * Fetch a blob body by digest, trying each server in turn.
+   * Returns null if none serve it.
    */
   async fetchBlobBytes(
     digest: Proto.ContentDigest,
   ): Promise<Uint8Array | null> {
-    const suffix = `/blob/${toDigestKey(digest)}`;
-    for (const server of this.servers) {
-      const cdn = this.cdnUrlByServer.get(server);
-      if (!cdn) continue;
+    for (const url of this.blobUrls(digest)) {
       try {
-        const res = await fetch(`${cdn}${suffix}`);
+        const res = await fetch(url);
         if (!res.ok) continue;
         return new Uint8Array(await res.arrayBuffer());
       } catch {
