@@ -228,7 +228,6 @@ function AliasProfile({ alias }: { alias: string }) {
   }, [alias]);
 
   // Load the candidate's profile to read the alias it claims for itself.
-  // Fetched over the network so the check doesn't pass/fail on a stale cache.
   const candidate =
     resolution.status === 'verifying' ? resolution.identity : null;
   const profile = useProfile(candidate, { fetchMode: FetchMode.Default });
