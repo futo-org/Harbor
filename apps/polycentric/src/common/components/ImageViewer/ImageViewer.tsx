@@ -5,8 +5,8 @@ import Icon from '@/src/common/components/Icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { resolveImageSources } from './resolveImageSources';
 import { ImageViewerInput } from './useImageViewerStore';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -270,7 +270,8 @@ export function ImageViewer({
             >
               <Image
                 source={{ uri: current.uri }}
-                resizeMode="contain"
+                recyclingKey={current.uri}
+                contentFit="contain"
                 style={[Atoms.w_full, Atoms.h_full]}
               />
             </Pressable>

@@ -9,12 +9,12 @@ import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   type LayoutChangeEvent,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import { v2 } from '@polycentric/react-native';
@@ -265,7 +265,8 @@ function AttachmentThumb({
     >
       <Image
         source={{ uri }}
-        resizeMode="cover"
+        recyclingKey={uri}
+        contentFit="cover"
         style={{ width: '100%', height: '100%' }}
       />
       {/* Loading / error overlay while the blobs are being processed+uploaded */}

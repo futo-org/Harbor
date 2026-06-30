@@ -2,7 +2,8 @@ import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { v2 } from '@polycentric/react-native';
-import { Image, Linking, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Linking, Pressable, View } from 'react-native';
 
 const IMAGE_BG = 'rgba(0,0,0,0.04)';
 /** Open-Graph standard image ratio (1200×630). */
@@ -52,7 +53,8 @@ export function LinkPreviewCard({ link }: { link: v2.Link }) {
         <Image
           testID="linkPreviewImage"
           source={{ uri: imageUri }}
-          resizeMode="cover"
+          recyclingKey={imageUri}
+          contentFit="cover"
           style={[
             Atoms.w_full,
             { aspectRatio: OG_ASPECT, backgroundColor: IMAGE_BG },

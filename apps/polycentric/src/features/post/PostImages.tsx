@@ -6,7 +6,8 @@ import { Atoms } from '@/src/common/theme';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
 import { v2 } from '@polycentric/react-native';
 import { useCallback, useMemo } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, View } from 'react-native';
 
 /** Target pixel size we want for displayed attachments. */
 const POST_IMAGE_TARGET = 512;
@@ -73,7 +74,8 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
       >
         <Image
           source={{ uri: sources[0].uri }}
-          resizeMode="cover"
+          recyclingKey={sources[0].uri}
+          contentFit="cover"
           style={[
             Atoms.w_full,
             Atoms.rounded_md,
@@ -154,7 +156,8 @@ function GridTile({
     >
       <Image
         source={{ uri }}
-        resizeMode="cover"
+        recyclingKey={uri}
+        contentFit="cover"
         style={[Atoms.w_full, Atoms.h_full, { backgroundColor: TILE_BG }]}
       />
     </Pressable>
