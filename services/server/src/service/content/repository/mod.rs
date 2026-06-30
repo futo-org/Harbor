@@ -29,10 +29,12 @@ impl Mutation {
         content_id: i64,
         content: Content,
         event_identity: &str,
+        trusted_moderator: Option<&str>,
     ) -> Result<(), Status> {
         let ctx = ChildContext {
             content_id,
             event_identity,
+            trusted_moderator,
         };
         match content.content_body {
             Some(ContentBody::Post(x)) => post::add(db, &ctx, x).await,
@@ -65,6 +67,7 @@ impl Mutation {
 struct ChildContext<'a> {
     content_id: i64,
     event_identity: &'a str,
+    trusted_moderator: Option<&'a str>,
 }
 
 /// Log a DB error and map it to an opaque internal status.
@@ -155,7 +158,7 @@ mod tests {
     async fn save_content_child_none_is_noop() {
         let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
         let content = Content { content_body: None };
-        Mutation::save_content_child(&db, 1, content, "alice")
+        Mutation::save_content_child(&db, 1, content, "alice", None)
             .await
             .unwrap();
         assert!(db.into_transaction_log().is_empty());
@@ -167,7 +170,7 @@ mod tests {
         let content = Content {
             content_body: Some(ContentBody::Delete(Delete { event_key: None })),
         };
-        let err = Mutation::save_content_child(&db, 1, content, "alice")
+        let err = Mutation::save_content_child(&db, 1, content, "alice", None)
             .await
             .unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);

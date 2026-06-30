@@ -9,6 +9,11 @@ pub(super) async fn add<C: ConnectionTrait>(
     ctx: &ChildContext<'_>,
     labels: Labels,
 ) -> Result<(), Status> {
+    // Only a trusted moderator can persist labels.
+    if ctx.trusted_moderator != Some(ctx.event_identity) {
+        return Ok(());
+    }
+
     let key = split_event_key(labels.event_key, "labels content")?;
 
     // One row per label value for efficient aggregation; the labeled

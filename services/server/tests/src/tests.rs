@@ -1,12 +1,11 @@
 use ed25519_dalek::SigningKey;
 use integration_tests::{
-COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
+    COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
     bundle_signature, connect_event_sync, derive_identity_string,
     generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
     make_revocation_bound, make_verification_claim_bundle, node_hash,
-    public_key_of,
     proto::{event_sync_service_client::EventSyncServiceClient, *},
-    *,
+    public_key_of, *,
 };
 use prost::Message as ProstMessage;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -631,7 +630,6 @@ async fn rewritten_event_invalidates_proofs() {
     );
 }
 
-<<<<<<< HEAD
 #[tokio::test]
 async fn put_verification_claim_is_ingested_and_listable() {
     let mut client = connect_event_sync().await;
@@ -697,7 +695,9 @@ async fn put_verification_claim_is_ingested_and_listable() {
             .as_ref()
             .is_some_and(|s| s.signature == claim_signature)),
         "stored verification claim not returned",
-=======
+    )
+}
+
 // Following are moderation / label integration tests: The server must
 // be started with `POLYCENTRIC_MODERATION_IDENTITY` set to the value
 // returned by `test_moderator_identity()`.
@@ -1266,6 +1266,5 @@ async fn omit_labels_untrusted_label_does_not_hide() {
             .map(|se| se.signature == post_sig)
             .unwrap_or(false)),
         "untrusted label must not be filterable via omit_labels — post should still appear",
->>>>>>> dc5014bf (Add server integration test CI; add server labels integration tests)
     );
 }
