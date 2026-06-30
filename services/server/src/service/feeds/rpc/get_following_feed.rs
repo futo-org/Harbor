@@ -4,19 +4,18 @@
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
-use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
-use crate::service::feeds::util::{map_db_err, page_limit};
+use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository as GraphRepository;
 use crate::service::proto::{GetFeedResponse, GetFollowingFeedRequest};
 use tonic::Status;
 
 pub struct Params {
+    pub common: feeds_pipeline::Params,
     pub identities: Vec<String>,
-    pub limit: u64,
 }
 
 pub async fn handle(
@@ -36,10 +35,8 @@ pub async fn handle(
         identities.push(caller);
     }
 
-    let params = Params {
-        identities,
-        limit: page_limit(&req.page_params),
-    };
+    let common = feeds_pipeline::Params::from_req_params(&req.page_params)?;
+    let params = Params { common, identities };
 
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
@@ -48,38 +45,41 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
+        page_info: Some(result.page_info.proto()?),
     })
 }
 
 async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
-) -> Result<Vec<EventWithContentRow>, Status> {
-    FeedsRepository::list_feed_events_by_identities(
+) -> Result<feeds_pipeline::Fetched, Status> {
+    let rows = FeedsRepository::list_feed_events_by_identities(
         &ctx.db,
         params.identities.clone(),
-        params.limit,
+        params.common.limit + 1, // Check for next page
+        &params.common.cursor_filter,
     )
     .await
-    .map_err(map_db_err)
+    .map_err(map_db_err)?;
+
+    Ok(feeds_pipeline::finalize_fetch(rows, &params.common))
 }
 
-#[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
     ctx: &ServiceContext,
     _params: &Params,
-    rows: &Vec<EventWithContentRow>,
+    fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, rows).await
+    feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
     _ctx: &ServiceContext,
     _params: &Params,
-    rows: Vec<EventWithContentRow>,
+    fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(rows, hydration).await
+    feeds_pipeline::filter(fetched, hydration).await
 }
 
 async fn view(

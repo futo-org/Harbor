@@ -1,8 +1,8 @@
+import 'react-native-get-random-values';
 import { PolycentricClient } from '@polycentric/js-core';
 import { PolycentricCore, setLogger } from './generated/rn/polycentric_core';
 import { createReactNativeStorageDriver } from './datastore/expo-sqlite';
 import { createReactNativeFileStoreDriver } from './filestore/expo-file-system';
-import { ReactNativeCryptoManager } from './crypto/react-native-crypto-manager';
 import {
   createBatchingLogSink,
   createIdentity,
@@ -22,7 +22,6 @@ export async function createPolycentricClient(
 ): Promise<PolycentricClient> {
   installConsoleLogger();
   const databaseName = normalizeDatabaseName(config.databaseName);
-  const cryptoManager = new ReactNativeCryptoManager();
 
   return PolycentricClient.create({
     core: new PolycentricCore(),
@@ -30,7 +29,6 @@ export async function createPolycentricClient(
     filestoreDriver: await createReactNativeFileStoreDriver(
       `${databaseName}-blobs`,
     ),
-    cryptoManager,
     seedServers: config.seedServers,
   });
 }

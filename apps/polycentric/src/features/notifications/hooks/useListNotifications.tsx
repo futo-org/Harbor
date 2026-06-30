@@ -1,5 +1,5 @@
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeNotifications, type NotificationData } from '../utils';
@@ -34,6 +34,6 @@ export default function useListNotifications(): UseListNotificationsResult {
     items,
     isLoading: query.isLoading,
     error: query.error,
-    refresh: query.refresh,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }

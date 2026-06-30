@@ -39,6 +39,11 @@ export const Routes = {
     editProfile: (identityId: string) => `/${identityId}/edit` as const,
     post: (identityId: string, keyFingerprint: string, sequence: string) =>
       `/${identityId}/post/${keyFingerprint}/${sequence}` as const,
+    verification: (
+      identityId: string,
+      keyFingerprint: string,
+      sequence: string,
+    ) => `/${identityId}/verifications/${keyFingerprint}/${sequence}` as const,
     settings: {
       index: '/settings',
       identity: '/settings/identity',

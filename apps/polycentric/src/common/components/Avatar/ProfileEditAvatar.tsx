@@ -14,9 +14,9 @@ type ProfileEditAvatarProps = {
 
 /**
  * Edit-mode counterpart to {@link ProfileAvatar}: seeds the image picker with
- * the identity's current avatar (resolved the same way — best-fitting variant
- * from the profile's `avatar` ImageSet via the blob CDN, falling back to a
- * Dicebear identicon) before the user chooses a replacement.
+ * the identity's current avatar (best-fitting variant from the profile's
+ * `avatar` ImageSet, falling back to a Dicebear identicon) before the user
+ * chooses a replacement.
  */
 export function ProfileEditAvatar({
   identityKey,

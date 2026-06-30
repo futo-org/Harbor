@@ -31,7 +31,9 @@ jest.mock('@/src/common/components/primitives', () => ({
 // The thumbnail is loaded through the server image proxy; capture the call by
 // returning a recognizable prefix.
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
-  usePolycentric: () => ({ imageProxyUrl: (url: string) => `proxy://${url}` }),
+  usePolycentric: () => ({
+    imageProxyUrls: (url: string) => [`proxy://${url}`],
+  }),
 }));
 
 const makeLink = (overrides: Partial<v2.Link> = {}): v2.Link =>
@@ -73,7 +75,8 @@ describe('LinkPreviewCard', () => {
       <LinkPreviewCard link={makeLink({ image: 'https://img.test/x.png' })} />,
     );
     // The raw image URL is rewritten through the proxy, not hotlinked.
-    expect(getByTestId('linkPreviewImage').props.source.uri).toBe(
+    // expo-image normalizes `source={{ uri }}` into an array of sources.
+    expect(getByTestId('linkPreviewImage').props.source[0].uri).toBe(
       'proxy://https://img.test/x.png',
     );
   });

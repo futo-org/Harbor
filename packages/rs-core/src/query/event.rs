@@ -210,6 +210,8 @@ pub fn get_event(
             subscriber.next(QueryResult {
                 data: Some(bytes.clone()),
                 status: QueryStatus::Success,
+                successful_servers: 0,
+                pending_servers: 0,
             });
             subscriber.complete();
         });

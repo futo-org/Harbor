@@ -61,3 +61,16 @@ export function encodeFieldValue(
       throw new Error(`Unsupported field kind: ${kind}`);
   }
 }
+
+/** Decode a field's canonical bytes back to a display string. */
+export function decodeFieldValue(
+  kind: v2.FieldKind,
+  bytes: Uint8Array,
+): string {
+  switch (kind) {
+    case v2.FieldKind.STRING:
+      return new TextDecoder().decode(bytes);
+    default:
+      throw new Error(`Unsupported field kind: ${kind}`);
+  }
+}

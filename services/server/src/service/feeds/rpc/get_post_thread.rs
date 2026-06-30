@@ -5,11 +5,11 @@ use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
-use crate::service::feeds::util::map_db_err;
+use crate::service::feeds::util::{PageInfo, map_db_err};
 use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
 use std::collections::HashMap;
 use tonic::Status;
@@ -78,7 +78,7 @@ pub async fn handle(
 async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
-) -> Result<Vec<EventWithContentRow>, Status> {
+) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
         &ctx.db,
         params.collection,
@@ -161,25 +161,32 @@ async fn fetch(
             thread.push(row);
         }
     }
-    Ok(thread)
+    Ok(feeds_pipeline::Fetched {
+        rows: thread,
+        page_info: PageInfo {
+            backward_cursor: FeedCursor::Start,
+            forward_cursor: FeedCursor::End,
+            has_previous_page: false,
+            has_next_page: false,
+        },
+    })
 }
 
-#[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
     ctx: &ServiceContext,
     _params: &Params,
-    rows: &Vec<EventWithContentRow>,
+    fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, rows).await
+    feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
     _ctx: &ServiceContext,
     _params: &Params,
-    rows: Vec<EventWithContentRow>,
+    fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(rows, hydration).await
+    feeds_pipeline::filter(fetched, hydration).await
 }
 
 async fn view(

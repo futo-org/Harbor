@@ -13,6 +13,7 @@ migration = { path = "./migration" }
 
 # 3rd Party
 axum = { version = "0.8.8", features = ["http2"] }
+base64.workspace = true
 chrono.workspace = true
 ed25519-dalek.workspace = true
 log.workspace = true
@@ -23,6 +24,7 @@ rdkafka = { workspace = true, features = ["cmake-build", "curl", "sasl"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
 sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 sha2.workspace = true
 time.workspace = true
 tokio = { workspace = true, features = ["full"] }
@@ -37,4 +39,3 @@ http = "1"
 [dev-dependencies]
 mockito = "1"
 tonic-prost-build = "*"
-

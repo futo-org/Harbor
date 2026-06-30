@@ -59,28 +59,9 @@ export interface ICryptoManager {
   ): Promise<boolean>;
 
   /**
-   * Generate a random process ID
-   *
-   * Process ID's are generated as the first 16 bytes of an Ed25519 private key.
-   * This is NOT the same private key used for a process.
-   * The Ed25519 key is only used here to ensure randomness.
-   *
-   * @returns Promise that resolves to 16 random bytes
-   */
-  generateProcessId(): Promise<Uint8Array>;
-
-  /**
    * Get the list of supported key types
    *
    * @returns Array of supported key type constants
    */
   getSupportedKeyTypes(): number[];
-
-  /**
-   * Convert a Uint8Array to hexadecimal string representation
-   *
-   * @param data - The byte array to convert
-   * @returns Hexadecimal string representation (lowercase, no prefix)
-   */
-  toHex(data: Uint8Array): string;
 }

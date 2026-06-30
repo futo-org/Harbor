@@ -8,3 +8,4 @@ pub mod notifications;
 pub mod proofs;
 pub mod proto;
 pub mod server;
+pub mod verifications;

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/events.proto";
+
+// Separate from verifications.proto: that file is imported by content.proto,
+// so importing events.proto (for EventBundle) there would be a cyclic import.
+
+message ListClaimsRequest {
+  string claimed_by_identity = 1;
+}
+
+message ListClaimsResponse {
+  repeated EventBundle event_bundles = 1;
+}
+
+service VerificationsService {
+  rpc ListClaims(ListClaimsRequest) returns (ListClaimsResponse);
+}

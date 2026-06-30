@@ -4,6 +4,7 @@
 //! etc.) is re-exported from this module so consumers don't depend on
 //! the internal file layout.
 
+pub mod claims;
 pub mod client;
 pub mod event;
 pub mod feed;
@@ -15,7 +16,7 @@ pub(crate) mod validation;
 
 pub use client::{
     FetchMode, MaybeSend, MergeFn, QueryClient, QueryFnBox, QueryFutureBox, QueryKey, QueryOpts,
-    QueryState,
+    QueryState, UpdateMode,
 };
 pub use query_observable::{
     QueryObservable, QueryObserver, QueryResult, QueryResultFfi, QueryStatus, ToFfiBytes,

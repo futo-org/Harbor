@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Query, QueryStatus, v2 } from '@polycentric/react-native';
+import { useMemo } from 'react';
+import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
-  decodeFeedItems,
+  decodeFeedQueryResult,
+  extractFeedToken,
+  shouldExtend,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
-import { type FeedHookResult, NOOP } from './types';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { type FeedHookResult } from './types';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 
 export function useFollowingFeed(options?: {
@@ -18,25 +20,35 @@ export function useFollowingFeed(options?: {
 
   const query = useQuery(
     feedQueryKeys.following(),
-    new Query.GetFollowingFeed({ followerIdentity }),
-    undefined,
+    (status, data) => {
+      const forwardToken = extractFeedToken(status, data);
+
+      return new Query.GetFollowingFeed({
+        followerIdentity,
+        limit: options?.limit,
+        forwardToken,
+      });
+    },
+    { updateMode: UpdateMode.Merge },
     enabled,
   );
 
-  const items = useMemo(() => {
-    if (!query.data) {
-      return [];
-    }
-    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(query.data));
-    return decodeFeedItems(response);
-  }, [query.data]);
+  const [items, hasNext] = useMemo(
+    () => decodeFeedQueryResult(query.data),
+    [query.data],
+  );
 
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: NOOP,
-    hasMore: false,
-    refresh: query.refresh,
+    loadMore: async () => {
+      if (shouldExtend(hasNext, query)) {
+        query.extend();
+      }
+    },
+    hasMore: hasNext,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }

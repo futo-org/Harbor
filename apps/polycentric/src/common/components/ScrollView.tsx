@@ -19,13 +19,19 @@ export type ScrollViewProps = RNScrollViewProps & {
     | undefined;
 };
 
-export function ScrollView({
-  HeaderComponent,
-  contentContainerStyle,
-  onScroll: _ignoredOnScroll,
-  children,
-  ...rest
-}: ScrollViewProps) {
+export const ScrollView = React.forwardRef<
+  Animated.ScrollView,
+  ScrollViewProps
+>(function ScrollView(
+  {
+    HeaderComponent,
+    contentContainerStyle,
+    onScroll: _ignoredOnScroll,
+    children,
+    ...rest
+  },
+  ref,
+) {
   const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
     useHidingHeader();
 
@@ -40,6 +46,7 @@ export function ScrollView({
       ) : null}
 
       <Animated.ScrollView
+        ref={ref}
         {...rest}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -52,4 +59,4 @@ export function ScrollView({
       </Animated.ScrollView>
     </View>
   );
-}
+});

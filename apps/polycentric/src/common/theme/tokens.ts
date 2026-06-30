@@ -82,6 +82,16 @@ export const Atoms = StyleSheet.create({
   },
 
   /**
+   * Cursors
+   */
+  cursor_default: {
+    cursor: 'auto',
+  },
+  cursor_pointer: {
+    cursor: 'pointer',
+  },
+
+  /**
    * Flex
    */
   flex: {

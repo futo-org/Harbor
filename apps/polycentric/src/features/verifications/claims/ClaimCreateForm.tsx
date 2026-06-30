@@ -2,19 +2,19 @@ import { Button, Text, TextInput } from '@/src/common/components';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { ClaimType, FormField } from './utils/forms';
-import useCreateClaim from './hooks/useCreateClaim';
-import { formToSchema } from './utils/schemas';
+import { ClaimType, FormField } from '../utils/forms';
+import useCreateClaim, { ClaimRef } from '../hooks/useCreateClaim';
+import { formToSchema } from '../utils/schemas';
 
 // Renders the input form for a claim type, collects values, and publishes the
 // claim. `onSubmitted` fires once the claim is created. Remount (via a `key`
 // on the claim type) to reset between types.
-export function ClaimForm({
+export function ClaimCreateForm({
   claimType,
   onSubmitted,
 }: {
   claimType: ClaimType;
-  onSubmitted: () => void;
+  onSubmitted: (ref: ClaimRef) => void;
 }) {
   const { theme } = useTheme();
   const { submit, isPending } = useCreateClaim();
@@ -33,8 +33,8 @@ export function ClaimForm({
     if (!isValid || isPending) return;
     setError(null);
     try {
-      await submit({ schema: formToSchema(claimType), values });
-      onSubmitted();
+      const ref = await submit({ schema: formToSchema(claimType), values });
+      if (ref) onSubmitted(ref);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

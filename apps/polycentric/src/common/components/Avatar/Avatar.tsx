@@ -1,16 +1,13 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { Image, type ImageProps } from 'expo-image';
 import {
-  Image,
-  ImageProps,
-  ImageSourcePropType,
   Pressable,
   PressableProps,
   StyleSheet,
   View,
   type ViewProps,
 } from 'react-native';
-import { opacity } from 'react-native-reanimated/lib/typescript/Colors';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -28,14 +25,30 @@ export function resolveAvatarSize(size: AvatarSizePreset | number): number {
 }
 
 interface AvatarProps extends Omit<ImageProps, 'source'> {
-  source?: ImageSourcePropType;
+  source?: ImageProps['source'];
+  /**
+   * Forces the image to clear + reload when it changes — set this when an
+   * Avatar lives in a recycled list row (FlashList) so a reused cell never
+   * flashes the previous identity's avatar. Defaults to the source URI.
+   */
+  recyclingKey?: string;
   size?: AvatarSizePreset | number;
   containerProps?: ViewProps;
   onPress?: () => void;
 }
 
+/** Pull a stable string URI out of an Image source for recycling. */
+function sourceUri(source: ImageProps['source']): string | undefined {
+  if (typeof source === 'string') return source;
+  if (source && typeof source === 'object' && 'uri' in source) {
+    return typeof source.uri === 'string' ? source.uri : undefined;
+  }
+  return undefined;
+}
+
 export function Avatar({
   source,
+  recyclingKey,
   size: sizeProp = 'md',
   containerProps,
   onPress,
@@ -77,7 +90,8 @@ export function Avatar({
       <Image
         {...restImageProps}
         source={source}
-        resizeMode={'cover'}
+        recyclingKey={recyclingKey ?? sourceUri(source)}
+        contentFit="cover"
         style={[styles.image, imageStyle]}
       />
       <HoverOverlay visible={showHoverDim} borderRadius={size / 2} />

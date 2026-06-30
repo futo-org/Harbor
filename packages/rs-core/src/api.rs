@@ -76,6 +76,7 @@ pub enum Query {
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
+    ListClaims(crate::query::claims::ListClaimsArgs),
 }
 
 #[uniffi::export(with_foreign)]
@@ -339,12 +340,14 @@ impl PolycentricCore {
             Query::ListEvents(args) => {
                 crate::query::event::list_events(&self.query_client, query_key, args, opts)
             }
+            Query::ListClaims(args) => {
+                crate::query::claims::list_claims(&self.query_client, query_key, args, opts)
+            }
         }
     }
 
-    /// Clear the per-server cache for `query_key`, notify live
-    /// subscribers with `Loading(None)`, then trigger a fresh fan-out.
-    /// No-op when the key has never been queried.
+    /// Clear the cache for a query key and discard the responses for any
+    /// in-flight merge queries.
     pub fn invalidate_query(&self, query_key: crate::query::QueryKey) {
         self.query_client.invalidate(&query_key);
     }

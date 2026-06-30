@@ -32,7 +32,7 @@ services:
       # container itself, making Kafka unreachable
       - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
       # Reached over the isolated `scraper_link` network (see below).
-      - POLYCENTRIC_SCRAPER_URL=http://scraper:3002
+      - POLYCENTRIC_SCRAPER_URL=http://scraper:8855
     # On both the shared app network and the isolated scraper link, so it can
     # talk to postgres/kafka/etc. AND to the scraper.
     networks:
@@ -71,7 +71,7 @@ services:
         - CMD
         - node
         - -e
-        - fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+        - fetch('http://localhost:8855/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
       interval: 10s
       timeout: 5s
       retries: 5

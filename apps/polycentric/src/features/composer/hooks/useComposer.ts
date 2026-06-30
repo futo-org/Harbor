@@ -1,3 +1,4 @@
+import { toast } from '@/src/common/components/toast/useToast';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
@@ -121,9 +122,9 @@ export function useComposer({
       return;
     }
     let cancelled = false;
-    setLinkPreviewLoading(true);
     // Debounce so we don't unfurl every intermediate URL while typing.
     const handle = setTimeout(() => {
+      setLinkPreviewLoading(true);
       void client.urlInfo(previewUrl).then((info) => {
         if (cancelled) return;
         // The endpoint returns metadata only; attach the URL we requested.
@@ -132,7 +133,7 @@ export function useComposer({
         );
         setLinkPreviewLoading(false);
       });
-    }, 500);
+    }, 1000);
     return () => {
       cancelled = true;
       clearTimeout(handle);
@@ -346,6 +347,7 @@ export function useComposer({
       await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
+      toast.success(isReply ? 'Reply posted' : 'Post published');
       onClose();
       resetAll();
 
