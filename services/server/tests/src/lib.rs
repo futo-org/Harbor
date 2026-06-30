@@ -5,14 +5,19 @@ use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    PublicKey, RevocationBound, SerializedContent, SerializedVerificationSchema,
-    SignedEvent, VectorClock, VerificationClaim, VerificationSchema, content,
+    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
+    PublicKey, RevocationBound, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema, content,
 };
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-pub const GRPC_ADDR: &str = "http://localhost:3000";
+/// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
+pub fn grpc_addr() -> String {
+    std::env::var("POLYCENTRIC_TEST_SERVER")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string())
+}
 
 /// 2025-01-15T12:00:00Z in milliseconds.
 pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
@@ -35,13 +40,13 @@ pub fn hex(bytes: &[u8]) -> String {
 
 pub async fn connect_event_sync()
 -> EventSyncServiceClient<tonic::transport::Channel> {
-    EventSyncServiceClient::connect(GRPC_ADDR)
+    EventSyncServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
 
 pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
-    FeedsServiceClient::connect(GRPC_ADDR)
+    FeedsServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }

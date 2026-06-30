@@ -129,11 +129,29 @@ if [ "$NO_DEPS" = false ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 2. Database migrations
+# 2. Start server (CI) or start server and run migrations (local)
 # ---------------------------------------------------------------------------
 if [ "$CI_MODE" = true ]; then
+  NETWORK="${COMPOSE_PROJECT_NAME}_default"
+
+  self_container() {
+    local id
+    id=$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)
+    echo "${id:-$(cat /etc/hostname)}"
+  }
+
+  echo "==> Starting server…"
+  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  docker compose up -d --build --wait server
+  echo "    server (docker) ready"
+
+  echo "==> Joining job container to the stack network ($NETWORK)…"
+  docker network connect "$NETWORK" "$(self_container)"
+  export POLYCENTRIC_TEST_SERVER="http://server:3000"
+
   echo "==> Applying migrations via docker compose exec…"
   docker compose exec -T server /app/migration up
+  echo "    migrations applied"
 else
   echo "==> Applying migrations…"
   (
@@ -141,21 +159,9 @@ else
     DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}" \
       cargo run -- fresh 2>&1
   )
-fi
-echo "    migrations applied"
+  echo "    migrations applied"
 
-# ---------------------------------------------------------------------------
-# 3. Start the server
-# ---------------------------------------------------------------------------
-echo "==> Starting server…"
-
-if [ "$CI_MODE" = true ]; then
-  # CI uses the docker compose stack — the server is already up.
-  # Restart it so it picks up the moderator identity.
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
-  docker compose up -d --build --wait server
-  echo "    server (docker) ready"
-else
+  echo "==> Starting server…"
   export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
   export DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
@@ -188,7 +194,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Run the integration test suite
+# 3. Run the integration test suite
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Running integration tests…"
