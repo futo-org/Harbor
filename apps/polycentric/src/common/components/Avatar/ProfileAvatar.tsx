@@ -5,6 +5,7 @@ import {
   pickImageVariant,
   usePolycentric,
 } from '../../lib/polycentric-hooks';
+import { useFallbackUri } from '@/src/common/components/Image';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 
 type ProfileAvatarProps = {
@@ -12,11 +13,9 @@ type ProfileAvatarProps = {
 } & Omit<ComponentProps<typeof Avatar>, 'source'>;
 
 /**
- * Avatar bound to a Polycentric identity. Picks the best-fitting
- * variant from the profile's `avatar` ImageSet and serves it from the
- * server's reported blob CDN (see `ServerService.GetInfo`). Falls back
- * to a Dicebear identicon when no avatar is set or the CDN hasn't
- * been resolved yet.
+ * Avatar bound to a Polycentric identity. Picks the best-fitting variant
+ * from the profile's `avatar` ImageSet, trying each server in turn and
+ * falling back to a Dicebear identicon if none serve it.
  */
 export function ProfileAvatar({
   identityKey,
@@ -27,14 +26,23 @@ export function ProfileAvatar({
   const client = usePolycentric();
   const pixelSize = resolveAvatarSize(size);
 
-  const uri = useMemo(() => {
+  const candidates = useMemo(() => {
     const variant = pickImageVariant(profile.avatar, pixelSize);
-    if (variant?.blob?.digest) {
-      const url = client.blobUrl(variant.blob.digest);
-      if (url) return url;
-    }
-    return identiconUrl(identityKey, pixelSize);
+    const blobUris = variant?.blob?.digest
+      ? client.blobUrls(variant.blob.digest)
+      : [];
+    return [...blobUris, identiconUrl(identityKey, pixelSize)];
   }, [profile.avatar, client, identityKey, pixelSize]);
 
-  return <Avatar {...rest} size={size} source={{ uri }} />;
+  const { uri, onError } = useFallbackUri(candidates);
+
+  return (
+    <Avatar
+      {...rest}
+      size={size}
+      source={{ uri }}
+      recyclingKey={candidates[0]}
+      onError={onError}
+    />
+  );
 }

@@ -31,7 +31,9 @@ jest.mock('@/src/common/components/primitives', () => ({
 // The thumbnail is loaded through the server image proxy; capture the call by
 // returning a recognizable prefix.
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
-  usePolycentric: () => ({ imageProxyUrl: (url: string) => `proxy://${url}` }),
+  usePolycentric: () => ({
+    imageProxyUrls: (url: string) => [`proxy://${url}`],
+  }),
 }));
 
 const makeLink = (overrides: Partial<v2.Link> = {}): v2.Link =>
