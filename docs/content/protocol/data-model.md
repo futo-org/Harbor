@@ -210,6 +210,7 @@ message ContentDigest {
 
 The body of an event. Exactly one variant is set.
 
+```protobuf
 message Content {
   oneof content_body {
     Post post = 2;
