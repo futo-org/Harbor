@@ -26,11 +26,9 @@ export default function useCreateClaim() {
     submit: async ({
       schema,
       values,
-      targetIdentities = [],
     }: {
       schema: v2.VerificationSchema;
       values: Record<string, string>;
-      targetIdentities?: string[];
     }): Promise<ClaimRef | undefined> => {
       if (isPending) {
         throw 'Already pending';
@@ -52,7 +50,6 @@ export default function useCreateClaim() {
             verificationClaim: {
               schema: serializeSchema(schema),
               fields,
-              targetIdentities,
             },
           },
         });

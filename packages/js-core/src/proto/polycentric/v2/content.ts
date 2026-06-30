@@ -13,6 +13,7 @@ import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
+import { VerificationTarget } from "./verifications";
 import { VerificationVerify } from "./verifications";
 import { VerificationClaim } from "./verifications";
 import { Identity } from "./identity";
@@ -99,6 +100,12 @@ export interface Content {
          * @generated from protobuf field: polycentric.v2.VerificationVerify verification_verify = 13
          */
         verificationVerify: VerificationVerify;
+    } | {
+        oneofKind: "verificationTarget";
+        /**
+         * @generated from protobuf field: polycentric.v2.VerificationTarget verification_target = 14
+         */
+        verificationTarget: VerificationTarget;
     } | {
         oneofKind: undefined;
     };
@@ -500,7 +507,8 @@ class Content$Type extends MessageType<Content> {
             { no: 10, name: "report", kind: "message", oneof: "contentBody", T: () => Report },
             { no: 11, name: "labels", kind: "message", oneof: "contentBody", T: () => Labels },
             { no: 12, name: "verification_claim", kind: "message", oneof: "contentBody", T: () => VerificationClaim },
-            { no: 13, name: "verification_verify", kind: "message", oneof: "contentBody", T: () => VerificationVerify }
+            { no: 13, name: "verification_verify", kind: "message", oneof: "contentBody", T: () => VerificationVerify },
+            { no: 14, name: "verification_target", kind: "message", oneof: "contentBody", T: () => VerificationTarget }
         ]);
     }
     create(value?: PartialMessage<Content>): Content {
@@ -587,6 +595,12 @@ class Content$Type extends MessageType<Content> {
                         verificationVerify: VerificationVerify.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).verificationVerify)
                     };
                     break;
+                case /* polycentric.v2.VerificationTarget verification_target */ 14:
+                    message.contentBody = {
+                        oneofKind: "verificationTarget",
+                        verificationTarget: VerificationTarget.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).verificationTarget)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -635,6 +649,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.VerificationVerify verification_verify = 13; */
         if (message.contentBody.oneofKind === "verificationVerify")
             VerificationVerify.internalBinaryWrite(message.contentBody.verificationVerify, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.VerificationTarget verification_target = 14; */
+        if (message.contentBody.oneofKind === "verificationTarget")
+            VerificationTarget.internalBinaryWrite(message.contentBody.verificationTarget, writer.tag(14, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -1,5 +1,4 @@
-//! gRPC `VerificationsService` impl. Each method delegates to a handler
-//! under `verifications/rpc/`.
+//! gRPC `VerificationsService` impl.
 
 pub mod list_claims;
 

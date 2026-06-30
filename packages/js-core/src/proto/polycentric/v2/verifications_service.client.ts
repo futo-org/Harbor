@@ -14,8 +14,6 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface IVerificationsServiceClient {
     /**
-     * List the verification claims created by an identity.
-     *
      * @generated from protobuf rpc: ListClaims
      */
     listClaims(input: ListClaimsRequest, options?: RpcOptions): UnaryCall<ListClaimsRequest, ListClaimsResponse>;
@@ -30,8 +28,6 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * List the verification claims created by an identity.
-     *
      * @generated from protobuf rpc: ListClaims
      */
     listClaims(input: ListClaimsRequest, options?: RpcOptions): UnaryCall<ListClaimsRequest, ListClaimsResponse> {

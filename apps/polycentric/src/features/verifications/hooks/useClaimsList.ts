@@ -5,7 +5,6 @@ import { DecodedClaim, decodeClaimBundle } from './useClaimById';
 
 /**
  * List the verification claims created by an identity, newest first.
- * Backed by the dedicated `VerificationsService.ListClaims` RPC.
  */
 export function useClaimsList(identity: string | undefined): {
   claims: DecodedClaim[];

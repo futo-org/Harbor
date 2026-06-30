@@ -1,9 +1,6 @@
-//! `list_claims`: list the *live* verification claims created by an
-//! identity. Claims are ordinary events in the `VERIFICATIONS`
-//! collection, so this runs the standard `fetch → hydrate → filter →
-//! view` pipeline, dropping any claim that carries a valid tombstone
-//! (i.e. the creator deleted it). The raw `events.list_events` path
-//! deliberately keeps tombstoned rows, so it can't be reused here.
+//! List claims (VERIFICATIONS events) for an identity, excluding deleted
+//! ones. Runs its own pipeline rather than `list_events`, which keeps
+//! tombstoned rows.
 
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;

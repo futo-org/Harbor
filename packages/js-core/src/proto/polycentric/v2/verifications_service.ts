@@ -12,19 +12,14 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventBundle } from "./events";
-// RPC surface for verification claims. Kept separate from
-// verifications.proto because the response references EventBundle
-// (events.proto), and events.proto -> content.proto -> verifications.proto
-// already form a chain; importing events.proto from verifications.proto
-// would create a cyclic import.
+// Separate from verifications.proto: that file is imported by content.proto,
+// so importing events.proto (for EventBundle) there would be a cyclic import.
 
 /**
  * @generated from protobuf message polycentric.v2.ListClaimsRequest
  */
 export interface ListClaimsRequest {
     /**
-     * Identity whose verification claims to list.
-     *
      * @generated from protobuf field: string claimed_by_identity = 1
      */
     claimedByIdentity: string;
@@ -34,8 +29,6 @@ export interface ListClaimsRequest {
  */
 export interface ListClaimsResponse {
     /**
-     * Claim events created by the identity, newest first.
-     *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];

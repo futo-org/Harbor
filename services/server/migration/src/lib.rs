@@ -15,6 +15,7 @@ mod m20260617_000001_add_notification_table;
 mod m20260617_000002_drop_push_token_table;
 mod m20260618_000001_timestamps_to_timestamptz;
 mod m20260625_000001_add_event_key_indices;
+mod m20260630_000001_add_verification_tables;
 
 pub struct Migrator;
 
@@ -37,6 +38,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260617_000002_drop_push_token_table::Migration),
             Box::new(m20260618_000001_timestamps_to_timestamptz::Migration),
             Box::new(m20260625_000001_add_event_key_indices::Migration),
+            Box::new(m20260630_000001_add_verification_tables::Migration),
         ]
     }
 }
