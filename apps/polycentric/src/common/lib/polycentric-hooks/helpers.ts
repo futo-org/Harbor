@@ -196,6 +196,13 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  * directly; reposts resolve their target post from `event_hints` (the
  * server ships the reposted post alongside) and surface it tagged with
  * `repostedBy`. A repost whose target isn't in the hints is dropped.
+ *
+ * Items are de-duplicated by their list key (`repostId ?? id`). The explore
+ * feed fans out across multiple servers and paginates with a single forward
+ * token, so the same post routinely arrives more than once. Without this,
+ * duplicate keys reach FlashList and recycled cells flash / the scroll
+ * position jumps while paginating. The first occurrence wins so already-
+ * rendered rows keep their position.
  */
 export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   const hintPosts = new Map<string, PostData>();
@@ -206,17 +213,25 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   }
 
   const items: PostData[] = [];
+  const seen = new Set<string>();
+  const pushUnique = (item: PostData) => {
+    const key = item.repostId ?? item.id;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(item);
+  };
+
   for (const bundle of response.eventBundles) {
     const post = decodePostBundle(bundle);
     if (post) {
-      items.push(post);
+      pushUnique(post);
       continue;
     }
     const repost = decodeRepostBundle(bundle);
     if (repost) {
       const target = hintPosts.get(repost.targetId);
       if (target) {
-        items.push({
+        pushUnique({
           ...target,
           repostedBy: repost.repostedBy,
           repostId: repost.repostId,
