@@ -3005,9 +3005,8 @@ export interface PolycentricCoreLike {
    */
   getServers(): Array<string>;
   /**
-   * Clear the per-server cache for `query_key`, notify live
-   * subscribers with `Loading(None)`, then trigger a fresh fan-out.
-   * No-op when the key has never been queried.
+   * Clear the cache for a query key and discard the responses for any
+   * in-flight merge queries.
    */
   invalidateQuery(queryKey: Array<string>): void;
   /**
@@ -3512,9 +3511,8 @@ export class PolycentricCore
   }
 
   /**
-   * Clear the per-server cache for `query_key`, notify live
-   * subscribers with `Loading(None)`, then trigger a fresh fan-out.
-   * No-op when the key has never been queried.
+   * Clear the cache for a query key and discard the responses for any
+   * in-flight merge queries.
    */
   invalidateQuery(queryKey: Array<string>): void {
     uniffiCaller.rustCall(
@@ -4469,7 +4467,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query() !==
-    34463
+    44746
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query'

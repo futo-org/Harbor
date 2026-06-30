@@ -1,10 +1,11 @@
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { DecodedClaim, decodeClaimBundle } from './useClaimById';
 
 /**
  * List the verification claims created by an identity, newest first.
+ * Backed by the dedicated `VerificationsService.ListClaims` RPC.
  */
 export function useClaimsList(identity: string | undefined): {
   claims: DecodedClaim[];
@@ -37,5 +38,9 @@ export function useClaimsList(identity: string | undefined): {
     }
   }, [enabled, query.data]);
 
-  return { claims, isLoading: query.isLoading, refresh: query.refresh };
+  return {
+    claims,
+    isLoading: query.isLoading,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
+  };
 }

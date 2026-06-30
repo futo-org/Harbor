@@ -55,3 +55,5 @@ export {
   InitializationStep,
   HydrationStatus,
 } from './client-internal/event-service';
+
+export { CryptoManager } from './crypto/crypto-manager';

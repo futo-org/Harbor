@@ -346,9 +346,8 @@ impl PolycentricCore {
         }
     }
 
-    /// Clear the per-server cache for `query_key`, notify live
-    /// subscribers with `Loading(None)`, then trigger a fresh fan-out.
-    /// No-op when the key has never been queried.
+    /// Clear the cache for a query key and discard the responses for any
+    /// in-flight merge queries.
     pub fn invalidate_query(&self, query_key: crate::query::QueryKey) {
         self.query_client.invalidate(&query_key);
     }

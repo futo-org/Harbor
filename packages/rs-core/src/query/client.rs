@@ -23,7 +23,7 @@ pub enum FetchMode {
 
 /// Specifies how cached data and newly fetched data should be handled
 /// after fetching.
-#[derive(Clone, Copy, Default, Debug, uniffi::Enum)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum UpdateMode {
     /// Data we fetched from the remote replaces any cached data.
     #[default]
@@ -152,6 +152,10 @@ pub struct QueryState<T> {
     /// Prevents a slow server from overriding data from a newer fan-out
     /// with a response that arrives really late.
     pub epoch: u64,
+
+    /// The epoch of the latest fan-out with a `Replace` update mode.
+    /// We discard a merge response if its epoch is from before this one.
+    pub latest_replace_epoch: u64,
 }
 
 impl<T> Default for QueryState<T> {
@@ -160,6 +164,7 @@ impl<T> Default for QueryState<T> {
         Self {
             data: HashMap::new(),
             epoch: 0,
+            latest_replace_epoch: 0,
         }
     }
 }
@@ -170,8 +175,13 @@ impl<T> QueryState<T> {
     }
 
     /// Start a new fan-out epoch.
-    pub fn next_fanout(&mut self) -> u64 {
+    pub fn next_fanout(&mut self, update_mode: UpdateMode) -> u64 {
         self.epoch += 1;
+
+        if update_mode == UpdateMode::Replace {
+            self.latest_replace_epoch = self.epoch;
+        }
+
         self.epoch
     }
 
@@ -185,6 +195,13 @@ impl<T> QueryState<T> {
         client: &Arc<Mutex<PolycentricClient>>,
         update_mode: UpdateMode,
     ) {
+        // Doing a replace fan-out means we want to discard any data from before.
+        // Don't even merge data if a replace fan-out has started after this data
+        // was requested.
+        if update_mode == UpdateMode::Merge && self.latest_replace_epoch > epoch {
+            return;
+        }
+
         if let Some((server, mut info)) = self.data.remove_entry(server) {
             info = info.update(value, epoch, merge_fn, client, update_mode);
             self.data.insert(server, info);
@@ -343,8 +360,15 @@ where
     /// Clear the per-key data cache. No subscribers are notified —
     /// orchestration of in-flight observables lives outside the core.
     pub fn invalidate(&self, query_key: &QueryKey) {
-        if let Some(state) = self.queries.lock().unwrap().get(query_key).cloned() {
-            state.lock().unwrap().data.clear();
+        if let Some(state) = self.queries.lock().unwrap().get(query_key) {
+            let mut state = state.lock().unwrap();
+
+            // Clear cached server responses
+            state.data.clear();
+
+            // Create a dummy replace epoch so that any pending merge requests have
+            // their responses discarded.
+            state.next_fanout(UpdateMode::Replace);
         }
     }
 }
@@ -399,7 +423,7 @@ fn spawn_fanout<T>(
     // Initialize fan-out state
     let epoch = {
         let mut state = state.lock().unwrap();
-        state.next_fanout()
+        state.next_fanout(update_mode)
     };
 
     let pending = Arc::new(AtomicUsize::new(servers.len()));

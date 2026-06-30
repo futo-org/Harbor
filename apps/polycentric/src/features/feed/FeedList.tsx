@@ -72,7 +72,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       refreshControl={
         !isWeb ? (
           <RefreshControl
-            refreshing={feed.isLoading}
+            refreshing={feed.isRefreshing}
             onRefresh={feed.refresh}
           />
         ) : undefined

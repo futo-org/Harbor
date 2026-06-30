@@ -3,6 +3,7 @@ import type { PostData } from '@/src/common/lib/polycentric-hooks';
 export interface FeedHookResult {
   items: PostData[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: Error | null;
   loadMore: () => Promise<void>;
   hasMore: boolean;
@@ -16,6 +17,7 @@ export const NOOP_SYNC = () => {};
 export const EMPTY_FEED: FeedHookResult = {
   items: EMPTY_POSTS,
   isLoading: false,
+  isRefreshing: false,
   error: null,
   loadMore: NOOP,
   hasMore: false,
