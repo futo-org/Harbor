@@ -10,8 +10,9 @@
   image: $RUST_DIND_IMAGE
   stage: test
   # Serial execution: the Docker stack of one runner must not interfere
-  # with another.
-  resource_group: server-integration
+  # with another across integration test jobs (they share the same Compose
+  # project name).
+  resource_group: docker-compose-integration
   rules:
     - if: $CI_COMMIT_TAG =~ /^server-/
       when: always
