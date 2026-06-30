@@ -73,7 +73,8 @@ describe('LinkPreviewCard', () => {
       <LinkPreviewCard link={makeLink({ image: 'https://img.test/x.png' })} />,
     );
     // The raw image URL is rewritten through the proxy, not hotlinked.
-    expect(getByTestId('linkPreviewImage').props.source.uri).toBe(
+    // expo-image normalizes `source={{ uri }}` into an array of sources.
+    expect(getByTestId('linkPreviewImage').props.source[0].uri).toBe(
       'proxy://https://img.test/x.png',
     );
   });
