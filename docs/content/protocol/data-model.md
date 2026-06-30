@@ -76,10 +76,10 @@ message EventProofTarget {
 The unique identifier of an event.
 
 ```protobuf
-message EventKey {
   // Reserved collections:
   // 1 -> Identity, 2 -> Feed, 3 -> Profile,
-  // 4 -> Interactions, 5 -> Social graph
+  // 4 -> Interactions, 5 -> Social graph,
+  // 6 -> Reports, 7 -> Labels, 8 -> Verifications
   int32 collection = 1;
 
   // Identity key (sha256 hash of the initial Identity content)
@@ -210,7 +210,6 @@ message ContentDigest {
 
 The body of an event. Exactly one variant is set.
 
-```protobuf
 message Content {
   oneof content_body {
     Post post = 2;
@@ -222,6 +221,7 @@ message Content {
     Identity identity = 8;
     Repost repost = 9;
     Report report = 10;
+    Labels labels = 11;
   }
 }
 
@@ -239,6 +239,7 @@ message Post {
   optional PostReply reply = 2;
   repeated ImageSet images = 3;
   optional EventKey quote = 4;
+  repeated Link links = 5;
 }
 
 message PostReply {
@@ -250,6 +251,16 @@ message PostReply {
 
 message Repost {
   optional EventKey post = 1;
+}
+
+#### Link
+
+```protobuf
+message Link {
+  string title = 1;
+  string description = 2;
+  string image = 3;
+  string url = 4;
 }
 ```
 
@@ -323,6 +334,30 @@ enum ReportCategory {
   REPORT_CATEGORY_ILLEGAL = 5;
   REPORT_CATEGORY_COPYRIGHT = 6;
   REPORT_CATEGORY_SERVER_POLICY = 7;
+}
+```
+
+### Labels
+
+A `Labels` event records that a moderation service has classified content
+against a set of label values. Labels are signed events in collection 7
+(`Labels`). Like `Report`, labeling is per-server — a server indexes and
+serves only labels from its configured trusted moderation service (set via
+`POLYCENTRIC_MODERATION_IDENTITY` on the server side). Labels from any other
+identity are stored and synced as normal events but are not indexed or served
+when querying feeds.
+
+The server returns matching `Labels` events in a dedicated `label_events`
+response collection alongside feed results; the client correlates each label
+to its target by event key and renders it according to the user's preference
+(Hide / Warn / Show).
+
+```protobuf
+message Labels {
+  // Event being labeled
+  EventKey event_key = 1;
+  // Label values applied, e.g. "sexual" or "hate".
+  repeated string label_values = 2;
 }
 ```
 
