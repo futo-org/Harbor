@@ -34,6 +34,23 @@ pub struct Model {
     pub image: HasOne<super::content_image_model::Entity>,
     #[sea_orm(has_one)]
     pub blob: HasOne<super::content_blob_model::Entity>,
+    #[sea_orm(has_one)]
+    pub report: HasOne<super::content_report_model::Entity>,
+    #[sea_orm(has_one)]
+    pub repost: HasOne<super::content_repost_model::Entity>,
+    #[sea_orm(has_one)]
+    pub identity: HasOne<super::content_identity_model::Entity>,
+    #[sea_orm(has_many)]
+    pub labels: HasMany<super::content_label_model::Entity>,
+    #[sea_orm(has_one)]
+    pub verification_claim:
+        HasOne<super::content_verification_claim_model::Entity>,
+    #[sea_orm(has_many)]
+    pub verification_targets:
+        HasMany<super::content_verification_target_model::Entity>,
+    #[sea_orm(has_one)]
+    pub verification_verify:
+        HasOne<super::content_verification_verify_model::Entity>,
 
     // Timestamp the server received the content
     pub synced_at: TimeDateTimeWithTimeZone,

@@ -54,8 +54,15 @@ message VerificationClaim {
   SerializedVerificationSchema schema = 1;
   // Values keyed by FieldDef.key, decoded per the schema's FieldKind.
   map<string, bytes> fields = 2;
-  // Identities this claim is intended for
-  repeated string target_identities = 3;
+}
+
+// Targets a claim at one or more identities. Separate from the claim so
+// targeting can be set (or changed) after the claim is created.
+message VerificationTarget {
+  // The claim event being targeted.
+  EventKey claim_event_key = 1;
+  // Identities the claim is intended for.
+  repeated string target_identities = 2;
 }
 
 // ── A verifier's attestation ──

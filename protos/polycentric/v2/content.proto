@@ -22,6 +22,7 @@ message Content {
     // Verifications (see verifications.proto)
     VerificationClaim verification_claim = 12;
     VerificationVerify verification_verify = 13;
+    VerificationTarget verification_target = 14;
   }
 }
 

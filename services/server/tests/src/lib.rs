@@ -4,10 +4,12 @@ use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-    EventProofTarget, Identity, KeyType, Post, PublicKey, RevocationBound,
-    SerializedContent, SignedEvent, VectorClock, content,
+    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Post, PublicKey,
+    RevocationBound, SerializedContent, SerializedVerificationSchema,
+    SignedEvent, VectorClock, VerificationClaim, VerificationSchema, content,
 };
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 
 pub const GRPC_ADDR: &str = "http://localhost:3000";
 
@@ -17,6 +19,7 @@ pub const HOUR: u64 = 3_600_000;
 
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
+pub const COLLECTION_VERIFICATIONS: i32 = 8;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
@@ -159,6 +162,7 @@ pub fn make_post_bundle(
             reply: None,
             images: vec![],
             quote: None,
+            links: vec![],
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -173,6 +177,68 @@ pub fn make_post_bundle(
         },
         vec![],
         previous_root,
+        digest,
+        created_at,
+    );
+    bundle(sign(signing_key, event), content_bytes)
+}
+
+/// Build a signed verification-claim bundle carrying a one-field schema
+/// (`handle`) and a value for it.
+pub fn make_verification_claim_bundle(
+    identity: &str,
+    signing_key: &SigningKey,
+    sequence: u64,
+    identity_sequence: u64,
+    vector_clock: Vec<u64>,
+    handle: &str,
+    created_at: u64,
+) -> EventBundle {
+    let schema = VerificationSchema {
+        name: "X Verification".to_string(),
+        description: String::new(),
+        fields: vec![FieldDef {
+            key: "handle".to_string(),
+            kind: FieldKind::String as i32,
+            format: String::new(),
+            required: true,
+            description: "Handle".to_string(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = prost::Message::encode_to_vec(&schema);
+    let schema_digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+
+    let mut fields = HashMap::new();
+    fields.insert("handle".to_string(), handle.as_bytes().to_vec());
+
+    let content = Content {
+        content_body: Some(content::ContentBody::VerificationClaim(
+            VerificationClaim {
+                schema: Some(SerializedVerificationSchema {
+                    schema_bytes,
+                    digest: Some(schema_digest),
+                }),
+                fields,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = make_event(
+        COLLECTION_VERIFICATIONS,
+        identity,
+        signing_key,
+        sequence,
+        identity_sequence,
+        VectorClock {
+            sequence: vector_clock,
+        },
+        vec![],
+        vec![],
         digest,
         created_at,
     );

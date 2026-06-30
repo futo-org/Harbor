@@ -115,10 +115,24 @@ export interface VerificationClaim {
     fields: {
         [key: string]: Uint8Array;
     };
+}
+/**
+ * Targets a claim at one or more identities. Separate from the claim so
+ * targeting can be set (or changed) after the claim is created.
+ *
+ * @generated from protobuf message polycentric.v2.VerificationTarget
+ */
+export interface VerificationTarget {
     /**
-     * Identities this claim is intended for
+     * The claim event being targeted.
      *
-     * @generated from protobuf field: repeated string target_identities = 3
+     * @generated from protobuf field: polycentric.v2.EventKey claim_event_key = 1
+     */
+    claimEventKey?: EventKey;
+    /**
+     * Identities the claim is intended for.
+     *
+     * @generated from protobuf field: repeated string target_identities = 2
      */
     targetIdentities: string[];
 }
@@ -379,14 +393,12 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
     constructor() {
         super("polycentric.v2.VerificationClaim", [
             { no: 1, name: "schema", kind: "message", T: () => SerializedVerificationSchema },
-            { no: 2, name: "fields", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 12 /*ScalarType.BYTES*/ } },
-            { no: 3, name: "target_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "fields", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 12 /*ScalarType.BYTES*/ } }
         ]);
     }
     create(value?: PartialMessage<VerificationClaim>): VerificationClaim {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.fields = {};
-        message.targetIdentities = [];
         if (value !== undefined)
             reflectionMergePartial<VerificationClaim>(this, message, value);
         return message;
@@ -401,9 +413,6 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
                     break;
                 case /* map<string, bytes> fields */ 2:
                     this.binaryReadMap2(message.fields, reader, options);
-                    break;
-                case /* repeated string target_identities */ 3:
-                    message.targetIdentities.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -439,9 +448,6 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
         /* map<string, bytes> fields = 2; */
         for (let k of globalThis.Object.keys(message.fields))
             writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).bytes(message.fields[k]).join();
-        /* repeated string target_identities = 3; */
-        for (let i = 0; i < message.targetIdentities.length; i++)
-            writer.tag(3, WireType.LengthDelimited).string(message.targetIdentities[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -452,6 +458,60 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
  * @generated MessageType for protobuf message polycentric.v2.VerificationClaim
  */
 export const VerificationClaim = new VerificationClaim$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class VerificationTarget$Type extends MessageType<VerificationTarget> {
+    constructor() {
+        super("polycentric.v2.VerificationTarget", [
+            { no: 1, name: "claim_event_key", kind: "message", T: () => EventKey },
+            { no: 2, name: "target_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<VerificationTarget>): VerificationTarget {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.targetIdentities = [];
+        if (value !== undefined)
+            reflectionMergePartial<VerificationTarget>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: VerificationTarget): VerificationTarget {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey claim_event_key */ 1:
+                    message.claimEventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.claimEventKey);
+                    break;
+                case /* repeated string target_identities */ 2:
+                    message.targetIdentities.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: VerificationTarget, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey claim_event_key = 1; */
+        if (message.claimEventKey)
+            EventKey.internalBinaryWrite(message.claimEventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string target_identities = 2; */
+        for (let i = 0; i < message.targetIdentities.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.targetIdentities[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.VerificationTarget
+ */
+export const VerificationTarget = new VerificationTarget$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class VerificationVerify$Type extends MessageType<VerificationVerify> {
     constructor() {

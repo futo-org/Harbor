@@ -15,9 +15,7 @@ pub struct ListClaimsArgs {
     pub claimed_by_identity: String,
 }
 
-/// Merge `ListClaimsResponse` payloads from every server: concatenate
-/// the bundles, dedupe by `EventKey`, then drop any that fail signature
-/// / proof validation against the local client state.
+/// Concatenate per-server bundles, dedupe by `EventKey`, drop invalid ones.
 fn merge_list_claims_responses(
     values: &[Vec<u8>],
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
@@ -44,9 +42,8 @@ fn merge_list_claims_responses(
     merged.encode_to_vec()
 }
 
-/// List the verification claims created by `claimed_by_identity` across
-/// the configured servers. Emits serialized `ListClaimsResponse` proto
-/// bytes with `event_bundles` deduped by `EventKey` and validated.
+/// List an identity's verification claims across servers. Emits serialized
+/// `ListClaimsResponse` bytes.
 pub fn list_claims(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,

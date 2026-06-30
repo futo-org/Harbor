@@ -2,10 +2,11 @@ use integration_tests::proto::{
     Identity, ListEventsFilters, ListEventsRequest, PutEventsRequest,
 };
 use integration_tests::{
-    COLLECTION_FEED, DEFAULT_CREATED_AT, HOUR, bundle_signature,
-    connect_event_sync, derive_identity_string, generate_signing_key,
-    leaf_hash, make_identity_bundle, make_post_bundle, make_revocation_bound,
-    node_hash, public_key_of,
+    COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
+    bundle_signature, connect_event_sync, derive_identity_string,
+    generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
+    make_revocation_bound, make_verification_claim_bundle, node_hash,
+    public_key_of,
 };
 
 #[tokio::test]
@@ -616,5 +617,73 @@ async fn rewritten_event_invalidates_proofs() {
     assert_ne!(
         root_after_2_original, root_after_2_rewritten,
         "rewritten root must differ from the bound's recorded root",
+    );
+}
+
+#[tokio::test]
+async fn put_verification_claim_is_ingested_and_listable() {
+    let mut client = connect_event_sync().await;
+    let rotation_key = generate_signing_key();
+
+    let initial = Identity {
+        rotation_keys: vec![public_key_of(&rotation_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    };
+    let identity = derive_identity_string(&initial);
+
+    let genesis = make_identity_bundle(
+        &identity,
+        &rotation_key,
+        1,
+        1,
+        vec![1],
+        initial,
+        DEFAULT_CREATED_AT,
+    );
+    let claim = make_verification_claim_bundle(
+        &identity,
+        &rotation_key,
+        1,
+        1,
+        vec![1],
+        "alice",
+        DEFAULT_CREATED_AT + HOUR,
+    );
+    let claim_signature = bundle_signature(&claim);
+
+    let response = client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![genesis, claim],
+        })
+        .await
+        .expect("put_events failed")
+        .into_inner();
+    // Ingestion (and the claim/schema child-table writes) must succeed.
+    assert!(
+        response.errors.is_empty(),
+        "ingest reported errors: {:?}",
+        response.errors
+    );
+
+    let listed = client
+        .list_events(ListEventsRequest {
+            size: Some(100),
+            filters: Some(ListEventsFilters {
+                identity: Some(identity),
+                collection: Some(COLLECTION_VERIFICATIONS),
+                ..Default::default()
+            }),
+        })
+        .await
+        .expect("list_events failed")
+        .into_inner();
+
+    assert!(
+        listed.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .is_some_and(|s| s.signature == claim_signature)),
+        "stored verification claim not returned",
     );
 }
