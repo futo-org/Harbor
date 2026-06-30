@@ -80,7 +80,7 @@ if [ "$NO_DEPS" = false ]; then
   if [ "$CI_MODE" = true ]; then
     # CI: docker compose builds the image explicitly; --wait blocks until all
     # services are healthy.
-    docker compose up -d --build --wait postgres rustfs rustfs-init kafka
+    docker compose up -d --build --wait postgres rustfs kafka
   else
     docker compose up -d postgres rustfs rustfs-init kafka
 
