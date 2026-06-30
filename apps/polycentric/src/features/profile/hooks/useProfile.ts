@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { FetchMode, Query, v2 } from '@polycentric/react-native';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
@@ -55,7 +55,6 @@ export function useProfile(
     banner: decoded.banner,
     isLoading: query.isLoading,
     error: query.error ? new Error(query.error) : null,
-    // Force a network re-fetch regardless of the original `fetchMode`.
-    refresh: () => query.invalidate({ fetchMode: FetchMode.Default }),
+    refresh: () => query.refresh(RefreshStrategy.Fetch),
   };
 }

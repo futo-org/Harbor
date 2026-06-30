@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import { type FeedHookResult } from './types';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 import {
   decodeFeedQueryResult,
@@ -35,6 +35,7 @@ export function useIdentityFeed(
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => {
       if (shouldExtend(hasNext, query)) {
@@ -42,6 +43,6 @@ export function useIdentityFeed(
       }
     },
     hasMore: hasNext,
-    refresh: query.refresh,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }
