@@ -7,6 +7,8 @@ import {
   decodeBundle,
   type DecodedBundle,
 } from '@/src/common/lib/polycentric-hooks/helpers';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
+import { feedQueryKeys } from '../../feed/hooks/feedCache';
 import { create } from 'zustand';
 
 type FollowsState = {
@@ -45,6 +47,7 @@ const useFollows = create<FollowsState>((set, get) => ({
     try {
       await client.commitEvent(signedEvent, content);
       await client.sync();
+      invalidateQuery(client, feedQueryKeys.following());
     } catch (err) {
       console.error(err);
       // revert the change
@@ -102,6 +105,7 @@ const useFollows = create<FollowsState>((set, get) => ({
 
     if (targets.length > 0) {
       await client.sync();
+      invalidateQuery(client, feedQueryKeys.following());
     }
   },
   /**
