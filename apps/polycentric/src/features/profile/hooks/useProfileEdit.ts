@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
+import { profileQueryKey } from './useProfile';
 
 interface ProfileRef {
   description: string | null;
-  refresh: () => void;
 }
 
 export type ProfileEditState = {
@@ -49,7 +50,7 @@ export function useProfileEdit(
         description: descriptionDraft,
         avatarUri,
       });
-      profile.refresh();
+      invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
     } catch (err) {
       console.error('Failed to save profile:', err);

@@ -30,6 +30,17 @@ const EMPTY_PROFILE: Omit<
   banner: null,
 };
 
+/**
+ * Shared cache key for a profile. The fetch mode is intentionally not part
+ * of the key so every surface (feed avatars, post authors, the profile page)
+ * reads and invalidates the same entry.
+ */
+export function profileQueryKey(
+  identityKey: string | null | undefined,
+): string[] {
+  return ['profile', identityKey ?? ''];
+}
+
 export function useProfile(
   identityKey: string | null | undefined,
   options?: UseProfileOptions,
@@ -37,7 +48,7 @@ export function useProfile(
   const fetchMode = options?.fetchMode ?? FetchMode.OfflineOnly;
 
   const query = useQuery(
-    ['profile', identityKey ?? '', fetchMode.toString()],
+    profileQueryKey(identityKey),
     new Query.GetProfile({ identity: identityKey ?? '' }),
     { fetchMode },
     !!identityKey,
