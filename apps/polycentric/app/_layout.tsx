@@ -32,6 +32,7 @@ function useRegisteredProfileGuard() {
   const segments = useSegments() as string[];
 
   useEffect(() => {
+    if (isWeb) return;
     if (!isReady || currentIdentity) return;
     const inOnboarding = segments[0] === '(onboarding)';
     const atRoot = segments.length === 0;
