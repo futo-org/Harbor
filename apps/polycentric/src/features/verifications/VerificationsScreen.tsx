@@ -4,6 +4,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { type ListRef } from '@/src/common/components/List';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import { ClaimCreate } from './claims/ClaimCreate';
@@ -16,6 +17,7 @@ import {
 } from './hooks/useVerificationsStore';
 
 export default function VerificationsScreen() {
+  useRequireAccount();
   const { theme } = useTheme();
   const mode = useVerificationsStore((s) => s.mode);
   const setMode = useVerificationsStore((s) => s.setMode);

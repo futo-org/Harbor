@@ -5,8 +5,10 @@ import { types, v2 } from '@polycentric/react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ComposeSheet } from './ComposeSheet';
+import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 
 export default function ComposeScreen() {
+  useRequireAccount();
   const params = useLocalSearchParams<{
     replyTo?: string;
     quote?: string;

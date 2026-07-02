@@ -1,4 +1,5 @@
 import { IconButton, Text, TextInput } from '@/src/common/components';
+import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import { confirm } from '@/src/common/lib/dialogs/alert';
@@ -158,5 +159,6 @@ export function ServersSettingsSheet() {
 }
 
 export default function ServersSettingsScreen() {
+  useRequireAccount();
   return <ServersSettingsSheet />;
 }

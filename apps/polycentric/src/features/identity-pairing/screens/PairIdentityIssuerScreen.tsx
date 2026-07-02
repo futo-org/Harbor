@@ -1,4 +1,5 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
+import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import {
@@ -85,6 +86,7 @@ function CountdownTimer({
 }
 
 export default function PairIdentityIssuerScreen() {
+  useRequireAccount();
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const {

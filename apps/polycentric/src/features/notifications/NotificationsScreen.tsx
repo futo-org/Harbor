@@ -3,6 +3,7 @@ import { List } from '@/src/common/components/List';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { Atoms } from '@/src/common/theme';
 import { RefreshControl, View } from 'react-native';
 import Notification from './Notification';
@@ -11,6 +12,7 @@ import { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
+  useRequireAccount();
   const { items, isLoading, refresh } = useListNotifications();
   useFocusedRefresh(refresh);
 
