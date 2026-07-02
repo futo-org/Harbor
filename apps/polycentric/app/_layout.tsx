@@ -1,12 +1,15 @@
 import { Toaster } from '@/src/common/components/toast';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
-import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
+import {
+  PolycentricProvider,
+  usePolycentricContext,
+} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { PortalHost } from '@rn-primitives/portal';
-import { Stack } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
@@ -24,8 +27,23 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
+function useRegisteredProfileGuard() {
+  const { currentIdentity, isReady } = usePolycentricContext();
+  const segments = useSegments() as string[];
+
+  useEffect(() => {
+    if (!isReady || currentIdentity) return;
+    const inOnboarding = segments[0] === '(onboarding)';
+    const atRoot = segments.length === 0;
+    if (inOnboarding || atRoot) return;
+    router.replace('/');
+  }, [isReady, currentIdentity, segments]);
+}
+
 function RootStack() {
   const { theme } = useTheme();
+
+  useRegisteredProfileGuard();
 
   const stack = (
     <>
