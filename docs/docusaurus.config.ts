@@ -74,6 +74,20 @@ const config: Config = {
       style: 'dark',
       links: [
         {
+          title: 'Download',
+          items: [
+            { label: 'Web app', href: 'https://polycentric.io' },
+            {
+              label: 'Android APK',
+              href: 'https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk',
+            },
+            {
+              label: 'iOS (TestFlight)',
+              href: 'https://testflight.apple.com/join/bZ8py7Ny',
+            },
+          ],
+        },
+        {
           title: 'Docs',
           items: [
             { label: 'Introduction', to: '/' },

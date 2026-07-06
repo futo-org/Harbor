@@ -38,7 +38,7 @@ release-android-apk:
   stage: release
   image:
     name: gcr.io/go-containerregistry/crane:debug
-    entrypoint: ['']
+    entrypoint: [""]
   script:
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - crane tag $CI_REGISTRY_IMAGE/$IMAGE:$CI_COMMIT_SHA $CI_COMMIT_TAG
@@ -93,7 +93,7 @@ release-publish-rs-core:
   stage: publish
   image: $RUST_IMAGE
   variables:
-    GIT_DEPTH: '1'
+    GIT_DEPTH: "1"
   script:
     - VERSION="${CI_COMMIT_TAG#v}"
     # Bump the crate versions and give the path dependency a version so the
@@ -164,11 +164,12 @@ release:
       artifacts: false
   release:
     tag_name: $CI_COMMIT_TAG
-    name: '$CI_COMMIT_TAG'
-    ref: '$CI_COMMIT_SHA'
+    name: "$CI_COMMIT_TAG"
+    ref: "$CI_COMMIT_SHA"
     description: release_notes.md
     assets:
       links:
-        - name: 'Android APK ($CI_COMMIT_TAG)'
-          url: '$APK_PACKAGE_URL'
+        - name: "Android APK ($CI_COMMIT_TAG)"
+          url: "$APK_PACKAGE_URL"
           link_type: package
+          filepath: "/polycentric-android.apk"

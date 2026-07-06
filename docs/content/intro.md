@@ -14,6 +14,12 @@ fetch it from another server that holds a copy.
 The [web client and app](https://polycentric.io) and the
 [source code](https://gitlab.futo.org/polycentric/polycentric) are public.
 
+## Download
+
+- **Web app** — [polycentric.io](https://polycentric.io)
+- **Android** — [latest APK](https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk)
+- **iOS** — [TestFlight beta](https://testflight.apple.com/join/bZ8py7Ny)
+
 ## Model
 
 - **Distributed.** No single server owns the network. A user picks which servers
