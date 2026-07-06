@@ -1,6 +1,9 @@
 import { Toaster } from '@/src/common/components/toast';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
-import { PolycentricProvider } from '@/src/common/lib/polycentric-hooks';
+import {
+  PolycentricProvider,
+  usePolycentricContext,
+} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
@@ -26,6 +29,11 @@ export const unstable_settings = {
 
 function RootStack() {
   const { theme } = useTheme();
+  const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+
+  // Stay permissive until the identity store has settled — pruning routes
+  // during startup would break deep links that resolve after login state.
+  const accountGuard = isLoading || !isReady || !!currentIdentity;
 
   const stack = (
     <>
@@ -40,7 +48,13 @@ function RootStack() {
             : { orientation: 'portrait_up' }),
         }}
       >
-        <Stack.Screen name="(tabs)" />
+        {/* Mobile requires an account for the tabs (feeds, notifications,
+            ...); deep-linked profile/post views stay public everywhere. On
+            web the tabs stay routable and get granular guards instead. */}
+        <Stack.Protected guard={isWeb || accountGuard}>
+          <Stack.Screen name="(tabs)" />
+        </Stack.Protected>
+
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen
           name="feed"

@@ -10,11 +10,9 @@ import { ActivityIndicator, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
 import { useComposer } from './hooks/useComposer';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 
 // Full-screen composer for the detached "compose" native tab item (iOS).
 export default function ComposeTabScreen() {
-  useRequireAccount();
   const { theme } = useTheme();
 
   const navigation = useNavigation();

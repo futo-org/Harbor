@@ -18,7 +18,6 @@ import {
 } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
@@ -72,7 +71,6 @@ function LinkPreviewSettingRow() {
 }
 
 export default function SettingsTabScreen() {
-  useRequireAccount();
   const { identityKey } = useCurrentIdentity();
 
   return (

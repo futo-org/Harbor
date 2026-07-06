@@ -13,11 +13,9 @@ import { ProfileHeader } from './ProfileHeader';
 import { ProfileProvider, useProfileContext } from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 
 export default function ProfileScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
-  useRequireAccount(!identityId);
 
   return (
     <ProfileProvider identityKey={identityId ?? null}>

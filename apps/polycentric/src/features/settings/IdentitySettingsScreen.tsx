@@ -1,5 +1,4 @@
 import { ProfileAvatar, Text } from '@/src/common/components';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { Sheet } from '@/src/common/components/sheet';
 import {
   publicKeyToString,
@@ -106,7 +105,6 @@ export function IdentitySettingsSheet({
 
 export default function IdentitySettingsScreen() {
   const { identityKey } = useCurrentIdentity();
-  useRequireAccount();
 
   if (!identityKey) return null;
 

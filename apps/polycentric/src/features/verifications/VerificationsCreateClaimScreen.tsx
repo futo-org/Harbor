@@ -4,13 +4,11 @@ import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import { ClaimCreate } from './claims/ClaimCreate';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 
 // Standalone route for creating a claim. The content also appears inline on
 // the main Verifications screen; this just wraps it in its own screen.
 // Submitting navigates to the new claim's view (handled inside CreateClaim).
 export default function VerificationsCreateClaimScreen() {
-  useRequireAccount();
   return (
     <Screen>
       <Screen.PrimaryColumn>

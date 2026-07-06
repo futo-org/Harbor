@@ -7,7 +7,6 @@ import {
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -86,7 +85,6 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
 }
 
 export default function EditProfileScreen() {
-  useRequireAccount();
   const { identityKey: selfKey } = useCurrentIdentity();
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 

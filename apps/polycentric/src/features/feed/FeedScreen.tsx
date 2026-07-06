@@ -5,7 +5,6 @@ import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/Sett
 import { Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { useRequireAccount } from '@/src/common/lib/navigation/useRequireAccount';
 import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
@@ -26,7 +25,6 @@ const ListHeader = () => {
 };
 
 export default function FeedScreen() {
-  useRequireAccount();
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
 
