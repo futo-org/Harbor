@@ -519,6 +519,7 @@ mod tests {
                                 avatar: None,
                                 banner: None,
                                 description: None,
+                                alias: None,
                             })),
                         })]
                     })

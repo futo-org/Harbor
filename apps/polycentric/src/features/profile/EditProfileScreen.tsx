@@ -1,4 +1,5 @@
 import { Button, Text, TextInput } from '@/src/common/components';
+import { InfoTooltip } from '@/src/common/components/InfoTooltip';
 import { Sheet } from '@/src/common/components/sheet';
 import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
 import {
@@ -9,7 +10,7 @@ import {
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
@@ -17,15 +18,16 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
-  const edit = useProfileEdit(username, profile);
+  const edit = useProfileEdit(username, profile, identityKey);
 
   const close = useCallback(() => {
     if (router.canGoBack()) router.back();
   }, []);
 
   const handleSave = useCallback(async () => {
-    await edit.handleSave();
-    close();
+    // Keep the sheet open on a rejected save (e.g. alias failed verification)
+    // so the error stays visible.
+    if (await edit.handleSave()) close();
   }, [edit, close]);
 
   return (
@@ -77,6 +79,43 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               placeholder="Bio"
               numberOfLines={3}
             />
+          </View>
+
+          <View style={Atoms.gap_xs}>
+            <View
+              style={[
+                Atoms.flex_row,
+                Atoms.items_center,
+                Atoms.gap_xs,
+                { zIndex: 1 },
+              ]}
+            >
+              <Text variant="small" color="neutral_500">
+                ALIAS
+              </Text>
+              <InfoTooltip text="An alias like you@yourdomain.com that points to this profile. Your domain must be set up to link back here before it can be saved." />
+            </View>
+            <TextInput
+              value={edit.aliasDraft}
+              onChangeText={edit.setAliasDraft}
+              placeholder="user@domain.com"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+            {edit.aliasError ? (
+              <Text variant="small" color="negative_500">
+                {edit.aliasError}
+              </Text>
+            ) : null}
+            <Link
+              href="https://polycentric.dev/setting-up-an-alias"
+              accessibilityRole="link"
+            >
+              <Text variant="small" color="neutral_500">
+                How to set up an alias ↗
+              </Text>
+            </Link>
           </View>
         </View>
       </Sheet.Content>

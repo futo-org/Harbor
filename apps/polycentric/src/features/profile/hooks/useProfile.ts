@@ -8,6 +8,7 @@ export interface ProfileHookResult {
   description: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
+  alias: string | null;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -28,6 +29,7 @@ const EMPTY_PROFILE: Omit<
   description: null,
   avatar: null,
   banner: null,
+  alias: null,
 };
 
 export function useProfile(
@@ -53,6 +55,7 @@ export function useProfile(
     description: decoded.description,
     avatar: decoded.avatar,
     banner: decoded.banner,
+    alias: decoded.alias,
     isLoading: query.isLoading,
     error: query.error ? new Error(query.error) : null,
     refresh: () => query.refresh(RefreshStrategy.Fetch),

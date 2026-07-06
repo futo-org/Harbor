@@ -1,4 +1,6 @@
 import { BackButton } from '@/src/common/components/composites';
+import HoverCard from '@/src/common/components/HoverCard';
+import Icon from '@/src/common/components/Icon';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
 import {
   Button,
@@ -17,7 +19,7 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 
@@ -30,7 +32,7 @@ export interface ProfileHeaderProps {
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
-  const { identityKey, isSelf, activeFeed, setActiveFeed } =
+  const { identityKey, isSelf, activeFeed, setActiveFeed, alias } =
     useProfileContext();
 
   const fallbackUsername = useUsername(identityKey);
@@ -107,15 +109,25 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           Atoms.pb_lg,
           Atoms.flex_row,
           Atoms.justify_between,
+          Atoms.gap_md,
         ]}
       >
-        <View style={[Atoms.mt_md, Atoms.gap_xs]}>
+        {/* Flexible, shrinkable column: `minWidth: 0` lets a long unbreakable
+            alias truncate instead of forcing the row wider and pushing the
+            action button off-screen. */}
+        <View
+          style={[Atoms.mt_md, Atoms.gap_xs, Atoms.flex_1, { minWidth: 0 }]}
+        >
           <Text variant="title" fontWeight="bold">
             {truncateName(username, 32)}
           </Text>
-          <Text variant="secondary" color="neutral_500">
-            {short}
-          </Text>
+          <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
+            <Icon name="key" size={13} color="neutral_500" />
+            <Text variant="secondary" color="neutral_500">
+              {short}
+            </Text>
+          </View>
+          {alias ? <AliasLabel alias={alias} /> : null}
           {profile.description ? (
             <View style={Atoms.mt_sm}>
               <Text variant="body" fontSize="sm" color="neutral_1000">
@@ -125,7 +137,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           ) : null}
         </View>
 
-        <View style={Atoms.mt_md}>
+        <View style={[Atoms.mt_md, { flexShrink: 0 }]}>
           {isSelf ? (
             <Button
               title="Edit profile"
@@ -139,6 +151,57 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         </View>
       </View>
     </View>
+  );
+}
+
+/**
+ * The verified alias, truncated to one line so it can't push the
+ * action button off-screen. Built on the shared HoverCard (hover on web, tap on
+ * native), which portals + positions the reveal bubble correctly here.
+ */
+function AliasLabel({ alias }: { alias: string }) {
+  const { theme } = useTheme();
+
+  return (
+    <HoverCard openDelay={0}>
+      {/* `asChild` so the style array lands on an RN Pressable (which RN-Web
+          resolves) rather than being forwarded as-is to a DOM element. */}
+      <HoverCard.Trigger asChild>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={alias}
+          style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
+        >
+          <Icon name="at" size={13} color="neutral_500" />
+          <Text
+            variant="secondary"
+            color="neutral_500"
+            numberOfLines={1}
+            style={{ flexShrink: 1 }}
+          >
+            {alias}
+          </Text>
+        </Pressable>
+      </HoverCard.Trigger>
+      <HoverCard.Content side="bottom" align="start" animated={false}>
+        <View
+          style={[
+            Atoms.p_sm,
+            {
+              maxWidth: 320,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: theme.palette.neutral_300,
+              backgroundColor: theme.palette.background_secondary,
+            },
+          ]}
+        >
+          <Text variant="secondary" color="neutral_900">
+            {alias}
+          </Text>
+        </View>
+      </HoverCard.Content>
+    </HoverCard>
   );
 }
 

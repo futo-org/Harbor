@@ -56,4 +56,5 @@ export {
   HydrationStatus,
 } from './client-internal/event-service';
 
+export { resolveAlias, normalizeAlias } from './http/alias-resolver';
 export { CryptoManager } from './crypto/crypto-manager';
