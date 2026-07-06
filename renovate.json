@@ -32,6 +32,11 @@
       "enabled": false
     },
     {
+      "groupName": "rn-primitives",
+      "description": "Group @rn-primitives updates into one MR.",
+      "matchPackageNames": ["/^@rn-primitives//"]
+    },
+    {
       "groupName": "React Native Ecosystem Modules",
       "description": "Group community react-native module updates into one MR.",
       "matchUpdateTypes": ["patch", "minor"],
