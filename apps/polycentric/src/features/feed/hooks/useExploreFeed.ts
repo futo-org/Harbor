@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
-  decodeFeedQueryResult,
   extractFeedToken,
   shouldExtend,
   usePolycentricContext,
@@ -9,6 +7,7 @@ import {
 import { type FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
+import { useStableFeedItems } from './useStableFeedItems';
 
 export function useExploreFeed(options?: {
   perServerLimit?: number;
@@ -33,10 +32,7 @@ export function useExploreFeed(options?: {
     enabled,
   );
 
-  const [items, hasNext] = useMemo(
-    () => decodeFeedQueryResult(query.data),
-    [query.data],
-  );
+  const [items, hasNext] = useStableFeedItems(query.data);
 
   return {
     items,

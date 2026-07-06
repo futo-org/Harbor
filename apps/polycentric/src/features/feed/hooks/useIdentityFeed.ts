@@ -1,13 +1,12 @@
-import { useMemo } from 'react';
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import { type FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 import {
-  decodeFeedQueryResult,
   extractFeedToken,
   shouldExtend,
 } from '@/src/common/lib/polycentric-hooks';
+import { useStableFeedItems } from './useStableFeedItems';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
@@ -27,10 +26,7 @@ export function useIdentityFeed(
     enabled,
   );
 
-  const [items, hasNext] = useMemo(
-    () => decodeFeedQueryResult(query.data),
-    [query.data],
-  );
+  const [items, hasNext] = useStableFeedItems(query.data);
 
   return {
     items,
