@@ -1,12 +1,41 @@
+import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { Slot } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
   const { theme } = useTheme();
+  const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+
+  // Stay permissive until the identity store has settled — pruning routes
+  // during startup would break deep links that resolve after login state.
+  const accountGuard = isLoading || !isReady || !!currentIdentity;
+
   if (isWeb) {
-    return <Slot />;
+    // Web has no visible tab bar (the sidebar in Layout.tsx is the nav);
+    // a real Tabs navigator is used instead of a plain <Slot/> so the
+    // account-only tabs can be route-guarded. Guarded routes are removed
+    // from navigation while logged out; explore/search stay public.
+    return (
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: 'none' },
+        }}
+      >
+        <Tabs.Protected guard={accountGuard}>
+          <Tabs.Screen name="feed" />
+          <Tabs.Screen name="notifications" />
+          <Tabs.Screen name="verifications" />
+          <Tabs.Screen name="compose" />
+          <Tabs.Screen name="profile" />
+          <Tabs.Screen name="claims" />
+        </Tabs.Protected>
+        <Tabs.Screen name="explore" />
+        <Tabs.Screen name="search" />
+      </Tabs>
+    );
   }
 
   return (

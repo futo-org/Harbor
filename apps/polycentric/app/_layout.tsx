@@ -56,23 +56,33 @@ function RootStack() {
         </Stack.Protected>
 
         <Stack.Screen name="(onboarding)" />
-        <Stack.Screen
-          name="feed"
-          options={{
-            presentation: 'transparentModal',
-            animation: isWeb ? 'fade' : 'default',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        />
-        <Stack.Screen name="settings" />
-        <Stack.Screen
-          name="[identityId]/edit"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'none',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        />
+
+        {/* Account-only on every platform. Routes are auto-registered from
+            the filesystem; the explicit declarations here exist to place
+            them inside the guard. */}
+        <Stack.Protected guard={accountGuard}>
+          <Stack.Screen
+            name="feed"
+            options={{
+              presentation: 'transparentModal',
+              animation: isWeb ? 'fade' : 'default',
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          />
+          <Stack.Screen name="settings" />
+          <Stack.Screen
+            name="[identityId]/edit"
+            options={{
+              presentation: 'transparentModal',
+              animation: 'none',
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          />
+          <Stack.Screen name="identity/switch" />
+          <Stack.Screen name="verifications/index" />
+          <Stack.Screen name="verifications/claim" />
+        </Stack.Protected>
+
         <Stack.Screen
           name="image-viewer"
           options={{
