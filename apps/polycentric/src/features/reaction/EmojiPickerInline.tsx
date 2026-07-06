@@ -5,11 +5,13 @@ import { Emoji } from './Emoji';
 type EmojiPickerInlineProps = {
   selectedEmoji?: string | null;
   onSelect?: (emoji: string) => void;
+  onShowMore?: () => void;
 };
 
 export default function EmojiPickerInline({
   selectedEmoji,
   onSelect,
+  onShowMore,
 }: EmojiPickerInlineProps) {
   const { theme } = useTheme();
 
@@ -33,6 +35,9 @@ export default function EmojiPickerInline({
           selected={selectedEmoji === emoji.emoji}
         />
       ))}
+      {onShowMore && (
+        <Emoji emoji="…" onPress={onShowMore} style={[Atoms.p_xs]} />
+      )}
     </View>
   );
 }
