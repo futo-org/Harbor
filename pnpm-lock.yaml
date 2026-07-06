@@ -83,7 +83,7 @@ importers:
         version: 5.2.14(@types/react@19.2.17)(react-native-gesture-handler@2.30.1(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@lodev09/react-native-true-sheet':
         specifier: ^3.10.1
-        version: 3.11.0(@radix-ui/react-dialog@1.1.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@radix-ui/react-presence@1.1.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@react-navigation/core@7.21.2(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+        version: 3.11.2(@radix-ui/react-dialog@1.1.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@radix-ui/react-presence@1.1.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@react-navigation/core@7.21.2(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -3308,8 +3308,8 @@ packages:
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
 
-  '@lodev09/react-native-true-sheet@3.11.0':
-    resolution: {integrity: sha512-Dku8Gu7c0AQ4noQM+J8ndFHGR8UfqBV2vnBn9qUEERbo3kFCfhld3Jc/ygrpc62ZonSsw7f/70m2YRaxAa4nww==}
+  '@lodev09/react-native-true-sheet@3.11.2':
+    resolution: {integrity: sha512-ENSHnX0juBtrqElTKz4WMas9CLYPlv/y5GuATK325GuVIYFxHE8uo5ttCmXPksCGzQTrkiPtmL8Jw0QvtwQi5g==}
     peerDependencies:
       '@radix-ui/react-dialog': '>=1'
       '@radix-ui/react-presence': '>=1'
@@ -16504,7 +16504,7 @@ snapshots:
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
-  '@lodev09/react-native-true-sheet@3.11.0(@radix-ui/react-dialog@1.1.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@radix-ui/react-presence@1.1.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@react-navigation/core@7.21.2(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+  '@lodev09/react-native-true-sheet@3.11.2(@radix-ui/react-dialog@1.1.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@radix-ui/react-presence@1.1.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(@react-navigation/core@7.21.2(react@19.2.7))(react-native-reanimated@4.2.3(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native-worklets@0.7.2(@babel/core@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       react: 19.2.7
       react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
