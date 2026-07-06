@@ -119,7 +119,7 @@ importers:
         version: 1.4.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/toast':
         specifier: ^1.4.0
-        version: 1.4.0(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+        version: 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@shopify/flash-list':
         specifier: ^2.3.1
         version: 2.3.2(@babel/runtime@7.29.7)(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
@@ -4093,6 +4093,18 @@ packages:
       react-native-web:
         optional: true
 
+  '@rn-primitives/hooks@1.5.2':
+    resolution: {integrity: sha512-7XUVqR/nS309Fpltd19GflRTUPE/bYwZnOh/ofEDw7UMMelfI5CIgc70BXfZPHAkrjG9/tU3JAZl0KWSrWLJCQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native:
+        optional: true
+      react-native-web:
+        optional: true
+
   '@rn-primitives/hover-card@1.4.0':
     resolution: {integrity: sha512-PltEeCsJiQ0UG6UB6iapJYNrV2EjkFn3aUMNtOIkYPLi6hujPMq6kgI6F8rDUxXObwfku6XReO26PBvQs75I0A==}
     peerDependencies:
@@ -4155,8 +4167,20 @@ packages:
       react-native-web:
         optional: true
 
-  '@rn-primitives/toast@1.4.0':
-    resolution: {integrity: sha512-zqHO41dBdSLx649MXwSiTpMK7/eVns8P6MsoxW2FdCrhz39gBO8kuCc0ceq78Iw3UFc8zuRpFk8th1Urc8VkCg==}
+  '@rn-primitives/slot@1.5.2':
+    resolution: {integrity: sha512-TGSMB8hMALrcI6d5logiS8/0YzPRUQvsHghaF7FAuia+MF84WZS96Jvm959W4sDEP26AiDJtuQfCkTHOv0oxbw==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native:
+        optional: true
+      react-native-web:
+        optional: true
+
+  '@rn-primitives/toast@1.5.2':
+    resolution: {integrity: sha512-v3wVFhY5tHMb0TIANMqywjD/QSplei4gDCwkQ1E1OilX7n2cVGmiJEF9fJgpvLhnFuGyG2dO1a1Sx+y4T1nMyQ==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -4169,6 +4193,18 @@ packages:
 
   '@rn-primitives/types@1.4.0':
     resolution: {integrity: sha512-U7El2BbYXZG8WZrOIV4y1wpxH8aJA/sKH3SL2tZTL153ENj8aOpZ9QwyUoAU2t+sKVPDejrKjo89HeNuIuwPGQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native:
+        optional: true
+      react-native-web:
+        optional: true
+
+  '@rn-primitives/types@1.5.2':
+    resolution: {integrity: sha512-qoJOeCGBvQCTyEdKl4CL5MHwTLA2P3Lr6EzuJAxQcc/dUL0ev7IDtsAxHpoLraDD2kZdIkqnFtNsasr2iH25ZQ==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -17648,6 +17684,14 @@ snapshots:
       react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
       react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
+  '@rn-primitives/hooks@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      react: 19.2.7
+    optionalDependencies:
+      react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
+      react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+
   '@rn-primitives/hover-card@1.4.0(@rn-primitives/portal@1.4.0(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@radix-ui/react-hover-card': 1.1.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -17714,16 +17758,31 @@ snapshots:
       react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
       react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  '@rn-primitives/toast@1.4.0(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+  '@rn-primitives/slot@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@rn-primitives/slot': 1.4.0(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
-      '@rn-primitives/types': 1.4.0(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      react: 19.2.7
+    optionalDependencies:
+      react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
+      react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+
+  '@rn-primitives/toast@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@rn-primitives/hooks': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/slot': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       react: 19.2.7
     optionalDependencies:
       react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
       react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
   '@rn-primitives/types@1.4.0(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      react: 19.2.7
+    optionalDependencies:
+      react-native: 0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7)
+      react-native-web: 0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+
+  '@rn-primitives/types@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       react: 19.2.7
     optionalDependencies:
