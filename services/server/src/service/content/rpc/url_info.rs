@@ -7,55 +7,65 @@
 
 use crate::service::proto::{UrlInfoRequest, UrlInfoResponse};
 use crate::util::{http_client, scraper};
-use moka::Expiry;
-use moka::future::Cache;
 use serde::Deserialize;
-use std::sync::LazyLock;
+use std::collections::HashMap;
+use std::sync::{LazyLock, RwLock};
 use std::time::{Duration, Instant};
 use tonic::{Code, Status};
 
-const MAX_CACHED_URLS: u64 = 10_000;
+const MAX_CACHED_URLS: usize = 10_000;
+const EVICTION_BATCH: usize = 100;
 const SUCCESS_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 const FAILURE_TTL: Duration = Duration::from_secs(10 * 60);
 
 /// A cached scrape outcome. Failures are cached too (with a shorter
 /// TTL) so a dead or slow URL doesn't get re-scraped on every request.
-#[derive(Clone)]
-enum CacheEntry {
-    Success(UrlInfoResponse),
-    Failure { code: Code, message: String },
-}
+type ScrapeOutcome = Result<UrlInfoResponse, (Code, String)>;
 
-struct EntryExpiry;
+/// In-memory cache for `url_info` responses, keyed by trimmed URL.
+type UrlInfoCache = RwLock<HashMap<String, (Instant, ScrapeOutcome)>>;
 
-impl Expiry<String, CacheEntry> for EntryExpiry {
-    fn expire_after_create(
-        &self,
-        _key: &String,
-        value: &CacheEntry,
-        _created_at: Instant,
-    ) -> Option<Duration> {
-        Some(match value {
-            CacheEntry::Success(_) => SUCCESS_TTL,
-            CacheEntry::Failure { .. } => FAILURE_TTL,
-        })
+static CACHE: LazyLock<UrlInfoCache> = LazyLock::new(UrlInfoCache::default);
+
+fn ttl(outcome: &ScrapeOutcome) -> Duration {
+    match outcome {
+        Ok(_) => SUCCESS_TTL,
+        Err(_) => FAILURE_TTL,
     }
 }
 
-fn new_cache() -> Cache<String, CacheEntry> {
-    Cache::builder()
-        .max_capacity(MAX_CACHED_URLS)
-        .expire_after(EntryExpiry)
-        .build()
+fn get_cached(cache: &UrlInfoCache, key: &str) -> Option<ScrapeOutcome> {
+    let entries = cache.read().unwrap();
+    let (created, outcome) = entries.get(key)?;
+    (created.elapsed() < ttl(outcome)).then(|| outcome.clone())
 }
 
-/// In-memory cache for `url_info` responses. Concurrent requests for
-/// the same URL are coalesced into a single scraper call.
-static CACHE: LazyLock<Cache<String, CacheEntry>> = LazyLock::new(new_cache);
-
-/// Cache key for a URL: trimmed of surrounding whitespace.
-fn cache_key(url: &str) -> String {
-    url.trim().to_string()
+/// Insert an outcome. When the cache is full, drop expired entries;
+/// if everything is still live, evict the batch closest to expiry.
+fn insert_cached(cache: &UrlInfoCache, key: String, outcome: ScrapeOutcome) {
+    let mut entries = cache.write().unwrap();
+    if entries.len() >= MAX_CACHED_URLS {
+        entries
+            .retain(|_, (created, outcome)| created.elapsed() < ttl(outcome));
+    }
+    if entries.len() >= MAX_CACHED_URLS {
+        let mut remaining: Vec<(Duration, &String)> = entries
+            .iter()
+            .map(|(key, (created, outcome))| {
+                (ttl(outcome).saturating_sub(created.elapsed()), key)
+            })
+            .collect();
+        let batch = EVICTION_BATCH.min(remaining.len());
+        remaining.select_nth_unstable_by_key(batch - 1, |(left, _)| *left);
+        let evicted: Vec<String> = remaining[..batch]
+            .iter()
+            .map(|(_, key)| (*key).clone())
+            .collect();
+        for key in evicted {
+            entries.remove(&key);
+        }
+    }
+    entries.insert(key, (Instant::now(), outcome));
 }
 
 /// JSON returned by the scraper service's `/scrape` endpoint.
@@ -70,32 +80,27 @@ pub async fn handle(req: UrlInfoRequest) -> Result<UrlInfoResponse, Status> {
     lookup(&CACHE, &scraper::scrape_url(), &req.url).await
 }
 
-/// Serve from cache, scraping on a miss. `get_with` guarantees that
-/// concurrent misses for the same key run the scrape only once.
+/// Serve from cache, scraping on a miss. Concurrent misses for the
+/// same key may each scrape; the last result wins.
 async fn lookup(
-    cache: &Cache<String, CacheEntry>,
+    cache: &UrlInfoCache,
     scrape_url: &str,
     target_url: &str,
 ) -> Result<UrlInfoResponse, Status> {
-    let key = cache_key(target_url);
-    let entry = cache
-        .get_with(key.clone(), async {
-            match fetch_metadata(scrape_url, &key).await {
-                Ok(resp) => CacheEntry::Success(resp),
-                Err(status) => CacheEntry::Failure {
-                    code: status.code(),
-                    message: status.message().to_string(),
-                },
-            }
-        })
-        .await;
-
-    match entry {
-        CacheEntry::Success(resp) => Ok(resp),
-        CacheEntry::Failure { code, message } => {
-            Err(Status::new(code, message))
+    let key = target_url.trim();
+    let outcome = match get_cached(cache, key) {
+        Some(outcome) => outcome,
+        None => {
+            let outcome =
+                fetch_metadata(scrape_url, key).await.map_err(|status| {
+                    (status.code(), status.message().to_string())
+                });
+            insert_cached(cache, key.to_owned(), outcome.clone());
+            outcome
         }
-    }
+    };
+
+    outcome.map_err(|(code, message)| Status::new(code, message))
 }
 
 /// Call the scraper's `/scrape` endpoint and map its JSON onto a
@@ -226,7 +231,7 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = new_cache();
+        let cache = UrlInfoCache::default();
         let scrape_url = format!("{}/scrape", server.url());
         let first = lookup(&cache, &scrape_url, "https://example.com")
             .await
@@ -240,29 +245,25 @@ mod tests {
         mock.assert_async().await;
     }
 
-    #[tokio::test]
-    async fn concurrent_lookups_coalesce_into_one_scrape() {
-        let mut server = mockito::Server::new_async().await;
-        let mock = server
-            .mock("GET", "/scrape")
-            .match_query(mockito::Matcher::Any)
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(success_body("Once"))
-            .expect(1)
-            .create_async()
-            .await;
-
-        let cache = new_cache();
-        let scrape_url = format!("{}/scrape", server.url());
-        let (a, b) = tokio::join!(
-            lookup(&cache, &scrape_url, "https://example.com"),
-            lookup(&cache, &scrape_url, "https://example.com"),
+    #[test]
+    fn full_cache_evicts_a_batch_of_entries_closest_to_expiry() {
+        let cache = UrlInfoCache::default();
+        for i in 0..MAX_CACHED_URLS {
+            insert_cached(
+                &cache,
+                format!("https://example.com/{i}"),
+                Ok(UrlInfoResponse::default()),
+            );
+        }
+        insert_cached(
+            &cache,
+            "https://example.com/one-more".to_string(),
+            Ok(UrlInfoResponse::default()),
         );
 
-        assert_eq!(a.expect("should succeed").title, "Once");
-        assert_eq!(b.expect("should succeed").title, "Once");
-        mock.assert_async().await;
+        let entries = cache.read().unwrap();
+        assert_eq!(entries.len(), MAX_CACHED_URLS - EVICTION_BATCH + 1);
+        assert!(entries.contains_key("https://example.com/one-more"));
     }
 
     #[tokio::test]
@@ -276,7 +277,7 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = new_cache();
+        let cache = UrlInfoCache::default();
         let scrape_url = format!("{}/scrape", server.url());
         let first = lookup(&cache, &scrape_url, "https://dead.test")
             .await
@@ -306,7 +307,7 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = new_cache();
+        let cache = UrlInfoCache::default();
         let scrape_url = format!("{}/scrape", server.url());
         let first = lookup(&cache, &scrape_url, "https://example.com/page")
             .await
