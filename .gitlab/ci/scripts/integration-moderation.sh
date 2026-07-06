@@ -44,13 +44,16 @@ trap cleanup EXIT
 echo "==> Clearing any stale stack…"
 docker compose down -v >/dev/null 2>&1 || true
 
-echo "==> Bringing up infrastructure (postgres, rustfs, rustfs-init, kafka)…"
+echo "==> Bringing up infrastructure…"
 # Start infrastructure services first. Notably, we avoid the scraper
 # service because it's unnecessary for the test. Also, in CI's dind environment
 # the scraper cannot start because its nftables egress firewall requires
 # CAP_NET_ADMIN, and an exited dependency container causes compose v2 to
 # return a non-zero exit code, aborting the script.
-docker compose up -d --build --wait postgres rustfs rustfs-init kafka
+docker compose up -d --build --wait postgres rustfs kafka
+
+echo "==> Creating object-store bucket…"
+docker compose run --rm rustfs-init
 
 if [[ "${CI:-}" == "true" ]]; then
   echo "==> Joining the job container to the stack network ($NETWORK)…"
