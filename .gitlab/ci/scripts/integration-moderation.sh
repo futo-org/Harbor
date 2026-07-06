@@ -44,8 +44,16 @@ trap cleanup EXIT
 echo "==> Clearing any stale stack…"
 docker compose down -v >/dev/null 2>&1 || true
 
-echo "==> Bringing up the server stack…"
-docker compose up -d --build --wait postgres rustfs kafka server
+echo "==> Bringing up infrastructure…"
+# Start infrastructure services first. Notably, we avoid the scraper
+# service because it's unnecessary for the test. Also, in CI's dind environment
+# the scraper cannot start because its nftables egress firewall requires
+# CAP_NET_ADMIN, and an exited dependency container causes compose v2 to
+# return a non-zero exit code, aborting the script.
+docker compose up -d --build --wait postgres rustfs kafka
+
+echo "==> Creating object-store bucket…"
+docker compose run --rm rustfs-init
 
 if [[ "${CI:-}" == "true" ]]; then
   echo "==> Joining the job container to the stack network ($NETWORK)…"
@@ -59,6 +67,12 @@ if [[ "${CI:-}" == "true" ]]; then
   export POLYCENTRIC_TEST_OS_ENDPOINT="http://rustfs:9000"
   export POLYCENTRIC_TEST_KAFKA_BROKERS="kafka:19092"
 fi
+
+echo "==> Building and starting the server…"
+# Build and start the server without its depends_on chain (--no-deps), so
+# the scraper container is not pulled in.  The infrastructure is already
+# running, so this is safe.
+docker compose up -d --no-deps --build --wait server
 
 echo "==> Waiting for the server gRPC port ($SERVER_HOST:$SERVER_PORT)…"
 for _ in $(seq 1 60); do
