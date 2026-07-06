@@ -12,6 +12,22 @@ const linkValues = (text: string) => links(text).map((l) => l.value);
 /** Resolved URLs of the link segments. */
 const linkUrls = (text: string) => links(text).map((l) => l.url);
 
+/** Just the alias segments. */
+const aliases = (text: string) =>
+  parseTextLinks(text).filter(
+    (s): s is Extract<TextSegment, { type: 'alias' }> => s.type === 'alias',
+  );
+
+/** Just the identity segments. */
+const identities = (text: string) =>
+  parseTextLinks(text).filter(
+    (s): s is Extract<TextSegment, { type: 'identity' }> =>
+      s.type === 'identity',
+  );
+
+const HEX64 =
+  '0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722';
+
 describe('parseTextLinks', () => {
   describe('no links', () => {
     it('returns a single text segment for plain text', () => {
@@ -143,6 +159,90 @@ describe('parseTextLinks', () => {
     });
   });
 
+  describe('alias mentions', () => {
+    it('detects an `@user@domain.com` mention', () => {
+      expect(parseTextLinks('@user@domain.com')).toEqual([
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+      ]);
+    });
+
+    it('detects a mention within surrounding text', () => {
+      expect(parseTextLinks('hey @user@domain.com bye')).toEqual([
+        { type: 'text', value: 'hey ' },
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+        { type: 'text', value: ' bye' },
+      ]);
+    });
+
+    it('excludes trailing punctuation from the mention', () => {
+      expect(parseTextLinks('see @user@domain.com.')).toEqual([
+        { type: 'text', value: 'see ' },
+        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
+        { type: 'text', value: '.' },
+      ]);
+    });
+
+    it('preserves case (normalisation happens downstream)', () => {
+      expect(aliases('@User@Domain.com')).toEqual([
+        { type: 'alias', value: '@User@Domain.com', alias: 'User@Domain.com' },
+      ]);
+    });
+
+    it('allows dotted/underscored local parts', () => {
+      expect(aliases('@first.last_1@domain.io')).toEqual([
+        {
+          type: 'alias',
+          value: '@first.last_1@domain.io',
+          alias: 'first.last_1@domain.io',
+        },
+      ]);
+    });
+
+    it('does not treat a plain email as a mention', () => {
+      expect(aliases('reach me@example.com please')).toEqual([]);
+    });
+
+    it('does not match `@user@` with no TLD', () => {
+      expect(aliases('@user@localhost here')).toEqual([]);
+    });
+  });
+
+  describe('identity mentions', () => {
+    it('detects an `@<64-hex>` mention', () => {
+      expect(parseTextLinks(`@${HEX64}`)).toEqual([
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+      ]);
+    });
+
+    it('detects a mention within surrounding text', () => {
+      expect(parseTextLinks(`hi @${HEX64} ok`)).toEqual([
+        { type: 'text', value: 'hi ' },
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+        { type: 'text', value: ' ok' },
+      ]);
+    });
+
+    it('excludes trailing punctuation from the mention', () => {
+      expect(parseTextLinks(`see @${HEX64}.`)).toEqual([
+        { type: 'text', value: 'see ' },
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+        { type: 'text', value: '.' },
+      ]);
+    });
+
+    it('does not match fewer than 64 hex chars', () => {
+      expect(identities('@deadbeef here')).toEqual([]);
+    });
+
+    it('does not match a longer hex run (not exactly 64)', () => {
+      expect(identities(`@${HEX64}ab`)).toEqual([]);
+    });
+
+    it('does not match 64 non-hex chars', () => {
+      expect(identities(`@${'g'.repeat(64)} here`)).toEqual([]);
+    });
+  });
+
   describe('multiple links & surrounding text', () => {
     it('detects several links with text between them', () => {
       const segs = parseTextLinks(
@@ -185,6 +285,8 @@ describe('parseTextLinks', () => {
       'see https://example.com/path?x=1#y now',
       '(www.example.com), and example.org. done',
       'email a@b.com plus https://c.io end',
+      'hey @user@domain.com and a@b.com and example.net',
+      `mention @${HEX64} mid sentence`,
       'multi https://x.com www.y.org example.net z',
       '',
     ])('rejoining all segment values reproduces the input: %s', (input) => {

@@ -5,6 +5,7 @@ export type DecodedProfile = {
   description: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
+  alias: string | null;
 };
 
 /**
@@ -42,5 +43,6 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     description: latest?.update.description ?? null,
     avatar: latest?.update.avatar ?? null,
     banner: latest?.update.banner ?? null,
+    alias: latest?.update.alias ?? null,
   };
 }

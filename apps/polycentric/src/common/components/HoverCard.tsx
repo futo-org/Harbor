@@ -5,16 +5,24 @@ import { isWeb } from '../util/platform';
 
 export function HoverCardContent({
   children,
+  animated = true,
   ...props
-}: HoverCardPrimitive.ContentProps) {
+}: HoverCardPrimitive.ContentProps & {
+  /** Animate the reveal (BounceIn). Set false for an instant, static card. */
+  animated?: boolean;
+}) {
   const content = (
     <HoverCardPrimitive.Content {...props}>
-      <Animated.View
-        entering={BounceIn.duration(450)}
-        exiting={FadeOut.duration(100)}
-      >
-        {children}
-      </Animated.View>
+      {animated ? (
+        <Animated.View
+          entering={BounceIn.duration(450)}
+          exiting={FadeOut.duration(100)}
+        >
+          {children}
+        </Animated.View>
+      ) : (
+        children
+      )}
     </HoverCardPrimitive.Content>
   );
 

@@ -95,6 +95,8 @@ message ProfileUpdate {
   optional ImageSet banner = 3;
   // Bio
   optional string description = 4;
+  // A domain-based alias (e.g. user@domain.com) the profile claims for itself.
+  optional string alias = 5;
 }
 
 // If an uploaded Blob is uploaded to the servers Object Storage and not

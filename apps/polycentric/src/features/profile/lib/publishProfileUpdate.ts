@@ -5,6 +5,7 @@ type PublishProfileUpdateInput = {
   name: string;
   description: string;
   avatarUri?: string | null;
+  alias?: string | null;
 };
 
 // When the user picked a new avatar, resize + upload every
@@ -12,17 +13,19 @@ type PublishProfileUpdateInput = {
 // `fill` mode give us the square variants avatars want.
 export async function publishProfileUpdate(
   client: PolycentricClient,
-  { name, description, avatarUri }: PublishProfileUpdateInput,
+  { name, description, avatarUri, alias }: PublishProfileUpdateInput,
 ): Promise<void> {
   const avatar = avatarUri
     ? await processAndUploadImage(client, avatarUri)
     : undefined;
+  const trimmedAlias = alias?.trim();
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: {
       name,
       description,
       avatar,
+      alias: trimmedAlias ? trimmedAlias : undefined,
     },
   });
 

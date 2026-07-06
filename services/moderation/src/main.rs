@@ -137,6 +137,9 @@ fn content_text(content: &Content) -> Option<String> {
             if let Some(description) = &profile.description {
                 parts.push(description.clone());
             }
+            if let Some(alias) = &profile.alias {
+                parts.push(alias.clone());
+            }
             (!parts.is_empty()).then(|| parts.join("\n"))
         }
         _ => None,
