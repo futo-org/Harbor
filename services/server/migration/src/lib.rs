@@ -16,6 +16,7 @@ mod m20260617_000002_drop_push_token_table;
 mod m20260618_000001_timestamps_to_timestamptz;
 mod m20260625_000001_add_event_key_indices;
 mod m20260630_000001_add_verification_tables;
+mod m20260707_164130_add_indices_for_sorting;
 
 pub struct Migrator;
 
@@ -32,13 +33,14 @@ impl MigratorTrait for Migrator {
             Box::new(m20260526_000002_add_content_repost_table::Migration),
             Box::new(m20260528_000001_reaction_opinion_to_positive::Migration),
             Box::new(m20260601_000001_add_content_report_table::Migration),
-            Box::new(m20260604_000001_add_content_label_table::Migration),
             Box::new(m20260601_000001_add_follower_lookup_indexes::Migration),
+            Box::new(m20260604_000001_add_content_label_table::Migration),
             Box::new(m20260617_000001_add_notification_table::Migration),
             Box::new(m20260617_000002_drop_push_token_table::Migration),
             Box::new(m20260618_000001_timestamps_to_timestamptz::Migration),
             Box::new(m20260625_000001_add_event_key_indices::Migration),
             Box::new(m20260630_000001_add_verification_tables::Migration),
+            Box::new(m20260707_164130_add_indices_for_sorting::Migration),
         ]
     }
 }
