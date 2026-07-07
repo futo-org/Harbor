@@ -30,6 +30,7 @@ export function ClaimCreatePlatformLink({ platform }: { platform: Platform }) {
       <TextInput
         value={profileUrl}
         onChangeText={setProfileUrl}
+        autoFocus
         placeholder={platform.placeholder}
         keyboardType="url"
         autoCapitalize="none"

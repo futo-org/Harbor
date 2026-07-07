@@ -95,7 +95,11 @@ export const ClaimList = forwardRef<ListRef, ClaimListProps>(function ClaimList(
         active.isLoading ? null : (
           <ListEmpty>
             <View style={[Atoms.items_center, Atoms.gap_lg]}>
-              <Text variant="body" color="neutral_500">
+              <Text
+                variant="body"
+                color="neutral_500"
+                style={Atoms.text_center}
+              >
                 When someone asks you to verify a claim, it will show up here.
               </Text>
               <Button
@@ -138,7 +142,7 @@ function CreateClaimRow({ onPress }: { onPress: () => void }) {
         style={[
           Atoms.flex_row,
           Atoms.align_center,
-          Atoms.gap_sm,
+          Atoms.gap_md,
           Atoms.pl_lg,
           Atoms.pr_lg,
           Atoms.pt_md,
@@ -146,15 +150,25 @@ function CreateClaimRow({ onPress }: { onPress: () => void }) {
           { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
         ]}
       >
-        <Icon name="addOutline" size={22} color="primary_500" />
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          color="primary_500"
-          selectable={false}
-        >
-          Create new claim
-        </Text>
+        <View style={Atoms.flex_1}>
+          <Text
+            variant="secondary"
+            fontWeight="semibold"
+            color="primary_500"
+            selectable={false}
+          >
+            Create new claim
+          </Text>
+          <Text
+            variant="small"
+            style={theme.atoms.text_neutral_medium}
+            fontWeight="regular"
+            selectable={false}
+          >
+            Invite others to vouch for your claims & credentials.
+          </Text>
+        </View>
+        <Icon name="chevronForward" size={28} color="neutral_400" />
       </View>
     </Pressable>
   );

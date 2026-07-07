@@ -1,17 +1,19 @@
-import { Text } from '@/src/common/components';
+import { Button, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
+import { ScrollView } from '@/src/common/components/ScrollView';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClaimRef } from '../hooks/useCreateClaim';
 import { CLAIM_TYPES, ClaimType } from '../utils/forms';
 import { Platform } from '../utils/platforms';
-import { ClaimCreateForm } from './ClaimCreateForm';
+import { ClaimCreateForm, ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
 import { ClaimCreatePlatformPicker } from './ClaimCreatePlatformPicker';
 
@@ -60,7 +62,10 @@ export function ClaimCreateSheet({
 }) {
   const { theme } = useTheme();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const [stack, setStack] = useState<Step[]>([{ kind: 'type' }]);
+
+  const [form, setForm] = useState<ClaimFormState | null>(null);
 
   const step = stack[stack.length - 1];
   const canGoBack = stack.length > 1;
@@ -98,64 +103,96 @@ export function ClaimCreateSheet({
     <Sheet
       open={open}
       onClose={close}
-      detents={[0.9]}
+      detents={[0.5]}
       scrollable
       header={
         <Sheet.Header
           title={stepTitle(step)}
           closeIcon={canGoBack ? 'chevronBack' : 'close'}
           onClose={canGoBack ? pop : close}
+          right={
+            step.kind === 'form' ? (
+              form?.isPending ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.palette.primary_500}
+                  accessibilityLabel="Creating claim"
+                />
+              ) : (
+                <Button
+                  title="Create"
+                  variant="primary"
+                  size="sm"
+                  disabled={!form?.isValid}
+                  onPress={() => form?.submit()}
+                />
+              )
+            ) : undefined
+          }
         />
       }
     >
       <Sheet.Content>
-        <Animated.View
-          key={stepKey(step)}
-          entering={FadeInDown.duration(200)}
-          style={Atoms.gap_sm}
+        {/* TrueSheet's `scrollable` pins this ScrollView and insets it for the
+            keyboard, so focused inputs stay reachable while typing. */}
+        <ScrollView
+          style={Atoms.flex_1}
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + Spacing['lg'],
+          }}
+          keyboardShouldPersistTaps="handled"
         >
-          {step.kind === 'type' && (
-            <>
-              <Text
-                variant="small"
-                style={theme.atoms.text_neutral_medium}
-                fontWeight="semibold"
-              >
-                Select the type of claim to create
-              </Text>
-              <View>
-                {CLAIM_TYPES.map((claimType, i) => (
-                  <Animated.View
-                    key={claimType.name}
-                    entering={FadeInDown.delay(i * 40).duration(200)}
-                  >
-                    <ClaimTypeRow
-                      claimType={claimType}
-                      onPress={() => onSelectClaimType(claimType)}
-                    />
-                  </Animated.View>
-                ))}
-              </View>
-            </>
-          )}
+          <Animated.View
+            key={stepKey(step)}
+            entering={FadeInDown.duration(200)}
+            style={Atoms.gap_sm}
+          >
+            {step.kind === 'type' && (
+              <>
+                <Text
+                  variant="small"
+                  style={theme.atoms.text_neutral_medium}
+                  fontWeight="semibold"
+                >
+                  Select the type of claim to create
+                </Text>
+                <View>
+                  {CLAIM_TYPES.map((claimType, i) => (
+                    <Animated.View
+                      key={claimType.name}
+                      entering={FadeInDown.delay(i * 40).duration(200)}
+                    >
+                      <ClaimTypeRow
+                        claimType={claimType}
+                        onPress={() => onSelectClaimType(claimType)}
+                      />
+                    </Animated.View>
+                  ))}
+                </View>
+              </>
+            )}
 
-          {step.kind === 'form' && (
-            <ClaimCreateForm
-              claimType={step.claimType}
-              onSubmitted={handleSubmitted}
-            />
-          )}
+            {step.kind === 'form' && (
+              <ClaimCreateForm
+                claimType={step.claimType}
+                onSubmitted={handleSubmitted}
+                onFormState={setForm}
+              />
+            )}
 
-          {step.kind === 'platform' && (
-            <ClaimCreatePlatformPicker
-              onSelect={(platform) => push({ kind: 'platform-link', platform })}
-            />
-          )}
+            {step.kind === 'platform' && (
+              <ClaimCreatePlatformPicker
+                onSelect={(platform) =>
+                  push({ kind: 'platform-link', platform })
+                }
+              />
+            )}
 
-          {step.kind === 'platform-link' && (
-            <ClaimCreatePlatformLink platform={step.platform} />
-          )}
-        </Animated.View>
+            {step.kind === 'platform-link' && (
+              <ClaimCreatePlatformLink platform={step.platform} />
+            )}
+          </Animated.View>
+        </ScrollView>
       </Sheet.Content>
     </Sheet>
   );
