@@ -71,8 +71,6 @@ docs-review-stop:
   variables:
     CF_PAGES_PROJECT: polycentric-docs
     CF_PAGES_BRANCH: mr-$CI_MERGE_REQUEST_IID
-    # Needs a git checkout for the cleanup script below
-    GIT_STRATEGY: none
   environment:
     name: review/docs/$CI_MERGE_REQUEST_IID
     action: stop
