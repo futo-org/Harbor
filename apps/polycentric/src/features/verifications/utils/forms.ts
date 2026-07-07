@@ -15,6 +15,7 @@ export interface FormField {
 // A claim type and the form used to collect it.
 export interface ClaimType {
   name: string;
+  description: string;
   icon: IconName;
   color?: PaletteColorToken;
   fields: FormField[];
@@ -31,6 +32,7 @@ const DESCRIPTION: FormField = {
 export const CLAIM_TYPES: ClaimType[] = [
   {
     name: 'Freeform',
+    description: 'Anything you want to claim, in your own words.',
     icon: 'form',
     color: 'negative_300',
     fields: [
@@ -40,6 +42,7 @@ export const CLAIM_TYPES: ClaimType[] = [
   },
   {
     name: 'Platform',
+    description: 'Prove you own an account on another social platform.',
     icon: 'cardOutline',
     color: 'neutral_600',
     fields: [],
@@ -47,6 +50,7 @@ export const CLAIM_TYPES: ClaimType[] = [
   },
   {
     name: 'Occupation',
+    description: 'A job or position you hold or have held.',
     icon: 'briefcaseOutline',
     color: 'positive_500',
     fields: [
@@ -60,6 +64,7 @@ export const CLAIM_TYPES: ClaimType[] = [
   },
   {
     name: 'Skill',
+    description: 'A skill or expertise you have.',
     icon: 'bookOutline',
     color: 'primary_400',
     fields: [
@@ -69,6 +74,7 @@ export const CLAIM_TYPES: ClaimType[] = [
   },
   {
     name: 'Education',
+    description: 'A degree, certification, or course you completed.',
     icon: 'certificateOutline',
     color: 'warning_500',
     fields: [

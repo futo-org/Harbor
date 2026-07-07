@@ -60,7 +60,7 @@ export function ClaimCreateForm({
       )}
 
       <Button
-        title={isPending ? 'Submitting…' : 'Continue'}
+        title={isPending ? 'Submitting…' : 'Create claim'}
         variant="primary"
         onPress={onSubmit}
         disabled={!isValid || isPending}

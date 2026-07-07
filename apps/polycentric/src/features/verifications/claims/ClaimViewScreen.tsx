@@ -21,10 +21,13 @@ export default function ViewClaimScreen() {
     identityId,
     keyFingerprint,
     sequence = '',
+    requestVerification,
   } = useLocalSearchParams<{
     identityId: string;
     keyFingerprint: string;
     sequence: string;
+    // Set when arriving from the create flow to open the sheet immediately.
+    requestVerification?: string;
   }>();
 
   const { claim, isLoading } = useClaimById(
@@ -33,7 +36,7 @@ export default function ViewClaimScreen() {
     sequence ? BigInt(sequence) : undefined,
   );
 
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(requestVerification === '1');
 
   const { title, bodyFields } = useMemo<{
     title: string;
