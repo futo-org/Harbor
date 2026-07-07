@@ -42,6 +42,9 @@ type CommonProps = {
   children: ReactNode;
   detents?: SheetDetent[];
   dismissible?: boolean;
+  /** Dim the background; tapping the dim area dismisses the sheet (native).
+   * Set to `false` to allow interacting with the screen behind instead. */
+  dimmed?: boolean;
   scrollable?: boolean;
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
@@ -96,17 +99,24 @@ function SheetHeader({
   left,
   right,
 }: SheetHeaderProps) {
-  left = left ?? (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Go back"
-      onPress={onClose}
-      hitSlop={Spacing['lg']}
-      style={({ pressed }) => [pressed && { opacity: 0.5 }]}
-    >
-      <Icon name={closeIcon} size={24} color="neutral_900" />
-    </Pressable>
-  );
+  // Native sheets dismiss by swiping down, so the close button is redundant
+  // there — hide it. Web modals keep it, and back chevrons show everywhere.
+  const hideDefault = !isWeb && closeIcon === 'close';
+  left =
+    left ??
+    (hideDefault ? (
+      <View style={{ width: 40, height: 40 }} />
+    ) : (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        onPress={onClose}
+        hitSlop={Spacing['lg']}
+        style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+      >
+        <Icon name={closeIcon} size={24} color="neutral_900" />
+      </Pressable>
+    ));
   right = right ?? <View style={{ width: 40, height: 40 }} />;
 
   return (
@@ -161,6 +171,7 @@ function NativeSheet({
   children,
   detents = [0.5],
   dismissible = true,
+  dimmed = true,
   scrollable = false,
   navigation,
   ...props
@@ -205,7 +216,7 @@ function NativeSheet({
   return (
     <TrueSheet
       ref={sheetRef}
-      dimmed={false}
+      dimmed={dimmed}
       backgroundColor={surface}
       detents={detents}
       initialDetentIndex={0}
