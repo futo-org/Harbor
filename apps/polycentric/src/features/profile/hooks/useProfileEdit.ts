@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { resolveAlias } from '@polycentric/react-native';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
+import { profileQueryKey } from './useProfile';
 
 interface ProfileRef {
   description: string | null;
   alias: string | null;
-  refresh: () => void;
 }
 
 export type ProfileEditState = {
@@ -83,7 +84,7 @@ export function useProfileEdit(
         avatarUri,
         alias: aliasDraft,
       });
-      profile.refresh();
+      invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
       return true;
     } catch (err) {

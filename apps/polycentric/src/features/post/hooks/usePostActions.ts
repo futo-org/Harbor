@@ -7,6 +7,7 @@ import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
 import { router, useSegments } from 'expo-router';
 import { feedQueryKeys } from '../../feed/hooks/feedCache';
+import { threadQueryKey } from './useThread';
 
 type PostActions = {
   /**
@@ -53,6 +54,16 @@ export default function usePostActions(post: PostData): PostActions {
     invalidateQuery(client, feedQueryKeys.explore(identity));
   };
 
+  const invalidateThreads = (reply: PostData['reply']) => {
+    if (!reply) return;
+    const parents = [reply.parentId, reply.rootId].filter(
+      (id): id is string => !!id,
+    );
+    for (const parentId of new Set(parents)) {
+      invalidateQuery(client, threadQueryKey(parentId));
+    }
+  };
+
   return {
     reportAsync: async () => {
       // TODO: discuss if we should record report events or
@@ -61,6 +72,7 @@ export default function usePostActions(post: PostData): PostActions {
     deleteAsync: async () => {
       await deleteEventAtKey(post.id);
       invalidateFeeds(post.identity);
+      invalidateThreads(post.reply);
 
       if (segments[0] === '[identityId]' && segments[1] === 'post') {
         // Redirect to profile
