@@ -1093,7 +1093,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
     );
 
     // Label event is still in event_hints.
-    let label_bundle = resp
+    let _label_bundle = resp
         .event_hints
         .iter()
         .find_map(|h| {
