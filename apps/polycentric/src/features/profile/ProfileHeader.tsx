@@ -14,6 +14,7 @@ import {
   truncateName,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
+import { Tabs } from '@/src/common/components/Tabs';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
@@ -150,6 +151,21 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           )}
         </View>
       </View>
+
+      <Tabs>
+        <Tabs.Tab
+          active={activeFeed === 'posts'}
+          onPress={() => setActiveFeed('posts')}
+        >
+          Posts
+        </Tabs.Tab>
+        <Tabs.Tab
+          active={activeFeed === 'verifications'}
+          onPress={() => setActiveFeed('verifications')}
+        >
+          Verifications
+        </Tabs.Tab>
+      </Tabs>
     </View>
   );
 }

@@ -6,8 +6,7 @@ import { View } from 'react-native';
 import { CopyLinkComponent } from '../CopyLinkComponent';
 import { isProfileUrl, Platform } from '../utils/platforms';
 
-// Link an account on the chosen platform by adding a loop-back link to its
-// profile, then submitting the profile URL for verification.
+// Link a platform account by adding a loop-back link to its profile.
 export function ClaimCreatePlatformLink({ platform }: { platform: Platform }) {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();

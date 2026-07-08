@@ -15,7 +15,8 @@ export function IdentityChip({ identity }: { identity: string }) {
   return (
     <Pressable onPress={() => router.push(Routes.tabs.profile(identity))}>
       <Chip style={Atoms.pl_xs}>
-        <ProfileAvatar identityKey={identity} size="xs" />
+        {/* 20 matches ChipIcon's bubble so sibling chips share a height. */}
+        <ProfileAvatar identityKey={identity} size={20} />
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}>
           {name && (
             <Text

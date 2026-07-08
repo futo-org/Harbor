@@ -1,14 +1,15 @@
+import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import { router } from 'expo-router';
 import {
   createContext,
+  useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 
-type ActiveFeed = 'posts' | 'likes';
+export type ActiveFeed = 'posts' | 'verifications';
 
 interface ProfileContextValue {
   identityKey: string | null;
@@ -25,23 +26,36 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 export function ProfileProvider({
   identityKey,
   alias = null,
+  activeFeed = 'posts',
   children,
 }: {
   identityKey: string | null;
   alias?: string | null;
+  // Which tab's route rendered this profile.
+  activeFeed?: ActiveFeed;
   children: ReactNode;
 }) {
   const { identity: selfIdentity } = useCurrentIdentity();
   const isSelf = !!identityKey && selfIdentity?.identityKey === identityKey;
 
-  const [activeFeed, setActiveFeed] = useState<ActiveFeed>('posts');
-  useEffect(() => {
-    if (!isSelf) setActiveFeed('posts');
-  }, [isSelf]);
+  // Tabs are routes; switching replaces the URL, keeping the alias when
+  // the profile was reached via one.
+  const setActiveFeed = useCallback(
+    (tab: ActiveFeed) => {
+      const profileId = alias ?? identityKey;
+      if (tab === activeFeed || !profileId) return;
+      router.replace(
+        tab === 'verifications'
+          ? Routes.tabs.profileVerifications(profileId)
+          : Routes.tabs.profile(profileId),
+      );
+    },
+    [activeFeed, alias, identityKey],
+  );
 
   const value = useMemo<ProfileContextValue>(
     () => ({ identityKey, isSelf, activeFeed, setActiveFeed, alias }),
-    [identityKey, isSelf, activeFeed, alias],
+    [identityKey, isSelf, activeFeed, setActiveFeed, alias],
   );
 
   return (

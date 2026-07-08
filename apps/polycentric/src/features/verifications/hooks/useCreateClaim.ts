@@ -6,7 +6,9 @@ import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
+import { useClaimCreateOptions } from '../claims/ClaimCreateContext';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
+import { publishVerificationTarget } from './useRequestVerification';
 
 // Identifies a created claim event for routing to its view.
 export interface ClaimRef {
@@ -18,6 +20,8 @@ export interface ClaimRef {
 export default function useCreateClaim() {
   const client = usePolycentric();
   const { identityKey } = useCurrentIdentity();
+  // When set, the fresh claim is targeted at this identity for verification.
+  const { requestFrom } = useClaimCreateOptions();
 
   const [isPending, setPending] = useState<boolean>(false);
 
@@ -67,6 +71,11 @@ export default function useCreateClaim() {
         // Save the event locally and mirror it (with content) into the core.
         await client.commitEvent(signedEvent, content);
 
+        // The same sync below delivers both events.
+        if (requestFrom && event.key) {
+          await publishVerificationTarget(client, event.key, requestFrom);
+        }
+
         // Delivery to servers is best-effort — the claim is already saved
         // locally and will be pushed on the next sync if this fails.
         try {
@@ -78,6 +87,13 @@ export default function useCreateClaim() {
         // Refresh the creator's claim list so the new claim shows up.
         if (identityKey) {
           invalidateQuery(client, ['claims-list', identityKey]);
+          if (requestFrom) {
+            invalidateQuery(client, [
+              'verification-requests',
+              identityKey,
+              requestFrom,
+            ]);
+          }
         }
 
         const key = event.key;

@@ -22,6 +22,7 @@ function defineIcon<G extends string>(
  */
 export const IconsMap = {
   add: defineIcon(Ionicons, 'add'),
+  addCircleOutline: defineIcon(MaterialCommunityIcons, 'plus-circle-outline'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
   at: defineIcon(Ionicons, 'at'),
@@ -50,7 +51,7 @@ export const IconsMap = {
   home: defineIcon(Ionicons, 'home-outline'),
   image: defineIcon(Ionicons, 'image-outline'),
   images: defineIcon(Ionicons, 'images-outline'),
-  infoOutline: defineIcon(Ionicons, 'information-circle-outline'),
+  infoOutline: defineIcon(MaterialCommunityIcons, 'information-outline'),
   key: defineIcon(MaterialIcons, 'vpn-key'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
