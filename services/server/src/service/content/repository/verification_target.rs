@@ -88,6 +88,7 @@ mod tests {
             &ChildContext {
                 content_id: 5,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             target,
         )
@@ -112,6 +113,7 @@ mod tests {
             &ChildContext {
                 content_id: 5,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             target,
         )
@@ -132,6 +134,7 @@ mod tests {
             &ChildContext {
                 content_id: 5,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             target,
         )

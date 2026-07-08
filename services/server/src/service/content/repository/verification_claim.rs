@@ -221,6 +221,7 @@ mod tests {
             &ChildContext {
                 content_id: 1,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             VerificationClaim {
                 schema: None,

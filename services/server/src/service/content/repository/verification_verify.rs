@@ -63,6 +63,7 @@ mod tests {
             &ChildContext {
                 content_id: 9,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             verify,
         )
@@ -82,6 +83,7 @@ mod tests {
             &ChildContext {
                 content_id: 9,
                 event_identity: "alice",
+                trusted_moderator: None,
             },
             VerificationVerify {
                 claim_event_key: None,
