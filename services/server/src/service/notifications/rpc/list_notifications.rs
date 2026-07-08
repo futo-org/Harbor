@@ -36,12 +36,8 @@ pub struct Fetched {
 
 struct Hydrated {
     bundles: HashMap<TargetEventKey, EventBundle>,
-    /// Identity + profile events for every identity involved.
+    /// Identity, profile, and moderation label events for every identity involved.
     event_hints: Vec<EventHint>,
-    /// Label events for trigger events (no target event labels,
-    /// because we assume the notified identity authored the
-    /// target events, and they will not object to their own posts).
-    label_events: Vec<EventBundle>,
 }
 
 pub async fn handle(
@@ -142,7 +138,7 @@ async fn hydrate(
             .map_err(map_db_err)
     };
 
-    // Author identity (signing chain), profile (name/avatar), and moderation label events as hints.
+    // Author identity, profile, and moderation label events all ship as hints.
     let identities: Vec<String> = identities.into_iter().collect();
     let (identity_events, profile_events, label_rows) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
@@ -150,10 +146,10 @@ async fn hydrate(
         label_fut,
     )?;
 
-    let mut label_events = rows_to_bundles(label_rows);
-    attach_proofs(ctx, &mut label_events).await?;
+    let mut label_bundles = rows_to_bundles(label_rows);
+    attach_proofs(ctx, &mut label_bundles).await?;
 
-    let event_hints: Vec<EventHint> = rows_to_bundles(
+    let mut event_hints: Vec<EventHint> = rows_to_bundles(
         identity_events.into_iter().chain(profile_events).collect(),
     )
     .into_iter()
@@ -161,11 +157,13 @@ async fn hydrate(
         event_bundle: Some(event_bundle),
     })
     .collect();
+    event_hints.extend(label_bundles.into_iter().map(|b| EventHint {
+        event_bundle: Some(b),
+    }));
 
     Ok(Hydrated {
         bundles,
         event_hints,
-        label_events,
     })
 }
 
@@ -193,7 +191,6 @@ async fn view(
     let Hydrated {
         bundles,
         event_hints,
-        label_events,
     } = hydrated;
     let start_cursor =
         rows.first().map(|r| r.id.to_string()).unwrap_or_default();
@@ -218,7 +215,6 @@ async fn view(
     Ok(ListNotificationsResponse {
         notifications,
         event_hints,
-        label_events,
         page_info: Some(PageInfo {
             start_cursor,
             end_cursor,

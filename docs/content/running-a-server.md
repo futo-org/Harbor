@@ -185,7 +185,7 @@ device.
   pagination, so pages stay full.
 - **Warn / Show**: the label is left out of `omit_labels`. The post appears in
   the feed, and the matching `Labels` event is returned in the response's
-  `label_events` collection. The client correlates each label to its target by
+  `event_hints` collection. The client correlates each label to its target by
   event key and renders it behind a mask (Warn) or without annotation (Show).
 
 The labeler's identity is visible to clients — the raw trusted `Labels` events

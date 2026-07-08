@@ -50,11 +50,9 @@ pub async fn handle(
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
             .await?;
-
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
-        label_events: result.label_events,
         page_info: Some(result.page_info.proto()?),
     })
 }

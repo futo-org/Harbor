@@ -922,17 +922,23 @@ async fn trusted_labels_served_in_feed_response() {
         "post should be returned in identity feed",
     );
 
-    // Label event is present in label_events.
+    // Label event is present in event_hints.
     let label_bundle = resp
-        .label_events
+        .event_hints
         .iter()
-        .find(|b| {
-            b.signed_event
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
                 .as_ref()
                 .map(|se| se.signature == labels_sig)
                 .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
         })
-        .expect("Labels event should appear in label_events collection");
+        .expect("Labels event should appear in event_hints");
 
     // The label event content decodes to a Labels targeting our post.
     assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
@@ -1086,14 +1092,25 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         "post should be returned when omit_labels doesn't match its label",
     );
 
-    // Label event is still in label_events.
+    // Label event is still in event_hints.
     let label_bundle = resp
-        .label_events
+        .event_hints
         .iter()
-        .find(|b| b.signed_event.as_ref().map(|se| se.signature == labels_sig).unwrap_or(false))
-        .expect("Labels event should still be present in label_events for Warn/Show");
-
-    assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
+                .as_ref()
+                .map(|se| se.signature == labels_sig)
+                .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .expect(
+            "Labels event should still be present in event_hints for Warn/Show",
+        );
 }
 
 #[tokio::test]
@@ -1178,14 +1195,17 @@ async fn untrusted_labels_not_indexed() {
         "post should be returned even though impostor labeled it",
     );
 
-    // The impostor's Labels event is NOT in label_events.
+    // The impostor's Labels event is NOT in event_hints.
     assert!(
-        !resp.label_events.iter().any(|b| b
-            .signed_event
+        !resp.event_hints.iter().any(|h| h
+            .event_bundle
             .as_ref()
-            .map(|se| se.signature == impostor_labels_sig)
+            .and_then(|b| b
+                .signed_event
+                .as_ref()
+                .map(|se| se.signature == impostor_labels_sig))
             .unwrap_or(false)),
-        "untrusted Labels event must NOT appear in label_events collection",
+        "untrusted Labels event must NOT appear in event_hints collection",
     );
 }
 

@@ -39,22 +39,17 @@ message GetFeedResponse {
   repeated EventBundle event_bundles = 1;
   repeated EventHint event_hints = 2;
   optional PageInfo page_info = 3;
-  // Collection of label events that target events in `event_bundles`
-  repeated EventBundle label_events = 4;
+}
+
+message GetPostThreadResponse {
+  repeated EventBundle thread = 1;
+  repeated EventHint event_hints = 2;
 }
 
 message GetPostThreadRequest {
   // Parent post to return the thread for
   EventKey event_key = 1;
   int32 limit = 2;
-}
-
-message GetPostThreadResponse {
-  repeated EventBundle thread = 1;
-  repeated EventHint event_hints = 2;
-  // Trusted moderation `Labels` events that apply to events in this thread.
-  // The client correlates each label to its target by event key.
-  repeated EventBundle label_events = 3;
 }
 
 /**

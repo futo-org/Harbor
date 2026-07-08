@@ -586,7 +586,6 @@ mod tests {
                 })
                 .collect(),
             page_info: None,
-            label_events: Vec::new(),
         }
         .encode_to_vec()
     }

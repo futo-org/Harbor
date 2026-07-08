@@ -38,9 +38,6 @@ message ListNotificationsResponse {
   // Events that help the client resolve with fewer network calls
   repeated EventHint event_hints = 2;
   PageInfo page_info = 3;
-  // Trusted moderation `Labels` events that apply to events in the
-  // notifications. The client correlates each label to its target by event key.
-  repeated EventBundle label_events = 4;
 }
 
 message RegisterPushNotificationRequest {

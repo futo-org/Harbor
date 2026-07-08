@@ -83,8 +83,6 @@ pub struct GetFeedResponseFilter {
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    /// Label events that target events in `event_bundles`.
-    pub label_events: Vec<EventBundle>,
     pub page_info: PageInfo<FeedCursor>,
 }
 
@@ -363,18 +361,15 @@ pub async fn view(
     } = hydration;
 
     let mut event_bundles = rows_to_bundles(live_rows);
-    // Labels ship as first-class events the client ingests and verifies
-    // against the moderation identity, so attach their signing-key proofs
-    // just like primary content (unlike the contextual hints below).
-    let mut label_events = rows_to_bundles(label_events);
+    let mut label_bundles = rows_to_bundles(label_events);
     tokio::try_join!(
         attach_proofs(ctx, &mut event_bundles),
         attach_proofs(ctx, &mut tombstone_bundles),
-        attach_proofs(ctx, &mut label_events),
+        attach_proofs(ctx, &mut label_bundles),
     )?;
 
-    // Identity, profile and referenced (quote / repost) posts all ship
-    // as hints; tombstone bundles join them.
+    // Identity, profile, referenced (quote / repost) posts, tombstones,
+    // and moderation labels all ship as hints.
     let hint_rows: Vec<EventWithContentRow> = identity_events
         .into_iter()
         .chain(profile_events)
@@ -383,11 +378,11 @@ pub async fn view(
         .collect();
     let mut event_hints = rows_to_hints(hint_rows);
     event_hints.extend(bundles_to_hints(tombstone_bundles));
+    event_hints.extend(bundles_to_hints(label_bundles));
 
     Ok(GetFeedResponseView {
         event_bundles,
         event_hints,
-        label_events,
         page_info,
     })
 }

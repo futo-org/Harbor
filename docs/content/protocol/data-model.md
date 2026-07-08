@@ -348,10 +348,12 @@ serves only labels from its configured trusted moderation service (set via
 identity are stored and synced as normal events but are not indexed or served
 when querying feeds.
 
-The server returns matching `Labels` events in a dedicated `label_events`
-response collection alongside feed results; the client correlates each label
-to its target by event key and renders it according to the user's preference
-(Hide / Warn / Show).
+The server returns matching `Labels` events as `EventHint` entries alongside
+feed results; the client correlates each hint's event bundle to its target
+by event key and renders it according to the user's preference
+(Hide / Warn / Show). Because `EventHint` is a generic container, the client
+differentiates label hints from identity/profile hints by checking whether the
+event's collection is 7 (`Labels`).
 
 ```protobuf
 message Labels {
