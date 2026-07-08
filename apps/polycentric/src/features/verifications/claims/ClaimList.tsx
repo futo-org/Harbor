@@ -1,10 +1,9 @@
 import { Button, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { List, type ListRef } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { Tabs } from '@/src/common/components/Tabs';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import {
   type ComponentType,
@@ -13,11 +12,12 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DecodedClaim } from '../hooks/useClaimById';
 import { useClaimsList } from '../hooks/useClaimsList';
 import { useRequestedVerifications } from '../hooks/useRequestedVerifications';
+import { ClaimActionRow } from './ClaimActionRow';
 import { ClaimListItem } from './ClaimListItem';
 
 type ClaimListProps = {
@@ -84,9 +84,13 @@ export const ClaimList = forwardRef<ListRef, ClaimListProps>(function ClaimList(
       getItemType={(row) => row.kind}
       renderItem={({ item }) =>
         item.kind === 'create' ? (
-          <CreateClaimRow onPress={onCreateClaim} />
+          <ClaimActionRow
+            title="Create new claim"
+            subtitle="Invite others to vouch for your claims & credentials."
+            onPress={onCreateClaim}
+          />
         ) : (
-          <ClaimListItem claim={item.claim} />
+          <ClaimListItem claim={item.claim} showOwner={tab === 'inbox'} />
         )
       }
       ListEmptyComponent={
@@ -124,52 +128,3 @@ export const ClaimList = forwardRef<ListRef, ClaimListProps>(function ClaimList(
     />
   );
 });
-
-// Leads the outbox: styled like a claim row, but opens the create-claim flow.
-function CreateClaimRow({ onPress }: { onPress: () => void }) {
-  const { theme } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
-      ]}
-    >
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_md,
-          Atoms.pl_lg,
-          Atoms.pr_lg,
-          Atoms.pt_md,
-          Atoms.pb_md,
-          { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
-        ]}
-      >
-        <View style={Atoms.flex_1}>
-          <Text
-            variant="secondary"
-            fontWeight="semibold"
-            color="primary_500"
-            selectable={false}
-          >
-            Create new claim
-          </Text>
-          <Text
-            variant="small"
-            style={theme.atoms.text_neutral_medium}
-            fontWeight="regular"
-            selectable={false}
-          >
-            Invite others to vouch for your claims & credentials.
-          </Text>
-        </View>
-        <Icon name="chevronForward" size={28} color="neutral_400" />
-      </View>
-    </Pressable>
-  );
-}

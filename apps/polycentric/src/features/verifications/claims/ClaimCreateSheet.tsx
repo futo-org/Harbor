@@ -1,26 +1,40 @@
 import { Button, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
+import Icon, { IconName } from '@/src/common/components/Icon';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import {
+  Atoms,
+  PaletteColorToken,
+  Spacing,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DecodedClaim } from '../hooks/useClaimById';
+import { useClaimsList } from '../hooks/useClaimsList';
 import { ClaimRef } from '../hooks/useCreateClaim';
+import useRequestVerification from '../hooks/useRequestVerification';
 import { CLAIM_TYPES, ClaimType } from '../utils/forms';
 import { Platform } from '../utils/platforms';
+import { ClaimCreateProvider } from './ClaimCreateContext';
 import { ClaimCreateForm, ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
 import { ClaimCreatePlatformPicker } from './ClaimCreatePlatformPicker';
+import { ClaimListItem } from './ClaimListItem';
 
-// One sheet screen per step of the create-claim flow. Steps form a stack so
-// the header's back chevron retraces the path:
-//   type -> form (submit), or type -> platform -> platform-link.
+// One sheet screen per step of the create-claim flow; steps form a stack so
+// the back chevron retraces the path. With `requestFrom` the flow starts at
+// a new/existing-claim chooser.
 type Step =
+  | { kind: 'choose' }
+  | { kind: 'existing' }
   | { kind: 'type' }
   | { kind: 'form'; claimType: ClaimType }
   | { kind: 'platform' }
@@ -28,6 +42,10 @@ type Step =
 
 function stepTitle(step: Step): string {
   switch (step.kind) {
+    case 'choose':
+      return 'Request a verification';
+    case 'existing':
+      return 'Choose a claim';
     case 'type':
       return 'Create a claim';
     case 'form':
@@ -56,16 +74,27 @@ function stepKey(step: Step): string {
 export function ClaimCreateSheet({
   open,
   onClose,
+  requestFrom,
 }: {
   open: boolean;
   onClose: () => void;
+  // Identity to request verification from once the claim is created.
+  requestFrom?: string;
 }) {
   const { theme } = useTheme();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const [stack, setStack] = useState<Step[]>([{ kind: 'type' }]);
+
+  const initialStep: Step = requestFrom ? { kind: 'choose' } : { kind: 'type' };
+  const [stack, setStack] = useState<Step[]>([initialStep]);
 
   const [form, setForm] = useState<ClaimFormState | null>(null);
+
+  const { identityKey } = useCurrentIdentity();
+  const existingClaims = useClaimsList(
+    requestFrom ? (identityKey ?? undefined) : undefined,
+  );
+  const request = useRequestVerification();
 
   const step = stack[stack.length - 1];
   const canGoBack = stack.length > 1;
@@ -73,11 +102,10 @@ export function ClaimCreateSheet({
   const push = (next: Step) => setStack((s) => [...s, next]);
   const pop = () => setStack((s) => s.slice(0, -1));
 
-  // The component stays mounted while the sheet is closed, so reset the
-  // stack on every close to start the next open at the first step.
+  // The component stays mounted while the sheet is closed; reset on close.
   const close = () => {
     onClose();
-    setStack([{ kind: 'type' }]);
+    setStack([initialStep]);
   };
 
   const onSelectClaimType = (claimType: ClaimType) =>
@@ -85,19 +113,37 @@ export function ClaimCreateSheet({
       claimType.platform ? { kind: 'platform' } : { kind: 'form', claimType },
     );
 
-  const handleSubmitted = (ref: ClaimRef) => {
-    // Toast first, then navigate to the new claim's view, which opens the
-    // request-verification sheet straight away for the fresh claim.
-    toast.success('Claim created');
+  // The requests list refreshes via query invalidation — no redirect.
+  const onSelectExisting = async (claim: DecodedClaim) => {
+    if (!requestFrom || request.isPending) return;
+    try {
+      await request.submit({ claimId: claim.id, identity: requestFrom });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    toast.success('Verification requested');
     close();
-    router.push(
-      `${Routes.tabs.verification(
-        ref.identity,
-        ref.keyFingerprint,
-        ref.sequence,
-      )}?requestVerification=1`,
-    );
   };
+
+  const handleSubmitted = (ref: ClaimRef) => {
+    // Without a pre-targeted verifier, the claim view opens the share sheet.
+    toast.success(
+      requestFrom ? 'Claim created — verification requested' : 'Claim created',
+    );
+    close();
+    if (!requestFrom) {
+      router.push(
+        `${Routes.tabs.verification(
+          ref.identity,
+          ref.keyFingerprint,
+          ref.sequence,
+        )}?requestVerification=1`,
+      );
+    }
+  };
+
+  const options = useMemo(() => ({ requestFrom }), [requestFrom]);
 
   return (
     <Sheet
@@ -127,89 +173,150 @@ export function ClaimCreateSheet({
                   onPress={() => form?.submit()}
                 />
               )
+            ) : step.kind === 'existing' && request.isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.palette.primary_500}
+                accessibilityLabel="Requesting verification"
+              />
             ) : undefined
           }
         />
       }
     >
-      <Sheet.Content>
-        {/* TrueSheet's `scrollable` pins this ScrollView and insets it for the
-            keyboard, so focused inputs stay reachable while typing. */}
-        <ScrollView
-          style={Atoms.flex_1}
-          contentContainerStyle={{
-            paddingBottom: insets.bottom + Spacing['lg'],
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Animated.View
-            key={stepKey(step)}
-            entering={FadeInDown.duration(200)}
-            style={Atoms.gap_sm}
+      {/* The sheet portals its subtree, so the provider must ride inside. */}
+      <ClaimCreateProvider value={options}>
+        <Sheet.Content style={{ padding: 0 }}>
+          {/* TrueSheet's `scrollable` pins this ScrollView and insets it for
+              the keyboard. */}
+          <ScrollView
+            style={Atoms.flex_1}
+            contentContainerStyle={[
+              Atoms.pt_lg,
+              { paddingBottom: insets.bottom + Spacing['lg'] },
+            ]}
+            keyboardShouldPersistTaps="handled"
           >
-            {step.kind === 'type' && (
-              <>
-                <Text
-                  variant="small"
-                  style={theme.atoms.text_neutral_medium}
-                  fontWeight="semibold"
-                >
-                  Select the type of claim to create
-                </Text>
-                <View>
-                  {CLAIM_TYPES.map((claimType, i) => (
-                    <Animated.View
-                      key={claimType.name}
-                      entering={FadeInDown.delay(i * 40).duration(200)}
-                    >
-                      <ClaimTypeRow
-                        claimType={claimType}
-                        onPress={() => onSelectClaimType(claimType)}
-                      />
-                    </Animated.View>
-                  ))}
+            <Animated.View
+              key={stepKey(step)}
+              entering={FadeInDown.duration(200)}
+              style={Atoms.gap_sm}
+            >
+              {step.kind === 'choose' && (
+                <View style={{ marginTop: -Spacing['lg'] }}>
+                  <OptionRow
+                    icon="addCircleOutline"
+                    color="primary_500"
+                    title="New claim"
+                    description="Create a new claim for them to verify."
+                    onPress={() => push({ kind: 'type' })}
+                  />
+                  <OptionRow
+                    icon="verify"
+                    color="positive_500"
+                    title="Existing claim"
+                    description="Request verification of a claim you've already made."
+                    onPress={() => push({ kind: 'existing' })}
+                  />
                 </View>
-              </>
-            )}
+              )}
 
-            {step.kind === 'form' && (
-              <ClaimCreateForm
-                claimType={step.claimType}
-                onSubmitted={handleSubmitted}
-                onFormState={setForm}
-              />
-            )}
+              {step.kind === 'existing' && (
+                <View style={{ marginTop: -Spacing['lg'] }}>
+                  {existingClaims.claims.map((claim) => (
+                    <ClaimListItem
+                      key={`${claim.keyFingerprint}-${claim.sequence}`}
+                      claim={claim}
+                      onPress={() => void onSelectExisting(claim)}
+                    />
+                  ))}
+                  {existingClaims.claims.length === 0 &&
+                    !existingClaims.isLoading && (
+                      <Text
+                        variant="body"
+                        color="neutral_500"
+                        style={Atoms.px_lg}
+                      >
+                        You haven&apos;t created any claims yet.
+                      </Text>
+                    )}
+                </View>
+              )}
 
-            {step.kind === 'platform' && (
-              <ClaimCreatePlatformPicker
-                onSelect={(platform) =>
-                  push({ kind: 'platform-link', platform })
-                }
-              />
-            )}
+              {step.kind === 'type' && (
+                <>
+                  <Text
+                    variant="small"
+                    style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+                    fontWeight="semibold"
+                  >
+                    Select the type of claim to create
+                  </Text>
+                  <View>
+                    {CLAIM_TYPES.map((claimType, i) => (
+                      <Animated.View
+                        key={claimType.name}
+                        entering={FadeInDown.delay(i * 40).duration(200)}
+                      >
+                        <ClaimTypeRow
+                          claimType={claimType}
+                          onPress={() => onSelectClaimType(claimType)}
+                        />
+                      </Animated.View>
+                    ))}
+                  </View>
+                </>
+              )}
 
-            {step.kind === 'platform-link' && (
-              <ClaimCreatePlatformLink platform={step.platform} />
-            )}
-          </Animated.View>
-        </ScrollView>
-      </Sheet.Content>
+              {step.kind === 'form' && (
+                <View style={Atoms.px_lg}>
+                  <ClaimCreateForm
+                    claimType={step.claimType}
+                    onSubmitted={handleSubmitted}
+                    onFormState={setForm}
+                  />
+                </View>
+              )}
+
+              {step.kind === 'platform' && (
+                <View style={Atoms.px_lg}>
+                  <ClaimCreatePlatformPicker
+                    onSelect={(platform) =>
+                      push({ kind: 'platform-link', platform })
+                    }
+                  />
+                </View>
+              )}
+
+              {step.kind === 'platform-link' && (
+                <View style={Atoms.px_lg}>
+                  <ClaimCreatePlatformLink platform={step.platform} />
+                </View>
+              )}
+            </Animated.View>
+          </ScrollView>
+        </Sheet.Content>
+      </ClaimCreateProvider>
     </Sheet>
   );
 }
 
-// A claim type in the picker: icon bubble, name, and a one-line explanation.
-function ClaimTypeRow({
-  claimType,
+// An option in a picker step.
+function OptionRow({
+  icon,
+  color,
+  title,
+  description,
   onPress,
 }: {
-  claimType: ClaimType;
+  icon: IconName;
+  color?: PaletteColorToken;
+  title: string;
+  description: string;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
-  const tint = claimType.color
-    ? theme.palette[claimType.color]
-    : theme.palette.neutral_1000;
+  const tint = color ? theme.palette[color] : theme.palette.neutral_1000;
 
   return (
     <Pressable
@@ -219,8 +326,8 @@ function ClaimTypeRow({
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.gap_md,
-        Atoms.p_md,
-        Atoms.rounded_md,
+        Atoms.px_lg,
+        Atoms.py_md,
         (hovered || pressed) && {
           backgroundColor: theme.palette.neutral_25,
         },
@@ -233,7 +340,7 @@ function ClaimTypeRow({
           { backgroundColor: withHexOpacity(tint, '25') },
         ]}
       >
-        <Icon name={claimType.icon} size={20} color={claimType.color} />
+        <Icon name={icon} size={20} color={color} />
       </View>
       <View style={Atoms.flex_1}>
         <Text
@@ -242,7 +349,7 @@ function ClaimTypeRow({
           style={theme.atoms.text}
           selectable={false}
         >
-          {claimType.name}
+          {title}
         </Text>
         <Text
           variant="small"
@@ -250,10 +357,28 @@ function ClaimTypeRow({
           fontWeight="regular"
           selectable={false}
         >
-          {claimType.description}
+          {description}
         </Text>
       </View>
       <Icon name="chevronForward" size={18} color="neutral_500" />
     </Pressable>
+  );
+}
+
+function ClaimTypeRow({
+  claimType,
+  onPress,
+}: {
+  claimType: ClaimType;
+  onPress: () => void;
+}) {
+  return (
+    <OptionRow
+      icon={claimType.icon}
+      color={claimType.color}
+      title={claimType.name}
+      description={claimType.description}
+      onPress={onPress}
+    />
   );
 }

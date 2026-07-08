@@ -47,19 +47,22 @@ export function InfoTooltip({
   const hide = () => setOpen(false);
 
   const bubbleStyle = [
-    Atoms.p_sm,
+    Atoms.pt_sm,
+    Atoms.pb_sm,
+    Atoms.pl_md,
+    Atoms.pr_md,
+    Atoms.rounded_md,
     {
       width: BUBBLE_WIDTH,
       maxWidth: BUBBLE_WIDTH,
-      borderRadius: 8,
       borderWidth: 1,
-      borderColor: theme.palette.neutral_300,
-      backgroundColor: theme.palette.background_secondary,
+      borderColor: theme.palette.neutral_50,
+      backgroundColor: theme.palette.neutral_25,
     },
   ] as const;
 
   const bubbleBody = (
-    <Text variant="small" color="neutral_900">
+    <Text variant="small" color="neutral_600" fontWeight="semibold">
       {text}
     </Text>
   );

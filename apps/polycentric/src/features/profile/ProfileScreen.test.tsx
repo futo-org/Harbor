@@ -60,11 +60,11 @@ jest.mock('./ProfileContext', () => {
 // Inert stubs for the module-level imports the screen pulls in.
 jest.mock('./ProfileHeader', () => ({ ProfileHeader: () => null }));
 jest.mock('./ProfileFeedSwitcher', () => ({ ProfileFeedSwitcher: () => null }));
+jest.mock('./ProfileVerificationsList', () => ({
+  ProfileVerificationsList: () => null,
+}));
 jest.mock('@/src/features/feed/hooks/useIdentityFeed', () => ({
   useIdentityFeed: () => ({ refresh: () => undefined }),
-}));
-jest.mock('@/src/features/feed/hooks/useLikesFeed', () => ({
-  useLikesFeed: () => ({ refresh: () => undefined }),
 }));
 jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
@@ -192,12 +192,7 @@ describe('IdentityProfile (identity path)', () => {
 
     await render(<ProfileScreen />);
 
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({
-        pathname: '/[identityId]',
-        params: { identityId: ALIAS },
-      }),
-    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(`/${ALIAS}`));
     expect(mockRecord).toHaveBeenCalledWith(ALIAS, IDENTITY);
   });
 
@@ -216,12 +211,7 @@ describe('IdentityProfile (identity path)', () => {
 
     await render(<ProfileScreen />);
 
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({
-        pathname: '/[identityId]',
-        params: { identityId: ALIAS },
-      }),
-    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(`/${ALIAS}`));
     expect(mockResolve).not.toHaveBeenCalled();
   });
 

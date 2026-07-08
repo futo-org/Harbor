@@ -7,25 +7,38 @@ import { DecodedClaim } from '../hooks/useClaimById';
 import { CLAIM_TYPES } from '../utils/forms';
 import { resolveClaimTitle } from '../utils/render';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
+import { IdentityChip } from './toolbar/IdentityChip';
+import { StatusChip } from './toolbar/StatusChip';
 import { TimeChip } from './toolbar/TimeChip';
 
-// A single claim in the list: title plus the type and time chips, linking to
-// the claim's view.
-export function ClaimListItem({ claim }: { claim: DecodedClaim }) {
+// A single claim in the list: title plus the type and time chips. Links to
+// the claim's view unless `onPress` overrides it (e.g. a picker).
+export function ClaimListItem({
+  claim,
+  onPress,
+  showOwner = false,
+}: {
+  claim: DecodedClaim;
+  onPress?: () => void;
+  // Show who made the claim — for lists that aren't the viewer's own.
+  showOwner?: boolean;
+}) {
   const { theme } = useTheme();
   const { title } = resolveClaimTitle(claim.schemaName, claim.fields);
   const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
 
   return (
     <Pressable
-      onPress={() =>
-        router.push(
-          Routes.tabs.verification(
-            claim.identity,
-            claim.keyFingerprint,
-            claim.sequence.toString(),
-          ),
-        )
+      onPress={
+        onPress ??
+        (() =>
+          router.push(
+            Routes.tabs.verification(
+              claim.identity,
+              claim.keyFingerprint,
+              claim.sequence.toString(),
+            ),
+          ))
       }
       style={({ hovered, pressed }) => [
         (hovered || pressed) && {
@@ -62,12 +75,14 @@ export function ClaimListItem({ claim }: { claim: DecodedClaim }) {
             Atoms.flex_wrap,
           ]}
         >
+          {showOwner && <IdentityChip identity={claim.identity} />}
           <ClaimTypeChip
             name={claim.schemaName}
             icon={claimType?.icon ?? 'verify'}
             color={claimType?.color}
           />
           <TimeChip createdAt={claim.createdAt} />
+          <StatusChip />
         </View>
       </View>
     </Pressable>

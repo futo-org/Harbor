@@ -1,8 +1,8 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
+import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
-import { useLikesFeed } from '@/src/features/feed/hooks/useLikesFeed';
 import {
   FetchMode,
   normalizeAlias,
@@ -23,20 +23,30 @@ import {
   getVerifiedIdentity,
   recordVerifiedAlias,
 } from './lib/aliasVerificationCache';
-import { ProfileProvider, useProfileContext } from './ProfileContext';
+import {
+  type ActiveFeed,
+  ProfileProvider,
+  useProfileContext,
+} from './ProfileContext';
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
+import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({
+  tab = 'posts',
+}: {
+  // Which tab's route rendered this screen.
+  tab?: ActiveFeed;
+}) {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 
   // An alias (user@domain) rather than a polycentric identity key —
   // resolve it to a key first.
   if (identityId?.includes('@')) {
-    return <AliasProfile alias={identityId} />;
+    return <AliasProfile alias={identityId} tab={tab} />;
   }
 
-  return <IdentityProfile identityKey={identityId ?? null} />;
+  return <IdentityProfile identityKey={identityId ?? null} tab={tab} />;
 }
 
 /**
@@ -49,7 +59,13 @@ export default function ProfileScreen() {
  * doesn't actually own. The alias URL renders `AliasProfile` (not this
  * component), so there's no redirect loop.
  */
-function IdentityProfile({ identityKey }: { identityKey: string | null }) {
+function IdentityProfile({
+  identityKey,
+  tab,
+}: {
+  identityKey: string | null;
+  tab: ActiveFeed;
+}) {
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
 
   // Redirect at most once per identity, even though the shared profile query
@@ -60,6 +76,12 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
   }, [identityKey]);
 
   useEffect(() => {
+    // Redirecting to the canonical alias URL keeps the current tab.
+    const aliasPath = (alias: string) =>
+      tab === 'verifications'
+        ? Routes.tabs.profileVerifications(alias)
+        : Routes.tabs.profile(alias);
+
     if (!identityKey || redirectedRef.current) return;
 
     // Fast path: a relationship verified earlier this session redirects
@@ -67,10 +89,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
     const cachedAlias = getVerifiedAlias(identityKey);
     if (cachedAlias) {
       redirectedRef.current = true;
-      router.replace({
-        pathname: '/[identityId]',
-        params: { identityId: cachedAlias },
-      });
+      router.replace(aliasPath(cachedAlias));
       return;
     }
 
@@ -87,19 +106,16 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
         if (!canonical) return;
         recordVerifiedAlias(alias, identityKey);
         redirectedRef.current = true;
-        router.replace({
-          pathname: '/[identityId]',
-          params: { identityId: canonical },
-        });
+        router.replace(aliasPath(canonical));
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [identityKey, profile.isLoading, profile.alias]);
+  }, [identityKey, profile.isLoading, profile.alias, tab]);
 
   return (
-    <ProfileProvider identityKey={identityKey}>
+    <ProfileProvider identityKey={identityKey} activeFeed={tab}>
       <ProfileScreenContent />
     </ProfileProvider>
   );
@@ -107,7 +123,7 @@ function IdentityProfile({ identityKey }: { identityKey: string | null }) {
 
 function ProfileScreenContent() {
   const { theme } = useTheme();
-  const { identityKey, isSelf, activeFeed } = useProfileContext();
+  const { identityKey, activeFeed } = useProfileContext();
 
   const isFocused = useIsFocused();
 
@@ -125,10 +141,6 @@ function ProfileScreenContent() {
     enabled: isFocused,
     getIsAborted: () => isAbortedRef.current,
   });
-  const likesFeed = useLikesFeed({
-    enabled: isSelf && isFocused,
-    getIsAborted: () => isAbortedRef.current,
-  });
 
   const handleBack = useCallback(() => {
     router.back();
@@ -136,8 +148,7 @@ function ProfileScreenContent() {
 
   const refresh = useCallback(() => {
     identityFeed.refresh();
-    likesFeed.refresh();
-  }, [identityFeed.refresh, likesFeed.refresh]);
+  }, [identityFeed.refresh]);
   useFocusedRefresh(refresh);
 
   // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
@@ -155,24 +166,22 @@ function ProfileScreenContent() {
   );
 
   const tabs = useMemo(
-    () =>
-      isSelf
-        ? [
-            { key: 'posts', feed: identityFeed, bottomPadding: 40 },
-            { key: 'likes', feed: likesFeed, bottomPadding: 40 },
-          ]
-        : [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
-    [isSelf, identityFeed, likesFeed],
+    () => [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
+    [identityFeed],
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <ProfileFeedSwitcher
-          tabs={tabs}
-          activeKey={activeFeed}
-          HeaderComponent={profileHeader}
-        />
+        {activeFeed === 'verifications' ? (
+          <ProfileVerificationsList HeaderComponent={profileHeader} />
+        ) : (
+          <ProfileFeedSwitcher
+            tabs={tabs}
+            activeKey={activeFeed}
+            HeaderComponent={profileHeader}
+          />
+        )}
       </Screen.PrimaryColumn>
     </Screen>
   );
@@ -192,7 +201,7 @@ type AliasResolution =
  * render the profile for it. The alias stays in the URL; resolution happens
  * in place rather than redirecting to the canonical `/[identityId]`.
  */
-function AliasProfile({ alias }: { alias: string }) {
+function AliasProfile({ alias, tab }: { alias: string; tab: ActiveFeed }) {
   const [resolution, setResolution] = useState<AliasResolution>({
     status: 'loading',
   });
@@ -265,6 +274,7 @@ function AliasProfile({ alias }: { alias: string }) {
         <ProfileProvider
           identityKey={resolution.identity}
           alias={normalizeAlias(alias) ?? alias}
+          activeFeed={tab}
         >
           <ProfileScreenContent />
         </ProfileProvider>
