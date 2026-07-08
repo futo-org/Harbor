@@ -95,6 +95,11 @@ function InteractionNotification({
     router.push(route ?? Routes.tabs.profile(notification.fromIdentity));
   }, [notification]);
 
+  const openProfile = useCallback(
+    () => router.push(Routes.tabs.profile(notification.fromIdentity)),
+    [notification.fromIdentity],
+  );
+
   const dim = withHexOpacity(theme.palette.neutral_500, '40');
 
   return (
@@ -110,10 +115,17 @@ function InteractionNotification({
         },
       ]}
     >
-      <ProfileAvatar identityKey={notification.fromIdentity} size="md" />
+      <ProfileAvatar
+        identityKey={notification.fromIdentity}
+        size="md"
+        onPress={openProfile}
+      />
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
         <Text>
-          <Text fontWeight="bold">{name}</Text> {summary(notification)}
+          <Text fontWeight="bold" onPress={openProfile}>
+            {name}
+          </Text>{' '}
+          {summary(notification)}
           {notification.createdAt > 0 ? (
             <Text color="neutral_500">
               {' '}
