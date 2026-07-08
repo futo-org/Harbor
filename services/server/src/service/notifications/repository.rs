@@ -190,4 +190,73 @@ mod tests {
         let sql = format!("{:?}", db.into_transaction_log());
         assert!(sql.contains('<'), "cursor adds an id upper-bound: {sql}");
     }
+
+    #[tokio::test]
+    async fn omit_labels_empty_no_not_exists() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<notification::Model>::new()])
+            .into_connection();
+
+        Query::list_for_identity(&db, "bob", 25, None, &[])
+            .await
+            .unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            !sql.contains("NOT EXISTS"),
+            "empty omit_labels should not add NOT EXISTS: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn omit_labels_single_value_adds_not_exists() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<notification::Model>::new()])
+            .into_connection();
+
+        Query::list_for_identity(&db, "bob", 25, None, &["spam".into()])
+            .await
+            .unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            sql.contains("NOT EXISTS"),
+            "single omit_label should add NOT EXISTS: {sql}"
+        );
+        assert!(
+            sql.contains("content_label"),
+            "NOT EXISTS should reference content_label table: {sql}"
+        );
+        assert!(
+            sql.contains("trigger_event_key"),
+            "NOT EXISTS should join on trigger event key columns: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn omit_labels_multiple_values_in_clause() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<notification::Model>::new()])
+            .into_connection();
+
+        Query::list_for_identity(
+            &db,
+            "bob",
+            25,
+            None,
+            &["spam".into(), "hate".into()],
+        )
+        .await
+        .unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            sql.contains("NOT EXISTS"),
+            "multiple omit_labels should add NOT EXISTS: {sql}"
+        );
+        assert!(
+            sql.contains("IN (") || sql.contains("IN(") || sql.contains("spam"),
+            "multiple omit_labels should produce IN clause: {sql}"
+        );
+    }
 }

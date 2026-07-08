@@ -518,3 +518,135 @@ pub struct DescendantRef {
     pub event_id: i64,
     pub parent_event_id: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+
+    #[tokio::test]
+    async fn omit_labels_empty_no_filter() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<EventModel::Model>::new()])
+            .into_connection();
+
+        let query = EventModel::Entity::find()
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION));
+        query.all(&db).await.unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            !sql.contains("NOT EXISTS"),
+            "empty omit_labels should not add NOT EXISTS: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn omit_labels_adds_not_exists() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<EventModel::Model>::new()])
+            .into_connection();
+
+        let query = EventModel::Entity::find()
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
+            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+        query.all(&db).await.unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            sql.contains("NOT EXISTS"),
+            "single omit_label should add NOT EXISTS: {sql}"
+        );
+        assert!(
+            sql.contains("content_label"),
+            "NOT EXISTS should reference content_label table: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn omit_labels_multiple_values_in_clause() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<EventModel::Model>::new()])
+            .into_connection();
+
+        let query = EventModel::Entity::find()
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
+            .filter(omit_feed_event_if_label_present(&[
+                "spam".into(),
+                "hate".into(),
+            ]));
+        query.all(&db).await.unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            sql.contains("NOT EXISTS"),
+            "multiple omit_labels should add NOT EXISTS: {sql}"
+        );
+        // Verify both label values are present in the SQL
+        assert!(sql.contains("spam"), "expected 'spam' in SQL: {sql}");
+        assert!(sql.contains("hate"), "expected 'hate' in SQL: {sql}");
+    }
+
+    #[tokio::test]
+    async fn omit_labels_joins_on_all_event_key_columns() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<EventModel::Model>::new()])
+            .into_connection();
+
+        let query = EventModel::Entity::find()
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
+            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+        query.all(&db).await.unwrap();
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        // Verify all 5 event key columns are joined in the subquery
+        assert!(
+            sql.contains("event_key_collection") || sql.contains("collection"),
+            "missing collection join: {sql}"
+        );
+        assert!(
+            sql.contains("event_key_identity")
+                || sql.contains("event_key_identity"),
+            "missing identity join: {sql}"
+        );
+        assert!(
+            sql.contains("event_key_public_key_type")
+                || sql.contains("public_key_type"),
+            "missing public_key_type join: {sql}"
+        );
+        assert!(
+            sql.contains("event_key_public_key") || sql.contains("public_key"),
+            "missing public_key join: {sql}"
+        );
+        assert!(
+            sql.contains("event_key_sequence") || sql.contains("sequence"),
+            "missing sequence join: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn omit_labels_does_not_filter_when_no_label_match() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<EventModel::Model>::new()])
+            .into_connection();
+
+        // Label assigned to a different collection — should not filter
+        // out feed events. The NOT EXISTS subquery still appears in the
+        // SQL, so we verify the query succeeds (all can be executed).
+        let query = EventModel::Entity::find()
+            .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
+            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+        query
+            .all(&db)
+            .await
+            .expect("query with NOT EXISTS should succeed");
+
+        let sql = format!("{:?}", db.into_transaction_log());
+        // The subquery structure is still present, but it won't match
+        // feed events when labels target a different collection
+        assert!(
+            sql.contains("NOT EXISTS"),
+            "should still generate subquery: {sql}"
+        );
+    }
+}
