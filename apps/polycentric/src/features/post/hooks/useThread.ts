@@ -12,9 +12,11 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import {
   getQueryCache,
+  RefreshStrategy,
   setQueryCache,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
+import { FeedHookResult, NOOP } from '../../feed/hooks/types';
 
 const DUMMY_EVENT_KEY: EventKey = {
   collection: COLLECTION.FEED,
@@ -33,7 +35,7 @@ export function threadQueryKey(parentId: string, limit = 0): string[] {
 export function useThread(
   post: PostData | undefined,
   options?: { limit?: number },
-): { thread: PostData[]; isLoading: boolean; error: Error | null } {
+): FeedHookResult {
   const eventKey: EventKey = useMemo(() => {
     if (!post) return DUMMY_EVENT_KEY;
 
@@ -57,7 +59,7 @@ export function useThread(
     !!post,
   );
 
-  const thread = useMemo(() => {
+  const items = useMemo(() => {
     if (!query.data) return [];
     const response = v2.GetPostThreadResponse.fromBinary(
       new Uint8Array(query.data),
@@ -71,9 +73,14 @@ export function useThread(
   }, [query.data]);
 
   return {
-    thread,
+    items,
     isLoading: query.isLoading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
+    // TODO: paginate threads
+    loadMore: NOOP,
+    hasMore: false,
   };
 }
 

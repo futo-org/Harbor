@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
 import { type PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
@@ -6,16 +6,16 @@ import { useThread } from './hooks/useThread';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
 import { List, ListProps } from '@/src/common/components/List';
+import { isWeb } from '@/src/common/util/platform';
 
 type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
   post: PostData;
 };
 
 export function ThreadList({ post, ...rest }: ThreadListProps) {
-  const [refreshing, setRefreshing] = useState(false);
   const { height: windowHeight } = useWindowDimensions();
 
-  const { thread } = useThread(post);
+  const thread = useThread(post);
 
   // Mount the subject by itself first.
   // Other items may or may not be available.
@@ -27,15 +27,10 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
 
   const items = useMemo(() => {
     if (!isFirstLayoutComplete) return [post];
-    return thread.length > 0 ? thread : [post];
-  }, [isFirstLayoutComplete, thread, post]);
+    return thread.items.length > 0 ? thread.items : [post];
+  }, [isFirstLayoutComplete, thread.items, post]);
 
   const subjectIndex = items.findIndex((p) => p.id === post.id);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 0);
-  }, []);
 
   return (
     <List
@@ -67,7 +62,12 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
       }}
       ListFooterComponent={<View style={{ height: windowHeight }} />}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        !isWeb ? (
+          <RefreshControl
+            refreshing={thread.isRefreshing}
+            onRefresh={thread.refresh}
+          />
+        ) : undefined
       }
     />
   );
