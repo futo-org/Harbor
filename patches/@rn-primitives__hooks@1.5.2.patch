@@ -1,0 +1,33 @@
+diff --git a/dist/index.js b/dist/index.js
+index 6f4a59cb5a895dbf5f79e162f303b7027140254b..05e87dcbd63b2a947e7993ba8583f0953da2e121 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -48,6 +48,9 @@ var import_react_native = require("react-native");
+ function useAccessibilityFocus(enabled = true) {
+   const ref = React.useRef(null);
+   React.useEffect(() => {
++    if (import_react_native.Platform.OS === "web") {
++      return;
++    }
+     if (!enabled) {
+       return;
+     }
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 9d83a601b529ccb992145aad6d32f8215908037f..1e9fc44412a19c56c83309ecaff0569c6f872691 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -2,10 +2,13 @@
+
+ // src/useAccessibilityFocus.tsx
+ import * as React from "react";
+-import { AccessibilityInfo, findNodeHandle } from "react-native";
++import { AccessibilityInfo, findNodeHandle, Platform as Platform0 } from "react-native";
+ function useAccessibilityFocus(enabled = true) {
+   const ref = React.useRef(null);
+   React.useEffect(() => {
++    if (Platform0.OS === "web") {
++      return;
++    }
+     if (!enabled) {
+       return;
+     }

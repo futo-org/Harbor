@@ -30,6 +30,9 @@ patchedDependencies:
   '@expo/cli':
     hash: ea4184e1326d9513b8d8a8cfef27ec609848ff92f41989ef50b71c4c3b2d0b9f
     path: patches/@expo__cli.patch
+  '@rn-primitives/hooks@1.5.2':
+    hash: d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
+    path: patches/@rn-primitives__hooks@1.5.2.patch
   uniffi-bindgen-react-native@0.31.0-3:
     hash: 03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197
     path: patches/uniffi-bindgen-react-native@0.31.0-3.patch
@@ -17787,7 +17790,7 @@ snapshots:
   '@rn-primitives/dropdown-menu@1.5.2(@rn-primitives/portal@1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@radix-ui/react-dropdown-menu': 2.1.19(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@rn-primitives/hooks': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/hooks': 1.5.2(patch_hash=d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/portal': 1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
       '@rn-primitives/slot': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
@@ -17801,7 +17804,7 @@ snapshots:
       - '@types/react-dom'
       - react-dom
 
-  '@rn-primitives/hooks@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
+  '@rn-primitives/hooks@1.5.2(patch_hash=d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       react: 19.2.7
@@ -17812,7 +17815,7 @@ snapshots:
   '@rn-primitives/hover-card@1.5.2(@rn-primitives/portal@1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@radix-ui/react-hover-card': 1.1.18(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@rn-primitives/hooks': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/hooks': 1.5.2(patch_hash=d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/popover': 1.5.2(@rn-primitives/portal@1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/portal': 1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
       '@rn-primitives/slot': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
@@ -17829,7 +17832,7 @@ snapshots:
   '@rn-primitives/popover@1.5.2(@rn-primitives/portal@1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@radix-ui/react-popover': 1.1.18(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@rn-primitives/hooks': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/hooks': 1.5.2(patch_hash=d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/portal': 1.5.2(@types/react@19.2.17)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
       '@rn-primitives/slot': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
@@ -17877,7 +17880,7 @@ snapshots:
 
   '@rn-primitives/toast@1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@rn-primitives/hooks': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      '@rn-primitives/hooks': 1.5.2(patch_hash=d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78)(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/slot': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@rn-primitives/types': 1.5.2(react-native-web@0.21.2(encoding@0.1.13)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-native@0.83.9(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       react: 19.2.7
