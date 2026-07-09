@@ -140,14 +140,44 @@ if [ "$CI_MODE" = true ]; then
     echo "${id:-$(cat /etc/hostname)}"
   }
 
-  echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
-  docker compose up -d --build --wait server
-  echo "    server (docker) ready"
-
   echo "==> Joining job container to the stack network ($NETWORK)…"
   docker network connect "$NETWORK" "$(self_container)"
-  export POLYCENTRIC_TEST_SERVER="http://server:3000"
+
+  echo "==> Starting server…"
+  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  # --no-deps avoids pulling in the `scraper` dependency, which requires
+  # NET_ADMIN for its nftables egress firewall and cannot start in CI's
+  # Docker-in-Docker environment.
+  docker compose up -d --no-deps --build --wait server
+
+  # Resolve the server container's IP on the compose network and use it
+  # directly, bypassing Docker embedded DNS (which can be flaky when the job
+  # container is connected to a compose network via `docker network connect`
+  # in a Docker-in-Docker environment).
+  SERVER_HOST=server
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' polycentric-server-1 2>/dev/null)
+  if [ -n "$SERVER_IP" ]; then
+    SERVER_HOST=$SERVER_IP
+    export POLYCENTRIC_TEST_SERVER="http://${SERVER_IP}:3000"
+    echo "    server IP: ${SERVER_IP}"
+  else
+    export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
+    echo "    (no server IP found; using ${POLYCENTRIC_TEST_SERVER})"
+  fi
+
+  echo "    waiting for server (port ${SERVER_HOST}:3000)…"
+  for i in $(seq 1 60); do
+    if (exec 3<>"/dev/tcp/${SERVER_HOST}/3000") 2>/dev/null; then
+      exec 3>&- 3<&-
+      echo "    server ready (after ${i}s)"
+      break
+    fi
+    if [ "$i" -eq 60 ]; then
+      echo "ERROR: server did not start within 60 seconds"
+      exit 1
+    fi
+    sleep 1
+  done
 
   echo "==> Applying migrations via docker compose exec…"
   docker compose exec -T server /app/migration up
@@ -172,6 +202,8 @@ else
   export CONTENT_BLOB_OS_SECRET_KEY="${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
   export POLYCENTRIC_KAFKA_BROKERS="${POLYCENTRIC_KAFKA_BROKERS:-localhost:9092}"
+  # The test crate reads this to know where to reach the server.
+  export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
 
   cargo run -p server &
   SERVER_PID=$!

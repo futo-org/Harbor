@@ -34,7 +34,7 @@
         - services/server/**/*
         - services/common/**/*
         - compose.yml
-        - .gitlab/ci/test_integration.yml
+        - .gitlab/ci/test_server.yml
         - .gitlab/ci/scripts/integration-server.sh
   variables:
     RUNNER_SCRIPT_TIMEOUT: 30m
