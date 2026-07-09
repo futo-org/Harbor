@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 const IDENTITY =
   'f00df0262908a197391c4cbc619eb11cb6867c90915b6e23a3db7a061def8fc3';
@@ -16,6 +16,7 @@ jest.mock('./ProfileContext', () => ({
   useProfileContext: () => mockContext,
 }));
 
+let mockCounts = { followingCount: 0, followersCount: 0 };
 jest.mock('./hooks/useProfile', () => ({
   useProfile: () => ({
     name: 'Alice',
@@ -23,6 +24,7 @@ jest.mock('./hooks/useProfile', () => ({
     avatar: null,
     banner: null,
     alias: null,
+    ...mockCounts,
     isLoading: false,
     error: null,
     refresh: () => undefined,
@@ -66,7 +68,13 @@ jest.mock('@/src/common/components/primitives', () => {
   };
 });
 jest.mock('@/src/common/constants', () => ({
-  Routes: { tabs: { editProfile: () => '/x' } },
+  Routes: {
+    tabs: {
+      editProfile: () => '/x',
+      profileFollowing: () => '/x/following',
+      profileFollowers: () => '/x/followers',
+    },
+  },
 }));
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   identiconUrl: () => 'u',
@@ -79,6 +87,7 @@ jest.mock('@/src/common/theme', () => ({
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
 
+import { router } from 'expo-router';
 import { ProfileHeader } from './ProfileHeader';
 
 const baseContext = {
@@ -107,5 +116,37 @@ describe('ProfileHeader alias', () => {
     expect(queryByText('SHORT_ID')).not.toBeNull();
     // No alias-style text rendered.
     expect(queryByText(/@/)).toBeNull();
+  });
+});
+
+describe('ProfileHeader follow counters', () => {
+  beforeEach(() => {
+    mockContext = { ...baseContext };
+    mockCounts = { followingCount: 0, followersCount: 0 };
+    (router.push as jest.Mock).mockClear();
+  });
+
+  it('renders the counts from the profile', async () => {
+    mockCounts = { followingCount: 3, followersCount: 7 };
+    const { getByText } = await render(
+      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+    );
+
+    expect(getByText('3')).toBeTruthy();
+    expect(getByText(/Following/)).toBeTruthy();
+    expect(getByText('7')).toBeTruthy();
+    expect(getByText(/Followers/)).toBeTruthy();
+  });
+
+  it('links to the following and followers lists', async () => {
+    const { getByText } = await render(
+      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+    );
+
+    await fireEvent.press(getByText(/Following/));
+    expect(router.push).toHaveBeenCalledWith('/x/following');
+
+    await fireEvent.press(getByText(/Followers/));
+    expect(router.push).toHaveBeenCalledWith('/x/followers');
   });
 });

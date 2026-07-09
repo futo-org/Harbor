@@ -1,0 +1,30 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+import "polycentric/v2/events.proto";
+
+message ListFollowingRequest {
+  // Identity whose followed identities are returned.
+  string identity = 1;
+  optional PageParams page_params = 2;
+}
+
+message ListFollowersRequest {
+  // Identity whose followers are returned.
+  string identity = 1;
+  optional PageParams page_params = 2;
+}
+
+message ListFollowsResponse {
+  // The active (non-tombstoned) Follow events, newest first.
+  repeated EventBundle event_bundles = 1;
+  optional PageInfo page_info = 2;
+}
+
+service GraphService {
+  // Follow events authored by `identity` — who they follow.
+  rpc ListFollowing(ListFollowingRequest) returns (ListFollowsResponse);
+  // Follow events targeting `identity` — who follows them.
+  rpc ListFollowers(ListFollowersRequest) returns (ListFollowsResponse);
+}

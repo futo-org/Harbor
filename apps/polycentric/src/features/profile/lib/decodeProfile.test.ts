@@ -45,9 +45,16 @@ function bundle(content: v2.Content, sequence: number): v2.EventBundle {
   });
 }
 
-function serializedResponse(bundles: v2.EventBundle[]): Uint8Array {
-  return v2.ListEventsResponse.toBinary(
-    v2.ListEventsResponse.create({ eventBundles: bundles }),
+function serializedResponse(
+  bundles: v2.EventBundle[],
+  counts?: { following: number; followers: number },
+): Uint8Array {
+  return v2.GetProfileResponse.toBinary(
+    v2.GetProfileResponse.create({
+      eventBundles: bundles,
+      followingCount: BigInt(counts?.following ?? 0),
+      followersCount: BigInt(counts?.followers ?? 0),
+    }),
   );
 }
 
@@ -81,5 +88,20 @@ describe('decodeProfile', () => {
 
   it('returns nulls for an empty response', () => {
     expect(decodeProfile(serializedResponse([])).alias).toBeNull();
+  });
+
+  it('extracts the follow counters', () => {
+    const bytes = serializedResponse(
+      [bundle(profileContent({ name: 'Alice' }), 1)],
+      { following: 3, followers: 7 },
+    );
+    const decoded = decodeProfile(bytes);
+    expect(decoded.followingCount).toBe(3);
+    expect(decoded.followersCount).toBe(7);
+  });
+
+  it('defaults the counters to zero', () => {
+    expect(decodeProfile(serializedResponse([])).followingCount).toBe(0);
+    expect(decodeProfile(serializedResponse([])).followersCount).toBe(0);
   });
 });

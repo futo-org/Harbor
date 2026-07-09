@@ -18,7 +18,7 @@ import { Tabs } from '@/src/common/components/Tabs';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
@@ -136,6 +136,13 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
               </Text>
             </View>
           ) : null}
+          {identityKey ? (
+            <FollowCounts
+              identityKey={identityKey}
+              following={profile.followingCount}
+              followers={profile.followersCount}
+            />
+          ) : null}
         </View>
 
         <View style={[Atoms.mt_md, { flexShrink: 0 }]}>
@@ -166,6 +173,54 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           Verifications
         </Tabs.Tab>
       </Tabs>
+    </View>
+  );
+}
+
+// Following / followers counts linking to their lists.
+function FollowCounts({
+  identityKey,
+  following,
+  followers,
+}: {
+  identityKey: string;
+  following: number;
+  followers: number;
+}) {
+  const counts: {
+    label: string;
+    count: number;
+    route: Href;
+  }[] = [
+    {
+      label: 'Following',
+      count: following,
+      route: Routes.tabs.profileFollowing(identityKey),
+    },
+    {
+      label: 'Followers',
+      count: followers,
+      route: Routes.tabs.profileFollowers(identityKey),
+    },
+  ];
+
+  return (
+    <View style={[Atoms.flex_row, Atoms.gap_md, Atoms.mt_sm]}>
+      {counts.map(({ label, count, route }) => (
+        <Pressable
+          key={label}
+          accessibilityRole="link"
+          onPress={() => router.push(route)}
+          style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+        >
+          <Text variant="secondary" color="neutral_500" selectable={false}>
+            <Text variant="secondary" fontWeight="semibold">
+              {count}
+            </Text>{' '}
+            {label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }

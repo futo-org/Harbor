@@ -58,3 +58,42 @@ describe('useProfile', () => {
     expect(mockDecode).not.toHaveBeenCalled();
   });
 });
+
+describe('useProfile follow counters', () => {
+  it('passes the decoded counters through', async () => {
+    mockUseQuery.mockReturnValue({
+      data: new Uint8Array([1]),
+      isLoading: false,
+      error: null,
+      invalidate: jest.fn(),
+    });
+    mockDecode.mockReturnValue({
+      name: 'Alice',
+      description: null,
+      avatar: null,
+      banner: null,
+      alias: null,
+      followingCount: 3,
+      followersCount: 7,
+    });
+
+    const { result } = await renderHook(() => useProfile('id'));
+
+    expect(result.current.followingCount).toBe(3);
+    expect(result.current.followersCount).toBe(7);
+  });
+
+  it('reports zero counters when there is no data', async () => {
+    mockUseQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      invalidate: jest.fn(),
+    });
+
+    const { result } = await renderHook(() => useProfile('id'));
+
+    expect(result.current.followingCount).toBe(0);
+    expect(result.current.followersCount).toBe(0);
+  });
+});
