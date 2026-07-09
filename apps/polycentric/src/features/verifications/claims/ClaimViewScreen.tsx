@@ -165,9 +165,7 @@ export default function ViewClaimScreen() {
                 <RequestVerificationSheet
                   open={sheetOpen}
                   onClose={() => setSheetOpen(false)}
-                  identityId={claim.identity}
-                  keyFingerprint={claim.keyFingerprint}
-                  sequence={claim.sequence.toString()}
+                  claimId={claim.id}
                 />
               </>
             )}
