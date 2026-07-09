@@ -3,7 +3,14 @@ import { Atoms } from '@/src/common/theme';
 import { Chip } from './Chip';
 import { ChipIcon } from './ChipIcon';
 
-export function StatusChip({ verified = false }: { verified?: boolean }) {
+export function StatusChip({
+  verifiedCount = 0,
+  totalCount = 0,
+}: {
+  verifiedCount?: number;
+  totalCount?: number;
+}) {
+  const verified = verifiedCount > 0;
   return (
     <Chip style={Atoms.pl_xs}>
       <ChipIcon
@@ -16,7 +23,9 @@ export function StatusChip({ verified = false }: { verified?: boolean }) {
         fontWeight="semibold"
         selectable={false}
       >
-        {verified ? 'Verified' : 'Not verified'}
+        {totalCount > 0
+          ? `${verifiedCount}/${totalCount} verified`
+          : 'Not verified'}
       </Text>
     </Chip>
   );

@@ -8,8 +8,8 @@ import { DecodedClaim, decodeClaimBundle } from './useClaimById';
 /**
  * The current identity's claims with a pending verification request aimed at
  * `targetIdentity`. One `ListEvents` query yields both the claims and their
- * `VerificationTarget` events. "Pending" means "requested" until a query for
- * the verifier's `VerificationVerify` attestations exists.
+ * `VerificationTarget` events. "Pending" means "requested" until a query
+ * for the verifier's `VerificationVerify` events exists.
  */
 export function useVerificationRequestsTo(targetIdentity: string | undefined): {
   claims: DecodedClaim[];

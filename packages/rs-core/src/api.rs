@@ -76,7 +76,10 @@ pub enum Query {
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
-    ListClaims(crate::query::claims::ListClaimsArgs),
+    ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
+    ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
+    ListVerificationVerifies(crate::query::verifications::ListVerificationVerifiesArgs),
+    ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
 }
@@ -342,8 +345,37 @@ impl PolycentricCore {
             Query::ListEvents(args) => {
                 crate::query::event::list_events(&self.query_client, query_key, args, opts)
             }
-            Query::ListClaims(args) => {
-                crate::query::claims::list_claims(&self.query_client, query_key, args, opts)
+            Query::ListVerificationClaims(args) => {
+                crate::query::verifications::list_verification_claims(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::ListVerificationTargets(args) => {
+                crate::query::verifications::list_verification_targets(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::ListVerificationVerifies(args) => {
+                crate::query::verifications::list_verification_verifies(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::ListTargetedVerificationClaims(args) => {
+                crate::query::verifications::list_targeted_verification_claims(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
             }
             Query::ListFollowing(args) => {
                 crate::query::graph::list_following(&self.query_client, query_key, args, opts)

@@ -4,9 +4,15 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { VerificationsService } from "./verifications_service";
+import type { ListTargetedVerificationClaimsResponse } from "./verifications_service";
+import type { ListTargetedVerificationClaimsRequest } from "./verifications_service";
+import type { ListVerificationVerifiesResponse } from "./verifications_service";
+import type { ListVerificationVerifiesRequest } from "./verifications_service";
+import type { ListVerificationTargetsResponse } from "./verifications_service";
+import type { ListVerificationTargetsRequest } from "./verifications_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
-import type { ListClaimsResponse } from "./verifications_service";
-import type { ListClaimsRequest } from "./verifications_service";
+import type { ListVerificationClaimsResponse } from "./verifications_service";
+import type { ListVerificationClaimsRequest } from "./verifications_service";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
@@ -14,9 +20,31 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface IVerificationsServiceClient {
     /**
-     * @generated from protobuf rpc: ListClaims
+     * VerificationClaim events published by an identity, with each claim's
+     * targets and verifies.
+     *
+     * @generated from protobuf rpc: ListVerificationClaims
      */
-    listClaims(input: ListClaimsRequest, options?: RpcOptions): UnaryCall<ListClaimsRequest, ListClaimsResponse>;
+    listVerificationClaims(input: ListVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListVerificationClaimsRequest, ListVerificationClaimsResponse>;
+    /**
+     * VerificationTarget events for a claim: who has been asked to verify.
+     *
+     * @generated from protobuf rpc: ListVerificationTargets
+     */
+    listVerificationTargets(input: ListVerificationTargetsRequest, options?: RpcOptions): UnaryCall<ListVerificationTargetsRequest, ListVerificationTargetsResponse>;
+    /**
+     * VerificationVerify events for a claim: who has verified it.
+     *
+     * @generated from protobuf rpc: ListVerificationVerifies
+     */
+    listVerificationVerifies(input: ListVerificationVerifiesRequest, options?: RpcOptions): UnaryCall<ListVerificationVerifiesRequest, ListVerificationVerifiesResponse>;
+    /**
+     * Claims whose owner asked `target_identity` for verification, with each
+     * claim's targets and verifies.
+     *
+     * @generated from protobuf rpc: ListTargetedVerificationClaims
+     */
+    listTargetedVerificationClaims(input: ListTargetedVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse>;
 }
 /**
  * @generated from protobuf service polycentric.v2.VerificationsService
@@ -28,10 +56,41 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * @generated from protobuf rpc: ListClaims
+     * VerificationClaim events published by an identity, with each claim's
+     * targets and verifies.
+     *
+     * @generated from protobuf rpc: ListVerificationClaims
      */
-    listClaims(input: ListClaimsRequest, options?: RpcOptions): UnaryCall<ListClaimsRequest, ListClaimsResponse> {
+    listVerificationClaims(input: ListVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListVerificationClaimsRequest, ListVerificationClaimsResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        return stackIntercept<ListClaimsRequest, ListClaimsResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<ListVerificationClaimsRequest, ListVerificationClaimsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * VerificationTarget events for a claim: who has been asked to verify.
+     *
+     * @generated from protobuf rpc: ListVerificationTargets
+     */
+    listVerificationTargets(input: ListVerificationTargetsRequest, options?: RpcOptions): UnaryCall<ListVerificationTargetsRequest, ListVerificationTargetsResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ListVerificationTargetsRequest, ListVerificationTargetsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * VerificationVerify events for a claim: who has verified it.
+     *
+     * @generated from protobuf rpc: ListVerificationVerifies
+     */
+    listVerificationVerifies(input: ListVerificationVerifiesRequest, options?: RpcOptions): UnaryCall<ListVerificationVerifiesRequest, ListVerificationVerifiesResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ListVerificationVerifiesRequest, ListVerificationVerifiesResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Claims whose owner asked `target_identity` for verification, with each
+     * claim's targets and verifies.
+     *
+     * @generated from protobuf rpc: ListTargetedVerificationClaims
+     */
+    listTargetedVerificationClaims(input: ListTargetedVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse> {
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse>("unary", this._transport, method, opt, input);
     }
 }

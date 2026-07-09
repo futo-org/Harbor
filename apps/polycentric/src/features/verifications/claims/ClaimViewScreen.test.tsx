@@ -78,6 +78,63 @@ jest.mock('../utils/render', () => ({
 jest.mock('./ClaimMenu', () => ({ ClaimMenu: () => null }));
 jest.mock('./toolbar', () => ({ Toolbar: () => null }));
 
+jest.mock('./toolbar/StatusChip', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    StatusChip: ({
+      verifiedCount = 0,
+      totalCount = 0,
+    }: {
+      verifiedCount?: number;
+      totalCount?: number;
+    }) =>
+      react.createElement(
+        Text,
+        { testID: 'status-chip' },
+        totalCount > 0
+          ? `${verifiedCount}/${totalCount} verified`
+          : 'Not verified',
+      ),
+  };
+});
+
+jest.mock('./ClaimVerifiersList', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    ClaimVerifiersList: ({
+      verifiers,
+    }: {
+      verifiers: { identity: string; verified: boolean }[];
+    }) =>
+      react.createElement(
+        Text,
+        { testID: 'verifiers' },
+        verifiers.map((v) => v.identity).join(','),
+      ),
+  };
+});
+
+type VerifiersResult = {
+  verifiers: { identity: string; verified: boolean }[];
+  verifiedCount: number;
+  totalCount: number;
+  isLoading: boolean;
+  refresh: () => void;
+};
+const emptyVerifiers = (): VerifiersResult => ({
+  verifiers: [],
+  verifiedCount: 0,
+  totalCount: 0,
+  isLoading: false,
+  refresh: () => {},
+});
+let mockVerifiers: VerifiersResult = emptyVerifiers();
+jest.mock('../hooks/useClaimVerifiers', () => ({
+  useClaimVerifiers: () => mockVerifiers,
+}));
+
 type SheetProps = { open: boolean; onClose: () => void };
 let mockSheetProps: SheetProps | null = null;
 jest.mock('../RequestVerificationSheet', () => ({
@@ -93,6 +150,7 @@ import ClaimViewScreen from './ClaimViewScreen';
 
 beforeEach(() => {
   mockSheetProps = null;
+  mockVerifiers = emptyVerifiers();
   mockParams = { identityId: 'me', keyFingerprint: 'fp', sequence: '1' };
 });
 
@@ -117,5 +175,33 @@ describe('ClaimViewScreen', () => {
     await fireEvent.press(screen.getByText('Request verification'));
 
     expect(mockSheetProps?.open).toBe(true);
+  });
+
+  it('shows Not verified when there are no verifications', async () => {
+    mockVerifiers = {
+      ...emptyVerifiers(),
+      verifiers: [{ identity: 'bob', verified: false }],
+      totalCount: 1,
+    };
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.getByTestId('status-chip')).toHaveTextContent('0/1 verified');
+    expect(screen.getByTestId('verifiers')).toHaveTextContent('bob');
+  });
+
+  it('shows the verified ratio once someone verifies', async () => {
+    mockVerifiers = {
+      verifiers: [
+        { identity: 'bob', verified: true },
+        { identity: 'carol', verified: false },
+      ],
+      verifiedCount: 1,
+      totalCount: 2,
+      isLoading: false,
+      refresh: () => {},
+    };
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.getByTestId('status-chip')).toHaveTextContent('1/2 verified');
   });
 });

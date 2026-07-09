@@ -4,6 +4,7 @@
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
+use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
 use crate::service::feeds::rpc::common::{
@@ -39,29 +40,14 @@ pub async fn handle(
         req.limit.min(200) as u64
     };
 
-    let event_key = req
-        .event_key
-        .ok_or_else(|| Status::invalid_argument("event_key is required"))?;
-    let signed_by = event_key.signed_by.ok_or_else(|| {
-        Status::invalid_argument("event_key.signed_by is required")
-    })?;
-
-    let collection: i16 = event_key.collection.try_into().map_err(|_| {
-        Status::invalid_argument("event_key.collection out of range")
-    })?;
-    let public_key_type: i16 = signed_by.key_type.try_into().map_err(|_| {
-        Status::invalid_argument("event_key.signed_by.key_type out of range")
-    })?;
-    let sequence: i64 = event_key.sequence.try_into().map_err(|_| {
-        Status::invalid_argument("event_key.sequence out of range")
-    })?;
+    let event_key = TargetEventKey::from_request(req.event_key, "event_key")?;
 
     let params = Params {
-        collection,
+        collection: event_key.collection,
         identity: event_key.identity,
-        public_key_type,
-        public_key: signed_by.key,
-        sequence,
+        public_key_type: event_key.public_key_type,
+        public_key: event_key.public_key,
+        sequence: event_key.sequence,
         descendants_limit,
     };
 

@@ -101,6 +101,10 @@ describe('useRequestVerification', () => {
       'me',
       'them',
     ]);
+    expect(invalidateQuery).toHaveBeenCalledWith(mockClient, [
+      'verification-targets',
+      CLAIM_ID,
+    ]);
   });
 
   it('still resolves when the push to servers fails', async () => {

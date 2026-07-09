@@ -2,6 +2,7 @@ import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useQueryStore } from '@/src/common/query/hooks/useQuery';
 import { FetchMode, Query } from '@polycentric/react-native';
 import { useEffect, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { decodeProfile, type DecodedProfile } from '../lib/decodeProfile';
 import { profileQueryKey } from './useProfile';
 
@@ -10,13 +11,12 @@ export function useProfiles(
 ): Map<string, DecodedProfile | null> {
   const client = usePolycentric();
 
-  // Key the effect on contents, not array identity, so a re-render with an
-  // equal list doesn't churn subscriptions.
+  // Key on contents, not array identity, so a re-render with an equal list
+  // doesn't churn subscriptions.
   const joined = identities.join('\n');
+  const ids = useMemo(() => (joined ? joined.split('\n') : []), [joined]);
 
   useEffect(() => {
-    if (!joined) return;
-    const ids = joined.split('\n');
     const store = useQueryStore.getState();
     for (const identity of ids) {
       store.subscribe(profileQueryKey(identity).join('\0'), {
@@ -32,25 +32,33 @@ export function useProfiles(
         store.unsubscribe(profileQueryKey(identity).join('\0'));
       }
     };
-  }, [joined, client]);
+  }, [ids, client]);
 
-  const queries = useQueryStore((s) => s.queries);
+  // Select only the subscribed entries' data — the store rebuilds its map on
+  // every query update anywhere, so selecting the whole map would re-render
+  // (and re-decode every profile) on unrelated ticks.
+  const data = useQueryStore(
+    useShallow((s) =>
+      ids.map(
+        (identity) => s.queries.get(profileQueryKey(identity).join('\0'))?.data,
+      ),
+    ),
+  );
 
   return useMemo(() => {
     const map = new Map<string, DecodedProfile | null>();
-    if (!joined) return map;
-    for (const identity of joined.split('\n')) {
-      const data = queries.get(profileQueryKey(identity).join('\0'))?.data;
+    ids.forEach((identity, i) => {
+      const bytes = data[i];
       let decoded: DecodedProfile | null = null;
-      if (data && data.byteLength > 0) {
+      if (bytes && bytes.byteLength > 0) {
         try {
-          decoded = decodeProfile(data);
+          decoded = decodeProfile(bytes);
         } catch {
           decoded = null;
         }
       }
       map.set(identity, decoded);
-    }
+    });
     return map;
-  }, [queries, joined]);
+  }, [ids, data]);
 }

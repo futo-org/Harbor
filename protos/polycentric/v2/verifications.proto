@@ -65,8 +65,8 @@ message VerificationTarget {
   repeated string target_identities = 2;
 }
 
-// ── A verifier's attestation ──
+// ── A verification of a claim ──
 message VerificationVerify {
-  // The claim event being attested to. The event's signer is the verifier.
+  // The claim event being verified. The event's author is the verifier.
   EventKey claim_event_key = 1;
 }
