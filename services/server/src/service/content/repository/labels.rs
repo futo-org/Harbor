@@ -4,6 +4,13 @@ use ::entity::content_label_model as ContentLabelModel;
 use sea_orm::{ActiveValue::Set, ConnectionTrait, EntityTrait};
 use tonic::Status;
 
+/// Persists content labels from a `ContentBody::Labels` event into the `content_labels` table.
+/// Writes one row per label value. This is a no-op (returns `Ok(())` without writing) unless the
+/// event author is the configured trusted moderator.
+///
+/// Note that label events from non-trusted identities are stored in the `event` and `content`
+/// tables via the standard `put_events` pipeline. The `content_labels` table filters for trusted
+/// label events for faster querying.
 pub(super) async fn add<C: ConnectionTrait>(
     db: &C,
     ctx: &ChildContext<'_>,
