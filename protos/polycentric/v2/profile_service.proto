@@ -1,0 +1,25 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/events.proto";
+
+message GetProfileRequest {
+  string identity = 1;
+}
+
+message GetProfileResponse {
+  // The identity's latest profile events.
+  repeated EventBundle event_bundles = 1;
+  // Side information needed to validate the bundles (the identity's
+  // key chain).
+  repeated EventHint event_hints = 2;
+  // Distinct identities this identity follows.
+  uint64 following_count = 3;
+  // Distinct identities following this identity.
+  uint64 followers_count = 4;
+}
+
+service ProfileService {
+  // A profile with its aggregate counters.
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+}

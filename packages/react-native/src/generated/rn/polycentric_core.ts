@@ -692,6 +692,112 @@ const FfiConverterTypeListEventsArgs = (() => {
   return new FFIConverter();
 })();
 
+export type ListFollowersArgs = {
+  identity: string;
+  limit?: number;
+  backwardToken?: string;
+  forwardToken?: string;
+};
+
+/**
+ * Generated factory for {@link ListFollowersArgs} record objects.
+ */
+export const ListFollowersArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListFollowersArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListFollowersArgs>,
+  });
+})();
+
+const FfiConverterTypeListFollowersArgs = (() => {
+  type TypeName = ListFollowersArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListFollowingArgs = {
+  identity: string;
+  limit?: number;
+  backwardToken?: string;
+  forwardToken?: string;
+};
+
+/**
+ * Generated factory for {@link ListFollowingArgs} record objects.
+ */
+export const ListFollowingArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListFollowingArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListFollowingArgs>,
+  });
+})();
+
+const FfiConverterTypeListFollowingArgs = (() => {
+  type TypeName = ListFollowingArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type ListNotificationsArgs = {
   identity: string;
   /**
@@ -1383,6 +1489,8 @@ export enum Query_Tags {
   ListNotifications = 'ListNotifications',
   ListEvents = 'ListEvents',
   ListClaims = 'ListClaims',
+  ListFollowing = 'ListFollowing',
+  ListFollowers = 'ListFollowers',
 }
 /**
  * Discriminated union over every observable RPC. `fetch_query`
@@ -1637,6 +1745,58 @@ export const Query = (() => {
     }
   }
 
+  type ListFollowing__interface = {
+    tag: Query_Tags.ListFollowing;
+    inner: Readonly<[ListFollowingArgs]>;
+  };
+  class ListFollowing_ extends UniffiEnum implements ListFollowing__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListFollowing;
+    readonly inner: Readonly<[ListFollowingArgs]>;
+    constructor(v0: ListFollowingArgs) {
+      super('Query', 'ListFollowing');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListFollowingArgs): ListFollowing_ {
+      return new ListFollowing_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListFollowing_ {
+      return obj.tag === Query_Tags.ListFollowing;
+    }
+  }
+
+  type ListFollowers__interface = {
+    tag: Query_Tags.ListFollowers;
+    inner: Readonly<[ListFollowersArgs]>;
+  };
+  class ListFollowers_ extends UniffiEnum implements ListFollowers__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListFollowers;
+    readonly inner: Readonly<[ListFollowersArgs]>;
+    constructor(v0: ListFollowersArgs) {
+      super('Query', 'ListFollowers');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListFollowersArgs): ListFollowers_ {
+      return new ListFollowers_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListFollowers_ {
+      return obj.tag === Query_Tags.ListFollowers;
+    }
+  }
+
   function instanceOf(obj: any): obj is Query {
     return obj[uniffiTypeNameSymbol] === 'Query';
   }
@@ -1652,6 +1812,8 @@ export const Query = (() => {
     ListNotifications: ListNotifications_,
     ListEvents: ListEvents_,
     ListClaims: ListClaims_,
+    ListFollowing: ListFollowing_,
+    ListFollowers: ListFollowers_,
   });
 })();
 /**
@@ -1670,7 +1832,9 @@ export type Query = InstanceType<
     | 'GetExploreFeed'
     | 'ListNotifications'
     | 'ListEvents'
-    | 'ListClaims']
+    | 'ListClaims'
+    | 'ListFollowing'
+    | 'ListFollowers']
 >;
 
 // FfiConverter for enum Query
@@ -1713,6 +1877,14 @@ const FfiConverterTypeQuery = (() => {
         case 9:
           return new Query.ListClaims(
             FfiConverterTypeListClaimsArgs.read(from)
+          );
+        case 10:
+          return new Query.ListFollowing(
+            FfiConverterTypeListFollowingArgs.read(from)
+          );
+        case 11:
+          return new Query.ListFollowers(
+            FfiConverterTypeListFollowersArgs.read(from)
           );
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -1772,6 +1944,18 @@ const FfiConverterTypeQuery = (() => {
           ordinalConverter.write(9, into);
           const inner = value.inner;
           FfiConverterTypeListClaimsArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListFollowing: {
+          ordinalConverter.write(10, into);
+          const inner = value.inner;
+          FfiConverterTypeListFollowingArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListFollowers: {
+          ordinalConverter.write(11, into);
+          const inner = value.inner;
+          FfiConverterTypeListFollowersArgs.write(inner[0], into);
           return;
         }
         default:
@@ -1835,6 +2019,18 @@ const FfiConverterTypeQuery = (() => {
           const inner = value.inner;
           let size = ordinalConverter.allocationSize(9);
           size += FfiConverterTypeListClaimsArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.ListFollowing: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(10);
+          size += FfiConverterTypeListFollowingArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.ListFollowers: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(11);
+          size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
           return size;
         }
         default:
@@ -4671,6 +4867,8 @@ export default Object.freeze({
     FfiConverterTypeGetProfileArgs,
     FfiConverterTypeListClaimsArgs,
     FfiConverterTypeListEventsArgs,
+    FfiConverterTypeListFollowersArgs,
+    FfiConverterTypeListFollowingArgs,
     FfiConverterTypeListNotificationsArgs,
     FfiConverterTypeLogLevel,
     FfiConverterTypeLogger,

@@ -3,8 +3,7 @@ use std::sync::Arc;
 
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    ListEventsFilters, ListEventsRequest, ListEventsResponse,
-    event_sync_service_client::EventSyncServiceClient,
+    GetProfileRequest, GetProfileResponse, profile_service_client::ProfileServiceClient,
 };
 use prost::Message;
 
@@ -20,15 +19,19 @@ pub struct GetProfileArgs {
     pub identity: String,
 }
 
+/// Concatenate per-server profile bundles (deduped, validated) and take
+/// the largest counters — the best-informed server wins.
 fn merge_profile_responses(
     values: &[Vec<u8>],
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
-    let mut merged = ListEventsResponse::default();
+    let mut merged = GetProfileResponse::default();
     for v in values {
-        if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
+        if let Ok(incoming) = GetProfileResponse::decode(v.as_slice()) {
             merged.event_bundles.extend(incoming.event_bundles);
             merged.event_hints.extend(incoming.event_hints);
+            merged.following_count = merged.following_count.max(incoming.following_count);
+            merged.followers_count = merged.followers_count.max(incoming.followers_count);
         }
     }
 
@@ -57,7 +60,8 @@ fn merge_profile_responses(
 
 /// Encode `identity`'s `PROFILE` collection events out of the local
 /// event store, returning `None` when the store has nothing for this
-/// identity.
+/// identity. The follow counters are server aggregates, so local
+/// snapshots report zero until a server responds.
 fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> Option<Vec<u8>> {
     let bundles = query_client
         .client()
@@ -69,15 +73,18 @@ fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> O
         return None;
     }
     Some(
-        ListEventsResponse {
+        GetProfileResponse {
             event_bundles: bundles,
             event_hints: Vec::new(),
+            following_count: 0,
+            followers_count: 0,
         }
         .encode_to_vec(),
     )
 }
 
-/// Fetch `identity`'s `PROFILE` collection events.
+/// Fetch `identity`'s profile (its `PROFILE` collection events plus the
+/// follow counters). Emits serialized `GetProfileResponse` bytes.
 ///
 /// - `OfflineOnly`: emits whatever's in the local store (or an empty
 ///   response) and completes.
@@ -101,13 +108,7 @@ pub fn get_profile(
     let offline_first = matches!(fetch_mode, Some(FetchMode::OfflineFirst));
     let skip_network = offline_only || (offline_first && local_bytes.is_some());
     if skip_network {
-        let bytes = local_bytes.unwrap_or_else(|| {
-            ListEventsResponse {
-                event_bundles: Vec::new(),
-                event_hints: Vec::new(),
-            }
-            .encode_to_vec()
-        });
+        let bytes = local_bytes.unwrap_or_else(|| GetProfileResponse::default().encode_to_vec());
         let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
             subscriber.next(QueryResult {
                 data: Some(bytes.clone()),
@@ -126,20 +127,10 @@ pub fn get_profile(
         let identity = identity.clone();
         let client = client.clone();
         async move {
-            let response: ListEventsResponse = EventSyncServiceClient::new(channel(&server_url)?)
-                .list_events(ListEventsRequest {
-                    filters: Some(ListEventsFilters {
-                        collection: Some(collections::PROFILE),
-                        identity: Some(identity),
-                        signed_by: None,
-                        sequence_gt: None,
-                        sequence_lt: None,
-                        heads: vec![],
-                    }),
-                    size: None,
-                })
+            let response = ProfileServiceClient::new(channel(&server_url)?)
+                .get_profile(GetProfileRequest { identity })
                 .await
-                .map_err(|e| format!("get_profile list_events [{server_url}]: {e}"))?
+                .map_err(|e| format!("get_profile [{server_url}]: {e}"))?
                 .into_inner();
 
             let bytes = response.encode_to_vec();
@@ -193,4 +184,49 @@ pub fn get_profile(
     });
 
     Arc::new(wrapped)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::client::PolycentricClient;
+    use std::sync::Mutex;
+
+    fn client() -> Arc<Mutex<PolycentricClient>> {
+        Arc::new(Mutex::new(PolycentricClient::new()))
+    }
+
+    fn response(following: u64, followers: u64) -> Vec<u8> {
+        GetProfileResponse {
+            event_bundles: Vec::new(),
+            event_hints: Vec::new(),
+            following_count: following,
+            followers_count: followers,
+        }
+        .encode_to_vec()
+    }
+
+    #[test]
+    fn merge_takes_the_largest_counters() {
+        let merged = merge_profile_responses(&[response(3, 7), response(5, 2)], &client());
+        let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.following_count, 5);
+        assert_eq!(decoded.followers_count, 7);
+    }
+
+    #[test]
+    fn merge_ignores_undecodable_responses() {
+        let merged = merge_profile_responses(&[vec![0xff], response(1, 2)], &client());
+        let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.following_count, 1);
+        assert_eq!(decoded.followers_count, 2);
+    }
+
+    #[test]
+    fn merge_of_nothing_reports_zero_counters() {
+        let merged = merge_profile_responses(&[], &client());
+        let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.following_count, 0);
+        assert_eq!(decoded.followers_count, 0);
+    }
 }

@@ -77,6 +77,8 @@ pub enum Query {
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
     ListClaims(crate::query::claims::ListClaimsArgs),
+    ListFollowing(crate::query::graph::ListFollowingArgs),
+    ListFollowers(crate::query::graph::ListFollowersArgs),
 }
 
 #[uniffi::export(with_foreign)]
@@ -342,6 +344,12 @@ impl PolycentricCore {
             }
             Query::ListClaims(args) => {
                 crate::query::claims::list_claims(&self.query_client, query_key, args, opts)
+            }
+            Query::ListFollowing(args) => {
+                crate::query::graph::list_following(&self.query_client, query_key, args, opts)
+            }
+            Query::ListFollowers(args) => {
+                crate::query::graph::list_followers(&self.query_client, query_key, args, opts)
             }
         }
     }

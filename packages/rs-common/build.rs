@@ -48,6 +48,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../protos/polycentric/v2/pairing_service.proto",
         "../../protos/polycentric/v2/verifications.proto",
         "../../protos/polycentric/v2/verifications_service.proto",
+        "../../protos/polycentric/v2/graph_service.proto",
+        "../../protos/polycentric/v2/profile_service.proto",
     ];
 
     let out_dir_path = PathBuf::from(&out_dir);

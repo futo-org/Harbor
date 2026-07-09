@@ -49,6 +49,9 @@ pub fn build_grpc_router(
         service::server::rpc::build_server_service(server_config);
     let verifications_service =
         service::verifications::rpc::build_verifications_service(ctx.clone());
+    let graph_service = service::graph::rpc::build_graph_service(ctx.clone());
+    let profile_service =
+        service::profile::rpc::build_profile_service(ctx.clone());
     let reflection_service = build_reflection_service()?;
     let notifications_service = build_notifications_service(ctx.clone());
     let grpc_web = GrpcWebLayer::new();
@@ -61,7 +64,9 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
         .add_service(grpc_web.layer(server_info_service))
-        .add_service(grpc_web.layer(verifications_service));
+        .add_service(grpc_web.layer(verifications_service))
+        .add_service(grpc_web.layer(graph_service))
+        .add_service(grpc_web.layer(profile_service));
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())
