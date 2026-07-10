@@ -2,12 +2,14 @@ import { Button, Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
+import useVerifyClaim from '../hooks/useVerifyClaim';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { RequestVerificationSheet } from '../RequestVerificationSheet';
@@ -41,6 +43,16 @@ export default function ViewClaimScreen() {
   const [sheetOpen, setSheetOpen] = useState(requestVerification === '1');
 
   const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
+
+  const { identityKey } = useCurrentIdentity();
+  const { verify, isPending: isVerifyPending } = useVerifyClaim();
+
+  // Only the claim author can request verifications; a viewer asked to
+  // verify gets a verify button instead, disabled once they have verified.
+  const isAuthor = !!claim && claim.identity === identityKey;
+  const isVerifyRequested = isAuthor
+    ? undefined
+    : verifiers.find((v) => v.identity === identityKey);
 
   const { title, bodyFields } = useMemo<{
     title: string;
@@ -137,18 +149,36 @@ export default function ViewClaimScreen() {
                   schemaName={claim.schemaName}
                 />
 
-                <Button
-                  title="Request verification"
-                  variant="primary"
-                  onPress={() => setSheetOpen(true)}
-                  style={[Atoms.w_full]}
-                />
+                {isAuthor && (
+                  <>
+                    <Button
+                      title="Request verification"
+                      variant="primary"
+                      onPress={() => setSheetOpen(true)}
+                      style={[Atoms.w_full]}
+                    />
 
-                <RequestVerificationSheet
-                  open={sheetOpen}
-                  onClose={() => setSheetOpen(false)}
-                  claimId={claim.id}
-                />
+                    <RequestVerificationSheet
+                      open={sheetOpen}
+                      onClose={() => setSheetOpen(false)}
+                      claimId={claim.id}
+                    />
+                  </>
+                )}
+
+                {isVerifyRequested && (
+                  <Button
+                    title={
+                      isVerifyRequested.verified
+                        ? 'Verified'
+                        : 'Verify this claim'
+                    }
+                    variant="primary"
+                    disabled={isVerifyRequested.verified || isVerifyPending}
+                    onPress={() => verify({ claimId: claim.id })}
+                    style={[Atoms.w_full]}
+                  />
+                )}
               </>
             )}
           </View>

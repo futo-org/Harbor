@@ -8,14 +8,31 @@ jest.mock('@/src/common/theme', () => ({
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
 
+// Rendered Button props by title — `fireEvent.press` fires the composite's
+// `onPress` even when the mock drops it, so tests assert `disabled` directly.
+let mockButtonProps: Record<string, { disabled?: boolean }> = {};
 jest.mock('@/src/common/components', () => {
   const react = require('react');
   const { Text } = require('react-native');
   return {
     Text: ({ children }: { children?: unknown }) =>
       react.createElement(Text, null, children),
-    Button: ({ title, onPress }: { title: string; onPress?: () => void }) =>
-      react.createElement(Text, { onPress }, title),
+    Button: ({
+      title,
+      onPress,
+      disabled,
+    }: {
+      title: string;
+      onPress?: () => void;
+      disabled?: boolean;
+    }) => {
+      mockButtonProps[title] = { disabled };
+      return react.createElement(
+        Text,
+        { onPress: disabled ? undefined : onPress },
+        title,
+      );
+    },
   };
 });
 
@@ -54,6 +71,17 @@ jest.mock('react-native-safe-area-context', () => ({
 let mockParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
+}));
+
+let mockIdentityKey = 'me';
+jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  useCurrentIdentity: () => ({ identityKey: mockIdentityKey }),
+}));
+
+const mockVerify = jest.fn(async () => undefined);
+jest.mock('../hooks/useVerifyClaim', () => ({
+  __esModule: true,
+  default: () => ({ verify: mockVerify, isPending: false }),
 }));
 
 jest.mock('../hooks/useClaimById', () => ({
@@ -152,6 +180,9 @@ beforeEach(() => {
   mockSheetProps = null;
   mockVerifiers = emptyVerifiers();
   mockParams = { identityId: 'me', keyFingerprint: 'fp', sequence: '1' };
+  mockIdentityKey = 'me';
+  mockButtonProps = {};
+  mockVerify.mockClear();
 });
 
 describe('ClaimViewScreen', () => {
@@ -203,5 +234,57 @@ describe('ClaimViewScreen', () => {
     const screen = await render(<ClaimViewScreen />);
 
     expect(screen.getByTestId('status-chip')).toHaveTextContent('1/2 verified');
+  });
+
+  it('hides every action button from a viewer who was not asked to verify', async () => {
+    mockIdentityKey = 'viewer';
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.queryByText('Request verification')).toBeNull();
+    expect(screen.queryByText('Verify this claim')).toBeNull();
+    expect(screen.queryByText('Verified')).toBeNull();
+  });
+
+  it('lets a requested viewer verify the claim', async () => {
+    mockIdentityKey = 'viewer';
+    mockVerifiers = {
+      ...emptyVerifiers(),
+      verifiers: [{ identity: 'viewer', verified: false }],
+      totalCount: 1,
+    };
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.queryByText('Request verification')).toBeNull();
+    await fireEvent.press(screen.getByText('Verify this claim'));
+
+    expect(mockVerify).toHaveBeenCalledWith({ claimId: 'aabb' });
+  });
+
+  it('disables the button once the viewer has verified', async () => {
+    mockIdentityKey = 'viewer';
+    mockVerifiers = {
+      ...emptyVerifiers(),
+      verifiers: [{ identity: 'viewer', verified: true }],
+      verifiedCount: 1,
+      totalCount: 1,
+    };
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.getByText('Verified')).toBeTruthy();
+    expect(screen.queryByText('Verify this claim')).toBeNull();
+    expect(mockButtonProps['Verified']).toEqual({ disabled: true });
+  });
+
+  it('shows the author the request button, never the verify button', async () => {
+    // Even when the author appears in the verifiers list.
+    mockVerifiers = {
+      ...emptyVerifiers(),
+      verifiers: [{ identity: 'me', verified: false }],
+      totalCount: 1,
+    };
+    const screen = await render(<ClaimViewScreen />);
+
+    expect(screen.getByText('Request verification')).toBeTruthy();
+    expect(screen.queryByText('Verify this claim')).toBeNull();
   });
 });

@@ -42,8 +42,10 @@ export function decodeTargetIdentities(bundles: v2.EventBundle[]): string[] {
   return out;
 }
 
-/** Authors of the verify events — who has verified the claim. */
-export function decodeVerifyAuthors(bundles: v2.EventBundle[]): Set<string> {
+/** Identities of the verifiers — who has verified the claim. */
+export function decodeVerifierIdentities(
+  bundles: v2.EventBundle[],
+): Set<string> {
   const out = new Set<string>();
   for (const bundle of bundles) {
     if (!bundle.signedEvent) continue;
@@ -92,7 +94,7 @@ export function decodeVerificationClaimBundle(
   if (!claim) return null;
   const verifiers = combineVerifiers(
     decodeTargetIdentities(group.targets),
-    decodeVerifyAuthors(group.verifies),
+    decodeVerifierIdentities(group.verifies),
   );
   return { ...claim, status: statusOf(verifiers) };
 }

@@ -38,8 +38,9 @@ export function ProfileProvider({
   const { identity: selfIdentity } = useCurrentIdentity();
   const isSelf = !!identityKey && selfIdentity?.identityKey === identityKey;
 
-  // Tabs are routes; switching replaces the URL, keeping the alias when
-  // the profile was reached via one.
+  // Tabs are routes, but siblings inside the profile's hidden tab
+  // navigator (`app/[identityId]/(profile)`) — replacing resolves to a
+  // tab jump that updates the URL without touching the root stack.
   const setActiveFeed = useCallback(
     (tab: ActiveFeed) => {
       const profileId = alias ?? identityKey;
