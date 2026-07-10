@@ -9,26 +9,83 @@ use crate::service::feeds::repository::{
 use crate::service::identity::repository::Query as IdentityRepo;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Content, EventBundle, Identity, PublicKey, SerializedContent, SignedEvent,
+    Content, EventBundle, EventHint, Identity, PublicKey, SerializedContent,
+    SignedEvent,
 };
 use prost::Message;
 use std::collections::HashMap;
 use tonic::Status;
 
-/// Collect every identity referenced by `rows`: each event's author
-/// plus any reply-parent identity carried in a Post's content.
-pub fn collect_identities(rows: &[EventWithContentRow]) -> Vec<String> {
+/// Collect every identity referenced by the rows: each event's author
+/// plus any identities its content names (a Post's reply parent, a
+/// Follow's target, a VerificationTarget's requested verifiers).
+pub fn collect_identities<'a>(
+    rows: impl IntoIterator<
+        Item = (
+            &'a ::entity::event_model::Model,
+            Option<&'a ::entity::content_model::Model>,
+        ),
+    >,
+) -> Vec<String> {
     let mut set: std::collections::HashSet<String> =
         std::collections::HashSet::new();
     for (event, content) in rows {
         set.insert(event.identity.clone());
-        if let Some(parent_identity) =
-            content.as_ref().and_then(reply_parent_identity)
-        {
-            set.insert(parent_identity);
+        if let Some(content) = content {
+            content_identities(content, &mut set);
         }
     }
     set.into_iter().collect()
+}
+
+/// Identities named inside a content body, added to `out`.
+fn content_identities(
+    content: &::entity::content_model::Model,
+    out: &mut std::collections::HashSet<String>,
+) {
+    let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
+    else {
+        return;
+    };
+    match decoded.content_body {
+        Some(ContentBody::Post(post)) => {
+            if let Some(identity) =
+                post.reply.and_then(|r| r.parent).map(|p| p.identity)
+                && !identity.is_empty()
+            {
+                out.insert(identity);
+            }
+        }
+        Some(ContentBody::Follow(follow)) => {
+            if !follow.identity.is_empty() {
+                out.insert(follow.identity);
+            }
+        }
+        Some(ContentBody::VerificationTarget(target)) => {
+            out.extend(
+                target
+                    .target_identities
+                    .into_iter()
+                    .filter(|identity| !identity.is_empty()),
+            );
+        }
+        _ => {}
+    }
+}
+
+/// The identity-chain and profile events for `identities`. Fetched
+/// sequentially so MockDatabase-backed tests stay deterministic; skips the
+/// lookups entirely for an empty list.
+pub async fn list_identity_and_profile_events(
+    ctx: &ServiceContext,
+    identities: Vec<String>,
+) -> Result<(Vec<EventWithContentRow>, Vec<EventWithContentRow>), Status> {
+    if identities.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let identity_events = list_identity_events(ctx, identities.clone()).await?;
+    let profile_events = list_profile_events(ctx, identities).await?;
+    Ok((identity_events, profile_events))
 }
 
 /// Fetch the latest identity events (rotation/signing key chain) for
@@ -106,17 +163,19 @@ pub fn rows_to_bundles(rows: Vec<EventWithContentRow>) -> Vec<EventBundle> {
         .collect()
 }
 
-/// Identity of a post content's reply-parent, if present and non-empty.
-fn reply_parent_identity(
-    content: &::entity::content_model::Model,
-) -> Option<String> {
-    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
-    match decoded.content_body? {
-        ContentBody::Post(post) => {
-            Some(post.reply?.parent?.identity).filter(|s| !s.is_empty())
-        }
-        _ => None,
-    }
+/// Wrap bundles as `EventHint`s.
+pub fn bundles_to_hints(bundles: Vec<EventBundle>) -> Vec<EventHint> {
+    bundles
+        .into_iter()
+        .map(|event_bundle| EventHint {
+            event_bundle: Some(event_bundle),
+        })
+        .collect()
+}
+
+/// Bundle rows wrapped as `EventHint`s.
+pub fn rows_to_hints(rows: Vec<EventWithContentRow>) -> Vec<EventHint> {
+    bundles_to_hints(rows_to_bundles(rows))
 }
 
 fn map_db_err(e: sea_orm::DbErr) -> Status {

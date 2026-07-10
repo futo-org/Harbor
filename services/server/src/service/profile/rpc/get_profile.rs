@@ -4,10 +4,10 @@
 use crate::service::context::ServiceContext;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
-    list_identity_events, list_profile_events, rows_to_bundles,
+    list_identity_events, list_profile_events, rows_to_bundles, rows_to_hints,
 };
 use crate::service::proofs::service::attach_proofs;
-use crate::service::proto::{EventHint, GetProfileRequest, GetProfileResponse};
+use crate::service::proto::{GetProfileRequest, GetProfileResponse};
 use tonic::Status;
 
 pub async fn handle(
@@ -29,12 +29,7 @@ pub async fn handle(
     attach_proofs(ctx, &mut event_bundles).await?;
 
     // The identity's key chain, so clients can validate the bundles.
-    let event_hints = rows_to_bundles(identity_rows)
-        .into_iter()
-        .map(|b| EventHint {
-            event_bundle: Some(b),
-        })
-        .collect();
+    let event_hints = rows_to_hints(identity_rows);
 
     Ok(GetProfileResponse {
         event_bundles,

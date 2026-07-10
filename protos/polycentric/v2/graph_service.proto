@@ -20,6 +20,8 @@ message ListFollowsResponse {
   // The active (non-tombstoned) Follow events, newest first.
   repeated EventBundle event_bundles = 1;
   optional PageInfo page_info = 2;
+  // Relevant events for the users in the follow events
+  repeated EventHint event_hints = 3;
 }
 
 service GraphService {

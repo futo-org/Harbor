@@ -14,8 +14,8 @@ use crate::service::feeds::util::{
     PageCursor, PageInfo, map_db_err, page_limit,
 };
 use crate::service::identity::service::{
-    collect_identities, list_identity_events, list_profile_events,
-    rows_to_bundles,
+    bundles_to_hints, collect_identities, list_identity_events,
+    list_profile_events, rows_to_bundles, rows_to_hints,
 };
 
 use crate::service::proofs::service::attach_proofs;
@@ -184,7 +184,10 @@ pub async fn hydrate(
 
     let keys: Vec<TargetEventKey> =
         rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let identities = collect_identities(rows);
+    let identities = collect_identities(
+        rows.iter()
+            .map(|(event, content)| (event, content.as_ref())),
+    );
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
 
     // Returns valid (as far as the server is concerned) tombstones related to queried events
@@ -345,15 +348,8 @@ pub async fn view(
         .chain(quote_post_events)
         .chain(repost_events)
         .collect();
-    let mut event_hints: Vec<EventHint> = rows_to_bundles(hint_rows)
-        .into_iter()
-        .map(|b| EventHint {
-            event_bundle: Some(b),
-        })
-        .collect();
-    event_hints.extend(tombstone_bundles.into_iter().map(|b| EventHint {
-        event_bundle: Some(b),
-    }));
+    let mut event_hints = rows_to_hints(hint_rows);
+    event_hints.extend(bundles_to_hints(tombstone_bundles));
 
     Ok(GetFeedResponseView {
         event_bundles,

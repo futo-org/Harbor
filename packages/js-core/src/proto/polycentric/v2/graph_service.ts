@@ -11,6 +11,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { EventHint } from "./events";
 import { PageInfo } from "./common";
 import { EventBundle } from "./events";
 import { PageParams } from "./common";
@@ -58,6 +59,13 @@ export interface ListFollowsResponse {
      * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 2
      */
     pageInfo?: PageInfo;
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 3
+     */
+    eventHints: EventHint[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ListFollowingRequest$Type extends MessageType<ListFollowingRequest> {
@@ -172,12 +180,14 @@ class ListFollowsResponse$Type extends MessageType<ListFollowsResponse> {
     constructor() {
         super("polycentric.v2.ListFollowsResponse", [
             { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
-            { no: 2, name: "page_info", kind: "message", T: () => PageInfo }
+            { no: 2, name: "page_info", kind: "message", T: () => PageInfo },
+            { no: 3, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListFollowsResponse>): ListFollowsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.eventBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListFollowsResponse>(this, message, value);
         return message;
@@ -192,6 +202,9 @@ class ListFollowsResponse$Type extends MessageType<ListFollowsResponse> {
                     break;
                 case /* optional polycentric.v2.PageInfo page_info */ 2:
                     message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 3:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -211,6 +224,9 @@ class ListFollowsResponse$Type extends MessageType<ListFollowsResponse> {
         /* optional polycentric.v2.PageInfo page_info = 2; */
         if (message.pageInfo)
             PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 3; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

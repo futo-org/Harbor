@@ -9,7 +9,7 @@ use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::util::map_db_err;
 use crate::service::identity::service::{
-    list_identity_events, list_profile_events, rows_to_bundles,
+    list_identity_events, list_profile_events, rows_to_bundles, rows_to_hints,
 };
 use crate::service::notifications::repository::Query as NotificationRepository;
 use crate::service::proofs::service::attach_proofs;
@@ -117,14 +117,9 @@ async fn hydrate(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
     )?;
-    let event_hints: Vec<EventHint> = rows_to_bundles(
+    let event_hints: Vec<EventHint> = rows_to_hints(
         identity_events.into_iter().chain(profile_events).collect(),
-    )
-    .into_iter()
-    .map(|event_bundle| EventHint {
-        event_bundle: Some(event_bundle),
-    })
-    .collect();
+    );
 
     Ok(Hydrated {
         bundles,

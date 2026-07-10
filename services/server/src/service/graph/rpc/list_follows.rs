@@ -10,7 +10,9 @@ use crate::service::feeds::repository::CursorFilter;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
-use crate::service::identity::service::rows_to_bundles;
+use crate::service::identity::service::{
+    collect_identities, list_identity_and_profile_events, rows_to_bundles,
+};
 use crate::service::proto::{ListFollowsResponse, PageParams};
 use sea_orm::DbConn;
 use tonic::Status;
@@ -111,8 +113,19 @@ async fn hydrate(
         .map_err(map_db_err)?;
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
 
+    let identities = collect_identities(
+        fetched
+            .rows
+            .iter()
+            .map(|(event, content)| (event, content.as_ref())),
+    );
+    let (identity_events, profile_events) =
+        list_identity_and_profile_events(ctx, identities).await?;
+
     Ok(HydrationState {
         deletes_by_target,
+        identity_events,
+        profile_events,
         ..Default::default()
     })
 }
@@ -143,11 +156,12 @@ async fn view(
     _ctx: &ServiceContext,
     _params: &Params,
     filtered: Filtered,
-    _hydration: HydrationState,
+    hydration: HydrationState,
 ) -> Result<ListFollowsResponse, Status> {
     Ok(ListFollowsResponse {
         event_bundles: rows_to_bundles(filtered.live_rows),
         page_info: Some(filtered.page_info.page_info.proto()?),
+        event_hints: hydration.identity_profile_hints(),
     })
 }
 
@@ -215,6 +229,11 @@ mod tests {
         Vec::new()
     }
 
+    /// Empty result set for the identity/profile hint queries.
+    fn no_rows() -> Vec<MockRow> {
+        Vec::new()
+    }
+
     #[tokio::test]
     async fn returns_a_full_page_with_a_next_page() {
         // Three rows for a limit of two: the extra row signals more data.
@@ -225,6 +244,8 @@ mod tests {
                 follow_row(1, "alice", "target"),
             ]])
             .append_query_results([no_tombstones()])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db).await;
 
@@ -253,6 +274,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![follow_row(1, "alice", "target")]])
             .append_query_results([no_tombstones()])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db).await;
 
@@ -278,6 +301,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![follow_row(1, "alice", "target")]])
             .append_query_results([no_tombstones()])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db).await;
 
