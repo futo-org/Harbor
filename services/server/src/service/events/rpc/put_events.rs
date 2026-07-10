@@ -190,7 +190,6 @@ async fn process_event(
                 content_row.id,
                 content,
                 &key.identity,
-                ctx.trusted_moderator.as_deref(),
             )
             .await?;
         }

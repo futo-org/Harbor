@@ -6,9 +6,12 @@ use ::entity::{
 };
 use polycentric_common::models::collections;
 use sea_orm::{
-    FromQueryResult,
+    Condition, FromQueryResult,
     entity::prelude::*,
-    sea_query::{Expr, IntoCondition, IntoValueTuple, Query as SeaQuery},
+    sea_query::{
+        Expr, IntoCondition, IntoValueTuple, PostgresQueryBuilder,
+        Query as SeaQuery,
+    },
     *,
 };
 use serde::{Deserialize, Serialize};
@@ -69,9 +72,17 @@ impl Query {
         limit: u64,
         cursor_filter: &Option<CursorFilter>,
         omit_labels: &[String],
+        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, None, cursor_filter, omit_labels)
-            .await
+        Self::do_list_feed_events(
+            db,
+            limit,
+            None,
+            cursor_filter,
+            omit_labels,
+            trusted_moderator,
+        )
+        .await
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
@@ -84,6 +95,7 @@ impl Query {
         limit: u64,
         cursor_filter: &Option<CursorFilter>,
         omit_labels: &[String],
+        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(
             db,
@@ -91,6 +103,7 @@ impl Query {
             Some(identities),
             cursor_filter,
             omit_labels,
+            trusted_moderator,
         )
         .await
     }
@@ -101,6 +114,7 @@ impl Query {
         only_identities: Option<Vec<String>>,
         cursor_filter: &Option<CursorFilter>,
         omit_labels: &[String],
+        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let cursor_filter = cursor_filter
             .as_ref()
@@ -122,7 +136,12 @@ impl Query {
 
         // Drop any events with omitted labels before pagination
         if !omit_labels.is_empty() {
-            query = query.filter(omit_feed_event_if_label_present(omit_labels));
+            if let Some(moderator) = trusted_moderator {
+                query = query.filter(omit_feed_event_if_label_present(
+                    moderator,
+                    omit_labels,
+                ));
+            }
         }
 
         let mut sea_cursor = query.cursor_by(FeedMarker::cols());
@@ -198,19 +217,27 @@ impl Query {
             .await
     }
 
-    /// Fetch label events that target any of `keys`. Only labels that
-    /// come from the server's trusted moderation service are returned.
+    /// Fetch label events that target any of `keys`. Only labels from
+    /// the trusted moderator are returned, using a join through
+    /// `content_label` → `content` → `events` to check the label
+    /// author's identity. Returns empty when no moderator is configured.
     pub async fn list_labels_for_event_keys(
         db: &DbConn,
         keys: &[TargetEventKey],
+        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let Some(moderator) = trusted_moderator else {
+            return Ok(Vec::new());
+        };
+
         if keys.is_empty() {
             return Ok(Vec::new());
         }
 
-        let mut filter = Condition::any();
+        // Create filtering clause for the relevant event keys
+        let mut event_key_filter = Condition::any();
         for key in keys {
-            filter = filter.add(
+            event_key_filter = event_key_filter.add(
                 Condition::all()
                     .add(
                         ContentLabelModel::Column::EventKeyCollection
@@ -235,18 +262,68 @@ impl Query {
             );
         }
 
-        // Note that we're obtaining labels from the `content_labels` table,
-        // which separates each label onto its own row, even though the
-        // `Labels` event in the protocol may describe multiple for a single
-        // target event.
-        let label_rows = ContentLabelModel::Entity::find()
-            .filter(filter)
-            .all(db)
-            .await?;
+        // Join label information with the identity that signed the label,
+        // then filter based on the event key filter constructed above. Also,
+        // only select events from the trusted moderator identity
+        let mut query = SeaQuery::select();
+        query
+            .column((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::ContentId,
+            ))
+            .from(ContentLabelModel::Entity)
+            .inner_join(
+                ContentModel::Entity,
+                Expr::col((
+                    ContentLabelModel::Entity,
+                    ContentLabelModel::Column::ContentId,
+                ))
+                .equals((ContentModel::Entity, ContentModel::Column::Id)),
+            )
+            .inner_join(
+                EventModel::Entity,
+                Expr::col((
+                    EventModel::Entity,
+                    EventModel::Column::ContentDigestType,
+                ))
+                .equals((
+                    ContentModel::Entity,
+                    ContentModel::Column::DigestType,
+                ))
+                .and(
+                    Expr::col((
+                        EventModel::Entity,
+                        EventModel::Column::ContentDigestBytes,
+                    ))
+                    .equals((
+                        ContentModel::Entity,
+                        ContentModel::Column::DigestBytes,
+                    )),
+                ),
+            )
+            .and_where(
+                Expr::col((EventModel::Entity, EventModel::Column::Identity))
+                    .equals(moderator.to_owned()),
+            )
+            .and_where(event_key_filter.into());
 
-        // Get every content ID that has a label
+        // Build the query
+        let (sql, values) = query.build(PostgresQueryBuilder);
+        let stmt = Statement::from_sql_and_values(
+            db.get_database_backend(),
+            &sql,
+            values,
+        );
+
+        // Collect the content IDs that match the query
+        #[derive(Debug, FromQueryResult)]
+        struct LabelContentId {
+            content_id: i64,
+        }
+        let label_ids: Vec<LabelContentId> =
+            LabelContentId::find_by_statement(stmt).all(db).await?;
         let mut content_ids: Vec<i64> =
-            label_rows.into_iter().map(|row| row.content_id).collect();
+            label_ids.into_iter().map(|r| r.content_id).collect();
         content_ids.sort_unstable();
         content_ids.dedup();
 
@@ -254,7 +331,7 @@ impl Query {
             return Ok(Vec::new());
         }
 
-        // Turn content IDs into `EventWithContentRow` entries
+        // Return event entities that match the content IDs
         EventModel::Entity::find()
             .select_also(ContentModel::Entity)
             .join(JoinType::LeftJoin, content_join())
@@ -441,14 +518,48 @@ impl Query {
     }
 }
 
-/// Creates a sub-expression to include in a feed query which first selects all
-/// label events targeting any given feed event, then checks whether the label
-/// value is included in `omit_labels`, and will filter the feed event as
-/// appropriate. Caller must ensure `omit_labels` is not empty.
-fn omit_feed_event_if_label_present(omit_labels: &[String]) -> Expr {
+/// Creates a sub-expression to include in a feed query which finds all
+/// label events from the trusted moderator targeting any given feed event,
+/// using a join through `content_label` → `content` → `events` to check
+/// the label author's identity. Caller must ensure `omit_labels` is not
+/// empty.
+fn omit_feed_event_if_label_present(
+    trusted_moderator: &str,
+    omit_labels: &[String],
+) -> Expr {
     let mut sub = SeaQuery::select();
     sub.expr(Expr::val(1))
         .from(ContentLabelModel::Entity)
+        .inner_join(
+            ContentModel::Entity,
+            Expr::col((
+                ContentLabelModel::Entity,
+                ContentLabelModel::Column::ContentId,
+            ))
+            .equals((ContentModel::Entity, ContentModel::Column::Id)),
+        )
+        .inner_join(
+            EventModel::Entity,
+            Expr::col((
+                EventModel::Entity,
+                EventModel::Column::ContentDigestType,
+            ))
+            .equals((ContentModel::Entity, ContentModel::Column::DigestType))
+            .and(
+                Expr::col((
+                    EventModel::Entity,
+                    EventModel::Column::ContentDigestBytes,
+                ))
+                .equals((
+                    ContentModel::Entity,
+                    ContentModel::Column::DigestBytes,
+                )),
+            ),
+        )
+        .and_where(
+            Expr::col((EventModel::Entity, EventModel::Column::Identity))
+                .equals(trusted_moderator.to_owned()),
+        )
         .and_where(
             Expr::col((
                 ContentLabelModel::Entity,
@@ -549,7 +660,10 @@ mod tests {
 
         let query = EventModel::Entity::find()
             .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+            .filter(omit_feed_event_if_label_present(
+                "trusted_moderator",
+                &["spam".into()],
+            ));
         query.all(&db).await.unwrap();
 
         let sql = format!("{:?}", db.into_transaction_log());
@@ -561,6 +675,14 @@ mod tests {
             sql.contains("content_label"),
             "NOT EXISTS should reference content_label table: {sql}"
         );
+        assert!(
+            sql.contains("INNER JOIN"),
+            "NOT EXISTS should join content_label -> content -> events: {sql}"
+        );
+        assert!(
+            sql.contains("events"),
+            "NOT EXISTS should reference events table: {sql}"
+        );
     }
 
     #[tokio::test]
@@ -571,10 +693,10 @@ mod tests {
 
         let query = EventModel::Entity::find()
             .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(omit_feed_event_if_label_present(&[
-                "spam".into(),
-                "hate".into(),
-            ]));
+            .filter(omit_feed_event_if_label_present(
+                "trusted_moderator",
+                &["spam".into(), "hate".into()],
+            ));
         query.all(&db).await.unwrap();
 
         let sql = format!("{:?}", db.into_transaction_log());
@@ -595,7 +717,10 @@ mod tests {
 
         let query = EventModel::Entity::find()
             .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+            .filter(omit_feed_event_if_label_present(
+                "trusted_moderator",
+                &["spam".into()],
+            ));
         query.all(&db).await.unwrap();
 
         let sql = format!("{:?}", db.into_transaction_log());
@@ -635,7 +760,10 @@ mod tests {
         // SQL, so we verify the query succeeds (all can be executed).
         let query = EventModel::Entity::find()
             .filter(EventModel::Column::Collection.eq(FEED_COLLECTION))
-            .filter(omit_feed_event_if_label_present(&["spam".into()]));
+            .filter(omit_feed_event_if_label_present(
+                "trusted_moderator",
+                &["spam".into()],
+            ));
         query
             .all(&db)
             .await

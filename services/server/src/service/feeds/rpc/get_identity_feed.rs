@@ -60,10 +60,10 @@ async fn fetch(
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
         &params.common.omit_labels,
+        ctx.trusted_moderator.as_deref(),
     )
     .await
     .map_err(map_db_err)?;
-
     Ok(feeds_pipeline::finalize_fetch(rows, &params.common))
 }
 

@@ -81,6 +81,7 @@ async fn fetch(
         params.limit + 1, // over-fetch for pagination
         params.after_id,
         &params.omit_labels,
+        ctx.trusted_moderator.as_deref(),
     )
     .await
     .map_err(map_db_err)?;
@@ -133,9 +134,13 @@ async fn hydrate(
     // Fetch label events for trigger events only: we assume recipient is the target's
     // author and does not object to their own posts.
     let label_fut = async {
-        FeedsRepository::list_labels_for_event_keys(&ctx.db, &trigger_keys)
-            .await
-            .map_err(map_db_err)
+        FeedsRepository::list_labels_for_event_keys(
+            &ctx.db,
+            &trigger_keys,
+            ctx.trusted_moderator.as_deref(),
+        )
+        .await
+        .map_err(map_db_err)
     };
 
     // Author identity, profile, and moderation label events all ship as hints.

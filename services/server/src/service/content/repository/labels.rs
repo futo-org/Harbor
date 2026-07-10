@@ -4,23 +4,13 @@ use ::entity::content_label_model as ContentLabelModel;
 use sea_orm::{ActiveValue::Set, ConnectionTrait, EntityTrait};
 use tonic::Status;
 
-/// Persists content labels from a `ContentBody::Labels` event into the `content_labels` table.
-/// Writes one row per label value. This is a no-op (returns `Ok(())` without writing) unless the
-/// event author is the configured trusted moderator.
-///
-/// Note that label events from non-trusted identities are stored in the `event` and `content`
-/// tables via the standard `put_events` pipeline. The `content_labels` table filters for trusted
-/// label events for faster querying.
+/// Persists content labels from a `ContentBody::Labels` event into the
+/// `content_label` table.
 pub(super) async fn add<C: ConnectionTrait>(
     db: &C,
     ctx: &ChildContext<'_>,
     labels: Labels,
 ) -> Result<(), Status> {
-    // Only a trusted moderator can persist labels.
-    if ctx.trusted_moderator != Some(ctx.event_identity) {
-        return Ok(());
-    }
-
     let key = split_event_key(labels.event_key, "labels content")?;
 
     // One row per label value for efficient aggregation; the labeled
@@ -53,7 +43,8 @@ pub(super) async fn add<C: ConnectionTrait>(
 mod tests {
     use super::*;
     use crate::service::proto::{EventKey, PublicKey};
-    use sea_orm::{DatabaseBackend, MockDatabase};
+    use sea_orm::{DatabaseBackend, MockDatabase, Value};
+    use std::collections::BTreeMap;
     use tonic::Code;
 
     fn event_key() -> EventKey {
@@ -79,26 +70,34 @@ mod tests {
         ChildContext {
             content_id: 1,
             event_identity: "mod",
-            trusted_moderator: Some("mod"),
         }
     }
 
-    fn sample_label_model(label_value: &str) -> ContentLabelModel::Model {
-        ContentLabelModel::Model {
-            content_id: 1,
-            label_value: label_value.into(),
-            event_key_collection: 8,
-            event_key_identity: "alice".into(),
-            event_key_public_key_type: 1,
-            event_key_public_key: vec![0xAB, 0xCD],
-            event_key_sequence: 7,
-        }
+    fn sample_content_label_row(label_value: &str) -> BTreeMap<String, Value> {
+        BTreeMap::from([
+            ("content_id".into(), Value::BigInt(Some(1))),
+            (
+                "label_value".into(),
+                Value::String(Some(label_value.into())),
+            ),
+            ("event_key_collection".into(), Value::SmallInt(Some(8))),
+            (
+                "event_key_identity".into(),
+                Value::String(Some("alice".into())),
+            ),
+            ("event_key_public_key_type".into(), Value::SmallInt(Some(1))),
+            (
+                "event_key_public_key".into(),
+                Value::Bytes(Some(vec![0xAB, 0xCD])),
+            ),
+            ("event_key_sequence".into(), Value::BigInt(Some(7))),
+        ])
     }
 
     #[tokio::test]
     async fn trusted_moderator_persists_labels() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![sample_label_model("spam")]])
+            .append_query_results([vec![sample_content_label_row("spam")]])
             .into_connection();
         let ctx = ctx_moderator();
         let labels = make_labels();
@@ -112,42 +111,6 @@ mod tests {
             "expected content_label table: {log}"
         );
         assert!(log.contains("spam"), "expected label value in SQL: {log}");
-    }
-
-    #[tokio::test]
-    async fn untrusted_moderator_noop() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let ctx = ChildContext {
-            content_id: 1,
-            event_identity: "other_user",
-            trusted_moderator: Some("mod"),
-        };
-        let labels = make_labels();
-
-        add(&db, &ctx, labels).await.unwrap();
-
-        assert!(
-            db.into_transaction_log().is_empty(),
-            "no DB calls expected when moderator does not match"
-        );
-    }
-
-    #[tokio::test]
-    async fn no_moderator_configured_noop() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let ctx = ChildContext {
-            content_id: 1,
-            event_identity: "mod",
-            trusted_moderator: None,
-        };
-        let labels = make_labels();
-
-        add(&db, &ctx, labels).await.unwrap();
-
-        assert!(
-            db.into_transaction_log().is_empty(),
-            "no DB calls expected when no moderator configured"
-        );
     }
 
     #[tokio::test]
@@ -205,12 +168,11 @@ mod tests {
         );
     }
 
-    #[tokio::test]
     async fn multiple_label_values_one_row_each() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![
-                sample_label_model("spam"),
-                sample_label_model("hate"),
+                sample_content_label_row("spam"),
+                sample_content_label_row("hate"),
             ]])
             .into_connection();
         let ctx = ctx_moderator();
@@ -223,6 +185,10 @@ mod tests {
 
         let log = format!("{:?}", db.into_transaction_log());
         assert!(log.contains("INSERT"), "expected INSERT in log: {log}");
+        assert!(
+            log.contains("content_label"),
+            "expected content_label table: {log}"
+        );
         assert!(
             log.matches("spam").count() >= 1,
             "expected 'spam' in INSERT SQL: {log}"

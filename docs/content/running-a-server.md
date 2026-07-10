@@ -154,7 +154,6 @@ deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
 delete permission on the bucket, while the server's own credentials do not.
 
 ### Moderation labels
-
 Beyond blob deletion and `Report` events, the moderation service can also
 **label** content by publishing a `Labels` event (collection 7, defined in
 [protocol → Labels](/protocol/data-model#labels)). A label is a string
@@ -162,16 +161,12 @@ identifying the kind of violation detected — the vocabulary used by FUTO's
 service is `hate`, `self-harm`, `sexual`, `porn`, and `graphic-media`.
 
 #### Trusting a moderation service
-
 Set the **single** moderation service the server trusts via an environment
 variable `POLYCENTRIC_MODERATION_IDENTITY`. It should be equal to the hex
-identity string of the trusted moderation service. When unset, labels are
-stored/relayed but never indexed or served.
-
-The server indexes `Labels` events from this identity into a `content_label`
-table and serves them to clients alongside feed responses. Labels from **any
-other identity** are stored and synced as normal events but **not** indexed and
-have no effect on feeds.
+identity string of the trusted moderation service. Until the identity is
+set, clients will not be served label events alongside the feed events
+such that they can filter locally, nor will the labels they wish to omit
+be actually omitted by the server during feed requests.
 
 #### Client filtering contract
 
@@ -202,13 +197,11 @@ The `Labels` event always target a post or profile event, and indirectly
 target any media or blob linked to that event.
 
 #### Changing the trusted service
-
-Re-pointing `POLYCENTRIC_MODERATION_IDENTITY` to a different moderation service
-does **not** refresh the labels on previously labeled content. Labels indexed
-under the previous service persist in the database and continue to be served
-alongside any new labels from the replacement service. If you wish to clear the
-labels of a previous moderation service, clear the `content_labels` table of
-the Postgres event/content database.
+Any identity can sign label events for any content, even if the server only
+trusts one identity. The server stores all such label events. Thus, setting a
+new `POLYCENTRIC_MODERATION_IDENTITY` will instantly update the moderation
+labels served. Following requests will only serve the labels the server has
+stored that match the trusted identity.
 
 ## TLS and production
 

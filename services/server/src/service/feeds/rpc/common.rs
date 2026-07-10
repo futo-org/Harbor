@@ -223,9 +223,13 @@ pub async fn hydrate(
             .map_err(map_db_err)
     };
     let labels_fut = async {
-        FeedsRepository::list_labels_for_event_keys(&ctx.db, &label_keys)
-            .await
-            .map_err(map_db_err)
+        FeedsRepository::list_labels_for_event_keys(
+            &ctx.db,
+            &label_keys,
+            ctx.trusted_moderator.as_deref(),
+        )
+        .await
+        .map_err(map_db_err)
     };
 
     let (
