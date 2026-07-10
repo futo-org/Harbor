@@ -11,43 +11,226 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { EventKey } from "./event_key";
+import { EventHint } from "./events";
 import { EventBundle } from "./events";
 // Separate from verifications.proto: that file is imported by content.proto,
 // so importing events.proto (for EventBundle) there would be a cyclic import.
 
 /**
- * @generated from protobuf message polycentric.v2.ListClaimsRequest
+ * A claim with the verification state around it, so lists can show each
+ * claim's verified status from a single response.
+ *
+ * @generated from protobuf message polycentric.v2.VerificationClaimBundle
  */
-export interface ListClaimsRequest {
+export interface VerificationClaimBundle {
+    /**
+     * The VerificationClaim event.
+     *
+     * @generated from protobuf field: polycentric.v2.EventBundle claim = 1
+     */
+    claim?: EventBundle;
+    /**
+     * VerificationTarget events published by the claim's owner — who has
+     * been asked to verify.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle targets = 2
+     */
+    targets: EventBundle[];
+    /**
+     * VerificationVerify events. The verifying identity is each
+     * event's own signer.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle verifies = 3
+     */
+    verifies: EventBundle[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListVerificationClaimsRequest
+ */
+export interface ListVerificationClaimsRequest {
     /**
      * @generated from protobuf field: string claimed_by_identity = 1
      */
     claimedByIdentity: string;
 }
 /**
- * @generated from protobuf message polycentric.v2.ListClaimsResponse
+ * @generated from protobuf message polycentric.v2.ListVerificationClaimsResponse
  */
-export interface ListClaimsResponse {
+export interface ListVerificationClaimsResponse {
     /**
+     * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
+     */
+    claimBundles: VerificationClaimBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListVerificationTargetsRequest
+ */
+export interface ListVerificationTargetsRequest {
+    /**
+     * @generated from protobuf field: polycentric.v2.EventKey claim_event_key = 1
+     */
+    claimEventKey?: EventKey;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListVerificationTargetsResponse
+ */
+export interface ListVerificationTargetsResponse {
+    /**
+     * VerificationTarget events for the claim, published by the claim's
+     * owner — who has been asked to verify. Deleted targets are excluded.
+     *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListVerificationVerifiesRequest
+ */
+export interface ListVerificationVerifiesRequest {
+    /**
+     * @generated from protobuf field: polycentric.v2.EventKey claim_event_key = 1
+     */
+    claimEventKey?: EventKey;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListVerificationVerifiesResponse
+ */
+export interface ListVerificationVerifiesResponse {
+    /**
+     * VerificationVerify events for the claim, excluding deleted ones.
+     * The verifying identity is each event's own signer.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
+     */
+    eventBundles: EventBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListTargetedVerificationClaimsRequest
+ */
+export interface ListTargetedVerificationClaimsRequest {
+    /**
+     * @generated from protobuf field: string target_identity = 1
+     */
+    targetIdentity: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListTargetedVerificationClaimsResponse
+ */
+export interface ListTargetedVerificationClaimsResponse {
+    /**
+     * Claims whose owner targeted `target_identity` — the identity's inbox
+     * of verification requests.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
+     */
+    claimBundles: VerificationClaimBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class ListClaimsRequest$Type extends MessageType<ListClaimsRequest> {
+class VerificationClaimBundle$Type extends MessageType<VerificationClaimBundle> {
     constructor() {
-        super("polycentric.v2.ListClaimsRequest", [
+        super("polycentric.v2.VerificationClaimBundle", [
+            { no: 1, name: "claim", kind: "message", T: () => EventBundle },
+            { no: 2, name: "targets", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 3, name: "verifies", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+        ]);
+    }
+    create(value?: PartialMessage<VerificationClaimBundle>): VerificationClaimBundle {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.targets = [];
+        message.verifies = [];
+        if (value !== undefined)
+            reflectionMergePartial<VerificationClaimBundle>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: VerificationClaimBundle): VerificationClaimBundle {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventBundle claim */ 1:
+                    message.claim = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.claim);
+                    break;
+                case /* repeated polycentric.v2.EventBundle targets */ 2:
+                    message.targets.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventBundle verifies */ 3:
+                    message.verifies.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: VerificationClaimBundle, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventBundle claim = 1; */
+        if (message.claim)
+            EventBundle.internalBinaryWrite(message.claim, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventBundle targets = 2; */
+        for (let i = 0; i < message.targets.length; i++)
+            EventBundle.internalBinaryWrite(message.targets[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventBundle verifies = 3; */
+        for (let i = 0; i < message.verifies.length; i++)
+            EventBundle.internalBinaryWrite(message.verifies[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.VerificationClaimBundle
+ */
+export const VerificationClaimBundle = new VerificationClaimBundle$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListVerificationClaimsRequest$Type extends MessageType<ListVerificationClaimsRequest> {
+    constructor() {
+        super("polycentric.v2.ListVerificationClaimsRequest", [
             { no: 1, name: "claimed_by_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<ListClaimsRequest>): ListClaimsRequest {
+    create(value?: PartialMessage<ListVerificationClaimsRequest>): ListVerificationClaimsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.claimedByIdentity = "";
         if (value !== undefined)
-            reflectionMergePartial<ListClaimsRequest>(this, message, value);
+            reflectionMergePartial<ListVerificationClaimsRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListClaimsRequest): ListClaimsRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationClaimsRequest): ListVerificationClaimsRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -66,7 +249,7 @@ class ListClaimsRequest$Type extends MessageType<ListClaimsRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: ListClaimsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: ListVerificationClaimsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string claimed_by_identity = 1; */
         if (message.claimedByIdentity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.claimedByIdentity);
@@ -77,30 +260,35 @@ class ListClaimsRequest$Type extends MessageType<ListClaimsRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.ListClaimsRequest
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationClaimsRequest
  */
-export const ListClaimsRequest = new ListClaimsRequest$Type();
+export const ListVerificationClaimsRequest = new ListVerificationClaimsRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ListClaimsResponse$Type extends MessageType<ListClaimsResponse> {
+class ListVerificationClaimsResponse$Type extends MessageType<ListVerificationClaimsResponse> {
     constructor() {
-        super("polycentric.v2.ListClaimsResponse", [
-            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+        super("polycentric.v2.ListVerificationClaimsResponse", [
+            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
-    create(value?: PartialMessage<ListClaimsResponse>): ListClaimsResponse {
+    create(value?: PartialMessage<ListVerificationClaimsResponse>): ListVerificationClaimsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.eventBundles = [];
+        message.claimBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
-            reflectionMergePartial<ListClaimsResponse>(this, message, value);
+            reflectionMergePartial<ListVerificationClaimsResponse>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListClaimsResponse): ListClaimsResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationClaimsResponse): ListVerificationClaimsResponse {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
-                    message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated polycentric.v2.VerificationClaimBundle claim_bundles */ 1:
+                    message.claimBundles.push(VerificationClaimBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -113,10 +301,13 @@ class ListClaimsResponse$Type extends MessageType<ListClaimsResponse> {
         }
         return message;
     }
-    internalBinaryWrite(message: ListClaimsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated polycentric.v2.EventBundle event_bundles = 1; */
-        for (let i = 0; i < message.eventBundles.length; i++)
-            EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+    internalBinaryWrite(message: ListVerificationClaimsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1; */
+        for (let i = 0; i < message.claimBundles.length; i++)
+            VerificationClaimBundle.internalBinaryWrite(message.claimBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -124,12 +315,319 @@ class ListClaimsResponse$Type extends MessageType<ListClaimsResponse> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.ListClaimsResponse
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationClaimsResponse
  */
-export const ListClaimsResponse = new ListClaimsResponse$Type();
+export const ListVerificationClaimsResponse = new ListVerificationClaimsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListVerificationTargetsRequest$Type extends MessageType<ListVerificationTargetsRequest> {
+    constructor() {
+        super("polycentric.v2.ListVerificationTargetsRequest", [
+            { no: 1, name: "claim_event_key", kind: "message", T: () => EventKey }
+        ]);
+    }
+    create(value?: PartialMessage<ListVerificationTargetsRequest>): ListVerificationTargetsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<ListVerificationTargetsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationTargetsRequest): ListVerificationTargetsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey claim_event_key */ 1:
+                    message.claimEventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.claimEventKey);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListVerificationTargetsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey claim_event_key = 1; */
+        if (message.claimEventKey)
+            EventKey.internalBinaryWrite(message.claimEventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationTargetsRequest
+ */
+export const ListVerificationTargetsRequest = new ListVerificationTargetsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListVerificationTargetsResponse$Type extends MessageType<ListVerificationTargetsResponse> {
+    constructor() {
+        super("polycentric.v2.ListVerificationTargetsResponse", [
+            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+        ]);
+    }
+    create(value?: PartialMessage<ListVerificationTargetsResponse>): ListVerificationTargetsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventBundles = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListVerificationTargetsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationTargetsResponse): ListVerificationTargetsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
+                    message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListVerificationTargetsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.EventBundle event_bundles = 1; */
+        for (let i = 0; i < message.eventBundles.length; i++)
+            EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationTargetsResponse
+ */
+export const ListVerificationTargetsResponse = new ListVerificationTargetsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListVerificationVerifiesRequest$Type extends MessageType<ListVerificationVerifiesRequest> {
+    constructor() {
+        super("polycentric.v2.ListVerificationVerifiesRequest", [
+            { no: 1, name: "claim_event_key", kind: "message", T: () => EventKey }
+        ]);
+    }
+    create(value?: PartialMessage<ListVerificationVerifiesRequest>): ListVerificationVerifiesRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<ListVerificationVerifiesRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationVerifiesRequest): ListVerificationVerifiesRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey claim_event_key */ 1:
+                    message.claimEventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.claimEventKey);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListVerificationVerifiesRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey claim_event_key = 1; */
+        if (message.claimEventKey)
+            EventKey.internalBinaryWrite(message.claimEventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationVerifiesRequest
+ */
+export const ListVerificationVerifiesRequest = new ListVerificationVerifiesRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListVerificationVerifiesResponse$Type extends MessageType<ListVerificationVerifiesResponse> {
+    constructor() {
+        super("polycentric.v2.ListVerificationVerifiesResponse", [
+            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+        ]);
+    }
+    create(value?: PartialMessage<ListVerificationVerifiesResponse>): ListVerificationVerifiesResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventBundles = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListVerificationVerifiesResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListVerificationVerifiesResponse): ListVerificationVerifiesResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
+                    message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListVerificationVerifiesResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.EventBundle event_bundles = 1; */
+        for (let i = 0; i < message.eventBundles.length; i++)
+            EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListVerificationVerifiesResponse
+ */
+export const ListVerificationVerifiesResponse = new ListVerificationVerifiesResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListTargetedVerificationClaimsRequest$Type extends MessageType<ListTargetedVerificationClaimsRequest> {
+    constructor() {
+        super("polycentric.v2.ListTargetedVerificationClaimsRequest", [
+            { no: 1, name: "target_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ListTargetedVerificationClaimsRequest>): ListTargetedVerificationClaimsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.targetIdentity = "";
+        if (value !== undefined)
+            reflectionMergePartial<ListTargetedVerificationClaimsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListTargetedVerificationClaimsRequest): ListTargetedVerificationClaimsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string target_identity */ 1:
+                    message.targetIdentity = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListTargetedVerificationClaimsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string target_identity = 1; */
+        if (message.targetIdentity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.targetIdentity);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListTargetedVerificationClaimsRequest
+ */
+export const ListTargetedVerificationClaimsRequest = new ListTargetedVerificationClaimsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListTargetedVerificationClaimsResponse$Type extends MessageType<ListTargetedVerificationClaimsResponse> {
+    constructor() {
+        super("polycentric.v2.ListTargetedVerificationClaimsResponse", [
+            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+        ]);
+    }
+    create(value?: PartialMessage<ListTargetedVerificationClaimsResponse>): ListTargetedVerificationClaimsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.claimBundles = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListTargetedVerificationClaimsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListTargetedVerificationClaimsResponse): ListTargetedVerificationClaimsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.VerificationClaimBundle claim_bundles */ 1:
+                    message.claimBundles.push(VerificationClaimBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListTargetedVerificationClaimsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1; */
+        for (let i = 0; i < message.claimBundles.length; i++)
+            VerificationClaimBundle.internalBinaryWrite(message.claimBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListTargetedVerificationClaimsResponse
+ */
+export const ListTargetedVerificationClaimsResponse = new ListTargetedVerificationClaimsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.VerificationsService
  */
 export const VerificationsService = new ServiceType("polycentric.v2.VerificationsService", [
-    { name: "ListClaims", options: {}, I: ListClaimsRequest, O: ListClaimsResponse }
+    { name: "ListVerificationClaims", options: {}, I: ListVerificationClaimsRequest, O: ListVerificationClaimsResponse },
+    { name: "ListVerificationTargets", options: {}, I: ListVerificationTargetsRequest, O: ListVerificationTargetsResponse },
+    { name: "ListVerificationVerifies", options: {}, I: ListVerificationVerifiesRequest, O: ListVerificationVerifiesResponse },
+    { name: "ListTargetedVerificationClaims", options: {}, I: ListTargetedVerificationClaimsRequest, O: ListTargetedVerificationClaimsResponse }
 ]);

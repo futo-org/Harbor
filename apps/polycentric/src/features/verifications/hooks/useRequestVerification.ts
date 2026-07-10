@@ -66,7 +66,8 @@ export default function useRequestVerification() {
           console.warn('Failed to push verification target to servers:', e);
         }
 
-        // Refresh the pending-requests list for this verifier.
+        // Refresh the pending-requests list for this verifier and the
+        // claim's requested-verifiers list.
         if (identityKey) {
           invalidateQuery(client, [
             'verification-requests',
@@ -74,6 +75,7 @@ export default function useRequestVerification() {
             identity,
           ]);
         }
+        invalidateQuery(client, ['verification-targets', claimId]);
       } finally {
         setPending(false);
       }

@@ -1,5 +1,4 @@
 import { Text } from '@/src/common/components';
-import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { List } from '@/src/common/components/List';
@@ -15,13 +14,9 @@ import {
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { router, useLocalSearchParams } from 'expo-router';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  View,
-} from 'react-native';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from './FollowButton';
 import {
@@ -130,52 +125,15 @@ export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
 // Avatar + name row linking to the identity's profile.
 function IdentityRow({ identity }: { identity: string }) {
   const { theme } = useTheme();
-  const profile = useProfile(identity);
   const { identityKey } = useCurrentIdentity();
-  const name = profile.name ? truncateName(profile.name, 32) : null;
   const isSelf = identityKey === identity;
 
   return (
-    <Pressable
+    <ProfileRow
+      identity={identity}
       onPress={() => router.push(Routes.tabs.profile(identity))}
-      style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
-      ]}
-    >
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_md,
-          Atoms.px_lg,
-          Atoms.py_md,
-          { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
-        ]}
-      >
-        <ProfileAvatar identityKey={identity} size="md" />
-        <View style={Atoms.flex_1}>
-          <Text
-            variant="secondary"
-            fontWeight="semibold"
-            numberOfLines={1}
-            selectable={false}
-          >
-            {name ?? 'Anonymous'}
-          </Text>
-          <Text
-            variant="small"
-            color="neutral_500"
-            numberOfLines={1}
-            selectable={false}
-            style={{ fontFamily: 'monospace' }}
-          >
-            {shortenIdentityId(identity)}
-          </Text>
-        </View>
-        {!isSelf && <FollowButton identity={identity} />}
-      </View>
-    </Pressable>
+      style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
+      trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
+    />
   );
 }

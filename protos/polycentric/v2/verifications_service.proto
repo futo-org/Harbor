@@ -1,19 +1,76 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
 
 // Separate from verifications.proto: that file is imported by content.proto,
 // so importing events.proto (for EventBundle) there would be a cyclic import.
 
-message ListClaimsRequest {
+// A claim with the verification state around it, so lists can show each
+// claim's verified status from a single response.
+message VerificationClaimBundle {
+  // The VerificationClaim event.
+  EventBundle claim = 1;
+  // VerificationTarget events published by the claim's owner
+  repeated EventBundle targets = 2;
+  // VerificationVerify events.
+  repeated EventBundle verifies = 3;
+}
+
+message ListVerificationClaimsRequest {
   string claimed_by_identity = 1;
 }
 
-message ListClaimsResponse {
+message ListVerificationClaimsResponse {
+  repeated VerificationClaimBundle claim_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
+}
+
+message ListVerificationTargetsRequest {
+  EventKey claim_event_key = 1;
+}
+
+message ListVerificationTargetsResponse {
+  // VerificationTarget events for the claim, published by the claim's
+  // owner — who has been asked to verify.
   repeated EventBundle event_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
+}
+
+message ListVerificationVerifiesRequest {
+  EventKey claim_event_key = 1;
+}
+
+message ListVerificationVerifiesResponse {
+  // VerificationVerify events for the claim.
+  repeated EventBundle event_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
+}
+
+message ListTargetedVerificationClaimsRequest {
+  string target_identity = 1;
+}
+
+message ListTargetedVerificationClaimsResponse {
+  // Claims whose owner targeted `target_identity`. The 'inbox'.
+  repeated VerificationClaimBundle claim_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
 }
 
 service VerificationsService {
-  rpc ListClaims(ListClaimsRequest) returns (ListClaimsResponse);
+  // VerificationClaim events published by an identity, with each claim's
+  // targets and verifies.
+  rpc ListVerificationClaims(ListVerificationClaimsRequest) returns (ListVerificationClaimsResponse);
+  // VerificationTarget events for a claim: who has been asked to verify.
+  rpc ListVerificationTargets(ListVerificationTargetsRequest) returns (ListVerificationTargetsResponse);
+  // VerificationVerify events for a claim: who has verified it.
+  rpc ListVerificationVerifies(ListVerificationVerifiesRequest) returns (ListVerificationVerifiesResponse);
+  // Claims whose owner asked `target_identity` for verification, with each
+  // claim's targets and verifies.
+  rpc ListTargetedVerificationClaims(ListTargetedVerificationClaimsRequest) returns (ListTargetedVerificationClaimsResponse);
 }

@@ -4,6 +4,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { DecodedClaim } from '../hooks/useClaimById';
+import { ClaimVerificationStatus } from '../utils/claim-status';
 import { CLAIM_TYPES } from '../utils/forms';
 import { resolveClaimTitle } from '../utils/render';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
@@ -18,7 +19,7 @@ export function ClaimListItem({
   onPress,
   showOwner = false,
 }: {
-  claim: DecodedClaim;
+  claim: DecodedClaim & { status?: ClaimVerificationStatus };
   onPress?: () => void;
   // Show who made the claim — for lists that aren't the viewer's own.
   showOwner?: boolean;
@@ -82,7 +83,10 @@ export function ClaimListItem({
             color={claimType?.color}
           />
           <TimeChip createdAt={claim.createdAt} />
-          <StatusChip />
+          <StatusChip
+            verifiedCount={claim.status?.verifiedCount}
+            totalCount={claim.status?.totalCount}
+          />
         </View>
       </View>
     </Pressable>

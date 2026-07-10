@@ -1,5 +1,4 @@
 import { Button, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
@@ -8,10 +7,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ClaimField, useClaimById } from '../hooks/useClaimById';
+import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
 import { ClaimMenu } from './ClaimMenu';
+import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { RequestVerificationSheet } from '../RequestVerificationSheet';
 import { resolveClaimTitle } from '../utils/render';
 import { Toolbar } from './toolbar';
+import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ViewClaimScreen() {
@@ -37,6 +39,8 @@ export default function ViewClaimScreen() {
   );
 
   const [sheetOpen, setSheetOpen] = useState(requestVerification === '1');
+
+  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
 
   const { title, bodyFields } = useMemo<{
     title: string;
@@ -94,34 +98,10 @@ export default function ViewClaimScreen() {
                   </Text>
 
                   {/* Verified status */}
-                  <View
-                    style={[
-                      Atoms.flex_row,
-                      Atoms.align_center,
-                      Atoms.gap_xs,
-                      Atoms.rounded_full,
-                      Atoms.pt_sm,
-                      Atoms.pb_sm,
-                      Atoms.pl_md,
-                      Atoms.pr_md,
-                      Atoms.self_start,
-                      Atoms.cursor_default,
-                      {
-                        borderWidth: 1,
-                        borderColor: theme.palette.neutral_25,
-                      },
-                    ]}
-                  >
-                    <Icon name="close" color="neutral_600" />
-                    <Text
-                      selectable={false}
-                      fontSize={'sm'}
-                      color="neutral_600"
-                      fontWeight="semibold"
-                    >
-                      Not verified
-                    </Text>
-                  </View>
+                  <StatusChip
+                    verifiedCount={verifiedCount}
+                    totalCount={totalCount}
+                  />
                 </View>
 
                 <View style={Atoms.gap_md}>
@@ -147,6 +127,8 @@ export default function ViewClaimScreen() {
                     </View>
                   ))}
                 </View>
+
+                <ClaimVerifiersList verifiers={verifiers} />
 
                 <View style={[Atoms.flex_1]} />
                 <Toolbar

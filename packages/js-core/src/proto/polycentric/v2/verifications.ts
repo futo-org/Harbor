@@ -137,13 +137,13 @@ export interface VerificationTarget {
     targetIdentities: string[];
 }
 /**
- * ── A verifier's attestation ──
+ * ── A verification of a claim ──
  *
  * @generated from protobuf message polycentric.v2.VerificationVerify
  */
 export interface VerificationVerify {
     /**
-     * The claim event being attested to. The event's signer is the verifier.
+     * The claim event being verified. The event's author is the verifier.
      *
      * @generated from protobuf field: polycentric.v2.EventKey claim_event_key = 1
      */

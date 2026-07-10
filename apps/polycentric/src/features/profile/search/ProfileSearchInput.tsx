@@ -1,14 +1,9 @@
-import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
+import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { Text, TextInput } from '@/src/common/components/primitives';
-import {
-  shortenIdentityId,
-  truncateName,
-} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { Fragment, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import {
   type ProfileSuggestion,
   useProfileSuggestions,
@@ -137,63 +132,29 @@ function SuggestionRow({
   disabled: boolean;
 }) {
   const { theme } = useTheme();
-  // Followed profiles read from cache like every other list; alias/id
-  // matches are usually strangers, so fetch their profile to show a name.
-  const profile = useProfile(suggestion.identity, {
-    fetchMode:
-      suggestion.source === 'following'
-        ? FetchMode.OfflineOnly
-        : FetchMode.Default,
-  });
-  const name = profile.name ?? suggestion.name;
-  const alias = profile.alias ?? suggestion.alias;
 
   return (
-    <Pressable
+    <ProfileRow
+      identity={suggestion.identity}
       onPress={disabled ? undefined : onPress}
-      style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
-      ]}
-    >
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_md,
-          Atoms.px_lg,
-          Atoms.py_md,
-        ]}
-      >
-        <ProfileAvatar identityKey={suggestion.identity} size="md" />
-        <View style={Atoms.flex_1}>
-          <Text
-            variant="secondary"
-            fontWeight="semibold"
-            numberOfLines={1}
-            selectable={false}
-          >
-            {name ? truncateName(name, 32) : 'Anonymous'}
-          </Text>
-          <Text
-            variant="small"
-            color="neutral_500"
-            numberOfLines={1}
-            selectable={false}
-            style={alias ? undefined : { fontFamily: 'monospace' }}
-          >
-            {alias ?? shortenIdentityId(suggestion.identity)}
-          </Text>
-        </View>
-        {pending && (
+      // Followed profiles read from cache like every other list; alias/id
+      // matches are usually strangers, so fetch their profile to show a name.
+      fetchMode={
+        suggestion.source === 'following'
+          ? FetchMode.OfflineOnly
+          : FetchMode.Default
+      }
+      fallbackName={suggestion.name}
+      fallbackAlias={suggestion.alias}
+      trailing={
+        pending ? (
           <ActivityIndicator
             size="small"
             color={theme.palette.primary_500}
             accessibilityLabel="Working"
           />
-        )}
-      </View>
-    </Pressable>
+        ) : undefined
+      }
+    />
   );
 }
