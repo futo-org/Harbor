@@ -1,7 +1,7 @@
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
@@ -14,27 +14,27 @@ export default function TabsLayout() {
 
   if (isWeb) {
     // Web has no visible tab bar (the sidebar in Layout.tsx is the nav);
-    // a real Tabs navigator is used instead of a plain <Slot/> so the
-    // account-only tabs can be route-guarded. Guarded routes are removed
-    // from navigation while logged out; explore/search stay public.
+    // a navigator is used instead of a plain <Slot/> so the account-only
+    // routes can be route-guarded. Guarded routes are removed from
+    // navigation while logged out; explore/search stay public.
     return (
-      <Tabs
+      <Stack
         screenOptions={{
           headerShown: false,
-          tabBarStyle: { display: 'none' },
+          animation: 'none',
         }}
       >
-        <Tabs.Protected guard={accountGuard}>
-          <Tabs.Screen name="feed" />
-          <Tabs.Screen name="notifications" />
-          <Tabs.Screen name="verifications" />
-          <Tabs.Screen name="compose" />
-          <Tabs.Screen name="profile" />
-          <Tabs.Screen name="claims" />
-        </Tabs.Protected>
-        <Tabs.Screen name="explore" />
-        <Tabs.Screen name="search" />
-      </Tabs>
+        <Stack.Protected guard={accountGuard}>
+          <Stack.Screen name="feed" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="verifications" />
+          <Stack.Screen name="compose" />
+          <Stack.Screen name="profile" />
+          <Stack.Screen name="claims" />
+        </Stack.Protected>
+        <Stack.Screen name="explore" />
+        <Stack.Screen name="search" />
+      </Stack>
     );
   }
 
