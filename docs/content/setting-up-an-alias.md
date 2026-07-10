@@ -43,7 +43,7 @@ Three requirements:
 - It must be reachable over **HTTPS**.
 
 You can list several names in the same file if you host aliases for more than
-one person.
+one person. You can also use the name "*" to specify the identity that can use the bare domain alias (i.e. simply @domain.com instead of @user@domain.com).
 
 ## 2. Set the alias on your profile
 
