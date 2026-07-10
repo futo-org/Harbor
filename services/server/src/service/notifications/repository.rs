@@ -86,7 +86,7 @@ fn omit_trigger_labels_subquery(
         )
         .and_where(
             Expr::col((EventModel::Entity, EventModel::Column::Identity))
-                .equals(trusted_moderator.to_owned()),
+                .eq(trusted_moderator.to_owned()),
         )
         .and_where(
             Expr::col((

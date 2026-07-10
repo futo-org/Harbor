@@ -303,7 +303,7 @@ impl Query {
             )
             .and_where(
                 Expr::col((EventModel::Entity, EventModel::Column::Identity))
-                    .equals(moderator.to_owned()),
+                    .eq(moderator.to_owned()),
             )
             .and_where(event_key_filter.into());
 
@@ -518,17 +518,43 @@ impl Query {
     }
 }
 
-/// Creates a sub-expression to include in a feed query which finds all
-/// label events from the trusted moderator targeting any given feed event,
-/// using a join through `content_label` → `content` → `events` to check
-/// the label author's identity. Caller must ensure `omit_labels` is not
-/// empty.
+/// Builds a `NOT EXISTS (...)` sub-expression for a feed query that
+/// excludes any feed event carrying one of `omit_labels` from the trusted
+/// moderator.
+///
+/// Caller must ensure `omit_labels` is not empty.
 fn omit_feed_event_if_label_present(
     trusted_moderator: &str,
     omit_labels: &[String],
 ) -> Expr {
-    let mut sub = SeaQuery::select();
-    sub.expr(Expr::val(1))
+    let mut trusted_moderator_expression = SeaQuery::select();
+    trusted_moderator_expression
+        .expr(Expr::val(1))
+        .from(EventModel::Entity)
+        .and_where(
+            Expr::col((
+                EventModel::Entity,
+                EventModel::Column::ContentDigestType,
+            ))
+            .equals((ContentModel::Entity, ContentModel::Column::DigestType)),
+        )
+        .and_where(
+            Expr::col((
+                EventModel::Entity,
+                EventModel::Column::ContentDigestBytes,
+            ))
+            .equals((ContentModel::Entity, ContentModel::Column::DigestBytes)),
+        )
+        .and_where(
+            Expr::col((EventModel::Entity, EventModel::Column::Identity))
+                .eq(trusted_moderator.to_owned()),
+        );
+
+    // Main subquery: find labels whose event_key matches the outer
+    // query's events row *and* whose label_value is in omit_labels.
+    let mut sub_expression = SeaQuery::select();
+    sub_expression
+        .expr(Expr::val(1))
         .from(ContentLabelModel::Entity)
         .inner_join(
             ContentModel::Entity,
@@ -538,28 +564,8 @@ fn omit_feed_event_if_label_present(
             ))
             .equals((ContentModel::Entity, ContentModel::Column::Id)),
         )
-        .inner_join(
-            EventModel::Entity,
-            Expr::col((
-                EventModel::Entity,
-                EventModel::Column::ContentDigestType,
-            ))
-            .equals((ContentModel::Entity, ContentModel::Column::DigestType))
-            .and(
-                Expr::col((
-                    EventModel::Entity,
-                    EventModel::Column::ContentDigestBytes,
-                ))
-                .equals((
-                    ContentModel::Entity,
-                    ContentModel::Column::DigestBytes,
-                )),
-            ),
-        )
-        .and_where(
-            Expr::col((EventModel::Entity, EventModel::Column::Identity))
-                .equals(trusted_moderator.to_owned()),
-        )
+        // event_key_* compare against columns not found in this sub-query,
+        // but which will be in the full query.
         .and_where(
             Expr::col((
                 ContentLabelModel::Entity,
@@ -601,9 +607,10 @@ fn omit_feed_event_if_label_present(
                 ContentLabelModel::Column::LabelValue,
             ))
             .is_in(omit_labels.iter().cloned()),
-        );
+        )
+        .and_where(Expr::exists(trusted_moderator_expression));
 
-    Expr::not_exists(sub)
+    Expr::not_exists(sub_expression)
 }
 
 /// Relation joining an event to its content row on (digest_type, digest_bytes).
