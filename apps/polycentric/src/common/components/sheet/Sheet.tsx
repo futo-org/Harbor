@@ -7,7 +7,6 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
-import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Portal } from '@rn-primitives/portal';
 import { router, useNavigation } from 'expo-router';
 import {
@@ -59,7 +58,7 @@ export type SheetProps =
 
 export function Sheet(props: SheetProps) {
   const portalId = useId();
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const navigation = useSheetNavigation();
   if (props.open === false) return null;
   return (
     <Portal name={`sheet-${portalId}`}>
@@ -159,8 +158,13 @@ Sheet.Header = SheetHeader;
 Sheet.Content = SheetContent;
 Sheet.Footer = SheetFooter;
 
+// `ReturnType` can't see a generic hook's default type; the non-generic
+// wrapper pins it down without importing react-navigation's types.
+const useSheetNavigation = () => useNavigation();
+type Navigation = ReturnType<typeof useSheetNavigation>;
+
 type WithNavigation<T> = T & {
-  navigation: NavigationProp<ParamListBase>;
+  navigation: Navigation;
 };
 type NativeInternalProps = WithNavigation<SheetProps>;
 type WebInternalProps = WithNavigation<SheetProps>;

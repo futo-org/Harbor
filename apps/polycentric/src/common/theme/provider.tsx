@@ -1,6 +1,9 @@
 import { Fonts } from '@/src/common/assets';
-import * as ReactNavigation from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import {
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -65,7 +68,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     return null;
   }
 
-  const navTheme: ReactNavigation.Theme = {
+  const navTheme: typeof DefaultTheme = {
     dark: theme.scheme === 'dark',
     colors: {
       primary: theme.palette.primary_500,
@@ -75,14 +78,14 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       border: theme.palette.neutral_200,
       notification: theme.palette.negative_500,
     },
-    fonts: ReactNavigation.DefaultTheme.fonts,
+    fonts: DefaultTheme.fonts,
   };
 
   return (
     <Context.Provider value={value}>
-      <ReactNavigation.ThemeProvider value={navTheme}>
+      <NavigationThemeProvider value={navTheme}>
         {children}
-      </ReactNavigation.ThemeProvider>
+      </NavigationThemeProvider>
     </Context.Provider>
   );
 }
