@@ -5,6 +5,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
   FetchMode,
+  isIdentityKey,
   normalizeAlias,
   resolveAlias,
 } from '@polycentric/react-native';
@@ -40,13 +41,12 @@ export default function ProfileScreen({
 }) {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 
-  // An alias (user@domain) rather than a polycentric identity key —
-  // resolve it to a key first.
-  if (identityId?.includes('@')) {
-    return <AliasProfile alias={identityId} tab={tab} />;
+  if (!identityId || isIdentityKey(identityId)) {
+    return <IdentityProfile identityKey={identityId ?? null} tab={tab} />;
   }
 
-  return <IdentityProfile identityKey={identityId ?? null} tab={tab} />;
+  // An alias (user@domain, or a bare domain) — resolve it to a key first.
+  return <AliasProfile alias={identityId} tab={tab} />;
 }
 
 /**

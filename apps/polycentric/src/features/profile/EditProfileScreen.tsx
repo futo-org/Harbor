@@ -93,7 +93,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               <Text variant="small" color="neutral_500">
                 ALIAS
               </Text>
-              <InfoTooltip text="An alias like you@yourdomain.com that points to this profile. Your domain must be set up to link back here before it can be saved." />
+              <InfoTooltip text="An alias like you@yourdomain.com (or just yourdomain.com) that points to this profile. Your domain must be set up to link back here before it can be saved." />
             </View>
             <TextInput
               value={edit.aliasDraft}

@@ -28,10 +28,21 @@ describe('normalizeAlias', () => {
     );
   });
 
+  it('accepts a bare domain (wildcard alias)', () => {
+    expect(normalizeAlias('Domain.COM')).toBe('domain.com');
+    expect(normalizeAlias('@domain.com')).toBe('domain.com');
+    expect(normalizeAlias('  domain.com  ')).toBe('domain.com');
+    expect(normalizeAlias('sub.domain.com')).toBe('sub.domain.com');
+  });
+
   it.each([
     ['empty', ''],
-    ['no @', 'nodomain'],
-    ['empty local part', '@domain.com'],
+    ['lone @', '@'],
+    ['single-label bare domain', 'nodomain'],
+    ['empty label in bare domain', 'domain..com'],
+    ['trailing dot in bare domain', 'domain.com.'],
+    ['bare domain with path', 'domain.com/path'],
+    ['literal wildcard local part', '*@domain.com'],
     ['multiple @', 'a@@b.com'],
     ['single-label domain', 'user@localhost'],
     ['underscore in domain label', 'user@dom_ain.com'],
@@ -94,6 +105,17 @@ describe('resolveAlias', () => {
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe(
       'https://Example.com/.well-known/polycentric.json?alias=test',
+    );
+  });
+
+  it('resolves a bare domain via the wildcard entry', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ names: { '*': HEX_IDENTITY } }));
+
+    await expect(resolveAlias('example.com')).resolves.toBe(HEX_IDENTITY);
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      'https://example.com/.well-known/polycentric.json?alias=*',
     );
   });
 
