@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import {
   ClaimVerificationStatus,
   combineVerifiers,
-  decodeVerifyAuthors,
+  decodeVerifierIdentities,
   decodeTargetIdentities,
   statusOf,
 } from '../utils/claim-status';
@@ -92,7 +92,7 @@ export function useClaimVerifiers(
       const response = v2.ListVerificationVerifiesResponse.fromBinary(
         new Uint8Array(verifies.data),
       );
-      return decodeVerifyAuthors(response.eventBundles);
+      return decodeVerifierIdentities(response.eventBundles);
     } catch {
       return new Set();
     }
