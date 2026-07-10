@@ -63,26 +63,27 @@ function parseAlias(
 
   let local: string;
   let domain: string;
-  const at = acct.indexOf('@');
-  if (at === -1) {
+  const parts = acct.split('@');
+  if (parts.length === 1) {
     // A bare domain (`domain.com`) points at the domain's wildcard entry:
     // the identity listed under `*` in its polycentric.json.
     local = '*';
-    domain = acct;
-  } else {
-    // Exactly one '@', with a non-empty local part before it.
-    if (at === 0 || acct.indexOf('@', at + 1) !== -1) {
-      return null;
-    }
+    domain = parts[0];
+  } else if (parts.length === 2) {
     // Lowercase the local part so the query, the names-map lookup, and alias
     // comparison are all case-insensitive on a single canonical form.
-    local = acct.slice(0, at).toLowerCase();
-    domain = acct.slice(at + 1);
+    local = parts[0].toLowerCase();
+    domain = parts[1];
 
-    // Local part: every character must be in the conservative allow-list.
-    if (!Array.from(local).every((c) => LOCAL_CHARS.has(c))) {
+    // Local part: non-empty, every character in the conservative allow-list.
+    if (
+      local.length === 0 ||
+      !Array.from(local).every((c) => LOCAL_CHARS.has(c))
+    ) {
       return null;
     }
+  } else {
+    return null;
   }
 
   // Domain: a dotted hostname — two or more non-empty LDH labels.
