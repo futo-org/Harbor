@@ -168,6 +168,7 @@ mod tests {
         );
     }
 
+    #[tokio::test]
     async fn multiple_label_values_one_row_each() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![
