@@ -276,7 +276,11 @@ function AttachmentThumb({
             Atoms.items_center,
             Atoms.justify_center,
             {
-              ...StyleSheet.absoluteFillObject,
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
               backgroundColor: withHexOpacity(
                 status === 'error'
                   ? theme.palette.negative_500

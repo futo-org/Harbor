@@ -29,8 +29,5 @@
     "lint-staged": "^17.0.7",
     "turbo": "^2.9.14",
     "typescript-eslint": "^8.46.2"
-  },
-  "dependencies": {
-    "expo": "^55.0.15"
   }
 }

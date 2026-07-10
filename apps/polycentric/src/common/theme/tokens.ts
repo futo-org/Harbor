@@ -10,6 +10,7 @@ export const Spacing = {
   xl: 20,
   '2xl': 24,
   '3xl': 32,
+  '4xl': 40,
 } as const;
 
 export type SpacingToken = keyof typeof Spacing;
@@ -63,7 +64,7 @@ export const Breakpoints = {
   '2xl': 1400,
 } as const;
 
-export const Atoms = StyleSheet.create({
+const atomStyles = {
   /**
    * Position
    */
@@ -676,4 +677,5 @@ export const Atoms = StyleSheet.create({
     outlineStyle: 'none',
     outlineWidth: 0,
   } as unknown as ViewStyle,
-});
+} satisfies Record<string, ViewStyle | TextStyle>;
+export const Atoms = StyleSheet.create(atomStyles);

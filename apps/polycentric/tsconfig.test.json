@@ -1,0 +1,15 @@
+{
+  // Test files only: brings in the jest globals the app config doesn't need.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node", "react-native-web"]
+  },
+  "include": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/types/**/*.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": ["node_modules", "android", "ios"]
+}
