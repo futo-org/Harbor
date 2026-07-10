@@ -12,6 +12,7 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventKey } from "./event_key";
+import { EventHint } from "./events";
 import { EventBundle } from "./events";
 // Separate from verifications.proto: that file is imported by content.proto,
 // so importing events.proto (for EventBundle) there would be a cyclic import.
@@ -61,6 +62,13 @@ export interface ListVerificationClaimsResponse {
      * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
      */
     claimBundles: VerificationClaimBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListVerificationTargetsRequest
@@ -82,6 +90,13 @@ export interface ListVerificationTargetsResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListVerificationVerifiesRequest
@@ -103,6 +118,13 @@ export interface ListVerificationVerifiesResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListTargetedVerificationClaimsRequest
@@ -124,6 +146,13 @@ export interface ListTargetedVerificationClaimsResponse {
      * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
      */
     claimBundles: VerificationClaimBundle[];
+    /**
+     * Identity-chain and profile events for every identity referenced by the
+     * bundles, so clients can validate and render them without extra queries.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class VerificationClaimBundle$Type extends MessageType<VerificationClaimBundle> {
@@ -238,12 +267,14 @@ export const ListVerificationClaimsRequest = new ListVerificationClaimsRequest$T
 class ListVerificationClaimsResponse$Type extends MessageType<ListVerificationClaimsResponse> {
     constructor() {
         super("polycentric.v2.ListVerificationClaimsResponse", [
-            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle }
+            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListVerificationClaimsResponse>): ListVerificationClaimsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.claimBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListVerificationClaimsResponse>(this, message, value);
         return message;
@@ -255,6 +286,9 @@ class ListVerificationClaimsResponse$Type extends MessageType<ListVerificationCl
             switch (fieldNo) {
                 case /* repeated polycentric.v2.VerificationClaimBundle claim_bundles */ 1:
                     message.claimBundles.push(VerificationClaimBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -271,6 +305,9 @@ class ListVerificationClaimsResponse$Type extends MessageType<ListVerificationCl
         /* repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1; */
         for (let i = 0; i < message.claimBundles.length; i++)
             VerificationClaimBundle.internalBinaryWrite(message.claimBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -331,12 +368,14 @@ export const ListVerificationTargetsRequest = new ListVerificationTargetsRequest
 class ListVerificationTargetsResponse$Type extends MessageType<ListVerificationTargetsResponse> {
     constructor() {
         super("polycentric.v2.ListVerificationTargetsResponse", [
-            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListVerificationTargetsResponse>): ListVerificationTargetsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.eventBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListVerificationTargetsResponse>(this, message, value);
         return message;
@@ -348,6 +387,9 @@ class ListVerificationTargetsResponse$Type extends MessageType<ListVerificationT
             switch (fieldNo) {
                 case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
                     message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -364,6 +406,9 @@ class ListVerificationTargetsResponse$Type extends MessageType<ListVerificationT
         /* repeated polycentric.v2.EventBundle event_bundles = 1; */
         for (let i = 0; i < message.eventBundles.length; i++)
             EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -424,12 +469,14 @@ export const ListVerificationVerifiesRequest = new ListVerificationVerifiesReque
 class ListVerificationVerifiesResponse$Type extends MessageType<ListVerificationVerifiesResponse> {
     constructor() {
         super("polycentric.v2.ListVerificationVerifiesResponse", [
-            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle }
+            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListVerificationVerifiesResponse>): ListVerificationVerifiesResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.eventBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListVerificationVerifiesResponse>(this, message, value);
         return message;
@@ -441,6 +488,9 @@ class ListVerificationVerifiesResponse$Type extends MessageType<ListVerification
             switch (fieldNo) {
                 case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
                     message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -457,6 +507,9 @@ class ListVerificationVerifiesResponse$Type extends MessageType<ListVerification
         /* repeated polycentric.v2.EventBundle event_bundles = 1; */
         for (let i = 0; i < message.eventBundles.length; i++)
             EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -518,12 +571,14 @@ export const ListTargetedVerificationClaimsRequest = new ListTargetedVerificatio
 class ListTargetedVerificationClaimsResponse$Type extends MessageType<ListTargetedVerificationClaimsResponse> {
     constructor() {
         super("polycentric.v2.ListTargetedVerificationClaimsResponse", [
-            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle }
+            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<ListTargetedVerificationClaimsResponse>): ListTargetedVerificationClaimsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.claimBundles = [];
+        message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<ListTargetedVerificationClaimsResponse>(this, message, value);
         return message;
@@ -535,6 +590,9 @@ class ListTargetedVerificationClaimsResponse$Type extends MessageType<ListTarget
             switch (fieldNo) {
                 case /* repeated polycentric.v2.VerificationClaimBundle claim_bundles */ 1:
                     message.claimBundles.push(VerificationClaimBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -551,6 +609,9 @@ class ListTargetedVerificationClaimsResponse$Type extends MessageType<ListTarget
         /* repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1; */
         for (let i = 0; i < message.claimBundles.length; i++)
             VerificationClaimBundle.internalBinaryWrite(message.claimBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

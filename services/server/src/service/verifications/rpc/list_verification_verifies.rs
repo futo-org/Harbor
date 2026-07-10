@@ -1,9 +1,9 @@
 //! VerificationVerify events for a claim: who has verified it.
 
+use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::identity::service::rows_to_bundles;
-use crate::service::proofs::service::attach_proofs;
+use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::proto::{
     ListVerificationVerifiesRequest, ListVerificationVerifiesResponse,
 };
@@ -12,38 +12,56 @@ use crate::service::verifications::repository::{
 };
 use tonic::Status;
 
-use crate::service::events::tombstone::drop_tombstoned;
+use super::common::{self, event_list};
+
+struct Params {
+    claim_key: TargetEventKey,
+}
 
 pub async fn handle(
     ctx: &ServiceContext,
     req: ListVerificationVerifiesRequest,
 ) -> Result<ListVerificationVerifiesResponse, Status> {
-    let claim_key =
-        TargetEventKey::from_request(req.claim_event_key, "claim_event_key")?;
+    let params = Params {
+        claim_key: TargetEventKey::from_request(
+            req.claim_event_key,
+            "claim_event_key",
+        )?,
+    };
+    let view = pipeline::create_pipeline(
+        ctx,
+        &params,
+        fetch,
+        event_list::hydrate,
+        event_list::filter,
+        event_list::view,
+    )
+    .await?;
+    Ok(ListVerificationVerifiesResponse {
+        event_bundles: view.event_bundles,
+        event_hints: view.event_hints,
+    })
+}
 
-    let rows = Repository::list_verify_events_for_claims(
+async fn fetch(
+    ctx: &ServiceContext,
+    params: &Params,
+) -> Result<Vec<EventWithContentRow>, Status> {
+    Ok(Repository::list_verify_events_for_claims(
         &ctx.db,
-        std::slice::from_ref(&claim_key),
+        std::slice::from_ref(&params.claim_key),
     )
     .await
-    .map_err(|e| {
-        eprintln!("list_verification_verifies db error: {e}");
-        Status::internal("internal server error")
-    })?
+    .map_err(common::map_db_err)?
     .into_iter()
     .map(VerificationEventDto::into_row)
-    .collect();
-    let rows = drop_tombstoned(ctx, rows).await?;
-
-    let mut event_bundles = rows_to_bundles(rows);
-    attach_proofs(ctx, &mut event_bundles).await?;
-    Ok(ListVerificationVerifiesResponse { event_bundles })
+    .collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::verifications::rpc::tests::{
+    use crate::service::verifications::rpc::common::tests::{
         claim_event_key, ctx, no_rows, verify_row,
     };
     use sea_orm::{DbBackend, MockDatabase};
@@ -55,6 +73,8 @@ mod tests {
                 verify_row(2, "bob", "alice"),
                 verify_row(1, "carol", "alice"),
             ]])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db).await;

@@ -5,16 +5,22 @@ use std::collections::HashSet;
 
 use tonic::Status;
 
+use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
+use crate::service::events::tombstone::tombstoned_keys;
 use crate::service::proto::{
     ListTargetedVerificationClaimsRequest,
     ListTargetedVerificationClaimsResponse,
 };
 use crate::service::verifications::repository::Query as Repository;
 
-use super::build_claim_bundles;
-use crate::service::events::tombstone::{drop_tombstoned, tombstoned_keys};
+use super::common::claim_bundles::{self, FetchedClaims};
+use super::common::map_db_err;
+
+struct Params {
+    target_identity: String,
+}
 
 pub async fn handle(
     ctx: &ServiceContext,
@@ -24,15 +30,35 @@ pub async fn handle(
         return Err(Status::invalid_argument("target_identity is required"));
     }
 
-    let targets =
-        Repository::list_targets_for_identity(&ctx.db, &req.target_identity)
-            .await
-            .map_err(|e| {
-                eprintln!("list_targeted_verification_claims db error: {e}");
-                Status::internal("internal server error")
-            })?;
+    let params = Params {
+        target_identity: req.target_identity,
+    };
+    let view = pipeline::create_pipeline(
+        ctx,
+        &params,
+        fetch,
+        claim_bundles::hydrate,
+        claim_bundles::filter,
+        claim_bundles::view,
+    )
+    .await?;
+    Ok(ListTargetedVerificationClaimsResponse {
+        claim_bundles: view.claim_bundles,
+        event_hints: view.event_hints,
+    })
+}
 
-    // Deleting a target event revokes the request.
+/// Fetches claims that are targeted at an identity and returns relevant
+/// VerificationClaim, VerificationTarget and VerificationVerify events
+async fn fetch(
+    ctx: &ServiceContext,
+    params: &Params,
+) -> Result<FetchedClaims, Status> {
+    let targets =
+        Repository::list_targets_for_identity(&ctx.db, &params.target_identity)
+            .await
+            .map_err(map_db_err)?;
+
     let target_keys: Vec<TargetEventKey> =
         targets.iter().map(|t| t.target_key.clone()).collect();
     let revoked = tombstoned_keys(ctx, &target_keys).await?;
@@ -45,23 +71,17 @@ pub async fn handle(
         .filter(|key| seen.insert(key.clone()))
         .collect();
 
-    let claim_rows =
-        Repository::list_claim_events_by_keys(&ctx.db, &claim_keys)
-            .await
-            .map_err(|e| {
-                eprintln!("list_targeted_verification_claims db error: {e}");
-                Status::internal("internal server error")
-            })?;
-    let claim_rows = drop_tombstoned(ctx, claim_rows).await?;
+    let claims = Repository::list_claim_events_by_keys(&ctx.db, &claim_keys)
+        .await
+        .map_err(map_db_err)?;
 
-    let claim_bundles = build_claim_bundles(ctx, claim_rows).await?;
-    Ok(ListTargetedVerificationClaimsResponse { claim_bundles })
+    claim_bundles::fetch_verification_state(ctx, claims).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::verifications::rpc::tests::{
+    use crate::service::verifications::rpc::common::tests::{
         claim_row, ctx, no_rows, target_row, target_table_row,
     };
     use sea_orm::{DbBackend, MockDatabase};
@@ -70,13 +90,14 @@ mod tests {
     async fn returns_claims_targeting_the_identity() {
         let db = MockDatabase::new(DbBackend::Postgres)
             // Requests naming "bob", their tombstones, the claims they
-            // reference, the claims' tombstones, then the claims' targets
-            // (+ tombstones) and verifies for the status wrapping.
+            // reference, the claims' targets and verifies, one combined
+            // tombstone lookup, then the identity and profile hint queries.
             .append_query_results([vec![target_table_row(2, "alice", "bob")]])
             .append_query_results([no_rows()])
             .append_query_results([vec![claim_row(1, "alice")]])
-            .append_query_results([no_rows()])
             .append_query_results([vec![target_row(2, "alice", &["bob"])]])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
@@ -117,11 +138,12 @@ mod tests {
             ]])
             .append_query_results([no_rows()])
             .append_query_results([vec![claim_row(1, "alice")]])
-            .append_query_results([no_rows()])
             .append_query_results([vec![
                 target_row(3, "alice", &["bob"]),
                 target_row(2, "alice", &["bob"]),
             ]])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
@@ -143,7 +165,7 @@ mod tests {
     #[tokio::test]
     async fn returns_nothing_when_no_requests_exist() {
         // Only the requests query runs: no target keys means no tombstone
-        // lookup, and no claim keys means no claims query.
+        // lookup, and no claim keys means no further queries.
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([Vec::<(
                 ::entity::event_model::Model,

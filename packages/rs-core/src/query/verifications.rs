@@ -3,8 +3,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse,
-    ListVerificationClaimsRequest, ListVerificationClaimsResponse, ListVerificationTargetsRequest,
+    EventBundle, EventHint, ListTargetedVerificationClaimsRequest,
+    ListTargetedVerificationClaimsResponse, ListVerificationClaimsRequest,
+    ListVerificationClaimsResponse, ListVerificationTargetsRequest,
     ListVerificationTargetsResponse, ListVerificationVerifiesRequest,
     ListVerificationVerifiesResponse, VerificationClaimBundle,
     verifications_service_client::VerificationsServiceClient,
@@ -13,7 +14,7 @@ use prost::Message;
 
 use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::event::key::EventKey;
-use crate::query::validation::retain_validated_bundles;
+use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -39,11 +40,15 @@ pub struct ListTargetedVerificationClaimsArgs {
 /// Responses carrying a flat `event_bundles` list.
 trait EventBundleResponse: Message + Default {
     fn bundles_mut(&mut self) -> &mut Vec<EventBundle>;
+    fn hints_mut(&mut self) -> &mut Vec<EventHint>;
 }
 
 impl EventBundleResponse for ListVerificationTargetsResponse {
     fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
         &mut self.event_bundles
+    }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
     }
 }
 
@@ -51,22 +56,32 @@ impl EventBundleResponse for ListVerificationVerifiesResponse {
     fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
         &mut self.event_bundles
     }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 /// Responses carrying `claim_bundles` (a claim with its targets/verifies).
 trait ClaimBundleResponse: Message + Default {
     fn claim_bundles_mut(&mut self) -> &mut Vec<VerificationClaimBundle>;
+    fn hints_mut(&mut self) -> &mut Vec<EventHint>;
 }
 
 impl ClaimBundleResponse for ListVerificationClaimsResponse {
     fn claim_bundles_mut(&mut self) -> &mut Vec<VerificationClaimBundle> {
         &mut self.claim_bundles
     }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 impl ClaimBundleResponse for ListTargetedVerificationClaimsResponse {
     fn claim_bundles_mut(&mut self) -> &mut Vec<VerificationClaimBundle> {
         &mut self.claim_bundles
+    }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
     }
 }
 
@@ -78,6 +93,16 @@ fn dedupe_bundles(bundles: &mut Vec<EventBundle>) {
     });
 }
 
+fn dedupe_hints(hints: &mut Vec<EventHint>) {
+    let mut seen: HashSet<EventDedupKey> = HashSet::new();
+    hints.retain(
+        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
+            Some(k) => seen.insert(k),
+            None => true,
+        },
+    );
+}
+
 /// Concatenate per-server bundles, dedupe by `EventKey`, drop invalid ones.
 fn merge_bundle_responses<T: EventBundleResponse>(
     values: &[Vec<u8>],
@@ -87,13 +112,16 @@ fn merge_bundle_responses<T: EventBundleResponse>(
     for v in values {
         if let Ok(mut incoming) = T::decode(v.as_slice()) {
             merged.bundles_mut().append(incoming.bundles_mut());
+            merged.hints_mut().append(incoming.hints_mut());
         }
     }
 
     dedupe_bundles(merged.bundles_mut());
+    dedupe_hints(merged.hints_mut());
 
     let c = client.lock().unwrap();
     retain_validated_bundles(&c, merged.bundles_mut());
+    retain_validated_hints(&c, merged.hints_mut());
     drop(c);
 
     merged.encode_to_vec()
@@ -106,11 +134,13 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged: Vec<VerificationClaimBundle> = Vec::new();
+    let mut hints: Vec<EventHint> = Vec::new();
     let mut index_by_claim: HashMap<EventDedupKey, usize> = HashMap::new();
     for v in values {
         let Ok(mut incoming) = T::decode(v.as_slice()) else {
             continue;
         };
+        hints.append(incoming.hints_mut());
         for group in incoming.claim_bundles_mut().drain(..) {
             let Some(key) = group.claim.as_ref().and_then(event_dedup_key) else {
                 continue;
@@ -129,7 +159,10 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
         }
     }
 
+    dedupe_hints(&mut hints);
+
     let c = client.lock().unwrap();
+    retain_validated_hints(&c, &mut hints);
     merged.retain_mut(|group| {
         let mut claim = Vec::from_iter(group.claim.take());
         retain_validated_bundles(&c, &mut claim);
@@ -147,6 +180,7 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
 
     let mut response = T::default();
     *response.claim_bundles_mut() = merged;
+    *response.hints_mut() = hints;
     response.encode_to_vec()
 }
 
@@ -186,8 +220,14 @@ pub fn list_verification_claims(
                 .map_err(|e| format!("list_verification_claims [{server_url}]: {e}"))?
                 .into_inner();
             let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
             {
                 let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
                 c.copy_bundles(all_bundles(&response.claim_bundles));
             }
             Ok(bytes)
@@ -226,8 +266,14 @@ pub fn list_verification_targets(
                 .map_err(|e| format!("list_verification_targets [{server_url}]: {e}"))?
                 .into_inner();
             let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
             {
                 let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
             Ok(bytes)
@@ -265,8 +311,14 @@ pub fn list_verification_verifies(
                 .map_err(|e| format!("list_verification_verifies [{server_url}]: {e}"))?
                 .into_inner();
             let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
             {
                 let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
             Ok(bytes)
@@ -305,8 +357,14 @@ pub fn list_targeted_verification_claims(
                 .map_err(|e| format!("list_targeted_verification_claims [{server_url}]: {e}"))?
                 .into_inner();
             let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
             {
                 let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
                 c.copy_bundles(all_bundles(&response.claim_bundles));
             }
             Ok(bytes)

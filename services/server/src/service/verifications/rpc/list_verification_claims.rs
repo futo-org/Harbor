@@ -1,6 +1,6 @@
-//! VerificationClaim events for an identity, each wrapped with the targets
-//! and verifies referencing it so lists can show verified status directly.
-
+//! Claims an identity has made (owns) returns relevant
+/// VerificationClaim, VerificationTarget and VerificationVerify events
+use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::proto::{
     ListVerificationClaimsRequest, ListVerificationClaimsResponse,
@@ -8,8 +8,12 @@ use crate::service::proto::{
 use crate::service::verifications::repository::Query as Repository;
 use tonic::Status;
 
-use super::build_claim_bundles;
-use crate::service::events::tombstone::drop_tombstoned;
+use super::common::claim_bundles::{self, FetchedClaims};
+use super::common::map_db_err;
+
+struct Params {
+    identity: String,
+}
 
 pub async fn handle(
     ctx: &ServiceContext,
@@ -21,25 +25,39 @@ pub async fn handle(
         ));
     }
 
-    let claim_rows = Repository::list_claim_events_for_identity(
-        &ctx.db,
-        &req.claimed_by_identity,
+    let params = Params {
+        identity: req.claimed_by_identity,
+    };
+    let view = pipeline::create_pipeline(
+        ctx,
+        &params,
+        fetch,
+        claim_bundles::hydrate,
+        claim_bundles::filter,
+        claim_bundles::view,
     )
-    .await
-    .map_err(|e| {
-        eprintln!("list_verification_claims db error: {e}");
-        Status::internal("internal server error")
-    })?;
-    let claim_rows = drop_tombstoned(ctx, claim_rows).await?;
+    .await?;
+    Ok(ListVerificationClaimsResponse {
+        claim_bundles: view.claim_bundles,
+        event_hints: view.event_hints,
+    })
+}
 
-    let claim_bundles = build_claim_bundles(ctx, claim_rows).await?;
-    Ok(ListVerificationClaimsResponse { claim_bundles })
+async fn fetch(
+    ctx: &ServiceContext,
+    params: &Params,
+) -> Result<FetchedClaims, Status> {
+    let claims =
+        Repository::list_claim_events_for_identity(&ctx.db, &params.identity)
+            .await
+            .map_err(map_db_err)?;
+    claim_bundles::fetch_verification_state(ctx, claims).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::verifications::rpc::tests::{
+    use crate::service::verifications::rpc::common::tests::{
         claim_row, ctx, no_rows, target_row, verify_row,
     };
     use sea_orm::{DbBackend, MockDatabase};
@@ -47,13 +65,13 @@ mod tests {
     #[tokio::test]
     async fn wraps_each_claim_with_its_targets_and_verifies() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            // Claims, their tombstones, targets, their tombstones,
-            // verifies, their tombstones.
+            // Claims, targets, verifies, one combined tombstone lookup, then
+            // the identity and profile hint queries.
             .append_query_results([vec![claim_row(1, "alice")]])
-            .append_query_results([no_rows()])
             .append_query_results([vec![target_row(2, "alice", &["bob"])]])
-            .append_query_results([no_rows()])
             .append_query_results([vec![verify_row(3, "bob", "alice")]])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
         let ctx = ctx(db).await;
@@ -88,6 +106,8 @@ mod tests {
     async fn returns_claims_without_verification_state() {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![claim_row(1, "alice")]])
+            .append_query_results([no_rows()])
+            .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])

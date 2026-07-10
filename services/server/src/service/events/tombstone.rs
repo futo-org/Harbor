@@ -32,33 +32,26 @@ impl HasEventKey for EventWithContentRow {
     }
 }
 
-/// The subset of `keys` whose events have a valid Delete tombstone.
-pub async fn tombstoned_keys(
+/// The valid Delete tombstones for `keys`, by tombstoned event key.
+pub async fn validated_tombstones(
     ctx: &ServiceContext,
     keys: &[TargetEventKey],
-) -> Result<HashSet<TargetEventKey>, Status> {
+) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
     let raw = list_tombstones_for_event_keys(&ctx.db, keys)
         .await
         .map_err(|e| {
             eprintln!("tombstone db error: {e}");
             Status::internal("internal server error")
         })?;
-    let valid = validate_tombstones(ctx, raw).await?;
-    Ok(valid.into_keys().collect())
+    validate_tombstones(ctx, raw).await
 }
 
-/// Drop rows whose events have a valid Delete tombstone.
-pub async fn drop_tombstoned<T: HasEventKey>(
+/// The subset of `keys` whose events have a valid Delete tombstone.
+pub async fn tombstoned_keys(
     ctx: &ServiceContext,
-    rows: Vec<T>,
-) -> Result<Vec<T>, Status> {
-    let keys: Vec<TargetEventKey> =
-        rows.iter().map(HasEventKey::event_key).collect();
-    let tombstoned = tombstoned_keys(ctx, &keys).await?;
-    Ok(rows
-        .into_iter()
-        .filter(|row| !tombstoned.contains(&row.event_key()))
-        .collect())
+    keys: &[TargetEventKey],
+) -> Result<HashSet<TargetEventKey>, Status> {
+    Ok(validated_tombstones(ctx, keys).await?.into_keys().collect())
 }
 
 /// List all tombstone events

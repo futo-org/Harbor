@@ -96,8 +96,7 @@ macro_rules! claim_key_of {
 pub struct Query;
 
 impl Query {
-    /// VerificationClaim events published by an identity. Newest first,
-    /// tombstones NOT yet filtered.
+    /// VerificationClaim events published by an identity.
     pub async fn list_claim_events_for_identity(
         db: &DbConn,
         identity: &str,
@@ -115,8 +114,7 @@ impl Query {
     }
 
     /// VerificationTarget events published by the claims' owners that
-    /// reference any of `claim_keys`. Newest first, tombstones NOT yet
-    /// filtered.
+    /// reference any of `claim_keys`.
     pub async fn list_target_events_for_claims(
         db: &DbConn,
         claim_keys: &[TargetEventKey],
@@ -163,7 +161,7 @@ impl Query {
     }
 
     /// VerificationVerify events verifying any of `claim_keys`, from any
-    /// identity. Newest first, tombstones NOT yet filtered.
+    /// identity.
     pub async fn list_verify_events_for_claims(
         db: &DbConn,
         claim_keys: &[TargetEventKey],

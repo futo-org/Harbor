@@ -12,11 +12,9 @@ import "polycentric/v2/events.proto";
 message VerificationClaimBundle {
   // The VerificationClaim event.
   EventBundle claim = 1;
-  // VerificationTarget events published by the claim's owner — who has
-  // been asked to verify.
+  // VerificationTarget events published by the claim's owner
   repeated EventBundle targets = 2;
-  // VerificationVerify events. The verifying identity is each
-  // event's own signer.
+  // VerificationVerify events.
   repeated EventBundle verifies = 3;
 }
 
@@ -26,6 +24,8 @@ message ListVerificationClaimsRequest {
 
 message ListVerificationClaimsResponse {
   repeated VerificationClaimBundle claim_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
 }
 
 message ListVerificationTargetsRequest {
@@ -34,8 +34,10 @@ message ListVerificationTargetsRequest {
 
 message ListVerificationTargetsResponse {
   // VerificationTarget events for the claim, published by the claim's
-  // owner — who has been asked to verify. Deleted targets are excluded.
+  // owner — who has been asked to verify.
   repeated EventBundle event_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
 }
 
 message ListVerificationVerifiesRequest {
@@ -43,9 +45,10 @@ message ListVerificationVerifiesRequest {
 }
 
 message ListVerificationVerifiesResponse {
-  // VerificationVerify events for the claim, excluding deleted ones.
-  // The verifying identity is each event's own signer.
+  // VerificationVerify events for the claim.
   repeated EventBundle event_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
 }
 
 message ListTargetedVerificationClaimsRequest {
@@ -53,9 +56,10 @@ message ListTargetedVerificationClaimsRequest {
 }
 
 message ListTargetedVerificationClaimsResponse {
-  // Claims whose owner targeted `target_identity` — the identity's inbox
-  // of verification requests.
+  // Claims whose owner targeted `target_identity`. The 'inbox'.
   repeated VerificationClaimBundle claim_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles 
+  repeated EventHint event_hints = 2;
 }
 
 service VerificationsService {
