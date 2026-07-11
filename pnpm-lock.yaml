@@ -79,7 +79,7 @@ importers:
         version: 5.2.14(dcf317b904ee5027a33c8caac99363f2)
       '@lodev09/react-native-true-sheet':
         specifier: ^3.10.1
-        version: 3.11.2(be273744d94c07265e52769214ce7280)
+        version: 3.11.3(be273744d94c07265e52769214ce7280)
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -3104,8 +3104,8 @@ packages:
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
 
-  '@lodev09/react-native-true-sheet@3.11.2':
-    resolution: {integrity: sha512-ENSHnX0juBtrqElTKz4WMas9CLYPlv/y5GuATK325GuVIYFxHE8uo5ttCmXPksCGzQTrkiPtmL8Jw0QvtwQi5g==}
+  '@lodev09/react-native-true-sheet@3.11.3':
+    resolution: {integrity: sha512-d5WL9Cr4aF7BrDOtk1HwpaT0HFzatz2YUVv7hjHQvBZOOi8I18LTTYaLvKZZVw0V+V7G5T+S7QWi3tgExwvS5g==}
     peerDependencies:
       '@radix-ui/react-dialog': '>=1'
       '@radix-ui/react-presence': '>=1'
@@ -16184,7 +16184,7 @@ snapshots:
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
-  '@lodev09/react-native-true-sheet@3.11.2(be273744d94c07265e52769214ce7280)':
+  '@lodev09/react-native-true-sheet@3.11.3(be273744d94c07265e52769214ce7280)':
     dependencies:
       react: 19.2.3
       react-native: 0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
@@ -17406,9 +17406,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
