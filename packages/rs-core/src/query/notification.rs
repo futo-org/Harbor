@@ -21,6 +21,8 @@ pub struct ListNotificationsArgs {
     pub first: Option<u32>,
     /// Return notifications after this cursor.
     pub after: Option<String>,
+    /// Label values for which the requester does not want to see content.
+    pub omit_labels: Vec<String>,
 }
 
 /// Identity of a notification for dedup: the `(trigger, target)` event
@@ -107,12 +109,14 @@ pub fn list_notifications(
         identity,
         first,
         after,
+        omit_labels,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
         let after = after.clone();
+        let omit_labels = omit_labels.clone();
         let client = client.clone();
         async move {
             let response = NotificationServiceClient::new(channel(&server_url)?)
@@ -120,6 +124,7 @@ pub fn list_notifications(
                     identity,
                     first,
                     after,
+                    omit_labels,
                 })
                 .await
                 .map_err(|e| format!("list_notifications [{server_url}]: {e}"))?

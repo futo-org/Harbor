@@ -61,8 +61,6 @@ if [[ "${CI:-}" == "true" ]]; then
   # Reach the services by their in-network names instead of localhost. Kafka
   # is reached on its INTERNAL listener, which advertises kafka:19092 on this
   # network (the EXTERNAL listener advertises localhost:9092, for local use).
-  SERVER_HOST=server
-  export POLYCENTRIC_TEST_SERVER="http://server:3000"
   export POLYCENTRIC_TEST_DATABASE_URL="postgres://postgres:testing@postgres:5432"
   export POLYCENTRIC_TEST_OS_ENDPOINT="http://rustfs:9000"
   export POLYCENTRIC_TEST_KAFKA_BROKERS="kafka:19092"
@@ -74,12 +72,29 @@ echo "==> Building and starting the server…"
 # running, so this is safe.
 docker compose up -d --no-deps --build --wait server
 
+# Resolve the server container's IP on the compose network and use it
+# directly, bypassing Docker embedded DNS (which can be flaky in a
+# Docker-in-Docker environment when the job container is connected to the
+# compose network via `docker network connect`).
+if [[ "${CI:-}" == "true" ]]; then
+  SERVER_HOST=server
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' polycentric-server-1 2>/dev/null)
+  if [ -n "$SERVER_IP" ]; then
+    SERVER_HOST=$SERVER_IP
+  fi
+fi
+export POLYCENTRIC_TEST_SERVER="http://${SERVER_HOST}:${SERVER_PORT}"
+
 echo "==> Waiting for the server gRPC port ($SERVER_HOST:$SERVER_PORT)…"
-for _ in $(seq 1 60); do
+for i in $(seq 1 60); do
   if (exec 3<>"/dev/tcp/$SERVER_HOST/$SERVER_PORT") 2>/dev/null; then
     exec 3>&- 3<&-
-    echo "    server is accepting connections"
+    echo "    server is accepting connections (after ${i}s)"
     break
+  fi
+  if [ "$i" -eq 60 ]; then
+    echo "ERROR: server did not start within 60 seconds"
+    exit 1
   fi
   sleep 1
 done

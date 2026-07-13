@@ -61,7 +61,6 @@ impl Mutation {
     }
 }
 
-/// Context shared by every content-type submodule.
 struct ChildContext<'a> {
     content_id: i64,
     event_identity: &'a str,

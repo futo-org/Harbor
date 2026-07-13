@@ -12,6 +12,7 @@ pub struct HydrationState {
     pub profile_events: Vec<EventWithContentRow>,
     pub quote_post_events: Vec<EventWithContentRow>,
     pub repost_events: Vec<EventWithContentRow>,
+    pub label_events: Vec<EventWithContentRow>,
 }
 
 impl HydrationState {

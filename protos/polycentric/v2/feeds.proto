@@ -15,18 +15,24 @@ message GetIdentityFeedRequest {
   // Identity to return the posts of
   string identity = 1;
   optional PageParams page_params = 2;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
 }
 
 message GetFollowingFeedRequest {
   // Identity of the follower to return the feed for
   string follower_identity = 1;
   optional PageParams page_params = 2;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
 }
 
 message GetExploreFeedRequest {
   // Identity of the caller to return relevant posts fort
   optional string identity = 1;
   optional PageParams page_params = 2;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
 }
 
 message GetFeedResponse {
@@ -35,15 +41,15 @@ message GetFeedResponse {
   optional PageInfo page_info = 3;
 }
 
+message GetPostThreadResponse {
+  repeated EventBundle thread = 1;
+  repeated EventHint event_hints = 2;
+}
+
 message GetPostThreadRequest {
   // Parent post to return the thread for
   EventKey event_key = 1;
   int32 limit = 2;
-}
-
-message GetPostThreadResponse {
-  repeated EventBundle thread = 1;
-  repeated EventHint event_hints = 2;
 }
 
 /**

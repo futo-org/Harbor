@@ -27,6 +27,7 @@ services:
       - CONTENT_BLOB_OS_ENDPOINT=http://rustfs:9000
       - CONTENT_BLOB_OS_FORCE_PATH_STYLE=true
       - CONTENT_BLOB_OS_ACCESS_KEY=rustfsadmin
+      - POLYCENTRIC_MODERATION_IDENTITY=${POLYCENTRIC_MODERATION_IDENTITY:-}
       - CONTENT_BLOB_OS_SECRET_KEY=rustfsadmin
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable

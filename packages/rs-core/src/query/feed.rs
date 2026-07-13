@@ -1,26 +1,33 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
+use crate::{
+    client::PolycentricClient,
+    logging::log_warn,
+    query::{
+        QueryClient, QueryKey, QueryObservable, QueryOpts, channel,
+        event::{
+            dedup::{EventDedupKey, event_dedup_key},
+            key::EventKey,
+        },
+        validation::{retain_validated_bundles, retain_validated_hints},
+    },
+};
 use base64::prelude::*;
-use polycentric_common::models::protos_v2::{Event, PageInfo};
-use std::cmp::Reverse;
-use std::collections::{BTreeMap, HashSet};
-use std::sync::{Arc, Mutex};
-
-use polycentric_common::error::CoreError;
-use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams,
-    feeds_service_client::FeedsServiceClient,
+use polycentric_common::{
+    error::CoreError,
+    models::protos_v2::{
+        Event, EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse,
+        GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+        GetPostThreadResponse, PageInfo, PageParams, feeds_service_client::FeedsServiceClient,
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-
-use crate::client::PolycentricClient;
-use crate::logging::log_warn;
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
-use crate::query::event::key::EventKey;
-use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use std::{
+    cmp::Reverse,
+    collections::{BTreeMap, HashSet},
+    sync::{Arc, Mutex},
+};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetIdentityFeedArgs {
@@ -344,6 +351,7 @@ pub fn get_identity_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
@@ -393,6 +401,7 @@ pub fn get_following_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
@@ -442,6 +451,7 @@ pub fn get_explore_feed(
                         backward_token,
                         forward_token,
                     }),
+                    omit_labels: vec![],
                 })
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?

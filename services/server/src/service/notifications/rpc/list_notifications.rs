@@ -1,37 +1,42 @@
-use std::collections::{HashMap, HashSet};
-
+use crate::{
+    data::pipeline,
+    service::{
+        context::ServiceContext,
+        events::TargetEventKey,
+        feeds::{repository::Query as FeedsRepository, util::map_db_err},
+        identity::service::{
+            list_identity_events, list_profile_events, rows_to_bundles,
+        },
+        notifications::repository::Query as NotificationRepository,
+        proofs::service::attach_proofs,
+        proto::{
+            EventBundle, EventHint, EventKey, ListNotificationsRequest,
+            ListNotificationsResponse, Notification, PageInfo, PublicKey,
+        },
+    },
+};
 use ::entity::notification;
+use std::collections::{HashMap, HashSet};
 use tonic::Status;
-
-use crate::data::pipeline;
-use crate::service::context::ServiceContext;
-use crate::service::events::TargetEventKey;
-use crate::service::feeds::repository::Query as FeedsRepository;
-use crate::service::feeds::util::map_db_err;
-use crate::service::identity::service::{
-    list_identity_events, list_profile_events, rows_to_bundles, rows_to_hints,
-};
-use crate::service::notifications::repository::Query as NotificationRepository;
-use crate::service::proofs::service::attach_proofs;
-use crate::service::proto::{
-    EventBundle, EventHint, EventKey, ListNotificationsRequest,
-    ListNotificationsResponse, Notification, PageInfo, PublicKey,
-};
 
 const DEFAULT_LIMIT: u32 = 50;
 const MAX_LIMIT: u32 = 200;
-
 struct Params {
     identity: String,
     limit: u64,
     after_id: Option<i64>,
+    omit_labels: Vec<String>,
+}
+
+pub struct Fetched {
+    pub rows: Vec<notification::Model>,
+    pub has_next_page: bool,
+    pub has_previous_page: bool,
 }
 
 struct Hydrated {
-    /// Trigger/target events, indexed by their comparable key so each
-    /// notification row can look up the bundles it references.
     bundles: HashMap<TargetEventKey, EventBundle>,
-    /// Identity + profile events for every identity involved.
+    /// Identity, profile, and moderation label events for every identity involved.
     event_hints: Vec<EventHint>,
 }
 
@@ -60,6 +65,7 @@ pub async fn handle(
         identity: req.identity,
         limit,
         after_id,
+        omit_labels: req.omit_labels,
     };
 
     pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view).await
@@ -68,29 +74,44 @@ pub async fn handle(
 async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
-) -> Result<Vec<notification::Model>, Status> {
-    NotificationRepository::list_for_identity(
+) -> Result<Fetched, Status> {
+    let raw = NotificationRepository::list_for_identity(
         &ctx.db,
         &params.identity,
-        params.limit,
+        params.limit + 1, // over-fetch for pagination
         params.after_id,
+        &params.omit_labels,
+        ctx.trusted_moderator.as_deref(),
     )
     .await
-    .map_err(map_db_err)
+    .map_err(map_db_err)?;
+
+    let has_next_page = raw.len() > params.limit as usize;
+    let rows: Vec<notification::Model> =
+        raw.into_iter().take(params.limit as usize).collect();
+
+    Ok(Fetched {
+        rows,
+        has_next_page,
+        has_previous_page: params.after_id.is_some(),
+    })
 }
 
-#[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
     ctx: &ServiceContext,
     _params: &Params,
-    rows: &Vec<notification::Model>,
+    fetched: &Fetched,
 ) -> Result<Hydrated, Status> {
+    let rows = &fetched.rows;
     // Every trigger (and present target) event the page references, plus the
     // identities involved.
     let mut cmp_keys: Vec<TargetEventKey> = Vec::new();
+    let mut trigger_keys: Vec<TargetEventKey> = Vec::new();
     let mut identities: HashSet<String> = HashSet::new();
     for row in rows {
-        cmp_keys.push(trigger_key(row));
+        let trigger_key = trigger_key(row);
+        trigger_keys.push(trigger_key.clone());
+        cmp_keys.push(trigger_key);
         if let Some(target) = target_key(row) {
             cmp_keys.push(target);
         }
@@ -110,16 +131,40 @@ async fn hydrate(
     attach_proofs(ctx, &mut fetched_bundles).await?;
     let bundles: HashMap<TargetEventKey, EventBundle> =
         fetched_keys.into_iter().zip(fetched_bundles).collect();
+    // Fetch label events for trigger events only: we assume recipient is the target's
+    // author and does not object to their own posts.
+    let label_fut = async {
+        FeedsRepository::list_labels_for_event_keys(
+            &ctx.db,
+            &trigger_keys,
+            ctx.trusted_moderator.as_deref(),
+        )
+        .await
+        .map_err(map_db_err)
+    };
 
-    // Author identity (signing chain) + profile (name/avatar) events as hints.
+    // Author identity, profile, and moderation label events all ship as hints.
     let identities: Vec<String> = identities.into_iter().collect();
-    let (identity_events, profile_events) = tokio::try_join!(
+    let (identity_events, profile_events, label_rows) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
+        label_fut,
     )?;
-    let event_hints: Vec<EventHint> = rows_to_hints(
+
+    let mut label_bundles = rows_to_bundles(label_rows);
+    attach_proofs(ctx, &mut label_bundles).await?;
+
+    let mut event_hints: Vec<EventHint> = rows_to_bundles(
         identity_events.into_iter().chain(profile_events).collect(),
-    );
+    )
+    .into_iter()
+    .map(|event_bundle| EventHint {
+        event_bundle: Some(event_bundle),
+    })
+    .collect();
+    event_hints.extend(label_bundles.into_iter().map(|b| EventHint {
+        event_bundle: Some(b),
+    }));
 
     Ok(Hydrated {
         bundles,
@@ -127,29 +172,31 @@ async fn hydrate(
     })
 }
 
-// Notifications carry no per-row state to filter (no tombstones); pass through.
+/// No filtering. `omit_labels` is enforced in `fetch`.
 async fn filter(
     _ctx: &ServiceContext,
     _params: &Params,
-    rows: Vec<notification::Model>,
+    fetched: Fetched,
     _hydrated: &Hydrated,
-) -> Result<Vec<notification::Model>, Status> {
-    Ok(rows)
+) -> Result<Fetched, Status> {
+    Ok(fetched)
 }
 
 async fn view(
     _ctx: &ServiceContext,
-    params: &Params,
-    rows: Vec<notification::Model>,
+    _params: &Params,
+    fetched: Fetched,
     hydrated: Hydrated,
 ) -> Result<ListNotificationsResponse, Status> {
+    let Fetched {
+        rows,
+        has_next_page,
+        has_previous_page,
+    } = fetched;
     let Hydrated {
         bundles,
         event_hints,
     } = hydrated;
-
-    // A full page implies there may be more; cursors page off the row ids.
-    let has_next_page = rows.len() as u64 == params.limit;
     let start_cursor =
         rows.first().map(|r| r.id.to_string()).unwrap_or_default();
     let end_cursor = rows.last().map(|r| r.id.to_string()).unwrap_or_default();
@@ -177,7 +224,7 @@ async fn view(
             start_cursor,
             end_cursor,
             has_next_page,
-            has_previous_page: params.after_id.is_some(),
+            has_previous_page,
         }),
     })
 }

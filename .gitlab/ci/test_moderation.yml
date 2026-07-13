@@ -9,9 +9,10 @@
 .moderation-integration-workflow:
   image: $RUST_DIND_IMAGE
   stage: test
-  # Enforce serial execution of moderation integration tests using a `resource_group`, so that the
-  # Docker stack of one CI runner doing the test doesn't interfere with that of the other.
-  resource_group: moderation-integration
+  # Enforce serial execution of integration tests that share the same Docker
+  # Compose project (postgres, rustfs, kafka, server) — the two integration
+  # pipelines must never run concurrently or they tear down each other's stack.
+  resource_group: docker-compose-integration
   rules:
     - if: $CI_COMMIT_TAG =~ /^moderation-/
       when: always

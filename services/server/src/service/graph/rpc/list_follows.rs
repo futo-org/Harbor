@@ -45,7 +45,7 @@ pub async fn handle(
     }
 
     let params = Params {
-        common: feeds_pipeline::Params::from_req_params(page_params)?,
+        common: feeds_pipeline::Params::from_req_params(page_params, vec![])?,
         identity,
         direction,
     };

@@ -31,12 +31,14 @@ use tonic::Status;
 pub struct Params {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter>,
+    pub omit_labels: Vec<String>,
 }
 
 impl Params {
-    /// Extract values from the client request's page params.
+    /// Extract values from the client request's page params and `omit_labels` set.
     pub fn from_req_params(
         params: &Option<PageParams>,
+        omit_labels: Vec<String>,
     ) -> Result<Params, Status> {
         let limit = page_limit(params);
 
@@ -62,6 +64,7 @@ impl Params {
         Ok(Params {
             limit,
             cursor_filter,
+            omit_labels,
         })
     }
 }
@@ -190,6 +193,17 @@ pub async fn hydrate(
     );
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
 
+    let quote_set = to_target_event_keys(&quote_keys);
+    let repost_set = to_target_event_keys(&repost_keys);
+
+    // Include quote and repost events in label look-up
+    let label_keys: Vec<TargetEventKey> = {
+        let mut set: HashSet<TargetEventKey> = keys.iter().cloned().collect();
+        set.extend(quote_set.iter().cloned());
+        set.extend(repost_set.iter().cloned());
+        set.into_iter().collect()
+    };
+
     // Returns valid (as far as the server is concerned) tombstones related to queried events
     let tombstones_fut = async {
         let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
@@ -208,16 +222,30 @@ pub async fn hydrate(
             .await
             .map_err(map_db_err)
     };
+    let labels_fut = async {
+        FeedsRepository::list_labels_for_event_keys(
+            &ctx.db,
+            &label_keys,
+            ctx.trusted_moderator.as_deref(),
+        )
+        .await
+        .map_err(map_db_err)
+    };
 
-    let (deletes_by_target, identity_events, profile_events, referenced) = tokio::try_join!(
+    let (
+        deletes_by_target,
+        identity_events,
+        profile_events,
+        referenced,
+        label_events,
+    ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
         profile_events_fut,
         referenced_fut,
+        labels_fut,
     )?;
 
-    let quote_set = to_target_event_keys(&quote_keys);
-    let repost_set = to_target_event_keys(&repost_keys);
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
     for row in referenced {
@@ -235,6 +263,7 @@ pub async fn hydrate(
         profile_events,
         quote_post_events,
         repost_events,
+        label_events,
     })
 }
 
@@ -331,17 +360,20 @@ pub async fn view(
         profile_events,
         quote_post_events,
         repost_events,
+        label_events,
         ..
     } = hydration;
 
     let mut event_bundles = rows_to_bundles(live_rows);
+    let mut label_bundles = rows_to_bundles(label_events);
     tokio::try_join!(
         attach_proofs(ctx, &mut event_bundles),
         attach_proofs(ctx, &mut tombstone_bundles),
+        attach_proofs(ctx, &mut label_bundles),
     )?;
 
-    // Identity, profile and referenced (quote / repost) posts all ship
-    // as hints; tombstone bundles join them.
+    // Identity, profile, referenced (quote / repost) posts, tombstones,
+    // and moderation labels all ship as hints.
     let hint_rows: Vec<EventWithContentRow> = identity_events
         .into_iter()
         .chain(profile_events)
@@ -350,6 +382,7 @@ pub async fn view(
         .collect();
     let mut event_hints = rows_to_hints(hint_rows);
     event_hints.extend(bundles_to_hints(tombstone_bundles));
+    event_hints.extend(bundles_to_hints(label_bundles));
 
     Ok(GetFeedResponseView {
         event_bundles,
