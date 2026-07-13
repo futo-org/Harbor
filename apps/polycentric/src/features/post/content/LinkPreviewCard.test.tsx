@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 import type { v2 } from '@polycentric/react-native';
-import { LinkPreviewCard } from './LinkPreviewCard';
+import { COMPACT_IMAGE_WIDTH, LinkPreviewCard } from './LinkPreviewCard';
 
 // The card pulls its colors/atoms from the theme; under test we don't render
 // the real ThemeProvider (it blocks on font + storage loads), so stub the
@@ -79,6 +79,22 @@ describe('LinkPreviewCard', () => {
     expect(getByTestId('linkPreviewImage').props.source[0].uri).toBe(
       'proxy://https://img.test/x.png',
     );
+  });
+
+  it('renders the thumbnail as a fixed-width side image when compact', async () => {
+    const { getByTestId } = await render(
+      <LinkPreviewCard
+        compact
+        link={makeLink({ image: 'https://img.test/x.png' })}
+      />,
+    );
+    // Compact swaps the full-width banner (sized by aspect ratio) for a
+    // fixed-width thumbnail.
+    const style = StyleSheet.flatten(
+      getByTestId('linkPreviewImage').props.style,
+    );
+    expect(style.width).toBe(COMPACT_IMAGE_WIDTH);
+    expect(style.aspectRatio).toBeUndefined();
   });
 
   it('renders no image and only the host line when optional fields are empty', async () => {
