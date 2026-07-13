@@ -11,6 +11,8 @@ const ALIAS = 'test@domain.com';
 jest.mock('@polycentric/react-native', () => ({
   FetchMode: { Default: 'Default' },
   resolveAlias: jest.fn(),
+  isIdentityKey: (s: string): boolean =>
+    s.length > 0 && [...s].every((c) => '0123456789abcdefABCDEF'.includes(c)),
   normalizeAlias: (alias: string): string | null => {
     let s = alias.trim();
     if (s.startsWith('@')) s = s.slice(1);
