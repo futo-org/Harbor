@@ -135,13 +135,13 @@ impl Query {
         }
 
         // Drop any events with omitted labels before pagination
-        if !omit_labels.is_empty() {
-            if let Some(moderator) = trusted_moderator {
-                query = query.filter(omit_feed_event_if_label_present(
-                    moderator,
-                    omit_labels,
-                ));
-            }
+        if !omit_labels.is_empty()
+            && let Some(moderator) = trusted_moderator
+        {
+            query = query.filter(omit_feed_event_if_label_present(
+                moderator,
+                omit_labels,
+            ));
         }
 
         let mut sea_cursor = query.cursor_by(FeedMarker::cols());

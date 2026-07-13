@@ -29,17 +29,17 @@ impl Query {
             query = query.filter(notification::Column::Id.lt(after));
         }
 
-        if !omit_labels.is_empty() {
-            if let Some(moderator) = trusted_moderator {
-                // The `trigger` event is activity related to a `target` event.
-                // We assume that, in the context of a notification, the `target`
-                // event is never objectionable because it is authored by the
-                // identity we are serving notifications to, so we only check the
-                // `trigger` event.
-                query = query.filter(Expr::not_exists(
-                    omit_trigger_labels_subquery(moderator, omit_labels),
-                ));
-            }
+        if !omit_labels.is_empty()
+            && let Some(moderator) = trusted_moderator
+        {
+            // The `trigger` event is activity related to a `target` event.
+            // We assume that, in the context of a notification, the `target`
+            // event is never objectionable because it is authored by the
+            // identity we are serving notifications to, so we only check the
+            // `trigger` event.
+            query = query.filter(Expr::not_exists(
+                omit_trigger_labels_subquery(moderator, omit_labels),
+            ));
         }
 
         query.all(db).await
