@@ -18,9 +18,21 @@ const EVICTION_BATCH: usize = 100;
 const SUCCESS_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 const FAILURE_TTL: Duration = Duration::from_secs(10 * 60);
 
-/// A cached scrape outcome. Failures are cached too (with a shorter
-/// TTL) so a dead or slow URL doesn't get re-scraped on every request.
+/// A cached scrape outcome. Failures the scraper reported for the URL
+/// are cached too (with a shorter TTL) so a dead or slow URL doesn't
+/// get re-scraped on every request; failures to reach the scraper at
+/// all are never cached (see `ScrapeFailure`).
 type ScrapeOutcome = Result<UrlInfoResponse, (Code, String)>;
+
+/// Why a scrape failed: `Reported` means the scraper answered for this
+/// URL (a property of the target, cacheable); `Unreachable` means the
+/// scraper couldn't be reached or gave an unusable response (transient
+/// infrastructure trouble, never cached).
+#[derive(Debug)]
+enum ScrapeFailure {
+    Reported(Status),
+    Unreachable(Status),
+}
 
 /// In-memory cache for `url_info` responses, keyed by trimmed URL.
 type UrlInfoCache = RwLock<HashMap<String, (Instant, ScrapeOutcome)>>;
@@ -91,10 +103,13 @@ async fn lookup(
     let outcome = match get_cached(cache, key) {
         Some(outcome) => outcome,
         None => {
-            let outcome =
-                fetch_metadata(scrape_url, key).await.map_err(|status| {
-                    (status.code(), status.message().to_string())
-                });
+            let outcome = match fetch_metadata(scrape_url, key).await {
+                Ok(resp) => Ok(resp),
+                Err(ScrapeFailure::Unreachable(status)) => return Err(status),
+                Err(ScrapeFailure::Reported(status)) => {
+                    Err((status.code(), status.message().to_string()))
+                }
+            };
             insert_cached(cache, key.to_owned(), outcome.clone());
             outcome
         }
@@ -108,25 +123,29 @@ async fn lookup(
 async fn fetch_metadata(
     scrape_url: &str,
     target_url: &str,
-) -> Result<UrlInfoResponse, Status> {
+) -> Result<UrlInfoResponse, ScrapeFailure> {
     let resp = http_client::client()
         .get(scrape_url)
         .query(&[("url", target_url)])
         .send()
         .await
         .map_err(|e| {
-            Status::unavailable(format!("scraper request failed: {e}"))
+            ScrapeFailure::Unreachable(Status::unavailable(format!(
+                "scraper request failed: {e}"
+            )))
         })?;
 
     if !resp.status().is_success() {
-        return Err(Status::unavailable(format!(
+        return Err(ScrapeFailure::Reported(Status::unavailable(format!(
             "scraper returned status {}",
             resp.status()
-        )));
+        ))));
     }
 
     let meta: ScrapedMetadata = resp.json().await.map_err(|e| {
-        Status::internal(format!("invalid scraper response: {e}"))
+        ScrapeFailure::Unreachable(Status::internal(format!(
+            "invalid scraper response: {e}"
+        )))
     })?;
 
     Ok(UrlInfoResponse {
@@ -211,7 +230,10 @@ mod tests {
             .await
             .expect_err("non-2xx should error");
 
-        assert_eq!(err.code(), Code::Unavailable);
+        let ScrapeFailure::Reported(status) = err else {
+            panic!("non-2xx should be a Reported failure");
+        };
+        assert_eq!(status.code(), Code::Unavailable);
     }
 
     fn success_body(title: &str) -> String {
@@ -338,6 +360,39 @@ mod tests {
             .await
             .expect_err("invalid JSON should error");
 
-        assert_eq!(err.code(), Code::Internal);
+        let ScrapeFailure::Unreachable(status) = err else {
+            panic!("a malformed body should be an Unreachable failure");
+        };
+        assert_eq!(status.code(), Code::Internal);
+    }
+
+    #[tokio::test]
+    async fn unreachable_scraper_failures_are_not_cached() {
+        let cache = UrlInfoCache::default();
+
+        let refused =
+            lookup(&cache, "http://127.0.0.1:1/scrape", "https://example.com")
+                .await
+                .expect_err("unreachable scraper should fail");
+        assert_eq!(refused.code(), Code::Unavailable);
+
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(success_body("Recovered"))
+            .expect(1)
+            .create_async()
+            .await;
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let recovered = lookup(&cache, &scrape_url, "https://example.com")
+            .await
+            .expect("retry after recovery should succeed");
+
+        assert_eq!(recovered.title, "Recovered");
+        mock.assert_async().await;
     }
 }
