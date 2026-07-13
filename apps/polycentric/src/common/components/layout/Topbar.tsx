@@ -100,13 +100,13 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               {title}
             </Text>
           ) : (
-            <Link href={{ pathname: '/' }}>
-              <Image
-                source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
-                contentFit="contain"
-                style={[{ width: 36, height: 36 }, Atoms.self_center]}
-              />
-            </Link>
+            // <Link href={{ pathname: '/' }}>
+            <Image
+              source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
+              contentFit="contain"
+              style={[{ width: 36, height: 36 }, Atoms.self_center]}
+            />
+            // </Link>
           ))}
       </View>
       <View
