@@ -78,7 +78,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
                 identityKey
                   ? () =>
                       router.push({
-                        pathname: '/profile/[identityId]',
+                        pathname: '/[identityId]',
                         params: { identityId: identityKey },
                       })
                   : undefined
