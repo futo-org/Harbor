@@ -1,4 +1,4 @@
-FROM rust:1.96-slim AS chef
+FROM rust:1.97-slim AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -23,7 +23,7 @@ RUN cargo build --release \
     --package server \
     --package migration
 
-FROM rust:1.96-slim
+FROM rust:1.97-slim
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
