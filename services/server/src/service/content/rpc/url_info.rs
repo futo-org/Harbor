@@ -61,23 +61,26 @@ fn insert_cached(cache: &UrlInfoCache, key: String, outcome: ScrapeOutcome) {
             .retain(|_, (created, outcome)| created.elapsed() < ttl(outcome));
     }
     if entries.len() >= MAX_CACHED_URLS {
-        let mut remaining: Vec<(Duration, &String)> = entries
-            .iter()
-            .map(|(key, (created, outcome))| {
-                (ttl(outcome).saturating_sub(created.elapsed()), key)
-            })
-            .collect();
-        let batch = EVICTION_BATCH.min(remaining.len());
-        remaining.select_nth_unstable_by_key(batch - 1, |(left, _)| *left);
-        let evicted: Vec<String> = remaining[..batch]
-            .iter()
-            .map(|(_, key)| (*key).clone())
-            .collect();
-        for key in evicted {
-            entries.remove(&key);
-        }
+        evict_batch_closest_to_expiry(&mut entries);
     }
     entries.insert(key, (Instant::now(), outcome));
+}
+
+/// Remove the `EVICTION_BATCH` entries with the least remaining TTL.
+fn evict_batch_closest_to_expiry(
+    entries: &mut HashMap<String, (Instant, ScrapeOutcome)>,
+) {
+    let mut by_remaining_ttl: Vec<(Duration, String)> = entries
+        .iter()
+        .map(|(key, (created, outcome))| {
+            (ttl(outcome).saturating_sub(created.elapsed()), key.clone())
+        })
+        .collect();
+    by_remaining_ttl.sort_unstable_by_key(|(remaining, _)| *remaining);
+
+    for (_, key) in by_remaining_ttl.into_iter().take(EVICTION_BATCH) {
+        entries.remove(&key);
+    }
 }
 
 /// JSON returned by the scraper service's `/scrape` endpoint.
