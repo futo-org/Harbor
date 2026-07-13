@@ -100,21 +100,20 @@ async fn lookup(
     target_url: &str,
 ) -> Result<UrlInfoResponse, Status> {
     let key = target_url.trim();
-    let outcome = match get_cached(cache, key) {
-        Some(outcome) => outcome,
-        None => {
-            let outcome = match fetch_metadata(scrape_url, key).await {
-                Ok(resp) => Ok(resp),
-                Err(ScrapeFailure::Unreachable(status)) => return Err(status),
-                Err(ScrapeFailure::Reported(status)) => {
-                    Err((status.code(), status.message().to_string()))
-                }
-            };
-            insert_cached(cache, key.to_owned(), outcome.clone());
-            outcome
+
+    if let Some(outcome) = get_cached(cache, key) {
+        return outcome.map_err(|(code, message)| Status::new(code, message));
+    }
+
+    let outcome = match fetch_metadata(scrape_url, key).await {
+        Ok(resp) => Ok(resp),
+        Err(ScrapeFailure::Unreachable(status)) => return Err(status),
+        Err(ScrapeFailure::Reported(status)) => {
+            Err((status.code(), status.message().to_string()))
         }
     };
 
+    insert_cached(cache, key.to_owned(), outcome.clone());
     outcome.map_err(|(code, message)| Status::new(code, message))
 }
 
