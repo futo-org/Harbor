@@ -14,7 +14,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { useColorScheme } from 'react-native';
-import { loadThemeName, saveThemeName } from './storage';
+import { useSettings } from '@/src/common/settings';
 import { themes, type Theme, type ThemeKey } from './themes';
 
 export type ThemeContextValue = {
@@ -32,25 +32,25 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     'Inter-Italic': Fonts['Inter-Italic'],
   });
 
-  // useColorScheme returns the system theme preference.
   const colorScheme = useColorScheme();
-  const [activeThemeName, setActiveThemeNameState] = useState<ThemeKey>(
-    colorScheme === 'dark' ? 'dark' : 'light',
-  );
-  const [themePreferenceLoaded, setThemePreferenceLoaded] = useState(false);
+  const storedTheme = useSettings((s) => s.theme);
+  const [hydrated, setHydrated] = useState(useSettings.persist.hasHydrated());
 
   useEffect(() => {
-    void loadThemeName().then((themeName) => {
-      if (themeName) {
-        setActiveThemeNameState(themeName);
-      }
-      setThemePreferenceLoaded(true);
-    });
+    const unsub = useSettings.persist.onFinishHydration(() =>
+      setHydrated(true),
+    );
+    return unsub;
   }, []);
 
+  const activeThemeName = hydrated
+    ? storedTheme
+    : colorScheme === 'dark'
+      ? 'dark'
+      : 'light';
+
   const setActiveThemeName = useCallback((name: ThemeKey) => {
-    setActiveThemeNameState(name);
-    void saveThemeName(name);
+    useSettings.getState().setTheme(name);
   }, []);
 
   const theme = useMemo(() => themes[activeThemeName], [activeThemeName]);
@@ -64,7 +64,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     throw fontError;
   }
 
-  if (!fontsLoaded || !themePreferenceLoaded) {
+  if (!fontsLoaded || !hydrated) {
     return null;
   }
 
