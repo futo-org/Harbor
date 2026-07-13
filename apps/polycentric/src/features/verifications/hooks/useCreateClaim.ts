@@ -71,6 +71,12 @@ export default function useCreateClaim() {
         // Save the event locally and mirror it (with content) into the core.
         await client.commitEvent(signedEvent, content);
 
+        try {
+          await client.sync(SyncStrategy.PARTIAL_PUSH);
+        } catch (err) {
+          console.error(err);
+        }
+
         // The same sync below delivers both events.
         if (requestFrom && event.key) {
           await publishVerificationTarget(client, event.key, requestFrom);
