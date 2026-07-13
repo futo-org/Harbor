@@ -37,10 +37,10 @@ describe('settings store — linkPreviewsEnabled', () => {
 
   it('recovers from a malformed stored value', async () => {
     await AsyncStorage.setItem(SETTINGS_KEY, '{broken');
-    const { persist } = useSettingsStore;
+    const { persist } = useSettings;
     await persist.rehydrate();
     // Should fall back to the default
-    expect(useSettingsStore.getState().linkPreviewsEnabled).toBe(true);
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 
   it('returns the default instead of throwing when storage errors', async () => {
@@ -49,6 +49,6 @@ describe('settings store — linkPreviewsEnabled', () => {
     );
     const { persist } = useSettings;
     await persist.rehydrate();
-    expect(useSettingsStore.getState().linkPreviewsEnabled).toBe(true);
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 });
