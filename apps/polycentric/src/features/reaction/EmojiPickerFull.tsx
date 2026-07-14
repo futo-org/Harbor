@@ -1,5 +1,5 @@
 import { Sheet } from '@/src/common/components/sheet';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, Spacing } from '@/src/common/theme';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { categories, type EmojiEntry } from './emojiData';
@@ -51,13 +51,27 @@ export function EmojiPickerFull({
       detents={[0.5]}
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
     >
-      <Sheet.Content style={[Atoms.px_lg, { maxHeight: 420, minHeight: 0 }]}>
-        <EmojiPickerCategoryTabs
-          categories={categories}
-          activeKey={activeCategory}
-          onSelect={setActiveCategory}
-        />
-        <View style={[Atoms.pt_sm, Atoms.flex_1, { minHeight: 0 }]}>
+      <Sheet.Content
+        style={[{ maxHeight: 420, minHeight: 0, flexDirection: 'row' }]}
+      >
+        <View
+          style={[
+            { width: 56, borderRightWidth: 1, borderRightColor: '#e0e0e0' },
+          ]}
+        >
+          <EmojiPickerCategoryTabs
+            categories={categories}
+            activeKey={activeCategory}
+            onSelect={setActiveCategory}
+          />
+        </View>
+        <View
+          style={[
+            Atoms.flex_1,
+            Atoms.pt_sm,
+            { minHeight: 0, paddingHorizontal: Spacing.sm },
+          ]}
+        >
           <FlatList
             data={rows}
             keyExtractor={(_, index) => String(index)}

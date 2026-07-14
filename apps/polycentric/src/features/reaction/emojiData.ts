@@ -24,6 +24,7 @@ function groupByCategory(): EmojiCategory[] {
   const map = new Map<string, EmojiEntry[]>();
 
   for (const entry of data.emojis) {
+    if (entry.category === 'Component') continue;
     let list = map.get(entry.category);
     if (!list) {
       list = [];

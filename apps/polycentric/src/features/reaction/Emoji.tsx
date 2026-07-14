@@ -26,10 +26,10 @@ export const Emoji = ({
     transform: [{ scale: scale.value }],
   }));
   const bounceIn = () => {
-    scale.value = withSpring(1.25, { damping: 6, stiffness: 220, mass: 0.5 });
+    scale.value = withSpring(1.12, { damping: 10, stiffness: 220, mass: 0.3 });
   };
   const bounceOut = () => {
-    scale.value = withSpring(1, { damping: 14, stiffness: 220, mass: 0.5 });
+    scale.value = withSpring(1, { damping: 16, stiffness: 220, mass: 0.3 });
   };
 
   return (

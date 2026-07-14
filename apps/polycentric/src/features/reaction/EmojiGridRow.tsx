@@ -18,7 +18,7 @@ export function EmojiGridRow({
 
   return (
     <View
-      style={[Atoms.flex_row, Atoms.justify_between, Atoms.px_xs, Atoms.py_xs]}
+      style={[Atoms.flex_row, Atoms.justify_start, Atoms.gap_2xs, Atoms.py_xs]}
     >
       {emojis.map((entry) => (
         <Emoji

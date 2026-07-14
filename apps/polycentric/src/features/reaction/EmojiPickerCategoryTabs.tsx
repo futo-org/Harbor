@@ -1,6 +1,5 @@
-import { HorizontalScrollGroup } from '@/src/common/components/primitives/HorizontalScrollGroup';
-import { Atoms, BorderRadius, Spacing, useTheme } from '@/src/common/theme';
-import { Pressable, Text, View } from 'react-native';
+import { Atoms, BorderRadius, useTheme } from '@/src/common/theme';
+import { Pressable, ScrollView, Text } from 'react-native';
 import type { EmojiCategory } from './emojiData';
 
 type EmojiPickerCategoryTabsProps = {
@@ -17,7 +16,10 @@ export function EmojiPickerCategoryTabs({
   const { theme } = useTheme();
 
   return (
-    <HorizontalScrollGroup>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[Atoms.gap_xs, Atoms.py_xs]}
+    >
       {categories.map((cat) => {
         const active = cat.key === activeKey;
         return (
@@ -25,37 +27,22 @@ export function EmojiPickerCategoryTabs({
             key={cat.key}
             onPress={() => onSelect(cat.key)}
             style={[
-              Atoms.flex_row,
               Atoms.align_center,
+              Atoms.justify_center,
               {
-                paddingHorizontal: Spacing.md,
-                paddingVertical: Spacing.xs,
+                width: 40,
+                height: 40,
                 borderRadius: BorderRadius.full,
                 backgroundColor: active
                   ? theme.palette.primary_500
-                  : theme.palette.neutral_25,
+                  : 'transparent',
               },
             ]}
           >
-            <Text style={{ fontSize: 16, marginRight: Spacing.xs }}>
-              {cat.icon}
-            </Text>
-            <Text
-              style={[
-                Atoms.text_sm,
-                {
-                  color: active
-                    ? theme.palette.neutral_0
-                    : theme.palette.neutral_900,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {cat.name}
-            </Text>
+            <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
           </Pressable>
         );
       })}
-    </HorizontalScrollGroup>
+    </ScrollView>
   );
 }

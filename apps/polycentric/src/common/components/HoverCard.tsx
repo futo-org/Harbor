@@ -1,6 +1,6 @@
 import * as HoverCardPrimitive from '@rn-primitives/hover-card';
 import { StyleSheet, View } from 'react-native';
-import Animated, { BounceIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
 import { isWeb } from '../util/platform';
 
 export function HoverCardContent({
@@ -8,14 +8,14 @@ export function HoverCardContent({
   animated = true,
   ...props
 }: HoverCardPrimitive.ContentProps & {
-  /** Animate the reveal (BounceIn). Set false for an instant, static card. */
+  /** Animate the reveal (ZoomIn spring). Set false for an instant, static card. */
   animated?: boolean;
 }) {
   const content = (
     <HoverCardPrimitive.Content {...props}>
       {animated ? (
         <Animated.View
-          entering={BounceIn.duration(450)}
+          entering={ZoomIn.springify().damping(30).mass(0.2).stiffness(400)}
           exiting={FadeOut.duration(100)}
         >
           {children}
