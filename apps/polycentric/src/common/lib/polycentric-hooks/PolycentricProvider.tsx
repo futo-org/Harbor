@@ -257,6 +257,7 @@ export function PolycentricProvider({
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
+    if (!client || !store) return null;
     return {
       client,
       store,

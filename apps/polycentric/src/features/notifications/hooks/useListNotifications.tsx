@@ -17,7 +17,7 @@ export default function useListNotifications(): UseListNotificationsResult {
 
   const query = useQuery(
     ['list_notifications', identity],
-    new Query.ListNotifications({ identity }),
+    new Query.ListNotifications({ identity, omitLabels: [] }),
     undefined,
     !!identity,
   );
