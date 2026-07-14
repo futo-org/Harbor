@@ -7,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { loadLinkPreviewsEnabled, saveLinkPreviewsEnabled } from './storage';
+import { useSettings } from '@/src/common/settings';
 
 export type LinkPreviewsContextValue = {
   /** Whether to generate a link preview for URLs in the user's own posts. */
@@ -21,23 +21,19 @@ export const Context = createContext<LinkPreviewsContextValue | undefined>(
 Context.displayName = 'PolycentricLinkPreviewsContext';
 
 export function LinkPreviewsProvider({ children }: PropsWithChildren) {
-  // Default on: matches the prior always-generate behavior. Unlike the theme
-  // provider we don't block render until the stored value loads — a brief
-  // default-on before hydration is harmless (it only affects composing a post,
-  // not the initial paint).
-  const [enabled, setEnabledState] = useState(true);
+  const stored = useSettings((s) => s.linkPreviewsEnabled);
+  const [hydrated, setHydrated] = useState(useSettings.persist.hasHydrated());
 
   useEffect(() => {
-    void loadLinkPreviewsEnabled().then((stored) => {
-      if (stored !== undefined) {
-        setEnabledState(stored);
-      }
-    });
+    const unsub = useSettings.persist.onFinishHydration(() =>
+      setHydrated(true),
+    );
+    return unsub;
   }, []);
 
+  const enabled = hydrated ? stored : true;
   const setEnabled = useCallback((next: boolean) => {
-    setEnabledState(next);
-    void saveLinkPreviewsEnabled(next);
+    useSettings.getState().setLinkPreviewsEnabled(next);
   }, []);
 
   const value = useMemo(() => ({ enabled, setEnabled }), [enabled, setEnabled]);
