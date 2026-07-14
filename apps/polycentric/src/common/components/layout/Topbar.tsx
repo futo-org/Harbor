@@ -52,7 +52,8 @@ function Topbar({ title, left, center, right }: TopbarProps) {
     >
       <View
         style={[
-          !!right && { width: SIDE_WIDTH },
+          Atoms.flex_1,
+          { minWidth: SIDE_WIDTH },
           Atoms.justify_center,
           Atoms.items_start,
         ]}
@@ -77,7 +78,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
                 identityKey
                   ? () =>
                       router.push({
-                        pathname: '/profile/[identityId]',
+                        pathname: '/[identityId]',
                         params: { identityId: identityKey },
                       })
                   : undefined
@@ -87,7 +88,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
       </View>
       <View
         style={[
-          Atoms.flex_1,
+          Atoms.flex_shrink_1,
           Atoms.align_center,
           Atoms.flex_row,
           Atoms.justify_center,
@@ -95,20 +96,23 @@ function Topbar({ title, left, center, right }: TopbarProps) {
       >
         {center ??
           (title ? (
-            <Text variant="title">{title}</Text>
+            <Text variant="title" numberOfLines={1}>
+              {title}
+            </Text>
           ) : (
-            <Link href={{ pathname: '/' }}>
-              <Image
-                source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
-                contentFit="contain"
-                style={[{ width: 36, height: 36 }, Atoms.self_center]}
-              />
-            </Link>
+            // <Link href={{ pathname: '/' }}>
+            <Image
+              source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
+              contentFit="contain"
+              style={[{ width: 36, height: 36 }, Atoms.self_center]}
+            />
+            // </Link>
           ))}
       </View>
       <View
         style={[
-          !right && { width: SIDE_WIDTH },
+          Atoms.flex_1,
+          { minWidth: SIDE_WIDTH },
           Atoms.justify_center,
           Atoms.items_end,
         ]}

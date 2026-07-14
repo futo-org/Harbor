@@ -7,7 +7,6 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
-import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Portal } from '@rn-primitives/portal';
 import { router, useNavigation } from 'expo-router';
 import {
@@ -42,6 +41,9 @@ type CommonProps = {
   children: ReactNode;
   detents?: SheetDetent[];
   dismissible?: boolean;
+  /** Dim the background; tapping the dim area dismisses the sheet (native).
+   * Set to `false` to allow interacting with the screen behind instead. */
+  dimmed?: boolean;
   scrollable?: boolean;
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
@@ -56,7 +58,7 @@ export type SheetProps =
 
 export function Sheet(props: SheetProps) {
   const portalId = useId();
-  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const navigation = useSheetNavigation();
   if (props.open === false) return null;
   return (
     <Portal name={`sheet-${portalId}`}>
@@ -96,17 +98,24 @@ function SheetHeader({
   left,
   right,
 }: SheetHeaderProps) {
-  left = left ?? (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Go back"
-      onPress={onClose}
-      hitSlop={Spacing['lg']}
-      style={({ pressed }) => [pressed && { opacity: 0.5 }]}
-    >
-      <Icon name={closeIcon} size={24} color="neutral_900" />
-    </Pressable>
-  );
+  // Native sheets dismiss by swiping down, so the close button is redundant
+  // there — hide it. Web modals keep it, and back chevrons show everywhere.
+  const hideDefault = !isWeb && closeIcon === 'close';
+  left =
+    left ??
+    (hideDefault ? (
+      <View style={{ width: 40, height: 40 }} />
+    ) : (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        onPress={onClose}
+        hitSlop={Spacing['lg']}
+        style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+      >
+        <Icon name={closeIcon} size={24} color="neutral_900" />
+      </Pressable>
+    ));
   right = right ?? <View style={{ width: 40, height: 40 }} />;
 
   return (
@@ -149,8 +158,13 @@ Sheet.Header = SheetHeader;
 Sheet.Content = SheetContent;
 Sheet.Footer = SheetFooter;
 
+// `ReturnType` can't see a generic hook's default type; the non-generic
+// wrapper pins it down without importing react-navigation's types.
+const useSheetNavigation = () => useNavigation();
+type Navigation = ReturnType<typeof useSheetNavigation>;
+
 type WithNavigation<T> = T & {
-  navigation: NavigationProp<ParamListBase>;
+  navigation: Navigation;
 };
 type NativeInternalProps = WithNavigation<SheetProps>;
 type WebInternalProps = WithNavigation<SheetProps>;
@@ -161,6 +175,7 @@ function NativeSheet({
   children,
   detents = [0.5],
   dismissible = true,
+  dimmed = true,
   scrollable = false,
   navigation,
   ...props
@@ -205,7 +220,7 @@ function NativeSheet({
   return (
     <TrueSheet
       ref={sheetRef}
-      dimmed={false}
+      dimmed={dimmed}
       backgroundColor={surface}
       detents={detents}
       initialDetentIndex={0}

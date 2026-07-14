@@ -9,6 +9,8 @@ export interface ProfileHookResult {
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
+  followingCount: number;
+  followersCount: number;
   isLoading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -30,7 +32,20 @@ const EMPTY_PROFILE: Omit<
   avatar: null,
   banner: null,
   alias: null,
+  followingCount: 0,
+  followersCount: 0,
 };
+
+/**
+ * Shared cache key for a profile. The fetch mode is intentionally not part
+ * of the key so every surface (feed avatars, post authors, the profile page)
+ * reads and invalidates the same entry.
+ */
+export function profileQueryKey(
+  identityKey: string | null | undefined,
+): string[] {
+  return ['profile', identityKey ?? ''];
+}
 
 export function useProfile(
   identityKey: string | null | undefined,
@@ -39,7 +54,7 @@ export function useProfile(
   const fetchMode = options?.fetchMode ?? FetchMode.OfflineOnly;
 
   const query = useQuery(
-    ['profile', identityKey ?? '', fetchMode.toString()],
+    profileQueryKey(identityKey),
     new Query.GetProfile({ identity: identityKey ?? '' }),
     { fetchMode },
     !!identityKey,
@@ -56,6 +71,8 @@ export function useProfile(
     avatar: decoded.avatar,
     banner: decoded.banner,
     alias: decoded.alias,
+    followingCount: decoded.followingCount,
+    followersCount: decoded.followersCount,
     isLoading: query.isLoading,
     error: query.error ? new Error(query.error) : null,
     refresh: () => query.refresh(RefreshStrategy.Fetch),

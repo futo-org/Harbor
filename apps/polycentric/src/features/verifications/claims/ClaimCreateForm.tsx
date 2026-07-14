@@ -1,10 +1,18 @@
-import { Button, Text, TextInput } from '@/src/common/components';
+import { Text, TextInput } from '@/src/common/components';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { ClaimType, FormField } from '../utils/forms';
 import useCreateClaim, { ClaimRef } from '../hooks/useCreateClaim';
 import { formToSchema } from '../utils/schemas';
+
+// Submission is driven from outside (the sheet header's Create button), so
+// the form reports its current state upward instead of rendering a button.
+export type ClaimFormState = {
+  submit: () => void;
+  isValid: boolean;
+  isPending: boolean;
+};
 
 // Renders the input form for a claim type, collects values, and publishes the
 // claim. `onSubmitted` fires once the claim is created. Remount (via a `key`
@@ -12,9 +20,11 @@ import { formToSchema } from '../utils/schemas';
 export function ClaimCreateForm({
   claimType,
   onSubmitted,
+  onFormState,
 }: {
   claimType: ClaimType;
   onSubmitted: (ref: ClaimRef) => void;
+  onFormState: (state: ClaimFormState | null) => void;
 }) {
   const { theme } = useTheme();
   const { submit, isPending } = useCreateClaim();
@@ -40,13 +50,32 @@ export function ClaimCreateForm({
     }
   };
 
+  // `onSubmit` closes over hook values that change identity every render, so
+  // hand the parent a stable wrapper around a ref and only re-report when the
+  // state the header button renders from changes — reporting on every render
+  // would loop: report -> parent setState -> re-render -> report.
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  });
+
+  useEffect(() => {
+    onFormState({
+      submit: () => void onSubmitRef.current(),
+      isValid,
+      isPending,
+    });
+    return () => onFormState(null);
+  }, [onFormState, isValid, isPending]);
+
   return (
     <View style={Atoms.gap_md}>
-      {claimType.fields.map((field) => (
+      {claimType.fields.map((field, i) => (
         <FieldInput
           key={field.key}
           field={field}
           value={values[field.key] ?? ''}
+          autoFocus={i === 0}
           onChange={(text) =>
             setValues((prev) => ({ ...prev, [field.key]: text }))
           }
@@ -58,13 +87,6 @@ export function ClaimCreateForm({
           {error}
         </Text>
       )}
-
-      <Button
-        title={isPending ? 'Submitting…' : 'Continue'}
-        variant="primary"
-        onPress={onSubmit}
-        disabled={!isValid || isPending}
-      />
     </View>
   );
 }
@@ -72,10 +94,12 @@ export function ClaimCreateForm({
 function FieldInput({
   field,
   value,
+  autoFocus,
   onChange,
 }: {
   field: FormField;
   value: string;
+  autoFocus?: boolean;
   onChange: (text: string) => void;
 }) {
   const { theme } = useTheme();
@@ -94,6 +118,7 @@ function FieldInput({
       <TextInput
         value={value}
         onChangeText={onChange}
+        autoFocus={autoFocus}
         placeholder={isDate ? 'YYYY-MM-DD' : field.label}
         autoCapitalize={isDate ? 'none' : 'sentences'}
         multiline={multiline}

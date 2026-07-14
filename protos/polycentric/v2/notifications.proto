@@ -29,6 +29,8 @@ message ListNotificationsRequest {
   optional uint32 first = 2;
   // Return notifications after a cursor
   optional string after = 3;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 4;
 }
 
 message ListNotificationsResponse {

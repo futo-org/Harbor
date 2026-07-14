@@ -42,6 +42,8 @@ interface PostProps {
   showThreadLineBelow?: boolean;
   /** Hide the bottom hairline (used inside conversation views where the thread line is the visual seam instead). */
   hideBottomBorder?: boolean;
+  /** Render the link preview in its compact side-image layout (used in feeds). */
+  compactLinkPreview?: boolean;
 }
 
 export const Post = memo(function Post({
@@ -51,6 +53,7 @@ export const Post = memo(function Post({
   showThreadLineAbove = false,
   showThreadLineBelow = false,
   hideBottomBorder = false,
+  compactLinkPreview = false,
 }: PostProps) {
   const { theme } = useTheme();
 
@@ -211,7 +214,12 @@ export const Post = memo(function Post({
           ) : null}
           {/* Render only the first link preview. A post may carry multiple
               `links` (e.g. from another client), but we cap the UI at one. */}
-          {post.links?.[0] ? <LinkPreviewCard link={post.links[0]} /> : null}
+          {post.links?.[0] ? (
+            <LinkPreviewCard
+              link={post.links[0]}
+              compact={compactLinkPreview}
+            />
+          ) : null}
           {post.images?.length > 0 && <PostImages images={post.images} />}
           {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
           {showContentExpandToggle && (

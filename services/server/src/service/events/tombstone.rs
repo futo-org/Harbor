@@ -12,7 +12,7 @@ use sea_orm::{
     ColumnTrait, Condition, DbConn, DbErr, DerivePartialModel, EntityTrait,
     JoinType, QueryFilter, QuerySelect, RelationDef,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tonic::{Code, Status};
 
 /// `(EventModel::Model, Option<ContentModel::Model>)` — the shape
@@ -20,6 +20,39 @@ use tonic::{Code, Status};
 pub type EventWithContentRow = (EventModel::Model, Option<ContentModel::Model>);
 
 use super::TargetEventKey;
+
+/// A row wrapping an event that a Delete tombstone can remove.
+pub trait HasEventKey {
+    fn event_key(&self) -> TargetEventKey;
+}
+
+impl HasEventKey for EventWithContentRow {
+    fn event_key(&self) -> TargetEventKey {
+        TargetEventKey::of(&self.0)
+    }
+}
+
+/// The valid Delete tombstones for `keys`, by tombstoned event key.
+pub async fn validated_tombstones(
+    ctx: &ServiceContext,
+    keys: &[TargetEventKey],
+) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
+    let raw = list_tombstones_for_event_keys(&ctx.db, keys)
+        .await
+        .map_err(|e| {
+            eprintln!("tombstone db error: {e}");
+            Status::internal("internal server error")
+        })?;
+    validate_tombstones(ctx, raw).await
+}
+
+/// The subset of `keys` whose events have a valid Delete tombstone.
+pub async fn tombstoned_keys(
+    ctx: &ServiceContext,
+    keys: &[TargetEventKey],
+) -> Result<HashSet<TargetEventKey>, Status> {
+    Ok(validated_tombstones(ctx, keys).await?.into_keys().collect())
+}
 
 /// List all tombstone events
 /// WARNING: These events are unvalidated and can not be trusted

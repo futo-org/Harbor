@@ -24,7 +24,7 @@ export type FeedListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {
 const defaultKeyExtractor = (item: PostData) => item.repostId ?? item.id;
 
 const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
-  <Post post={item} />
+  <Post post={item} compactLinkPreview />
 );
 
 const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(

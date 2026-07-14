@@ -17,8 +17,10 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { Atoms } from '../theme';
+import { Atoms, useTheme } from '../theme';
 import { HidingHeader, renderNode, useHidingHeader } from './HidingHeader';
+import { InfoTooltip } from './InfoTooltip';
+import { Text } from './primitives';
 
 // A reanimated-compatible FlashList.
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
@@ -27,6 +29,38 @@ const WEB_INITIAL_VISIBLE = 12;
 const WEB_PAGE_SIZE = 12;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
+
+// A list section header row, with an optional explanatory tooltip.
+export function SectionHeader({
+  title,
+  tooltip,
+}: {
+  title: string;
+  tooltip?: string;
+}) {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.gap_xs,
+        Atoms.px_lg,
+        Atoms.pt_xl,
+        Atoms.pb_sm,
+      ]}
+    >
+      <Text
+        variant="small"
+        style={theme.atoms.text_neutral_medium}
+        fontWeight="semibold"
+      >
+        {title}
+      </Text>
+      {tooltip ? <InfoTooltip text={tooltip} size={14} /> : null}
+    </View>
+  );
+}
 
 export type ListProps<T> = FlashListProps<T> & {
   HeaderComponent?:

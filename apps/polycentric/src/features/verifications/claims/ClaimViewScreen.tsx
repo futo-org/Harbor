@@ -1,17 +1,21 @@
 import { Button, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ClaimField, useClaimById } from '../hooks/useClaimById';
+import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
+import useVerifyClaim from '../hooks/useVerifyClaim';
 import { ClaimMenu } from './ClaimMenu';
+import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { RequestVerificationSheet } from '../RequestVerificationSheet';
 import { resolveClaimTitle } from '../utils/render';
 import { Toolbar } from './toolbar';
+import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ViewClaimScreen() {
@@ -21,10 +25,13 @@ export default function ViewClaimScreen() {
     identityId,
     keyFingerprint,
     sequence = '',
+    requestVerification,
   } = useLocalSearchParams<{
     identityId: string;
     keyFingerprint: string;
     sequence: string;
+    // Set when arriving from the create flow to open the sheet immediately.
+    requestVerification?: string;
   }>();
 
   const { claim, isLoading } = useClaimById(
@@ -33,7 +40,19 @@ export default function ViewClaimScreen() {
     sequence ? BigInt(sequence) : undefined,
   );
 
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(requestVerification === '1');
+
+  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
+
+  const { identityKey } = useCurrentIdentity();
+  const { verify, isPending: isVerifyPending } = useVerifyClaim();
+
+  // Only the claim author can request verifications; a viewer asked to
+  // verify gets a verify button instead, disabled once they have verified.
+  const isAuthor = !!claim && claim.identity === identityKey;
+  const isVerifyRequested = isAuthor
+    ? undefined
+    : verifiers.find((v) => v.identity === identityKey);
 
   const { title, bodyFields } = useMemo<{
     title: string;
@@ -91,34 +110,10 @@ export default function ViewClaimScreen() {
                   </Text>
 
                   {/* Verified status */}
-                  <View
-                    style={[
-                      Atoms.flex_row,
-                      Atoms.align_center,
-                      Atoms.gap_xs,
-                      Atoms.rounded_full,
-                      Atoms.pt_sm,
-                      Atoms.pb_sm,
-                      Atoms.pl_md,
-                      Atoms.pr_md,
-                      Atoms.self_start,
-                      Atoms.cursor_default,
-                      {
-                        borderWidth: 1,
-                        borderColor: theme.palette.neutral_25,
-                      },
-                    ]}
-                  >
-                    <Icon name="close" color="neutral_600" />
-                    <Text
-                      selectable={false}
-                      fontSize={'sm'}
-                      color="neutral_600"
-                      fontWeight="semibold"
-                    >
-                      Not verified
-                    </Text>
-                  </View>
+                  <StatusChip
+                    verifiedCount={verifiedCount}
+                    totalCount={totalCount}
+                  />
                 </View>
 
                 <View style={Atoms.gap_md}>
@@ -145,6 +140,8 @@ export default function ViewClaimScreen() {
                   ))}
                 </View>
 
+                <ClaimVerifiersList verifiers={verifiers} />
+
                 <View style={[Atoms.flex_1]} />
                 <Toolbar
                   identity={claim.identity}
@@ -152,20 +149,36 @@ export default function ViewClaimScreen() {
                   schemaName={claim.schemaName}
                 />
 
-                <Button
-                  title="Request verification"
-                  variant="primary"
-                  onPress={() => setSheetOpen(true)}
-                  style={[Atoms.w_full]}
-                />
+                {isAuthor && (
+                  <>
+                    <Button
+                      title="Request verification"
+                      variant="primary"
+                      onPress={() => setSheetOpen(true)}
+                      style={[Atoms.w_full]}
+                    />
 
-                <RequestVerificationSheet
-                  open={sheetOpen}
-                  onClose={() => setSheetOpen(false)}
-                  identityId={claim.identity}
-                  keyFingerprint={claim.keyFingerprint}
-                  sequence={claim.sequence.toString()}
-                />
+                    <RequestVerificationSheet
+                      open={sheetOpen}
+                      onClose={() => setSheetOpen(false)}
+                      claimId={claim.id}
+                    />
+                  </>
+                )}
+
+                {isVerifyRequested && (
+                  <Button
+                    title={
+                      isVerifyRequested.verified
+                        ? 'Verified'
+                        : 'Verify this claim'
+                    }
+                    variant="primary"
+                    disabled={isVerifyRequested.verified || isVerifyPending}
+                    onPress={() => verify({ claimId: claim.id })}
+                    style={[Atoms.w_full]}
+                  />
+                )}
               </>
             )}
           </View>

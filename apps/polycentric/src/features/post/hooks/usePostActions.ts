@@ -3,10 +3,12 @@ import {
   PostData,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
-import { router, useSegments } from 'expo-router';
+import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import { feedQueryKeys } from '../../feed/hooks/feedCache';
+import { threadQueryKey } from './useThread';
 
 type PostActions = {
   /**
@@ -27,6 +29,12 @@ type PostActions = {
 export default function usePostActions(post: PostData): PostActions {
   const client = usePolycentric();
   const segments = useSegments();
+
+  const { identityId, keyFingerprint, sequence } = useLocalSearchParams<{
+    identityId?: string;
+    keyFingerprint?: string;
+    sequence?: string;
+  }>();
 
   // Tombstone the event identified by `hexEventKey` (a FEED-collection
   // Delete referencing it).
@@ -53,6 +61,16 @@ export default function usePostActions(post: PostData): PostActions {
     invalidateQuery(client, feedQueryKeys.explore(identity));
   };
 
+  const invalidateThreads = (reply: PostData['reply']) => {
+    if (!reply) return;
+    const parents = [reply.parentId, reply.rootId].filter(
+      (id): id is string => !!id,
+    );
+    for (const parentId of new Set(parents)) {
+      invalidateQuery(client, threadQueryKey(parentId));
+    }
+  };
+
   return {
     reportAsync: async () => {
       // TODO: discuss if we should record report events or
@@ -61,10 +79,25 @@ export default function usePostActions(post: PostData): PostActions {
     deleteAsync: async () => {
       await deleteEventAtKey(post.id);
       invalidateFeeds(post.identity);
+      invalidateThreads(post.reply);
 
-      if (segments[0] === '[identityId]' && segments[1] === 'post') {
-        // Redirect to profile
-        router.navigate('../../');
+      // We want to change the active page if we are currently viewing the post
+      // that just got deleted:
+
+      const onPostScreen =
+        segments[0] === '[identityId]' && segments[1] === 'post';
+
+      const isSubject =
+        post.identity === identityId &&
+        getKeyFingerprint(post.signedBy) === keyFingerprint &&
+        post.sequence === sequence;
+
+      if (onPostScreen && isSubject) {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('../../');
+        }
         return;
       }
     },

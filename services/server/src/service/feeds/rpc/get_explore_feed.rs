@@ -1,15 +1,21 @@
 //! `get_explore_feed`: recent Feed events across all identities.
 //! Ranking is not yet implemented.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
-use crate::service::context::ServiceContext;
-use crate::service::feeds::repository::Query as FeedsRepository;
-use crate::service::feeds::rpc::common::{
-    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+use crate::{
+    data::{hydration::HydrationState, pipeline},
+    service::{
+        context::ServiceContext,
+        feeds::{
+            repository::Query as FeedsRepository,
+            rpc::common::{
+                self as feeds_pipeline, GetFeedResponseFilter,
+                GetFeedResponseView,
+            },
+            util::map_db_err,
+        },
+        proto::{GetExploreFeedRequest, GetFeedResponse},
+    },
 };
-use crate::service::feeds::util::map_db_err;
-use crate::service::proto::{GetExploreFeedRequest, GetFeedResponse};
 use tonic::Status;
 
 pub struct Params {
@@ -20,14 +26,16 @@ pub async fn handle(
     ctx: &ServiceContext,
     req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
-    let common = feeds_pipeline::Params::from_req_params(&req.page_params)?;
+    let common = feeds_pipeline::Params::from_req_params(
+        &req.page_params,
+        req.omit_labels,
+    )?;
 
     let params = Params { common };
 
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
             .await?;
-
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -43,6 +51,8 @@ async fn fetch(
         &ctx.db,
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
+        &params.common.omit_labels,
+        ctx.trusted_moderator.as_deref(),
     )
     .await
     .map_err(map_db_err)?;

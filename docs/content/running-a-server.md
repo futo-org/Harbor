@@ -153,6 +153,56 @@ deletes matching blobs directly from the object store, and publishes a
 deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
 delete permission on the bucket, while the server's own credentials do not.
 
+### Moderation labels
+Beyond blob deletion and `Report` events, the moderation service can also
+**label** content by publishing a `Labels` event (collection 7, defined in
+[protocol → Labels](/protocol/data-model#labels)). A label is a string
+identifying the kind of violation detected — the vocabulary used by FUTO's
+service is `hate`, `self-harm`, `sexual`, `porn`, and `graphic-media`.
+
+#### Trusting a moderation service
+Set the **single** moderation service the server trusts via an environment
+variable `POLYCENTRIC_MODERATION_IDENTITY`. It should be equal to the hex
+identity string of the trusted moderation service. Until the identity is
+set, clients will not be served label events alongside the feed events
+such that they can filter locally, nor will the labels they wish to omit
+be actually omitted by the server during feed requests.
+
+#### Client filtering contract
+
+Clients control what labeled content they see through per-request filters.
+Each user picks a level per label — Hide, Warn, or Show — stored on the
+device.
+
+- **Hide**: the client sends the label value(s) to omit via the `omit_labels`
+  field on `GetIdentityFeedRequest`, `GetFollowingFeedRequest`, and
+  `GetExploreFeedRequest`. The server drops matching rows **before**
+  pagination, so pages stay full.
+- **Warn / Show**: the label is left out of `omit_labels`. The post appears in
+  the feed, and the matching `Labels` event is returned in the response's
+  `event_hints` collection. The client correlates each label to its target by
+  event key and renders it behind a mask (Warn) or without annotation (Show).
+
+The labeler's identity is visible to clients — the raw trusted `Labels` events
+are served as-is.
+
+#### What gets labeled
+
+The moderation service inspects:
+
+- **Post content**: text, link-preview URLs, and attached images.
+- **Profile content**: name, description, avatar, and banner.
+
+The `Labels` event always target a post or profile event, and indirectly
+target any media or blob linked to that event.
+
+#### Changing the trusted service
+Any identity can sign label events for any content, even if the server only
+trusts one identity. The server stores all such label events. Thus, setting a
+new `POLYCENTRIC_MODERATION_IDENTITY` will instantly update the moderation
+labels served. Following requests will only serve the labels the server has
+stored that match the trusted identity.
+
 ## TLS and production
 
 The server speaks cleartext h2c and HTTP; it has no built-in TLS. For a public

@@ -588,45 +588,6 @@ const FfiConverterTypeGetProfileArgs = (() => {
   return new FFIConverter();
 })();
 
-export type ListClaimsArgs = {
-  claimedByIdentity: string;
-};
-
-/**
- * Generated factory for {@link ListClaimsArgs} record objects.
- */
-export const ListClaimsArgs = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<ListClaimsArgs, ReturnType<typeof defaults>>(
-      defaults
-    );
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<ListClaimsArgs>,
-  });
-})();
-
-const FfiConverterTypeListClaimsArgs = (() => {
-  type TypeName = ListClaimsArgs;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    read(from: RustBuffer): TypeName {
-      return {
-        claimedByIdentity: FfiConverterString.read(from),
-      };
-    }
-    write(value: TypeName, into: RustBuffer): void {
-      FfiConverterString.write(value.claimedByIdentity, into);
-    }
-    allocationSize(value: TypeName): number {
-      return FfiConverterString.allocationSize(value.claimedByIdentity);
-    }
-  }
-  return new FFIConverter();
-})();
-
 export type ListEventsArgs = {
   size?: number;
   identity?: string;
@@ -692,6 +653,112 @@ const FfiConverterTypeListEventsArgs = (() => {
   return new FFIConverter();
 })();
 
+export type ListFollowersArgs = {
+  identity: string;
+  limit?: number;
+  backwardToken?: string;
+  forwardToken?: string;
+};
+
+/**
+ * Generated factory for {@link ListFollowersArgs} record objects.
+ */
+export const ListFollowersArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListFollowersArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListFollowersArgs>,
+  });
+})();
+
+const FfiConverterTypeListFollowersArgs = (() => {
+  type TypeName = ListFollowersArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListFollowingArgs = {
+  identity: string;
+  limit?: number;
+  backwardToken?: string;
+  forwardToken?: string;
+};
+
+/**
+ * Generated factory for {@link ListFollowingArgs} record objects.
+ */
+export const ListFollowingArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ListFollowingArgs, ReturnType<typeof defaults>>(
+      defaults
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ListFollowingArgs>,
+  });
+})();
+
+const FfiConverterTypeListFollowingArgs = (() => {
+  type TypeName = ListFollowingArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        identity: FfiConverterString.read(from),
+        limit: FfiConverterOptionalInt32.read(from),
+        backwardToken: FfiConverterOptionalString.read(from),
+        forwardToken: FfiConverterOptionalString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.identity, into);
+      FfiConverterOptionalInt32.write(value.limit, into);
+      FfiConverterOptionalString.write(value.backwardToken, into);
+      FfiConverterOptionalString.write(value.forwardToken, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.identity) +
+        FfiConverterOptionalInt32.allocationSize(value.limit) +
+        FfiConverterOptionalString.allocationSize(value.backwardToken) +
+        FfiConverterOptionalString.allocationSize(value.forwardToken)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type ListNotificationsArgs = {
   identity: string;
   /**
@@ -702,6 +769,10 @@ export type ListNotificationsArgs = {
    * Return notifications after this cursor.
    */
   after?: string;
+  /**
+   * Label values for which the requester does not want to see content.
+   */
+  omitLabels: Array<string>;
 };
 
 /**
@@ -730,19 +801,186 @@ const FfiConverterTypeListNotificationsArgs = (() => {
         identity: FfiConverterString.read(from),
         first: FfiConverterOptionalUInt32.read(from),
         after: FfiConverterOptionalString.read(from),
+        omitLabels: FfiConverterSequenceString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterString.write(value.identity, into);
       FfiConverterOptionalUInt32.write(value.first, into);
       FfiConverterOptionalString.write(value.after, into);
+      FfiConverterSequenceString.write(value.omitLabels, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterString.allocationSize(value.identity) +
         FfiConverterOptionalUInt32.allocationSize(value.first) +
-        FfiConverterOptionalString.allocationSize(value.after)
+        FfiConverterOptionalString.allocationSize(value.after) +
+        FfiConverterSequenceString.allocationSize(value.omitLabels)
       );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListTargetedVerificationClaimsArgs = {
+  targetIdentity: string;
+};
+
+/**
+ * Generated factory for {@link ListTargetedVerificationClaimsArgs} record objects.
+ */
+export const ListTargetedVerificationClaimsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      ListTargetedVerificationClaimsArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () =>
+      Object.freeze(defaults()) as Partial<ListTargetedVerificationClaimsArgs>,
+  });
+})();
+
+const FfiConverterTypeListTargetedVerificationClaimsArgs = (() => {
+  type TypeName = ListTargetedVerificationClaimsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        targetIdentity: FfiConverterString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.targetIdentity, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterString.allocationSize(value.targetIdentity);
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListVerificationClaimsArgs = {
+  claimedByIdentity: string;
+};
+
+/**
+ * Generated factory for {@link ListVerificationClaimsArgs} record objects.
+ */
+export const ListVerificationClaimsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      ListVerificationClaimsArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () =>
+      Object.freeze(defaults()) as Partial<ListVerificationClaimsArgs>,
+  });
+})();
+
+const FfiConverterTypeListVerificationClaimsArgs = (() => {
+  type TypeName = ListVerificationClaimsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        claimedByIdentity: FfiConverterString.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.claimedByIdentity, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterString.allocationSize(value.claimedByIdentity);
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListVerificationTargetsArgs = {
+  claimEventKey: EventKey;
+};
+
+/**
+ * Generated factory for {@link ListVerificationTargetsArgs} record objects.
+ */
+export const ListVerificationTargetsArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      ListVerificationTargetsArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () =>
+      Object.freeze(defaults()) as Partial<ListVerificationTargetsArgs>,
+  });
+})();
+
+const FfiConverterTypeListVerificationTargetsArgs = (() => {
+  type TypeName = ListVerificationTargetsArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        claimEventKey: FfiConverterTypeEventKey.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterTypeEventKey.write(value.claimEventKey, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterTypeEventKey.allocationSize(value.claimEventKey);
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ListVerificationVerifiesArgs = {
+  claimEventKey: EventKey;
+};
+
+/**
+ * Generated factory for {@link ListVerificationVerifiesArgs} record objects.
+ */
+export const ListVerificationVerifiesArgs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<
+      ListVerificationVerifiesArgs,
+      ReturnType<typeof defaults>
+    >(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () =>
+      Object.freeze(defaults()) as Partial<ListVerificationVerifiesArgs>,
+  });
+})();
+
+const FfiConverterTypeListVerificationVerifiesArgs = (() => {
+  type TypeName = ListVerificationVerifiesArgs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        claimEventKey: FfiConverterTypeEventKey.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterTypeEventKey.write(value.claimEventKey, into);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterTypeEventKey.allocationSize(value.claimEventKey);
     }
   }
   return new FFIConverter();
@@ -1382,7 +1620,12 @@ export enum Query_Tags {
   GetExploreFeed = 'GetExploreFeed',
   ListNotifications = 'ListNotifications',
   ListEvents = 'ListEvents',
-  ListClaims = 'ListClaims',
+  ListVerificationClaims = 'ListVerificationClaims',
+  ListVerificationTargets = 'ListVerificationTargets',
+  ListVerificationVerifies = 'ListVerificationVerifies',
+  ListTargetedVerificationClaims = 'ListTargetedVerificationClaims',
+  ListFollowing = 'ListFollowing',
+  ListFollowers = 'ListFollowers',
 }
 /**
  * Discriminated union over every observable RPC. `fetch_query`
@@ -1611,29 +1854,173 @@ export const Query = (() => {
     }
   }
 
-  type ListClaims__interface = {
-    tag: Query_Tags.ListClaims;
-    inner: Readonly<[ListClaimsArgs]>;
+  type ListVerificationClaims__interface = {
+    tag: Query_Tags.ListVerificationClaims;
+    inner: Readonly<[ListVerificationClaimsArgs]>;
   };
-  class ListClaims_ extends UniffiEnum implements ListClaims__interface {
+  class ListVerificationClaims_
+    extends UniffiEnum
+    implements ListVerificationClaims__interface
+  {
     /**
      * @private
      * This field is private and should not be used, use `tag` instead.
      */
     readonly [uniffiTypeNameSymbol] = 'Query';
-    readonly tag = Query_Tags.ListClaims;
-    readonly inner: Readonly<[ListClaimsArgs]>;
-    constructor(v0: ListClaimsArgs) {
-      super('Query', 'ListClaims');
+    readonly tag = Query_Tags.ListVerificationClaims;
+    readonly inner: Readonly<[ListVerificationClaimsArgs]>;
+    constructor(v0: ListVerificationClaimsArgs) {
+      super('Query', 'ListVerificationClaims');
 
       this.inner = Object.freeze([v0]);
     }
-    static new(v0: ListClaimsArgs): ListClaims_ {
-      return new ListClaims_(v0);
+    static new(v0: ListVerificationClaimsArgs): ListVerificationClaims_ {
+      return new ListVerificationClaims_(v0);
     }
 
-    static instanceOf(obj: any): obj is ListClaims_ {
-      return obj.tag === Query_Tags.ListClaims;
+    static instanceOf(obj: any): obj is ListVerificationClaims_ {
+      return obj.tag === Query_Tags.ListVerificationClaims;
+    }
+  }
+
+  type ListVerificationTargets__interface = {
+    tag: Query_Tags.ListVerificationTargets;
+    inner: Readonly<[ListVerificationTargetsArgs]>;
+  };
+  class ListVerificationTargets_
+    extends UniffiEnum
+    implements ListVerificationTargets__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListVerificationTargets;
+    readonly inner: Readonly<[ListVerificationTargetsArgs]>;
+    constructor(v0: ListVerificationTargetsArgs) {
+      super('Query', 'ListVerificationTargets');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListVerificationTargetsArgs): ListVerificationTargets_ {
+      return new ListVerificationTargets_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListVerificationTargets_ {
+      return obj.tag === Query_Tags.ListVerificationTargets;
+    }
+  }
+
+  type ListVerificationVerifies__interface = {
+    tag: Query_Tags.ListVerificationVerifies;
+    inner: Readonly<[ListVerificationVerifiesArgs]>;
+  };
+  class ListVerificationVerifies_
+    extends UniffiEnum
+    implements ListVerificationVerifies__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListVerificationVerifies;
+    readonly inner: Readonly<[ListVerificationVerifiesArgs]>;
+    constructor(v0: ListVerificationVerifiesArgs) {
+      super('Query', 'ListVerificationVerifies');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListVerificationVerifiesArgs): ListVerificationVerifies_ {
+      return new ListVerificationVerifies_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListVerificationVerifies_ {
+      return obj.tag === Query_Tags.ListVerificationVerifies;
+    }
+  }
+
+  type ListTargetedVerificationClaims__interface = {
+    tag: Query_Tags.ListTargetedVerificationClaims;
+    inner: Readonly<[ListTargetedVerificationClaimsArgs]>;
+  };
+  class ListTargetedVerificationClaims_
+    extends UniffiEnum
+    implements ListTargetedVerificationClaims__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListTargetedVerificationClaims;
+    readonly inner: Readonly<[ListTargetedVerificationClaimsArgs]>;
+    constructor(v0: ListTargetedVerificationClaimsArgs) {
+      super('Query', 'ListTargetedVerificationClaims');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(
+      v0: ListTargetedVerificationClaimsArgs
+    ): ListTargetedVerificationClaims_ {
+      return new ListTargetedVerificationClaims_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListTargetedVerificationClaims_ {
+      return obj.tag === Query_Tags.ListTargetedVerificationClaims;
+    }
+  }
+
+  type ListFollowing__interface = {
+    tag: Query_Tags.ListFollowing;
+    inner: Readonly<[ListFollowingArgs]>;
+  };
+  class ListFollowing_ extends UniffiEnum implements ListFollowing__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListFollowing;
+    readonly inner: Readonly<[ListFollowingArgs]>;
+    constructor(v0: ListFollowingArgs) {
+      super('Query', 'ListFollowing');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListFollowingArgs): ListFollowing_ {
+      return new ListFollowing_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListFollowing_ {
+      return obj.tag === Query_Tags.ListFollowing;
+    }
+  }
+
+  type ListFollowers__interface = {
+    tag: Query_Tags.ListFollowers;
+    inner: Readonly<[ListFollowersArgs]>;
+  };
+  class ListFollowers_ extends UniffiEnum implements ListFollowers__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Query';
+    readonly tag = Query_Tags.ListFollowers;
+    readonly inner: Readonly<[ListFollowersArgs]>;
+    constructor(v0: ListFollowersArgs) {
+      super('Query', 'ListFollowers');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: ListFollowersArgs): ListFollowers_ {
+      return new ListFollowers_(v0);
+    }
+
+    static instanceOf(obj: any): obj is ListFollowers_ {
+      return obj.tag === Query_Tags.ListFollowers;
     }
   }
 
@@ -1651,7 +2038,12 @@ export const Query = (() => {
     GetExploreFeed: GetExploreFeed_,
     ListNotifications: ListNotifications_,
     ListEvents: ListEvents_,
-    ListClaims: ListClaims_,
+    ListVerificationClaims: ListVerificationClaims_,
+    ListVerificationTargets: ListVerificationTargets_,
+    ListVerificationVerifies: ListVerificationVerifies_,
+    ListTargetedVerificationClaims: ListTargetedVerificationClaims_,
+    ListFollowing: ListFollowing_,
+    ListFollowers: ListFollowers_,
   });
 })();
 /**
@@ -1670,7 +2062,12 @@ export type Query = InstanceType<
     | 'GetExploreFeed'
     | 'ListNotifications'
     | 'ListEvents'
-    | 'ListClaims']
+    | 'ListVerificationClaims'
+    | 'ListVerificationTargets'
+    | 'ListVerificationVerifies'
+    | 'ListTargetedVerificationClaims'
+    | 'ListFollowing'
+    | 'ListFollowers']
 >;
 
 // FfiConverter for enum Query
@@ -1711,8 +2108,28 @@ const FfiConverterTypeQuery = (() => {
             FfiConverterTypeListEventsArgs.read(from)
           );
         case 9:
-          return new Query.ListClaims(
-            FfiConverterTypeListClaimsArgs.read(from)
+          return new Query.ListVerificationClaims(
+            FfiConverterTypeListVerificationClaimsArgs.read(from)
+          );
+        case 10:
+          return new Query.ListVerificationTargets(
+            FfiConverterTypeListVerificationTargetsArgs.read(from)
+          );
+        case 11:
+          return new Query.ListVerificationVerifies(
+            FfiConverterTypeListVerificationVerifiesArgs.read(from)
+          );
+        case 12:
+          return new Query.ListTargetedVerificationClaims(
+            FfiConverterTypeListTargetedVerificationClaimsArgs.read(from)
+          );
+        case 13:
+          return new Query.ListFollowing(
+            FfiConverterTypeListFollowingArgs.read(from)
+          );
+        case 14:
+          return new Query.ListFollowers(
+            FfiConverterTypeListFollowersArgs.read(from)
           );
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -1768,10 +2185,43 @@ const FfiConverterTypeQuery = (() => {
           FfiConverterTypeListEventsArgs.write(inner[0], into);
           return;
         }
-        case Query_Tags.ListClaims: {
+        case Query_Tags.ListVerificationClaims: {
           ordinalConverter.write(9, into);
           const inner = value.inner;
-          FfiConverterTypeListClaimsArgs.write(inner[0], into);
+          FfiConverterTypeListVerificationClaimsArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListVerificationTargets: {
+          ordinalConverter.write(10, into);
+          const inner = value.inner;
+          FfiConverterTypeListVerificationTargetsArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListVerificationVerifies: {
+          ordinalConverter.write(11, into);
+          const inner = value.inner;
+          FfiConverterTypeListVerificationVerifiesArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListTargetedVerificationClaims: {
+          ordinalConverter.write(12, into);
+          const inner = value.inner;
+          FfiConverterTypeListTargetedVerificationClaimsArgs.write(
+            inner[0],
+            into
+          );
+          return;
+        }
+        case Query_Tags.ListFollowing: {
+          ordinalConverter.write(13, into);
+          const inner = value.inner;
+          FfiConverterTypeListFollowingArgs.write(inner[0], into);
+          return;
+        }
+        case Query_Tags.ListFollowers: {
+          ordinalConverter.write(14, into);
+          const inner = value.inner;
+          FfiConverterTypeListFollowersArgs.write(inner[0], into);
           return;
         }
         default:
@@ -1831,10 +2281,49 @@ const FfiConverterTypeQuery = (() => {
           size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
           return size;
         }
-        case Query_Tags.ListClaims: {
+        case Query_Tags.ListVerificationClaims: {
           const inner = value.inner;
           let size = ordinalConverter.allocationSize(9);
-          size += FfiConverterTypeListClaimsArgs.allocationSize(inner[0]);
+          size += FfiConverterTypeListVerificationClaimsArgs.allocationSize(
+            inner[0]
+          );
+          return size;
+        }
+        case Query_Tags.ListVerificationTargets: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(10);
+          size += FfiConverterTypeListVerificationTargetsArgs.allocationSize(
+            inner[0]
+          );
+          return size;
+        }
+        case Query_Tags.ListVerificationVerifies: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(11);
+          size += FfiConverterTypeListVerificationVerifiesArgs.allocationSize(
+            inner[0]
+          );
+          return size;
+        }
+        case Query_Tags.ListTargetedVerificationClaims: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(12);
+          size +=
+            FfiConverterTypeListTargetedVerificationClaimsArgs.allocationSize(
+              inner[0]
+            );
+          return size;
+        }
+        case Query_Tags.ListFollowing: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(13);
+          size += FfiConverterTypeListFollowingArgs.allocationSize(inner[0]);
+          return size;
+        }
+        case Query_Tags.ListFollowers: {
+          const inner = value.inner;
+          let size = ordinalConverter.allocationSize(14);
+          size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
           return size;
         }
         default:
@@ -4274,6 +4763,9 @@ const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
@@ -4283,9 +4775,6 @@ const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
 const FfiConverterOptionalTypeUpdateMode = new FfiConverterOptional(
   FfiConverterTypeUpdateMode
 );
-
-// FfiConverter for Array<string>
-const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for Array<string> | undefined
 const FfiConverterOptionalSequenceString = new FfiConverterOptional(
@@ -4669,9 +5158,14 @@ export default Object.freeze({
     FfiConverterTypeGetIdentityFeedArgs,
     FfiConverterTypeGetPostThreadArgs,
     FfiConverterTypeGetProfileArgs,
-    FfiConverterTypeListClaimsArgs,
     FfiConverterTypeListEventsArgs,
+    FfiConverterTypeListFollowersArgs,
+    FfiConverterTypeListFollowingArgs,
     FfiConverterTypeListNotificationsArgs,
+    FfiConverterTypeListTargetedVerificationClaimsArgs,
+    FfiConverterTypeListVerificationClaimsArgs,
+    FfiConverterTypeListVerificationTargetsArgs,
+    FfiConverterTypeListVerificationVerifiesArgs,
     FfiConverterTypeLogLevel,
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,

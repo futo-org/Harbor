@@ -1,18 +1,19 @@
-use integration_tests::proto::{
-    Identity, ListEventsFilters, ListEventsRequest, PutEventsRequest,
-};
+use ed25519_dalek::SigningKey;
 use integration_tests::{
     COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
     bundle_signature, connect_event_sync, derive_identity_string,
     generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
     make_revocation_bound, make_verification_claim_bundle, node_hash,
-    public_key_of,
+    proto::{event_sync_service_client::EventSyncServiceClient, *},
+    public_key_of, *,
 };
+use prost::Message as ProstMessage;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 #[tokio::test]
 async fn list_events_empty_works() {
     let mut client = connect_event_sync().await;
-    let response = client
+    client
         .list_events(ListEventsRequest {
             size: Some(10),
             ..Default::default()
@@ -21,7 +22,6 @@ async fn list_events_empty_works() {
         .expect("list_events failed");
     // No assertion on count — server may have prior state — just that the
     // call succeeds and decodes.
-    let _ = response.into_inner().event_bundles;
 }
 
 #[tokio::test]
@@ -111,13 +111,21 @@ async fn invalid_signature_rejected() {
         signed.signature[0] ^= 0xFF;
     }
 
-    let err = client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect_err("tampered signature must be rejected");
-    assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        .expect("put_events failed");
+    let inner = response.into_inner();
+    assert!(
+        inner
+            .errors
+            .iter()
+            .any(|e| e.message.contains("invalid signature")),
+        "tampered signature must be rejected, got errors: {:?}",
+        inner.errors,
+    );
 }
 
 /// A revokes B after B has written two FEED events. The pre-revocation
@@ -403,19 +411,31 @@ async fn post_revocation_event_returns_without_proof() {
         3,
         1,
         vec![0, 3],
-        vec![],
-        "post-revocation post",
+        node_hash(&leaf_hash(&sig_1), &leaf_hash(&sig_2)),
+        "forged post",
         DEFAULT_CREATED_AT + 4 * HOUR,
     );
     let sig_3 = bundle_signature(&post_3);
-    client
+
+    // B forges a post_3 after revocation. The signature is valid (B still
+    // holds the key), but `authorize_event_signer` rejects it because B's
+    // key is revoked and post_3 is not within the committed bound. The
+    // server returns the rejection in the response errors, not as a gRPC
+    // error.
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![post_3],
         })
         .await
-        .expect("post_3 put failed");
+        .expect("put_events call succeeded");
+    let inner = response.into_inner();
+    assert!(
+        inner.errors.iter().any(|e| e.message.contains("revoked")),
+        "post-revocation event must be rejected, got errors: {:?}",
+        inner.errors,
+    );
 
-    // List events.
+    // Also verify it didn't end up in the events table by accident.
     let response = client
         .list_events(ListEventsRequest {
             size: Some(100),
@@ -427,23 +447,13 @@ async fn post_revocation_event_returns_without_proof() {
         .await
         .expect("list_events failed");
     let bundles = response.into_inner().event_bundles;
-
-    // post_3 is present (server doesn't filter on revocation status).
-    let bundle_3 = bundles
-        .iter()
-        .find(|b| {
-            b.signed_event
-                .as_ref()
-                .map(|se| se.signature == sig_3)
-                .unwrap_or(false)
-        })
-        .expect("post_3 missing from list_events response");
-
-    // …but it carries no proof — it's not in the head's committed tree.
     assert!(
-        bundle_3.event_proofs.is_empty(),
-        "post-revocation event must not carry a forged EventProof; got {} proofs",
-        bundle_3.event_proofs.len(),
+        !bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == sig_3)
+            .unwrap_or(false)),
+        "post-revocation event must NOT appear in list_events",
     );
 }
 
@@ -685,5 +695,596 @@ async fn put_verification_claim_is_ingested_and_listable() {
             .as_ref()
             .is_some_and(|s| s.signature == claim_signature)),
         "stored verification claim not returned",
+    )
+}
+
+// Following are moderation / label integration tests: The server must
+// be started with `POLYCENTRIC_MODERATION_IDENTITY` set to the value
+// returned by `test_moderator_identity()`.
+
+/// Ensures the moderator's genesis identity event is published exactly once
+/// across all tests (the moderator identity is deterministic, so sequence
+/// collisions would silently fail on the second insert).
+static MODERATOR_READY: AtomicBool = AtomicBool::new(false);
+
+async fn ensure_moderator_setup() {
+    if MODERATOR_READY.load(Ordering::Acquire) {
+        return;
+    }
+    if MODERATOR_READY
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
+    {
+        let mut event = connect_event_sync().await;
+        let mod_key = test_moderator_key();
+        let mod_identity = test_moderator_identity();
+        publish_genesis(
+            &mut event,
+            &mod_identity,
+            &mod_key,
+            DEFAULT_CREATED_AT,
+        )
+        .await;
+    }
+}
+
+/// Monotonic sequence number for the moderator's Labels events — each test
+/// needs a unique (collection, identity, pub_key, sequence) tuple or the
+/// duplicate is silently dropped by the server.
+static NEXT_LABELS_SEQ: AtomicU64 = AtomicU64::new(1);
+
+async fn next_labels_seq() -> u64 {
+    NEXT_LABELS_SEQ.fetch_add(1, Ordering::Relaxed)
+}
+
+async fn publish_genesis(
+    client: &mut EventSyncServiceClient<tonic::transport::Channel>,
+    identity: &str,
+    key: &SigningKey,
+    created_at: u64,
+) -> Vec<u8> {
+    let initial = Identity {
+        rotation_keys: vec![public_key_of(key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    };
+    let bundle =
+        make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
+    let sig = bundle_signature(&bundle);
+    client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![bundle],
+        })
+        .await
+        .expect("genesis put failed");
+    sig
+}
+
+async fn publish_post(
+    client: &mut EventSyncServiceClient<tonic::transport::Channel>,
+    identity: &str,
+    key: &SigningKey,
+    text: &str,
+    created_at: u64,
+) -> Vec<u8> {
+    let bundle = make_post_bundle(
+        identity,
+        key,
+        1,
+        1,
+        vec![1],
+        vec![],
+        text,
+        created_at,
+    );
+    let sig = bundle_signature(&bundle);
+    client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![bundle],
+        })
+        .await
+        .expect("post put failed");
+    sig
+}
+
+async fn publish_labels(
+    client: &mut EventSyncServiceClient<tonic::transport::Channel>,
+    identity: &str,
+    key: &SigningKey,
+    target_event_key: EventKey,
+    label_values: Vec<String>,
+    created_at: u64,
+) -> Vec<u8> {
+    let seq = next_labels_seq().await;
+    let bundle = make_labels_bundle(
+        identity,
+        key,
+        seq,
+        1,
+        vec![1],
+        vec![],
+        target_event_key,
+        label_values,
+        created_at,
+    );
+    let sig = bundle_signature(&bundle);
+    client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![bundle],
+        })
+        .await
+        .expect("labels put failed");
+    sig
+}
+
+fn get_post_event_key(identity: &str, key: &SigningKey) -> EventKey {
+    EventKey {
+        collection: COLLECTION_FEED,
+        identity: identity.to_string(),
+        signed_by: Some(public_key_of(key)),
+        sequence: 1,
+    }
+}
+
+/// Returns the labels bundle content if it decodes to Labels, panics otherwise.
+fn assert_is_labels_bundle(
+    bundle: &EventBundle,
+    expected_target: &EventKey,
+    expected_values: &[&str],
+) {
+    let sc = bundle
+        .serialized_content
+        .as_ref()
+        .expect("bundle has serialized_content");
+    let content = Content::decode(sc.content_bytes.as_slice())
+        .expect("valid content protobuf");
+    match &content.content_body {
+        Some(content::ContentBody::Labels(labels)) => {
+            let ek = labels.event_key.as_ref().expect("Labels has event_key");
+            assert_eq!(ek.collection, expected_target.collection);
+            assert_eq!(ek.identity, expected_target.identity);
+            assert_eq!(ek.sequence, expected_target.sequence);
+            let actual: Vec<&str> =
+                labels.label_values.iter().map(|s| s.as_str()).collect();
+            assert_eq!(actual, expected_values, "label_values mismatch");
+        }
+        _ => panic!(
+            "expected Labels content body, got {:?}",
+            content.content_body
+        ),
+    }
+}
+
+#[tokio::test]
+async fn trusted_labels_served_in_feed_response() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "hello label world",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    let labels_sig = publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key.clone(),
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Get identity feed — no omit_labels.
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity.clone(),
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    // Post is present.
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned in identity feed",
+    );
+
+    // Label event is present in event_hints.
+    let label_bundle = resp
+        .event_hints
+        .iter()
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
+                .as_ref()
+                .map(|se| se.signature == labels_sig)
+                .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .expect("Labels event should appear in event_hints");
+
+    // The label event content decodes to a Labels targeting our post.
+    assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
+
+    // The label event carries the moderator identity (labeler visible).
+    let label_event = label_bundle
+        .signed_event
+        .as_ref()
+        .and_then(|se| Event::decode(se.event_bytes.as_slice()).ok())
+        .expect("valid event bytes in label bundle");
+    let label_event_key = label_event.key.as_ref().expect("event has key");
+    assert_eq!(
+        label_event_key.identity, mod_identity,
+        "label event should carry the moderator identity",
+    );
+    assert_eq!(label_event_key.collection, COLLECTION_LABELS);
+}
+
+#[tokio::test]
+async fn omit_labels_hides_labeled_post() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "hide-me post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key,
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Query with omit_labels = ["sexual"] → post should be hidden.
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity,
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec!["sexual".to_string()],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    assert!(
+        !resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be hidden when omit_labels contains 'sexual'",
+    );
+}
+
+#[tokio::test]
+async fn omit_labels_non_matching_keeps_post_and_labels() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "warn-label post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    let labels_sig = publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key.clone(),
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Query with a different label — post should stay, label event should be
+    // present in the collection (client renders Warn from the collection).
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity,
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec!["hate".to_string()],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    // Post is present.
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned when omit_labels doesn't match its label",
+    );
+
+    // Label event is still in event_hints.
+    let _label_bundle = resp
+        .event_hints
+        .iter()
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
+                .as_ref()
+                .map(|se| se.signature == labels_sig)
+                .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .expect(
+            "Labels event should still be present in event_hints for Warn/Show",
+        );
+}
+
+#[tokio::test]
+async fn untrusted_labels_not_indexed() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+
+    // Impostor — a random key that is NOT the configured moderator.
+    let impostor_key = generate_signing_key();
+    let impostor_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&impostor_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+    publish_genesis(
+        &mut event,
+        &impostor_identity,
+        &impostor_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "test unmoderated",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+
+    // Publish a Labels event from the impostor (NOT the trusted moderator).
+    let impostor_labels_sig = publish_labels(
+        &mut event,
+        &impostor_identity,
+        &impostor_key,
+        target_key.clone(),
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Feed query — no omit_labels.
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity,
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    // Post is present (not hidden — impostor's label is not trusted).
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned even though impostor labeled it",
+    );
+
+    // The impostor's Labels event is NOT in event_hints.
+    assert!(
+        !resp.event_hints.iter().any(|h| h
+            .event_bundle
+            .as_ref()
+            .and_then(|b| b
+                .signed_event
+                .as_ref()
+                .map(|se| se.signature == impostor_labels_sig))
+            .unwrap_or(false)),
+        "untrusted Labels event must NOT appear in event_hints collection",
+    );
+}
+
+#[tokio::test]
+async fn omit_labels_untrusted_label_does_not_hide() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+
+    let impostor_key = generate_signing_key();
+    let impostor_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&impostor_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    });
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+    publish_genesis(
+        &mut event,
+        &impostor_identity,
+        &impostor_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "impostor-labeled post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    publish_labels(
+        &mut event,
+        &impostor_identity,
+        &impostor_key,
+        target_key,
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Query with omit_labels = ["sexual"] — the label came from an untrusted
+    // source so it was never indexed; the post should NOT be hidden.
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity,
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec!["sexual".to_string()],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "untrusted label must not be filterable via omit_labels — post should still appear",
     );
 }

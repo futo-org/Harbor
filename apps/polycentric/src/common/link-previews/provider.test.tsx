@@ -2,9 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import { useSettings } from '@/src/common/settings';
 import { LinkPreviewsProvider, useLinkPreviews } from './';
 
-const KEY = 'polycentric:generate-link-previews-enabled';
+const SETTINGS_KEY = 'polycentric:settings';
 
 type Api = ReturnType<typeof useLinkPreviews>;
 
@@ -25,35 +26,47 @@ function renderHook() {
   return { result };
 }
 
-/** Flush the load effect's pending microtasks. */
+/** Flush pending microtasks (hydration, state updates). */
 const flush = () => act(async () => {});
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  useSettings.setState({ linkPreviewsEnabled: true });
 });
 
 describe('LinkPreviewsProvider', () => {
   it('defaults to enabled when nothing is stored', async () => {
+    await useSettings.persist.rehydrate();
     const { result } = renderHook();
     await flush();
     expect(result.current.enabled).toBe(true);
   });
 
   it('hydrates the stored value', async () => {
-    await AsyncStorage.setItem(KEY, 'false');
+    await AsyncStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ state: { linkPreviewsEnabled: false } }),
+    );
+    await useSettings.persist.rehydrate();
+
     const { result } = renderHook();
     await flush();
     expect(result.current.enabled).toBe(false);
   });
 
   it('updates and persists when toggled', async () => {
+    await useSettings.persist.rehydrate();
+
     const { result } = renderHook();
     await flush();
 
     act(() => result.current.setEnabled(false));
     expect(result.current.enabled).toBe(false);
 
-    await flush();
-    expect(await AsyncStorage.getItem(KEY)).toBe('false');
+    await useSettings.persist.rehydrate();
+
+    const stored = await AsyncStorage.getItem(SETTINGS_KEY);
+    const parsed = stored ? JSON.parse(stored) : {};
+    expect(parsed.state.linkPreviewsEnabled).toBe(false);
   });
 });

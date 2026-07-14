@@ -6,15 +6,17 @@ export type DecodedProfile = {
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
+  followingCount: number;
+  followersCount: number;
 };
 
 /**
- * Decode a serialised `ListEventsResponse` of `ProfileUpdate` events
- * into a flattened profile snapshot using only the highest-sequence
- * update; older updates are ignored.
+ * Decode a serialised `GetProfileResponse` into a flattened profile
+ * snapshot using only the highest-sequence `ProfileUpdate` event; older
+ * updates are ignored.
  */
 export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
-  const response = v2.ListEventsResponse.fromBinary(
+  const response = v2.GetProfileResponse.fromBinary(
     bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
   );
 
@@ -44,5 +46,7 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     avatar: latest?.update.avatar ?? null,
     banner: latest?.update.banner ?? null,
     alias: latest?.update.alias ?? null,
+    followingCount: Number(response.followingCount),
+    followersCount: Number(response.followersCount),
   };
 }

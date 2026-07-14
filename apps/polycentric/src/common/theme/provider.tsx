@@ -1,6 +1,9 @@
 import { Fonts } from '@/src/common/assets';
-import * as ReactNavigation from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import {
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -11,7 +14,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { useColorScheme } from 'react-native';
-import { loadThemeName, saveThemeName } from './storage';
+import { useSettings } from '@/src/common/settings';
 import { themes, type Theme, type ThemeKey } from './themes';
 
 export type ThemeContextValue = {
@@ -29,25 +32,25 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     'Inter-Italic': Fonts['Inter-Italic'],
   });
 
-  // useColorScheme returns the system theme preference.
   const colorScheme = useColorScheme();
-  const [activeThemeName, setActiveThemeNameState] = useState<ThemeKey>(
-    colorScheme === 'dark' ? 'dark' : 'light',
-  );
-  const [themePreferenceLoaded, setThemePreferenceLoaded] = useState(false);
+  const storedTheme = useSettings((s) => s.theme);
+  const [hydrated, setHydrated] = useState(useSettings.persist.hasHydrated());
 
   useEffect(() => {
-    void loadThemeName().then((themeName) => {
-      if (themeName) {
-        setActiveThemeNameState(themeName);
-      }
-      setThemePreferenceLoaded(true);
-    });
+    const unsub = useSettings.persist.onFinishHydration(() =>
+      setHydrated(true),
+    );
+    return unsub;
   }, []);
 
+  const activeThemeName = hydrated
+    ? storedTheme
+    : colorScheme === 'dark'
+      ? 'dark'
+      : 'light';
+
   const setActiveThemeName = useCallback((name: ThemeKey) => {
-    setActiveThemeNameState(name);
-    void saveThemeName(name);
+    useSettings.getState().setTheme(name);
   }, []);
 
   const theme = useMemo(() => themes[activeThemeName], [activeThemeName]);
@@ -61,11 +64,11 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     throw fontError;
   }
 
-  if (!fontsLoaded || !themePreferenceLoaded) {
+  if (!fontsLoaded || !hydrated) {
     return null;
   }
 
-  const navTheme: ReactNavigation.Theme = {
+  const navTheme: typeof DefaultTheme = {
     dark: theme.scheme === 'dark',
     colors: {
       primary: theme.palette.primary_500,
@@ -75,14 +78,14 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       border: theme.palette.neutral_200,
       notification: theme.palette.negative_500,
     },
-    fonts: ReactNavigation.DefaultTheme.fonts,
+    fonts: DefaultTheme.fonts,
   };
 
   return (
     <Context.Provider value={value}>
-      <ReactNavigation.ThemeProvider value={navTheme}>
+      <NavigationThemeProvider value={navTheme}>
         {children}
-      </ReactNavigation.ThemeProvider>
+      </NavigationThemeProvider>
     </Context.Provider>
   );
 }
