@@ -3,20 +3,19 @@
 //! The actual fetching, JS prerendering, and Open Graph / HTML extraction are
 //! delegated to the internal scraper service (`services/scraper`); this handler
 //! calls that service, maps its JSON onto a `UrlInfoResponse`, and caches the
-//! outcome in memory (see `CACHE`).
+//! outcome in the `url_info_cache` table.
 
 use crate::service::proto::{UrlInfoRequest, UrlInfoResponse};
 use crate::util::{http_client, scraper};
+use ::entity::url_info_cache_model;
+use chrono::{TimeDelta, Utc};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::{ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::sync::{LazyLock, RwLock};
-use std::time::{Duration, Instant};
 use tonic::{Code, Status};
 
-const MAX_CACHED_URLS: usize = 10_000;
-const EVICTION_BATCH: usize = 100;
-const SUCCESS_TTL: Duration = Duration::from_secs(24 * 60 * 60);
-const FAILURE_TTL: Duration = Duration::from_secs(10 * 60);
+const SUCCESS_TTL: TimeDelta = TimeDelta::hours(24);
+const FAILURE_TTL: TimeDelta = TimeDelta::minutes(10);
 
 /// A cached scrape outcome. Failures the scraper reported for the URL
 /// are cached too (with a shorter TTL) so a dead or slow URL doesn't
@@ -34,52 +33,98 @@ enum ScrapeFailure {
     Unreachable(Status),
 }
 
-/// In-memory cache for `url_info` responses, keyed by trimmed URL.
-type UrlInfoCache = RwLock<HashMap<String, (Instant, ScrapeOutcome)>>;
-
-static CACHE: LazyLock<UrlInfoCache> = LazyLock::new(UrlInfoCache::default);
-
-fn ttl(outcome: &ScrapeOutcome) -> Duration {
-    match outcome {
-        Ok(_) => SUCCESS_TTL,
-        Err(_) => FAILURE_TTL,
+fn ttl(row: &url_info_cache_model::Model) -> TimeDelta {
+    if row.error_code.is_some() {
+        FAILURE_TTL
+    } else {
+        SUCCESS_TTL
     }
 }
 
-fn get_cached(cache: &UrlInfoCache, key: &str) -> Option<ScrapeOutcome> {
-    let entries = cache.read().unwrap();
-    let (created, outcome) = entries.get(key)?;
-    (created.elapsed() < ttl(outcome)).then(|| outcome.clone())
+/// Read a fresh cached outcome for `url`. Expired rows and database
+/// errors are both treated as cache misses.
+async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
+    let row = url_info_cache_model::Entity::find_by_id(url)
+        .one(db)
+        .await
+        .map_err(|e| log::warn!("url_info cache lookup failed: {e}"))
+        .ok()??;
+
+    if Utc::now().signed_duration_since(row.updated_at) >= ttl(&row) {
+        return None;
+    }
+
+    Some(match row.error_code {
+        Some(code) => {
+            Err((Code::from(code), row.error_message.unwrap_or_default()))
+        }
+        None => Ok(UrlInfoResponse {
+            title: row.title,
+            description: row.description,
+            image: row.image,
+        }),
+    })
 }
 
-/// Insert an outcome. When the cache is full, drop expired entries;
-/// if everything is still live, evict the batch closest to expiry.
-fn insert_cached(cache: &UrlInfoCache, key: String, outcome: ScrapeOutcome) {
-    let mut entries = cache.write().unwrap();
-    if entries.len() >= MAX_CACHED_URLS {
-        entries
-            .retain(|_, (created, outcome)| created.elapsed() < ttl(outcome));
-    }
-    if entries.len() >= MAX_CACHED_URLS {
-        evict_batch_closest_to_expiry(&mut entries);
-    }
-    entries.insert(key, (Instant::now(), outcome));
-}
+/// Upsert an outcome for `url` and opportunistically prune rows so old
+/// they are expired under every TTL. Both are best-effort: failures
+/// are logged and the response is served regardless.
+async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
+    let now = Utc::now();
 
-/// Remove the `EVICTION_BATCH` entries with the least remaining TTL.
-fn evict_batch_closest_to_expiry(
-    entries: &mut HashMap<String, (Instant, ScrapeOutcome)>,
-) {
-    let mut by_remaining_ttl: Vec<(Duration, String)> = entries
-        .iter()
-        .map(|(key, (created, outcome))| {
-            (ttl(outcome).saturating_sub(created.elapsed()), key.clone())
-        })
-        .collect();
-    by_remaining_ttl.sort_unstable_by_key(|(remaining, _)| *remaining);
+    let (title, description, image, error_code, error_message) = match outcome {
+        Ok(resp) => (
+            resp.title.clone(),
+            resp.description.clone(),
+            resp.image.clone(),
+            None,
+            None,
+        ),
+        Err((code, message)) => (
+            String::new(),
+            String::new(),
+            String::new(),
+            Some(*code as i32),
+            Some(message.clone()),
+        ),
+    };
 
-    for (_, key) in by_remaining_ttl.into_iter().take(EVICTION_BATCH) {
-        entries.remove(&key);
+    let row = url_info_cache_model::ActiveModel {
+        url: Set(url.to_owned()),
+        title: Set(title),
+        description: Set(description),
+        image: Set(image),
+        error_code: Set(error_code),
+        error_message: Set(error_message),
+        created_at: Set(now),
+        updated_at: Set(now),
+    };
+
+    let insert = url_info_cache_model::Entity::insert(row)
+        .on_conflict(
+            OnConflict::column(url_info_cache_model::Column::Url)
+                .update_columns([
+                    url_info_cache_model::Column::Title,
+                    url_info_cache_model::Column::Description,
+                    url_info_cache_model::Column::Image,
+                    url_info_cache_model::Column::ErrorCode,
+                    url_info_cache_model::Column::ErrorMessage,
+                    url_info_cache_model::Column::UpdatedAt,
+                ])
+                .to_owned(),
+        )
+        .exec_without_returning(db)
+        .await;
+    if let Err(e) = insert {
+        log::warn!("url_info cache insert failed: {e}");
+    }
+
+    let prune = url_info_cache_model::Entity::delete_many()
+        .filter(url_info_cache_model::Column::UpdatedAt.lt(now - SUCCESS_TTL))
+        .exec(db)
+        .await;
+    if let Err(e) = prune {
+        log::warn!("url_info cache prune failed: {e}");
     }
 }
 
@@ -91,20 +136,23 @@ struct ScrapedMetadata {
     image: Option<String>,
 }
 
-pub async fn handle(req: UrlInfoRequest) -> Result<UrlInfoResponse, Status> {
-    lookup(&CACHE, &scraper::scrape_url(), &req.url).await
+pub async fn handle(
+    db: &DbConn,
+    req: UrlInfoRequest,
+) -> Result<UrlInfoResponse, Status> {
+    lookup(db, &scraper::scrape_url(), &req.url).await
 }
 
 /// Serve from cache, scraping on a miss. Concurrent misses for the
 /// same key may each scrape; the last result wins.
 async fn lookup(
-    cache: &UrlInfoCache,
+    db: &DbConn,
     scrape_url: &str,
     target_url: &str,
 ) -> Result<UrlInfoResponse, Status> {
     let key = target_url.trim();
 
-    if let Some(outcome) = get_cached(cache, key) {
+    if let Some(outcome) = get_cached(db, key).await {
         return outcome.map_err(|(code, message)| Status::new(code, message));
     }
 
@@ -116,7 +164,7 @@ async fn lookup(
         }
     };
 
-    insert_cached(cache, key.to_owned(), outcome.clone());
+    insert_cached(db, key, &outcome).await;
     outcome.map_err(|(code, message)| Status::new(code, message))
 }
 
@@ -160,6 +208,9 @@ async fn fetch_metadata(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sea_orm::{
+        DatabaseConnection, DbBackend, MockDatabase, MockExecResult,
+    };
     use tonic::Code;
 
     // Each test gets its own mock server (own port) and passes its URL
@@ -242,6 +293,41 @@ mod tests {
         format!(r#"{{"title":"{title}","description":"","image":""}}"#)
     }
 
+    fn cached_row(
+        url: &str,
+        title: &str,
+        updated_at: chrono::DateTime<Utc>,
+    ) -> url_info_cache_model::Model {
+        url_info_cache_model::Model {
+            url: url.to_string(),
+            title: title.to_string(),
+            description: String::new(),
+            image: String::new(),
+            error_code: None,
+            error_message: None,
+            created_at: updated_at,
+            updated_at,
+        }
+    }
+
+    fn exec_ok() -> MockExecResult {
+        MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 1,
+        }
+    }
+
+    /// A mock connection expecting one miss-then-scrape lookup: a SELECT
+    /// returning `first_select`, then the upsert and prune statements.
+    fn db_for_one_miss(
+        first_select: Vec<url_info_cache_model::Model>,
+    ) -> DatabaseConnection {
+        MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([first_select])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection()
+    }
+
     #[tokio::test]
     async fn second_lookup_is_served_from_cache() {
         let mut server = mockito::Server::new_async().await;
@@ -255,12 +341,19 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = UrlInfoCache::default();
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([
+                Vec::<url_info_cache_model::Model>::new(),
+                vec![cached_row("https://example.com", "Cached", Utc::now())],
+            ])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection();
+
         let scrape_url = format!("{}/scrape", server.url());
-        let first = lookup(&cache, &scrape_url, "https://example.com")
+        let first = lookup(&db, &scrape_url, "https://example.com")
             .await
             .expect("first lookup should succeed");
-        let second = lookup(&cache, &scrape_url, "https://example.com")
+        let second = lookup(&db, &scrape_url, "https://example.com")
             .await
             .expect("second lookup should succeed");
 
@@ -269,25 +362,33 @@ mod tests {
         mock.assert_async().await;
     }
 
-    #[test]
-    fn full_cache_evicts_a_batch_of_entries_closest_to_expiry() {
-        let cache = UrlInfoCache::default();
-        for i in 0..MAX_CACHED_URLS {
-            insert_cached(
-                &cache,
-                format!("https://example.com/{i}"),
-                Ok(UrlInfoResponse::default()),
-            );
-        }
-        insert_cached(
-            &cache,
-            "https://example.com/one-more".to_string(),
-            Ok(UrlInfoResponse::default()),
-        );
+    #[tokio::test]
+    async fn expired_rows_are_refetched() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(success_body("Fresh"))
+            .expect(1)
+            .create_async()
+            .await;
 
-        let entries = cache.read().unwrap();
-        assert_eq!(entries.len(), MAX_CACHED_URLS - EVICTION_BATCH + 1);
-        assert!(entries.contains_key("https://example.com/one-more"));
+        let stale = Utc::now() - SUCCESS_TTL - TimeDelta::minutes(1);
+        let db = db_for_one_miss(vec![cached_row(
+            "https://example.com",
+            "Stale",
+            stale,
+        )]);
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let resp = lookup(&db, &scrape_url, "https://example.com")
+            .await
+            .expect("expired row should be refetched");
+
+        assert_eq!(resp.title, "Fresh");
+        mock.assert_async().await;
     }
 
     #[tokio::test]
@@ -301,12 +402,24 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = UrlInfoCache::default();
+        let failure_row = url_info_cache_model::Model {
+            error_code: Some(Code::Unavailable as i32),
+            error_message: Some("scraper returned status 502".to_string()),
+            ..cached_row("https://dead.test", "", Utc::now())
+        };
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([
+                Vec::<url_info_cache_model::Model>::new(),
+                vec![failure_row],
+            ])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection();
+
         let scrape_url = format!("{}/scrape", server.url());
-        let first = lookup(&cache, &scrape_url, "https://dead.test")
+        let first = lookup(&db, &scrape_url, "https://dead.test")
             .await
             .expect_err("first lookup should fail");
-        let second = lookup(&cache, &scrape_url, "https://dead.test")
+        let second = lookup(&db, &scrape_url, "https://dead.test")
             .await
             .expect_err("second lookup should fail");
 
@@ -316,7 +429,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn surrounding_whitespace_shares_a_cache_entry() {
+    async fn surrounding_whitespace_is_trimmed_before_scraping() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/scrape")
@@ -331,17 +444,14 @@ mod tests {
             .create_async()
             .await;
 
-        let cache = UrlInfoCache::default();
-        let scrape_url = format!("{}/scrape", server.url());
-        let first = lookup(&cache, &scrape_url, "https://example.com/page")
-            .await
-            .expect("plain URL should succeed");
-        let second = lookup(&cache, &scrape_url, " https://example.com/page ")
-            .await
-            .expect("whitespace variant should hit the same entry");
+        let db = db_for_one_miss(Vec::new());
 
-        assert_eq!(first.title, "Normalized");
-        assert_eq!(second.title, "Normalized");
+        let scrape_url = format!("{}/scrape", server.url());
+        let resp = lookup(&db, &scrape_url, " https://example.com/page ")
+            .await
+            .expect("padded URL should be trimmed and scraped");
+
+        assert_eq!(resp.title, "Normalized");
         mock.assert_async().await;
     }
 
@@ -370,10 +480,19 @@ mod tests {
 
     #[tokio::test]
     async fn unreachable_scraper_failures_are_not_cached() {
-        let cache = UrlInfoCache::default();
+        // Two SELECT misses but only ONE upsert+prune pair: if the failed
+        // first lookup wrote to the cache, the second lookup's statements
+        // would find no mock results and the test would fail.
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([
+                Vec::<url_info_cache_model::Model>::new(),
+                Vec::<url_info_cache_model::Model>::new(),
+            ])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection();
 
         let refused =
-            lookup(&cache, "http://127.0.0.1:1/scrape", "https://example.com")
+            lookup(&db, "http://127.0.0.1:1/scrape", "https://example.com")
                 .await
                 .expect_err("unreachable scraper should fail");
         assert_eq!(refused.code(), Code::Unavailable);
@@ -390,7 +509,7 @@ mod tests {
             .await;
 
         let scrape_url = format!("{}/scrape", server.url());
-        let recovered = lookup(&cache, &scrape_url, "https://example.com")
+        let recovered = lookup(&db, &scrape_url, "https://example.com")
             .await
             .expect("retry after recovery should succeed");
 
