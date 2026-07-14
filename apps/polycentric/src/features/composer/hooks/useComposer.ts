@@ -124,6 +124,9 @@ export function useComposer({
       setLinkPreviewLoading(false);
       return;
     }
+    // The URL changed: drop any card for the previous URL immediately. The
+    // loading state waits until the debounced fetch actually starts.
+    setLinkPreview((prev) => (prev && prev.url === previewUrl ? prev : null));
     let cancelled = false;
     // Debounce so we don't unfurl every intermediate URL while typing.
     const handle = setTimeout(() => {

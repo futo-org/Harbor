@@ -415,6 +415,38 @@ describe('useComposer link previews', () => {
     expect(built.post.links).toHaveLength(1);
   });
 
+  it('drops the stale card as soon as the url is swapped', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      // The loading state waits for the debounced fetch to actually start.
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).not.toBeNull();
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      // Swap the url: the stale card disappears right away, before the new
+      // fetch (and its loading state) kicks in.
+      act(() => result.current.setText('now https://other.example instead'));
+      expect(result.current.linkPreview).toBeNull();
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://other.example',
+      });
+      expect(result.current.linkPreviewLoading).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('drops the preview and stops embedding once dismissed', async () => {
     const { result } = await renderComposer();
     act(() => result.current.setText(draftWithUrl));
