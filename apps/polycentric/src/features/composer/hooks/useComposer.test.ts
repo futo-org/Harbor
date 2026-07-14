@@ -447,6 +447,57 @@ describe('useComposer link previews', () => {
     }
   });
 
+  it('disables posting until the preview finishes loading', async () => {
+    jest.useFakeTimers();
+    try {
+      const unfurl = deferred<Awaited<ReturnType<typeof mockClient.urlInfo>>>();
+      mockClient.urlInfo.mockReturnValueOnce(unfurl.promise);
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+
+      // Debounce elapses, the fetch starts: posting is held.
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreviewLoading).toBe(true);
+      expect(result.current.canPost).toBe(false);
+
+      await act(async () => {
+        unfurl.resolve({
+          url: 'https://example.com',
+          title: 't',
+          description: 'd',
+          image: 'i',
+        });
+      });
+      expect(result.current.linkPreviewLoading).toBe(false);
+      expect(result.current.canPost).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('re-enables posting when a loading preview is removed', async () => {
+    jest.useFakeTimers();
+    try {
+      // Never resolves: the user removes the preview instead of waiting.
+      mockClient.urlInfo.mockReturnValueOnce(new Promise(() => {}));
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.canPost).toBe(false);
+
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreviewLoading).toBe(false);
+      expect(result.current.canPost).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('drops the preview and stops embedding once dismissed', async () => {
     const { result } = await renderComposer();
     act(() => result.current.setText(draftWithUrl));

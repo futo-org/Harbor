@@ -148,8 +148,13 @@ export function useComposer({
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
+  // While the link preview is fetching, hold the Post button so the user
+  // either waits for the card (it gets embedded in the signed post) or
+  // removes it with the X, which clears the loading state.
   const canPost =
-    (text.trim().length > 0 || attachments.length > 0) && !submitting;
+    (text.trim().length > 0 || attachments.length > 0) &&
+    !submitting &&
+    !linkPreviewLoading;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   // Reset composer state and drop any in-flight/cached uploads so nothing
