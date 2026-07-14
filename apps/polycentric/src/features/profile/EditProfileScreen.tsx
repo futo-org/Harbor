@@ -10,7 +10,7 @@ import {
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 
@@ -19,6 +19,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const username = profile.name ?? fallbackUsername;
   const edit = useProfileEdit(username, profile, identityKey);
+  const navigation = useNavigation();
 
   const close = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -27,8 +28,11 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const handleSave = useCallback(async () => {
     // Keep the sheet open on a rejected save (e.g. alias failed verification)
     // so the error stays visible.
-    if (await edit.handleSave()) close();
-  }, [edit, close]);
+    if (!(await edit.handleSave())) return;
+    // The user may have dismissed the sheet while the save was in flight —
+    // going back then would pop whatever screen they're on now instead.
+    if (navigation.isFocused()) close();
+  }, [edit, close, navigation]);
 
   return (
     <Sheet detents={[1]} dismissible scrollable>
