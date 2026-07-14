@@ -415,6 +415,23 @@ describe('useComposer link previews', () => {
     expect(built.post.links).toHaveLength(1);
   });
 
+  it('drops the preview and stops embedding once dismissed', async () => {
+    const { result } = await renderComposer();
+    act(() => result.current.setText(draftWithUrl));
+
+    act(() => result.current.handleRemoveLinkPreview());
+    expect(result.current.linkPreview).toBeNull();
+    expect(result.current.linkPreviewLoading).toBe(false);
+
+    await act(async () => {
+      await result.current.handlePost();
+    });
+
+    expect(mockClient.urlInfo).not.toHaveBeenCalled();
+    const built = mockClient.contentManager.build.mock.calls[0][0];
+    expect(built.post.links).toHaveLength(0);
+  });
+
   it('skips link preview generation when disabled', async () => {
     mockLinkPreviewsEnabled = false;
     const { result } = await renderComposer();

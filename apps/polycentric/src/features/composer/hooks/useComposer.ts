@@ -107,6 +107,9 @@ export function useComposer({
   // at post time (see handlePost) so we don't fetch it twice.
   const [linkPreview, setLinkPreview] = useState<v2.Link | null>(null);
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+  // True once the user removed the preview (X button): no more previews are
+  // generated or embedded for this draft, until the composer resets.
+  const [previewDismissed, setPreviewDismissed] = useState(false);
 
   const previewUrl = useMemo(
     () => parseTextLinks(text).find((s) => s.type === 'link')?.url ?? null,
@@ -114,9 +117,9 @@ export function useComposer({
   );
 
   useEffect(() => {
-    // No URL, or the user disabled preview generation: show nothing (and clear
-    // any card already shown if they toggle it off mid-draft).
-    if (!previewUrl || !linkPreviewsEnabled) {
+    // No URL, the user disabled preview generation, or they dismissed this
+    // URL's preview: show nothing (and clear any card already shown).
+    if (!previewUrl || !linkPreviewsEnabled || previewDismissed) {
       setLinkPreview(null);
       setLinkPreviewLoading(false);
       return;
@@ -138,7 +141,7 @@ export function useComposer({
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [previewUrl, client, linkPreviewsEnabled]);
+  }, [previewUrl, client, linkPreviewsEnabled, previewDismissed]);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
@@ -150,8 +153,17 @@ export function useComposer({
   // carries over to the next open.
   const resetAll = useCallback(() => {
     uploadCache.clear();
+    setPreviewDismissed(false);
     resetComposer();
   }, [resetComposer]);
+
+  // X button on the link preview (loading or resolved): drop the card and
+  // stop generating/embedding previews for the rest of this draft.
+  const handleRemoveLinkPreview = useCallback(() => {
+    setPreviewDismissed(true);
+    setLinkPreview(null);
+    setLinkPreviewLoading(false);
+  }, []);
 
   // Begin processing + uploading an attachment immediately, caching the
   // promise by id so `handlePost` can await the already-running work (it waits
@@ -288,14 +300,16 @@ export function useComposer({
           : [];
 
       // Embed the first URL's preview in the signed post, unless the user
-      // disabled preview generation. Reuse the live preview when it matches the
-      // current URL; otherwise fetch fresh (e.g. posted before the preview
-      // resolved). Best-effort — null yields no card.
+      // disabled preview generation or dismissed the preview for this draft.
+      // Reuse the live preview when it matches the current URL; otherwise
+      // fetch fresh (e.g. posted before the preview resolved). Best-effort —
+      // null yields no card.
+      const embedPreview = linkPreviewsEnabled && !previewDismissed;
       let link =
-        linkPreviewsEnabled && linkPreview && linkPreview.url === previewUrl
+        embedPreview && linkPreview && linkPreview.url === previewUrl
           ? linkPreview
           : null;
-      if (linkPreviewsEnabled && !link && previewUrl) {
+      if (embedPreview && !link && previewUrl) {
         const info = await client.urlInfo(previewUrl);
         // Metadata-only response; populate the URL we requested.
         link = info ? v2.Link.create({ ...info, url: previewUrl }) : null;
@@ -382,6 +396,7 @@ export function useComposer({
     replyRootEventKey,
     linkPreview,
     linkPreviewsEnabled,
+    previewDismissed,
     previewUrl,
     resetAll,
     setSubmitting,
@@ -417,5 +432,6 @@ export function useComposer({
     handleAttachImage,
     handleCaptureImage,
     handleRemoveAttachment,
+    handleRemoveLinkPreview,
   };
 }
