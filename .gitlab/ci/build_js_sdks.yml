@@ -36,10 +36,11 @@
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
-# Populates the shared pnpm store cache; the other js jobs consume it with
-# `policy: pull` and never re-upload it. The cache key is the pnpm-lock.yaml
-# hash, so the cache only needs (re)creating when the lockfile changes —
-# this job is rules-scoped to exactly that.
+# Populates the shared pnpm store cache with a full workspace install (the
+# pattern from pnpm's GitLab CI docs); the other js jobs consume it with
+# `policy: pull` and never re-upload it. The cache key is the
+# pnpm-lock.yaml hash, so the cache only needs (re)creating when the
+# lockfile changes — this job is rules-scoped to exactly that.
 pnpm-deps-warmup:
   stage: setup
   allow_failure: true
@@ -71,9 +72,7 @@ pnpm-deps-warmup:
     - npm install -g pnpm@10
     - pnpm config set store-dir ${PNPM_STORE_DIR}
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
-    # Download every package in the lockfile into the store without
-    # installing — exactly what the cache persists.
-    - pnpm fetch
+    - pnpm install
 
 js-sdks-format-check:
   extends: .js-sdks-base

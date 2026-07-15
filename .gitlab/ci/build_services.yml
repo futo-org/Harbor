@@ -4,15 +4,22 @@
     pull_policy: if-not-present
   stage: check
   cache:
-    key:
-      files:
-        - Cargo.lock
-      prefix: cargo-deps
-    paths:
-      - .cargo/registry/index
-      - .cargo/registry/cache
-      - .cargo/git/db
-    policy: pull
+    - key:
+        files:
+          - Cargo.lock
+        prefix: cargo-deps
+      paths:
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+      policy: pull
+    - key:
+        files:
+          - Cargo.lock
+        prefix: cargo-target
+      paths:
+        - target
+      policy: pull
 
 .service-format-check:
   extends: .service-rust-base
