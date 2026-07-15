@@ -31,13 +31,6 @@
         - .cargo/registry/cache
         - .cargo/git/db
       policy: pull
-    - key:
-        files:
-          - Cargo.lock
-        prefix: cargo-target
-      paths:
-        - target
-      policy: pull
 
 # Populates the shared cargo-deps cache; every other rust job consumes it
 # with `policy: pull` and never re-uploads it. The cache key is the
@@ -68,21 +61,8 @@ cargo-deps-warmup:
         - .cargo/registry/cache
         - .cargo/git/db
       policy: pull-push
-    - key:
-        files:
-          - Cargo.lock
-        prefix: cargo-target
-      paths:
-        - target
-      policy: pull-push
   script:
     - cargo fetch
-    # Compile the workspace once so check jobs start from warm artifacts:
-    # clippy for the lint jobs, --no-run test builds for the test jobs.
-    # Workspace-crate artifacts go stale as sources change, but the
-    # dependency compilation (the bulk) is a pure function of Cargo.lock.
-    - cargo clippy --workspace
-    - cargo test --workspace --no-run
 
 .rust-check:
   extends: .rs-core-workflow
