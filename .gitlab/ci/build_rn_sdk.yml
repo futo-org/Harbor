@@ -24,23 +24,20 @@ rn-android-build:
     - !reference [.rs-core-workflow, rules]
     - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
+  # Self-populating per job: the first run downloads and compiles
+  # everything and uploads the result; every run after starts with warm
+  # crate sources and sccache hits for unchanged crates.
   cache:
-    - key:
-        files:
-          - Cargo.lock
-        prefix: cargo-deps
-      paths:
-        - .cargo/registry/index
-        - .cargo/registry/cache
-        - .cargo/git/db
-      policy: pull
-    - key:
-        files:
-          - Cargo.lock
-        prefix: cargo-sccache-android
-      paths:
-        - .sccache
-      policy: pull-push
+    key:
+      files:
+        - Cargo.lock
+      prefix: cargo-${CI_JOB_NAME}
+    paths:
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+      - .sccache
+    policy: pull-push
   before_script:
     - command -v sccache >/dev/null && export RUSTC_WRAPPER=sccache || true
   script:
