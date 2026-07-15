@@ -51,7 +51,7 @@ async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
     let row = url_info_cache_model::Entity::find_by_id(url)
         .one(db)
         .await
-        .map_err(|e| log::warn!("url_info cache lookup failed: {e}"))
+        .map_err(|e| eprintln!("url_info cache lookup failed: {e}"))
         .ok()??;
 
     if Utc::now().signed_duration_since(row.updated_at) >= ttl(&row) {
@@ -122,7 +122,7 @@ async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
         .exec_without_returning(db)
         .await;
     if let Err(e) = insert {
-        log::warn!("url_info cache insert failed: {e}");
+        eprintln!("url_info cache insert failed: {e}");
     }
 }
 
@@ -132,7 +132,7 @@ async fn evict_if_full(db: &DbConn) {
     let count = match url_info_cache_model::Entity::find().count(db).await {
         Ok(count) => count,
         Err(e) => {
-            log::warn!("url_info cache count failed: {e}");
+            eprintln!("url_info cache count failed: {e}");
             return;
         }
     };
@@ -151,7 +151,7 @@ async fn evict_if_full(db: &DbConn) {
         .exec(db)
         .await;
     if let Err(e) = evicted {
-        log::warn!("url_info cache eviction failed: {e}");
+        eprintln!("url_info cache eviction failed: {e}");
     }
 }
 
