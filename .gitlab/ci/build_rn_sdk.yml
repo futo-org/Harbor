@@ -25,9 +25,10 @@ rn-android-build:
     - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
   cache:
-    - key: rs-core-cargo-deps-${CI_COMMIT_REF_SLUG}
-      fallback_keys:
-        - rs-core-cargo-deps-${CI_DEFAULT_BRANCH}
+    - key:
+        files:
+          - Cargo.lock
+        prefix: cargo-deps
       paths:
         - .cargo/registry/index
         - .cargo/registry/cache

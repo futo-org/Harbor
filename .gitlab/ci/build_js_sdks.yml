@@ -21,9 +21,10 @@
   variables:
     PNPM_STORE_DIR: ${CI_PROJECT_DIR}/.pnpm-store
   cache:
-    key: js-sdks-pnpm-${CI_COMMIT_REF_SLUG}
-    fallback_keys:
-      - js-sdks-pnpm-${CI_DEFAULT_BRANCH}
+    key:
+      files:
+        - pnpm-lock.yaml
+      prefix: js-sdks-pnpm
     paths:
       - .pnpm-store
   before_script:

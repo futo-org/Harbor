@@ -2,14 +2,15 @@
   image: ${RUST_IMAGE}
   stage: check
   cache:
-    key: ${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}
-    fallback_keys:
-      - ${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}
-      - ${CI_JOB_NAME}
+    key:
+      files:
+        - Cargo.lock
+      prefix: cargo-deps
     paths:
-      - .cargo/registry/index/
-      - .cargo/registry/cache/
-      - .cargo/git/db/
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+      - .cargo/bin
 
 .service-format-check:
   extends: .service-rust-base
