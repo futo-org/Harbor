@@ -42,6 +42,7 @@
 # this job is rules-scoped to exactly that.
 pnpm-deps-warmup:
   stage: setup
+  allow_failure: true
   image:
     name: node:24-slim
     pull_policy: if-not-present

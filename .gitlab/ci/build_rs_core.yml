@@ -39,6 +39,7 @@
 cargo-deps-warmup:
   extends: .rs-core-workflow
   stage: setup
+  allow_failure: true
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
