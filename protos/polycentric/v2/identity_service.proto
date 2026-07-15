@@ -1,0 +1,30 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/server.proto";
+
+/**
+ * Payload an identity signs when requesting its own flags.
+ */
+message ListIdentityFlagsBody {
+  // Identity key whose flags are requested.
+  string identity = 1;
+  // Client timestamp in unix milliseconds; must be within the server's
+  // acceptable skew window.
+  int64 timestamp = 2;
+}
+
+message ListIdentityFlagsResponse {
+  // Flag values set on the identity, e.g. "moderator" or "banned".
+  repeated string flags = 1;
+}
+
+/**
+ * Identity APIs.
+ */
+service IdentityService {
+  // Returns the server-administered flags on an identity. This endpoint
+  // expects a signed ListIdentityFlagsBody message, signed by one of the
+  // identity's authorized keys.
+  rpc ListIdentityFlags(SignedMessage) returns (ListIdentityFlagsResponse);
+}

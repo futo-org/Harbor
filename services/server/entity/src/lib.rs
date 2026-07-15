@@ -15,6 +15,7 @@ pub mod content_verification_claim_model;
 pub mod content_verification_target_model;
 pub mod content_verification_verify_model;
 pub mod event_model;
+pub mod identity_flag_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;

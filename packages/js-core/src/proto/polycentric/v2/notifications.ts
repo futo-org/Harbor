@@ -58,6 +58,12 @@ export interface ListNotificationsRequest {
      * @generated from protobuf field: optional string after = 3
      */
     after?: string;
+    /**
+     * Label values for which the requester does not want to see content
+     *
+     * @generated from protobuf field: repeated string omit_labels = 4
+     */
+    omitLabels: string[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListNotificationsResponse
@@ -210,12 +216,14 @@ class ListNotificationsRequest$Type extends MessageType<ListNotificationsRequest
         super("polycentric.v2.ListNotificationsRequest", [
             { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "first", kind: "scalar", opt: true, T: 13 /*ScalarType.UINT32*/ },
-            { no: 3, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<ListNotificationsRequest>): ListNotificationsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.identity = "";
+        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<ListNotificationsRequest>(this, message, value);
         return message;
@@ -233,6 +241,9 @@ class ListNotificationsRequest$Type extends MessageType<ListNotificationsRequest
                     break;
                 case /* optional string after */ 3:
                     message.after = reader.string();
+                    break;
+                case /* repeated string omit_labels */ 4:
+                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -255,6 +266,9 @@ class ListNotificationsRequest$Type extends MessageType<ListNotificationsRequest
         /* optional string after = 3; */
         if (message.after !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.after);
+        /* repeated string omit_labels = 4; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
