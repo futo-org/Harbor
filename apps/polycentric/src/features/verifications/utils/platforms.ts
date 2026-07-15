@@ -1,6 +1,6 @@
-import { PaletteColorToken } from '@/src/common/theme';
+import type { PaletteColorToken } from '@/src/common/theme';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { createElement, ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 
 // A platform a claim can be verified against. `logo` matches SelectChip's icon
 // render-prop; `color` tints the logo and its chip; `location` is where the

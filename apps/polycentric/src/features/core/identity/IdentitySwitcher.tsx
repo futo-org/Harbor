@@ -35,13 +35,13 @@ import {
 import {
   Animated,
   FlatList,
-  ListRenderItemInfo,
+  type ListRenderItemInfo,
   Platform,
   Pressable,
   View,
 } from 'react-native';
 import DraggableFlatList, {
-  RenderItemParams,
+  type RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import Reanimated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';

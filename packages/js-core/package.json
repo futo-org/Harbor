@@ -16,6 +16,8 @@
     "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-core/scripts/generate-proto-barrel.mjs",
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "test": "vitest",
     "test:run": "vitest run"
   },

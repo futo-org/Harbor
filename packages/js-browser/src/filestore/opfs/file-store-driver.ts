@@ -1,4 +1,8 @@
-import { toDigestKey, type IFileStoreDriver, v2 } from '@polycentric/js-core';
+import {
+  toDigestKey,
+  type IFileStoreDriver,
+  type v2,
+} from '@polycentric/js-core';
 
 /**
  * Origin Private File System backed IFileStoreDriver. Blob bytes are

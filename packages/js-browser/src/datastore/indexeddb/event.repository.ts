@@ -1,6 +1,6 @@
 import type { IEventRepository } from '@polycentric/js-core';
 import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
-import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
 
 /**
  * Stored representation of an event in IndexedDB.

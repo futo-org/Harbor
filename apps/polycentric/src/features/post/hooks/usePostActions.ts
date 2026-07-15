@@ -1,6 +1,6 @@
 import {
   hexToBytes,
-  PostData,
+  type PostData,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';

@@ -1,6 +1,5 @@
-import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { router } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -38,20 +37,23 @@ export function ProfileProvider({
   const { identity: selfIdentity } = useCurrentIdentity();
   const isSelf = !!identityKey && selfIdentity?.identityKey === identityKey;
 
-  // Tabs are routes, but siblings inside the profile's hidden tab
-  // navigator (`app/[identityId]/(profile)`) — replacing resolves to a
-  // tab jump that updates the URL without touching the root stack.
+  const navigation = useNavigation();
+
+  // Tabs are sibling routes inside the profile's hidden tab navigator
+  // (`app/[identityId]/(profile)`). Jump between them directly — going
+  // through `router.replace(href)` resolves at the stack level, which
+  // remounts the whole profile with a push transition instead of
+  // switching tabs in place. Expo-router keeps the URL in sync with the
+  // resulting navigation state.
   const setActiveFeed = useCallback(
     (tab: ActiveFeed) => {
-      const profileId = alias ?? identityKey;
-      if (tab === activeFeed || !profileId) return;
-      router.replace(
-        tab === 'verifications'
-          ? Routes.tabs.profileVerifications(profileId)
-          : Routes.tabs.profile(profileId),
-      );
+      if (tab === activeFeed) return;
+      navigation.dispatch({
+        type: 'JUMP_TO',
+        payload: { name: tab === 'verifications' ? 'verifications' : 'index' },
+      });
     },
-    [activeFeed, alias, identityKey],
+    [activeFeed, navigation],
   );
 
   const value = useMemo<ProfileContextValue>(

@@ -1,5 +1,5 @@
 import { openCompose } from '@/src/common/constants';
-import { PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
@@ -22,7 +22,7 @@ export type PostToolbarProps = {
 export function PostToolbar({ post, style }: PostToolbarProps) {
   const { theme } = useTheme();
 
-  const {} = usePostActions(post);
+  usePostActions(post);
 
   const onRepostPress = () => {};
 

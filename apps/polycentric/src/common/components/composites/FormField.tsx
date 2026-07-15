@@ -1,7 +1,10 @@
-import { ViewStyle, View } from 'react-native';
+import { type ViewStyle, View } from 'react-native';
 import { forwardRef } from 'react';
 import { Text } from '@/src/common/components/primitives';
-import { TextInput, TextInputProps } from '@/src/common/components/primitives';
+import {
+  TextInput,
+  type TextInputProps,
+} from '@/src/common/components/primitives';
 import {
   Spacing,
   type SpacingToken,

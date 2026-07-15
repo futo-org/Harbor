@@ -1,5 +1,5 @@
 import { Atoms, useTheme } from '@/src/common/theme';
-import { ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
 import { Pressable, Text } from 'react-native';
 import Animated, {
   useAnimatedStyle,

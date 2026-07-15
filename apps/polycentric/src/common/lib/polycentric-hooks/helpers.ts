@@ -1,4 +1,4 @@
-import { QueryStatus, v2 } from '@polycentric/react-native';
+import { type QueryStatus, v2 } from '@polycentric/react-native';
 import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
 export function toBase64(bytes: Uint8Array): string {
@@ -251,7 +251,7 @@ export function decodeFeedQueryResult(
   }
 
   const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
-  let hasNext = !!response.pageInfo?.hasNextPage;
+  const hasNext = !!response.pageInfo?.hasNextPage;
   return [decodeFeedItems(response), hasNext];
 }
 
@@ -260,7 +260,7 @@ export function extractFeedToken(
   _status: QueryStatus | undefined,
   data: ArrayBuffer | undefined,
 ): string | undefined {
-  let forwardToken: string | undefined = undefined;
+  let forwardToken: string | undefined;
 
   if (data) {
     const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));

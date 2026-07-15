@@ -16,7 +16,7 @@ import {
   setQueryCache,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import { FeedHookResult, NOOP } from '../../feed/hooks/types';
+import { type FeedHookResult, NOOP } from '../../feed/hooks/types';
 
 const DUMMY_EVENT_KEY: EventKey = {
   collection: COLLECTION.FEED,

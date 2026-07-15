@@ -1,5 +1,5 @@
 import { Button, Text } from '@/src/common/components';
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
@@ -7,7 +7,7 @@ import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import {
   Atoms,
-  PaletteColorToken,
+  type PaletteColorToken,
   Spacing,
   useTheme,
   withHexOpacity,
@@ -17,14 +17,14 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DecodedClaim } from '../hooks/useClaimById';
+import type { DecodedClaim } from '../hooks/useClaimById';
 import { useClaimsList } from '../hooks/useClaimsList';
-import { ClaimRef } from '../hooks/useCreateClaim';
+import type { ClaimRef } from '../hooks/useCreateClaim';
 import useRequestVerification from '../hooks/useRequestVerification';
-import { CLAIM_TYPES, ClaimType } from '../utils/forms';
-import { Platform } from '../utils/platforms';
+import { CLAIM_TYPES, type ClaimType } from '../utils/forms';
+import type { Platform } from '../utils/platforms';
 import { ClaimCreateProvider } from './ClaimCreateContext';
-import { ClaimCreateForm, ClaimFormState } from './ClaimCreateForm';
+import { ClaimCreateForm, type ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
 import { ClaimCreatePlatformPicker } from './ClaimCreatePlatformPicker';
 import { ClaimListItem } from './ClaimListItem';

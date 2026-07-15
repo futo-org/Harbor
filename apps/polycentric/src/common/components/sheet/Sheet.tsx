@@ -22,7 +22,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-  ViewProps,
+  type ViewProps,
 } from 'react-native';
 import Reanimated, {
   useAnimatedStyle,
@@ -30,7 +30,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
-import Icon, { IconProps } from '../Icon';
+import Icon, { type IconProps } from '../Icon';
 import Topbar from '../layout/Topbar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -297,9 +297,9 @@ function WebModal({
   const { animatedStyle, fadeOut, isExiting } = useFadeTransition();
 
   // Mirror native's `onPresented` once the modal has mounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fire once on mount
   useEffect(() => {
     onPresented?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const close = useCallback(() => {

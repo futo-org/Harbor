@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DecodedClaim } from '../hooks/useClaimById';
+import type { DecodedClaim } from '../hooks/useClaimById';
 import { useClaimsList } from '../hooks/useClaimsList';
 import { useRequestedVerifications } from '../hooks/useRequestedVerifications';
 import { ClaimActionRow } from './ClaimActionRow';

@@ -71,6 +71,7 @@ function IdentityProfile({
   // Redirect at most once per identity, even though the shared profile query
   // may briefly re-enter its loading state and re-run this effect.
   const redirectedRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `identityKey` is the reset trigger, not a capture
   useEffect(() => {
     redirectedRef.current = false;
   }, [identityKey]);

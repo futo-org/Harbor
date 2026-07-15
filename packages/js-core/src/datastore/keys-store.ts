@@ -1,6 +1,6 @@
-import { IKeysRepository } from '../platform-interfaces';
+import type { IKeysRepository } from '../platform-interfaces';
 import type { PrivateKey } from '../polycentric-client';
-import { PublicKey } from '../proto/v2';
+import type { PublicKey } from '../proto/v2';
 
 /**
  * KeysStore provides operations for managing cryptographic keys.

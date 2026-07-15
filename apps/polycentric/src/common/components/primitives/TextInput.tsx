@@ -1,7 +1,7 @@
 import {
   TextInput as RNTextInput,
-  TextInputProps as RNTextInputProps,
-  TextStyle,
+  type TextInputProps as RNTextInputProps,
+  type TextStyle,
   StyleSheet,
   Platform,
 } from 'react-native';

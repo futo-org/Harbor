@@ -2,7 +2,10 @@ import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';
-import { PostData, usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  type PostData,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { View } from 'react-native';
 import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';

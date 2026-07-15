@@ -9,11 +9,11 @@ import {
 import {
   Animated,
   Pressable,
-  PressableProps,
-  StyleProp,
-  ViewStyle,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
-import { Text, TextVariant } from './Text';
+import { Text, type TextVariant } from './Text';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 

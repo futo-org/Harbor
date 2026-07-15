@@ -94,6 +94,7 @@ export function PostSkeletonList({ count = 6 }: { count?: number }) {
   return (
     <View>
       {Array.from({ length: count }).map((_, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder rows never reorder
         <PostSkeleton key={i} />
       ))}
     </View>

@@ -1,10 +1,10 @@
-import { PaletteColorToken, useTheme } from '@/src/common/theme';
+import { type PaletteColorToken, useTheme } from '@/src/common/theme';
 import {
   Ionicons,
   MaterialCommunityIcons,
   MaterialIcons,
 } from '@expo/vector-icons';
-import { ComponentProps, ComponentType, ReactNode } from 'react';
+import type { ComponentProps, ComponentType, ReactNode } from 'react';
 
 function defineIcon<G extends string>(
   IconSet: ComponentType<any> & { glyphMap: Record<G, number | string> },

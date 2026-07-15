@@ -1,9 +1,4 @@
 {
-  "eslint.workingDirectories": [
-    {
-      "pattern": "packages/*"
-    }
-  ],
   "editor.suggest.showSnippets": false,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {

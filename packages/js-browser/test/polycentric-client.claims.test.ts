@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   PolycentricClient,
   KEY_TYPE,
-  ClaimFieldEntry,
-  SignedEvent,
+  type ClaimFieldEntry,
+  type SignedEvent,
 } from '@polycentric/js-core';
 import type { PolycentricClientConfig } from '@polycentric/js-core';
 import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';

@@ -11,10 +11,10 @@ import { isWeb } from '@/src/common/util/platform';
 import {
   Animated,
   Pressable,
-  StyleProp,
+  type StyleProp,
   StyleSheet,
   View,
-  ViewStyle,
+  type ViewStyle,
 } from 'react-native';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';

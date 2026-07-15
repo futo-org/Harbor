@@ -4,7 +4,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { useCallback, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';

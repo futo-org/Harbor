@@ -1,4 +1,4 @@
-import { IEventAckRepository } from '../platform-interfaces';
+import type { IEventAckRepository } from '../platform-interfaces';
 
 /**
  * EventAckStore provides operations for managing event acknowledgments.

@@ -1,12 +1,12 @@
 import { Button, Text, TextArea } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
-import useReportOptions, { ReportOptions } from './hooks/useReportOptions';
+import useReportOptions, { type ReportOptions } from './hooks/useReportOptions';
 import { ActivityIndicator, View } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
 import useReportAction from './hooks/useReportAction';
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 
 type ReportSheetProps = {
   eventId: string;

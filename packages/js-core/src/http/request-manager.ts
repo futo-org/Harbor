@@ -77,7 +77,7 @@ export class RequestManager {
 
   // Exponential backoff: 1s, 2s, 4s, 8s, etc. with jitter. Cap at 10 seconds.
   private calculateRetryDelay(attempt: number): number {
-    const baseDelay = Math.pow(2, attempt) * 1000;
+    const baseDelay = 2 ** attempt * 1000;
     const jitter = Math.random() * 0.1 * baseDelay;
     return Math.min(baseDelay + jitter, 10000);
   }

@@ -1,12 +1,13 @@
 import { isWeb } from '@/src/common/util/platform';
 import {
   FlashList,
-  FlashListRef,
+  type FlashListRef,
   type FlashListProps,
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import React, {
+import type React from 'react';
+import {
   cloneElement,
   forwardRef,
   isValidElement,

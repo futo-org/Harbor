@@ -1,12 +1,12 @@
 import { Text } from '@/src/common/components';
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
-  PaletteColorToken,
+  type PaletteColorToken,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { Pressable, PressableProps, View } from 'react-native';
+import { Pressable, type PressableProps, View } from 'react-native';
 
 type PostActionButtonProps = {
   icon: IconName;

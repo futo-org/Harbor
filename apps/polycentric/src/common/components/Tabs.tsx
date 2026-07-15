@@ -1,5 +1,5 @@
 import { Atoms, useTheme } from '@/src/common/theme';
-import { ComponentProps, ReactElement } from 'react';
+import type { ComponentProps, ReactElement } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './primitives';
 

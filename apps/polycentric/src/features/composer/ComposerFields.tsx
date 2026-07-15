@@ -4,7 +4,7 @@ import {
   Text,
   TextArea,
 } from '@/src/common/components/primitives';
-import { type PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useState } from 'react';
 import {
@@ -17,7 +17,7 @@ import {
 import { Image } from 'expo-image';
 import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import type { useComposer } from './hooks/useComposer';
 import { isWeb } from '@/src/common/util/platform';

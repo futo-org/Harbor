@@ -1,5 +1,9 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { toDigestKey, type IFileStoreDriver, v2 } from '@polycentric/js-core';
+import {
+  toDigestKey,
+  type IFileStoreDriver,
+  type v2,
+} from '@polycentric/js-core';
 
 /**
  * expo-file-system-backed IFileStoreDriver. Blob bytes are written to

@@ -8,6 +8,7 @@ export function useIdentityKeyFor(keyPair: KeyPair): string | null {
   const { client } = usePolycentricContext();
   const pubKey = pubkeyStr(keyPair.publicKey);
   const [identityKey, setIdentityKey] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `keyPair` is keyed by its stable `pubKey` string
   useEffect(() => {
     let cancelled = false;
     void client.getIdentityKeyFor(keyPair).then((k) => {
@@ -16,7 +17,6 @@ export function useIdentityKeyFor(keyPair: KeyPair): string | null {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, pubKey]);
   return identityKey;
 }

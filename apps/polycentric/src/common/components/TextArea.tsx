@@ -9,7 +9,7 @@ import {
 } from 'react';
 import {
   Platform,
-  TextInput as RNTextInput,
+  type TextInput as RNTextInput,
   type TextInputContentSizeChangeEventData,
   type NativeSyntheticEvent,
   TextInputContentSizeChangeEvent,
@@ -29,6 +29,7 @@ export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
     const innerRef = useRef<RNTextInput>(null);
     useImperativeHandle(ref, () => innerRef.current as RNTextInput);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever `value` changes
     useLayoutEffect(() => {
       if (Platform.OS !== 'web') return;
       const node = innerRef.current as unknown as HTMLTextAreaElement | null;

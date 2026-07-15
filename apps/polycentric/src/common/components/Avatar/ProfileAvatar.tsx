@@ -1,4 +1,4 @@
-import { ComponentProps, useMemo } from 'react';
+import { type ComponentProps, useMemo } from 'react';
 import { Avatar, resolveAvatarSize } from './Avatar';
 import {
   identiconUrl,

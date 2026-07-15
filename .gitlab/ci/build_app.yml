@@ -35,6 +35,13 @@ app-format-check:
     - pnpm format apps/polycentric
   allow_failure: true
 
+app-lint-check:
+  extends: .app-check-base
+  stage: check
+  script:
+    - pnpm --filter polycentric-app lint
+  allow_failure: true
+
 app-tests:
   extends: .app-check-base
   stage: check

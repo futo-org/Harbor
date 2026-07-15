@@ -1,4 +1,4 @@
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { create } from 'zustand';
 
 /** A directly renderable image; aspectRatio defaults to square. */

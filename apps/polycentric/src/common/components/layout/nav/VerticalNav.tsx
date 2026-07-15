@@ -1,5 +1,5 @@
 import { Atoms } from '@/src/common/theme';
-import { ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
 
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import Icon from '@/src/common/components/Icon';

@@ -1,7 +1,7 @@
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
-  PaletteColorToken,
+  type PaletteColorToken,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';

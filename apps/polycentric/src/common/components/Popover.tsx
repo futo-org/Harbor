@@ -1,5 +1,5 @@
 import * as PopoverPrimitive from '@rn-primitives/popover';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export function PopoverContent({ children }: { children: ReactNode }) {
   return (
