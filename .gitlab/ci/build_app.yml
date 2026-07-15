@@ -22,7 +22,9 @@
 # SDK build artifacts needed.
 .app-check-base:
   extends: .app-workflow
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   before_script:
     - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
@@ -87,7 +89,9 @@ app-web-image:
 .app-build-expo:
   extends: .app-build-base
   stage: build
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   before_script:
     - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/

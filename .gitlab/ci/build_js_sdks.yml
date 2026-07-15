@@ -1,5 +1,7 @@
 .js-sdk-workflow:
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   rules:
     - if: $CI_COMMIT_TAG =~ /^js-sdk-/
       when: always
@@ -27,11 +29,50 @@
       prefix: js-sdks-pnpm
     paths:
       - .pnpm-store
+    policy: pull
   before_script:
     - npm install -g pnpm@10
     - pnpm config set store-dir ${PNPM_STORE_DIR}
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
+
+# Populates the shared pnpm store cache; the other js jobs consume it with
+# `policy: pull` and never re-upload it. The cache key is the pnpm-lock.yaml
+# hash, so the cache only needs (re)creating when the lockfile changes —
+# this job is rules-scoped to exactly that.
+pnpm-deps-warmup:
+  stage: setup
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - pnpm-lock.yaml
+        - .gitlab/ci/build_js_sdks.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - .gitlab/ci/build_js_sdks.yml
+  variables:
+    PNPM_STORE_DIR: ${CI_PROJECT_DIR}/.pnpm-store
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+      prefix: js-sdks-pnpm
+    paths:
+      - .pnpm-store
+    policy: pull-push
+  script:
+    - npm install -g pnpm@10
+    - pnpm config set store-dir ${PNPM_STORE_DIR}
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    # Download every package in the lockfile into the store without
+    # installing — exactly what the cache persists.
+    - pnpm fetch
 
 js-sdks-format-check:
   extends: .js-sdks-base

@@ -66,7 +66,9 @@ release-tag-server-image:
 release-publish-npm:
   extends: .release-workflow
   stage: publish
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   needs:
     - job: rs-core-uniffi-web-build
       artifacts: true

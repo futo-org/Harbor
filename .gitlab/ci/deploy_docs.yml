@@ -18,7 +18,9 @@
 docs-deploy:
   extends: .docs-deploy-workflow
   stage: deploy
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   needs:
     - job: docs-build
       artifacts: true
@@ -43,7 +45,9 @@ docs-deploy:
 docs-review:
   extends: .docs-review-rules
   stage: deploy
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   needs:
     - job: docs-build
       artifacts: true
@@ -59,7 +63,9 @@ docs-review:
 
 docs-review-stop:
   stage: deploy
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:

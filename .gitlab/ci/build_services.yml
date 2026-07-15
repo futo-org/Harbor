@@ -1,5 +1,7 @@
 .service-rust-base:
-  image: ${RUST_IMAGE}
+  image:
+    name: ${RUST_IMAGE}
+    pull_policy: if-not-present
   stage: check
   cache:
     key:
@@ -10,7 +12,7 @@
       - .cargo/registry/index
       - .cargo/registry/cache
       - .cargo/git/db
-      - .cargo/bin
+    policy: pull
 
 .service-format-check:
   extends: .service-rust-base
@@ -242,7 +244,9 @@ push-notifications-image:
 # (the runtime image provides a system one).
 scraper-typecheck:
   extends: .scraper-workflow
-  image: node:24-slim
+  image:
+    name: node:24-slim
+    pull_policy: if-not-present
   stage: check
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'
