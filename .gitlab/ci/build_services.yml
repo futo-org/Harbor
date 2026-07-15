@@ -10,7 +10,6 @@
       - .cargo/registry/index/
       - .cargo/registry/cache/
       - .cargo/git/db/
-      - target/
 
 .service-format-check:
   extends: .service-rust-base
