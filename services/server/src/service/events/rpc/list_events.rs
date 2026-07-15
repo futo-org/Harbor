@@ -9,7 +9,7 @@ use crate::service::events::repository::Query as EventsRepository;
 use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
-    rows_to_bundles,
+    rows_to_bundles, rows_to_hints,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
@@ -92,7 +92,10 @@ async fn hydrate(
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
-    let identities = collect_identities(rows);
+    let identities = collect_identities(
+        rows.iter()
+            .map(|(event, content)| (event, content.as_ref())),
+    );
     let (identity_events, profile_events) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
@@ -129,17 +132,9 @@ async fn view(
     let mut event_bundles = rows_to_bundles(live_rows);
     attach_proofs(ctx, &mut event_bundles).await?;
 
-    let mut event_hints: Vec<EventHint> = Vec::new();
-    event_hints.extend(rows_to_bundles(identity_events).into_iter().map(|b| {
-        EventHint {
-            event_bundle: Some(b),
-        }
-    }));
-    event_hints.extend(rows_to_bundles(profile_events).into_iter().map(|b| {
-        EventHint {
-            event_bundle: Some(b),
-        }
-    }));
+    let event_hints = rows_to_hints(
+        identity_events.into_iter().chain(profile_events).collect(),
+    );
 
     Ok(View {
         event_bundles,

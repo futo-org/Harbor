@@ -2,16 +2,22 @@ pub mod proto;
 
 use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
+use proto::feeds_service_client::FeedsServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Post, PublicKey,
-    RevocationBound, SerializedContent, SerializedVerificationSchema,
-    SignedEvent, VectorClock, VerificationClaim, VerificationSchema, content,
+    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
+    PublicKey, RevocationBound, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema, content,
 };
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-pub const GRPC_ADDR: &str = "http://localhost:3000";
+/// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
+pub fn grpc_addr() -> String {
+    std::env::var("POLYCENTRIC_TEST_SERVER")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string())
+}
 
 /// 2025-01-15T12:00:00Z in milliseconds.
 pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
@@ -20,6 +26,7 @@ pub const HOUR: u64 = 3_600_000;
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_LABELS: i32 = 7;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
@@ -33,7 +40,13 @@ pub fn hex(bytes: &[u8]) -> String {
 
 pub async fn connect_event_sync()
 -> EventSyncServiceClient<tonic::transport::Channel> {
-    EventSyncServiceClient::connect(GRPC_ADDR)
+    EventSyncServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
+    FeedsServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -288,4 +301,64 @@ pub fn bundle_signature(b: &EventBundle) -> Vec<u8> {
         .expect("bundle missing signed_event")
         .signature
         .clone()
+}
+
+/// Deterministic signing key for the test moderator. The server must be
+/// started with `POLYCENTRIC_MODERATION_IDENTITY` set to
+/// [`test_moderator_identity()`] for these tests to pass.
+pub fn test_moderator_key() -> SigningKey {
+    let seed = sha256(b"polycentric-test-moderator-seed-2026");
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&seed[..32]);
+    SigningKey::from_bytes(&bytes)
+}
+
+/// Identity string of the test moderator — the value that must be set as
+/// `POLYCENTRIC_MODERATION_IDENTITY` when starting the server.
+pub fn test_moderator_identity() -> String {
+    let key = test_moderator_key();
+    let initial = Identity {
+        rotation_keys: vec![public_key_of(&key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+    };
+    derive_identity_string(&initial)
+}
+
+/// Build a signed Labels-collection (collection 7) event bundle targeting
+/// `target_event_key` with the given label values.
+#[allow(clippy::too_many_arguments)]
+pub fn make_labels_bundle(
+    identity: &str,
+    signing_key: &SigningKey,
+    sequence: u64,
+    identity_sequence: u64,
+    vector_clock: Vec<u64>,
+    previous_root: Vec<u8>,
+    target_event_key: EventKey,
+    label_values: Vec<String>,
+    created_at: u64,
+) -> EventBundle {
+    let content = Content {
+        content_body: Some(content::ContentBody::Labels(Labels {
+            event_key: Some(target_event_key),
+            label_values,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = make_event(
+        COLLECTION_LABELS,
+        identity,
+        signing_key,
+        sequence,
+        identity_sequence,
+        VectorClock {
+            sequence: vector_clock,
+        },
+        vec![],
+        previous_root,
+        digest,
+        created_at,
+    );
+    bundle(sign(signing_key, event), content_bytes)
 }

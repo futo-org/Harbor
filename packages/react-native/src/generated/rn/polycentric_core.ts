@@ -769,6 +769,10 @@ export type ListNotificationsArgs = {
    * Return notifications after this cursor.
    */
   after?: string;
+  /**
+   * Label values for which the requester does not want to see content.
+   */
+  omitLabels: Array<string>;
 };
 
 /**
@@ -797,18 +801,21 @@ const FfiConverterTypeListNotificationsArgs = (() => {
         identity: FfiConverterString.read(from),
         first: FfiConverterOptionalUInt32.read(from),
         after: FfiConverterOptionalString.read(from),
+        omitLabels: FfiConverterSequenceString.read(from),
       };
     }
     write(value: TypeName, into: RustBuffer): void {
       FfiConverterString.write(value.identity, into);
       FfiConverterOptionalUInt32.write(value.first, into);
       FfiConverterOptionalString.write(value.after, into);
+      FfiConverterSequenceString.write(value.omitLabels, into);
     }
     allocationSize(value: TypeName): number {
       return (
         FfiConverterString.allocationSize(value.identity) +
         FfiConverterOptionalUInt32.allocationSize(value.first) +
-        FfiConverterOptionalString.allocationSize(value.after)
+        FfiConverterOptionalString.allocationSize(value.after) +
+        FfiConverterSequenceString.allocationSize(value.omitLabels)
       );
     }
   }
@@ -4756,6 +4763,9 @@ const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
   FfiConverterTypeFetchMode
@@ -4765,9 +4775,6 @@ const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(
 const FfiConverterOptionalTypeUpdateMode = new FfiConverterOptional(
   FfiConverterTypeUpdateMode
 );
-
-// FfiConverter for Array<string>
-const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for Array<string> | undefined
 const FfiConverterOptionalSequenceString = new FfiConverterOptional(

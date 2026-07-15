@@ -54,7 +54,6 @@ pub async fn handle(
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
             .await?;
-
     Ok(GetPostThreadResponse {
         thread: result.event_bundles,
         event_hints: result.event_hints,

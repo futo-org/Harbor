@@ -11,6 +11,7 @@ include:
   - local: '.gitlab/ci/deploy_services.yml'
   - local: '.gitlab/ci/deploy_pages.yml'
   - local: '.gitlab/ci/scan_dependencies.yml'
+  - local: '.gitlab/ci/test_server.yml'
   - local: '.gitlab/ci/test_moderation.yml'
   - local: '.gitlab/ci/release.yml'
 stages:

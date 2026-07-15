@@ -180,6 +180,26 @@ describe('useProfileSuggestions', () => {
     ]);
   });
 
+  it('resolves a bare-domain query as a wildcard alias', async () => {
+    const stranger = 'ef'.repeat(32);
+    mockResolve.mockResolvedValue(stranger);
+
+    const { result } = renderSuggestions('Example.com');
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(mockResolve).toHaveBeenCalledWith('example.com');
+    expect(result.current.suggestions).toEqual([
+      {
+        identity: stranger,
+        name: null,
+        alias: 'example.com',
+        source: 'alias',
+      },
+    ]);
+  });
+
   it('shows nothing for an alias that does not resolve', async () => {
     mockResolve.mockResolvedValue(null);
 

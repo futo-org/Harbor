@@ -31,6 +31,11 @@ export async function publishVerificationTarget(
   const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
   const signedEvent = await client.signEvent(event);
   await client.commitEvent(signedEvent, content);
+  try {
+    await client.sync(SyncStrategy.PARTIAL_PUSH);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 // Request verification of an existing claim from a specific identity.

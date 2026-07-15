@@ -3,92 +3,11 @@
 //! `claim_bundles` serves the claim-list RPCs (claims wrapped with their
 //! targets and verifies) and `event_list` the flat single-list RPCs.
 
-use crate::service::proto::Content;
-use crate::service::proto::content::ContentBody;
-use ::entity::content_model as ContentModel;
-use ::entity::event_model as EventModel;
-use prost::Message;
-use std::collections::HashSet;
 use tonic::Status;
 
 pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
     eprintln!("verifications db error: {e}");
     Status::internal("internal server error")
-}
-
-/// Identities a client needs to render the rows: every event author, plus
-/// the identities a VerificationTarget content names (the requested
-/// verifiers may have no events of their own in the response).
-fn collect_verification_identities<'a>(
-    rows: impl Iterator<
-        Item = (&'a EventModel::Model, Option<&'a ContentModel::Model>),
-    >,
-) -> Vec<String> {
-    let mut set: HashSet<String> = HashSet::new();
-    for (event, content) in rows {
-        set.insert(event.identity.clone());
-        let Some(content) = content else { continue };
-        let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
-        else {
-            continue;
-        };
-        if let Some(ContentBody::VerificationTarget(target)) =
-            decoded.content_body
-        {
-            set.extend(
-                target
-                    .target_identities
-                    .into_iter()
-                    .filter(|s| !s.is_empty()),
-            );
-        }
-    }
-    set.into_iter().collect()
-}
-
-/// Identity-chain and profile events for `identities`, as hydration state.
-/// Fetched sequentially so MockDatabase-backed tests stay deterministic.
-async fn hydrate_identities(
-    ctx: &crate::service::context::ServiceContext,
-    identities: Vec<String>,
-) -> Result<
-    (
-        Vec<crate::service::events::tombstone::EventWithContentRow>,
-        Vec<crate::service::events::tombstone::EventWithContentRow>,
-    ),
-    Status,
-> {
-    if identities.is_empty() {
-        return Ok((Vec::new(), Vec::new()));
-    }
-    let identity_events =
-        crate::service::identity::service::list_identity_events(
-            ctx,
-            identities.clone(),
-        )
-        .await?;
-    let profile_events =
-        crate::service::identity::service::list_profile_events(ctx, identities)
-            .await?;
-    Ok((identity_events, profile_events))
-}
-
-/// `identity_events` and `profile_events` hydration rows as `EventHint`s.
-fn hints_from_hydration(
-    hydration: crate::data::hydration::HydrationState,
-) -> Vec<crate::service::proto::EventHint> {
-    let hint_rows: Vec<crate::service::events::tombstone::EventWithContentRow> =
-        hydration
-            .identity_events
-            .into_iter()
-            .chain(hydration.profile_events)
-            .collect();
-    crate::service::identity::service::rows_to_bundles(hint_rows)
-        .into_iter()
-        .map(|b| crate::service::proto::EventHint {
-            event_bundle: Some(b),
-        })
-        .collect()
 }
 
 /// Stages producing `VerificationClaimBundle`s: each claim wrapped with the
@@ -100,7 +19,9 @@ pub(crate) mod claim_bundles {
     use crate::service::events::tombstone::{
         self, EventWithContentRow, HasEventKey,
     };
-    use crate::service::identity::service::rows_to_bundles;
+    use crate::service::identity::service::{
+        collect_identities, list_identity_and_profile_events, rows_to_bundles,
+    };
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventHint, VerificationClaimBundle};
     use crate::service::verifications::repository::{
@@ -159,7 +80,7 @@ pub(crate) mod claim_bundles {
         let deletes_by_target =
             tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let identities = super::collect_verification_identities(
+        let identities = collect_identities(
             fetched
                 .claims
                 .iter()
@@ -178,7 +99,7 @@ pub(crate) mod claim_bundles {
                 ),
         );
         let (identity_events, profile_events) =
-            super::hydrate_identities(ctx, identities).await?;
+            list_identity_and_profile_events(ctx, identities).await?;
 
         Ok(HydrationState {
             deletes_by_target,
@@ -271,7 +192,7 @@ pub(crate) mod claim_bundles {
         }
         Ok(View {
             claim_bundles,
-            event_hints: super::hints_from_hydration(hydration),
+            event_hints: hydration.identity_profile_hints(),
         })
     }
 }
@@ -284,7 +205,9 @@ pub(crate) mod event_list {
     use crate::service::events::tombstone::{
         self, EventWithContentRow, HasEventKey,
     };
-    use crate::service::identity::service::rows_to_bundles;
+    use crate::service::identity::service::{
+        collect_identities, list_identity_and_profile_events, rows_to_bundles,
+    };
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventBundle, EventHint};
     use tonic::Status;
@@ -302,12 +225,12 @@ pub(crate) mod event_list {
         let deletes_by_target =
             tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let identities = super::collect_verification_identities(
+        let identities = collect_identities(
             rows.iter()
                 .map(|(event, content)| (event, content.as_ref())),
         );
         let (identity_events, profile_events) =
-            super::hydrate_identities(ctx, identities).await?;
+            list_identity_and_profile_events(ctx, identities).await?;
 
         Ok(HydrationState {
             deletes_by_target,
@@ -350,7 +273,7 @@ pub(crate) mod event_list {
         attach_proofs(ctx, &mut event_bundles).await?;
         Ok(View {
             event_bundles,
-            event_hints: super::hints_from_hydration(hydration),
+            event_hints: hydration.identity_profile_hints(),
         })
     }
 }

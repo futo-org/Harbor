@@ -1,15 +1,21 @@
 //! `get_identity_feed`: posts authored by a specific identity,
 //! newest first.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
-use crate::service::context::ServiceContext;
-use crate::service::feeds::repository::Query as FeedsRepository;
-use crate::service::feeds::rpc::common::{
-    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+use crate::{
+    data::{hydration::HydrationState, pipeline},
+    service::{
+        context::ServiceContext,
+        feeds::{
+            repository::Query as FeedsRepository,
+            rpc::common::{
+                self as feeds_pipeline, GetFeedResponseFilter,
+                GetFeedResponseView,
+            },
+            util::map_db_err,
+        },
+        proto::{GetFeedResponse, GetIdentityFeedRequest},
+    },
 };
-use crate::service::feeds::util::map_db_err;
-use crate::service::proto::{GetFeedResponse, GetIdentityFeedRequest};
 use tonic::Status;
 
 pub struct Params {
@@ -25,7 +31,10 @@ pub async fn handle(
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    let common = feeds_pipeline::Params::from_req_params(&req.page_params)?;
+    let common = feeds_pipeline::Params::from_req_params(
+        &req.page_params,
+        req.omit_labels,
+    )?;
     let params = Params {
         common,
         identity: req.identity,
@@ -34,7 +43,6 @@ pub async fn handle(
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
             .await?;
-
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -51,10 +59,11 @@ async fn fetch(
         vec![params.identity.clone()],
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
+        &params.common.omit_labels,
+        ctx.trusted_moderator.as_deref(),
     )
     .await
     .map_err(map_db_err)?;
-
     Ok(feeds_pipeline::finalize_fetch(rows, &params.common))
 }
 

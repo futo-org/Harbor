@@ -35,6 +35,13 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
 
+// The toast barrel pulls in Toaster, whose @rn-primitives/portal dependency
+// ships untranspiled JSX that jest can't parse.
+const mockToast = { success: jest.fn(), error: jest.fn() };
+jest.mock('@/src/common/components/toast', () => ({
+  useToast: () => mockToast,
+}));
+
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { v2 } from '@polycentric/react-native';
 import * as React from 'react';
@@ -90,6 +97,7 @@ describe('useVerifyClaim', () => {
 
     expect(mockClient.buildEvent).toHaveBeenCalledWith(content, 8);
     expect(mockClient.sync).toHaveBeenCalledWith('partial-push');
+    expect(mockToast.success).toHaveBeenCalled();
   });
 
   it('refreshes the verifiers list and the verification inbox', async () => {

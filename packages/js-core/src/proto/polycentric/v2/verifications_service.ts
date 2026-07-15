@@ -31,15 +31,13 @@ export interface VerificationClaimBundle {
      */
     claim?: EventBundle;
     /**
-     * VerificationTarget events published by the claim's owner — who has
-     * been asked to verify.
+     * VerificationTarget events published by the claim's owner
      *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle targets = 2
      */
     targets: EventBundle[];
     /**
-     * VerificationVerify events. The verifying identity is each
-     * event's own signer.
+     * VerificationVerify events.
      *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle verifies = 3
      */
@@ -63,8 +61,7 @@ export interface ListVerificationClaimsResponse {
      */
     claimBundles: VerificationClaimBundle[];
     /**
-     * Identity-chain and profile events for every identity referenced by the
-     * bundles, so clients can validate and render them without extra queries.
+     * Additional events that may be helpful, like relevant identity and profiles
      *
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
@@ -85,14 +82,13 @@ export interface ListVerificationTargetsRequest {
 export interface ListVerificationTargetsResponse {
     /**
      * VerificationTarget events for the claim, published by the claim's
-     * owner — who has been asked to verify. Deleted targets are excluded.
+     * owner — who has been asked to verify.
      *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];
     /**
-     * Identity-chain and profile events for every identity referenced by the
-     * bundles, so clients can validate and render them without extra queries.
+     * Additional events that may be helpful, like relevant identity and profiles
      *
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
@@ -112,15 +108,13 @@ export interface ListVerificationVerifiesRequest {
  */
 export interface ListVerificationVerifiesResponse {
     /**
-     * VerificationVerify events for the claim, excluding deleted ones.
-     * The verifying identity is each event's own signer.
+     * VerificationVerify events for the claim.
      *
      * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
      */
     eventBundles: EventBundle[];
     /**
-     * Identity-chain and profile events for every identity referenced by the
-     * bundles, so clients can validate and render them without extra queries.
+     * Additional events that may be helpful, like relevant identity and profiles
      *
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
@@ -140,15 +134,13 @@ export interface ListTargetedVerificationClaimsRequest {
  */
 export interface ListTargetedVerificationClaimsResponse {
     /**
-     * Claims whose owner targeted `target_identity` — the identity's inbox
-     * of verification requests.
+     * Claims whose owner targeted `target_identity`. The 'inbox'.
      *
      * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
      */
     claimBundles: VerificationClaimBundle[];
     /**
-     * Identity-chain and profile events for every identity referenced by the
-     * bundles, so clients can validate and render them without extra queries.
+     * Additional events that may be helpful, like relevant identity and profiles
      *
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */

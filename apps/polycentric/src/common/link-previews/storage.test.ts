@@ -1,40 +1,54 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadLinkPreviewsEnabled, saveLinkPreviewsEnabled } from './storage';
+import { useSettings } from '@/src/common/settings';
 
-const KEY = 'polycentric:generate-link-previews-enabled';
+const SETTINGS_KEY = 'polycentric:settings';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  useSettings.setState({ linkPreviewsEnabled: true });
   jest.clearAllMocks();
 });
 
-describe('link-previews storage', () => {
-  it('returns undefined when nothing is stored', async () => {
-    expect(await loadLinkPreviewsEnabled()).toBeUndefined();
+describe('settings store — linkPreviewsEnabled', () => {
+  it('defaults to true', () => {
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 
-  it('round-trips true and false', async () => {
-    await saveLinkPreviewsEnabled(true);
-    expect(await loadLinkPreviewsEnabled()).toBe(true);
+  it('round-trips true and false', () => {
+    useSettings.getState().setLinkPreviewsEnabled(false);
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(false);
 
-    await saveLinkPreviewsEnabled(false);
-    expect(await loadLinkPreviewsEnabled()).toBe(false);
+    useSettings.getState().setLinkPreviewsEnabled(true);
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 
-  it('persists as a string under the documented key', async () => {
-    await saveLinkPreviewsEnabled(false);
-    expect(await AsyncStorage.getItem(KEY)).toBe('false');
+  it('persists via the settings key', async () => {
+    useSettings.getState().setLinkPreviewsEnabled(false);
+
+    // The persist middleware calls AsyncStorage.setItem during setState.
+    // Flush pending microtasks so the mock's async setItem resolves.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      SETTINGS_KEY,
+      expect.stringContaining('"linkPreviewsEnabled":false'),
+    );
   });
 
-  it('ignores a malformed stored value', async () => {
-    await AsyncStorage.setItem(KEY, 'maybe');
-    expect(await loadLinkPreviewsEnabled()).toBeUndefined();
+  it('recovers from a malformed stored value', async () => {
+    await AsyncStorage.setItem(SETTINGS_KEY, '{broken');
+    const { persist } = useSettings;
+    await persist.rehydrate();
+    // Should fall back to the default
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 
-  it('returns undefined instead of throwing when storage errors', async () => {
+  it('returns the default instead of throwing when storage errors', async () => {
     (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(
       new Error('boom'),
     );
-    expect(await loadLinkPreviewsEnabled()).toBeUndefined();
+    const { persist } = useSettings;
+    await persist.rehydrate();
+    expect(useSettings.getState().linkPreviewsEnabled).toBe(true);
   });
 });

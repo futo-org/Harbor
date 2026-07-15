@@ -40,7 +40,8 @@ function isHex(s: string): boolean {
  * Suggests identities for a partially-typed profile query:
  * - people the current user follows, matched on profile name, alias, or
  *   identity-id prefix (everyone followed when the query is empty),
- * - the identity behind a `user@domain` alias, resolved over the network,
+ * - the identity behind a `user@domain` or bare-domain alias, resolved over
+ *   the network,
  * - the query itself when it's a pasted identity id.
  *
  * TODO: matching runs client-side over the first FOLLOWING_LIMIT follow
@@ -63,7 +64,7 @@ export function useProfileSuggestions(
   const profiles = useProfiles(followedIdentities);
 
   const trimmed = query.trim();
-  const aliasQuery = trimmed.includes('@') ? normalizeAlias(trimmed) : null;
+  const aliasQuery = normalizeAlias(trimmed);
 
   // Debounced alias → identity resolution; the result remembers which alias
   // it answered so a stale response never surfaces for a newer query.

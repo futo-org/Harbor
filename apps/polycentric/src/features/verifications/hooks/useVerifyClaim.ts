@@ -1,3 +1,4 @@
+import { useToast } from '@/src/common/components/toast';
 import {
   hexToBytes,
   useCurrentIdentity,
@@ -13,6 +14,7 @@ export default function useVerifyClaim() {
   const client = usePolycentric();
   const { identityKey } = useCurrentIdentity();
   const [isPending, setPending] = useState(false);
+  const toast = useToast();
 
   return {
     isPending,
@@ -41,6 +43,8 @@ export default function useVerifyClaim() {
         );
         const signedEvent = await client.signEvent(event);
         await client.commitEvent(signedEvent, content);
+
+        toast.success('Verified!');
 
         // Delivery to servers is best-effort — the verify is already saved
         // locally and will be pushed on the next sync if this fails.

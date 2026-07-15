@@ -1,3 +1,4 @@
+import type { types } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -21,7 +22,9 @@ jest.mock('expo-image-picker', () => ({
 
 const mockClient = {
   contentManager: {
-    build: jest.fn((x: unknown) => ({ content: x })),
+    build: jest.fn((x: { oneofKind: 'post'; post: types.v2.Post }) => ({
+      content: x,
+    })),
     save: jest.fn(async () => undefined),
   },
   buildEvent: jest.fn(async () => ({ event: true })),

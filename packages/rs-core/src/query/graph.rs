@@ -14,7 +14,7 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::feed::{FakeCursorToken, merge_page_info};
-use crate::query::validation::retain_validated_bundles;
+use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -68,6 +68,7 @@ fn merge_follows_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricCli
     for v in values {
         if let Ok(incoming) = ListFollowsResponse::decode(v.as_slice()) {
             merged.event_bundles.extend(incoming.event_bundles);
+            merged.event_hints.extend(incoming.event_hints);
             merged.page_info = merge_page_info(merged.page_info, incoming.page_info);
         }
     }
@@ -91,8 +92,17 @@ fn merge_follows_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricCli
         Reverse(created_at)
     });
 
+    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
+    merged.event_hints.retain(
+        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
+            Some(k) => seen_hints.insert(k),
+            None => true,
+        },
+    );
+
     let c = client.lock().unwrap();
     retain_validated_bundles(&c, &mut merged.event_bundles);
+    retain_validated_hints(&c, &mut merged.event_hints);
     drop(c);
 
     merged.encode_to_vec()
@@ -139,7 +149,16 @@ pub fn list_following(
             prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
             let bytes = response.encode_to_vec();
 
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(response.event_bundles);
+            }
             Ok(bytes)
         }
     };
@@ -188,7 +207,16 @@ pub fn list_followers(
             prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
             let bytes = response.encode_to_vec();
 
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(response.event_bundles);
+            }
             Ok(bytes)
         }
     };
@@ -208,6 +236,7 @@ mod tests {
     fn response_from(server: &str, has_next_page: bool) -> Vec<u8> {
         let mut response = ListFollowsResponse {
             event_bundles: Vec::new(),
+            event_hints: Vec::new(),
             page_info: Some(PageInfo {
                 start_cursor: "start".to_string(),
                 end_cursor: "end".to_string(),

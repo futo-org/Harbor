@@ -10,6 +10,7 @@ packages:
 catalog:
   '@noble/curves': ^2.2.0
   '@noble/hashes': ^2.2.0
+  '@types/node': ^24.0.0
   '@ubjs/core': 0.31.0-3
   typescript: ^5.9.3
   uniffi-bindgen-react-native: 0.31.0-3
