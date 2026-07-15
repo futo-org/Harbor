@@ -16,6 +16,11 @@ RUN apt-get update && apt-get install -y \
 RUN rustup set profile default && rustup component add clippy rustfmt
 RUN cargo install just cargo-ndk && rm -rf /usr/local/cargo/registry
 
+# sccache
+RUN curl -L "https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-unknown-linux-musl.tar.gz" \
+    | tar xz --strip-components=1 -C /usr/local/bin --wildcards "*/sccache" \
+    && chmod +x /usr/local/bin/sccache
+
 # Android NDK
 RUN curl -L -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip" \
     && unzip -q /tmp/ndk.zip -d /opt \

@@ -3,16 +3,27 @@
     name: ${RUST_IMAGE}
     pull_policy: if-not-present
   stage: check
+  variables:
+    SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
+  before_script:
+    - command -v sccache >/dev/null && export RUSTC_WRAPPER=sccache || true
   cache:
-    key:
-      files:
-        - Cargo.lock
-      prefix: cargo-deps
-    paths:
-      - .cargo/registry/index
-      - .cargo/registry/cache
-      - .cargo/git/db
-    policy: pull
+    - key:
+        files:
+          - Cargo.lock
+        prefix: cargo-deps
+      paths:
+        - .cargo/registry/index
+        - .cargo/registry/cache
+        - .cargo/git/db
+      policy: pull
+    - key:
+        files:
+          - Cargo.lock
+        prefix: cargo-sccache
+      paths:
+        - .sccache
+      policy: pull
 
 .service-format-check:
   extends: .service-rust-base
