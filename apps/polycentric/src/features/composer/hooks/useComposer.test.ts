@@ -498,6 +498,57 @@ describe('useComposer link previews', () => {
     }
   });
 
+  it('revives previews when a different link is typed after dismissal', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).not.toBeNull();
+
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreview).toBeNull();
+
+      act(() => result.current.setText('now https://other.example instead'));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://other.example',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('revives previews when the same link is deleted and retyped', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreview).toBeNull();
+
+      // Deleting the link clears the dismissal, so retyping the very same
+      // url unfurls it again.
+      act(() => result.current.setText('check  out'));
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://example.com',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('drops the preview and stops embedding once dismissed', async () => {
     const { result } = await renderComposer();
     act(() => result.current.setText(draftWithUrl));

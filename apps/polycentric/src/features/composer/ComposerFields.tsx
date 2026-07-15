@@ -44,7 +44,9 @@ type ComposerFieldsProps = {
   linkPreview: v2.Link | null;
   /** True while the link preview is being fetched. */
   linkPreviewLoading: boolean;
-  /** Remove the link preview (X button) — no previews for this draft. */
+  /**
+   * Remove the link preview (X button).
+   */
   onRemoveLinkPreview: () => void;
   /** Auto-focus the text field.**/
   autoFocus?: boolean;

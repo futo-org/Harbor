@@ -107,14 +107,21 @@ export function useComposer({
   // at post time (see handlePost) so we don't fetch it twice.
   const [linkPreview, setLinkPreview] = useState<v2.Link | null>(null);
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
-  // True once the user removed the preview (X button): no more previews are
-  // generated or embedded for this draft, until the composer resets.
+  // True while the user has removed the current link's preview (X button).
+  // Dismissal only covers the link that was showing: as soon as the draft's
+  // first URL changes — including deleting the link and retyping the same
+  // one, which passes through "no URL" — previews come back.
   const [previewDismissed, setPreviewDismissed] = useState(false);
 
   const previewUrl = useMemo(
     () => parseTextLinks(text).find((s) => s.type === 'link')?.url ?? null,
     [text],
   );
+
+  // Lift the dismissal the moment the first URL changes.
+  useEffect(() => {
+    setPreviewDismissed(false);
+  }, [previewUrl]);
 
   useEffect(() => {
     // No URL, the user disabled preview generation, or they dismissed this
@@ -166,7 +173,7 @@ export function useComposer({
   }, [resetComposer]);
 
   // X button on the link preview (loading or resolved): drop the card and
-  // stop generating/embedding previews for the rest of this draft.
+  // suppress previews for this link until the draft's first URL changes.
   const handleRemoveLinkPreview = useCallback(() => {
     setPreviewDismissed(true);
     setLinkPreview(null);
