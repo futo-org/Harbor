@@ -9,11 +9,15 @@ use crate::service::proto::{UrlInfoRequest, UrlInfoResponse};
 use crate::util::{http_client, scraper};
 use ::entity::url_info_cache_model;
 use chrono::{TimeDelta, Utc};
-use sea_orm::sea_query::OnConflict;
-use sea_orm::{ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
+use sea_orm::sea_query::{OnConflict, Query as SeaQuery};
+use sea_orm::{
+    ColumnTrait, DbConn, EntityTrait, Order, PaginatorTrait, QueryFilter, Set,
+};
 use serde::Deserialize;
 use tonic::{Code, Status};
 
+const MAX_CACHED_URLS: u64 = 10_000;
+const EVICTION_BATCH: u64 = 100;
 const SUCCESS_TTL: TimeDelta = TimeDelta::hours(24);
 const FAILURE_TTL: TimeDelta = TimeDelta::minutes(10);
 
@@ -66,10 +70,12 @@ async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
     })
 }
 
-/// Upsert an outcome for `url` and opportunistically prune rows so old
-/// they are expired under every TTL. Both are best-effort: failures
-/// are logged and the response is served regardless.
+/// Upsert an outcome for `url`, evicting the oldest rows once the
+/// cache is full. All statements are best-effort: failures are logged
+/// and the response is served regardless.
 async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
+    evict_if_full(db).await;
+
     let now = Utc::now();
 
     let (title, description, image, error_code, error_message) = match outcome {
@@ -118,13 +124,34 @@ async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
     if let Err(e) = insert {
         log::warn!("url_info cache insert failed: {e}");
     }
+}
 
-    let prune = url_info_cache_model::Entity::delete_many()
-        .filter(url_info_cache_model::Column::UpdatedAt.lt(now - SUCCESS_TTL))
+/// Delete the `EVICTION_BATCH` oldest rows once the cache holds at
+/// least `MAX_CACHED_URLS` entries.
+async fn evict_if_full(db: &DbConn) {
+    let count = match url_info_cache_model::Entity::find().count(db).await {
+        Ok(count) => count,
+        Err(e) => {
+            log::warn!("url_info cache count failed: {e}");
+            return;
+        }
+    };
+    if count < MAX_CACHED_URLS {
+        return;
+    }
+
+    let oldest = SeaQuery::select()
+        .column(url_info_cache_model::Column::Url)
+        .from(url_info_cache_model::Entity)
+        .order_by(url_info_cache_model::Column::UpdatedAt, Order::Asc)
+        .limit(EVICTION_BATCH)
+        .to_owned();
+    let evicted = url_info_cache_model::Entity::delete_many()
+        .filter(url_info_cache_model::Column::Url.in_subquery(oldest))
         .exec(db)
         .await;
-    if let Err(e) = prune {
-        log::warn!("url_info cache prune failed: {e}");
+    if let Err(e) = evicted {
+        log::warn!("url_info cache eviction failed: {e}");
     }
 }
 
@@ -317,14 +344,24 @@ mod tests {
         }
     }
 
+    fn count_row(
+        count: i64,
+    ) -> std::collections::BTreeMap<&'static str, sea_orm::Value> {
+        std::collections::BTreeMap::from([(
+            "num_items",
+            sea_orm::Value::BigInt(Some(count)),
+        )])
+    }
+
     /// A mock connection expecting one miss-then-scrape lookup: a SELECT
-    /// returning `first_select`, then the upsert and prune statements.
+    /// returning `first_select`, the row count, then the upsert.
     fn db_for_one_miss(
         first_select: Vec<url_info_cache_model::Model>,
     ) -> DatabaseConnection {
         MockDatabase::new(DbBackend::Postgres)
             .append_query_results([first_select])
-            .append_exec_results([exec_ok(), exec_ok()])
+            .append_query_results([vec![count_row(0)]])
+            .append_exec_results([exec_ok()])
             .into_connection()
     }
 
@@ -342,11 +379,14 @@ mod tests {
             .await;
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([
-                Vec::<url_info_cache_model::Model>::new(),
-                vec![cached_row("https://example.com", "Cached", Utc::now())],
-            ])
-            .append_exec_results([exec_ok(), exec_ok()])
+            .append_query_results([Vec::<url_info_cache_model::Model>::new()])
+            .append_query_results([vec![count_row(0)]])
+            .append_query_results([vec![cached_row(
+                "https://example.com",
+                "Cached",
+                Utc::now(),
+            )]])
+            .append_exec_results([exec_ok()])
             .into_connection();
 
         let scrape_url = format!("{}/scrape", server.url());
@@ -392,6 +432,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn full_cache_evicts_a_batch_of_oldest_rows() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/scrape")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(success_body("Evicting"))
+            .expect(1)
+            .create_async()
+            .await;
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([Vec::<url_info_cache_model::Model>::new()])
+            .append_query_results([vec![count_row(MAX_CACHED_URLS as i64)]])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection();
+
+        let scrape_url = format!("{}/scrape", server.url());
+        let resp = lookup(&db, &scrape_url, "https://example.com")
+            .await
+            .expect("lookup should succeed");
+        assert_eq!(resp.title, "Evicting");
+        mock.assert_async().await;
+
+        let statements = db.into_transaction_log();
+        let eviction = statements
+            .iter()
+            .find(|statement| format!("{statement:?}").contains("DELETE"));
+        let eviction_sql = format!(
+            "{:?}",
+            eviction.expect("a full cache should issue an eviction DELETE")
+        );
+        assert!(eviction_sql.contains("ORDER BY"));
+        assert!(eviction_sql.contains("LIMIT"));
+    }
+
+    #[tokio::test]
     async fn failures_are_cached() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
@@ -408,11 +486,10 @@ mod tests {
             ..cached_row("https://dead.test", "", Utc::now())
         };
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([
-                Vec::<url_info_cache_model::Model>::new(),
-                vec![failure_row],
-            ])
-            .append_exec_results([exec_ok(), exec_ok()])
+            .append_query_results([Vec::<url_info_cache_model::Model>::new()])
+            .append_query_results([vec![count_row(0)]])
+            .append_query_results([vec![failure_row]])
+            .append_exec_results([exec_ok()])
             .into_connection();
 
         let scrape_url = format!("{}/scrape", server.url());
@@ -480,7 +557,7 @@ mod tests {
 
     #[tokio::test]
     async fn unreachable_scraper_failures_are_not_cached() {
-        // Two SELECT misses but only ONE upsert+prune pair: if the failed
+        // Two SELECT misses but only ONE count+upsert set: if the failed
         // first lookup wrote to the cache, the second lookup's statements
         // would find no mock results and the test would fail.
         let db = MockDatabase::new(DbBackend::Postgres)
@@ -488,7 +565,8 @@ mod tests {
                 Vec::<url_info_cache_model::Model>::new(),
                 Vec::<url_info_cache_model::Model>::new(),
             ])
-            .append_exec_results([exec_ok(), exec_ok()])
+            .append_query_results([vec![count_row(0)]])
+            .append_exec_results([exec_ok()])
             .into_connection();
 
         let refused =
