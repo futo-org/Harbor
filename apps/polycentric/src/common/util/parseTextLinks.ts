@@ -44,10 +44,13 @@ const TRAILING_PUNCT = /[.,!?;:'")\]}]+$/;
 export function parseTextLinks(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
 
   LINK_REGEX.lastIndex = 0;
-  while ((match = LINK_REGEX.exec(text)) !== null) {
+  for (
+    let match = LINK_REGEX.exec(text);
+    match !== null;
+    match = LINK_REGEX.exec(text)
+  ) {
     const start = match.index;
     let raw = match[0];
     const isMention = raw[0] === '@';

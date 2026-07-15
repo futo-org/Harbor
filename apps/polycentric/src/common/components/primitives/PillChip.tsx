@@ -1,4 +1,4 @@
-import { type ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
 import { Text } from './Text';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 

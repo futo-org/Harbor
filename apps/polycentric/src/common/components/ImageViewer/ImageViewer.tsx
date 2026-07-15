@@ -4,7 +4,7 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { resolveImageSources } from './resolveImageSources';
-import { ImageViewerInput } from './useImageViewerStore';
+import type { ImageViewerInput } from './useImageViewerStore';
 import { Image } from '@/src/common/components/Image';
 import {
   Platform,
@@ -95,6 +95,7 @@ export function ImageViewer({
   const dismissY = useSharedValue(0);
 
   // Reset zoom/pan whenever the displayed image changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `index` is the reset trigger, not a capture
   useEffect(() => {
     scale.value = 1;
     savedScale.value = 1;

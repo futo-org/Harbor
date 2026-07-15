@@ -1,7 +1,7 @@
 import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
 import { Linking, Pressable, View } from 'react-native';
 

@@ -1,5 +1,5 @@
-import { IconName } from '@/src/common/components/Icon';
-import { PaletteColorToken } from '@/src/common/theme';
+import type { IconName } from '@/src/common/components/Icon';
+import type { PaletteColorToken } from '@/src/common/theme';
 
 // A single input in a claim form. `kind` is purely a UI concern (which widget
 // to render) — it does not appear in the verification schema.

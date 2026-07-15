@@ -1,7 +1,7 @@
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
 import {
-  PostData,
+  type PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';

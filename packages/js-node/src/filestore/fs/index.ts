@@ -1,7 +1,11 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import { toDigestKey, type IFileStoreDriver, v2 } from '@polycentric/js-core';
+import {
+  toDigestKey,
+  type IFileStoreDriver,
+  type v2,
+} from '@polycentric/js-core';
 
 /**
  * Filesystem-backed IFileStoreDriver. Blob bytes are written to one

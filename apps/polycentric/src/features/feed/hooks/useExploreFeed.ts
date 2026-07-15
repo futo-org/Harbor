@@ -4,7 +4,7 @@ import {
   shouldExtend,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
-import { type FeedHookResult } from './types';
+import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 import { useStableFeedItems } from './useStableFeedItems';

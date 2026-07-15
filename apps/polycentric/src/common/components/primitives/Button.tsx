@@ -15,14 +15,14 @@ import {
   Animated,
   Platform,
   Pressable,
-  PressableProps,
+  type PressableProps,
   StyleProp,
   StyleSheet,
   View,
-  ViewStyle,
+  type ViewStyle,
 } from 'react-native';
 import { Text } from './Text';
-import Icon, { IconName } from '../Icon';
+import Icon, { type IconName } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 

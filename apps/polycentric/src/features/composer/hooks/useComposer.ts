@@ -16,7 +16,7 @@ import {
   injectPostIntoFeedCache,
 } from '@/src/features/feed/hooks/feedCache';
 import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import { COLLECTION, types, v2 } from '@polycentric/react-native';
+import { COLLECTION, type types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
@@ -195,7 +195,9 @@ export function useComposer({
         status: 'processing' as const,
       }));
       addAttachments(additions);
-      additions.forEach((a) => startUpload(a.id, a.uri));
+      additions.forEach((a) => {
+        startUpload(a.id, a.uri);
+      });
       setError(null);
     },
     [attachments.length, addAttachments, startUpload, setError],
@@ -314,7 +316,7 @@ export function useComposer({
         };
       }
 
-      if (!!quote) {
+      if (quote) {
         post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
       }
 

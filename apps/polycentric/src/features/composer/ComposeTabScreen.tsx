@@ -3,7 +3,7 @@ import { Button } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { types } from '@polycentric/react-native';
+import type { types } from '@polycentric/react-native';
 import { router, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { ActivityIndicator, View } from 'react-native';

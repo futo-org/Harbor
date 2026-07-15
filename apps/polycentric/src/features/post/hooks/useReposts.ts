@@ -1,7 +1,7 @@
 import {
   bytesToHex,
   hexToBytes,
-  PostData,
+  type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import {

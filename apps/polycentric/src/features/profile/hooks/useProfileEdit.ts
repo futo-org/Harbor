@@ -57,6 +57,7 @@ export function useProfileEdit(
   }, [profile.alias]);
 
   // Editing the alias clears any stale verification error.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `aliasDraft` is the reset trigger, not a capture
   useEffect(() => {
     setAliasError(null);
   }, [aliasDraft]);

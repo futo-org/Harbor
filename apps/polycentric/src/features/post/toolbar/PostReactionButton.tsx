@@ -1,7 +1,10 @@
-import HoverCard, { TriggerRef } from '@/src/common/components/HoverCard';
-import { PostData, usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import HoverCard, { type TriggerRef } from '@/src/common/components/HoverCard';
+import {
+  type PostData,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
-import { GestureResponderEvent, View } from 'react-native';
+import { type GestureResponderEvent, View } from 'react-native';
 import { DEFAULT_REACTION_EMOJI } from '../../reaction/consts';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';

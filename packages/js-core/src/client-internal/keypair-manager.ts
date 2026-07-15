@@ -4,7 +4,7 @@ import type {
   PrivateKey,
 } from '../polycentric-client';
 import { KEY_TYPE } from '../constants';
-import { PublicKey, KeyType } from '../proto/v2';
+import { PublicKey, type KeyType } from '../proto/v2';
 
 export class KeyPairManager {
   constructor(private readonly client: PolycentricClient) {}

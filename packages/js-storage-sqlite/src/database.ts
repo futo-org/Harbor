@@ -2,8 +2,8 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 export type SqliteDb = BaseSQLiteDatabase<
   'sync' | 'async',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: matches the untyped sqlite driver interface
   any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: matches the untyped sqlite driver interface
   any
 >;

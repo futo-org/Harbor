@@ -52,12 +52,12 @@ jest.mock('../claims/ClaimCreateContext', () => ({
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import { formToSchema } from '../utils/schemas';
-import useCreateClaim, { ClaimRef } from './useCreateClaim';
+import useCreateClaim, { type ClaimRef } from './useCreateClaim';
 
 const SCHEMA = formToSchema({
   name: 'Occupation',

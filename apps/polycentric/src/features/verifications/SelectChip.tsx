@@ -1,13 +1,13 @@
 import { Button } from '@/src/common/components';
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
-  PaletteColorToken,
+  type PaletteColorToken,
   Spacing,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 // A pill-style selectable chip: a colored icon/logo bubble plus a label.

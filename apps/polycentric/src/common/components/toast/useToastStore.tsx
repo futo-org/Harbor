@@ -32,7 +32,8 @@ let nextId = 0;
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
   show: (title, options = {}) => {
-    const id = `toast-${(nextId += 1)}`;
+    nextId += 1;
+    const id = `toast-${nextId}`;
     const toast: ToastData = {
       id,
       title,

@@ -39,6 +39,13 @@ js-sdks-format-check:
     - pnpm format
   allow_failure: true
 
+js-sdks-lint-check:
+  extends: .js-sdks-base
+  stage: check
+  script:
+    - pnpm --filter js-core lint
+  allow_failure: true
+
 js-core-tests-check:
   extends: .js-sdks-base
   stage: check

@@ -1,5 +1,5 @@
 import type { IContentRepository } from '../platform-interfaces/content.repository';
-import * as Proto from '../proto/v2';
+import type * as Proto from '../proto/v2';
 
 export class ContentStore {
   constructor(private repository: IContentRepository) {}

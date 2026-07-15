@@ -1,4 +1,4 @@
-import { LinkProps } from 'expo-router';
+import type { LinkProps } from 'expo-router';
 
 /**
  * Turns an 'href' prop value into a flattened string with params substituted

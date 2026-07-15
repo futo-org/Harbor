@@ -1,12 +1,12 @@
 import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
-import { ExternalPathString, Link } from 'expo-router';
+import { type ExternalPathString, Link } from 'expo-router';
 import {
-  ComponentProps,
+  type ComponentProps,
   memo,
-  ReactElement,
-  ReactNode,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useState,
 } from 'react';

@@ -45,8 +45,8 @@
     "clean": "del-cli android/build lib",
     "build": "bob build",
     "typecheck": "tsc",
-    "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "lint:fix": "eslint \"**/*.{js,ts,tsx}\" --fix",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "test": "jest"
   },
   "keywords": ["react-native", "ios", "android"],
@@ -61,21 +61,13 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.0.0",
-    "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^10.0.0",
     "@react-native/babel-preset": "0.83.0",
-    "@react-native/eslint-config": "0.86.0",
     "@types/jest": "^29.5.14",
     "@types/react": "^19.2.0",
     "del-cli": "^7.0.0",
-    "eslint": "^10.0.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
     "expo-file-system": "~57.0.0",
     "expo-sqlite": "~57.0.0",
     "jest": "^29.7.0",
-    "prettier": "^3.4.2",
     "react": "19.2.3",
     "react-native": "0.86.0",
     "react-native-builder-bob": "^0.43.0",
@@ -105,13 +97,6 @@
     "name": "PolycentricSpec",
     "type": "modules",
     "jsSrcsDir": "src"
-  },
-  "prettier": {
-    "quoteProps": "consistent",
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "es5",
-    "useTabs": false
   },
   "jest": {
     "preset": "react-native",

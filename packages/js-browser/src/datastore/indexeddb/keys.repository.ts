@@ -1,6 +1,6 @@
 import type { IKeysRepository, PrivateKey } from '@polycentric/js-core';
 import { v2, DatabaseError } from '@polycentric/js-core';
-import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
 
 interface PersistedKey {
   key_type: number;

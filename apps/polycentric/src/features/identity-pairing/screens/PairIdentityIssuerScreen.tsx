@@ -195,6 +195,7 @@ export default function PairIdentityIssuerScreen() {
             const isApproving = approvingClaimers.has(activeClaimer);
             const pendingCount = pendingClaimers.length;
 
+            // biome-ignore lint/correctness/useExhaustiveDependencies: biome can't track captures of components declared inside callbacks
             useEffect(() => {
               if (pendingCount > 0 || isApproving || isApproveActionActive) {
                 dismissRequestedRef.current = false;

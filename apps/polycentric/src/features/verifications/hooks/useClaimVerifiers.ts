@@ -3,7 +3,7 @@ import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { type EventKey, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import {
-  ClaimVerificationStatus,
+  type ClaimVerificationStatus,
   combineVerifiers,
   decodeVerifierIdentities,
   decodeTargetIdentities,

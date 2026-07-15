@@ -1,7 +1,7 @@
-import { IContentRepository, v2 as Proto } from '@polycentric/js-core';
+import { type IContentRepository, v2 as Proto } from '@polycentric/js-core';
 
 import { DatabaseError } from '@polycentric/js-core';
-import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
 
 export class IndexedDBContentRepository implements IContentRepository {
   private readonly database: IndexedDBDatabase;

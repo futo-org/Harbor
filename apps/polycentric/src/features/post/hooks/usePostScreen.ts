@@ -29,7 +29,7 @@ export function usePostScreen(postId: string) {
     }, [postId, setPostId]),
   );
 
-  const reload = useCallback(() => {}, [postId]);
+  const reload = useCallback(() => {}, []);
 
   return { postId, replyIds, isLoading, reload };
 }

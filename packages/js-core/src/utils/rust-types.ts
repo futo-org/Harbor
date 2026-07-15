@@ -13,6 +13,6 @@ export type CommentsFeedState = {
 };
 
 export interface ServerError {
-  server?: String;
+  server?: string;
   error: Error;
 }

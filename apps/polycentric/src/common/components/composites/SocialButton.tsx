@@ -1,5 +1,5 @@
 import { PillButton } from '@/src/common/components/primitives';
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 
 type SocialAction = 'follow' | 'unfollow' | 'block' | 'unblock';
 

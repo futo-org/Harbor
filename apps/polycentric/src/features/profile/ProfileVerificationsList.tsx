@@ -7,7 +7,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { ClaimActionRow } from '@/src/features/verifications/claims/ClaimActionRow';
 import { ClaimCreateSheet } from '@/src/features/verifications/claims/ClaimCreateSheet';
 import { ClaimListItem } from '@/src/features/verifications/claims/ClaimListItem';
-import { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
+import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
 import { useClaimsList } from '@/src/features/verifications/hooks/useClaimsList';
 import { useVerificationRequestsTo } from '@/src/features/verifications/hooks/useVerificationRequestsTo';
 import { useVerifiedClaims } from '@/src/features/verifications/hooks/useVerifiedClaims';

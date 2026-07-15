@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components';
 import {
-  PostData,
+  type PostData,
   truncateName,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';

@@ -21,7 +21,7 @@ type ListHeader = FlashListProps<unknown>['ListHeaderComponent'];
 export function ProfileFeedSwitcher({
   tabs,
   activeKey,
-  HeaderComponent: HeaderComponent,
+  HeaderComponent,
 }: {
   tabs: ProfileFeedTab[];
   activeKey: string;

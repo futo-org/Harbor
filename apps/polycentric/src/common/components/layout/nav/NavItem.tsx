@@ -1,9 +1,15 @@
-import { Link, LinkProps, router, usePathname, useRouter } from 'expo-router';
+import {
+  Link,
+  type LinkProps,
+  router,
+  usePathname,
+  useRouter,
+} from 'expo-router';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import {
   cloneElement,
   isValidElement,
-  ReactNode,
+  type ReactNode,
   useEffect,
   useState,
 } from 'react';
@@ -32,7 +38,7 @@ export function NavItem({ href, icon, label, ...props }: NavItemProps) {
   const [open, setOpen] = useState(isActive);
 
   useEffect(() => {
-    if (!isActive && open) {
+    if (!isActive) {
       setOpen(false);
     }
   }, [isActive]);

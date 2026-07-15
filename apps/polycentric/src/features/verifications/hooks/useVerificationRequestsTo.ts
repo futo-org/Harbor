@@ -3,7 +3,7 @@ import { bytesToHex } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
-import { DecodedClaim, decodeClaimBundle } from './useClaimById';
+import { type DecodedClaim, decodeClaimBundle } from './useClaimById';
 
 /**
  * The current identity's claims with a pending verification request aimed at
@@ -56,9 +56,7 @@ export function useVerificationRequestsTo(targetIdentity: string | undefined): {
           requestedIds.add(
             bytesToHex(v2.EventKey.toBinary(target.claimEventKey)),
           );
-        } catch {
-          continue;
-        }
+        } catch {}
       }
 
       return [...requestedIds]

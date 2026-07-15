@@ -1,4 +1,4 @@
-import { ClaimField } from '../hooks/useClaimById';
+import type { ClaimField } from '../hooks/useClaimById';
 
 // Claim types whose title reads better as a field value than the schema name.
 const TITLE_FIELD: Record<string, string> = {

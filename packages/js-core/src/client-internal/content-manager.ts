@@ -1,5 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2.js';
-import { PolycentricClient } from '../polycentric-client';
+import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 
 export class ContentManager {

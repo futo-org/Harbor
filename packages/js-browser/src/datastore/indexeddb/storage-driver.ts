@@ -1,5 +1,5 @@
 import type { IStorageDriver } from '@polycentric/js-core';
-import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
 import { IndexedDBEventAckRepository } from './event-ack.repository';
 import { IndexedDBKeysRepository } from './keys.repository';
 import { IndexedDBEventRepository } from './event.repository';

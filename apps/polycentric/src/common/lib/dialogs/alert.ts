@@ -1,4 +1,4 @@
-import { Alert, AlertButton, Platform } from 'react-native';
+import { Alert, type AlertButton, Platform } from 'react-native';
 
 interface AlertOptions {
   title: string;

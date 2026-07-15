@@ -7,7 +7,7 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import Toast, { ToastConfigParams } from 'react-native-toast-message';
+import Toast, { type ToastConfigParams } from 'react-native-toast-message';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

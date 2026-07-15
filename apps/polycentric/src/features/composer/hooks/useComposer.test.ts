@@ -104,7 +104,7 @@ function libraryReturns(
   picker.launchImageLibraryAsync.mockResolvedValue({
     canceled: false,
     assets,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: test mock cast
   } as any);
 }
 
@@ -147,7 +147,9 @@ beforeEach(() => {
 // Unmount any mounted hook between tests so roots don't accumulate.
 afterEach(() => {
   act(() => {
-    renderers.forEach((r) => r.unmount());
+    renderers.forEach((r) => {
+      r.unmount();
+    });
   });
   renderers = [];
 });
@@ -262,7 +264,7 @@ describe('useComposer attachments', () => {
     picker.launchImageLibraryAsync.mockResolvedValue({
       canceled: true,
       assets: null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: test mock cast
     } as any);
     const { result } = await renderComposer();
     await act(async () => {
@@ -277,7 +279,7 @@ describe('useComposer camera capture', () => {
   it('sets an error when camera permission is denied', async () => {
     picker.requestCameraPermissionsAsync.mockResolvedValue({
       granted: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: test mock cast
     } as any);
     const { result } = await renderComposer();
 
@@ -293,12 +295,12 @@ describe('useComposer camera capture', () => {
   it('ingests a captured photo when permission is granted', async () => {
     picker.requestCameraPermissionsAsync.mockResolvedValue({
       granted: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: test mock cast
     } as any);
     picker.launchCameraAsync.mockResolvedValue({
       canceled: false,
       assets: [{ uri: 'file://shot.jpg', width: 30, height: 40 }],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: test mock cast
     } as any);
     const { result } = await renderComposer();
 

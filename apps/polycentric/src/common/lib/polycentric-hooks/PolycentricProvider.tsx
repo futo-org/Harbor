@@ -2,9 +2,9 @@ import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import {
-  PolycentricClient,
+  type PolycentricClient,
   createPolycentricClient,
-  types,
+  type types,
   type IdentityState,
 } from '@polycentric/react-native';
 import {
@@ -149,8 +149,9 @@ export function PolycentricProvider({
     }
   }, [isLoading, onInitialized]);
 
+  const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
-    if (!client || !currentIdentity) return;
+    if (!client || !currentIdentityKey) return;
     void (async () => {
       try {
         const token = await registerForPushNotifications();
@@ -163,7 +164,7 @@ export function PolycentricProvider({
         console.warn('Push registration failed:', err);
       }
     })();
-  }, [client, currentIdentity?.identityKey]);
+  }, [client, currentIdentityKey]);
 
   useEffect(() => {
     let cancelled = false;

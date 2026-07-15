@@ -7,7 +7,7 @@ import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
 import ReportSheet from '../../moderation/ReportSheet';
-import { DecodedClaim } from '../hooks/useClaimById';
+import type { DecodedClaim } from '../hooks/useClaimById';
 import useClaimActions from '../hooks/useClaimActions';
 
 // Overflow menu for a claim: the author can delete it, everyone else can

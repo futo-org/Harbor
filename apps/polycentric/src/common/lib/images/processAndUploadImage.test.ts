@@ -90,7 +90,7 @@ function makeClient() {
       mime,
     })),
     uploadBlob: jest.fn(async () => undefined),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: test mock cast
   } as any;
 }
 

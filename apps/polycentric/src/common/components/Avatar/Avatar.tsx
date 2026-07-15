@@ -3,7 +3,7 @@ import { useTheme, withHexOpacity } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
 import {
   Pressable,
-  PressableProps,
+  type PressableProps,
   StyleSheet,
   View,
   type ViewProps,

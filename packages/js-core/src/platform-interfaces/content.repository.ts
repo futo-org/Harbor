@@ -1,4 +1,4 @@
-import * as Proto from '../proto/v2';
+import type * as Proto from '../proto/v2';
 
 /**
  * ContentRepository stores serialized content bytes keyed by their digest.

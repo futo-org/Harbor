@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components';
-import { IconName } from '@/src/common/components/Icon';
-import { Atoms, PaletteColorToken } from '@/src/common/theme';
+import type { IconName } from '@/src/common/components/Icon';
+import { Atoms, type PaletteColorToken } from '@/src/common/theme';
 import { Chip } from './Chip';
 import { ChipIcon } from './ChipIcon';
 

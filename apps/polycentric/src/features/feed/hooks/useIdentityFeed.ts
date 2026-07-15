@@ -1,5 +1,5 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
-import { type FeedHookResult } from './types';
+import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { feedQueryKeys } from './feedCache';
 import {
