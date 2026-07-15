@@ -1,17 +1,20 @@
 import { Atoms, BorderRadius, useTheme } from '@/src/common/theme';
-import { Pressable, ScrollView, Text } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 import type { EmojiCategory } from './emojiData';
+import { Emoji } from './Emoji';
 
 type EmojiPickerCategoryTabsProps = {
   categories: EmojiCategory[];
   activeKey: string;
   onSelect: (key: string) => void;
+  tabSize: number;
 };
 
 export function EmojiPickerCategoryTabs({
   categories,
   activeKey,
   onSelect,
+  tabSize,
 }: EmojiPickerCategoryTabsProps) {
   const { theme } = useTheme();
 
@@ -30,8 +33,8 @@ export function EmojiPickerCategoryTabs({
               Atoms.align_center,
               Atoms.justify_center,
               {
-                width: 40,
-                height: 40,
+                width: tabSize,
+                height: tabSize,
                 borderRadius: BorderRadius.full,
                 backgroundColor: active
                   ? theme.palette.primary_500
@@ -39,7 +42,12 @@ export function EmojiPickerCategoryTabs({
               },
             ]}
           >
-            <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+            <Emoji
+              emoji={cat.icon}
+              onPress={() => onSelect(cat.key)}
+              size={tabSize}
+              selected={active}
+            />
           </Pressable>
         );
       })}

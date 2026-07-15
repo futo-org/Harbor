@@ -15,6 +15,10 @@ export type EmojiCategory = {
   emojis: EmojiEntry[];
 };
 
+export type PickerItem =
+  | { type: 'header'; categoryKey: string; first: boolean }
+  | { type: 'row'; categoryKey: string; emojis: EmojiEntry[] };
+
 const data = rawData as { emojis: EmojiEntry[] };
 
 /**
@@ -50,4 +54,40 @@ for (const cat of categories) {
 
 export function getCategory(key: string): EmojiCategory | undefined {
   return categoryByKey[key];
+}
+
+/**
+ * Build an array of emoji rows for the emoji picker suitable for a
+ * `FlashList`. (The `FlashList` would not be able to virtualize individual
+ * emoji buttons.) Additionally, return a lookup table from category key
+ * to the index of that category's start in the list.
+ *
+ * Each category emits one header item followed by as many row items as
+ * needed to hold its emojis chunked at `columns` per row.
+ *
+ * Note that the first header will include a field `first: true`.
+ */
+export function buildEmojiItems(
+  categories: EmojiCategory[],
+  columns: number,
+): { items: PickerItem[]; sectionIndex: Record<string, number> } {
+  const items: PickerItem[] = [];
+  const sectionIndex: Record<string, number> = {};
+
+  for (let i = 0; i < categories.length; i++) {
+    const c = categories[i]!;
+    sectionIndex[c.key] = items.length;
+    items.push({ type: 'header', categoryKey: c.key, first: i === 0 });
+
+    const emojis = c.emojis;
+    for (let j = 0; j < emojis.length; j += columns) {
+      items.push({
+        type: 'row',
+        categoryKey: c.key,
+        emojis: emojis.slice(j, j + columns),
+      });
+    }
+  }
+
+  return { items, sectionIndex };
 }

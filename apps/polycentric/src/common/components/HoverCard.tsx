@@ -1,28 +1,58 @@
 import * as HoverCardPrimitive from '@rn-primitives/hover-card';
+import { type ReactNode, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { isWeb } from '../util/platform';
+
+/**
+ * Reveal wrapper for the hover card: fades in while zooming from 80% -> 100%.
+ *
+ * Driven by a shared value and `useAnimatedStyle` rather than...
+ *  - A layout `entering` animation which gets displaced on web: the animation
+ *    clean-up will end up transforming it downwards, creating a jump after
+ *    appearing
+ *  - A pre-built `reanimated` animation which is not implemented for web in our
+ *    version of `reanimated`
+ */
+function RevealView({ children }: { children: ReactNode }) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(1, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progress]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.8 + 0.2 * progress.value }],
+  }));
+
+  return (
+    <Animated.View style={style} exiting={FadeOut.duration(120)}>
+      {children}
+    </Animated.View>
+  );
+}
 
 export function HoverCardContent({
   children,
   animated = true,
   ...props
 }: HoverCardPrimitive.ContentProps & {
-  /** Animate the reveal (ZoomIn spring). Set false for an instant, static card. */
+  /** Animate the reveal. Set false for an instant, static card. */
   animated?: boolean;
 }) {
   const content = (
     <HoverCardPrimitive.Content {...props}>
-      {animated ? (
-        <Animated.View
-          entering={ZoomIn.springify().damping(30).mass(0.2).stiffness(400)}
-          exiting={FadeOut.duration(100)}
-        >
-          {children}
-        </Animated.View>
-      ) : (
-        children
-      )}
+      {animated ? <RevealView>{children}</RevealView> : children}
     </HoverCardPrimitive.Content>
   );
 

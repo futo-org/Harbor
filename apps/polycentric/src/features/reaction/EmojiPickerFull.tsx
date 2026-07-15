@@ -1,12 +1,19 @@
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, Spacing } from '@/src/common/theme';
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, View } from 'react-native';
-import { categories, type EmojiEntry } from './emojiData';
-import { EmojiPickerCategoryTabs } from './EmojiPickerCategoryTabs';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { View } from 'react-native';
+import type { ViewToken } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { buildEmojiItems, categories } from './emojiData';
+import type { PickerItem } from './emojiData';
 import { EmojiGridRow } from './EmojiGridRow';
+import { EmojiPickerCategoryTabs } from './EmojiPickerCategoryTabs';
+import { EmojiSectionRule } from './EmojiSectionRule';
 
-const EMOJIS_PER_ROW = 8;
+const GRID_BUTTON_SIZE = 36;
+const TAB_BUTTON_SIZE = 44;
+const TAB_RAIL_WIDTH = 56;
+const LIST_MAX_HEIGHT = 420;
 
 type EmojiPickerFullProps = {
   open: boolean;
@@ -21,20 +28,24 @@ export function EmojiPickerFull({
   onSelect,
   selectedEmoji,
 }: EmojiPickerFullProps) {
-  const [activeCategory, setActiveCategory] = useState(categories[0]!.key);
+  const [panelWidth, setPanelWidth] = useState(0);
+  const [activeSection, setActiveSection] = useState(categories[0]!.key);
+  const listRef = useRef<FlashList<PickerItem>>(null);
 
-  const activeEmojis = useMemo(() => {
-    const cat = categories.find((c) => c.key === activeCategory);
-    return cat?.emojis ?? [];
-  }, [activeCategory]);
+  const columns = useMemo(() => {
+    if (panelWidth <= 0) return 1;
+    return Math.max(
+      1,
+      Math.floor(
+        (panelWidth + Spacing['2xs']) / (GRID_BUTTON_SIZE + Spacing['2xs']),
+      ),
+    );
+  }, [panelWidth]);
 
-  const rows = useMemo(() => {
-    const result: EmojiEntry[][] = [];
-    for (let i = 0; i < activeEmojis.length; i += EMOJIS_PER_ROW) {
-      result.push(activeEmojis.slice(i, i + EMOJIS_PER_ROW));
-    }
-    return result;
-  }, [activeEmojis]);
+  const { items, sectionIndex } = useMemo(
+    () => buildEmojiItems(categories, columns),
+    [columns],
+  );
 
   const handleSelect = useCallback(
     (emoji: string) => {
@@ -44,47 +55,115 @@ export function EmojiPickerFull({
     [onSelect, onClose],
   );
 
+  const scrollToSection = useCallback(
+    (key: string) => {
+      const index = sectionIndex[key];
+      if (index === undefined) return;
+      listRef.current?.scrollToIndex({ index, animated: true });
+    },
+    [sectionIndex],
+  );
+
+  // Stable viewability callback — ref ensures FlashList doesn't re-create layout.
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      for (const v of viewableItems) {
+        const item = v.item as PickerItem | undefined;
+        if (item?.type === 'header') {
+          setActiveSection(item.categoryKey);
+          break;
+        }
+      }
+    },
+  ).current;
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 }).current;
+
+  const handleScrollToIndexFailed = useCallback(
+    (info: {
+      index: number;
+      highestMeasuredFrameIndex: number;
+      averageItemLength: number;
+    }) => {
+      // Scroll to a nearby item first (the highest measured index), then retry.
+      listRef.current?.scrollToIndex({
+        index: Math.min(info.index, info.highestMeasuredFrameIndex),
+        animated: false,
+      });
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ index: info.index, animated: true });
+      }, 300);
+    },
+    [],
+  );
+
+  const onLayout = useCallback(
+    (e: { nativeEvent: { layout: { width: number } } }) => {
+      setPanelWidth(e.nativeEvent.layout.width);
+    },
+    [],
+  );
+
   return (
     <Sheet
       open={open}
       onClose={onClose}
       detents={[0.5]}
+      scrollable
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
     >
       <Sheet.Content
-        style={[{ maxHeight: 420, minHeight: 0, flexDirection: 'row' }]}
+        style={[{ maxHeight: LIST_MAX_HEIGHT, flexDirection: 'row' }]}
       >
         <View
-          style={[
-            { width: 56, borderRightWidth: 1, borderRightColor: '#e0e0e0' },
-          ]}
+          style={{
+            width: TAB_RAIL_WIDTH,
+            borderRightWidth: 1,
+            borderRightColor: '#e0e0e0',
+          }}
         >
           <EmojiPickerCategoryTabs
             categories={categories}
-            activeKey={activeCategory}
-            onSelect={setActiveCategory}
+            activeKey={activeSection}
+            onSelect={scrollToSection}
+            tabSize={TAB_BUTTON_SIZE}
           />
         </View>
         <View
           style={[
             Atoms.flex_1,
             Atoms.pt_sm,
-            { minHeight: 0, paddingHorizontal: Spacing.sm },
+            { paddingHorizontal: Spacing.sm, height: LIST_MAX_HEIGHT },
           ]}
+          onLayout={onLayout}
         >
-          <FlatList
-            data={rows}
-            keyExtractor={(_, index) => String(index)}
-            renderItem={({ item }) => (
-              <EmojiGridRow
-                emojis={item}
-                onSelect={handleSelect}
-                selectedEmoji={selectedEmoji}
-              />
-            )}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[Atoms.py_xs]}
-          />
+          {panelWidth > 0 ? (
+            <FlashList
+              key={columns}
+              ref={listRef}
+              data={items}
+              keyExtractor={(_item, index) => String(index)}
+              renderItem={({ item }) => {
+                if (item.type === 'header') {
+                  return <EmojiSectionRule first={item.first} />;
+                }
+                return (
+                  <EmojiGridRow
+                    emojis={item.emojis}
+                    onSelect={handleSelect}
+                    selectedEmoji={selectedEmoji}
+                    buttonSize={GRID_BUTTON_SIZE}
+                  />
+                );
+              }}
+              getItemType={(item) => item.type}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig}
+              onScrollToIndexFailed={handleScrollToIndexFailed}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[Atoms.py_xs]}
+            />
+          ) : null}
         </View>
       </Sheet.Content>
     </Sheet>

@@ -7,12 +7,14 @@ type EmojiGridRowProps = {
   emojis: EmojiEntry[];
   onSelect: (emoji: string) => void;
   selectedEmoji?: string | null;
+  buttonSize: number;
 };
 
 export function EmojiGridRow({
   emojis,
   onSelect,
   selectedEmoji,
+  buttonSize,
 }: EmojiGridRowProps) {
   if (emojis.length === 0) return null;
 
@@ -26,6 +28,7 @@ export function EmojiGridRow({
           emoji={entry.emoji}
           onPress={() => onSelect(entry.emoji)}
           selected={selectedEmoji === entry.emoji}
+          size={buttonSize}
         />
       ))}
     </View>

@@ -11,6 +11,9 @@ type EmojiProps = {
   emoji: string;
   onPress: () => void;
   selected?: boolean;
+  /** When set, renders as a fixed-size circular button. Omit to keep the
+   *  original content-sizing. */
+  size?: number;
   style?: ComponentProps<typeof Pressable>['style'];
 };
 export const Emoji = ({
@@ -18,6 +21,7 @@ export const Emoji = ({
   emoji,
   onPress,
   selected = false,
+  size,
 }: EmojiProps) => {
   const { theme } = useTheme();
 
@@ -32,6 +36,10 @@ export const Emoji = ({
     scale.value = withSpring(1, { damping: 16, stiffness: 220, mass: 0.3 });
   };
 
+  const fixedSizeStyle = size
+    ? { width: size, height: size, borderRadius: size / 2 }
+    : Atoms.rounded_full;
+
   return (
     <Pressable
       onPress={onPress}
@@ -40,15 +48,16 @@ export const Emoji = ({
       onPressIn={bounceIn}
       onPressOut={bounceOut}
       style={(state) => [
+        fixedSizeStyle,
+        { alignItems: 'center', justifyContent: 'center' },
         typeof style === 'function' ? style(state) : style,
-        Atoms.rounded_full,
         (state.hovered || selected) && {
           backgroundColor: theme.palette.neutral_100,
         },
       ]}
     >
       <Animated.View style={animatedStyle}>
-        <Text style={{ fontSize: 20 }}>{emoji}</Text>
+        <Text style={{ fontSize: size ? size * 0.55 : 20 }}>{emoji}</Text>
       </Animated.View>
     </Pressable>
   );
