@@ -339,7 +339,7 @@ importers:
         version: 3.49.1-build4
       js-base64:
         specifier: ^3.7.8
-        version: 3.8.0
+        version: 3.8.1
     devDependencies:
       '@polycentric/tsconfig':
         specifier: workspace:*
@@ -397,7 +397,7 @@ importers:
         version: 5.0.4
       js-base64:
         specifier: ^3.7.8
-        version: 3.8.0
+        version: 3.8.1
     devDependencies:
       '@bufbuild/buf':
         specifier: ^1.71.0
@@ -7704,8 +7704,8 @@ packages:
   joi@17.13.3:
     resolution: {integrity: sha512-otDA4ldcIx+ZXsKHWmp0YizCweVRZG96J10b0FevjfuncLO1oX59THoAmHkNubYJ+9gWsYsp5k8v4ib6oDv1fA==}
 
-  js-base64@3.8.0:
-    resolution: {integrity: sha512-65kvbemyZhj+ExQt1PEFyBEjL5vAHysu1lJdW1AwhhChkO8ZBPizYk/m9GVrpbS2Je1hF+UYZ+6KywqtZV8mHw==}
+  js-base64@3.8.1:
+    resolution: {integrity: sha512-5xVjhUZlHHeuO2W7w2rDFj/Kl1xLX+HjZxdOQwCsUOifl6UaoH1o1wsbsTMz+r0aeC7gCijvru02j6TfKZWzKg==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -21044,7 +21044,7 @@ snapshots:
       '@sideway/formula': 3.0.1
       '@sideway/pinpoint': 2.0.0
 
-  js-base64@3.8.0: {}
+  js-base64@3.8.1: {}
 
   js-tokens@4.0.0: {}
 
