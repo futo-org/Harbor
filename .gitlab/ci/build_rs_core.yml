@@ -33,13 +33,15 @@
         - .cargo/registry/cache
         - .cargo/git/db
       policy: pull
+    # Self-populating per job: the first run compiles and uploads, every
+    # run after gets sccache hits for unchanged crates.
     - key:
         files:
           - Cargo.lock
-        prefix: cargo-sccache
+        prefix: cargo-sccache-${CI_JOB_NAME}
       paths:
         - .sccache
-      policy: pull
+      policy: pull-push
 
 # Populates the shared cargo-deps cache; every other rust job consumes it
 # with `policy: pull` and never re-uploads it. The cache key is the
@@ -70,20 +72,8 @@ cargo-deps-warmup:
         - .cargo/registry/cache
         - .cargo/git/db
       policy: pull-push
-    - key:
-        files:
-          - Cargo.lock
-        prefix: cargo-sccache
-      paths:
-        - .sccache
-      policy: pull-push
   script:
     - cargo fetch
-    - command -v sccache >/dev/null || { echo "image has no sccache yet; skipping compile warmup"; exit 1; }
-    # Compile the workspace once so dependency compiles land in sccache;
-    # consumer jobs then recompile only workspace crates.
-    - cargo clippy --workspace
-    - cargo test --workspace --no-run
 
 .rust-check:
   extends: .rs-core-workflow

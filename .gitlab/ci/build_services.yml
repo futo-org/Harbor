@@ -18,10 +18,10 @@
     - key:
         files:
           - Cargo.lock
-        prefix: cargo-sccache
+        prefix: cargo-sccache-${CI_JOB_NAME}
       paths:
         - .sccache
-      policy: pull
+      policy: pull-push
 
 .service-format-check:
   extends: .service-rust-base
