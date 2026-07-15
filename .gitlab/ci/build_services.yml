@@ -1,7 +1,5 @@
 .service-rust-base:
-  image:
-    name: ${RUST_IMAGE}
-    pull_policy: if-not-present
+  image: ${RUST_IMAGE}
   stage: check
   variables:
     SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
@@ -255,9 +253,7 @@ push-notifications-image:
 # (the runtime image provides a system one).
 scraper-typecheck:
   extends: .scraper-workflow
-  image:
-    name: node:24-slim
-    pull_policy: if-not-present
+  image: node:24-slim
   stage: check
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'

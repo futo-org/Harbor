@@ -25,6 +25,7 @@ stages:
 variables:
   CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
   CARGO_TARGET_DIR: ${CI_PROJECT_DIR}/target
+  SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   # CI builds are throwaway: incremental compilation only adds overhead and
   # bloats target dirs, and debuginfo is most of a dev target's size and a
   # large share of its compile time (test backtraces lose file/line info).
