@@ -1,6 +1,11 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "develop"
+  },
   "files": {
     "ignoreUnknown": false,
     "includes": [
@@ -15,6 +20,7 @@
       "!apps/polycentric/build",
       "!apps/polycentric/android",
       "!apps/polycentric/ios",
+      "!apps/polycentric/src/common/assets",
       "!packages/react-native/android",
       "!packages/react-native/ios",
       "!packages/react-native/lib",

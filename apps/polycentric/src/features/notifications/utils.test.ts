@@ -12,7 +12,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => {
     '@/src/common/lib/polycentric-hooks/helpers',
   );
   return {
-    bytesToHex: helpers.bytesToHex,
+    eventKeyId: helpers.eventKeyId,
     decodeV2PostBundle: helpers.decodePostBundle,
   };
 });

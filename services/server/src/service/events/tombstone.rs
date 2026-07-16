@@ -126,6 +126,7 @@ pub async fn list_tombstones_for_event_keys(
                 content_bytes: row.delete_content.serialized_bytes,
             }),
             event_proofs: Vec::new(),
+            meta: None,
         });
     }
 
@@ -304,6 +305,7 @@ mod tests {
             }),
             serialized_content: None,
             event_proofs: vec![],
+            meta: None,
         }
     }
 
@@ -327,6 +329,7 @@ mod tests {
             signed_event: None,
             serialized_content: None,
             event_proofs: vec![],
+            meta: None,
         };
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
@@ -344,6 +347,7 @@ mod tests {
             }),
             serialized_content: None,
             event_proofs: vec![],
+            meta: None,
         };
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;

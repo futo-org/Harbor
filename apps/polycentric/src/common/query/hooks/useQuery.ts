@@ -68,14 +68,14 @@ export enum RefreshStrategy {
   Eager,
 }
 
+export type QueryKey = string[];
+
 type QueryArgs = {
   client: PolycentricClient;
   queryKey: QueryKey;
   query: Query;
   opts: QueryOpts | undefined;
 };
-
-type QueryKey = string[];
 
 type SubscriptionRef = {
   refCount: number;

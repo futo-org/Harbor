@@ -17,10 +17,15 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
 }));
 
-jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
-  bytesToHex: (bytes: Uint8Array) => Buffer.from(bytes).toString('hex'),
-  getKeyFingerprint: () => 'fingerprint',
-}));
+jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
+  const helpers = jest.requireActual(
+    '@/src/common/lib/polycentric-hooks/helpers',
+  );
+  return {
+    eventKeyId: helpers.eventKeyId,
+    getKeyFingerprint: () => 'fingerprint',
+  };
+});
 
 let mockQueryData: Uint8Array | null = null;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({

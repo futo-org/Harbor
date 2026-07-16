@@ -1,5 +1,5 @@
 import {
-  bytesToHex,
+  eventKeyId,
   hexToBytes,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -43,8 +43,8 @@ function decodeRepost(
   if (!event.key) return null;
   return {
     event,
-    targetIdHex: bytesToHex(v2.EventKey.toBinary(target)),
-    repostIdHex: bytesToHex(v2.EventKey.toBinary(event.key)),
+    targetIdHex: eventKeyId(target),
+    repostIdHex: eventKeyId(event.key),
   };
 }
 
@@ -81,7 +81,7 @@ const useReposts = create<RepostsState>((set, get) => ({
 
     const event = v2.Event.fromBinary(signedEvent.eventBytes);
     if (!event.key) return;
-    const repostIdHex = bytesToHex(v2.EventKey.toBinary(event.key));
+    const repostIdHex = eventKeyId(event.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
 

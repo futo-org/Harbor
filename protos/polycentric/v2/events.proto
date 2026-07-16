@@ -53,6 +53,7 @@ message EventBundle {
   SignedEvent signed_event = 1;
   optional SerializedContent serialized_content = 2;
   repeated EventProof event_proofs = 3;
+  optional EventMetadata meta = 4;
 }
 
 // Merkle inclusion proof: the SignedEvent in this bundle is the leaf at
@@ -64,6 +65,13 @@ message EventProof {
   uint64 leaf_index = 2;
   // RFC 6962 audit path: sibling hashes from leaf toward root.
   repeated bytes audit_path = 3;
+}
+
+// Optional helper data that servers can include to help clients better present
+// information to users.
+message EventMetadata {
+  // This server's estimate for how many replies a post has.
+  optional int32 reply_count = 1;
 }
 
 // Hints are additional events that the server provides that may be

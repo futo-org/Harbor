@@ -433,6 +433,7 @@ fn signed_bundle(
         }),
         serialized_content: Some(SerializedContent { content_bytes }),
         event_proofs: vec![],
+        meta: None,
     }
 }
 

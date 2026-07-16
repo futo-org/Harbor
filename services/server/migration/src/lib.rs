@@ -17,6 +17,7 @@ mod m20260618_000001_timestamps_to_timestamptz;
 mod m20260625_000001_add_event_key_indices;
 mod m20260630_000001_add_verification_tables;
 mod m20260707_164130_add_indices_for_sorting;
+mod m20260707_191447_add_reply_counts_table;
 mod m20260715_000001_add_moderator_table;
 
 pub struct Migrator;
@@ -42,6 +43,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260625_000001_add_event_key_indices::Migration),
             Box::new(m20260630_000001_add_verification_tables::Migration),
             Box::new(m20260707_164130_add_indices_for_sorting::Migration),
+            Box::new(m20260707_191447_add_reply_counts_table::Migration),
             Box::new(m20260715_000001_add_moderator_table::Migration),
         ]
     }

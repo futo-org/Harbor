@@ -7,8 +7,11 @@ import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
-import { feedQueryKeys } from '../../feed/hooks/feedCache';
-import { threadQueryKey } from './useThread';
+import {
+  alterPostReplyCount,
+  feedQueryKeys,
+  threadQueryKey,
+} from '@/src/features/feed/hooks/feedCache';
 
 type PostActions = {
   /**
@@ -55,19 +58,32 @@ export default function usePostActions(post: PostData): PostActions {
     await client.sync(SyncStrategy.PARTIAL_PUSH);
   };
 
-  const invalidateFeeds = (identity: string) => {
+  const invalidateFeeds = (identity: string, deletionParent?: string) => {
     invalidateQuery(client, feedQueryKeys.following());
     invalidateQuery(client, feedQueryKeys.identity(identity));
     invalidateQuery(client, feedQueryKeys.explore(identity));
+
+    if (deletionParent) {
+      alterPostReplyCount(feedQueryKeys.following(), deletionParent, -1);
+      alterPostReplyCount(feedQueryKeys.identity(identity), deletionParent, -1);
+      alterPostReplyCount(feedQueryKeys.explore(identity), deletionParent, -1);
+    }
   };
 
-  const invalidateThreads = (reply: PostData['reply']) => {
+  const invalidateThreads = (reply: PostData['reply'], deletion?: boolean) => {
     if (!reply) return;
+
     const parents = [reply.parentId, reply.rootId].filter(
       (id): id is string => !!id,
     );
+
     for (const parentId of new Set(parents)) {
-      invalidateQuery(client, threadQueryKey(parentId));
+      const key = threadQueryKey(parentId);
+      invalidateQuery(client, key);
+
+      if (reply.parentId && deletion) {
+        alterPostReplyCount(key, reply.parentId, -1);
+      }
     }
   };
 
@@ -78,8 +94,8 @@ export default function usePostActions(post: PostData): PostActions {
     },
     deleteAsync: async () => {
       await deleteEventAtKey(post.id);
-      invalidateFeeds(post.identity);
-      invalidateThreads(post.reply);
+      invalidateFeeds(post.identity, post.reply?.parentId);
+      invalidateThreads(post.reply, true);
 
       // We want to change the active page if we are currently viewing the post
       // that just got deleted:

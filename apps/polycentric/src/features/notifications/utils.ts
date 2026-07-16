@@ -1,5 +1,5 @@
 import {
-  bytesToHex,
+  eventKeyId,
   decodeV2PostBundle,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
@@ -73,7 +73,7 @@ function triggerInfo(
     const key = event.key;
     if (!key) return null;
     return {
-      id: bytesToHex(v2.EventKey.toBinary(key)),
+      id: eventKeyId(key),
       identity: key.identity,
       createdAt: Number(event.createdAt ?? 0),
     };
