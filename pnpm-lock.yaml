@@ -583,7 +583,7 @@ importers:
     dependencies:
       browserless:
         specifier: ^13.1.6
-        version: 13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+        version: 13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       html-get:
         specifier: ^2.24.6
         version: 2.26.0(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -1509,18 +1509,18 @@ packages:
     resolution: {integrity: sha512-dHq2dsbaqEdByzyy7P6xdXz8nhVYmw2ahHqhk301ZSnj0hG7K2GlhRgk5Uvy0012sbk3ypgt7wLJkByQGVNnFw==}
     engines: {node: '>= 24'}
 
-  '@browserless/goto@13.5.3':
-    resolution: {integrity: sha512-YSPeYtQaygmmBo8e3d542vKo4/2C0LCcSkx8chRWihInYsz4ur3edraVRGYStouRWnM6fdb4Z2ObMkVcS/o3yw==}
+  '@browserless/goto@13.6.1':
+    resolution: {integrity: sha512-mT3iY6E3U0QjO2vki+pN5QaoPZuwQ0cuPDcTcI5P9t0EpEw/B+0bYRkRKdJ4U7ZQFD5ehh7dQtXhDY4J56Moyw==}
     engines: {node: '>= 24'}
     peerDependencies:
       puppeteer: '25'
 
-  '@browserless/pdf@13.5.3':
-    resolution: {integrity: sha512-FWZMlwQJ9ttg7KyXeOP10vHZXNCDbIuAgRTAr4/3q4Wp1mKQQVFKGDw07LIs6rv7uZDDig3An2EVGX5KqEXagw==}
+  '@browserless/pdf@13.6.1':
+    resolution: {integrity: sha512-jRuiFpRrcfdK78uozNn4TDZR3xjxppNYLtSNUInM53mNX3Ph5ZdmvL3hbpUVoX9GYX4Rm6GQme0Ijt7sSoHr8Q==}
     engines: {node: '>= 24'}
 
-  '@browserless/screenshot@13.5.3':
-    resolution: {integrity: sha512-mhaV+hCd4Namo3XMSo6mTBNx6ajqAl7wr3G76u1hoPbgXKqr/xtOCYWqOtOtNaCpvynbfr2SBMXMOXoywzCWNA==}
+  '@browserless/screenshot@13.6.1':
+    resolution: {integrity: sha512-YO0iwKq1He3xAcI6mJY8Yt5evTTcEfETITdiIxCr5xDl6mjwTFXb6noAne7LaYMTKJSyrDonbyXRZZcXallNEQ==}
     engines: {node: '>= 24'}
 
   '@bufbuild/buf-darwin-arm64@1.71.0':
@@ -2149,8 +2149,8 @@ packages:
     resolution: {integrity: sha512-xx0W3eav2uW1NRIpuHJWNwLTC15xPNjU4Uxi9NSnd3swYC96BE3vFiT93SD8s24kmAAWNwgZwfZ2fghGZ01Lcw==}
     engines: {node: '>=20.0'}
 
-  '@duckduckgo/autoconsent@16.2.0':
-    resolution: {integrity: sha512-tXVlKSga3jdAZQK3z9VWukFccrD59kuIX9GRZ0fQ/H0cJPlryIDaMJU6Qsg3e9S/yKry0KYxcdZjPypRHwHsqg==}
+  '@duckduckgo/autoconsent@16.9.0':
+    resolution: {integrity: sha512-f0xwshjJpkNKuMTa8lPH4KRrIAkMRUaSbw4PJiDSy3piYi/wvj9U8mvb6inYr/FO1MZ8KpykIDS2MBhY3958Jw==}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -2161,6 +2161,9 @@ packages:
 
   '@emnapi/runtime@1.11.1':
     resolution: {integrity: sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw==}
+
+  '@emnapi/runtime@1.11.2':
+    resolution: {integrity: sha512-kyOl3X0DuTiT1h2ft8r2fYO8JYtU9a9Xis/zBSiGArNaagCOWx90N1k2wxp18czFDH+OgcWGb5ZP/XMt3dcyPA==}
 
   '@emnapi/wasi-threads@1.2.1':
     resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
@@ -5172,8 +5175,8 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
-  browserless@13.5.3:
-    resolution: {integrity: sha512-e3D7o3UX95q089zhIIzks86IlIOwv8evyGSrMCoTarRg2TTZGr1BELEd3Wi+Zte3qSY9UDK/PrSFL0MWGz2tdA==}
+  browserless@13.6.1:
+    resolution: {integrity: sha512-++ysKMObRl4yA3XVzt7pXCikAbiMeKJY4fww2jgLncFExnGQipNsI+ayBz/KVbRyWAjoZeJTagB/qQE4YOD3UQ==}
     engines: {node: '>= 24'}
 
   browserslist@4.28.4:
@@ -7254,6 +7257,11 @@ packages:
 
   install-artifact-from-github@1.6.0:
     resolution: {integrity: sha512-wKsuzN8fy8QK7iEUqyWTQmvZ1QFGPn1xyl3/1iIIDthDjS7Hn9HoPwHlNakZirWbCsbad0lZMkr6Xfbpe1pUzw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  install-artifact-from-github@1.7.0:
+    resolution: {integrity: sha512-qAb91yAKVF9rFY4rVP21ZtYUyCScxAFt9udwzVWNLBE1pQcdQeB2gd1HlNPcQNYCzCDvJ/QJQPuWQ6aTmSlU8g==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -9493,6 +9501,10 @@ packages:
     resolution: {integrity: sha512-mtxKjWS+VYIt2ijgt6ohEdwzNlGPom1whyaEKJD40cBc/wqkO1vJoOyK539Qb8Xa9m4GA6hiPGDIbW/d3egSRQ==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
 
+  re2@1.26.0:
+    resolution: {integrity: sha512-QTEfFp0nu1eT/HKKZC+2BKM9Lb8uqprGkcHhro9r3giiKS+1SnNZBZ1m7C7Axi/VR1YGXiu3mp35UA53yHAuNw==}
+    engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
+
   react-devtools-core@6.1.5:
     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
 
@@ -10531,11 +10543,18 @@ packages:
   tldts-core@7.4.6:
     resolution: {integrity: sha512-TkQNGJIhlEphpHCjKodMTSe23egUZr/g+flI2qkLgiJ/maAzSgXypSLRTNH3nCmqgayEmtcJBiLcfODSAr1xoA==}
 
-  tldts-experimental@7.4.5:
-    resolution: {integrity: sha512-bwtTTTg5YJVFwpoxqO1Xtggkmia84oKfXCGMvz6ta1JEJ5S+MJ5n7hyYFzXVNh9GFg6zisd90iPTFzhe5bMQwg==}
+  tldts-core@7.4.8:
+    resolution: {integrity: sha512-c1P7u0EhACHj7lPy4MJm8iTFEU8+nB0LCtddH0fhP7noaVoXAqafMtOOeX+ulpuPBqnrRgRhw494RICT3mbhnw==}
+
+  tldts-experimental@7.4.8:
+    resolution: {integrity: sha512-BhnfwjtvAhq2ea0vglBojLEvn2QtZFZenstPQt75O8RtSqf8Xgh2vh7ksD4afpKwqjUNKg9ze2f18C8KbmSy7A==}
 
   tldts@7.4.6:
     resolution: {integrity: sha512-rbP0Gyx8b3Ae9yO//CU2wbSnQNoQ66m1nJdSbSHmnwKwzkkz/u8mERYU8T2rmlmy+bJvRNn84yNCW8gYqox44Q==}
+    hasBin: true
+
+  tldts@7.4.8:
+    resolution: {integrity: sha512-htwgN/8KRB3z3vnC0BOETVh2m499g5GmyTK9Wq5JBLX3FNz6tSBveAd+fQhzy9hkjif8vy2jwDMR1sGhLtZl2A==}
     hasBin: true
 
   tmpl@1.0.5:
@@ -10564,8 +10583,8 @@ packages:
     resolution: {integrity: sha512-Loo5UUvLD9ScZ6jh8beX1T6sO1w2/MpCRpEP7V280GKMVUQ0Jzar2U3UJPsrdbziLEMMhu3Ujnq//rhiFuIeag==}
     engines: {node: '>=6'}
 
-  tough-cookie@6.0.1:
-    resolution: {integrity: sha512-LktZQb3IeoUWB9lqR5EWTHgW/VTITCXg4D21M+lvybRVdylLrRMnqaIONLVb5mav8vM19m44HIcGq4qASeu2Qw==}
+  tough-cookie@6.0.2:
+    resolution: {integrity: sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA==}
     engines: {node: '>=16'}
 
   tr46@0.0.3:
@@ -10785,8 +10804,8 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  url-http@1.3.10:
-    resolution: {integrity: sha512-6N0QUwKvcxdl42ctKT/8LxLmFPX1UAhwlrx/lLwnQxh3wIvym3aQCp3UEk1x3zVvLXxgJPtF7v//OH3jtCch9w==}
+  url-http@1.3.11:
+    resolution: {integrity: sha512-NeDS7vVC8o9XsX9z8ahiUQSBiCO1Wi2s2chvRZ9kXK7IA1bSdYvOzWcc67EYarmS2PG6ww+Z0jEgeEtrAkq/zQ==}
     engines: {node: '>= 18'}
 
   url-loader@4.1.1:
@@ -12470,10 +12489,10 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@browserless/goto@13.5.3(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/goto@13.6.1(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
       '@browserless/devices': 13.0.0
-      '@duckduckgo/autoconsent': 16.2.0
+      '@duckduckgo/autoconsent': 16.9.0
       '@ghostery/adblocker-puppeteer': 2.18.1(puppeteer@25.3.0)
       debug-logfmt: 1.4.13(debug@4.4.3)
       got: 11.8.6
@@ -12482,15 +12501,15 @@ snapshots:
       p-timeout: 4.1.0
       puppeteer: 25.3.0
       shallow-equal: 3.1.0
-      tough-cookie: 6.0.1
+      tough-cookie: 6.0.2
     transitivePeerDependencies:
       - debug
       - supports-color
 
-  '@browserless/pdf@13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/pdf@13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
-      '@browserless/goto': 13.5.3(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/screenshot': 13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.1(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/screenshot': 13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       '@kikobeats/time-span': 1.0.13
       debug-logfmt: 1.4.13(debug@4.4.3)
       p-reflect: 2.1.0
@@ -12501,10 +12520,10 @@ snapshots:
       - puppeteer
       - supports-color
 
-  '@browserless/screenshot@13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/screenshot@13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
       '@browserless/errors': 13.1.7(debug@4.4.3)
-      '@browserless/goto': 13.5.3(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.1(debug@4.4.3)(puppeteer@25.3.0)
       '@kikobeats/content-type': 1.0.4
       '@kikobeats/time-span': 1.0.13
       automad-prism-themes: 0.3.7
@@ -13877,9 +13896,9 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@duckduckgo/autoconsent@16.2.0':
+  '@duckduckgo/autoconsent@16.9.0':
     dependencies:
-      tldts-experimental: 7.4.5
+      tldts-experimental: 7.4.8
 
   '@egjs/hammerjs@2.0.17':
     dependencies:
@@ -13892,6 +13911,11 @@ snapshots:
     optional: true
 
   '@emnapi/runtime@1.11.1':
+    dependencies:
+      tslib: 2.8.1
+    optional: true
+
+  '@emnapi/runtime@1.11.2':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -14677,7 +14701,7 @@ snapshots:
       '@ghostery/adblocker': 2.18.1
       '@ghostery/adblocker-content': 2.18.1
       puppeteer: 25.3.0
-      tldts-experimental: 7.4.5
+      tldts-experimental: 7.4.8
 
   '@ghostery/adblocker@2.18.1':
     dependencies:
@@ -14687,11 +14711,11 @@ snapshots:
       '@remusao/guess-url-type': 2.1.0
       '@remusao/small': 2.1.0
       '@remusao/smaz': 2.2.0
-      tldts-experimental: 7.4.5
+      tldts-experimental: 7.4.8
 
   '@ghostery/url-parser@1.3.1':
     dependencies:
-      tldts-experimental: 7.4.5
+      tldts-experimental: 7.4.8
 
   '@gorhom/bottom-sheet@5.2.14(dcf317b904ee5027a33c8caac99363f2)':
     dependencies:
@@ -14805,7 +14829,7 @@ snapshots:
 
   '@img/sharp-wasm32@0.35.3':
     dependencies:
-      '@emnapi/runtime': 1.11.1
+      '@emnapi/runtime': 1.11.2
     optional: true
 
   '@img/sharp-webcontainers-wasm32@0.35.3':
@@ -17920,12 +17944,12 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  browserless@13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0):
+  browserless@13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0):
     dependencies:
       '@browserless/errors': 13.1.7(debug@4.4.3)
-      '@browserless/goto': 13.5.3(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/pdf': 13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/screenshot': 13.5.3(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.1(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/pdf': 13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/screenshot': 13.6.1(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       debug-logfmt: 1.4.13(debug@4.4.3)
       kill-process-group: 1.0.16
       p-reflect: 2.1.0
@@ -20393,6 +20417,8 @@ snapshots:
 
   install-artifact-from-github@1.6.0: {}
 
+  install-artifact-from-github@1.7.0: {}
+
   interpret@3.1.1: {}
 
   invariant@2.2.4:
@@ -20522,7 +20548,7 @@ snapshots:
 
   is-url-http@2.3.13:
     dependencies:
-      url-http: 1.3.10
+      url-http: 1.3.11
 
   is-wsl@2.2.0:
     dependencies:
@@ -21126,7 +21152,7 @@ snapshots:
       parse5: 8.0.1
       saxes: 6.0.0
       symbol-tree: 3.2.4
-      tough-cookie: 6.0.1
+      tough-cookie: 6.0.2
       undici: 7.28.0
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
@@ -23265,6 +23291,12 @@ snapshots:
       nan: 2.28.0
       node-gyp: 13.0.1
 
+  re2@1.26.0:
+    dependencies:
+      install-artifact-from-github: 1.7.0
+      nan: 2.28.0
+      node-gyp: 13.0.1
+
   react-devtools-core@6.1.5:
     dependencies:
       shell-quote: 1.8.4
@@ -24699,13 +24731,19 @@ snapshots:
 
   tldts-core@7.4.6: {}
 
-  tldts-experimental@7.4.5:
+  tldts-core@7.4.8: {}
+
+  tldts-experimental@7.4.8:
     dependencies:
-      tldts-core: 7.4.6
+      tldts-core: 7.4.8
 
   tldts@7.4.6:
     dependencies:
       tldts-core: 7.4.6
+
+  tldts@7.4.8:
+    dependencies:
+      tldts-core: 7.4.8
 
   tmpl@1.0.5: {}
 
@@ -24728,9 +24766,9 @@ snapshots:
       universalify: 0.2.0
       url-parse: 1.5.10
 
-  tough-cookie@6.0.1:
+  tough-cookie@6.0.2:
     dependencies:
-      tldts: 7.4.6
+      tldts: 7.4.8
 
   tr46@0.0.3: {}
 
@@ -24927,11 +24965,11 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  url-http@1.3.10:
+  url-http@1.3.11:
     dependencies:
       punycode-regex: 1.0.1
-      re2: 1.25.0
-      url-regex-safe: 4.0.0(re2@1.25.0)
+      re2: 1.26.0
+      url-regex-safe: 4.0.0(re2@1.26.0)
 
   url-loader@4.1.1(file-loader@6.2.0(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16)))(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16)):
     dependencies:
@@ -24960,6 +24998,13 @@ snapshots:
       tlds: 1.261.0
     optionalDependencies:
       re2: 1.25.0
+
+  url-regex-safe@4.0.0(re2@1.26.0):
+    dependencies:
+      ip-regex: 4.3.0
+      tlds: 1.261.0
+    optionalDependencies:
+      re2: 1.26.0
 
   use-callback-ref@1.3.3(@types/react@19.2.17)(react@19.2.3):
     dependencies:
