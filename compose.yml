@@ -29,6 +29,9 @@ services:
       - CONTENT_BLOB_OS_ACCESS_KEY=rustfsadmin
       - POLYCENTRIC_MODERATION_IDENTITY=${POLYCENTRIC_MODERATION_IDENTITY:-}
       - CONTENT_BLOB_OS_SECRET_KEY=rustfsadmin
+      # Canonical name of this server. Must exactly match the server URL
+      # clients use.
+      - POLYCENTRIC_SERVER_NAME=${POLYCENTRIC_SERVER_NAME:-http://localhost:3000}
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable
       - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
