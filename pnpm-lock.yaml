@@ -28,6 +28,7 @@ catalogs:
 overrides:
   serialize-javascript@<7.0.5: '>=7.0.5'
   uuid@<11.1.1: '>=11.1.1'
+  websocket-driver@<0.7.5: '>=0.7.5'
 
 patchedDependencies:
   '@expo/cli':
@@ -11111,8 +11112,8 @@ packages:
       webpack:
         optional: true
 
-  websocket-driver@0.7.4:
-    resolution: {integrity: sha512-b17KeDIQVjvb0ssuSDF2cYXSg2iztliJ4B9WdsuB6J952qCPKmnVq4DyW5motImXHDC1cBT/1UezrJVsKw5zjg==}
+  websocket-driver@0.7.5:
+    resolution: {integrity: sha512-ZL2+3c7kMBdIRCMz6l8jQMHyGVxj+UL+xVk74Ombiciboca8rHa15L86B19E5oh1pL9Ii/uj54gtsIrZGMo6zA==}
     engines: {node: '>=0.8.0'}
 
   websocket-extensions@0.1.4:
@@ -16352,7 +16353,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -19669,7 +19672,7 @@ snapshots:
 
   faye-websocket@0.11.4:
     dependencies:
-      websocket-driver: 0.7.4
+      websocket-driver: 0.7.5
 
   fb-dotslash@0.5.8: {}
 
@@ -24357,7 +24360,7 @@ snapshots:
     dependencies:
       faye-websocket: 0.11.4
       uuid: 14.0.1
-      websocket-driver: 0.7.4
+      websocket-driver: 0.7.5
 
   sort-css-media-queries@2.2.0: {}
 
@@ -25397,7 +25400,7 @@ snapshots:
       '@rspack/core': 1.7.11
       webpack: 5.108.4(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16)
 
-  websocket-driver@0.7.4:
+  websocket-driver@0.7.5:
     dependencies:
       http-parser-js: 0.5.10
       safe-buffer: 5.2.1
