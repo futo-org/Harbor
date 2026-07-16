@@ -3502,12 +3502,13 @@ export interface PolycentricCoreLike {
    * Ask a server whether an identity is a moderator.
    * `signed_message_bytes` is a serialized `SignedMessage` wrapping an
    * `IsModeratorBody` signed by one of the identity's authorized keys.
+   * Returns serialized `IsModeratorResponse` proto bytes.
    */
   isModerator(
     serverUrl: string,
     signedMessageBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<boolean>;
+  ) /*throws*/ : Promise<ArrayBuffer>;
   /**
    * Join an existing pairing session. `signed_message_bytes` is a
    * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
@@ -4036,12 +4037,13 @@ export class PolycentricCore
    * Ask a server whether an identity is a moderator.
    * `signed_message_bytes` is a serialized `SignedMessage` wrapping an
    * `IsModeratorBody` signed by one of the identity's authorized keys.
+   * Returns serialized `IsModeratorResponse` proto bytes.
    */
   async isModerator(
     serverUrl: string,
     signedMessageBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal },
-  ): Promise<boolean> /*throws*/ {
+  ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
     try {
       return await uniffiRustCallAsync(
@@ -4060,19 +4062,21 @@ export class PolycentricCore
           );
         },
         /*pollFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_poll_i8,
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
         /*cancelFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_cancel_i8,
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
         /*completeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_complete_i8,
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
         /*freeFunc:*/ nativeModule()
-          .ubrn_ffi_polycentric_core_rust_future_free_i8,
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
         // Async returns always go through the JS-side converter: the
         // FFI symbol returns the future handle (u64), and the user-level
         // RustBuffer comes back via the shared `rust_future_complete_*`
         // export. The bytes the runtime hands back must be deserialized
         // here using the per-callable return-type converter.
-        /*liftFunc:*/ FfiConverterBool.lift.bind(FfiConverterBool),
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer,
+        ),
         /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
         /*asyncOpts:*/ asyncOpts_,
         /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -5032,7 +5036,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    29957
+    44154
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",

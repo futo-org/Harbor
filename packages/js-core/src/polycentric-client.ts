@@ -239,10 +239,12 @@ export class PolycentricClient {
       publicKey: this.currentKeyPair.publicKey,
     });
 
-    return await this.core.isModerator(
+    const bytes = await this.core.isModerator(
       server,
       Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
     );
+    return Proto.IsModeratorResponse.fromBinary(new Uint8Array(bytes))
+      .isModerator;
   }
 
   /**

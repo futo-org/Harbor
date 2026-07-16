@@ -493,11 +493,12 @@ impl PolycentricCore {
     /// Ask a server whether an identity is a moderator.
     /// `signed_message_bytes` is a serialized `SignedMessage` wrapping an
     /// `IsModeratorBody` signed by one of the identity's authorized keys.
+    /// Returns serialized `IsModeratorResponse` proto bytes.
     pub async fn is_moderator(
         &self,
         server_url: String,
         signed_message_bytes: Vec<u8>,
-    ) -> Result<bool, CoreError> {
+    ) -> Result<Vec<u8>, CoreError> {
         let signed = SignedMessage::decode(signed_message_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
         let mut client = IdentityServiceClient::new(channel(&server_url)?);
@@ -505,7 +506,7 @@ impl PolycentricCore {
             .is_moderator(signed)
             .await
             .map_err(|e| CoreError::Network(format!("is_moderator: {e}")))?;
-        Ok(response.into_inner().is_moderator)
+        Ok(response.into_inner().encode_to_vec())
     }
 
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
