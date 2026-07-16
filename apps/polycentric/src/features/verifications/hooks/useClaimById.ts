@@ -1,5 +1,5 @@
 import {
-  bytesToHex,
+  eventKeyId,
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
@@ -54,7 +54,7 @@ export function decodeClaimBundle(bundle: v2.EventBundle): DecodedClaim | null {
     }));
 
     return {
-      id: bytesToHex(v2.EventKey.toBinary(ev.key)),
+      id: eventKeyId(ev.key),
       schemaName: schema.name,
       fields,
       identity: ev.key.identity,

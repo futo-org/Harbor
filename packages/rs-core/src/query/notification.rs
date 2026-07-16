@@ -10,7 +10,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
+use crate::query::event::merge::{EventDedupKey, event_dedup_key, merge_event_hints};
 use crate::query::validation::retain_validated_hints;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
@@ -78,18 +78,13 @@ fn merge_notification_responses(
         .notifications
         .retain(|n| seen.insert(notification_dedup_key(n)));
 
-    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
-    merged.event_hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen_hints.insert(k),
-            None => true,
-        },
-    );
+    merge_event_hints(&mut merged.event_hints);
 
-    let c = client.lock().unwrap();
-    retain_validated_notifications(&c, &mut merged.notifications);
-    retain_validated_hints(&c, &mut merged.event_hints);
-    drop(c);
+    {
+        let c = client.lock().unwrap();
+        retain_validated_notifications(&c, &mut merged.notifications);
+        retain_validated_hints(&c, &mut merged.event_hints);
+    }
 
     merged.encode_to_vec()
 }

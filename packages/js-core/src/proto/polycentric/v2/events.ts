@@ -117,6 +117,10 @@ export interface EventBundle {
      * @generated from protobuf field: repeated polycentric.v2.EventProof event_proofs = 3
      */
     eventProofs: EventProof[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.EventMetadata meta = 4
+     */
+    meta?: EventMetadata;
 }
 /**
  * Merkle inclusion proof: the SignedEvent in this bundle is the leaf at
@@ -142,6 +146,20 @@ export interface EventProof {
      * @generated from protobuf field: repeated bytes audit_path = 3
      */
     auditPath: Uint8Array[];
+}
+/**
+ * Optional helper data that servers can include to help clients better present
+ * information to users.
+ *
+ * @generated from protobuf message polycentric.v2.EventMetadata
+ */
+export interface EventMetadata {
+    /**
+     * This server's estimate for how many replies a post has.
+     *
+     * @generated from protobuf field: optional int32 reply_count = 1
+     */
+    replyCount?: number;
 }
 /**
  * Hints are additional events that the server provides that may be
@@ -508,7 +526,8 @@ class EventBundle$Type extends MessageType<EventBundle> {
         super("polycentric.v2.EventBundle", [
             { no: 1, name: "signed_event", kind: "message", T: () => SignedEvent },
             { no: 2, name: "serialized_content", kind: "message", T: () => SerializedContent },
-            { no: 3, name: "event_proofs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventProof }
+            { no: 3, name: "event_proofs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventProof },
+            { no: 4, name: "meta", kind: "message", T: () => EventMetadata }
         ]);
     }
     create(value?: PartialMessage<EventBundle>): EventBundle {
@@ -532,6 +551,9 @@ class EventBundle$Type extends MessageType<EventBundle> {
                 case /* repeated polycentric.v2.EventProof event_proofs */ 3:
                     message.eventProofs.push(EventProof.internalBinaryRead(reader, reader.uint32(), options));
                     break;
+                case /* optional polycentric.v2.EventMetadata meta */ 4:
+                    message.meta = EventMetadata.internalBinaryRead(reader, reader.uint32(), options, message.meta);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -553,6 +575,9 @@ class EventBundle$Type extends MessageType<EventBundle> {
         /* repeated polycentric.v2.EventProof event_proofs = 3; */
         for (let i = 0; i < message.eventProofs.length; i++)
             EventProof.internalBinaryWrite(message.eventProofs[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.EventMetadata meta = 4; */
+        if (message.meta)
+            EventMetadata.internalBinaryWrite(message.meta, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -626,6 +651,52 @@ class EventProof$Type extends MessageType<EventProof> {
  * @generated MessageType for protobuf message polycentric.v2.EventProof
  */
 export const EventProof = new EventProof$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EventMetadata$Type extends MessageType<EventMetadata> {
+    constructor() {
+        super("polycentric.v2.EventMetadata", [
+            { no: 1, name: "reply_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<EventMetadata>): EventMetadata {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<EventMetadata>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EventMetadata): EventMetadata {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional int32 reply_count */ 1:
+                    message.replyCount = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: EventMetadata, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional int32 reply_count = 1; */
+        if (message.replyCount !== undefined)
+            writer.tag(1, WireType.Varint).int32(message.replyCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.EventMetadata
+ */
+export const EventMetadata = new EventMetadata$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class EventHint$Type extends MessageType<EventHint> {
     constructor() {

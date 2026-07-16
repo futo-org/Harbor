@@ -103,6 +103,7 @@ impl PolycentricClient {
                     serialized_content: content_bytes
                         .map(|c| SerializedContent { content_bytes: c }),
                     event_proofs: proofs.to_vec(),
+                    meta: None, // TODO: compute from local repository?
                 })
             })
     }
@@ -369,6 +370,7 @@ impl PolycentricClient {
                 signed_event: Some(signed_event.clone()),
                 serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
                 event_proofs: proofs.to_vec(),
+                meta: None, // TODO: compute from local repository?
             };
             bundles.push((event_key.clone(), bundle));
         }

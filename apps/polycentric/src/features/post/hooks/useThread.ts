@@ -1,22 +1,12 @@
 import { useMemo } from 'react';
-import {
-  COLLECTION,
-  Query,
-  v2,
-  type EventKey,
-} from '@polycentric/react-native';
-import {
-  bundleEventId,
-  decodeV2PostBundle,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
-import {
-  getQueryCache,
-  RefreshStrategy,
-  setQueryCache,
-  useQuery,
-} from '@/src/common/query/hooks/useQuery';
+import { COLLECTION, Query, type EventKey } from '@polycentric/react-native';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { type FeedHookResult, NOOP } from '../../feed/hooks/types';
+import {
+  threadQueryKey,
+  useThreadWithOverlays,
+} from '@/src/features/feed/hooks/feedCache';
 
 const DUMMY_EVENT_KEY: EventKey = {
   collection: COLLECTION.FEED,
@@ -24,10 +14,6 @@ const DUMMY_EVENT_KEY: EventKey = {
   signedBy: { keyType: 0, key: new ArrayBuffer(0) },
   sequence: 0n,
 };
-
-export function threadQueryKey(parentId: string, limit = 0): string[] {
-  return ['post_thread', parentId, String(limit)];
-}
 
 /**
  * Load the thread for a given post
@@ -52,25 +38,16 @@ export function useThread(
 
   const limit = options?.limit ?? 0;
 
+  const queryKey = threadQueryKey(post?.id ?? '', limit);
+
   const query = useQuery(
-    threadQueryKey(post?.id ?? '', limit),
+    queryKey,
     new Query.GetPostThread({ eventKey, limit }),
     undefined,
     !!post,
   );
 
-  const items = useMemo(() => {
-    if (!query.data) return [];
-    const response = v2.GetPostThreadResponse.fromBinary(
-      new Uint8Array(query.data),
-    );
-    const decoded: PostData[] = [];
-    for (const bundle of response.thread) {
-      const d = decodeV2PostBundle(bundle);
-      if (d) decoded.push(d);
-    }
-    return decoded;
-  }, [query.data]);
+  const items = useThreadWithOverlays(queryKey, query.data);
 
   return {
     items,
@@ -82,45 +59,4 @@ export function useThread(
     loadMore: NOOP,
     hasMore: false,
   };
-}
-
-/**
- * Optimistically add a reply to the top of the threas
- */
-export function injectReplyIntoThreadCache(
-  parentId: string,
-  newBundle: v2.EventBundle,
-  limit = 0,
-): void {
-  const key = threadQueryKey(parentId, limit);
-  const cached = getQueryCache(key);
-  if (!cached?.data) return;
-
-  const newId = bundleEventId(newBundle);
-  if (!newId) return;
-
-  let response: v2.GetPostThreadResponse;
-  try {
-    response = v2.GetPostThreadResponse.fromBinary(new Uint8Array(cached.data));
-  } catch {
-    return;
-  }
-
-  for (const b of response.thread) {
-    if (bundleEventId(b) === newId) return;
-  }
-
-  const subjectIdx = response.thread.findIndex(
-    (b) => bundleEventId(b) === parentId,
-  );
-  const insertAt = subjectIdx >= 0 ? subjectIdx + 1 : response.thread.length;
-
-  const newThread = [...response.thread];
-  newThread.splice(insertAt, 0, newBundle);
-
-  const updated = v2.GetPostThreadResponse.create({ thread: newThread });
-  const bytes = v2.GetPostThreadResponse.toBinary(updated);
-  // `.slice().buffer` gives a clean ArrayBuffer that matches `bytes.byteLength`
-  // — `bytes.buffer` could be larger than the view.
-  setQueryCache(key, { data: bytes.slice().buffer });
 }

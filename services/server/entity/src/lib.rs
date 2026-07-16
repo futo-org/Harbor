@@ -18,4 +18,5 @@ pub mod event_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;
+pub mod reply_count_model;
 pub mod verification_schema_model;

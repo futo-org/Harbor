@@ -619,6 +619,7 @@ mod tests {
                 content_bytes: content.encode_to_vec(),
             }),
             event_proofs: vec![],
+            meta: None,
         }
     }
 

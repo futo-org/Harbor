@@ -12,7 +12,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
+use crate::query::event::merge::{EventDedupKey, event_dedup_key};
 use crate::query::feed::{FakeCursorToken, merge_page_info};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};

@@ -121,6 +121,7 @@ fn bundle(signed_event: SignedEvent, content_bytes: Vec<u8>) -> EventBundle {
         signed_event: Some(signed_event),
         serialized_content: Some(SerializedContent { content_bytes }),
         event_proofs: vec![],
+        meta: None,
     }
 }
 

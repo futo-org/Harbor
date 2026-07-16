@@ -264,6 +264,7 @@ impl PolycentricClient {
                 content_bytes: content_bytes.clone(),
             }),
             event_proofs: vec![],
+            meta: None,
         };
 
         // Push to every server; success on any is enough to consider it

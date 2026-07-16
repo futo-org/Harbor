@@ -9,4 +9,5 @@ pub mod profile;
 pub mod proofs;
 pub mod proto;
 pub mod server;
+pub mod stats;
 pub mod verifications;

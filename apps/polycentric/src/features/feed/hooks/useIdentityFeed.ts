@@ -1,12 +1,15 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { feedQueryKeys } from './feedCache';
+import {
+  feedQueryKeys,
+  useFeedPageInfo,
+  useFeedWithOverlays,
+} from './feedCache';
 import {
   extractFeedToken,
   shouldExtend,
 } from '@/src/common/lib/polycentric-hooks';
-import { useStableFeedItems } from './useStableFeedItems';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
@@ -15,9 +18,10 @@ export function useIdentityFeed(
 ): FeedHookResult {
   const enabled = options?.enabled ?? true;
   const identity = identityId ?? '';
+  const queryKey = feedQueryKeys.identity(identity);
 
   const query = useQuery(
-    feedQueryKeys.identity(identity),
+    queryKey,
     (status, data) => {
       const forwardToken = extractFeedToken(status, data);
       return new Query.GetIdentityFeed({ identity, limit, forwardToken });
@@ -26,7 +30,9 @@ export function useIdentityFeed(
     enabled,
   );
 
-  const [items, hasNext] = useStableFeedItems(query.data);
+  const items = useFeedWithOverlays(queryKey, query.data);
+  const pageInfo = useFeedPageInfo(queryKey, query.data);
+  const hasNext = pageInfo?.hasNextPage ?? false;
 
   return {
     items,

@@ -6,8 +6,11 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { feedQueryKeys } from './feedCache';
-import { useStableFeedItems } from './useStableFeedItems';
+import {
+  feedQueryKeys,
+  useFeedPageInfo,
+  useFeedWithOverlays,
+} from './feedCache';
 
 export function useFollowingFeed(options?: {
   limit?: number;
@@ -16,9 +19,10 @@ export function useFollowingFeed(options?: {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
   const followerIdentity = client.activeIdentityKey || '';
+  const queryKey = feedQueryKeys.following();
 
   const query = useQuery(
-    feedQueryKeys.following(),
+    queryKey,
     (status, data) => {
       const forwardToken = extractFeedToken(status, data);
 
@@ -32,7 +36,9 @@ export function useFollowingFeed(options?: {
     enabled,
   );
 
-  const [items, hasNext] = useStableFeedItems(query.data);
+  const items = useFeedWithOverlays(queryKey, query.data);
+  const pageInfo = useFeedPageInfo(queryKey, query.data);
+  const hasNext = pageInfo?.hasNextPage ?? false;
 
   return {
     items,

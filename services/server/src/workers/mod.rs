@@ -13,6 +13,7 @@ use tokio::task::JoinSet;
 
 use crate::service::context::ServiceContext;
 use crate::service::notifications::worker::NotificationWorker;
+use crate::service::stats::worker::StatsWorker;
 
 /// A fatal error that ends a worker (and, with it, the `workers` process).
 pub type WorkerError = Box<dyn std::error::Error + Send + Sync>;
@@ -57,6 +58,12 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>) {
                 NotificationWorker::NAME,
                 NotificationWorker::new(ctx).run().await,
             )
+        });
+    }
+    {
+        let ctx = ctx.clone();
+        set.spawn(async move {
+            (StatsWorker::NAME, StatsWorker::new(ctx).run().await)
         });
     }
 

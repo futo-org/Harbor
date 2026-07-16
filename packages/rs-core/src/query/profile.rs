@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use polycentric_common::models::collections;
@@ -7,7 +6,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
+use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
     FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
@@ -35,25 +34,14 @@ fn merge_profile_responses(
         }
     }
 
-    let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
-    merged
-        .event_bundles
-        .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen_bundles.insert(k),
-            None => true,
-        });
-    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
-    merged.event_hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen_hints.insert(k),
-            None => true,
-        },
-    );
+    merge_event_bundles(&mut merged.event_bundles);
+    merge_event_hints(&mut merged.event_hints);
 
-    let c = client.lock().unwrap();
-    retain_validated_bundles(&c, &mut merged.event_bundles);
-    retain_validated_hints(&c, &mut merged.event_hints);
-    drop(c);
+    {
+        let c = client.lock().unwrap();
+        retain_validated_bundles(&c, &mut merged.event_bundles);
+        retain_validated_hints(&c, &mut merged.event_hints);
+    }
 
     merged.encode_to_vec()
 }

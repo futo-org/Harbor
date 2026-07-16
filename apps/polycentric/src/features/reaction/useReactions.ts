@@ -1,5 +1,5 @@
 import {
-  bytesToHex,
+  eventKeyId,
   decodeBundle,
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -76,7 +76,7 @@ const useReactions = create<ReactionsState>((set, get) => ({
     const event = await client.buildEvent(content, COLLECTION.INTERACTIONS);
     const signedEvent = await client.signEvent(event);
     if (!event.key) return;
-    const eventId = bytesToHex(v2.EventKey.toBinary(event.key));
+    const eventId = eventKeyId(event.key);
 
     // Snapshot for revert.
     const prev = {
@@ -177,8 +177,8 @@ const useReactions = create<ReactionsState>((set, get) => ({
       // Need a target, an emoji, and the reaction event's own key.
       if (!targetKey || !emoji || !reactionKey) continue;
 
-      const targetId = bytesToHex(v2.EventKey.toBinary(targetKey));
-      const eventId = bytesToHex(v2.EventKey.toBinary(reactionKey));
+      const targetId = eventKeyId(targetKey);
+      const eventId = eventKeyId(reactionKey);
       const sequence = Number(decoded.event.key?.sequence ?? 0);
 
       const prev = latest.get(targetId);

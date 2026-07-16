@@ -1,5 +1,5 @@
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { bytesToHex } from '@/src/common/lib/polycentric-hooks/helpers';
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
@@ -53,9 +53,7 @@ export function useVerificationRequestsTo(targetIdentity: string | undefined): {
           const target = content.contentBody.verificationTarget;
           if (!target.claimEventKey) continue;
           if (!target.targetIdentities.includes(targetIdentity!)) continue;
-          requestedIds.add(
-            bytesToHex(v2.EventKey.toBinary(target.claimEventKey)),
-          );
+          requestedIds.add(eventKeyId(target.claimEventKey));
         } catch {}
       }
 

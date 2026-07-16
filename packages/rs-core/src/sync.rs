@@ -111,6 +111,7 @@ fn bundle_from_signed_event(
         signed_event: Some(signed_event),
         serialized_content,
         event_proofs: vec![],
+        meta: None, // TODO: compute from local store?
     })
 }
 

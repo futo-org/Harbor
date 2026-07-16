@@ -49,6 +49,9 @@ export type PostData = {
    *  key so a repost is distinct from the original post. */
   repostId?: string;
 
+  /** Our estimation for how many replies this post has. */
+  replyCount?: number;
+
   signedEvent: v2.SignedEvent;
 };
 
@@ -121,6 +124,10 @@ export function decodeBundle<K extends ContentKind>(
   return { event, content, signedEvent: bundle.signedEvent };
 }
 
+export function eventKeyId(eventKey: v2.EventKey): string {
+  return bytesToHex(v2.EventKey.toBinary(eventKey));
+}
+
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
 export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
   const decoded = decodeBundle(bundle, 'post');
@@ -130,20 +137,16 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
     const key = event.key;
     if (!key?.signedBy?.key) return null;
 
-    const id = bytesToHex(v2.EventKey.toBinary(key));
+    const id = eventKeyId(key);
     const reply = post.reply
       ? {
-          rootId: post.reply.root
-            ? bytesToHex(v2.EventKey.toBinary(post.reply.root))
-            : undefined,
+          rootId: post.reply.root ? eventKeyId(post.reply.root) : undefined,
           parentId: post.reply.parent
-            ? bytesToHex(v2.EventKey.toBinary(post.reply.parent))
+            ? eventKeyId(post.reply.parent)
             : undefined,
         }
       : undefined;
-    const quoteId = post.quote
-      ? bytesToHex(v2.EventKey.toBinary(post.quote))
-      : undefined;
+    const quoteId = post.quote ? eventKeyId(post.quote) : undefined;
 
     return {
       id,
@@ -156,6 +159,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       links: post.links,
       reply,
       quoteId,
+      replyCount: bundle.meta?.replyCount,
       signedEvent: v2.SignedEvent.create({
         eventBytes: signedEvent.eventBytes,
         signature: signedEvent.signature,
@@ -183,8 +187,8 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
     if (!target) return null;
     return {
       repostedBy: key.identity,
-      targetId: bytesToHex(v2.EventKey.toBinary(target)),
-      repostId: bytesToHex(v2.EventKey.toBinary(key)),
+      targetId: eventKeyId(target),
+      repostId: eventKeyId(key),
     };
   } catch {
     return null;
@@ -196,13 +200,6 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  * directly; reposts resolve their target post from `event_hints` (the
  * server ships the reposted post alongside) and surface it tagged with
  * `repostedBy`. A repost whose target isn't in the hints is dropped.
- *
- * Items are de-duplicated by their list key (`repostId ?? id`). The explore
- * feed fans out across multiple servers and paginates with a single forward
- * token, so the same post routinely arrives more than once. Without this,
- * duplicate keys reach FlashList and recycled cells flash / the scroll
- * position jumps while paginating. The first occurrence wins so already-
- * rendered rows keep their position.
  */
 export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   const hintPosts = new Map<string, PostData>();
@@ -213,25 +210,17 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   }
 
   const items: PostData[] = [];
-  const seen = new Set<string>();
-  const pushUnique = (item: PostData) => {
-    const key = item.repostId ?? item.id;
-    if (seen.has(key)) return;
-    seen.add(key);
-    items.push(item);
-  };
-
   for (const bundle of response.eventBundles) {
     const post = decodePostBundle(bundle);
     if (post) {
-      pushUnique(post);
+      items.push(post);
       continue;
     }
     const repost = decodeRepostBundle(bundle);
     if (repost) {
       const target = hintPosts.get(repost.targetId);
       if (target) {
-        pushUnique({
+        items.push({
           ...target,
           repostedBy: repost.repostedBy,
           repostId: repost.repostId,
@@ -240,19 +229,6 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
     }
   }
   return items;
-}
-
-/** Extract the items and next page indicator from the feed response. */
-export function decodeFeedQueryResult(
-  data: ArrayBuffer | undefined,
-): [PostData[], boolean] {
-  if (!data) {
-    return [[], false];
-  }
-
-  const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
-  const hasNext = !!response.pageInfo?.hasNextPage;
-  return [decodeFeedItems(response), hasNext];
 }
 
 /** Get the forward cursor token from a previous feed query result */
@@ -333,7 +309,7 @@ export function bundleEventId(bundle: v2.EventBundle): string | null {
   try {
     const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
     if (!event.key) return null;
-    return bytesToHex(v2.EventKey.toBinary(event.key));
+    return eventKeyId(event.key);
   } catch {
     return null;
   }

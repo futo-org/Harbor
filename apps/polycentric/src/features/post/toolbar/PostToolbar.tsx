@@ -46,6 +46,7 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
         icon="reply"
         onPress={onReplyPress}
         color={'primary_500'}
+        count={post.replyCount}
       />
       <PostReactionButton post={post} />
       <RepostButton post={post} />

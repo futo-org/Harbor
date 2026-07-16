@@ -12,10 +12,12 @@ import {
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { parseTextLinks } from '@/src/common/util/parseTextLinks';
 import {
+  alterPostReplyCount,
   feedQueryKeys,
   injectPostIntoFeedCache,
+  injectReplyIntoThreadCache,
+  threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
-import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
 import { COLLECTION, type types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -339,8 +341,13 @@ export function useComposer({
 
       // Optimistically add the new event to the below query
       if (isReply && replyTo) {
-        injectReplyIntoThreadCache(replyTo.id, newBundle);
+        injectReplyIntoThreadCache(newBundle);
+        alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.following(), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
       }
+
       injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
