@@ -1,9 +1,8 @@
-//! Creates the `identity_flag` table: server-administered flags on an
-//! identity (e.g. "moderator", "banned"), one row per identity+flag pair.
-//! Columns are spelled out here (rather than derived from the entity) so
-//! this migration is a fixed snapshot that never drifts as
-//! `entity::identity_flag_model` evolves. `IF NOT EXISTS` keeps it a no-op
-//! on a database that already has the table.
+//! Creates the `moderator` table: identities the server recognizes as
+//! moderators, one row per identity. Columns are spelled out here (rather
+//! than derived from the entity) so this migration is a fixed snapshot
+//! that never drifts as `entity::moderator_model` evolves. `IF NOT EXISTS`
+//! keeps it a no-op on a database that already has the table.
 
 use sea_orm_migration::{prelude::*, schema::*};
 
@@ -16,12 +15,11 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Alias::new("identity_flag"))
+                    .table(Alias::new("moderator"))
                     .if_not_exists()
                     // sha256 hash of the initial Identity content; matches
                     // `content_identity.identity`.
-                    .col(string(Alias::new("identity")))
-                    .col(string(Alias::new("flag")))
+                    .col(string(Alias::new("identity")).primary_key())
                     .col(
                         timestamp_with_time_zone(Alias::new("created_at"))
                             .default(Expr::current_timestamp()),
@@ -29,11 +27,6 @@ impl MigrationTrait for Migration {
                     .col(
                         timestamp_with_time_zone(Alias::new("updated_at"))
                             .default(Expr::current_timestamp()),
-                    )
-                    .primary_key(
-                        Index::create()
-                            .col(Alias::new("identity"))
-                            .col(Alias::new("flag")),
                     )
                     .to_owned(),
             )
@@ -45,7 +38,7 @@ impl MigrationTrait for Migration {
             .drop_table(
                 Table::drop()
                     .if_exists()
-                    .table(Alias::new("identity_flag"))
+                    .table(Alias::new("moderator"))
                     .to_owned(),
             )
             .await

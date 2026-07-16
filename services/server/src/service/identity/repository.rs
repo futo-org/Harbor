@@ -3,7 +3,7 @@ use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, Identity, PublicKey};
 use ::entity::{
     content_model as ContentModel, event_model as EventModel,
-    identity_flag_model as IdentityFlagModel,
+    moderator_model as ModeratorModel,
 };
 use polycentric_common::models::collections;
 use prost::Message;
@@ -129,20 +129,21 @@ impl Query {
             .any(|k| k.is_rotation_key && k.key.key.as_slice() == public_key))
     }
 
-    /// Server-administered flag values set on `identity`, e.g.
-    /// "moderator" or "banned".
+    /// Server-administered flag values set on `identity`. Currently just
+    /// "moderator", derived from membership in the `moderator` table.
     pub async fn list_flags(
         db: &DbConn,
         identity: &str,
     ) -> Result<Vec<String>, DbErr> {
-        Ok(IdentityFlagModel::Entity::find()
-            .filter(IdentityFlagModel::Column::Identity.eq(identity))
-            .order_by_asc(IdentityFlagModel::Column::Flag)
-            .all(db)
+        let is_moderator = ModeratorModel::Entity::find_by_id(identity)
+            .one(db)
             .await?
-            .into_iter()
-            .map(|row| row.flag)
-            .collect())
+            .is_some();
+        Ok(if is_moderator {
+            vec![ModeratorModel::FLAG_MODERATOR.to_string()]
+        } else {
+            vec![]
+        })
     }
 
     /// Every IDENTITY-collection event (full chain) for each of
