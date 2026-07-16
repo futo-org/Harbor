@@ -22,9 +22,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
-import { FUTO_URL, openCompose } from '../../constants';
+import { openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
+import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
 
@@ -286,32 +287,10 @@ export const LeftSidebar = memo(function LeftSidebar({
   );
 });
 
-type RightSidebarProps = {} & ComponentProps<typeof View>;
-export const RightSidebar = memo(function RightSidebar({
-  ...props
-}: RightSidebarProps) {
-  const { theme, setActiveThemeName } = useTheme();
-
+export const RightSidebar = memo(function RightSidebar() {
   const { width: deviceWidth } = useWindowDimensions();
   const width = 350;
   const marginRight = deviceWidth <= Breakpoints['2xl'] ? 10 : 70;
-
-  const toggleTheme = useCallback(() => {
-    const next = theme.name === 'dark' ? 'light' : 'dark';
-    setActiveThemeName(next);
-  }, [setActiveThemeName, theme.name]);
-
-  const LINKS: { text: string; href: ExternalPathString }[] = [
-    {
-      text: 'Privacy Policy',
-      href: 'https://docs.polycentric.io/privacy-policy/',
-    },
-    {
-      text: 'Source Code',
-      href: 'https://gitlab.futo.org/polycentric/polycentric',
-    },
-    { text: 'FUTO © 2026.', href: FUTO_URL },
-  ];
 
   return (
     <View style={{ width, marginRight }}>
@@ -333,63 +312,12 @@ export const RightSidebar = memo(function RightSidebar({
           ]}
         >
           <View style={[Atoms.flex_1]}></View>
-          <View
-            style={[
-              Atoms.flex_row,
-              Atoms.items_center,
-              Atoms.w_full,
-              Atoms.py_sm,
-              Atoms.px_sm,
-              Atoms.gap_sm,
-              Atoms.flex_wrap,
-            ]}
-          >
-            <Pressable
-              accessibilityLabel="Toggle color theme"
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={toggleTheme}
-              style={({ pressed }) => [pressed && { opacity: 0.65 }]}
-            >
-              <Icon
-                name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
-                size={typography.fontSize.sm}
-                color="neutral_500"
-              />
-            </Pressable>
-            {LINKS.map(({ text, href }) => (
-              <RightSidebarLink key={href} href={href} text={text} />
-            ))}
-          </View>
+          <AppFooter />
         </View>
       </View>
     </View>
   );
 });
-
-type RightSidebarLinkProps = {
-  href: ExternalPathString;
-  text: string;
-};
-function RightSidebarLink({ href, text }: RightSidebarLinkProps) {
-  const { theme } = useTheme();
-  const [hovering, setHovering] = useState(false);
-  return (
-    <Link
-      href={href}
-      accessibilityRole="link"
-      accessibilityLabel={text}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-      style={[
-        theme.atoms.text_neutral_low,
-        hovering && { textDecorationLine: 'underline' },
-      ]}
-    >
-      {text}
-    </Link>
-  );
-}
 
 Screen.LeftSidebar = LeftSidebar;
 Screen.RightSidebar = RightSidebar;
