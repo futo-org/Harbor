@@ -13,6 +13,7 @@ use tonic::Status;
 
 pub async fn handle(
     db: &DatabaseConnection,
+    server_name: &str,
     msg: SignedMessage,
 ) -> Result<ListIdentityFlagsResponse, Status> {
     let public_key = verify_signed_message(&msg)?;
@@ -21,6 +22,14 @@ pub async fn handle(
         .map_err(|_| {
             Status::invalid_argument("Argument is not a ListIdentityFlagsBody")
         })?;
+
+    // The signed body names the server it is addressed to, so a server
+    // that receives it cannot relay it to another server.
+    if body.server_url != server_name {
+        return Err(Status::permission_denied(
+            "request is addressed to a different server",
+        ));
+    }
 
     let skew_ms: i64 = 30 * 60 * 1000;
     if (body.timestamp - Utc::now().timestamp_millis()).abs() > skew_ms {

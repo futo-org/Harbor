@@ -32,6 +32,14 @@ export interface ListIdentityFlagsBody {
      * @generated from protobuf field: int64 timestamp = 2
      */
     timestamp: bigint;
+    /**
+     * URL of the server the request is addressed to. The server rejects
+     * requests addressed to other servers, so a server that receives one
+     * cannot relay it elsewhere to expose the client's flags.
+     *
+     * @generated from protobuf field: string server_url = 3
+     */
+    serverUrl: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.ListIdentityFlagsResponse
@@ -49,13 +57,15 @@ class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
     constructor() {
         super("polycentric.v2.ListIdentityFlagsBody", [
             { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+            { no: 2, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "server_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<ListIdentityFlagsBody>): ListIdentityFlagsBody {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.identity = "";
         message.timestamp = 0n;
+        message.serverUrl = "";
         if (value !== undefined)
             reflectionMergePartial<ListIdentityFlagsBody>(this, message, value);
         return message;
@@ -70,6 +80,9 @@ class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
                     break;
                 case /* int64 timestamp */ 2:
                     message.timestamp = reader.int64().toBigInt();
+                    break;
+                case /* string server_url */ 3:
+                    message.serverUrl = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -89,6 +102,9 @@ class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
         /* int64 timestamp = 2; */
         if (message.timestamp !== 0n)
             writer.tag(2, WireType.Varint).int64(message.timestamp);
+        /* string server_url = 3; */
+        if (message.serverUrl !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.serverUrl);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -12,6 +12,10 @@ use tonic::{Request, Response, Status};
 
 pub struct IdentityServiceImpl {
     db: DatabaseConnection,
+    // This server's canonical name; signed request bodies must be
+    // addressed to it. Same value stamped into SOURCE_SERVER on
+    // published events.
+    server_name: String,
 }
 
 #[tonic::async_trait]
@@ -21,7 +25,12 @@ impl IdentityService for IdentityServiceImpl {
         request: Request<SignedMessage>,
     ) -> Result<Response<ListIdentityFlagsResponse>, Status> {
         Ok(Response::new(
-            list_identity_flags::handle(&self.db, request.into_inner()).await?,
+            list_identity_flags::handle(
+                &self.db,
+                &self.server_name,
+                request.into_inner(),
+            )
+            .await?,
         ))
     }
 }
@@ -30,7 +39,11 @@ impl IdentityService for IdentityServiceImpl {
 pub fn build_identity_service(
     db: DatabaseConnection,
 ) -> IdentityServiceServer<IdentityServiceImpl> {
-    IdentityServiceServer::new(IdentityServiceImpl { db })
+    IdentityServiceServer::new(IdentityServiceImpl {
+        db,
+        server_name: std::env::var("POLYCENTRIC_SERVER_NAME")
+            .unwrap_or_default(),
+    })
 }
 
 #[cfg(test)]
@@ -43,9 +56,12 @@ mod tests {
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
+    const TEST_SERVER: &str = "http://test-server";
+
     fn impl_for_testing() -> IdentityServiceImpl {
         IdentityServiceImpl {
             db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            server_name: TEST_SERVER.to_string(),
         }
     }
 
@@ -54,6 +70,7 @@ mod tests {
         let body = Proto::ListIdentityFlagsBody {
             identity: identity.to_string(),
             timestamp,
+            server_url: TEST_SERVER.to_string(),
         };
         let message_bytes = Message::encode_to_vec(&body);
         let signature = signing_key.sign(&message_bytes);
@@ -115,6 +132,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_identity_flags_rejects_wrong_server_url() {
+        // Valid signature and timestamp, but the signed body is addressed
+        // to a different server, e.g. relayed by the server it was sent to.
+        let service = IdentityServiceImpl {
+            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            server_name: "http://another-server".to_string(),
+        };
+        let msg = make_signed_body("identity", Utc::now().timestamp_millis());
+
+        let err = service
+            .list_identity_flags(Request::new(msg))
+            .await
+            .unwrap_err();
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
     async fn list_identity_flags_rejects_unauthorized_key() {
         // Signature and timestamp are valid, but the mock database has no
         // identity events, so the signer is not an authorized key.
@@ -125,6 +160,7 @@ mod tests {
                     Option<::entity::content_model::Model>,
                 ), _, _>(vec![vec![]])
                 .into_connection(),
+            server_name: TEST_SERVER.to_string(),
         };
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
 

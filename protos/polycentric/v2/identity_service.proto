@@ -12,6 +12,10 @@ message ListIdentityFlagsBody {
   // Client timestamp in unix milliseconds; must be within the server's
   // acceptable skew window.
   int64 timestamp = 2;
+  // URL of the server the request is addressed to. The server rejects
+  // requests addressed to other servers, so a server that receives one
+  // cannot relay it elsewhere to expose the client's flags.
+  string server_url = 3;
 }
 
 message ListIdentityFlagsResponse {
