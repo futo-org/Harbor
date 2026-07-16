@@ -57,7 +57,14 @@ export const Emoji = ({
       ]}
     >
       <Animated.View style={animatedStyle}>
-        <Text style={{ fontSize: size ? size * 0.55 : 20 }}>{emoji}</Text>
+        <Text
+          style={{
+            fontSize: size ? size * 0.55 : 20,
+            color: theme.palette.neutral_1000,
+          }}
+        >
+          {emoji}
+        </Text>
       </Animated.View>
     </Pressable>
   );
