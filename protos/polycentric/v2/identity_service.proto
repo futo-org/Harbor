@@ -4,31 +4,30 @@ package polycentric.v2;
 import "polycentric/v2/server.proto";
 
 /**
- * Payload an identity signs when requesting its own flags.
+ * Payload an identity signs to query whether it is a moderator.
  */
-message ListIdentityFlagsBody {
-  // Identity key whose flags are requested.
+message IsModeratorBody {
+  // The user's identity key.
   string identity = 1;
   // Client timestamp in unix milliseconds; must be within the server's
   // acceptable skew window.
   int64 timestamp = 2;
   // URL of the server the request is addressed to. The server rejects
   // requests addressed to other servers, so a server that receives one
-  // cannot relay it elsewhere to expose the client's flags.
+  // cannot relay it elsewhere to expose the client's status.
   string server_url = 3;
 }
 
-message ListIdentityFlagsResponse {
-  // Flag values set on the identity, e.g. "moderator" or "banned".
-  repeated string flags = 1;
+message IsModeratorResponse {
+  bool is_moderator = 1;
 }
 
 /**
  * Identity APIs.
  */
 service IdentityService {
-  // Returns the server-administered flags on an identity. This endpoint
-  // expects a signed ListIdentityFlagsBody message, signed by one of the
-  // identity's authorized keys.
-  rpc ListIdentityFlags(SignedMessage) returns (ListIdentityFlagsResponse);
+  // Returns whether an identity is a moderator on this server. This
+  // endpoint expects a signed IsModeratorBody message, signed by one of
+  // the identity's authorized keys.
+  rpc IsModerator(SignedMessage) returns (IsModeratorResponse);
 }

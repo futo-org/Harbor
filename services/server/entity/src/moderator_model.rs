@@ -1,8 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Flag value reported for identities present in this table.
-pub const FLAG_MODERATOR: &str = "moderator";
-
 /// Identities the server recognizes as moderators. Presence of a row
 /// means the identity is a moderator.
 #[sea_orm::model]

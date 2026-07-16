@@ -14,13 +14,13 @@ import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
  * *
- * Payload an identity signs when requesting its own flags.
+ * Payload an identity signs to query whether it is a moderator.
  *
- * @generated from protobuf message polycentric.v2.ListIdentityFlagsBody
+ * @generated from protobuf message polycentric.v2.IsModeratorBody
  */
-export interface ListIdentityFlagsBody {
+export interface IsModeratorBody {
     /**
-     * Identity key whose flags are requested.
+     * The user's identity key.
      *
      * @generated from protobuf field: string identity = 1
      */
@@ -35,42 +35,40 @@ export interface ListIdentityFlagsBody {
     /**
      * URL of the server the request is addressed to. The server rejects
      * requests addressed to other servers, so a server that receives one
-     * cannot relay it elsewhere to expose the client's flags.
+     * cannot relay it elsewhere to expose the client's status.
      *
      * @generated from protobuf field: string server_url = 3
      */
     serverUrl: string;
 }
 /**
- * @generated from protobuf message polycentric.v2.ListIdentityFlagsResponse
+ * @generated from protobuf message polycentric.v2.IsModeratorResponse
  */
-export interface ListIdentityFlagsResponse {
+export interface IsModeratorResponse {
     /**
-     * Flag values set on the identity, e.g. "moderator" or "banned".
-     *
-     * @generated from protobuf field: repeated string flags = 1
+     * @generated from protobuf field: bool is_moderator = 1
      */
-    flags: string[];
+    isModerator: boolean;
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
+class IsModeratorBody$Type extends MessageType<IsModeratorBody> {
     constructor() {
-        super("polycentric.v2.ListIdentityFlagsBody", [
+        super("polycentric.v2.IsModeratorBody", [
             { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 3, name: "server_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<ListIdentityFlagsBody>): ListIdentityFlagsBody {
+    create(value?: PartialMessage<IsModeratorBody>): IsModeratorBody {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.identity = "";
         message.timestamp = 0n;
         message.serverUrl = "";
         if (value !== undefined)
-            reflectionMergePartial<ListIdentityFlagsBody>(this, message, value);
+            reflectionMergePartial<IsModeratorBody>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListIdentityFlagsBody): ListIdentityFlagsBody {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IsModeratorBody): IsModeratorBody {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -95,7 +93,7 @@ class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
         }
         return message;
     }
-    internalBinaryWrite(message: ListIdentityFlagsBody, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: IsModeratorBody, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string identity = 1; */
         if (message.identity !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.identity);
@@ -112,30 +110,30 @@ class ListIdentityFlagsBody$Type extends MessageType<ListIdentityFlagsBody> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.ListIdentityFlagsBody
+ * @generated MessageType for protobuf message polycentric.v2.IsModeratorBody
  */
-export const ListIdentityFlagsBody = new ListIdentityFlagsBody$Type();
+export const IsModeratorBody = new IsModeratorBody$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class ListIdentityFlagsResponse$Type extends MessageType<ListIdentityFlagsResponse> {
+class IsModeratorResponse$Type extends MessageType<IsModeratorResponse> {
     constructor() {
-        super("polycentric.v2.ListIdentityFlagsResponse", [
-            { no: 1, name: "flags", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        super("polycentric.v2.IsModeratorResponse", [
+            { no: 1, name: "is_moderator", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
-    create(value?: PartialMessage<ListIdentityFlagsResponse>): ListIdentityFlagsResponse {
+    create(value?: PartialMessage<IsModeratorResponse>): IsModeratorResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.flags = [];
+        message.isModerator = false;
         if (value !== undefined)
-            reflectionMergePartial<ListIdentityFlagsResponse>(this, message, value);
+            reflectionMergePartial<IsModeratorResponse>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListIdentityFlagsResponse): ListIdentityFlagsResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IsModeratorResponse): IsModeratorResponse {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated string flags */ 1:
-                    message.flags.push(reader.string());
+                case /* bool is_moderator */ 1:
+                    message.isModerator = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -148,10 +146,10 @@ class ListIdentityFlagsResponse$Type extends MessageType<ListIdentityFlagsRespon
         }
         return message;
     }
-    internalBinaryWrite(message: ListIdentityFlagsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated string flags = 1; */
-        for (let i = 0; i < message.flags.length; i++)
-            writer.tag(1, WireType.LengthDelimited).string(message.flags[i]);
+    internalBinaryWrite(message: IsModeratorResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool is_moderator = 1; */
+        if (message.isModerator !== false)
+            writer.tag(1, WireType.Varint).bool(message.isModerator);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -159,12 +157,12 @@ class ListIdentityFlagsResponse$Type extends MessageType<ListIdentityFlagsRespon
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.ListIdentityFlagsResponse
+ * @generated MessageType for protobuf message polycentric.v2.IsModeratorResponse
  */
-export const ListIdentityFlagsResponse = new ListIdentityFlagsResponse$Type();
+export const IsModeratorResponse = new IsModeratorResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.IdentityService
  */
 export const IdentityService = new ServiceType("polycentric.v2.IdentityService", [
-    { name: "ListIdentityFlags", options: {}, I: SignedMessage, O: ListIdentityFlagsResponse }
+    { name: "IsModerator", options: {}, I: SignedMessage, O: IsModeratorResponse }
 ]);

@@ -1,12 +1,12 @@
 //! gRPC `IdentityService` impl. Each method delegates to a handler
 //! under `identity/rpc/`.
 
-pub mod list_identity_flags;
+pub mod is_moderator;
 
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
-use crate::service::proto::{ListIdentityFlagsResponse, SignedMessage};
+use crate::service::proto::{IsModeratorResponse, SignedMessage};
 use sea_orm::DatabaseConnection;
 use tonic::{Request, Response, Status};
 
@@ -20,12 +20,12 @@ pub struct IdentityServiceImpl {
 
 #[tonic::async_trait]
 impl IdentityService for IdentityServiceImpl {
-    async fn list_identity_flags(
+    async fn is_moderator(
         &self,
         request: Request<SignedMessage>,
-    ) -> Result<Response<ListIdentityFlagsResponse>, Status> {
+    ) -> Result<Response<IsModeratorResponse>, Status> {
         Ok(Response::new(
-            list_identity_flags::handle(
+            is_moderator::handle(
                 &self.db,
                 &self.server_name,
                 request.into_inner(),
@@ -67,7 +67,7 @@ mod tests {
 
     fn make_signed_body(identity: &str, timestamp: i64) -> SignedMessage {
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-        let body = Proto::ListIdentityFlagsBody {
+        let body = Proto::IsModeratorBody {
             identity: identity.to_string(),
             timestamp,
             server_url: TEST_SERVER.to_string(),
@@ -86,53 +86,44 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_identity_flags_rejects_invalid_signature() {
+    async fn is_moderator_rejects_invalid_signature() {
         let service = impl_for_testing();
         let mut msg =
             make_signed_body("identity", Utc::now().timestamp_millis());
         msg.signature[0] ^= 1;
 
-        let err = service
-            .list_identity_flags(Request::new(msg))
-            .await
-            .unwrap_err();
+        let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::Unauthenticated);
     }
 
     #[tokio::test]
-    async fn list_identity_flags_rejects_missing_public_key() {
+    async fn is_moderator_rejects_missing_public_key() {
         let service = impl_for_testing();
         let mut msg =
             make_signed_body("identity", Utc::now().timestamp_millis());
         msg.public_key = None;
 
-        let err = service
-            .list_identity_flags(Request::new(msg))
-            .await
-            .unwrap_err();
+        let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::InvalidArgument);
     }
 
     #[tokio::test]
-    async fn list_identity_flags_rejects_stale_timestamp() {
+    async fn is_moderator_rejects_stale_timestamp() {
         let service = impl_for_testing();
         let msg = make_signed_body(
             "identity",
             Utc::now().timestamp_millis() - 60 * 60 * 1000,
         );
 
-        let err = service
-            .list_identity_flags(Request::new(msg))
-            .await
-            .unwrap_err();
+        let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::InvalidArgument);
     }
 
     #[tokio::test]
-    async fn list_identity_flags_rejects_wrong_server_url() {
+    async fn is_moderator_rejects_wrong_server_url() {
         // Valid signature and timestamp, but the signed body is addressed
         // to a different server, e.g. relayed by the server it was sent to.
         let service = IdentityServiceImpl {
@@ -141,16 +132,13 @@ mod tests {
         };
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
 
-        let err = service
-            .list_identity_flags(Request::new(msg))
-            .await
-            .unwrap_err();
+        let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::PermissionDenied);
     }
 
     #[tokio::test]
-    async fn list_identity_flags_rejects_unauthorized_key() {
+    async fn is_moderator_rejects_unauthorized_key() {
         // Signature and timestamp are valid, but the mock database has no
         // identity events, so the signer is not an authorized key.
         let service = IdentityServiceImpl {
@@ -164,10 +152,7 @@ mod tests {
         };
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
 
-        let err = service
-            .list_identity_flags(Request::new(msg))
-            .await
-            .unwrap_err();
+        let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::PermissionDenied);
     }

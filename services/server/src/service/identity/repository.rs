@@ -129,21 +129,15 @@ impl Query {
             .any(|k| k.is_rotation_key && k.key.key.as_slice() == public_key))
     }
 
-    /// Server-administered flag values set on `identity`. Currently just
-    /// "moderator", derived from membership in the `moderator` table.
-    pub async fn list_flags(
+    /// True when `identity` has a row in the `moderator` table.
+    pub async fn is_moderator(
         db: &DbConn,
         identity: &str,
-    ) -> Result<Vec<String>, DbErr> {
-        let is_moderator = ModeratorModel::Entity::find_by_id(identity)
+    ) -> Result<bool, DbErr> {
+        Ok(ModeratorModel::Entity::find_by_id(identity)
             .one(db)
             .await?
-            .is_some();
-        Ok(if is_moderator {
-            vec![ModeratorModel::FLAG_MODERATOR.to_string()]
-        } else {
-            vec![]
-        })
+            .is_some())
     }
 
     /// Every IDENTITY-collection event (full chain) for each of

@@ -5,7 +5,7 @@ import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { IdentityService } from "./identity_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
-import type { ListIdentityFlagsResponse } from "./identity_service";
+import type { IsModeratorResponse } from "./identity_service";
 import type { SignedMessage } from "./server";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
@@ -17,13 +17,13 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface IIdentityServiceClient {
     /**
-     * Returns the server-administered flags on an identity. This endpoint
-     * expects a signed ListIdentityFlagsBody message, signed by one of the
-     * identity's authorized keys.
+     * Returns whether an identity is a moderator on this server. This
+     * endpoint expects a signed IsModeratorBody message, signed by one of
+     * the identity's authorized keys.
      *
-     * @generated from protobuf rpc: ListIdentityFlags
+     * @generated from protobuf rpc: IsModerator
      */
-    listIdentityFlags(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, ListIdentityFlagsResponse>;
+    isModerator(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsModeratorResponse>;
 }
 /**
  * *
@@ -38,14 +38,14 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * Returns the server-administered flags on an identity. This endpoint
-     * expects a signed ListIdentityFlagsBody message, signed by one of the
-     * identity's authorized keys.
+     * Returns whether an identity is a moderator on this server. This
+     * endpoint expects a signed IsModeratorBody message, signed by one of
+     * the identity's authorized keys.
      *
-     * @generated from protobuf rpc: ListIdentityFlags
+     * @generated from protobuf rpc: IsModerator
      */
-    listIdentityFlags(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, ListIdentityFlagsResponse> {
+    isModerator(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsModeratorResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        return stackIntercept<SignedMessage, ListIdentityFlagsResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<SignedMessage, IsModeratorResponse>("unary", this._transport, method, opt, input);
     }
 }

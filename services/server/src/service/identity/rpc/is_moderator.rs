@@ -1,11 +1,11 @@
-//! `list_identity_flags`: returns the server-administered flags on an
-//! identity after verifying the request is signed by one of the
+//! `is_moderator`: returns whether an identity is a moderator on this
+//! server after verifying the request is signed by one of the
 //! identity's authorized keys.
 
 use crate::service::identity::pairing::rpc::common::verify_signed_message;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::{ListIdentityFlagsResponse, SignedMessage};
+use crate::service::proto::{IsModeratorResponse, SignedMessage};
 use chrono::Utc;
 use prost::Message;
 use sea_orm::DatabaseConnection;
@@ -15,13 +15,12 @@ pub async fn handle(
     db: &DatabaseConnection,
     server_name: &str,
     msg: SignedMessage,
-) -> Result<ListIdentityFlagsResponse, Status> {
+) -> Result<IsModeratorResponse, Status> {
     let public_key = verify_signed_message(&msg)?;
 
-    let body = Proto::ListIdentityFlagsBody::decode(&msg.message_bytes[..])
-        .map_err(|_| {
-            Status::invalid_argument("Argument is not a ListIdentityFlagsBody")
-        })?;
+    let body = Proto::IsModeratorBody::decode(&msg.message_bytes[..]).map_err(
+        |_| Status::invalid_argument("Argument is not an IsModeratorBody"),
+    )?;
 
     // The signed body names the server it is addressed to, so a server
     // that receives it cannot relay it to another server.
@@ -49,9 +48,10 @@ pub async fn handle(
         return Err(Status::permission_denied("not authorized"));
     }
 
-    let flags = id_repo::Query::list_flags(db, &body.identity)
-        .await
-        .map_err(|_| Status::internal("internal server error"))?;
+    let is_moderator =
+        id_repo::Query::is_moderator(db, &body.identity)
+            .await
+            .map_err(|_| Status::internal("internal server error"))?;
 
-    Ok(ListIdentityFlagsResponse { flags })
+    Ok(IsModeratorResponse { is_moderator })
 }
