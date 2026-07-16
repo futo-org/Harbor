@@ -214,6 +214,38 @@ export class PolycentricClient {
   }
 
   /**
+   * Ask `server` whether the active identity is a moderator
+   * (`IdentityService.IsModerator`).
+   */
+  async isModerator(server: string): Promise<boolean> {
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const messageBytes = Proto.IsModeratorBody.toBinary(
+      Proto.IsModeratorBody.create({
+        identity: this.activeIdentityKey,
+        timestamp: BigInt(Date.now()),
+        serverUrl: server,
+      }),
+    );
+    const signature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      messageBytes,
+      this.currentKeyPair.keyType,
+    );
+    const signedMessage = Proto.SignedMessage.create({
+      signature,
+      messageBytes,
+      publicKey: this.currentKeyPair.publicKey,
+    });
+
+    return await this.core.isModerator(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {

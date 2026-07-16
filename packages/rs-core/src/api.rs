@@ -7,6 +7,7 @@ use polycentric_common::models::protos_v2::{
     PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
+    identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
 };
@@ -487,6 +488,24 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("upload_blob: {e}")))?;
         Ok(())
+    }
+
+    /// Ask a server whether an identity is a moderator.
+    /// `signed_message_bytes` is a serialized `SignedMessage` wrapping an
+    /// `IsModeratorBody` signed by one of the identity's authorized keys.
+    pub async fn is_moderator(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<bool, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let response = client
+            .is_moderator(signed)
+            .await
+            .map_err(|e| CoreError::Network(format!("is_moderator: {e}")))?;
+        Ok(response.into_inner().is_moderator)
     }
 
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
