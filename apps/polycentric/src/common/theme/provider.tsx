@@ -13,7 +13,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 import { useSettings } from '@/src/common/settings';
 import { themes, type Theme, type ThemeKey } from './themes';
 

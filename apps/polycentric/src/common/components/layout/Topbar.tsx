@@ -3,8 +3,7 @@ import { Image } from 'expo-image';
 import { Link, router, useSegments } from 'expo-router';
 import { memo, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
-import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
-import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
+import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
 import { ProfileAvatar, Text } from '../primitives';
@@ -102,7 +101,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
           ) : (
             // <Link href={{ pathname: '/' }}>
             <Image
-              source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
+              source={HARBOR_LOGO}
               contentFit="contain"
               style={[{ width: 36, height: 36 }, Atoms.self_center]}
             />
