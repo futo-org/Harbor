@@ -21,8 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
-import BLUE_LOGO from '../../assets/images/polycentric-logo-blue-256.png';
-import WHITE_LOGO from '../../assets/images/polycentric-logo-white-256.png';
+import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { FUTO_URL, openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
@@ -232,7 +231,8 @@ export const LeftSidebar = memo(function LeftSidebar({
               <Link
                 href="/"
                 style={[
-                  Atoms.py_lg,
+                  Atoms.pt_sm,
+                  Atoms.pb_lg,
                   Atoms.flex,
                   Atoms.align_center,
                   !narrowSidebar && Atoms.px_lg,
@@ -240,9 +240,9 @@ export const LeftSidebar = memo(function LeftSidebar({
                 ]}
               >
                 <Image
-                  source={theme.scheme === 'dark' ? WHITE_LOGO : BLUE_LOGO}
+                  source={HARBOR_LOGO}
                   contentFit="contain"
-                  style={{ width: 30, height: 30 }}
+                  style={{ width: 40, height: 40 }}
                 />
               </Link>
 
