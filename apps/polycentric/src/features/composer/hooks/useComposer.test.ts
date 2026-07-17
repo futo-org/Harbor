@@ -534,9 +534,14 @@ describe('useComposer link previews', () => {
       act(() => result.current.handleRemoveLinkPreview());
       expect(result.current.linkPreview).toBeNull();
 
-      // Deleting the link clears the dismissal, so retyping the very same
-      // url unfurls it again.
+      // Delete the link and let the draft settle: the removal enters the
+      // diff baseline, so retyping the very same url counts as newly typed
+      // and unfurls again. (Deleting and retyping within one debounce window
+      // coalesces into "no change" — the settled diff never sees it.)
       act(() => result.current.setText('check  out'));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
       act(() => result.current.setText(draftWithUrl));
       await act(async () => {
         jest.advanceTimersByTime(1000);

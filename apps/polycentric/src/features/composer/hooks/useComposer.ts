@@ -102,56 +102,93 @@ export function useComposer({
   const setError = useComposerStore((s) => s.setError);
   const resetComposer = useComposerStore((s) => s.reset);
 
-  // Live link preview: debounce-detect the first URL in the draft and unfurl
-  // it via the server. The resolved Link is shown in the composer and reused
-  // at post time (see handlePost) so we don't fetch it twice.
+  // Live link preview. The card previews `previewUrl`, which is only ever
+  // set by `settlePreviewUrl` spotting a newly typed link, and cleared by the
+  // X button (or the link leaving the draft) — so a removed preview stays
+  // removed until the user types another url. The resolved Link is reused at
+  // post time (see handlePost) so we don't fetch it twice.
   const [linkPreview, setLinkPreview] = useState<v2.Link | null>(null);
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
-  // True while the user has removed the current link's preview (X button).
-  // Dismissal only covers the link that was showing: as soon as the draft's
-  // first URL changes — including deleting the link and retyping the same
-  // one, which passes through "no URL" — previews come back.
-  const [previewDismissed, setPreviewDismissed] = useState(false);
+  const [previewUrl, setPreviewUrlState] = useState<string | null>(null);
+  // Mirror of `previewUrl` so `settlePreviewUrl` can read and return the
+  // target synchronously (handlePost can't wait for a re-render).
+  const previewUrlRef = useRef<string | null>(null);
+  const setPreviewUrl = useCallback((url: string | null) => {
+    previewUrlRef.current = url;
+    setPreviewUrlState(url);
+  }, []);
 
-  const previewUrl = useMemo(
-    () => parseTextLinks(text).find((s) => s.type === 'link')?.url ?? null,
+  // Every url in the draft, in order, duplicates kept.
+  const textLinks = useMemo(
+    () =>
+      parseTextLinks(text)
+        .filter((s) => s.type === 'link')
+        .map((s) => s.url),
     [text],
   );
 
-  // Lift the dismissal the moment the first URL changes.
-  useEffect(() => {
-    setPreviewDismissed(false);
-  }, [previewUrl]);
+  // The draft's urls as of the last settle (or preview removal): the baseline
+  // the next settle diffs against to spot newly typed links.
+  const settledLinksRef = useRef<string[]>([]);
 
+  // Diff the draft's urls against the baseline; a url the baseline doesn't
+  // account for was just typed — an appended link, an old link edited into a
+  // new spelling, or a deleted link retyped — and becomes the preview target
+  // if and only if there is no target already. Runs post-debounce (and at
+  // post time), so intermediate spellings never enter the baseline.
+  const settlePreviewUrl = useCallback(() => {
+    // Multiset diff: each current url consumes one baseline occurrence, so a
+    // duplicate of an existing link still counts as new.
+    const remaining = new Map<string, number>();
+    for (const url of settledLinksRef.current) {
+      remaining.set(url, (remaining.get(url) ?? 0) + 1);
+    }
+    let typedUrl: string | null = null;
+    for (const url of textLinks) {
+      const count = remaining.get(url) ?? 0;
+      if (count === 0) typedUrl = typedUrl ?? url;
+      else remaining.set(url, count - 1);
+    }
+    settledLinksRef.current = textLinks;
+    if (!previewUrlRef.current && typedUrl) setPreviewUrl(typedUrl);
+    return previewUrlRef.current;
+  }, [textLinks, setPreviewUrl]);
+
+  // Debounce the settle so we don't adopt every intermediate url while the
+  // user is still typing it. The previewed link leaving the draft clears the
+  // card immediately, though — a deleted link shouldn't keep its preview.
   useEffect(() => {
-    // No URL, the user disabled preview generation, or they dismissed this
-    // URL's preview: show nothing (and clear any card already shown).
-    if (!previewUrl || !linkPreviewsEnabled || previewDismissed) {
+    if (previewUrlRef.current && !textLinks.includes(previewUrlRef.current)) {
+      setPreviewUrl(null);
+      setLinkPreview(null);
+      setLinkPreviewLoading(false);
+    }
+    const handle = setTimeout(settlePreviewUrl, 1000);
+    return () => clearTimeout(handle);
+  }, [textLinks, settlePreviewUrl, setPreviewUrl]);
+
+  // Unfurl the target via the server. No extra debounce: targets only change
+  // on settle, which is already debounced.
+  useEffect(() => {
+    if (!previewUrl || !linkPreviewsEnabled) {
       setLinkPreview(null);
       setLinkPreviewLoading(false);
       return;
     }
-    // The URL changed: drop any card for the previous URL immediately. The
-    // loading state waits until the debounced fetch actually starts.
-    setLinkPreview((prev) => (prev && prev.url === previewUrl ? prev : null));
     let cancelled = false;
-    // Debounce so we don't unfurl every intermediate URL while typing.
-    const handle = setTimeout(() => {
-      setLinkPreviewLoading(true);
-      void client.urlInfo(previewUrl).then((info) => {
-        if (cancelled) return;
-        // The endpoint returns metadata only; attach the URL we requested.
-        setLinkPreview(
-          info ? v2.Link.create({ ...info, url: previewUrl }) : null,
-        );
-        setLinkPreviewLoading(false);
-      });
-    }, 1000);
+    setLinkPreviewLoading(true);
+    void client.urlInfo(previewUrl).then((info) => {
+      if (cancelled) return;
+      // The endpoint returns metadata only; attach the URL we requested.
+      setLinkPreview(
+        info ? v2.Link.create({ ...info, url: previewUrl }) : null,
+      );
+      setLinkPreviewLoading(false);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(handle);
     };
-  }, [previewUrl, client, linkPreviewsEnabled, previewDismissed]);
+  }, [previewUrl, client, linkPreviewsEnabled]);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
@@ -168,17 +205,24 @@ export function useComposer({
   // carries over to the next open.
   const resetAll = useCallback(() => {
     uploadCache.clear();
-    setPreviewDismissed(false);
-    resetComposer();
-  }, [resetComposer]);
-
-  // X button on the link preview (loading or resolved): drop the card and
-  // suppress previews for this link until the draft's first URL changes.
-  const handleRemoveLinkPreview = useCallback(() => {
-    setPreviewDismissed(true);
+    // Start the next draft with a clean preview slate: no target, and an
+    // empty baseline so its first link diffs as new.
+    settledLinksRef.current = [];
+    setPreviewUrl(null);
     setLinkPreview(null);
     setLinkPreviewLoading(false);
-  }, []);
+    resetComposer();
+  }, [resetComposer, setPreviewUrl]);
+
+  // X button on the link preview (loading or resolved): clear the target and
+  // fold the draft's current links into the baseline, so they can never diff
+  // as new again — only typing another url brings a preview back.
+  const handleRemoveLinkPreview = useCallback(() => {
+    settledLinksRef.current = textLinks;
+    setPreviewUrl(null);
+    setLinkPreview(null);
+    setLinkPreviewLoading(false);
+  }, [textLinks, setPreviewUrl]);
 
   // Begin processing + uploading an attachment immediately, caching the
   // promise by id so `handlePost` can await the already-running work (it waits
@@ -314,20 +358,20 @@ export function useComposer({
             )
           : [];
 
-      // Embed the first URL's preview in the signed post, unless the user
-      // disabled preview generation or dismissed the preview for this draft.
-      // Reuse the live preview when it matches the current URL; otherwise
-      // fetch fresh (e.g. posted before the preview resolved). Best-effort —
-      // null yields no card.
-      const embedPreview = linkPreviewsEnabled && !previewDismissed;
+      // Embed the targeted url's preview in the signed post. Settle now so a
+      // url typed within the debounce window still gets its preview (and a
+      // removed preview stays removed — its links are already baselined, so
+      // the diff yields nothing). Reuse the live preview when it matches;
+      // otherwise fetch fresh. Best-effort — null yields no card.
+      const targetUrl = linkPreviewsEnabled ? settlePreviewUrl() : null;
       let link =
-        embedPreview && linkPreview && linkPreview.url === previewUrl
+        targetUrl && linkPreview && linkPreview.url === targetUrl
           ? linkPreview
           : null;
-      if (embedPreview && !link && previewUrl) {
-        const info = await client.urlInfo(previewUrl);
+      if (!link && targetUrl) {
+        const info = await client.urlInfo(targetUrl);
         // Metadata-only response; populate the URL we requested.
-        link = info ? v2.Link.create({ ...info, url: previewUrl }) : null;
+        link = info ? v2.Link.create({ ...info, url: targetUrl }) : null;
       }
 
       const post: types.v2.Post = {
@@ -411,8 +455,7 @@ export function useComposer({
     replyRootEventKey,
     linkPreview,
     linkPreviewsEnabled,
-    previewDismissed,
-    previewUrl,
+    settlePreviewUrl,
     resetAll,
     setSubmitting,
     setError,
