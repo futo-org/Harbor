@@ -2,26 +2,8 @@
 
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::SignedMessage;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
-
-/// Verifies a signed pairing request and returns the signer public key.
-pub fn verify_signed_message(
-    msg: &SignedMessage,
-) -> Result<Proto::PublicKey, Status> {
-    let public_key = msg
-        .public_key
-        .clone()
-        .ok_or_else(|| Status::invalid_argument("public_key is required"))?;
-    polycentric_common::signing::verify_signature(
-        &public_key.key,
-        &msg.signature,
-        &msg.message_bytes,
-    )
-    .map_err(|e| Status::unauthenticated(e.to_string()))?;
-    Ok(public_key)
-}
 
 /// Builds `PairingSession` from the stored session row and current claimers.
 /// Expired sessions are deleted and reported as not found.

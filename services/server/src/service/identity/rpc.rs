@@ -1,6 +1,7 @@
 //! gRPC `IdentityService` impl. Each method delegates to a handler
 //! under `identity/rpc/`.
 
+pub mod common;
 pub mod is_moderator;
 
 use crate::service::context::ServiceContext;

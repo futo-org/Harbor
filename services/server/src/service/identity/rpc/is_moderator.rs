@@ -3,11 +3,12 @@
 //! identity's authorized keys.
 
 use crate::service::context::ServiceContext;
-use crate::service::identity::pairing::rpc::common::verify_signed_message;
 use crate::service::identity::repository as id_repo;
+use crate::service::identity::rpc::common::{
+    check_timestamp_skew, verify_signed_message,
+};
 use crate::service::proto as Proto;
 use crate::service::proto::{Identity, IsModeratorResponse, SignedMessage};
-use chrono::Utc;
 use prost::Message;
 use tonic::Status;
 
@@ -30,12 +31,7 @@ pub async fn handle(
         ));
     }
 
-    let skew_ms: i64 = 30 * 60 * 1000;
-    if (body.timestamp - Utc::now().timestamp_millis()).abs() > skew_ms {
-        return Err(Status::invalid_argument(
-            "timestamp outside acceptable skew window",
-        ));
-    }
+    check_timestamp_skew(body.timestamp)?;
 
     let authorized = identity_content(ctx, &body.identity)
         .await?
