@@ -13,6 +13,8 @@ pub struct Model {
     pub title: String,
     pub description: String,
     pub image: String,
+    // Raw JSON body the scraper returned for a successful scrape.
+    pub raw_response: Option<String>,
     pub error_code: Option<i32>,
     pub error_message: Option<String>,
     pub created_at: DateTimeUtc,

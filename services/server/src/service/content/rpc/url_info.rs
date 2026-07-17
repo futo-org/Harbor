@@ -73,7 +73,12 @@ async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
 /// Upsert an outcome for `url`, evicting the oldest rows once the
 /// cache is full. All statements are best-effort: failures are logged
 /// and the response is served regardless.
-async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
+async fn insert_cached(
+    db: &DbConn,
+    url: &str,
+    outcome: &ScrapeOutcome,
+    raw_response: Option<String>,
+) {
     evict_if_full(db).await;
 
     let now = Utc::now();
@@ -100,6 +105,7 @@ async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
         title: Set(title),
         description: Set(description),
         image: Set(image),
+        raw_response: Set(raw_response),
         error_code: Set(error_code),
         error_message: Set(error_message),
         created_at: Set(now),
@@ -113,6 +119,7 @@ async fn insert_cached(db: &DbConn, url: &str, outcome: &ScrapeOutcome) {
                     url_info_cache_model::Column::Title,
                     url_info_cache_model::Column::Description,
                     url_info_cache_model::Column::Image,
+                    url_info_cache_model::Column::RawResponse,
                     url_info_cache_model::Column::ErrorCode,
                     url_info_cache_model::Column::ErrorMessage,
                     url_info_cache_model::Column::UpdatedAt,
@@ -183,24 +190,24 @@ async fn lookup(
         return outcome.map_err(|(code, message)| Status::new(code, message));
     }
 
-    let outcome = match fetch_metadata(scrape_url, key).await {
-        Ok(resp) => Ok(resp),
+    let (outcome, raw_response) = match fetch_metadata(scrape_url, key).await {
+        Ok((resp, raw)) => (Ok(resp), Some(raw)),
         Err(ScrapeFailure::Unreachable(status)) => return Err(status),
         Err(ScrapeFailure::Reported(status)) => {
-            Err((status.code(), status.message().to_string()))
+            (Err((status.code(), status.message().to_string())), None)
         }
     };
 
-    insert_cached(db, key, &outcome).await;
+    insert_cached(db, key, &outcome, raw_response).await;
     outcome.map_err(|(code, message)| Status::new(code, message))
 }
 
 /// Call the scraper's `/scrape` endpoint and map its JSON onto a
-/// `UrlInfoResponse`.
+/// `UrlInfoResponse`, returned alongside the raw response body.
 async fn fetch_metadata(
     scrape_url: &str,
     target_url: &str,
-) -> Result<UrlInfoResponse, ScrapeFailure> {
+) -> Result<(UrlInfoResponse, String), ScrapeFailure> {
     let resp = http_client::client()
         .get(scrape_url)
         .query(&[("url", target_url)])
@@ -219,17 +226,23 @@ async fn fetch_metadata(
         ))));
     }
 
-    let meta: ScrapedMetadata = resp.json().await.map_err(|e| {
+    let raw = resp.text().await.map_err(|e| {
+        ScrapeFailure::Unreachable(Status::internal(format!(
+            "invalid scraper response: {e}"
+        )))
+    })?;
+    let meta: ScrapedMetadata = serde_json::from_str(&raw).map_err(|e| {
         ScrapeFailure::Unreachable(Status::internal(format!(
             "invalid scraper response: {e}"
         )))
     })?;
 
-    Ok(UrlInfoResponse {
+    let response = UrlInfoResponse {
         title: meta.title.unwrap_or_default(),
         description: meta.description.unwrap_or_default(),
         image: meta.image.unwrap_or_default(),
-    })
+    };
+    Ok((response, raw))
 }
 
 #[cfg(test)]
@@ -262,13 +275,17 @@ mod tests {
             .await;
 
         let scrape_url = format!("{}/scrape", server.url());
-        let resp = fetch_metadata(&scrape_url, "https://example.com")
+        let (resp, raw) = fetch_metadata(&scrape_url, "https://example.com")
             .await
             .expect("should map metadata");
 
         assert_eq!(resp.title, "Example");
         assert_eq!(resp.description, "Desc");
         assert_eq!(resp.image, "https://img/x.png");
+        assert_eq!(
+            raw,
+            r#"{"title":"Example","description":"Desc","image":"https://img/x.png"}"#,
+        );
         mock.assert_async().await;
     }
 
@@ -286,7 +303,7 @@ mod tests {
             .await;
 
         let scrape_url = format!("{}/scrape", server.url());
-        let resp = fetch_metadata(&scrape_url, "https://x.test")
+        let (resp, _raw) = fetch_metadata(&scrape_url, "https://x.test")
             .await
             .expect("should map metadata");
 
@@ -330,6 +347,7 @@ mod tests {
             title: title.to_string(),
             description: String::new(),
             image: String::new(),
+            raw_response: None,
             error_code: None,
             error_message: None,
             created_at: updated_at,
