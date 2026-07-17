@@ -121,7 +121,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         merged.pendingServers === prev.pendingServers &&
         merged.hasPendingRefresh === prev.hasPendingRefresh
       ) {
-        return {};
+        return state;
       }
       const next = new Map(state.queries);
       next.set(key, merged);
@@ -339,7 +339,7 @@ export function setQueryCache(
       merged.pendingServers === prev.pendingServers &&
       merged.hasPendingRefresh === prev.hasPendingRefresh
     ) {
-      return {};
+      return state;
     }
     const next = new Map(state.queries);
     next.set(cacheKey, merged);
