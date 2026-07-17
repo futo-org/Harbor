@@ -82,7 +82,6 @@ function RootStack() {
           />
           <Stack.Screen name="identity/switch" />
           <Stack.Screen name="verifications/index" />
-          <Stack.Screen name="verifications/claim" />
         </Stack.Protected>
 
         <Stack.Screen
