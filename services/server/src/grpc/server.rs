@@ -46,7 +46,7 @@ pub fn build_grpc_router(
     let pairing_service =
         service::identity::pairing::rpc::build_pairing_service(db.clone());
     let identity_service =
-        service::identity::rpc::build_identity_service(db.clone());
+        service::identity::rpc::build_identity_service(ctx.clone());
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
     let verifications_service =

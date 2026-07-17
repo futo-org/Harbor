@@ -3,15 +3,16 @@
 
 pub mod is_moderator;
 
+use crate::service::context::ServiceContext;
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
 use crate::service::proto::{IsModeratorResponse, SignedMessage};
-use sea_orm::DatabaseConnection;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 pub struct IdentityServiceImpl {
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
     // This server's canonical name; signed request bodies must be
     // addressed to it. Same value stamped into SOURCE_SERVER on
     // published events.
@@ -26,7 +27,7 @@ impl IdentityService for IdentityServiceImpl {
     ) -> Result<Response<IsModeratorResponse>, Status> {
         Ok(Response::new(
             is_moderator::handle(
-                &self.db,
+                &self.ctx,
                 &self.server_name,
                 request.into_inner(),
             )
@@ -37,10 +38,10 @@ impl IdentityService for IdentityServiceImpl {
 
 /// Creates the gRPC service implementation for identity APIs.
 pub fn build_identity_service(
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 ) -> IdentityServiceServer<IdentityServiceImpl> {
     IdentityServiceServer::new(IdentityServiceImpl {
-        db,
+        ctx,
         server_name: std::env::var("POLYCENTRIC_SERVER_NAME")
             .unwrap_or_default(),
     })
@@ -58,9 +59,19 @@ mod tests {
 
     const TEST_SERVER: &str = "http://test-server";
 
-    fn impl_for_testing() -> IdentityServiceImpl {
+    async fn mock_ctx(db: sea_orm::DatabaseConnection) -> Arc<ServiceContext> {
+        let kafka_producer = common_kafka::build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        ServiceContext::new(db, kafka_producer)
+    }
+
+    async fn impl_for_testing() -> IdentityServiceImpl {
         IdentityServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            ctx: mock_ctx(
+                MockDatabase::new(DbBackend::Postgres).into_connection(),
+            )
+            .await,
             server_name: TEST_SERVER.to_string(),
         }
     }
@@ -87,7 +98,7 @@ mod tests {
 
     #[tokio::test]
     async fn is_moderator_rejects_invalid_signature() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg =
             make_signed_body("identity", Utc::now().timestamp_millis());
         msg.signature[0] ^= 1;
@@ -99,7 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn is_moderator_rejects_missing_public_key() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg =
             make_signed_body("identity", Utc::now().timestamp_millis());
         msg.public_key = None;
@@ -111,7 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn is_moderator_rejects_stale_timestamp() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let msg = make_signed_body(
             "identity",
             Utc::now().timestamp_millis() - 60 * 60 * 1000,
@@ -127,7 +138,10 @@ mod tests {
         // Valid signature and timestamp, but the signed body is addressed
         // to a different server, e.g. relayed by the server it was sent to.
         let service = IdentityServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            ctx: mock_ctx(
+                MockDatabase::new(DbBackend::Postgres).into_connection(),
+            )
+            .await,
             server_name: "http://another-server".to_string(),
         };
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
@@ -142,12 +156,15 @@ mod tests {
         // Signature and timestamp are valid, but the mock database has no
         // identity events, so the signer is not an authorized key.
         let service = IdentityServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres)
-                .append_query_results::<(
-                    ::entity::event_model::Model,
-                    Option<::entity::content_model::Model>,
-                ), _, _>(vec![vec![]])
-                .into_connection(),
+            ctx: mock_ctx(
+                MockDatabase::new(DbBackend::Postgres)
+                    .append_query_results::<(
+                        ::entity::event_model::Model,
+                        Option<::entity::content_model::Model>,
+                    ), _, _>(vec![vec![]])
+                    .into_connection(),
+            )
+            .await,
             server_name: TEST_SERVER.to_string(),
         };
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
