@@ -1,6 +1,6 @@
 import type { IEventAckRepository } from '@polycentric/js-core';
 import { DatabaseError } from '@polycentric/js-core';
-import { IndexedDBDatabase, IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
 
 interface PersistedEventAck {
   system_key_type: number;

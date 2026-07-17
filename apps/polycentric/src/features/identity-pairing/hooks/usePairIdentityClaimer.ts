@@ -71,8 +71,12 @@ export function usePairIdentityClaimer(
         if (!currentKey) return;
 
         const keys = new Set<string>();
-        state.rotationKeys.forEach((k) => keys.add(publicKeyToString(k)));
-        state.signingKeys.forEach((k) => keys.add(publicKeyToString(k)));
+        state.rotationKeys.forEach((k) => {
+          keys.add(publicKeyToString(k));
+        });
+        state.signingKeys.forEach((k) => {
+          keys.add(publicKeyToString(k));
+        });
 
         if (keys.has(publicKeyToString(currentKey))) {
           setAuthorized(true);

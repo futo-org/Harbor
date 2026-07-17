@@ -491,7 +491,7 @@ export class PolycentricClient {
 
   /** Convert to FFI types */
   private getFilterHeads(heads: Proto.EventKey[]): EventKey[] {
-    let out: EventKey[] = [];
+    const out: EventKey[] = [];
 
     for (const head of heads) {
       if (!head.signedBy) continue;
@@ -677,7 +677,7 @@ export class PolycentricClient {
     const identity = this.activeIdentityKey;
 
     // Only filter by heads when doing a partial pull
-    let heads = undefined;
+    let heads: Proto.EventKey[] | undefined;
 
     if (partial) {
       // Partial pulls will skip events at or before each event stream head.
@@ -690,7 +690,7 @@ export class PolycentricClient {
           const event = Proto.Event.fromBinary(signedEvent.eventBytes);
           return event.key;
         })
-        .filter((head) => !!head);
+        .filter((head): head is Proto.EventKey => !!head);
     }
 
     // Fetch new bundles from server
@@ -710,7 +710,7 @@ export class PolycentricClient {
     }
 
     // Remove duplicate blobs
-    let blobMap: Map<string, Proto.Blob> = new Map();
+    const blobMap: Map<string, Proto.Blob> = new Map();
 
     for (const blob of blobs) {
       if (!blob.digest) continue;
@@ -837,7 +837,7 @@ export class PolycentricClient {
     const pushFn = this.getPushFn(strategy, identity);
 
     // Pull concurrently with pushing new events and blobs
-    let pullTask = pullFn();
+    const pullTask = pullFn();
 
     // Push new events and blobs to servers
     const pushTasks = this.servers.map(async (server): Promise<void> => {

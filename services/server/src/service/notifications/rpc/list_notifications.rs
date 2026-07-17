@@ -3,6 +3,7 @@ use crate::{
     service::{
         context::ServiceContext,
         events::TargetEventKey,
+        events::repository::Query as EventsRepository,
         feeds::{repository::Query as FeedsRepository, util::map_db_err},
         identity::service::{
             list_identity_events, list_profile_events, rows_to_bundles,
@@ -129,8 +130,16 @@ async fn hydrate(
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
     let mut fetched_bundles = rows_to_bundles(fetched);
     attach_proofs(ctx, &mut fetched_bundles).await?;
-    let bundles: HashMap<TargetEventKey, EventBundle> =
-        fetched_keys.into_iter().zip(fetched_bundles).collect();
+
+    let mut bundles: HashMap<TargetEventKey, EventBundle> =
+        fetched_keys.iter().cloned().zip(fetched_bundles).collect();
+
+    let reply_count_fut = async {
+        EventsRepository::count_replies(&ctx.db, fetched_keys)
+            .await
+            .map_err(map_db_err)
+    };
+
     // Fetch label events for trigger events only: we assume recipient is the target's
     // author and does not object to their own posts.
     let label_fut = async {
@@ -145,10 +154,12 @@ async fn hydrate(
 
     // Author identity, profile, and moderation label events all ship as hints.
     let identities: Vec<String> = identities.into_iter().collect();
-    let (identity_events, profile_events, label_rows) = tokio::try_join!(
+
+    let (identity_events, profile_events, label_rows, reply_counts) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
         label_fut,
+        reply_count_fut
     )?;
 
     let mut label_bundles = rows_to_bundles(label_rows);
@@ -165,6 +176,14 @@ async fn hydrate(
     event_hints.extend(label_bundles.into_iter().map(|b| EventHint {
         event_bundle: Some(b),
     }));
+
+    for (key, reply_count) in reply_counts {
+        if let Some(bundle) = bundles.get_mut(&key) {
+            let meta = bundle.meta.get_or_insert_default();
+            meta.reply_count =
+                Some(i32::try_from(reply_count).unwrap_or(i32::MAX));
+        }
+    }
 
     Ok(Hydrated {
         bundles,

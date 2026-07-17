@@ -3,7 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { create } from 'zustand';
 import { Routes } from '@/src/common/constants';
 import { createIdentity } from '@polycentric/react-native';
-import { getNextStep, isLastStep, SignupRoute } from './flow';
+import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
   DEFAULT_SERVER,
   usePolycentricContext,

@@ -5,7 +5,7 @@ const { version: PKG_VERSION } = require('./package.json');
 
 const IS_DEV = process.env.APP_VARIANT === 'dev';
 
-const NAME = IS_DEV ? 'Polycentric Dev' : 'Polycentric';
+const NAME = IS_DEV ? 'Harbor Dev' : 'Harbor';
 const ID = IS_DEV ? 'org.futo.polycentric.dev' : 'org.futo.polycentric';
 
 const GOOGLE_SERVICES_FILE =
@@ -46,7 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         './src/common/assets/images/app-icons/android-icon-monochrome.png',
       backgroundImage:
         './src/common/assets/images/app-icons/android-icon-background.png',
-      backgroundColor: '#F2F5F9',
+      backgroundColor: '#FF6A00',
     },
     package: ID,
     permissions: ['android.permission.CAMERA'],
@@ -60,7 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: './src/common/assets/images/app-icons/ios-icon-default.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: '#F2F5F9',
+        backgroundColor: '#FF6A00',
       },
     ],
     'expo-font',

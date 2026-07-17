@@ -57,7 +57,7 @@ export class HTTPClient {
     const systemQuery = encodeBase64(system);
     const rangesQuery = encodeBase64(ranges);
 
-    let url = `${server}/events?system=${systemQuery}&ranges=${rangesQuery}`;
+    const url = `${server}/events?system=${systemQuery}&ranges=${rangesQuery}`;
 
     const response = await this.requestManager.makeRequest(url);
     return response.ok
@@ -88,7 +88,7 @@ export class HTTPClient {
   async getExplore(
     server: string,
     cursor?: Uint8Array,
-    limit?: Number,
+    limit?: number,
     moderationFilters?: string,
   ): Promise<Uint8Array> {
     const url = new URL(server);
@@ -120,7 +120,7 @@ export class HTTPClient {
     searchQuery?: string,
     searchType?: string,
     cursor?: Uint8Array,
-    limit?: Number,
+    limit?: number,
     moderationFilters?: string,
   ): Promise<Uint8Array> {
     const url = new URL(server);

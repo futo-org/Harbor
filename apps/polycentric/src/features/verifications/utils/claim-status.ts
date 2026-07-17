@@ -1,5 +1,5 @@
 import { v2 } from '@polycentric/react-native';
-import { DecodedClaim, decodeClaimBundle } from '../hooks/useClaimById';
+import { type DecodedClaim, decodeClaimBundle } from '../hooks/useClaimById';
 
 export interface ClaimVerifier {
   identity: string;
@@ -35,9 +35,7 @@ export function decodeTargetIdentities(bundles: v2.EventBundle[]): string[] {
           out.push(identity);
         }
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return out;
 }
@@ -52,9 +50,7 @@ export function decodeVerifierIdentities(
     try {
       const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
       if (event.key?.identity) out.add(event.key.identity);
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return out;
 }

@@ -1,4 +1,4 @@
-import * as Proto from '../proto/v2';
+import type * as Proto from '../proto/v2';
 
 /**
  * Client-side blob storage for server `/blob/` files (profile pictures,

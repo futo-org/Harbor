@@ -27,6 +27,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
   useFocusEffect: () => undefined,
   useIsFocused: () => true,
+  useNavigation: () => ({ dispatch: jest.fn() }),
 }));
 
 jest.mock('./hooks/useProfile', () => ({ useProfile: jest.fn() }));

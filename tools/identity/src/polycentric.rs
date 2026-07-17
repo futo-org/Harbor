@@ -18,6 +18,7 @@ pub fn publish(server: &str, events: Vec<ExportedEvent>) -> Result<usize> {
                 content_bytes: e.content,
             }),
             event_proofs: vec![],
+            meta: None,
         })
         .collect();
     let count = event_bundles.len();

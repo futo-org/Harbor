@@ -2,7 +2,7 @@ import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SelectChip } from '../SelectChip';
-import { Platform, PLATFORMS } from '../utils/platforms';
+import { type Platform, PLATFORMS } from '../utils/platforms';
 
 // The grid of platforms a claim can be verified against.
 export function ClaimCreatePlatformPicker({

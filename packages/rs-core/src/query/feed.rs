@@ -1,32 +1,32 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
+use std::cmp::Reverse;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
+
+use base64::prelude::*;
+use polycentric_common::error::CoreError;
+use polycentric_common::models::protos_v2::{
+    Event, EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
+    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageInfo, PageParams,
+    feeds_service_client::FeedsServiceClient,
+};
+use prost::Message;
+use serde::{Deserialize, Serialize};
+
 use crate::{
     client::PolycentricClient,
     logging::log_warn,
     query::{
         QueryClient, QueryKey, QueryObservable, QueryOpts, channel,
         event::{
-            dedup::{EventDedupKey, event_dedup_key},
             key::EventKey,
+            merge::{
+                EventBundleResponse, merge_bundle_responses, merge_event_bundles, merge_event_hints,
+            },
         },
         validation::{retain_validated_bundles, retain_validated_hints},
     },
-};
-use base64::prelude::*;
-use polycentric_common::{
-    error::CoreError,
-    models::protos_v2::{
-        Event, EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse,
-        GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
-        GetPostThreadResponse, PageInfo, PageParams, feeds_service_client::FeedsServiceClient,
-    },
-};
-use prost::Message;
-use serde::{Deserialize, Serialize};
-use std::{
-    cmp::Reverse,
-    collections::{BTreeMap, HashSet},
-    sync::{Arc, Mutex},
 };
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -223,7 +223,7 @@ fn merge_cursors(t1: String, t2: String) -> (String, bool) {
     (merged.encode().unwrap_or(t1), more_data)
 }
 
-pub(crate) fn merge_page_info(i1: Option<PageInfo>, i2: Option<PageInfo>) -> Option<PageInfo> {
+pub fn merge_page_info(i1: Option<PageInfo>, i2: Option<PageInfo>) -> Option<PageInfo> {
     match (i1, i2) {
         (None, None) => None,
         (Some(i), None) => Some(i),
@@ -242,36 +242,54 @@ pub(crate) fn merge_page_info(i1: Option<PageInfo>, i2: Option<PageInfo>) -> Opt
     }
 }
 
-/// Merge function for every feed-RPC observable.
-fn merge_feed_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    let mut merged = GetFeedResponse::default();
+/// Pull bundles out of each `EventHint` and copy them into the local
+/// client stores. Hints are useful side-information the server
+/// provides (e.g. the profile of a post's author).
+fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
+    let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
 
+    if !bundles.is_empty() {
+        client.lock().unwrap().copy_bundles(bundles);
+    }
+}
+
+/// Merge function for every feed-RPC observable
+fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    do_feed_merge(values, client, true)
+}
+
+/// TODO: remove.
+/// currently only used in tests.
+#[allow(dead_code)]
+fn merge_feed_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    do_feed_merge(values, client, false)
+}
+
+fn do_feed_merge(
+    values: &[Vec<u8>],
+    client: &Arc<Mutex<PolycentricClient>>,
+    validate: bool,
+) -> Vec<u8> {
+    let mut response = GetFeedResponse::default();
     for v in values {
         if let Ok(incoming) = GetFeedResponse::decode(v.as_slice()) {
-            merged.event_bundles.extend(incoming.event_bundles);
-            merged.event_hints.extend(incoming.event_hints);
-            merged.page_info = merge_page_info(merged.page_info, incoming.page_info);
+            response.event_bundles.extend(incoming.event_bundles);
+            response.event_hints.extend(incoming.event_hints);
+            response.page_info = merge_page_info(response.page_info, incoming.page_info);
         }
     }
 
-    let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
-    merged
-        .event_bundles
-        .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen_bundles.insert(k),
-            None => true,
-        });
+    merge_event_bundles(&mut response.event_bundles);
+    merge_event_hints(&mut response.event_hints);
 
-    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
-    merged.event_hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen_hints.insert(k),
-            None => true,
-        },
-    );
+    if validate {
+        let c = client.lock().unwrap();
+        retain_validated_bundles(&c, &mut response.event_bundles);
+        retain_validated_hints(&c, &mut response.event_hints);
+    }
 
     // Ensure the merged events are sorted in feed order
-    merged.event_bundles.sort_by_cached_key(|bundle| {
+    response.event_bundles.sort_by_cached_key(|bundle| {
         let created_at = bundle
             .signed_event
             .as_ref()
@@ -282,41 +300,18 @@ fn merge_feed_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClien
         Reverse(created_at)
     });
 
-    merged.encode_to_vec()
+    response.encode_to_vec()
 }
 
-/// Pull bundles out of each `EventHint` and copy them into the local
-/// client stores. Hints are useful side-information the server
-/// provides (e.g. the profile of a post's author).
-fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
-    let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
-    if !bundles.is_empty() {
-        client.lock().unwrap().copy_bundles(bundles);
+/// Thread responses follow the shape of events + hints, except the events
+/// are stored in `self.thread`.
+impl EventBundleResponse for GetPostThreadResponse {
+    fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
+        &mut self.thread
     }
-}
-
-/// Validates events feed-RPC observables.
-fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    let merged = merge_feed_responses(values, client);
-    let Ok(mut response) = GetFeedResponse::decode(merged.as_slice()) else {
-        return merged;
-    };
-    let c = client.lock().unwrap();
-    retain_validated_bundles(&c, &mut response.event_bundles);
-    retain_validated_hints(&c, &mut response.event_hints);
-    response.encode_to_vec()
-}
-
-/// Validating merge for the post-thread observable. Same as validated_feed_merge above.
-fn validated_thread_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    let merged = merge_thread_responses(values, client);
-    let Ok(mut response) = GetPostThreadResponse::decode(merged.as_slice()) else {
-        return merged;
-    };
-    let c = client.lock().unwrap();
-    retain_validated_bundles(&c, &mut response.thread);
-    retain_validated_hints(&c, &mut response.event_hints);
-    response.encode_to_vec()
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 /// Return posts for an identity.
@@ -469,38 +464,6 @@ pub fn get_explore_feed(
     Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
 }
 
-/// Merge function for the post-thread observable. Concatenates the
-/// `thread` and `event_hints` lists from each per-server response and
-/// dedupes each by `EventKey` so duplicate posts/hints coming back
-/// from multiple servers only appear once.
-fn merge_thread_responses(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    let mut merged = GetPostThreadResponse::default();
-    for v in values {
-        if let Ok(incoming) = GetPostThreadResponse::decode(v.as_slice()) {
-            merged.thread.extend(incoming.thread);
-            merged.event_hints.extend(incoming.event_hints);
-        }
-    }
-
-    let mut seen_thread: HashSet<EventDedupKey> = HashSet::new();
-    merged
-        .thread
-        .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen_thread.insert(k),
-            None => true,
-        });
-
-    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
-    merged.event_hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen_hints.insert(k),
-            None => true,
-        },
-    );
-
-    merged.encode_to_vec()
-}
-
 /// Fetch a parent post and its direct replies. `event_key` identifies
 /// the parent post. Fans out to every configured server and emits the
 /// merged `GetPostThreadResponse` progressively; each response's
@@ -536,11 +499,18 @@ pub fn get_post_thread(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_thread_merge, opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        merge_bundle_responses::<GetPostThreadResponse>,
+        opts,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::query::event::merge::event_dedup_key;
+
     use super::*;
     use polycentric_common::models::protos_v2::{
         Event, EventBundle, EventHint, EventKey, GetFeedResponse, PublicKey, SignedEvent,
@@ -569,6 +539,7 @@ mod tests {
             }),
             serialized_content: None,
             event_proofs: Vec::new(),
+            meta: None,
         }
     }
 
@@ -603,6 +574,7 @@ mod tests {
             signed_event: None,
             serialized_content: None,
             event_proofs: Vec::new(),
+            meta: None,
         };
         assert!(event_dedup_key(&bundle).is_none());
     }
@@ -616,6 +588,7 @@ mod tests {
             }),
             serialized_content: None,
             event_proofs: Vec::new(),
+            meta: None,
         };
         assert!(event_dedup_key(&bundle).is_none());
     }
@@ -679,6 +652,7 @@ mod tests {
             }),
             serialized_content: None,
             event_proofs: Vec::new(),
+            meta: None,
         };
         let new = encode_response(vec![parseable, unparseable.clone(), unparseable], vec![]);
         let merged = merge_feed_responses(&[new], &test_client());

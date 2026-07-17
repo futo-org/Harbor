@@ -1,6 +1,9 @@
 import { router } from 'expo-router';
 import { useCallback } from 'react';
-import { useImageViewerStore, ImageViewerInput } from './useImageViewerStore';
+import {
+  useImageViewerStore,
+  type ImageViewerInput,
+} from './useImageViewerStore';
 
 /**
  * Opens the full-screen image viewer from anywhere in the app: stashes

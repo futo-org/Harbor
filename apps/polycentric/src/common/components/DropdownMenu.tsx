@@ -1,5 +1,6 @@
 import * as DropdownMenuPrimitive from '@rn-primitives/dropdown-menu';
-import React, { ReactNode } from 'react';
+import type React from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Atoms, useTheme } from '../theme';

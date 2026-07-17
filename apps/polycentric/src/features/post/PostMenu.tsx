@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import {
-  PostData,
+  type PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
@@ -22,7 +22,7 @@ export default function PostMenu({ post }: PostMenuProps) {
   const { identity: currIdentity } = useCurrentIdentity();
   const isPostAuthor = currIdentity?.identityKey === post.identity;
 
-  const { deleteAsync: deleteAsync } = usePostActions(post);
+  const { deleteAsync } = usePostActions(post);
 
   const [showReportSheet, setShowReportSheet] = useState<boolean>(false);
 

@@ -12,6 +12,7 @@ export function useFallbackUri(candidates: string[]): {
   const key = candidates.join('\n');
   const [index, setIndex] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is the reset trigger, not a capture
   useEffect(() => setIndex(0), [key]);
 
   const onError = useCallback(() => {

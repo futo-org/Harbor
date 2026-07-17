@@ -1,5 +1,5 @@
 import { Atoms } from '@/src/common/theme';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { Text } from './primitives';
 

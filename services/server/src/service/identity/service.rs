@@ -149,18 +149,22 @@ fn decode_identity_content(bytes: &[u8]) -> Option<Identity> {
 
 /// `(EventModel, Option<ContentModel>)` rows → `EventBundle`s with no proofs.
 pub fn rows_to_bundles(rows: Vec<EventWithContentRow>) -> Vec<EventBundle> {
-    rows.into_iter()
-        .map(|(event, content)| EventBundle {
-            signed_event: Some(SignedEvent {
-                event_bytes: event.event_bytes,
-                signature: event.signature,
-            }),
-            serialized_content: content.map(|c| SerializedContent {
-                content_bytes: c.serialized_bytes,
-            }),
-            event_proofs: Vec::new(),
-        })
-        .collect()
+    rows.into_iter().map(row_to_bundle).collect()
+}
+
+pub fn row_to_bundle(row: EventWithContentRow) -> EventBundle {
+    let (event, content) = row;
+    EventBundle {
+        signed_event: Some(SignedEvent {
+            event_bytes: event.event_bytes,
+            signature: event.signature,
+        }),
+        serialized_content: content.map(|c| SerializedContent {
+            content_bytes: c.serialized_bytes,
+        }),
+        event_proofs: Vec::new(),
+        meta: None,
+    }
 }
 
 /// Wrap bundles as `EventHint`s.

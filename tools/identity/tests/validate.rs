@@ -31,6 +31,7 @@ fn generated_identity_chain_validates_against_core() {
                 content_bytes: e.content,
             }),
             event_proofs: vec![],
+            meta: None,
         })
         .collect();
     let mut client = PolycentricClient::new();

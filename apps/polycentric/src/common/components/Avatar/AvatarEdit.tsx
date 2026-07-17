@@ -1,4 +1,4 @@
-import { ComponentProps, useState } from 'react';
+import { type ComponentProps, useState } from 'react';
 import { Avatar } from './Avatar';
 import * as ImagePicker from 'expo-image-picker';
 

@@ -27,6 +27,7 @@ export function ServersSettingsSheet() {
     setServers([...client.servers]);
   }, [client]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-read the server list when the identity switches
   useEffect(() => {
     refreshServers();
   }, [identity, refreshServers]);

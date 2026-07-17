@@ -1,6 +1,10 @@
 import { Atoms } from '@/src/common/theme';
 import React, { isValidElement, useState, type ReactNode } from 'react';
-import { LayoutChangeEvent, StyleSheet, type ViewStyle } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  StyleSheet,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,

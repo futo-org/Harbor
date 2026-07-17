@@ -2,7 +2,7 @@ import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { DecodedClaim } from './useClaimById';
+import type { DecodedClaim } from './useClaimById';
 
 // Actions for a verification claim (currently just delete).
 export default function useClaimActions(claim: DecodedClaim) {

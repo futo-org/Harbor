@@ -3,7 +3,7 @@ import {
   stringToPublicKey,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { type ActivePairingSession } from '@polycentric/react-native';
+import type { ActivePairingSession } from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function usePairIdentityIssuer(identityKey: string | null | undefined) {
@@ -27,8 +27,12 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
       .fetchIdentityState(identityKey)
       .then((state) => {
         const next = new Set<string>();
-        state.rotationKeys.forEach((k) => next.add(publicKeyToString(k)));
-        state.signingKeys.forEach((k) => next.add(publicKeyToString(k)));
+        state.rotationKeys.forEach((k) => {
+          next.add(publicKeyToString(k));
+        });
+        state.signingKeys.forEach((k) => {
+          next.add(publicKeyToString(k));
+        });
         setAuthorizedClaimers(next);
       })
       .catch(() => {});

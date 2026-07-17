@@ -7,7 +7,7 @@ import { Atoms } from '@/src/common/theme';
 import { RefreshControl, View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
-import { NotificationData } from './utils';
+import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {

@@ -1,6 +1,6 @@
 import { Atoms, useTheme } from '@/src/common/theme';
-import { ReactNode } from 'react';
-import { StyleProp, View, ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { type StyleProp, View, type ViewStyle } from 'react-native';
 
 // Shared pill container for toolbar chips (non-interactive). Plain content
 // gets a roomier left pad; chips with a round leading element pass `pl_xs`.

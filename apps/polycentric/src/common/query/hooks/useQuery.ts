@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import {
   FetchMode,
-  Query,
-  QueryOpts,
+  type Query,
+  type QueryOpts,
   QueryStatus,
   type PolycentricClient,
 } from '@polycentric/react-native';
@@ -68,14 +68,14 @@ export enum RefreshStrategy {
   Eager,
 }
 
+export type QueryKey = string[];
+
 type QueryArgs = {
   client: PolycentricClient;
   queryKey: QueryKey;
   query: Query;
   opts: QueryOpts | undefined;
 };
-
-type QueryKey = string[];
 
 type SubscriptionRef = {
   refCount: number;
@@ -154,7 +154,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     // Listen for outputs from relevant servers
     const sub = observable.subscribe({
       next(result) {
-        let patch: Partial<QueryRef> = {
+        const patch: Partial<QueryRef> = {
           data: result.data,
           status: result.status,
           successfulServers: result.successfulServers,
@@ -237,7 +237,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       }
 
       // Update javascript-side query store entry
-      let patch: Partial<QueryRef> = {
+      const patch: Partial<QueryRef> = {
         ...LOADING_ENTRY,
         hasPendingRefresh: true,
       };

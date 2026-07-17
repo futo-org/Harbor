@@ -13,10 +13,16 @@ jest.mock('@noble/hashes/sha2.js', () => ({
   sha256: () => new Uint8Array(32),
 }));
 
-jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
-  bytesToHex: (bytes: Uint8Array) => Buffer.from(bytes).toString('hex'),
-  getKeyFingerprint: () => 'fingerprint',
-}));
+jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
+  const helpers = jest.requireActual(
+    '@/src/common/lib/polycentric-hooks/helpers',
+  );
+  return {
+    bytesToHex: helpers.bytesToHex,
+    getKeyFingerprint: () => 'fingerprint',
+    eventKeyId: helpers.eventKeyId,
+  };
+});
 
 let mockQueryData: Uint8Array | null = null;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({

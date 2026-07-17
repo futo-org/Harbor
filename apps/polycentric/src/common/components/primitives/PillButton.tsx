@@ -1,4 +1,9 @@
-import { Pressable, PressableProps, StyleSheet, Animated } from 'react-native';
+import {
+  Pressable,
+  type PressableProps,
+  StyleSheet,
+  Animated,
+} from 'react-native';
 import { Text } from './Text';
 import {
   useTheme,

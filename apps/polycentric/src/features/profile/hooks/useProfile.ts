@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FetchMode, Query, v2 } from '@polycentric/react-native';
+import { FetchMode, Query, type v2 } from '@polycentric/react-native';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 

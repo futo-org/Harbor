@@ -1,4 +1,4 @@
-import { ComponentProps, useMemo } from 'react';
+import { type ComponentProps, useMemo } from 'react';
 import { resolveAvatarSize } from './Avatar';
 import AvatarEdit from './AvatarEdit';
 import {

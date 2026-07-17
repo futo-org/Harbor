@@ -30,7 +30,6 @@ export function createBatchingLogSink(maxQueue = 1000): {
   const flush = () => {
     scheduled = false;
     if (dropped > 0) {
-      // eslint-disable-next-line no-console
       console.warn(
         `[polycentric] dropped ${dropped} log message(s) (backpressure)`,
       );
@@ -38,7 +37,6 @@ export function createBatchingLogSink(maxQueue = 1000): {
     }
     if (queue.length === 0) return;
     const batch = queue.splice(0, queue.length).join('\n');
-    // eslint-disable-next-line no-console
     console.log(batch);
   };
 

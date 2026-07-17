@@ -1,9 +1,9 @@
 import { Text } from '@/src/common/components';
-import Icon, { IconName } from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
   BorderRadius,
-  PaletteColorToken,
+  type PaletteColorToken,
   useTheme,
 } from '@/src/common/theme';
 import * as ToastPrimitive from '@rn-primitives/toast';
@@ -16,7 +16,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
-import { ToastData, ToastVariant, useToastStore } from './useToastStore';
+import {
+  type ToastData,
+  type ToastVariant,
+  useToastStore,
+} from './useToastStore';
 
 const ENTER_MS = 220;
 const EXIT_MS = 160;

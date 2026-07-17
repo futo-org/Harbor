@@ -1,9 +1,9 @@
 import { Button } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
-import { type PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { types } from '@polycentric/react-native';
+import type { types } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator } from 'react-native';

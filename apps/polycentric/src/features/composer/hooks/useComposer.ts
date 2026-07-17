@@ -12,11 +12,13 @@ import {
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { parseTextLinks } from '@/src/common/util/parseTextLinks';
 import {
+  alterPostReplyCount,
   feedQueryKeys,
   injectPostIntoFeedCache,
+  injectReplyIntoThreadCache,
+  threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
-import { injectReplyIntoThreadCache } from '@/src/features/post/hooks/useThread';
-import { COLLECTION, types, v2 } from '@polycentric/react-native';
+import { COLLECTION, type types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
@@ -195,7 +197,9 @@ export function useComposer({
         status: 'processing' as const,
       }));
       addAttachments(additions);
-      additions.forEach((a) => startUpload(a.id, a.uri));
+      additions.forEach((a) => {
+        startUpload(a.id, a.uri);
+      });
       setError(null);
     },
     [attachments.length, addAttachments, startUpload, setError],
@@ -314,7 +318,7 @@ export function useComposer({
         };
       }
 
-      if (!!quote) {
+      if (quote) {
         post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
       }
 
@@ -337,8 +341,13 @@ export function useComposer({
 
       // Optimistically add the new event to the below query
       if (isReply && replyTo) {
-        injectReplyIntoThreadCache(replyTo.id, newBundle);
+        injectReplyIntoThreadCache(newBundle);
+        alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.following(), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
       }
+
       injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);

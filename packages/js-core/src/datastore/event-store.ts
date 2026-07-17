@@ -1,5 +1,5 @@
-import { IEventRepository } from '../platform-interfaces';
-import * as Proto from '../proto/v2';
+import type { IEventRepository } from '../platform-interfaces';
+import type * as Proto from '../proto/v2';
 import { DatabaseError } from '../errors';
 
 /**

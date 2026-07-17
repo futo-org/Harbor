@@ -1,19 +1,17 @@
-pub mod dedup;
 pub mod key;
+pub mod merge;
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use polycentric_common::models::protos_v2;
 use polycentric_common::models::protos_v2::{
-    EventBundle, ListEventsFilters, ListEventsRequest, ListEventsResponse,
+    EventBundle, EventHint, ListEventsFilters, ListEventsRequest, ListEventsResponse,
     event_sync_service_client::EventSyncServiceClient,
 };
 use prost::Message;
 
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::event::key::{EventKey, PublicKey};
-use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
+use crate::query::event::merge::{EventBundleResponse, merge_bundle_responses};
 use crate::query::{
     QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
@@ -37,39 +35,13 @@ pub struct GetEventArgs {
     pub sequence: u64,
 }
 
-fn merge_list_events_responses(
-    values: &[Vec<u8>],
-    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
-) -> Vec<u8> {
-    let mut merged = ListEventsResponse::default();
-    for v in values {
-        if let Ok(incoming) = ListEventsResponse::decode(v.as_slice()) {
-            merged.event_bundles.extend(incoming.event_bundles);
-            merged.event_hints.extend(incoming.event_hints);
-        }
+impl EventBundleResponse for ListEventsResponse {
+    fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
+        &mut self.event_bundles
     }
-
-    let mut seen_bundles: HashSet<EventDedupKey> = HashSet::new();
-    merged
-        .event_bundles
-        .retain(|bundle| match event_dedup_key(bundle) {
-            Some(k) => seen_bundles.insert(k),
-            None => true,
-        });
-    let mut seen_hints: HashSet<EventDedupKey> = HashSet::new();
-    merged.event_hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen_hints.insert(k),
-            None => true,
-        },
-    );
-
-    let c = client.lock().unwrap();
-    retain_validated_bundles(&c, &mut merged.event_bundles);
-    retain_validated_hints(&c, &mut merged.event_hints);
-    drop(c);
-
-    merged.encode_to_vec()
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 /// Returns serialized `ListEventsResponse` proto bytes on each emission with
@@ -148,7 +120,12 @@ pub fn list_events(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_list_events_responses, opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        merge_bundle_responses::<ListEventsResponse>,
+        opts,
+    ))
 }
 
 /// Merge function for `get_event`. Each per-server slot stores the

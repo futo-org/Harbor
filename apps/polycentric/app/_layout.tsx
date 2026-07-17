@@ -52,10 +52,10 @@ function RootStack() {
             ...); deep-linked profile/post views stay public everywhere. On
             web the tabs stay routable and get granular guards instead. */}
         <Stack.Protected guard={isWeb || accountGuard}>
-          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
         </Stack.Protected>
 
-        <Stack.Screen name="(onboarding)" />
+        <Stack.Screen name="(onboarding)" options={{ animation: 'none' }} />
 
         {/* Account-only on every platform. Routes are auto-registered from
             the filesystem; the explicit declarations here exist to place

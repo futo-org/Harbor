@@ -35,9 +35,7 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
       if (!latest || sequence > latest.sequence) {
         latest = { sequence, update: content.contentBody.profileUpdate };
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   return {

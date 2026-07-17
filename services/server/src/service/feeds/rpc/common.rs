@@ -4,6 +4,7 @@
 use crate::data::hydration::HydrationState;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
+use crate::service::events::repository::Query as EventsRepository;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
@@ -15,7 +16,7 @@ use crate::service::feeds::util::{
 };
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, rows_to_bundles, rows_to_hints,
+    list_profile_events, row_to_bundle, rows_to_bundles, rows_to_hints,
 };
 
 use crate::service::proofs::service::attach_proofs;
@@ -24,7 +25,7 @@ use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
 use prost::Message;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
@@ -232,18 +233,26 @@ pub async fn hydrate(
         .map_err(map_db_err)
     };
 
+    let reply_counts_fut = async {
+        EventsRepository::count_replies(&ctx.db, keys.clone())
+            .await
+            .map_err(map_db_err)
+    };
+
     let (
         deletes_by_target,
         identity_events,
         profile_events,
         referenced,
         label_events,
+        reply_counts,
     ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
         profile_events_fut,
         referenced_fut,
         labels_fut,
+        reply_counts_fut,
     )?;
 
     let mut quote_post_events = Vec::new();
@@ -264,6 +273,7 @@ pub async fn hydrate(
         quote_post_events,
         repost_events,
         label_events,
+        reply_counts,
     })
 }
 
@@ -361,11 +371,21 @@ pub async fn view(
         quote_post_events,
         repost_events,
         label_events,
+        reply_counts,
         ..
     } = hydration;
 
-    let mut event_bundles = rows_to_bundles(live_rows);
+    let mut event_bundles = live_rows
+        .into_iter()
+        .map(|row| {
+            let (event, _) = &row;
+            let key = TargetEventKey::of(event);
+            with_reply_count(row_to_bundle(row), &key, &reply_counts)
+        })
+        .collect::<Vec<_>>();
+
     let mut label_bundles = rows_to_bundles(label_events);
+
     tokio::try_join!(
         attach_proofs(ctx, &mut event_bundles),
         attach_proofs(ctx, &mut tombstone_bundles),
@@ -389,4 +409,17 @@ pub async fn view(
         event_hints,
         page_info,
     })
+}
+
+fn with_reply_count(
+    mut bundle: EventBundle,
+    key: &TargetEventKey,
+    reply_counts: &HashMap<TargetEventKey, i64>,
+) -> EventBundle {
+    if let Some(count) = reply_counts.get(key) {
+        let meta = bundle.meta.get_or_insert_default();
+        meta.reply_count = Some(i32::try_from(*count).unwrap_or(i32::MAX));
+    }
+
+    bundle
 }

@@ -17,7 +17,7 @@
   },
   "files": ["dist", "ubrn.config.yaml", "ubrn-wasm-patch.toml"],
   "scripts": {
-    "prebuild": "cargo install wasm-bindgen-cli --version 0.2.122 --locked",
+    "prebuild": "wasm-bindgen --version 2>/dev/null | grep -qF 0.2.122 || cargo install wasm-bindgen-cli --version 0.2.122 --locked --force",
     "build": "ubrn build web",
     "clean": "rm -rfv dist/ rust_modules/"
   },

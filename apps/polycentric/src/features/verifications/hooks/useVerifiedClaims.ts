@@ -1,4 +1,4 @@
-import { DecodedClaim } from './useClaimById';
+import type { DecodedClaim } from './useClaimById';
 
 const EMPTY: DecodedClaim[] = [];
 const noop = () => {};

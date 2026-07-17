@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
-import { type PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
 import { useThread } from './hooks/useThread';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
-import { List, ListProps } from '@/src/common/components/List';
+import { List, type ListProps } from '@/src/common/components/List';
 import { isWeb } from '@/src/common/util/platform';
 
 type ThreadListProps = Omit<ListProps<PostData>, 'data' | 'renderItem'> & {

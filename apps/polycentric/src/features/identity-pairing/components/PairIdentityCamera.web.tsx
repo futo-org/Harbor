@@ -41,7 +41,9 @@ export function PairIdentityCamera({
       .getUserMedia({ video: { facingMode: 'environment' } })
       .then(async (nextStream) => {
         if (cancelled || !videoRef.current) {
-          nextStream.getTracks().forEach((track) => track.stop());
+          nextStream.getTracks().forEach((track) => {
+            track.stop();
+          });
           return;
         }
 
@@ -94,7 +96,9 @@ export function PairIdentityCamera({
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
       }
-      stream?.getTracks().forEach((track) => track.stop());
+      stream?.getTracks().forEach((track) => {
+        track.stop();
+      });
     };
   }, [canUseCamera, onCodeScanned, parseInput]);
 

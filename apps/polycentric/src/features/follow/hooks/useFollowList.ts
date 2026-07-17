@@ -53,9 +53,7 @@ function decodeEntries(
         if (!identity || seen.has(identity)) continue;
         seen.add(identity);
         entries.push({ identity, createdAt: event.createdAt });
-      } catch {
-        continue;
-      }
+      } catch {}
     }
 
     return [entries, response.pageInfo?.hasNextPage ?? false];

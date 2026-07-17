@@ -1,4 +1,8 @@
-import { ToastOptions, ToastVariant, useToastStore } from './useToastStore';
+import {
+  type ToastOptions,
+  type ToastVariant,
+  useToastStore,
+} from './useToastStore';
 
 function trigger(variant: ToastVariant) {
   return (title: string, options?: ToastOptions) =>

@@ -19,19 +19,24 @@
         - .gitlab/ci/build_rs_core.yml
   variables:
     RUST_CORE_PATH: packages/rs-core
+  before_script:
+    # Enable the compile cache only when the image provides sccache, so
+    # pipelines still on an older rust image keep working.
+    - command -v sccache >/dev/null && export RUSTC_WRAPPER=sccache || true
+  # Self-populating per job: the first run downloads and compiles
+  # everything and uploads the result; every run after starts with warm
+  # crate sources and sccache hits for unchanged crates.
   cache:
-    - key: rs-core-cargo-deps-${CI_COMMIT_REF_SLUG}
-      fallback_keys:
-        - rs-core-cargo-deps-${CI_DEFAULT_BRANCH}
-      paths:
-        - .cargo/registry/index
-        - .cargo/registry/cache
-        - .cargo/git/db
-    - key: rs-core-target-${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}
-      fallback_keys:
-        - rs-core-target-${CI_JOB_NAME}-${CI_DEFAULT_BRANCH}
-      paths:
-        - target
+    key:
+      files:
+        - Cargo.lock
+      prefix: cargo-${CI_JOB_NAME}
+    paths:
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+      - .sccache
+    policy: pull-push
 
 .rust-check:
   extends: .rs-core-workflow
@@ -90,6 +95,20 @@ rs-core-uniffi-web-build:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
+  # Self-populating per job: the first run downloads and compiles
+  # everything and uploads the result; every run after starts with warm
+  # crate sources and sccache hits for unchanged crates.
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: cargo-${CI_JOB_NAME}
+    paths:
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+      - .sccache
+    policy: pull-push
   script:
     - cd packages/rs-core-uniffi-web
     - |

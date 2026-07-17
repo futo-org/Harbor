@@ -35,7 +35,7 @@ export default function FeedScreen() {
   useFocusEffect(
     useCallback(() => {
       setEnabled(true);
-    }, [setEnabled]),
+    }, []),
   );
 
   // Re-tapping the active tab scrolls to the top and refreshes.

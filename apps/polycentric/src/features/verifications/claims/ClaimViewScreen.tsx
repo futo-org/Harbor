@@ -7,7 +7,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { ClaimField, useClaimById } from '../hooks/useClaimById';
+import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
 import useVerifyClaim from '../hooks/useVerifyClaim';
 import { ClaimMenu } from './ClaimMenu';

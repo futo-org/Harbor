@@ -1,5 +1,5 @@
 import { Text } from '@/src/common/components';
-import { PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import useReactions from '../../reaction/useReactions';

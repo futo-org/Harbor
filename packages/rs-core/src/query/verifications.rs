@@ -1,5 +1,5 @@
+use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use polycentric_common::models::protos_v2::{
@@ -12,8 +12,11 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
-use crate::query::event::dedup::{EventDedupKey, event_dedup_key};
 use crate::query::event::key::EventKey;
+use crate::query::event::merge::{
+    EventBundleResponse, EventDedupKey, event_dedup_key, merge_bundle, merge_bundle_responses,
+    merge_event_bundles, merge_event_hints,
+};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
@@ -35,12 +38,6 @@ pub struct ListVerificationVerifiesArgs {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListTargetedVerificationClaimsArgs {
     pub target_identity: String,
-}
-
-/// Responses carrying a flat `event_bundles` list.
-trait EventBundleResponse: Message + Default {
-    fn bundles_mut(&mut self) -> &mut Vec<EventBundle>;
-    fn hints_mut(&mut self) -> &mut Vec<EventHint>;
 }
 
 impl EventBundleResponse for ListVerificationTargetsResponse {
@@ -85,48 +82,6 @@ impl ClaimBundleResponse for ListTargetedVerificationClaimsResponse {
     }
 }
 
-fn dedupe_bundles(bundles: &mut Vec<EventBundle>) {
-    let mut seen: HashSet<EventDedupKey> = HashSet::new();
-    bundles.retain(|bundle| match event_dedup_key(bundle) {
-        Some(k) => seen.insert(k),
-        None => true,
-    });
-}
-
-fn dedupe_hints(hints: &mut Vec<EventHint>) {
-    let mut seen: HashSet<EventDedupKey> = HashSet::new();
-    hints.retain(
-        |hint| match hint.event_bundle.as_ref().and_then(event_dedup_key) {
-            Some(k) => seen.insert(k),
-            None => true,
-        },
-    );
-}
-
-/// Concatenate per-server bundles, dedupe by `EventKey`, drop invalid ones.
-fn merge_bundle_responses<T: EventBundleResponse>(
-    values: &[Vec<u8>],
-    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
-) -> Vec<u8> {
-    let mut merged = T::default();
-    for v in values {
-        if let Ok(mut incoming) = T::decode(v.as_slice()) {
-            merged.bundles_mut().append(incoming.bundles_mut());
-            merged.hints_mut().append(incoming.hints_mut());
-        }
-    }
-
-    dedupe_bundles(merged.bundles_mut());
-    dedupe_hints(merged.hints_mut());
-
-    let c = client.lock().unwrap();
-    retain_validated_bundles(&c, merged.bundles_mut());
-    retain_validated_hints(&c, merged.hints_mut());
-    drop(c);
-
-    merged.encode_to_vec()
-}
-
 /// Merge per-server claim bundles by claim key, combining each claim's
 /// targets and verifies; dedupe and drop invalid bundles throughout.
 fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
@@ -148,6 +103,12 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
             match index_by_claim.entry(key) {
                 Entry::Occupied(entry) => {
                     let existing = &mut merged[*entry.get()];
+
+                    existing.claim = match (existing.claim.take(), group.claim) {
+                        (Some(a), Some(b)) => Some(merge_bundle(a, b)),
+                        (a, b) => a.or(b),
+                    };
+
                     existing.targets.extend(group.targets);
                     existing.verifies.extend(group.verifies);
                 }
@@ -159,24 +120,25 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
         }
     }
 
-    dedupe_hints(&mut hints);
+    merge_event_hints(&mut hints);
 
-    let c = client.lock().unwrap();
-    retain_validated_hints(&c, &mut hints);
-    merged.retain_mut(|group| {
-        let mut claim = Vec::from_iter(group.claim.take());
-        retain_validated_bundles(&c, &mut claim);
-        let Some(valid_claim) = claim.pop() else {
-            return false;
-        };
-        group.claim = Some(valid_claim);
-        dedupe_bundles(&mut group.targets);
-        retain_validated_bundles(&c, &mut group.targets);
-        dedupe_bundles(&mut group.verifies);
-        retain_validated_bundles(&c, &mut group.verifies);
-        true
-    });
-    drop(c);
+    {
+        let c = client.lock().unwrap();
+        retain_validated_hints(&c, &mut hints);
+        merged.retain_mut(|group| {
+            let mut claim = Vec::from_iter(group.claim.take());
+            retain_validated_bundles(&c, &mut claim);
+            let Some(valid_claim) = claim.pop() else {
+                return false;
+            };
+            group.claim = Some(valid_claim);
+            merge_event_bundles(&mut group.targets);
+            retain_validated_bundles(&c, &mut group.targets);
+            merge_event_bundles(&mut group.verifies);
+            retain_validated_bundles(&c, &mut group.verifies);
+            true
+        });
+    }
 
     let mut response = T::default();
     *response.claim_bundles_mut() = merged;
