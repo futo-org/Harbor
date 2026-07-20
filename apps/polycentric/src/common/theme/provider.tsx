@@ -14,6 +14,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { Appearance, useColorScheme } from 'react-native';
+import * as SystemUI from 'expo-system-ui';
 import { useSettings } from '@/src/common/settings';
 import { themes, type Theme, type ThemeKey } from './themes';
 
@@ -54,6 +55,13 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   }, []);
 
   const theme = useMemo(() => themes[activeThemeName], [activeThemeName]);
+
+  // Keep the native window background in sync with the theme so the
+  // moments where no surface has painted (splash dismissal, stack
+  // transitions) don't flash the default white window.
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(theme.palette.neutral_0);
+  }, [theme]);
 
   const value = useMemo(
     () => ({ theme, activeThemeName, setActiveThemeName }),

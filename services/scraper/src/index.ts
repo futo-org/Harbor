@@ -64,17 +64,22 @@ export type LinkMetadata = {
  * prerendered through headless Chromium (e.g. client-side apps that inject
  * their tags via JS), so callers don't have to. Each call runs in its own
  * browser context, which is always torn down afterwards.
+ *
+ * Throws when the target responds with a non-2xx status.
  */
 export const scrape = async (targetUrl: string): Promise<LinkMetadata> => {
   const context = browserlessFactory.createContext();
   try {
     // `html-get` returns the post-redirect URL alongside the (possibly
     // prerendered) HTML; metascraper needs both.
-    const { html, url } = await getHTML(targetUrl, {
+    const { html, url, statusCode } = await getHTML(targetUrl, {
       getBrowserless: () => context,
       // Same UA on the plain-fetch path (html-get may skip the browser).
       headers: { 'user-agent': USER_AGENT },
     });
+    if (statusCode < 200 || statusCode >= 300) {
+      throw new Error(`target responded with status ${statusCode}`);
+    }
     const meta = await scrapeMetadata({ html, url });
     return {
       title: meta.title ?? null,

@@ -1,8 +1,74 @@
+use std::collections::HashMap;
+
 use ::entity::reply_count_model as ReplyCountModel;
 use sea_orm::sea_query::{Expr, ExprTrait, OnConflict};
 use sea_orm::*;
 
 use crate::service::events::TargetEventKey;
+
+pub struct Query;
+
+impl Query {
+    /// For each event in `events`, estimate the number of replies it has.
+    /// Results are returned as a map from each event's key to its reply count.
+    /// Any event without any replies will not be included in the output map.
+    pub async fn count_replies(
+        db: &DbConn,
+        events: Vec<TargetEventKey>,
+    ) -> Result<HashMap<TargetEventKey, i64>, DbErr> {
+        if events.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let key_cols = [
+            ReplyCountModel::Column::EventKeyCollection,
+            ReplyCountModel::Column::EventKeyIdentity,
+            ReplyCountModel::Column::EventKeyPublicKeyType,
+            ReplyCountModel::Column::EventKeyPublicKey,
+            ReplyCountModel::Column::EventKeySequence,
+        ];
+
+        // Keep only rows for event keys that we care about.
+        let filter = {
+            let key_tuples = events.into_iter().map(|k| {
+                (
+                    k.collection,
+                    k.identity,
+                    k.public_key_type,
+                    k.public_key,
+                    k.sequence,
+                )
+            });
+
+            Expr::tuple(key_cols.map(Expr::col)).in_tuples(key_tuples)
+        };
+
+        // Fetch reply counts maintained by the stats worker.
+        let rows = ReplyCountModel::Entity::find()
+            .filter(filter)
+            .all(db)
+            .await?;
+
+        // Store the reply counts as a map for efficient access.
+        let map = rows
+            .into_iter()
+            .map(|row| {
+                (
+                    TargetEventKey {
+                        collection: row.event_key_collection,
+                        identity: row.event_key_identity,
+                        public_key_type: row.event_key_public_key_type,
+                        public_key: row.event_key_public_key,
+                        sequence: row.event_key_sequence,
+                    },
+                    row.reply_count,
+                )
+            })
+            .collect();
+
+        Ok(map)
+    }
+}
 
 pub struct Mutation;
 

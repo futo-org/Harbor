@@ -19,6 +19,9 @@ linkWorkspacePackages: true
 
 minimumReleaseAge: 1440
 
+minimumReleaseAgeExclude:
+  - react-native-screens
+
 onlyBuiltDependencies:
   - better-sqlite3
 

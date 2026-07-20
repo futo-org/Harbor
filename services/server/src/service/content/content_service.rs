@@ -53,7 +53,9 @@ impl ContentService for ContentServiceImpl {
         &self,
         request: Request<UrlInfoRequest>,
     ) -> Result<Response<UrlInfoResponse>, Status> {
-        Ok(Response::new(url_info::handle(request.into_inner()).await?))
+        Ok(Response::new(
+            url_info::handle(&self.db, request.into_inner()).await?,
+        ))
     }
 }
 

@@ -3,8 +3,9 @@ use polycentric_common::{
     models::{
         Serializable, collections,
         protos_v2::{
-            self, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventProof,
-            Identity, PublicKey, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
+            self, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventMetadata,
+            EventProof, Identity, PublicKey, SerializedContent, SignedEvent, VectorClock,
+            content::ContentBody,
         },
     },
 };
@@ -12,7 +13,7 @@ use polycentric_common::{
 use crate::identity::{DecodedIdentityEvent, IdentityDirectory};
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
-    keys::EventKey,
+    keys::EventKey, meta_store::MetaStore,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -39,6 +40,7 @@ pub struct PolycentricClient {
     event_store: EventStore,
     event_proofs_store: EventProofsStore,
     content_store: ContentStore,
+    meta_store: MetaStore,
 }
 
 impl PolycentricClient {
@@ -79,6 +81,11 @@ impl PolycentricClient {
         Ok(())
     }
 
+    /// Copy event metadata into the meta store.
+    pub fn copy_meta(&mut self, event_key: EventKey, meta: EventMetadata) {
+        self.meta_store.include(event_key, meta);
+    }
+
     /// First locally-valid bundle at `(identity, collection, sequence)`.
     pub fn find_event_bundle_by_sequence(
         &self,
@@ -98,12 +105,13 @@ impl PolycentricClient {
                     .as_ref()
                     .and_then(|d| self.content_store.get(d))
                     .map(|b| b.to_vec());
+                let meta = self.meta_store.get(k).cloned();
                 Some(EventBundle {
                     signed_event: Some(signed_event.clone()),
                     serialized_content: content_bytes
                         .map(|c| SerializedContent { content_bytes: c }),
                     event_proofs: proofs.to_vec(),
-                    meta: None, // TODO: compute from local repository?
+                    meta,
                 })
             })
     }
@@ -116,34 +124,32 @@ impl PolycentricClient {
             })
     }
 
+    /// Find the event metadata corresponding to `event_key`.
+    pub fn find_event_meta(&self, event_key: &EventKey) -> Option<&EventMetadata> {
+        self.meta_store.get(event_key)
+    }
+
     /// Sig-check and insert each bundle. Identity events go first (by
     /// sequence) so downstream validation can find the genesis. Any
     /// `event_proofs` travelling with a bundle are persisted in the
     /// proofs side-store so read-side validation can re-verify revoked
     /// signers later.
     pub fn copy_bundles(&mut self, bundles: Vec<EventBundle>) {
-        let mut prepared: Vec<(
-            SignedEvent,
-            Event,
-            Option<SerializedContent>,
-            Vec<EventProof>,
-        )> = bundles
+        let mut prepared: Vec<(Event, EventBundle)> = bundles
             .into_iter()
             .filter_map(|bundle| {
-                let signed_event = bundle.signed_event?;
+                let signed_event = bundle.signed_event.as_ref()?;
+
                 if signed_event.verify_signature().is_err() {
                     return None;
                 }
+
                 let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
-                Some((
-                    signed_event,
-                    event,
-                    bundle.serialized_content,
-                    bundle.event_proofs,
-                ))
+                Some((event, bundle))
             })
             .collect();
-        prepared.sort_by_key(|(_, event, _, _)| {
+
+        prepared.sort_by_key(|(event, _)| {
             let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(i32::MAX);
             let identity_first = if collection == collections::IDENTITY {
                 0
@@ -154,19 +160,28 @@ impl PolycentricClient {
             (identity_first, sequence)
         });
 
-        for (signed_event, event, serialized, proofs) in prepared {
-            if let (Some(digest), Some(content)) = (event.content_digest.as_ref(), serialized)
+        for (event, bundle) in prepared {
+            let digest = event.content_digest.as_ref();
+            let serialized = bundle.serialized_content;
+            let proofs = bundle.event_proofs;
+
+            if let (Some(digest), Some(content)) = (digest, serialized)
                 && let Err(e) = self.copy_content(digest, content.content_bytes)
             {
                 // Keep the validly-signed event; just drop the bad content.
                 crate::logging::log_warn(|| format!("dropping content: {e}"));
             }
-            if !proofs.is_empty()
-                && let Ok(key) = EventKey::from_event(event)
-            {
-                self.event_proofs_store.insert(key, proofs);
+            if let Ok(key) = EventKey::from_event(event) {
+                if !proofs.is_empty() {
+                    self.event_proofs_store.insert(key.clone(), proofs);
+                }
+                if let Some(meta) = bundle.meta {
+                    self.copy_meta(key, meta);
+                }
             }
-            let _ = self.copy_event(signed_event);
+            if let Some(signed_event) = bundle.signed_event {
+                let _ = self.copy_event(signed_event);
+            }
         }
     }
 
@@ -366,11 +381,13 @@ impl PolycentricClient {
                 });
             }
 
+            let meta = self.meta_store.get(event_key).cloned();
+
             let bundle = EventBundle {
                 signed_event: Some(signed_event.clone()),
                 serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
                 event_proofs: proofs.to_vec(),
-                meta: None, // TODO: compute from local repository?
+                meta,
             };
             bundles.push((event_key.clone(), bundle));
         }

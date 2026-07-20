@@ -4,7 +4,6 @@
 use crate::data::hydration::HydrationState;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::repository::Query as EventsRepository;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
@@ -16,7 +15,7 @@ use crate::service::feeds::util::{
 };
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, row_to_bundle, rows_to_bundles, rows_to_hints,
+    list_profile_events, rows_to_bundles,
 };
 
 use crate::service::proofs::service::attach_proofs;
@@ -24,8 +23,10 @@ use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
+use crate::service::stats::repository::Query as StatsRepository;
+use crate::service::stats::service::rows_to_bundles_with_meta;
 use prost::Message;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
@@ -197,8 +198,9 @@ pub async fn hydrate(
     let quote_set = to_target_event_keys(&quote_keys);
     let repost_set = to_target_event_keys(&repost_keys);
 
-    // Include quote and repost events in label look-up
-    let label_keys: Vec<TargetEventKey> = {
+    // Event keys for all referenced post events that may be displayed by the client.
+    // Fetch labels and additional metadata for these.
+    let display_keys: Vec<TargetEventKey> = {
         let mut set: HashSet<TargetEventKey> = keys.iter().cloned().collect();
         set.extend(quote_set.iter().cloned());
         set.extend(repost_set.iter().cloned());
@@ -226,7 +228,7 @@ pub async fn hydrate(
     let labels_fut = async {
         FeedsRepository::list_labels_for_event_keys(
             &ctx.db,
-            &label_keys,
+            &display_keys,
             ctx.trusted_moderator.as_deref(),
         )
         .await
@@ -234,7 +236,7 @@ pub async fn hydrate(
     };
 
     let reply_counts_fut = async {
-        EventsRepository::count_replies(&ctx.db, keys.clone())
+        StatsRepository::count_replies(&ctx.db, display_keys.clone())
             .await
             .map_err(map_db_err)
     };
@@ -375,14 +377,7 @@ pub async fn view(
         ..
     } = hydration;
 
-    let mut event_bundles = live_rows
-        .into_iter()
-        .map(|row| {
-            let (event, _) = &row;
-            let key = TargetEventKey::of(event);
-            with_reply_count(row_to_bundle(row), &key, &reply_counts)
-        })
-        .collect::<Vec<_>>();
+    let mut event_bundles = rows_to_bundles_with_meta(live_rows, &reply_counts);
 
     let mut label_bundles = rows_to_bundles(label_events);
 
@@ -400,7 +395,14 @@ pub async fn view(
         .chain(quote_post_events)
         .chain(repost_events)
         .collect();
-    let mut event_hints = rows_to_hints(hint_rows);
+
+    let mut event_hints = rows_to_bundles_with_meta(hint_rows, &reply_counts)
+        .into_iter()
+        .map(|bundle| EventHint {
+            event_bundle: Some(bundle),
+        })
+        .collect::<Vec<_>>();
+
     event_hints.extend(bundles_to_hints(tombstone_bundles));
     event_hints.extend(bundles_to_hints(label_bundles));
 
@@ -409,17 +411,4 @@ pub async fn view(
         event_hints,
         page_info,
     })
-}
-
-fn with_reply_count(
-    mut bundle: EventBundle,
-    key: &TargetEventKey,
-    reply_counts: &HashMap<TargetEventKey, i64>,
-) -> EventBundle {
-    if let Some(count) = reply_counts.get(key) {
-        let meta = bundle.meta.get_or_insert_default();
-        meta.reply_count = Some(i32::try_from(*count).unwrap_or(i32::MAX));
-    }
-
-    bundle
 }

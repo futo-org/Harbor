@@ -50,10 +50,13 @@ export function ProfileProvider({
       if (tab === activeFeed) return;
       navigation.dispatch({
         type: 'JUMP_TO',
-        payload: { name: tab === 'verifications' ? 'verifications' : 'index' },
+        payload: {
+          name: tab === 'verifications' ? 'verifications' : 'index',
+          params: { identityId: alias ?? identityKey },
+        },
       });
     },
-    [activeFeed, navigation],
+    [activeFeed, alias, identityKey, navigation],
   );
 
   const value = useMemo<ProfileContextValue>(

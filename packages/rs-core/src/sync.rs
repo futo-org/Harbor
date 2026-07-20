@@ -10,7 +10,7 @@ use polycentric_common::models::protos_v2::{
     event_sync_service_client::EventSyncServiceClient,
 };
 
-use crate::{api::CoreError, client::PolycentricClient, query::channel};
+use crate::{api::CoreError, client::PolycentricClient, query::channel, store::keys};
 
 /// Wrapper for executing a list_heads RPC
 pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>, CoreError> {
@@ -69,8 +69,8 @@ pub fn bundle_unsent_events(
             let unsent_events =
                 client.get_sync_events(identity, col, signer.key_type, &signer.key, server_latest);
 
-            for (_, signed_event) in unsent_events {
-                let bundle = bundle_from_signed_event(client, signed_event.clone())?;
+            for (event_key, signed_event) in unsent_events {
+                let bundle = bundle_from_signed_event(client, event_key, signed_event.clone())?;
                 bundles.push(bundle);
             }
         }
@@ -87,8 +87,8 @@ pub fn bundle_local_events(
     let local_events = client.get_local_events(identity);
 
     let mut bundles = vec![];
-    for (_, signed_event) in local_events {
-        let bundle = bundle_from_signed_event(client, signed_event.clone())?;
+    for (event_key, signed_event) in local_events {
+        let bundle = bundle_from_signed_event(client, event_key, signed_event.clone())?;
         bundles.push(bundle);
     }
 
@@ -97,6 +97,7 @@ pub fn bundle_local_events(
 
 fn bundle_from_signed_event(
     client: &PolycentricClient,
+    event_key: &keys::EventKey,
     signed_event: SignedEvent,
 ) -> Result<EventBundle, CoreError> {
     let event_bytes = &signed_event.event_bytes;
@@ -107,11 +108,13 @@ fn bundle_from_signed_event(
         .content_digest
         .and_then(|digest| client.find_content_from_digest(&digest));
 
+    let meta = client.find_event_meta(event_key).cloned();
+
     Ok(EventBundle {
         signed_event: Some(signed_event),
         serialized_content,
         event_proofs: vec![],
-        meta: None, // TODO: compute from local store?
+        meta,
     })
 }
 

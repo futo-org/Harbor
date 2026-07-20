@@ -53,7 +53,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
   },
   plugins: [
-    'expo-router',
+    [
+      'expo-router',
+      {
+        origin: 'https://harbor.social',
+      },
+    ],
     [
       'expo-splash-screen',
       {
