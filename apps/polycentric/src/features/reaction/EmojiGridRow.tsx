@@ -1,3 +1,4 @@
+import React from 'react';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import { Emoji } from './Emoji';
@@ -10,7 +11,7 @@ type EmojiGridRowProps = {
   buttonSize: number;
 };
 
-export function EmojiGridRow({
+export const EmojiGridRow = React.memo(function EmojiGridRow({
   emojis,
   onSelect,
   selectedEmoji,
@@ -33,4 +34,4 @@ export function EmojiGridRow({
       ))}
     </View>
   );
-}
+});

@@ -70,14 +70,22 @@ export function getCategory(key: string): EmojiCategory | undefined {
 export function buildEmojiItems(
   categories: EmojiCategory[],
   columns: number,
-): { items: PickerItem[]; sectionIndex: Record<string, number> } {
+): {
+  items: PickerItem[];
+  sectionIndex: Record<string, number>;
+  sectionOffset: Record<string, number>;
+} {
   const items: PickerItem[] = [];
   const sectionIndex: Record<string, number> = {};
+  const sectionOffset: Record<string, number> = {};
+  let y = 0;
 
   for (let i = 0; i < categories.length; i++) {
     const c = categories[i]!;
     sectionIndex[c.key] = items.length;
+    sectionOffset[c.key] = y;
     items.push({ type: 'header', categoryKey: c.key, first: i === 0 });
+    y += 26; // HEADER_HEIGHT
 
     const emojis = c.emojis;
     for (let j = 0; j < emojis.length; j += columns) {
@@ -86,8 +94,9 @@ export function buildEmojiItems(
         categoryKey: c.key,
         emojis: emojis.slice(j, j + columns),
       });
+      y += 44; // ROW_HEIGHT
     }
   }
 
-  return { items, sectionIndex };
+  return { items, sectionIndex, sectionOffset };
 }

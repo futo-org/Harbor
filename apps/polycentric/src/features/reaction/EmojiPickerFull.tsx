@@ -3,7 +3,7 @@ import { Atoms, Spacing } from '@/src/common/theme';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { ViewToken } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { buildEmojiItems, categories } from './emojiData';
 import type { PickerItem } from './emojiData';
 import { EmojiGridRow } from './EmojiGridRow';
@@ -30,7 +30,7 @@ export function EmojiPickerFull({
 }: EmojiPickerFullProps) {
   const [panelWidth, setPanelWidth] = useState(0);
   const [activeSection, setActiveSection] = useState(categories[0]!.key);
-  const listRef = useRef<FlashList<PickerItem>>(null);
+  const listRef = useRef<FlashListRef<PickerItem>>(null);
 
   const columns = useMemo(() => {
     if (panelWidth <= 0) return 1;
@@ -42,7 +42,7 @@ export function EmojiPickerFull({
     );
   }, [panelWidth]);
 
-  const { items, sectionIndex } = useMemo(
+  const { items, sectionOffset } = useMemo(
     () => buildEmojiItems(categories, columns),
     [columns],
   );
@@ -55,13 +55,30 @@ export function EmojiPickerFull({
     [onSelect, onClose],
   );
 
+  const renderItem = useCallback(
+    ({ item }: { item: PickerItem }) => {
+      if (item.type === 'header') {
+        return <EmojiSectionRule first={item.first} />;
+      }
+      return (
+        <EmojiGridRow
+          emojis={item.emojis}
+          onSelect={handleSelect}
+          selectedEmoji={selectedEmoji}
+          buttonSize={GRID_BUTTON_SIZE}
+        />
+      );
+    },
+    [handleSelect, selectedEmoji],
+  );
+
   const scrollToSection = useCallback(
     (key: string) => {
-      const index = sectionIndex[key];
-      if (index === undefined) return;
-      listRef.current?.scrollToIndex({ index, animated: true });
+      const offset = sectionOffset[key];
+      if (offset === undefined) return;
+      listRef.current?.scrollToOffset({ offset, animated: true });
     },
-    [sectionIndex],
+    [sectionOffset],
   );
 
   // Stable viewability callback — ref ensures FlashList doesn't re-create layout.
@@ -78,24 +95,6 @@ export function EmojiPickerFull({
   ).current;
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 }).current;
-
-  const handleScrollToIndexFailed = useCallback(
-    (info: {
-      index: number;
-      highestMeasuredFrameIndex: number;
-      averageItemLength: number;
-    }) => {
-      // Scroll to a nearby item first (the highest measured index), then retry.
-      listRef.current?.scrollToIndex({
-        index: Math.min(info.index, info.highestMeasuredFrameIndex),
-        animated: false,
-      });
-      setTimeout(() => {
-        listRef.current?.scrollToIndex({ index: info.index, animated: true });
-      }, 300);
-    },
-    [],
-  );
 
   const onLayout = useCallback(
     (e: { nativeEvent: { layout: { width: number } } }) => {
@@ -143,23 +142,10 @@ export function EmojiPickerFull({
               ref={listRef}
               data={items}
               keyExtractor={(_item, index) => String(index)}
-              renderItem={({ item }) => {
-                if (item.type === 'header') {
-                  return <EmojiSectionRule first={item.first} />;
-                }
-                return (
-                  <EmojiGridRow
-                    emojis={item.emojis}
-                    onSelect={handleSelect}
-                    selectedEmoji={selectedEmoji}
-                    buttonSize={GRID_BUTTON_SIZE}
-                  />
-                );
-              }}
+              renderItem={renderItem}
               getItemType={(item) => item.type}
               onViewableItemsChanged={onViewableItemsChanged}
               viewabilityConfig={viewabilityConfig}
-              onScrollToIndexFailed={handleScrollToIndexFailed}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[Atoms.py_xs]}
             />

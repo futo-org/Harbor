@@ -1,3 +1,4 @@
+import React from 'react';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
 
@@ -10,7 +11,9 @@ type EmojiSectionRuleProps = {
  * A full-width horizontal rule between emoji categories.
  * The very first section gets only a small top spacer, no rule.
  */
-export function EmojiSectionRule({ first }: EmojiSectionRuleProps) {
+export const EmojiSectionRule = React.memo(function EmojiSectionRule({
+  first,
+}: EmojiSectionRuleProps) {
   const { theme } = useTheme();
 
   if (first) {
@@ -26,4 +29,4 @@ export function EmojiSectionRule({ first }: EmojiSectionRuleProps) {
       }}
     />
   );
-}
+});
