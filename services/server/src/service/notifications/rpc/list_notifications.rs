@@ -3,7 +3,6 @@ use crate::{
     service::{
         context::ServiceContext,
         events::TargetEventKey,
-        events::repository::Query as EventsRepository,
         feeds::{repository::Query as FeedsRepository, util::map_db_err},
         identity::service::{
             list_identity_events, list_profile_events, rows_to_bundles,
@@ -14,6 +13,7 @@ use crate::{
             EventBundle, EventHint, EventKey, ListNotificationsRequest,
             ListNotificationsResponse, Notification, PageInfo, PublicKey,
         },
+        stats::repository::Query as StatsRepository,
     },
 };
 use ::entity::notification;
@@ -135,7 +135,7 @@ async fn hydrate(
         fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
     let reply_count_fut = async {
-        EventsRepository::count_replies(&ctx.db, fetched_keys)
+        StatsRepository::count_replies(&ctx.db, fetched_keys)
             .await
             .map_err(map_db_err)
     };

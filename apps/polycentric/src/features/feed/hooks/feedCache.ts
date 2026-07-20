@@ -164,8 +164,16 @@ function postChanged(orig: PostData, updated: PostData): boolean {
  * If `orig` is returned, then it has not been mutated.
  * If `latest` is returned, then `orig` is left untouched.
  * `latest` may be mutated either way.
+ * If `orig` is undefined, create a new entry with `latest` and no overlay.
  */
-function updatePostEntry(orig: PostEntry, latest: PostData): PostEntry {
+function updatePostEntry(
+  orig: PostEntry | undefined,
+  latest: PostData,
+): PostEntry {
+  if (!orig) {
+    return { post: latest, overlay: undefined };
+  }
+
   const overlay = updatePostOverlay(orig.overlay, latest);
   applyPostOverlay(latest, overlay);
   const post = postChanged(orig.post, latest) ? latest : orig.post;
@@ -282,6 +290,99 @@ function decodeThreadResponse(
 }
 
 export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
+  // --- Helpers for deriving entries ---
+
+  /**
+   * Update posts map based on non-repost posts in the feed items.
+   * Returns a list of the reposts in the feed items.
+   */
+  const initialPostUpdates = (
+    posts: Map<string, PostEntry>,
+    items: PostData[],
+  ): PostData[] => {
+    const reposts: PostData[] = [];
+
+    for (const post of items) {
+      if (post.repostId) {
+        reposts.push(post);
+        continue;
+      }
+
+      const entry = updatePostEntry(posts.get(postId(post)), post);
+      posts.set(postId(post), entry);
+    }
+
+    return reposts;
+  };
+
+  /**
+   * Use the feed response's reposts to update the post entries and obtain the
+   *  final values to output for the posts present in the feed items.
+   */
+  const updateUsingReposts = (
+    posts: Map<string, PostEntry>,
+    reposts: PostData[],
+  ): void => {
+    for (const repost of reposts) {
+      if (!repost.repostId) continue;
+
+      // Update upstream post
+      const asNonRepost: PostData = {
+        ...repost,
+        repostId: undefined,
+        repostedBy: undefined,
+      };
+
+      const upstreamEntry = updatePostEntry(posts.get(repost.id), asNonRepost);
+      posts.set(repost.id, upstreamEntry);
+
+      // Update repost
+      applyPostOverlay(repost, upstreamEntry.overlay);
+      const repostEntry = updatePostEntry(posts.get(repost.repostId), repost);
+      posts.set(repost.repostId, repostEntry);
+    }
+  };
+
+  /**
+   * Return the output after injecting the reply injections to each of the
+   * input arrays.
+   * Any post with an id in seenPosts will be excluded.
+   */
+  const withRepliesInjected = (
+    posts: Map<string, PostEntry>,
+    inputs: PostData[][],
+    replyInjections: Map<string, string[]>,
+    seenPosts: Set<string>,
+  ): PostData[] => {
+    const output: PostData[] = [];
+
+    /** Recursively inject a post's reply injections */
+    const injectPostReplies = (post: PostData): void => {
+      const injections = replyInjections.get(postId(post));
+      if (!injections) return;
+
+      for (const replyId of injections) {
+        if (seenPosts.has(replyId)) continue;
+
+        const reply = posts.get(replyId);
+        if (!reply) continue;
+
+        output.push(reply.post);
+        seenPosts.add(replyId);
+        injectPostReplies(reply.post);
+      }
+    };
+
+    for (const input of inputs) {
+      for (const post of input) {
+        output.push(post);
+        injectPostReplies(post);
+      }
+    }
+
+    return output;
+  };
+
   /** Derive a new feed entry from the provided query data and stored overlays. */
   const deriveEntry = (
     queryKey: string,
@@ -301,28 +402,34 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
         ? old.replyInjections
         : new Map();
 
+    // Update posts map with new server data.
+    // We will update with repost data afterward
+    const reposts = initialPostUpdates(posts, items);
+
+    // Update using repost data.
+    // PostData objects for the posts in the feed items list should be
+    // finalized now
+    updateUsingReposts(posts, reposts);
+
+    // Gather feed items
     const feedResponseItems: PostData[] = [];
-    const seenPosts: Set<string> = new Set();
 
-    // Handle posts from feed response:
-    // All of these posts will be included in the output array.
-    // Mark them as seen.
+    // Injections will be skipped for posts that are found in the feed items.
+    const seenPosts = new Set<string>();
+
     for (const post of items) {
-      const existing = posts.get(postId(post));
-      const entry = existing
-        ? updatePostEntry(existing, post)
-        : { post, overlay: undefined };
+      const entry = posts.get(postId(post));
+      if (!entry) continue;
 
-      posts.set(postId(post), entry);
-
-      seenPosts.add(postId(post));
       feedResponseItems.push(entry.post);
+      seenPosts.add(postId(post));
     }
 
-    let output: PostData[] = [];
-
-    // Handle injections
+    // Handle front injections
     // Injections may be skipped if we have already seen a post with the same id
+
+    const frontInjectedItems: PostData[] = [];
+
     for (const id of frontInjections) {
       if (seenPosts.has(id)) continue;
 
@@ -330,30 +437,16 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       if (!post) continue;
 
       seenPosts.add(id);
-      output.push(post);
+      frontInjectedItems.push(post);
     }
 
-    /** Recursively inject a post's reply injections */
-    const injectPostReplies = (post: PostData): void => {
-      const injections = replyInjections.get(postId(post));
-      if (!injections) return;
-
-      for (const replyId of injections) {
-        if (seenPosts.has(replyId)) continue;
-
-        const reply = posts.get(replyId);
-        if (!reply) continue;
-
-        output.push(reply.post);
-        seenPosts.add(replyId);
-        injectPostReplies(reply.post);
-      }
-    };
-
-    for (const post of feedResponseItems) {
-      output.push(post);
-      injectPostReplies(post);
-    }
+    // Gather output
+    let output = withRepliesInjected(
+      posts,
+      [frontInjectedItems, feedResponseItems],
+      replyInjections,
+      seenPosts,
+    );
 
     // Ensure stable output when empty
     if (output.length === 0) {

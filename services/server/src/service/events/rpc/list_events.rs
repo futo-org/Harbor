@@ -5,17 +5,21 @@
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
+use crate::service::events::TargetEventKey;
 use crate::service::events::repository::Query as EventsRepository;
 use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
-    rows_to_bundles, rows_to_hints,
+    rows_to_hints,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
     EventHint, EventKey, ListEventsRequest, ListEventsResponse, PublicKey,
 };
+use crate::service::stats::repository::Query as StatsRepository;
+use crate::service::stats::service::rows_to_bundles_with_meta;
 use polycentric_common::models::protos_v2::EventBundle;
+use sea_orm::DbErr;
 use tonic::Status;
 
 #[derive(Default)]
@@ -80,10 +84,7 @@ async fn fetch(
         params.heads.clone(),
     )
     .await
-    .map_err(|e| {
-        eprintln!("list_events db error: {e}");
-        Status::internal("internal server error")
-    })
+    .map_err(map_db_err)
 }
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
@@ -96,13 +97,27 @@ async fn hydrate(
         rows.iter()
             .map(|(event, content)| (event, content.as_ref())),
     );
-    let (identity_events, profile_events) = tokio::try_join!(
+
+    let keys = rows
+        .iter()
+        .map(|(event, _)| TargetEventKey::of(event))
+        .collect::<Vec<_>>();
+
+    let reply_counts_fut = async {
+        StatsRepository::count_replies(&ctx.db, keys)
+            .await
+            .map_err(map_db_err)
+    };
+
+    let (identity_events, profile_events, reply_counts) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
+        reply_counts_fut,
     )?;
     Ok(HydrationState {
         identity_events,
         profile_events,
+        reply_counts,
         ..Default::default()
     })
 }
@@ -126,10 +141,11 @@ async fn view(
     let HydrationState {
         identity_events,
         profile_events,
+        reply_counts,
         ..
     } = hydration;
 
-    let mut event_bundles = rows_to_bundles(live_rows);
+    let mut event_bundles = rows_to_bundles_with_meta(live_rows, &reply_counts);
     attach_proofs(ctx, &mut event_bundles).await?;
 
     let event_hints = rows_to_hints(
@@ -140,4 +156,9 @@ async fn view(
         event_bundles,
         event_hints,
     })
+}
+
+fn map_db_err(e: DbErr) -> Status {
+    eprintln!("list_events db error: {e}");
+    Status::internal("internal server error")
 }
