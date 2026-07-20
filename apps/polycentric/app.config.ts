@@ -1,11 +1,12 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import fs from 'fs';
+import { APP_NAME } from './src/common/constants/constants';
 
 const { version: PKG_VERSION } = require('./package.json');
 
 const IS_DEV = process.env.APP_VARIANT === 'dev';
 
-const NAME = IS_DEV ? 'Harbor Dev' : 'Harbor';
+const NAME = IS_DEV ? `${APP_NAME} Dev` : APP_NAME;
 const ID = IS_DEV ? 'org.futo.polycentric.dev' : 'org.futo.polycentric';
 
 const GOOGLE_SERVICES_FILE =

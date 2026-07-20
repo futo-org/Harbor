@@ -4,6 +4,7 @@ import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { APP_NAME } from '@/src/common/constants';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
@@ -18,6 +19,7 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
+import Head from 'expo-router/head';
 
 // Anchor the root stack on the tabs so that deep-linking directly
 // into a modal route (e.g. `/feed/compose`, `/settings/identity`)
@@ -113,20 +115,25 @@ export default function RootLayout() {
   }, [ready]);
 
   return (
-    <GestureHandlerRootView style={Atoms.flex_1}>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <ThemeProvider>
-          <LinkPreviewsProvider>
-            <PolycentricProvider onInitialized={onInitialized}>
-              <TrueSheetProvider>
-                <RootStack />
-                <PortalHost />
-                <Toaster />
-              </TrueSheetProvider>
-            </PolycentricProvider>
-          </LinkPreviewsProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <>
+      <Head>
+        <title>{APP_NAME}</title>
+      </Head>
+      <GestureHandlerRootView style={Atoms.flex_1}>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <ThemeProvider>
+            <LinkPreviewsProvider>
+              <PolycentricProvider onInitialized={onInitialized}>
+                <TrueSheetProvider>
+                  <RootStack />
+                  <PortalHost />
+                  <Toaster />
+                </TrueSheetProvider>
+              </PolycentricProvider>
+            </LinkPreviewsProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </>
   );
 }

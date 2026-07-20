@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/src/common/constants';
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
@@ -10,7 +11,7 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no"
         />
-        <title>Harbor</title>
+        <title>{APP_NAME}</title>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <ScrollViewStyleReset />
       </head>
