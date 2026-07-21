@@ -69,6 +69,13 @@ pub async fn handle(
         Status::internal("internal server error")
     })?;
 
+    println!(
+        "{} set {}'s state to {}",
+        body.moderator_identity,
+        body.target_identity,
+        if body.banned { "banned" } else { "unbanned" },
+    );
+
     if body.banned {
         // The erased identity's cached chain head and canonical heads
         // no longer match the database.
