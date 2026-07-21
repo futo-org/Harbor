@@ -3531,6 +3531,17 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
+   * List the identities banned on a server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `ListBansBody` signed by one
+   * of the moderator's authorized keys.
+   * Returns serialized `ListBansResponse` proto bytes.
+   */
+  listBans(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
    * List latest known sequence numbers from a server for a single identity.
    */
   listHeads(
@@ -4187,6 +4198,64 @@ export class PolycentricCore
         /*rustCaller:*/ uniffiCaller,
         /*rustFutureFunc:*/ () => {
           return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(
+              serverUrl,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterArrayBuffer.lower(
+              signedMessageBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer,
+        ),
+        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError,
+        ),
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * List the identities banned on a server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `ListBansBody` signed by one
+   * of the moderator's authorized keys.
+   * Returns serialized `ListBansResponse` proto bytes.
+   */
+  async listBans(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_bans(
             uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
             FfiConverterString.lower(
               serverUrl,
@@ -5194,6 +5263,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session",
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
+    4158
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
     );
   }
   if (

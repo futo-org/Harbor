@@ -547,6 +547,25 @@ impl PolycentricCore {
         Ok(response.into_inner().encode_to_vec())
     }
 
+    /// List the identities banned on a server. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping a `ListBansBody` signed by one
+    /// of the moderator's authorized keys.
+    /// Returns serialized `ListBansResponse` proto bytes.
+    pub async fn list_bans(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let response = client
+            .list_bans(signed)
+            .await
+            .map_err(|e| CoreError::Network(format!("list_bans: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
     /// Returns serialized `Link` proto bytes.
     pub async fn url_info(&self, server_url: String, url: String) -> Result<Vec<u8>, CoreError> {

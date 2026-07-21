@@ -138,6 +138,45 @@ export interface IsBannedResponse {
      */
     isBanned: boolean;
 }
+/**
+ * *
+ * Payload a moderator signs to list the identities banned on a server.
+ *
+ * @generated from protobuf message polycentric.v2.ListBansBody
+ */
+export interface ListBansBody {
+    /**
+     * Identity key of the moderator asking.
+     *
+     * @generated from protobuf field: string moderator_identity = 1
+     */
+    moderatorIdentity: string;
+    /**
+     * Client timestamp in unix milliseconds; must be within the server's
+     * acceptable skew window.
+     *
+     * @generated from protobuf field: int64 timestamp = 2
+     */
+    timestamp: bigint;
+    /**
+     * URL of the server the request is addressed to. The server rejects
+     * requests addressed to other servers.
+     *
+     * @generated from protobuf field: string server_url = 3
+     */
+    serverUrl: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ListBansResponse
+ */
+export interface ListBansResponse {
+    /**
+     * Identity keys banned on this server.
+     *
+     * @generated from protobuf field: repeated string banned_identities = 1
+     */
+    bannedIdentities: string[];
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class IsModeratorBody$Type extends MessageType<IsModeratorBody> {
     constructor() {
@@ -483,11 +522,122 @@ class IsBannedResponse$Type extends MessageType<IsBannedResponse> {
  * @generated MessageType for protobuf message polycentric.v2.IsBannedResponse
  */
 export const IsBannedResponse = new IsBannedResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListBansBody$Type extends MessageType<ListBansBody> {
+    constructor() {
+        super("polycentric.v2.ListBansBody", [
+            { no: 1, name: "moderator_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "server_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ListBansBody>): ListBansBody {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.moderatorIdentity = "";
+        message.timestamp = 0n;
+        message.serverUrl = "";
+        if (value !== undefined)
+            reflectionMergePartial<ListBansBody>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListBansBody): ListBansBody {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string moderator_identity */ 1:
+                    message.moderatorIdentity = reader.string();
+                    break;
+                case /* int64 timestamp */ 2:
+                    message.timestamp = reader.int64().toBigInt();
+                    break;
+                case /* string server_url */ 3:
+                    message.serverUrl = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListBansBody, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string moderator_identity = 1; */
+        if (message.moderatorIdentity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.moderatorIdentity);
+        /* int64 timestamp = 2; */
+        if (message.timestamp !== 0n)
+            writer.tag(2, WireType.Varint).int64(message.timestamp);
+        /* string server_url = 3; */
+        if (message.serverUrl !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.serverUrl);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListBansBody
+ */
+export const ListBansBody = new ListBansBody$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ListBansResponse$Type extends MessageType<ListBansResponse> {
+    constructor() {
+        super("polycentric.v2.ListBansResponse", [
+            { no: 1, name: "banned_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ListBansResponse>): ListBansResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.bannedIdentities = [];
+        if (value !== undefined)
+            reflectionMergePartial<ListBansResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ListBansResponse): ListBansResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated string banned_identities */ 1:
+                    message.bannedIdentities.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ListBansResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated string banned_identities = 1; */
+        for (let i = 0; i < message.bannedIdentities.length; i++)
+            writer.tag(1, WireType.LengthDelimited).string(message.bannedIdentities[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ListBansResponse
+ */
+export const ListBansResponse = new ListBansResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.IdentityService
  */
 export const IdentityService = new ServiceType("polycentric.v2.IdentityService", [
     { name: "IsModerator", options: {}, I: SignedMessage, O: IsModeratorResponse },
     { name: "SetBanStatus", options: {}, I: SignedMessage, O: SetBanStatusResponse },
-    { name: "IsBanned", options: {}, I: SignedMessage, O: IsBannedResponse }
+    { name: "IsBanned", options: {}, I: SignedMessage, O: IsBannedResponse },
+    { name: "ListBans", options: {}, I: SignedMessage, O: ListBansResponse }
 ]);

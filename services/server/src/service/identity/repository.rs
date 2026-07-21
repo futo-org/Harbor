@@ -150,6 +150,17 @@ impl Query {
             .is_some())
     }
 
+    /// Every banned identity, most recently banned first.
+    pub async fn list_bans(db: &DbConn) -> Result<Vec<String>, DbErr> {
+        Ok(BanModel::Entity::find()
+            .order_by_desc(BanModel::Column::CreatedAt)
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|row| row.identity)
+            .collect())
+    }
+
     /// Every IDENTITY-collection event (full chain) for each of
     /// `identities`. Sent as hints on feed/thread/list responses so
     /// clients can validate post authors without re-fetching the chain.

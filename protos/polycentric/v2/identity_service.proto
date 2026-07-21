@@ -63,6 +63,25 @@ message IsBannedResponse {
 }
 
 /**
+ * Payload a moderator signs to list the identities banned on a server.
+ */
+message ListBansBody {
+  // Identity key of the moderator asking.
+  string moderator_identity = 1;
+  // Client timestamp in unix milliseconds; must be within the server's
+  // acceptable skew window.
+  int64 timestamp = 2;
+  // URL of the server the request is addressed to. The server rejects
+  // requests addressed to other servers.
+  string server_url = 3;
+}
+
+message ListBansResponse {
+  // Identity keys banned on this server.
+  repeated string banned_identities = 1;
+}
+
+/**
  * Identity APIs.
  */
 service IdentityService {
@@ -78,4 +97,8 @@ service IdentityService {
   // expects a signed IsBannedBody message, signed by one of the
   // moderator's authorized keys.
   rpc IsBanned(SignedMessage) returns (IsBannedResponse);
+  // Lists the identities banned on this server. This endpoint expects a
+  // signed ListBansBody message, signed by one of the moderator's
+  // authorized keys.
+  rpc ListBans(SignedMessage) returns (ListBansResponse);
 }

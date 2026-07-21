@@ -4,6 +4,7 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { IdentityService } from "./identity_service";
+import type { ListBansResponse } from "./identity_service";
 import type { IsBannedResponse } from "./identity_service";
 import type { SetBanStatusResponse } from "./identity_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
@@ -42,6 +43,14 @@ export interface IIdentityServiceClient {
      * @generated from protobuf rpc: IsBanned
      */
     isBanned(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsBannedResponse>;
+    /**
+     * Lists the identities banned on this server. This endpoint expects a
+     * signed ListBansBody message, signed by one of the moderator's
+     * authorized keys.
+     *
+     * @generated from protobuf rpc: ListBans
+     */
+    listBans(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, ListBansResponse>;
 }
 /**
  * *
@@ -87,5 +96,16 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
     isBanned(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsBannedResponse> {
         const method = this.methods[2], opt = this._transport.mergeOptions(options);
         return stackIntercept<SignedMessage, IsBannedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Lists the identities banned on this server. This endpoint expects a
+     * signed ListBansBody message, signed by one of the moderator's
+     * authorized keys.
+     *
+     * @generated from protobuf rpc: ListBans
+     */
+    listBans(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, ListBansResponse> {
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SignedMessage, ListBansResponse>("unary", this._transport, method, opt, input);
     }
 }

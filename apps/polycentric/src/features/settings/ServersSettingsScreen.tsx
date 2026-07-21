@@ -8,6 +8,8 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import useModeratedServers from '@/src/features/moderation/hooks/useModeratedServers';
+import ModeratorDashboardSheet from '@/src/features/moderation/ModeratorDashboardSheet';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -22,6 +24,9 @@ export function ServersSettingsSheet() {
   const [isEditing, setIsEditing] = useState(false);
   const [newServerUrl, setNewServerUrl] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [dashboardServer, setDashboardServer] = useState<string | null>(null);
+
+  const { servers: moderatedServers } = useModeratedServers(true);
 
   const refreshServers = useCallback(() => {
     setServers([...client.servers]);
@@ -109,6 +114,20 @@ export function ServersSettingsSheet() {
                 >
                   {server}
                 </Text>
+                {moderatedServers.includes(server) && (
+                  <IconButton
+                    variant="ghost"
+                    compact
+                    icon={() => (
+                      <Icon
+                        name="shieldAccount"
+                        size={22}
+                        color="primary_600"
+                      />
+                    )}
+                    onPress={() => setDashboardServer(server)}
+                  />
+                )}
                 {isEditing && (
                   <IconButton
                     variant="ghost"
@@ -154,6 +173,15 @@ export function ServersSettingsSheet() {
           </View>
         )}
       </Sheet.Content>
+
+      {/* Modals */}
+      {dashboardServer !== null && (
+        <ModeratorDashboardSheet
+          server={dashboardServer}
+          open={true}
+          onClose={() => setDashboardServer(null)}
+        />
+      )}
     </Sheet>
   );
 }

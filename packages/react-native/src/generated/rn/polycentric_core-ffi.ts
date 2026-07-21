@@ -335,6 +335,11 @@ interface NativeModuleInterface {
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array,
   ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_bans(
+    uniffiSelf: bigint,
+    serverUrl: Uint8Array,
+    signedMessageBytes: Uint8Array,
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
@@ -470,6 +475,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;

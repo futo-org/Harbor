@@ -4,6 +4,7 @@
 pub mod common;
 pub mod is_banned;
 pub mod is_moderator;
+pub mod list_bans;
 pub mod set_ban_status;
 
 use crate::service::context::ServiceContext;
@@ -11,7 +12,8 @@ use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
 use crate::service::proto::{
-    IsBannedResponse, IsModeratorResponse, SetBanStatusResponse, SignedMessage,
+    IsBannedResponse, IsModeratorResponse, ListBansResponse,
+    SetBanStatusResponse, SignedMessage,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -60,6 +62,20 @@ impl IdentityService for IdentityServiceImpl {
     ) -> Result<Response<IsBannedResponse>, Status> {
         Ok(Response::new(
             is_banned::handle(
+                &self.ctx,
+                &self.server_name,
+                request.into_inner(),
+            )
+            .await?,
+        ))
+    }
+
+    async fn list_bans(
+        &self,
+        request: Request<SignedMessage>,
+    ) -> Result<Response<ListBansResponse>, Status> {
+        Ok(Response::new(
+            list_bans::handle(
                 &self.ctx,
                 &self.server_name,
                 request.into_inner(),
@@ -145,6 +161,14 @@ mod tests {
         sign_bytes(Message::encode_to_vec(&Proto::IsBannedBody {
             moderator_identity: "moderator".to_string(),
             target_identity: "target".to_string(),
+            timestamp: Utc::now().timestamp_millis(),
+            server_url: server_url.to_string(),
+        }))
+    }
+
+    fn make_signed_list_bans_body(server_url: &str) -> SignedMessage {
+        sign_bytes(Message::encode_to_vec(&Proto::ListBansBody {
+            moderator_identity: "moderator".to_string(),
             timestamp: Utc::now().timestamp_millis(),
             server_url: server_url.to_string(),
         }))
@@ -266,6 +290,27 @@ mod tests {
         let msg = make_signed_is_banned_body("http://another-server");
 
         let err = service.is_banned(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn list_bans_rejects_invalid_signature() {
+        let service = impl_for_testing().await;
+        let mut msg = make_signed_list_bans_body(TEST_SERVER);
+        msg.signature[0] ^= 1;
+
+        let err = service.list_bans(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn list_bans_rejects_wrong_server_url() {
+        let service = impl_for_testing().await;
+        let msg = make_signed_list_bans_body("http://another-server");
+
+        let err = service.list_bans(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::PermissionDenied);
     }

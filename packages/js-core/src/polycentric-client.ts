@@ -322,6 +322,41 @@ export class PolycentricClient {
   }
 
   /**
+   * List the identities banned on `server`
+   * (`IdentityService.ListBans`). The active identity must be a
+   * moderator on `server`.
+   */
+  async listBans(server: string): Promise<string[]> {
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const messageBytes = Proto.ListBansBody.toBinary(
+      Proto.ListBansBody.create({
+        moderatorIdentity: this.activeIdentityKey,
+        timestamp: BigInt(Date.now()),
+        serverUrl: server,
+      }),
+    );
+    const signature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      messageBytes,
+      this.currentKeyPair.keyType,
+    );
+    const signedMessage = Proto.SignedMessage.create({
+      signature,
+      messageBytes,
+      publicKey: this.currentKeyPair.publicKey,
+    });
+
+    const bytes = await this.core.listBans(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+    return Proto.ListBansResponse.fromBinary(new Uint8Array(bytes))
+      .bannedIdentities;
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {
