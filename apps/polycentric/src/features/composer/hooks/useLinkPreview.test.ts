@@ -89,7 +89,9 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => {
-    renderers.forEach((r) => r.unmount());
+    renderers.forEach((r) => {
+      r.unmount();
+    });
   });
   renderers = [];
 });

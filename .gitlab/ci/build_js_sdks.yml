@@ -25,18 +25,11 @@
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
-js-sdks-format-check:
+js-sdks-biome-check:
   extends: .js-sdks-base
   stage: check
   script:
-    - pnpm format
-  allow_failure: true
-
-js-sdks-lint-check:
-  extends: .js-sdks-base
-  stage: check
-  script:
-    - pnpm --filter js-core lint
+    - pnpm exec biome check packages/js-core --diagnostic-level=error
   allow_failure: true
 
 js-core-tests-check:
