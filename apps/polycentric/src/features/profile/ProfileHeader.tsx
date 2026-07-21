@@ -23,6 +23,7 @@ import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
+import ProfileMenu from './ProfileMenu';
 
 const BANNER_HEIGHT = 150;
 
@@ -145,7 +146,16 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           ) : null}
         </View>
 
-        <View style={[Atoms.mt_md, { flexShrink: 0 }]}>
+        <View
+          style={[
+            Atoms.mt_md,
+            Atoms.flex_row,
+            Atoms.items_center,
+            Atoms.gap_sm,
+            { flexShrink: 0 },
+          ]}
+        >
+          <ProfileMenu />
           {isSelf ? (
             <Button
               title="Edit profile"
