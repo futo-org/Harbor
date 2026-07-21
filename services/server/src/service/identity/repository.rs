@@ -4,11 +4,13 @@ use crate::service::proto::{Content, Identity, PublicKey};
 use ::entity::{
     ban_model as BanModel, content_model as ContentModel,
     event_model as EventModel, moderator_model as ModeratorModel,
+    notification as NotificationModel, reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::*;
 use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
 
@@ -174,8 +176,8 @@ pub struct Mutation;
 impl Mutation {
     /// Sets whether `identity` is banned: inserts or deletes its `ban`
     /// row. Idempotent in both directions.
-    pub async fn set_banned(
-        db: &DbConn,
+    pub async fn set_banned<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         banned: bool,
     ) -> Result<(), DbErr> {
@@ -199,6 +201,151 @@ impl Mutation {
         }
         Ok(())
     }
+
+    /// Erases everything `identity` published to this server: its
+    /// events, any content rows no other identity's events still
+    /// reference (plus their per-kind child rows), its notifications,
+    /// and its reply-count rows. Content is deduplicated by digest and
+    /// content bytes are public, so rows another identity's events
+    /// still reference are kept — otherwise getting banned on purpose
+    /// after referencing a victim's digests would erase the victim's
+    /// content. Blob bodies in the filestore are not touched; they
+    /// become unreachable once their `content_blob` rows are gone.
+    pub async fn erase_identity_content<C: ConnectionTrait>(
+        db: &C,
+        identity: &str,
+    ) -> Result<(), DbErr> {
+        // Content rows referenced by the identity's events, collected
+        // before the events are deleted.
+        let candidate_ids =
+            content_ids_for_identity_events(db, identity).await?;
+
+        EventModel::Entity::delete_many()
+            .filter(EventModel::Column::Identity.eq(identity))
+            .exec(db)
+            .await?;
+
+        let kept_ids = still_referenced_content_ids(db, &candidate_ids).await?;
+        let orphan_ids: Vec<i64> = candidate_ids
+            .into_iter()
+            .filter(|id| !kept_ids.contains(id))
+            .collect();
+        delete_content_rows(db, &orphan_ids).await?;
+
+        NotificationModel::Entity::delete_many()
+            .filter(
+                Condition::any()
+                    .add(NotificationModel::Column::FromIdentity.eq(identity))
+                    .add(NotificationModel::Column::ToIdentity.eq(identity)),
+            )
+            .exec(db)
+            .await?;
+
+        // Counts of replies *to* the identity's own events. Counts on
+        // other identities' events that included replies from this
+        // identity are left as-is.
+        ReplyCountModel::Entity::delete_many()
+            .filter(ReplyCountModel::Column::EventKeyIdentity.eq(identity))
+            .exec(db)
+            .await?;
+
+        Ok(())
+    }
+}
+
+/// Ids of content rows referenced by `identity`'s events.
+async fn content_ids_for_identity_events<C: ConnectionTrait>(
+    db: &C,
+    identity: &str,
+) -> Result<Vec<i64>, DbErr> {
+    let rows = db
+        .query_all_raw(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            r#"SELECT DISTINCT c.id FROM content c
+               JOIN events e ON e.content_digest_type = c.digest_type
+                 AND e.content_digest_bytes = c.digest_bytes
+               WHERE e.identity = $1"#,
+            [identity.into()],
+        ))
+        .await?;
+    rows.iter().map(|row| row.try_get("", "id")).collect()
+}
+
+/// The subset of `content_ids` still referenced by some event.
+async fn still_referenced_content_ids<C: ConnectionTrait>(
+    db: &C,
+    content_ids: &[i64],
+) -> Result<HashSet<i64>, DbErr> {
+    let mut kept = HashSet::new();
+    for chunk in content_ids.chunks(1000) {
+        let rows = db
+            .query_all_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                r#"SELECT DISTINCT c.id FROM content c
+                   JOIN events e ON e.content_digest_type = c.digest_type
+                     AND e.content_digest_bytes = c.digest_bytes
+                   WHERE c.id = ANY($1)"#,
+                [chunk.to_vec().into()],
+            ))
+            .await?;
+        for row in rows {
+            kept.insert(row.try_get::<i64>("", "id")?);
+        }
+    }
+    Ok(kept)
+}
+
+/// Deletes content rows and their per-kind child rows.
+async fn delete_content_rows<C: ConnectionTrait>(
+    db: &C,
+    content_ids: &[i64],
+) -> Result<(), DbErr> {
+    use ::entity::{
+        content_blob_model, content_block_model, content_delete_model,
+        content_follow_model, content_identity_model, content_image_model,
+        content_label_model, content_post_model, content_profile_update_model,
+        content_reaction_model, content_report_model, content_repost_model,
+        content_verification_claim_model, content_verification_target_model,
+        content_verification_verify_model,
+    };
+
+    for chunk in content_ids.chunks(1000) {
+        macro_rules! delete_children {
+            ($($model:ident),* $(,)?) => {
+                $(
+                    $model::Entity::delete_many()
+                        .filter(
+                            $model::Column::ContentId
+                                .is_in(chunk.iter().copied()),
+                        )
+                        .exec(db)
+                        .await?;
+                )*
+            };
+        }
+        delete_children!(
+            content_blob_model,
+            content_block_model,
+            content_delete_model,
+            content_follow_model,
+            content_identity_model,
+            content_image_model,
+            content_label_model,
+            content_post_model,
+            content_profile_update_model,
+            content_reaction_model,
+            content_report_model,
+            content_repost_model,
+            content_verification_claim_model,
+            content_verification_target_model,
+            content_verification_verify_model,
+        );
+        ContentModel::Entity::delete_many()
+            .filter(ContentModel::Column::Id.is_in(chunk.iter().copied()))
+            .exec(db)
+            .await?;
+    }
+    Ok(())
 }
 
 struct DecodedIdentityRow {
