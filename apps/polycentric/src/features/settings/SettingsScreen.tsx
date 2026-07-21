@@ -18,6 +18,7 @@ import {
 } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
+import { useSettings } from '@/src/common/settings';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
@@ -70,6 +71,30 @@ function LinkPreviewSettingRow() {
   );
 }
 
+function ModeratorModeSettingRow() {
+  const enabled = useSettings((s) => s.moderatorMode);
+  const setModeratorMode = useSettings((s) => s.setModeratorMode);
+
+  return (
+    <ListItem onPress={() => setModeratorMode(!enabled)}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
+      >
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+          <Icon name="shieldAccount" size={22} color="primary_600" />
+          <Text variant="body">Moderator Mode</Text>
+        </View>
+        <Switch value={enabled} onValueChange={setModeratorMode} />
+      </View>
+    </ListItem>
+  );
+}
+
 export default function SettingsTabScreen() {
   const { identityKey } = useCurrentIdentity();
 
@@ -115,6 +140,10 @@ export default function SettingsTabScreen() {
                 >
                   <Text variant="body">Polycentric servers</Text>
                 </ListItemWrapper>
+              </ListItemGroup>
+
+              <ListItemGroup label="Moderation">
+                <ModeratorModeSettingRow />
               </ListItemGroup>
 
               <ListItemGroup>
