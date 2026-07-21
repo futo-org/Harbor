@@ -3,8 +3,9 @@
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::SignedMessage;
+use crate::service::proto::{ModerationRequest, SignedMessage};
 use chrono::Utc;
+use prost::Message;
 use tonic::Status;
 
 /// Maximum accepted difference between a signed body's timestamp and
@@ -70,6 +71,56 @@ pub async fn authorize_signer(
             .is_some_and(|content| content.authorizes_signer(public_key));
     if !authorized {
         return Err(Status::permission_denied("not authorized"));
+    }
+    Ok(())
+}
+
+/// Decode and validate the signed `ModerationRequest` common to every
+/// moderation endpoint: verifies the signature, that the request is
+/// addressed to this server, that the timestamp is fresh, and that the
+/// signer controls `moderator_identity`. The returned request still
+/// holds the endpoint-specific `body` bytes for the caller to decode.
+///
+/// Does NOT check moderator status — `IsModerator` must answer for
+/// non-moderators too. Endpoints that require moderator privileges call
+/// [`require_moderator`] with the returned `moderator_identity`.
+pub async fn validate_moderation_request(
+    ctx: &ServiceContext,
+    server_name: &str,
+    msg: SignedMessage,
+) -> Result<ModerationRequest, Status> {
+    let public_key = verify_signed_message(&msg)?;
+
+    let request =
+        ModerationRequest::decode(&msg.message_bytes[..]).map_err(|_| {
+            Status::invalid_argument("Argument is not a ModerationRequest")
+        })?;
+
+    // The signed body names the server it is addressed to, so a server
+    // that receives it cannot relay it to another server.
+    if request.server_url != server_name {
+        return Err(Status::permission_denied(
+            "request is addressed to a different server",
+        ));
+    }
+
+    check_timestamp_skew(request.timestamp)?;
+
+    authorize_signer(ctx, &request.moderator_identity, &public_key).await?;
+
+    Ok(request)
+}
+
+/// Rejects unless `identity` is a moderator on this server.
+pub async fn require_moderator(
+    ctx: &ServiceContext,
+    identity: &str,
+) -> Result<(), Status> {
+    let is_moderator = id_repo::Query::is_moderator(&ctx.db, identity)
+        .await
+        .map_err(|_| Status::internal("internal server error"))?;
+    if !is_moderator {
+        return Err(Status::permission_denied("not a moderator"));
     }
     Ok(())
 }

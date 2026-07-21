@@ -139,39 +139,54 @@ mod tests {
         }
     }
 
-    fn make_signed_body(identity: &str, timestamp: i64) -> SignedMessage {
-        sign_bytes(Message::encode_to_vec(&Proto::IsModeratorBody {
-            identity: identity.to_string(),
+    fn moderation_request(
+        moderator_identity: &str,
+        timestamp: i64,
+        server_url: &str,
+        body: Vec<u8>,
+    ) -> SignedMessage {
+        sign_bytes(Message::encode_to_vec(&Proto::ModerationRequest {
+            moderator_identity: moderator_identity.to_string(),
             timestamp,
-            server_url: TEST_SERVER.to_string(),
+            server_url: server_url.to_string(),
+            body,
         }))
+    }
+
+    fn make_signed_body(identity: &str, timestamp: i64) -> SignedMessage {
+        moderation_request(identity, timestamp, TEST_SERVER, Vec::new())
     }
 
     fn make_signed_ban_body(server_url: &str) -> SignedMessage {
-        sign_bytes(Message::encode_to_vec(&Proto::SetBanStatusBody {
-            moderator_identity: "moderator".to_string(),
-            target_identity: "target".to_string(),
-            timestamp: Utc::now().timestamp_millis(),
-            server_url: server_url.to_string(),
-            banned: true,
-        }))
+        moderation_request(
+            "moderator",
+            Utc::now().timestamp_millis(),
+            server_url,
+            Message::encode_to_vec(&Proto::SetBanStatusRequest {
+                target_identity: "target".to_string(),
+                banned: true,
+            }),
+        )
     }
 
     fn make_signed_is_banned_body(server_url: &str) -> SignedMessage {
-        sign_bytes(Message::encode_to_vec(&Proto::IsBannedBody {
-            moderator_identity: "moderator".to_string(),
-            target_identity: "target".to_string(),
-            timestamp: Utc::now().timestamp_millis(),
-            server_url: server_url.to_string(),
-        }))
+        moderation_request(
+            "moderator",
+            Utc::now().timestamp_millis(),
+            server_url,
+            Message::encode_to_vec(&Proto::IsBannedRequest {
+                target_identity: "target".to_string(),
+            }),
+        )
     }
 
     fn make_signed_list_bans_body(server_url: &str) -> SignedMessage {
-        sign_bytes(Message::encode_to_vec(&Proto::ListBansBody {
-            moderator_identity: "moderator".to_string(),
-            timestamp: Utc::now().timestamp_millis(),
-            server_url: server_url.to_string(),
-        }))
+        moderation_request(
+            "moderator",
+            Utc::now().timestamp_millis(),
+            server_url,
+            Vec::new(),
+        )
     }
 
     #[tokio::test]

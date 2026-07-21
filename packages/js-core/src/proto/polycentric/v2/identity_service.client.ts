@@ -14,39 +14,37 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Identity APIs.
+ * Identity APIs. Every method takes a SignedMessage wrapping a
+ * serialized ModerationRequest (and, in `body`, the serialized
+ * endpoint-specific request), signed by one of `moderator_identity`'s
+ * authorized keys.
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
 export interface IIdentityServiceClient {
     /**
-     * Returns whether an identity is a moderator on this server. This
-     * endpoint expects a signed IsModeratorBody message, signed by one of
-     * the identity's authorized keys.
+     * Returns whether `moderator_identity` is a moderator on this server.
      *
      * @generated from protobuf rpc: IsModerator
      */
     isModerator(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsModeratorResponse>;
     /**
-     * Bans or unbans an identity on this server. This endpoint expects a
-     * signed SetBanStatusBody message, signed by one of the moderator's
-     * authorized keys.
+     * Bans or unbans an identity on this server. Requires the signer to be
+     * a moderator.
      *
      * @generated from protobuf rpc: SetBanStatus
      */
     setBanStatus(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, SetBanStatusResponse>;
     /**
-     * Returns whether an identity is banned on this server. This endpoint
-     * expects a signed IsBannedBody message, signed by one of the
-     * moderator's authorized keys.
+     * Returns whether an identity is banned on this server. Requires the
+     * signer to be a moderator.
      *
      * @generated from protobuf rpc: IsBanned
      */
     isBanned(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsBannedResponse>;
     /**
-     * Lists the identities banned on this server. This endpoint expects a
-     * signed ListBansBody message, signed by one of the moderator's
-     * authorized keys.
+     * Lists the identities banned on this server. Requires the signer to
+     * be a moderator.
      *
      * @generated from protobuf rpc: ListBans
      */
@@ -54,7 +52,10 @@ export interface IIdentityServiceClient {
 }
 /**
  * *
- * Identity APIs.
+ * Identity APIs. Every method takes a SignedMessage wrapping a
+ * serialized ModerationRequest (and, in `body`, the serialized
+ * endpoint-specific request), signed by one of `moderator_identity`'s
+ * authorized keys.
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
@@ -65,9 +66,7 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * Returns whether an identity is a moderator on this server. This
-     * endpoint expects a signed IsModeratorBody message, signed by one of
-     * the identity's authorized keys.
+     * Returns whether `moderator_identity` is a moderator on this server.
      *
      * @generated from protobuf rpc: IsModerator
      */
@@ -76,9 +75,8 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
         return stackIntercept<SignedMessage, IsModeratorResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Bans or unbans an identity on this server. This endpoint expects a
-     * signed SetBanStatusBody message, signed by one of the moderator's
-     * authorized keys.
+     * Bans or unbans an identity on this server. Requires the signer to be
+     * a moderator.
      *
      * @generated from protobuf rpc: SetBanStatus
      */
@@ -87,9 +85,8 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
         return stackIntercept<SignedMessage, SetBanStatusResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Returns whether an identity is banned on this server. This endpoint
-     * expects a signed IsBannedBody message, signed by one of the
-     * moderator's authorized keys.
+     * Returns whether an identity is banned on this server. Requires the
+     * signer to be a moderator.
      *
      * @generated from protobuf rpc: IsBanned
      */
@@ -98,9 +95,8 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
         return stackIntercept<SignedMessage, IsBannedResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Lists the identities banned on this server. This endpoint expects a
-     * signed ListBansBody message, signed by one of the moderator's
-     * authorized keys.
+     * Lists the identities banned on this server. Requires the signer to
+     * be a moderator.
      *
      * @generated from protobuf rpc: ListBans
      */

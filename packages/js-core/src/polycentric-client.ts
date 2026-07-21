@@ -214,18 +214,23 @@ export class PolycentricClient {
   }
 
   /**
-   * Ask `server` whether the active identity is a moderator
-   * (`IdentityService.IsModerator`).
+   * Build and sign a `ModerationRequest` addressed to `server`, wrapping
+   * the serialized endpoint-specific `body`. Returns the serialized
+   * `SignedMessage` bytes the core FFI methods expect.
    */
-  async isModerator(server: string): Promise<boolean> {
+  private async signModerationRequest(
+    server: string,
+    body: Uint8Array,
+  ): Promise<ArrayBuffer> {
     if (!this.currentKeyPair) throw new Error('No active key pair');
     if (!this.activeIdentityKey) throw new Error('No active identity');
 
-    const messageBytes = Proto.IsModeratorBody.toBinary(
-      Proto.IsModeratorBody.create({
-        identity: this.activeIdentityKey,
+    const messageBytes = Proto.ModerationRequest.toBinary(
+      Proto.ModerationRequest.create({
+        moderatorIdentity: this.activeIdentityKey,
         timestamp: BigInt(Date.now()),
         serverUrl: server,
+        body,
       }),
     );
     const signature = await this.crypto.sign(
@@ -238,10 +243,20 @@ export class PolycentricClient {
       messageBytes,
       publicKey: this.currentKeyPair.publicKey,
     });
+    return Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer;
+  }
 
+  /**
+   * Ask `server` whether the active identity is a moderator
+   * (`IdentityService.IsModerator`).
+   */
+  async isModerator(server: string): Promise<boolean> {
+    const body = Proto.IsModeratorRequest.toBinary(
+      Proto.IsModeratorRequest.create({}),
+    );
     const bytes = await this.core.isModerator(
       server,
-      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+      await this.signModerationRequest(server, body),
     );
     return Proto.IsModeratorResponse.fromBinary(new Uint8Array(bytes))
       .isModerator;
@@ -257,32 +272,12 @@ export class PolycentricClient {
     targetIdentity: string,
     banned: boolean,
   ): Promise<void> {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const messageBytes = Proto.SetBanStatusBody.toBinary(
-      Proto.SetBanStatusBody.create({
-        moderatorIdentity: this.activeIdentityKey,
-        targetIdentity,
-        timestamp: BigInt(Date.now()),
-        serverUrl: server,
-        banned,
-      }),
+    const body = Proto.SetBanStatusRequest.toBinary(
+      Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
     );
-    const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
-    );
-    const signedMessage = Proto.SignedMessage.create({
-      signature,
-      messageBytes,
-      publicKey: this.currentKeyPair.publicKey,
-    });
-
     await this.core.setBanStatus(
       server,
-      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+      await this.signModerationRequest(server, body),
     );
   }
 
@@ -292,31 +287,12 @@ export class PolycentricClient {
    * moderator on `server`.
    */
   async isBanned(server: string, targetIdentity: string): Promise<boolean> {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const messageBytes = Proto.IsBannedBody.toBinary(
-      Proto.IsBannedBody.create({
-        moderatorIdentity: this.activeIdentityKey,
-        targetIdentity,
-        timestamp: BigInt(Date.now()),
-        serverUrl: server,
-      }),
+    const body = Proto.IsBannedRequest.toBinary(
+      Proto.IsBannedRequest.create({ targetIdentity }),
     );
-    const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
-    );
-    const signedMessage = Proto.SignedMessage.create({
-      signature,
-      messageBytes,
-      publicKey: this.currentKeyPair.publicKey,
-    });
-
     const bytes = await this.core.isBanned(
       server,
-      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+      await this.signModerationRequest(server, body),
     );
     return Proto.IsBannedResponse.fromBinary(new Uint8Array(bytes)).isBanned;
   }
@@ -327,30 +303,12 @@ export class PolycentricClient {
    * moderator on `server`.
    */
   async listBans(server: string): Promise<string[]> {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const messageBytes = Proto.ListBansBody.toBinary(
-      Proto.ListBansBody.create({
-        moderatorIdentity: this.activeIdentityKey,
-        timestamp: BigInt(Date.now()),
-        serverUrl: server,
-      }),
+    const body = Proto.ListBansRequest.toBinary(
+      Proto.ListBansRequest.create({}),
     );
-    const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
-    );
-    const signedMessage = Proto.SignedMessage.create({
-      signature,
-      messageBytes,
-      publicKey: this.currentKeyPair.publicKey,
-    });
-
     const bytes = await this.core.listBans(
       server,
-      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+      await this.signModerationRequest(server, body),
     );
     return Proto.ListBansResponse.fromBinary(new Uint8Array(bytes))
       .bannedIdentities;

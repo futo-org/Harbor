@@ -491,8 +491,9 @@ impl PolycentricCore {
     }
 
     /// Ask a server whether an identity is a moderator.
-    /// `signed_message_bytes` is a serialized `SignedMessage` wrapping an
-    /// `IsModeratorBody` signed by one of the identity's authorized keys.
+    /// `signed_message_bytes` is a serialized `SignedMessage` wrapping a
+    /// `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
+    /// the identity's authorized keys.
     /// Returns serialized `IsModeratorResponse` proto bytes.
     pub async fn is_moderator(
         &self,
@@ -510,8 +511,9 @@ impl PolycentricCore {
     }
 
     /// Ban or unban an identity on a server. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
-    /// one of the moderator's authorized keys.
+    /// serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+    /// `SetBanStatusRequest`) signed by one of the moderator's authorized
+    /// keys.
     /// Returns serialized `SetBanStatusResponse` proto bytes.
     pub async fn set_ban_status(
         &self,
@@ -529,8 +531,9 @@ impl PolycentricCore {
     }
 
     /// Ask a server whether an identity is banned. `signed_message_bytes`
-    /// is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
-    /// one of the moderator's authorized keys.
+    /// is a serialized `SignedMessage` wrapping a `ModerationRequest`
+    /// (body: `IsBannedRequest`) signed by one of the moderator's
+    /// authorized keys.
     /// Returns serialized `IsBannedResponse` proto bytes.
     pub async fn is_banned(
         &self,
@@ -548,8 +551,9 @@ impl PolycentricCore {
     }
 
     /// List the identities banned on a server. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a `ListBansBody` signed by one
-    /// of the moderator's authorized keys.
+    /// serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+    /// `ListBansRequest`) signed by one of the moderator's authorized
+    /// keys.
     /// Returns serialized `ListBansResponse` proto bytes.
     pub async fn list_bans(
         &self,
