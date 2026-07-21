@@ -1,11 +1,5 @@
 //! `get_post_thread`: ancestors (root → direct parent), the subject
 //! itself, then descendants (one branch deep for now).
-//!
-//! Note that the thread request pipeline can filter tombstones/labels
-//! at the `filter` stage rather than the `fetch` stage because it
-//! serves hints for all missing events that were filtered by a
-//! tombstone/label. Thus, the client knows whether query returned the
-//! expected amount of events, even if some are missing.
 
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
