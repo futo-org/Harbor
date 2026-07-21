@@ -3,7 +3,7 @@
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::{Identity, SignedMessage};
+use crate::service::proto::SignedMessage;
 use chrono::Utc;
 use tonic::Status;
 
@@ -47,43 +47,31 @@ pub fn verify_signed_message(
 
 /// Rejects unless `public_key` is one of `identity`'s currently
 /// authorized keys.
+///
+/// Authorization walks the validated identity chain directly rather than
+/// reading `proof_cache`: the cache is also populated by feed/profile
+/// hydration (`warm_identity_cache`), which caches the highest-sequence
+/// raw IDENTITY event with no genesis or rotation-chain validation. Since
+/// `put_events` accepts IDENTITY-collection events without authorization,
+/// trusting the cache here would let a forged IDENTITY event authorize an
+/// attacker's key as a moderator.
 pub async fn authorize_signer(
     ctx: &ServiceContext,
     identity: &str,
     public_key: &Proto::PublicKey,
 ) -> Result<(), Status> {
-    let authorized = identity_content(ctx, identity)
-        .await?
-        .is_some_and(|content| content.authorizes_signer(public_key));
+    let authorized =
+        id_repo::Query::latest_valid_identity_content(&ctx.db, identity)
+            .await
+            .map_err(|e| {
+                eprintln!("authorize_signer db error: {e}");
+                Status::internal("internal server error")
+            })?
+            .is_some_and(|content| content.authorizes_signer(public_key));
     if !authorized {
         return Err(Status::permission_denied("not authorized"));
     }
     Ok(())
-}
-
-/// The identity's chain-head content, from the proof cache or the DB
-/// (warming the cache on a miss). `None` when no valid genesis exists.
-async fn identity_content(
-    ctx: &ServiceContext,
-    identity: &str,
-) -> Result<Option<Identity>, Status> {
-    if let Some(content) = ctx.proof_cache.identity_content(identity).await {
-        return Ok(Some(content));
-    }
-    let Some(loaded) =
-        id_repo::Query::latest_valid_identity_content(&ctx.db, identity)
-            .await
-            .map_err(|e| {
-                eprintln!("identity_content db error: {e}");
-                Status::internal("internal server error")
-            })?
-    else {
-        return Ok(None);
-    };
-    ctx.proof_cache
-        .warm_identity_content(identity, loaded.clone())
-        .await;
-    Ok(Some(loaded))
 }
 
 #[cfg(test)]
