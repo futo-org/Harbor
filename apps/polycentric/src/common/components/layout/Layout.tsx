@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView as RNScrollView,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -142,7 +143,10 @@ function Screen({
       testID="layout-screen"
       style={[
         Atoms.flex_row,
-        Atoms.flex_1,
+        // Web: grow with content so the sidebars' containing block spans the
+        // full scroll height, letting `position: sticky` pin them. Native
+        // keeps a fixed viewport-height screen.
+        isWeb ? { minHeight: '100%' } : Atoms.flex_1,
         { backgroundColor: theme.palette.neutral_0 },
         { paddingTop: insets.top },
         !isWeb && {
@@ -200,22 +204,23 @@ export const LeftSidebar = memo(function LeftSidebar({
         { alignItems: 'flex-end' },
       ]}
     >
-      <View style={{ width: narrowSidebar ? 88 : 275 }}>
+      <View style={{ width: narrowSidebar ? 88 : 275, height: '100%' }}>
         <View
           style={[
             {
-              position: 'fixed',
+              position: 'sticky',
               top: 0,
-              height: '100%',
+              height: '100vh',
             },
           ]}
         >
-          <View
-            style={[
+          <RNScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
               Atoms.justify_between,
               Atoms.align_center,
-              Atoms.h_full,
               {
+                minHeight: '100%',
                 paddingHorizontal: narrowSidebar ? 0 : 30,
                 width: narrowSidebar ? 88 : 275,
               },
@@ -280,7 +285,7 @@ export const LeftSidebar = memo(function LeftSidebar({
             >
               {identity && <IdentityFooter compact={narrowSidebar} />}
             </View>
-          </View>
+          </RNScrollView>
         </View>
       </View>
     </View>
@@ -293,13 +298,11 @@ export const RightSidebar = memo(function RightSidebar() {
   const marginRight = deviceWidth <= Breakpoints['2xl'] ? 10 : 70;
 
   return (
-    <View style={{ width, marginRight }}>
-      {/* Pin to viewport on web so it stays visible while the primary
-          column scrolls; the outer View reserves the row space. */}
+    <View style={{ width, marginRight, height: '100%' }}>
       <View
         style={
           isWeb
-            ? { position: 'fixed', top: 0, height: '100%', width }
+            ? { position: 'sticky', top: 0, height: '100vh', width }
             : undefined
         }
       >
