@@ -204,8 +204,7 @@ impl Mutation {
                     .do_nothing()
                     .to_owned(),
             )
-            .do_nothing()
-            .exec(db)
+            .exec_without_returning(db)
             .await?;
         } else {
             BanModel::Entity::delete_by_id(identity).exec(db).await?;
