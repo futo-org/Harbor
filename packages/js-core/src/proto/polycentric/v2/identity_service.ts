@@ -50,6 +50,94 @@ export interface IsModeratorResponse {
      */
     isModerator: boolean;
 }
+/**
+ * *
+ * Payload a moderator signs to ban or unban an identity.
+ *
+ * @generated from protobuf message polycentric.v2.SetBanStatusBody
+ */
+export interface SetBanStatusBody {
+    /**
+     * Identity key of the moderator issuing the action.
+     *
+     * @generated from protobuf field: string moderator_identity = 1
+     */
+    moderatorIdentity: string;
+    /**
+     * Identity key being banned or unbanned.
+     *
+     * @generated from protobuf field: string target_identity = 2
+     */
+    targetIdentity: string;
+    /**
+     * Client timestamp in unix milliseconds; must be within the server's
+     * acceptable skew window.
+     *
+     * @generated from protobuf field: int64 timestamp = 3
+     */
+    timestamp: bigint;
+    /**
+     * URL of the server the request is addressed to. The server rejects
+     * requests addressed to other servers.
+     *
+     * @generated from protobuf field: string server_url = 4
+     */
+    serverUrl: string;
+    /**
+     * Desired ban state: true to ban, false to unban.
+     *
+     * @generated from protobuf field: bool banned = 5
+     */
+    banned: boolean;
+}
+/**
+ * @generated from protobuf message polycentric.v2.SetBanStatusResponse
+ */
+export interface SetBanStatusResponse {
+}
+/**
+ * *
+ * Payload a moderator signs to query whether an identity is banned.
+ *
+ * @generated from protobuf message polycentric.v2.IsBannedBody
+ */
+export interface IsBannedBody {
+    /**
+     * Identity key of the moderator asking.
+     *
+     * @generated from protobuf field: string moderator_identity = 1
+     */
+    moderatorIdentity: string;
+    /**
+     * Identity key being asked about.
+     *
+     * @generated from protobuf field: string target_identity = 2
+     */
+    targetIdentity: string;
+    /**
+     * Client timestamp in unix milliseconds; must be within the server's
+     * acceptable skew window.
+     *
+     * @generated from protobuf field: int64 timestamp = 3
+     */
+    timestamp: bigint;
+    /**
+     * URL of the server the request is addressed to. The server rejects
+     * requests addressed to other servers.
+     *
+     * @generated from protobuf field: string server_url = 4
+     */
+    serverUrl: string;
+}
+/**
+ * @generated from protobuf message polycentric.v2.IsBannedResponse
+ */
+export interface IsBannedResponse {
+    /**
+     * @generated from protobuf field: bool is_banned = 1
+     */
+    isBanned: boolean;
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class IsModeratorBody$Type extends MessageType<IsModeratorBody> {
     constructor() {
@@ -160,9 +248,246 @@ class IsModeratorResponse$Type extends MessageType<IsModeratorResponse> {
  * @generated MessageType for protobuf message polycentric.v2.IsModeratorResponse
  */
 export const IsModeratorResponse = new IsModeratorResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SetBanStatusBody$Type extends MessageType<SetBanStatusBody> {
+    constructor() {
+        super("polycentric.v2.SetBanStatusBody", [
+            { no: 1, name: "moderator_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "target_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 4, name: "server_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "banned", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<SetBanStatusBody>): SetBanStatusBody {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.moderatorIdentity = "";
+        message.targetIdentity = "";
+        message.timestamp = 0n;
+        message.serverUrl = "";
+        message.banned = false;
+        if (value !== undefined)
+            reflectionMergePartial<SetBanStatusBody>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetBanStatusBody): SetBanStatusBody {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string moderator_identity */ 1:
+                    message.moderatorIdentity = reader.string();
+                    break;
+                case /* string target_identity */ 2:
+                    message.targetIdentity = reader.string();
+                    break;
+                case /* int64 timestamp */ 3:
+                    message.timestamp = reader.int64().toBigInt();
+                    break;
+                case /* string server_url */ 4:
+                    message.serverUrl = reader.string();
+                    break;
+                case /* bool banned */ 5:
+                    message.banned = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SetBanStatusBody, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string moderator_identity = 1; */
+        if (message.moderatorIdentity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.moderatorIdentity);
+        /* string target_identity = 2; */
+        if (message.targetIdentity !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.targetIdentity);
+        /* int64 timestamp = 3; */
+        if (message.timestamp !== 0n)
+            writer.tag(3, WireType.Varint).int64(message.timestamp);
+        /* string server_url = 4; */
+        if (message.serverUrl !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.serverUrl);
+        /* bool banned = 5; */
+        if (message.banned !== false)
+            writer.tag(5, WireType.Varint).bool(message.banned);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SetBanStatusBody
+ */
+export const SetBanStatusBody = new SetBanStatusBody$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SetBanStatusResponse$Type extends MessageType<SetBanStatusResponse> {
+    constructor() {
+        super("polycentric.v2.SetBanStatusResponse", []);
+    }
+    create(value?: PartialMessage<SetBanStatusResponse>): SetBanStatusResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<SetBanStatusResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetBanStatusResponse): SetBanStatusResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SetBanStatusResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SetBanStatusResponse
+ */
+export const SetBanStatusResponse = new SetBanStatusResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IsBannedBody$Type extends MessageType<IsBannedBody> {
+    constructor() {
+        super("polycentric.v2.IsBannedBody", [
+            { no: 1, name: "moderator_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "target_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "timestamp", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 4, name: "server_url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<IsBannedBody>): IsBannedBody {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.moderatorIdentity = "";
+        message.targetIdentity = "";
+        message.timestamp = 0n;
+        message.serverUrl = "";
+        if (value !== undefined)
+            reflectionMergePartial<IsBannedBody>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IsBannedBody): IsBannedBody {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string moderator_identity */ 1:
+                    message.moderatorIdentity = reader.string();
+                    break;
+                case /* string target_identity */ 2:
+                    message.targetIdentity = reader.string();
+                    break;
+                case /* int64 timestamp */ 3:
+                    message.timestamp = reader.int64().toBigInt();
+                    break;
+                case /* string server_url */ 4:
+                    message.serverUrl = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: IsBannedBody, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string moderator_identity = 1; */
+        if (message.moderatorIdentity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.moderatorIdentity);
+        /* string target_identity = 2; */
+        if (message.targetIdentity !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.targetIdentity);
+        /* int64 timestamp = 3; */
+        if (message.timestamp !== 0n)
+            writer.tag(3, WireType.Varint).int64(message.timestamp);
+        /* string server_url = 4; */
+        if (message.serverUrl !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.serverUrl);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.IsBannedBody
+ */
+export const IsBannedBody = new IsBannedBody$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IsBannedResponse$Type extends MessageType<IsBannedResponse> {
+    constructor() {
+        super("polycentric.v2.IsBannedResponse", [
+            { no: 1, name: "is_banned", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<IsBannedResponse>): IsBannedResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.isBanned = false;
+        if (value !== undefined)
+            reflectionMergePartial<IsBannedResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IsBannedResponse): IsBannedResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool is_banned */ 1:
+                    message.isBanned = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: IsBannedResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool is_banned = 1; */
+        if (message.isBanned !== false)
+            writer.tag(1, WireType.Varint).bool(message.isBanned);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.IsBannedResponse
+ */
+export const IsBannedResponse = new IsBannedResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.IdentityService
  */
 export const IdentityService = new ServiceType("polycentric.v2.IdentityService", [
-    { name: "IsModerator", options: {}, I: SignedMessage, O: IsModeratorResponse }
+    { name: "IsModerator", options: {}, I: SignedMessage, O: IsModeratorResponse },
+    { name: "SetBanStatus", options: {}, I: SignedMessage, O: SetBanStatusResponse },
+    { name: "IsBanned", options: {}, I: SignedMessage, O: IsBannedResponse }
 ]);

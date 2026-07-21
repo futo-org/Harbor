@@ -2,8 +2,8 @@ use crate::service::feeds::repository::{EventWithContentRow, content_join};
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, Identity, PublicKey};
 use ::entity::{
-    content_model as ContentModel, event_model as EventModel,
-    moderator_model as ModeratorModel,
+    ban_model as BanModel, content_model as ContentModel,
+    event_model as EventModel, moderator_model as ModeratorModel,
 };
 use polycentric_common::models::collections;
 use prost::Message;
@@ -140,6 +140,14 @@ impl Query {
             .is_some())
     }
 
+    /// True when `identity` has a row in the `ban` table.
+    pub async fn is_banned(db: &DbConn, identity: &str) -> Result<bool, DbErr> {
+        Ok(BanModel::Entity::find_by_id(identity)
+            .one(db)
+            .await?
+            .is_some())
+    }
+
     /// Every IDENTITY-collection event (full chain) for each of
     /// `identities`. Sent as hints on feed/thread/list responses so
     /// clients can validate post authors without re-fetching the chain.
@@ -158,6 +166,38 @@ impl Query {
             .order_by_asc(EventModel::Column::Sequence)
             .all(db)
             .await
+    }
+}
+
+pub struct Mutation;
+
+impl Mutation {
+    /// Sets whether `identity` is banned: inserts or deletes its `ban`
+    /// row. Idempotent in both directions.
+    pub async fn set_banned(
+        db: &DbConn,
+        identity: &str,
+        banned: bool,
+    ) -> Result<(), DbErr> {
+        if banned {
+            let now = chrono::Utc::now();
+            BanModel::Entity::insert(BanModel::ActiveModel {
+                identity: Set(identity.to_string()),
+                created_at: Set(now),
+                updated_at: Set(now),
+            })
+            .on_conflict(
+                sea_query::OnConflict::column(BanModel::Column::Identity)
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .do_nothing()
+            .exec(db)
+            .await?;
+        } else {
+            BanModel::Entity::delete_by_id(identity).exec(db).await?;
+        }
+        Ok(())
     }
 }
 

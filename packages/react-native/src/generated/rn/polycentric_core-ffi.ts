@@ -320,6 +320,11 @@ interface NativeModuleInterface {
     queryKey: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_banned(
+    uniffiSelf: bigint,
+    serverUrl: Uint8Array,
+    signedMessageBytes: Uint8Array,
+  ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_moderator(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
@@ -379,6 +384,11 @@ interface NativeModuleInterface {
     eventBundlesBytes: Uint8Array,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(
+    uniffiSelf: bigint,
+    serverUrl: Uint8Array,
+    signedMessageBytes: Uint8Array,
+  ): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
     signedMessageBytes: Uint8Array,
@@ -457,6 +467,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads(): number;
@@ -468,6 +479,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;

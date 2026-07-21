@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { IdentityService } from "./identity_service";
+import type { IsBannedResponse } from "./identity_service";
+import type { SetBanStatusResponse } from "./identity_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { IsModeratorResponse } from "./identity_service";
 import type { SignedMessage } from "./server";
@@ -24,6 +26,22 @@ export interface IIdentityServiceClient {
      * @generated from protobuf rpc: IsModerator
      */
     isModerator(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsModeratorResponse>;
+    /**
+     * Bans or unbans an identity on this server. This endpoint expects a
+     * signed SetBanStatusBody message, signed by one of the moderator's
+     * authorized keys.
+     *
+     * @generated from protobuf rpc: SetBanStatus
+     */
+    setBanStatus(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, SetBanStatusResponse>;
+    /**
+     * Returns whether an identity is banned on this server. This endpoint
+     * expects a signed IsBannedBody message, signed by one of the
+     * moderator's authorized keys.
+     *
+     * @generated from protobuf rpc: IsBanned
+     */
+    isBanned(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsBannedResponse>;
 }
 /**
  * *
@@ -47,5 +65,27 @@ export class IdentityServiceClient implements IIdentityServiceClient, ServiceInf
     isModerator(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsModeratorResponse> {
         const method = this.methods[0], opt = this._transport.mergeOptions(options);
         return stackIntercept<SignedMessage, IsModeratorResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Bans or unbans an identity on this server. This endpoint expects a
+     * signed SetBanStatusBody message, signed by one of the moderator's
+     * authorized keys.
+     *
+     * @generated from protobuf rpc: SetBanStatus
+     */
+    setBanStatus(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, SetBanStatusResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SignedMessage, SetBanStatusResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Returns whether an identity is banned on this server. This endpoint
+     * expects a signed IsBannedBody message, signed by one of the
+     * moderator's authorized keys.
+     *
+     * @generated from protobuf rpc: IsBanned
+     */
+    isBanned(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, IsBannedResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SignedMessage, IsBannedResponse>("unary", this._transport, method, opt, input);
     }
 }

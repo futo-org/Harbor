@@ -509,6 +509,44 @@ impl PolycentricCore {
         Ok(response.into_inner().encode_to_vec())
     }
 
+    /// Ban or unban an identity on a server. `signed_message_bytes` is a
+    /// serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
+    /// one of the moderator's authorized keys.
+    /// Returns serialized `SetBanStatusResponse` proto bytes.
+    pub async fn set_ban_status(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let response = client
+            .set_ban_status(signed)
+            .await
+            .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Ask a server whether an identity is banned. `signed_message_bytes`
+    /// is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
+    /// one of the moderator's authorized keys.
+    /// Returns serialized `IsBannedResponse` proto bytes.
+    pub async fn is_banned(
+        &self,
+        server_url: String,
+        signed_message_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let response = client
+            .is_banned(signed)
+            .await
+            .map_err(|e| CoreError::Network(format!("is_banned: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
     /// Returns serialized `Link` proto bytes.
     pub async fn url_info(&self, server_url: String, url: String) -> Result<Vec<u8>, CoreError> {

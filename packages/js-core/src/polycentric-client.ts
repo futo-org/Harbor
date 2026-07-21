@@ -248,6 +248,80 @@ export class PolycentricClient {
   }
 
   /**
+   * Ban or unban `targetIdentity` on `server`
+   * (`IdentityService.SetBanStatus`). The active identity must be a
+   * moderator on `server`.
+   */
+  async setBanStatus(
+    server: string,
+    targetIdentity: string,
+    banned: boolean,
+  ): Promise<void> {
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const messageBytes = Proto.SetBanStatusBody.toBinary(
+      Proto.SetBanStatusBody.create({
+        moderatorIdentity: this.activeIdentityKey,
+        targetIdentity,
+        timestamp: BigInt(Date.now()),
+        serverUrl: server,
+        banned,
+      }),
+    );
+    const signature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      messageBytes,
+      this.currentKeyPair.keyType,
+    );
+    const signedMessage = Proto.SignedMessage.create({
+      signature,
+      messageBytes,
+      publicKey: this.currentKeyPair.publicKey,
+    });
+
+    await this.core.setBanStatus(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+  }
+
+  /**
+   * Ask `server` whether `targetIdentity` is banned
+   * (`IdentityService.IsBanned`). The active identity must be a
+   * moderator on `server`.
+   */
+  async isBanned(server: string, targetIdentity: string): Promise<boolean> {
+    if (!this.currentKeyPair) throw new Error('No active key pair');
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+
+    const messageBytes = Proto.IsBannedBody.toBinary(
+      Proto.IsBannedBody.create({
+        moderatorIdentity: this.activeIdentityKey,
+        targetIdentity,
+        timestamp: BigInt(Date.now()),
+        serverUrl: server,
+      }),
+    );
+    const signature = await this.crypto.sign(
+      this.currentKeyPair.privateKey.key,
+      messageBytes,
+      this.currentKeyPair.keyType,
+    );
+    const signedMessage = Proto.SignedMessage.create({
+      signature,
+      messageBytes,
+      publicKey: this.currentKeyPair.publicKey,
+    });
+
+    const bytes = await this.core.isBanned(
+      server,
+      Proto.SignedMessage.toBinary(signedMessage).buffer as ArrayBuffer,
+    );
+    return Proto.IsBannedResponse.fromBinary(new Uint8Array(bytes)).isBanned;
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {

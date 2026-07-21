@@ -19,8 +19,9 @@ mod m20260630_000001_add_verification_tables;
 mod m20260707_164130_add_indices_for_sorting;
 mod m20260707_191447_add_reply_counts_table;
 mod m20260714_000001_add_url_info_cache_table;
-mod m20260717_000001_add_url_info_cache_raw_response;
 mod m20260715_000001_add_moderator_table;
+mod m20260717_000001_add_url_info_cache_raw_response;
+mod m20260721_000001_add_ban_table;
 
 pub struct Migrator;
 
@@ -51,6 +52,7 @@ impl MigratorTrait for Migrator {
                 m20260717_000001_add_url_info_cache_raw_response::Migration,
             ),
             Box::new(m20260715_000001_add_moderator_table::Migration),
+            Box::new(m20260721_000001_add_ban_table::Migration),
         ]
     }
 }

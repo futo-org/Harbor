@@ -3499,6 +3499,17 @@ export interface PolycentricCoreLike {
    */
   invalidateQuery(queryKey: Array<string>): void;
   /**
+   * Ask a server whether an identity is banned. `signed_message_bytes`
+   * is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
+   * one of the moderator's authorized keys.
+   * Returns serialized `IsBannedResponse` proto bytes.
+   */
+  isBanned(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ) /*throws*/ : Promise<ArrayBuffer>;
+  /**
    * Ask a server whether an identity is a moderator.
    * `signed_message_bytes` is a serialized `SignedMessage` wrapping an
    * `IsModeratorBody` signed by one of the identity's authorized keys.
@@ -3588,6 +3599,17 @@ export interface PolycentricCoreLike {
     signedMessageBytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<void>;
+  /**
+   * Ban or unban an identity on a server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
+   * one of the moderator's authorized keys.
+   * Returns serialized `SetBanStatusResponse` proto bytes.
+   */
+  setBanStatus(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ) /*throws*/ : Promise<ArrayBuffer>;
   /**
    * Replace the list of gRPC servers the core's `Observable`-returning
    * methods will fan out to.
@@ -4031,6 +4053,64 @@ export class PolycentricCore
       },
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
+  }
+
+  /**
+   * Ask a server whether an identity is banned. `signed_message_bytes`
+   * is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
+   * one of the moderator's authorized keys.
+   * Returns serialized `IsBannedResponse` proto bytes.
+   */
+  async isBanned(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_banned(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(
+              serverUrl,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterArrayBuffer.lower(
+              signedMessageBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer,
+        ),
+        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError,
+        ),
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
   }
 
   /**
@@ -4501,6 +4581,64 @@ export class PolycentricCore
         /*freeFunc:*/ nativeModule()
           .ubrn_ffi_polycentric_core_rust_future_free_void,
         /*liftFunc:*/ (_v) => {},
+        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+        /*asyncOpts:*/ asyncOpts_,
+        /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+          FfiConverterTypeCoreError,
+        ),
+      );
+    } catch (__error: any) {
+      if (uniffiIsDebug && __error instanceof Error) {
+        __error.stack = __stack;
+      }
+      throw __error;
+    }
+  }
+
+  /**
+   * Ban or unban an identity on a server. `signed_message_bytes` is a
+   * serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
+   * one of the moderator's authorized keys.
+   * Returns serialized `SetBanStatusResponse` proto bytes.
+   */
+  async setBanStatus(
+    serverUrl: string,
+    signedMessageBytes: ArrayBuffer,
+    asyncOpts_?: { signal: AbortSignal },
+  ): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+      return await uniffiRustCallAsync(
+        /*rustCaller:*/ uniffiCaller,
+        /*rustFutureFunc:*/ () => {
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(
+            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+            FfiConverterString.lower(
+              serverUrl,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterArrayBuffer.lower(
+              signedMessageBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+          );
+        },
+        /*pollFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+        /*cancelFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+        /*completeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+        /*freeFunc:*/ nativeModule()
+          .ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+        // Async returns always go through the JS-side converter: the
+        // FFI symbol returns the future handle (u64), and the user-level
+        // RustBuffer comes back via the shared `rust_future_complete_*`
+        // export. The bytes the runtime hands back must be deserialized
+        // here using the per-callable return-type converter.
+        /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(
+          FfiConverterArrayBuffer,
+        ),
         /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
         /*asyncOpts:*/ asyncOpts_,
         /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -5035,6 +5173,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
+    24367
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
     44154
   ) {
@@ -5120,6 +5266,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications",
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
+    58787
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",
     );
   }
   if (

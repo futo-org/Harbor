@@ -1,7 +1,9 @@
 //! Helpers shared across signed identity RPC handlers.
 
+use crate::service::context::ServiceContext;
+use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::SignedMessage;
+use crate::service::proto::{Identity, SignedMessage};
 use chrono::Utc;
 use tonic::Status;
 
@@ -41,6 +43,47 @@ pub fn verify_signed_message(
     )
     .map_err(|e| Status::unauthenticated(e.to_string()))?;
     Ok(public_key)
+}
+
+/// Rejects unless `public_key` is one of `identity`'s currently
+/// authorized keys.
+pub async fn authorize_signer(
+    ctx: &ServiceContext,
+    identity: &str,
+    public_key: &Proto::PublicKey,
+) -> Result<(), Status> {
+    let authorized = identity_content(ctx, identity)
+        .await?
+        .is_some_and(|content| content.authorizes_signer(public_key));
+    if !authorized {
+        return Err(Status::permission_denied("not authorized"));
+    }
+    Ok(())
+}
+
+/// The identity's chain-head content, from the proof cache or the DB
+/// (warming the cache on a miss). `None` when no valid genesis exists.
+async fn identity_content(
+    ctx: &ServiceContext,
+    identity: &str,
+) -> Result<Option<Identity>, Status> {
+    if let Some(content) = ctx.proof_cache.identity_content(identity).await {
+        return Ok(Some(content));
+    }
+    let Some(loaded) =
+        id_repo::Query::latest_valid_identity_content(&ctx.db, identity)
+            .await
+            .map_err(|e| {
+                eprintln!("identity_content db error: {e}");
+                Status::internal("internal server error")
+            })?
+    else {
+        return Ok(None);
+    };
+    ctx.proof_cache
+        .warm_identity_content(identity, loaded.clone())
+        .await;
+    Ok(Some(loaded))
 }
 
 #[cfg(test)]

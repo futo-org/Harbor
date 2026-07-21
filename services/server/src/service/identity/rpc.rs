@@ -2,13 +2,17 @@
 //! under `identity/rpc/`.
 
 pub mod common;
+pub mod is_banned;
 pub mod is_moderator;
+pub mod set_ban_status;
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
-use crate::service::proto::{IsModeratorResponse, SignedMessage};
+use crate::service::proto::{
+    IsBannedResponse, IsModeratorResponse, SetBanStatusResponse, SignedMessage,
+};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -28,6 +32,34 @@ impl IdentityService for IdentityServiceImpl {
     ) -> Result<Response<IsModeratorResponse>, Status> {
         Ok(Response::new(
             is_moderator::handle(
+                &self.ctx,
+                &self.server_name,
+                request.into_inner(),
+            )
+            .await?,
+        ))
+    }
+
+    async fn set_ban_status(
+        &self,
+        request: Request<SignedMessage>,
+    ) -> Result<Response<SetBanStatusResponse>, Status> {
+        Ok(Response::new(
+            set_ban_status::handle(
+                &self.ctx,
+                &self.server_name,
+                request.into_inner(),
+            )
+            .await?,
+        ))
+    }
+
+    async fn is_banned(
+        &self,
+        request: Request<SignedMessage>,
+    ) -> Result<Response<IsBannedResponse>, Status> {
+        Ok(Response::new(
+            is_banned::handle(
                 &self.ctx,
                 &self.server_name,
                 request.into_inner(),
@@ -77,14 +109,8 @@ mod tests {
         }
     }
 
-    fn make_signed_body(identity: &str, timestamp: i64) -> SignedMessage {
+    fn sign_bytes(message_bytes: Vec<u8>) -> SignedMessage {
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-        let body = Proto::IsModeratorBody {
-            identity: identity.to_string(),
-            timestamp,
-            server_url: TEST_SERVER.to_string(),
-        };
-        let message_bytes = Message::encode_to_vec(&body);
         let signature = signing_key.sign(&message_bytes);
 
         SignedMessage {
@@ -95,6 +121,33 @@ mod tests {
                 key: signing_key.verifying_key().as_bytes().to_vec(),
             }),
         }
+    }
+
+    fn make_signed_body(identity: &str, timestamp: i64) -> SignedMessage {
+        sign_bytes(Message::encode_to_vec(&Proto::IsModeratorBody {
+            identity: identity.to_string(),
+            timestamp,
+            server_url: TEST_SERVER.to_string(),
+        }))
+    }
+
+    fn make_signed_ban_body(server_url: &str) -> SignedMessage {
+        sign_bytes(Message::encode_to_vec(&Proto::SetBanStatusBody {
+            moderator_identity: "moderator".to_string(),
+            target_identity: "target".to_string(),
+            timestamp: Utc::now().timestamp_millis(),
+            server_url: server_url.to_string(),
+            banned: true,
+        }))
+    }
+
+    fn make_signed_is_banned_body(server_url: &str) -> SignedMessage {
+        sign_bytes(Message::encode_to_vec(&Proto::IsBannedBody {
+            moderator_identity: "moderator".to_string(),
+            target_identity: "target".to_string(),
+            timestamp: Utc::now().timestamp_millis(),
+            server_url: server_url.to_string(),
+        }))
     }
 
     #[tokio::test]
@@ -148,6 +201,71 @@ mod tests {
         let msg = make_signed_body("identity", Utc::now().timestamp_millis());
 
         let err = service.is_moderator(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn set_ban_status_rejects_invalid_signature() {
+        let service = impl_for_testing().await;
+        let mut msg = make_signed_ban_body(TEST_SERVER);
+        msg.signature[0] ^= 1;
+
+        let err = service.set_ban_status(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn set_ban_status_rejects_wrong_server_url() {
+        let service = impl_for_testing().await;
+        let msg = make_signed_ban_body("http://another-server");
+
+        let err = service.set_ban_status(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn set_ban_status_rejects_unauthorized_key() {
+        // Valid signature, but the mock database has no identity events,
+        // so the signer is not an authorized key of the moderator identity.
+        let service = IdentityServiceImpl {
+            ctx: mock_ctx(
+                MockDatabase::new(DbBackend::Postgres)
+                    .append_query_results::<(
+                        ::entity::event_model::Model,
+                        Option<::entity::content_model::Model>,
+                    ), _, _>(vec![vec![]])
+                    .into_connection(),
+            )
+            .await,
+            server_name: TEST_SERVER.to_string(),
+        };
+        let msg = make_signed_ban_body(TEST_SERVER);
+
+        let err = service.set_ban_status(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn is_banned_rejects_invalid_signature() {
+        let service = impl_for_testing().await;
+        let mut msg = make_signed_is_banned_body(TEST_SERVER);
+        msg.signature[0] ^= 1;
+
+        let err = service.is_banned(Request::new(msg)).await.unwrap_err();
+
+        assert_eq!(err.code(), Code::Unauthenticated);
+    }
+
+    #[tokio::test]
+    async fn is_banned_rejects_wrong_server_url() {
+        let service = impl_for_testing().await;
+        let msg = make_signed_is_banned_body("http://another-server");
+
+        let err = service.is_banned(Request::new(msg)).await.unwrap_err();
 
         assert_eq!(err.code(), Code::PermissionDenied);
     }
