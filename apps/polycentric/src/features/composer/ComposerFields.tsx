@@ -44,6 +44,10 @@ type ComposerFieldsProps = {
   linkPreview: v2.Link | null;
   /** True while the link preview is being fetched. */
   linkPreviewLoading: boolean;
+  /**
+   * Remove the link preview (X button).
+   */
+  onRemoveLinkPreview: () => void;
   /** Auto-focus the text field.**/
   autoFocus?: boolean;
 };
@@ -67,6 +71,7 @@ export function ComposerFields({
   onRemoveAttachment,
   linkPreview,
   linkPreviewLoading,
+  onRemoveLinkPreview,
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
@@ -136,6 +141,8 @@ export function ComposerFields({
           <ComposerLinkPreview
             link={linkPreview}
             loading={linkPreviewLoading}
+            disabled={submitting}
+            onRemove={onRemoveLinkPreview}
           />
           {/* Quote preview */}
           {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
@@ -148,39 +155,71 @@ export function ComposerFields({
 /**
  * Live link preview shown while composing: a loading row until the unfurl
  * resolves, then the same `LinkPreviewCard` used in the feed (so the composer
- * preview matches what the post will look like).
+ * preview matches what the post will look like). Both states carry an X
+ * button that removes the preview from the draft.
  */
 function ComposerLinkPreview({
   link,
   loading,
+  disabled,
+  onRemove,
 }: {
   link: v2.Link | null;
   loading: boolean;
+  disabled: boolean;
+  onRemove: () => void;
 }) {
   const { theme } = useTheme();
 
-  if (link) return <LinkPreviewCard link={link} />;
-  if (!loading) return null;
+  if (!link && !loading) return null;
 
   return (
-    <View
-      style={[
-        Atoms.flex_row,
-        Atoms.align_center,
-        Atoms.gap_sm,
-        Atoms.p_md,
-        Atoms.rounded_md,
-        Atoms.mt_md,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
-      ]}
-    >
-      <ActivityIndicator size="small" color={theme.palette.neutral_500} />
-      <Text variant="secondary" color="neutral_500">
-        Loading preview…
-      </Text>
+    <View>
+      {link ? (
+        <LinkPreviewCard link={link} />
+      ) : (
+        <View
+          style={[
+            Atoms.flex_row,
+            Atoms.align_center,
+            Atoms.gap_sm,
+            Atoms.p_md,
+            Atoms.rounded_md,
+            Atoms.mt_md,
+            {
+              borderWidth: 1,
+              borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
+            },
+          ]}
+        >
+          <ActivityIndicator size="small" color={theme.palette.neutral_500} />
+          <Text variant="secondary" color="neutral_500">
+            Loading preview…
+          </Text>
+        </View>
+      )}
+      <Pressable
+        onPress={onRemove}
+        disabled={disabled}
+        accessibilityLabel="Remove link preview"
+        hitSlop={6}
+        style={{
+          position: 'absolute',
+          // Below the card's own mt_md top margin (margins stay inside the
+          // wrapper, so the card's top edge is Spacing.md down from ours).
+          top: Spacing.md + 4,
+          right: 4,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
+          opacity: disabled ? 0.4 : 1,
+        }}
+      >
+        <Icon name="close" size={14} color="white" />
+      </Pressable>
     </View>
   );
 }

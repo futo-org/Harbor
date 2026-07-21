@@ -1,5 +1,4 @@
 import { toast } from '@/src/common/components/toast/useToast';
-import { useLinkPreviews } from '@/src/common/link-previews';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -10,7 +9,6 @@ import {
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { parseTextLinks } from '@/src/common/util/parseTextLinks';
 import {
   alterPostReplyCount,
   feedQueryKeys,
@@ -20,9 +18,10 @@ import {
 } from '@/src/features/feed/hooks/feedCache';
 import { COLLECTION, type types, v2 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
+import { useLinkPreview } from './useLinkPreview';
 
 export const MAX_ATTACHMENTS = 4;
 
@@ -72,7 +71,6 @@ export function useComposer({
 }: UseComposerArgs) {
   const client = usePolycentric();
   const { identityKey: currentIdentityKey } = useCurrentIdentity();
-  const { enabled: linkPreviewsEnabled } = useLinkPreviews();
 
   const onPostCreatedRef = useRef(onPostCreated);
   onPostCreatedRef.current = onPostCreated;
@@ -104,56 +102,34 @@ export function useComposer({
   const setError = useComposerStore((s) => s.setError);
   const resetComposer = useComposerStore((s) => s.reset);
 
-  // Live link preview: debounce-detect the first URL in the draft and unfurl
-  // it via the server. The resolved Link is shown in the composer and reused
-  // at post time (see handlePost) so we don't fetch it twice.
-  const [linkPreview, setLinkPreview] = useState<v2.Link | null>(null);
-  const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
-
-  const previewUrl = useMemo(
-    () => parseTextLinks(text).find((s) => s.type === 'link')?.url ?? null,
-    [text],
-  );
-
-  useEffect(() => {
-    // No URL, or the user disabled preview generation: show nothing (and clear
-    // any card already shown if they toggle it off mid-draft).
-    if (!previewUrl || !linkPreviewsEnabled) {
-      setLinkPreview(null);
-      setLinkPreviewLoading(false);
-      return;
-    }
-    let cancelled = false;
-    // Debounce so we don't unfurl every intermediate URL while typing.
-    const handle = setTimeout(() => {
-      setLinkPreviewLoading(true);
-      void client.urlInfo(previewUrl).then((info) => {
-        if (cancelled) return;
-        // The endpoint returns metadata only; attach the URL we requested.
-        setLinkPreview(
-          info ? v2.Link.create({ ...info, url: previewUrl }) : null,
-        );
-        setLinkPreviewLoading(false);
-      });
-    }, 1000);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [previewUrl, client, linkPreviewsEnabled]);
+  // Live link preview: spotting a newly typed url, unfurling it, and reusing
+  // the resolved Link at post time. See `useLinkPreview` for the state machine.
+  const {
+    linkPreview,
+    linkPreviewLoading,
+    handleRemove: handleRemoveLinkPreview,
+    reset: resetLinkPreview,
+    resolveLinkForPost,
+  } = useLinkPreview(text);
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
+  // While the link preview is fetching, hold the Post button so the user
+  // either waits for the card (it gets embedded in the signed post) or
+  // removes it with the X, which clears the loading state.
   const canPost =
-    (text.trim().length > 0 || attachments.length > 0) && !submitting;
+    (text.trim().length > 0 || attachments.length > 0) &&
+    !submitting &&
+    !linkPreviewLoading;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   // Reset composer state and drop any in-flight/cached uploads so nothing
   // carries over to the next open.
   const resetAll = useCallback(() => {
     uploadCache.clear();
+    resetLinkPreview();
     resetComposer();
-  }, [resetComposer]);
+  }, [resetComposer, resetLinkPreview]);
 
   // Begin processing + uploading an attachment immediately, caching the
   // promise by id so `handlePost` can await the already-running work (it waits
@@ -291,19 +267,9 @@ export function useComposer({
             )
           : [];
 
-      // Embed the first URL's preview in the signed post, unless the user
-      // disabled preview generation. Reuse the live preview when it matches the
-      // current URL; otherwise fetch fresh (e.g. posted before the preview
-      // resolved). Best-effort — null yields no card.
-      let link =
-        linkPreviewsEnabled && linkPreview && linkPreview.url === previewUrl
-          ? linkPreview
-          : null;
-      if (linkPreviewsEnabled && !link && previewUrl) {
-        const info = await client.urlInfo(previewUrl);
-        // Metadata-only response; populate the URL we requested.
-        link = info ? v2.Link.create({ ...info, url: previewUrl }) : null;
-      }
+      // Embed the targeted url's preview in the signed post (best-effort —
+      // null yields no card).
+      const link = await resolveLinkForPost();
 
       const post: types.v2.Post = {
         text: text.trim(),
@@ -389,9 +355,7 @@ export function useComposer({
     replyTo,
     replyToEventKey,
     replyRootEventKey,
-    linkPreview,
-    linkPreviewsEnabled,
-    previewUrl,
+    resolveLinkForPost,
     resetAll,
     setSubmitting,
     setError,
@@ -426,5 +390,6 @@ export function useComposer({
     handleAttachImage,
     handleCaptureImage,
     handleRemoveAttachment,
+    handleRemoveLinkPreview,
   };
 }
