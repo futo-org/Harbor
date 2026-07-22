@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+# The prod image consumes the js SDK + rs-core-uniffi-web dist built by CI (and
+# rs-core can't be built in-image at all); keep those dist dirs in the context.
+!packages/*/dist
+**/build
+**/.git
+**/.env*
+**/coverage

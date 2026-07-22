@@ -56,6 +56,7 @@ js-sdks-build:
     - !reference [.rs-core-workflow, rules]
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.app-workflow, rules]
+    - !reference [.verifier-bot-workflow, rules]
     - !reference [.release-workflow, rules]
 
 .js-sdks-publish-npm:

@@ -23,6 +23,6 @@
     "metascraper-image": "^5.50.6",
     "metascraper-title": "^5.50.6",
     "metascraper-url": "^5.50.6",
-    "puppeteer": "^25.1.0"
+    "puppeteer": "catalog:"
   }
 }
