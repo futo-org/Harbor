@@ -268,3 +268,102 @@ scraper-image:
   rules:
     - !reference [.scraper-workflow, rules]
     - !reference [.release-workflow, rules]
+
+########################################################################
+# verifier-bot (Node/TypeScript)
+########################################################################
+
+.verifier-bot-workflow:
+  image: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^verifier-bot-/
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - packages/js-*/**/*
+        - packages/rs-core-uniffi-web/**/*
+        - services/verifier-bot/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - packages/js-*/**/*
+        - packages/rs-core-uniffi-web/**/*
+        - services/verifier-bot/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    SERVICE_NAME: verifier-bot
+    SERVICE_DIR: verifier-bot
+
+# Biome lint for the bot. Lints source only, so it needs no build artifacts.
+verifier-bot-biome-check:
+  extends: .verifier-bot-workflow
+  image: node:24-slim
+  stage: check
+  allow_failure: true
+  before_script:
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install --ignore-scripts
+  script:
+    - pnpm exec biome check services/verifier-bot --diagnostic-level=error
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+
+# Credentials come from the VERIFIER_BOT_ENV_VARS CI/CD file variable (base64-encoded .env), decoded into
+# the .test.env the suite loads.
+verifier-bot-tests:
+  extends: .verifier-bot-workflow
+  image: node:24-slim
+  stage: test
+  allow_failure: true
+  needs:
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-core-uniffi-web-build
+      artifacts: true
+  variables:
+    PUPPETEER_SKIP_DOWNLOAD: '1'
+    POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends chromium python3 make g++ && rm -rf /var/lib/apt/lists/*
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+    - if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then base64 -d "$VERIFIER_BOT_ENV_VARS" > services/verifier-bot/.test.env; fi
+  script:
+    - pnpm --filter @polycentric/verifier-bot test:ci
+  artifacts:
+    when: always
+    reports:
+      junit: services/verifier-bot/junit.xml
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+
+# The bot consumes the CI-built js SDKs and rs-core-uniffi-web dist (pulled in
+# as artifacts); the image build typechecks the bot (see Dockerfile).
+verifier-bot-image:
+  extends:
+    - .verifier-bot-workflow
+    - .service-image
+  needs:
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-core-uniffi-web-build
+      artifacts: true
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+    - !reference [.release-workflow, rules]

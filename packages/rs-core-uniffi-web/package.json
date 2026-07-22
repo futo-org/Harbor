@@ -11,7 +11,11 @@
   "types": "./dist/index.ts",
   "exports": {
     ".": "./dist/index.ts",
-    "./generated": "./dist/generated/polycentric_core.ts",
+    "./generated": {
+      "types": "./dist/generated/polycentric_core.ts",
+      "node": "./dist/generated/polycentric_core.js",
+      "default": "./dist/generated/polycentric_core.ts"
+    },
     "./generated/wasm-bindgen": "./dist/generated/wasm-bindgen/index.js",
     "./generated/wasm-bindgen/index_bg.wasm": "./dist/generated/wasm-bindgen/index_bg.wasm"
   },
@@ -19,10 +23,14 @@
   "scripts": {
     "prebuild": "wasm-bindgen --version 2>/dev/null | grep -qF 0.2.122 || cargo install wasm-bindgen-cli --version 0.2.122 --locked --force",
     "build": "ubrn build web",
+    "postbuild": "tsc -p tsconfig.node.json",
     "clean": "rm -rfv dist/ rust_modules/"
   },
   "dependencies": {
-    "@ubjs/core": "catalog:",
+    "@ubjs/core": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
     "uniffi-bindgen-react-native": "catalog:"
   }
 }
