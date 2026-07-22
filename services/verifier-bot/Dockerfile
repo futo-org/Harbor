@@ -19,6 +19,8 @@ FROM base AS build
 WORKDIR /app
 # Puppeteer's Chromium comes from the runtime image, not the install.
 ENV PUPPETEER_SKIP_DOWNLOAD=1
+# No git in the build context; make husky's root `prepare` script a no-op.
+ENV HUSKY=0
 # Toolchain for better-sqlite3's native binding (falls back to compiling when
 # no prebuilt binary matches).
 RUN apt-get update \
@@ -41,11 +43,12 @@ COPY services/verifier-bot services/verifier-bot
 RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 # Compile the bot to dist/ against the prebuilt SDKs (this also typechecks).
 RUN pnpm --filter @polycentric/verifier-bot build
-# Flatten the prod dependency closure into a self-contained node_modules.
-# --prod drops devDependencies (tsx, typescript, the frontend toolchain);
-# --ignore-scripts skips the root `prepare` (husky), absent in prod.
-RUN pnpm --filter @polycentric/verifier-bot --prod --legacy --ignore-scripts \
-  --config.allowUnusedPatches=true deploy /deploy
+# Flatten the prod dependency closure into a self-contained node_modules with
+# `pnpm deploy`. inject-workspace-packages enables the non-legacy deploy (a
+# correct prod closure) without changing the monorepo's global install.
+RUN pnpm --filter @polycentric/verifier-bot --prod \
+  --config.inject-workspace-packages=true --config.allowUnusedPatches=true \
+  deploy /deploy
 
 # Stage 3: Run
 FROM node:24-slim AS runner
@@ -57,7 +60,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium \
   && rm -rf /var/lib/apt/lists/*
 
-# The flattened prod deployment (node_modules + package.json) and the bot's
+# The self-contained deploy (node_modules + package.json) plus the bot's
 # tsc-compiled dist/. rs-core-uniffi-web's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules

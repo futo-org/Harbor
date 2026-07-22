@@ -14,6 +14,8 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="/pnpm:$PATH"
 # Don't let Puppeteer fetch Chromium during install (runtime image provides it).
 ENV PUPPETEER_SKIP_DOWNLOAD=1
+# No git in the build context; make husky's root `prepare` script a no-op.
+ENV HUSKY=0
 
 # System deps: protoc + build tooling for the Rust core, Node 24, and the
 # better-sqlite3 native binding.
@@ -59,12 +61,14 @@ RUN pnpm --filter @polycentric/js-core \
 RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
 RUN pnpm --filter @polycentric/verifier-bot build
 
-# Flatten the prod dependency closure into a self-contained node_modules.
-# --prod drops devDependencies — including the uniffi/RN/Expo/webpack build
-# toolchain — so only runtime deps (and the workspace packages' built dist/) are
-# copied. --ignore-scripts skips the root `prepare` (husky), absent in prod.
-RUN pnpm --filter @polycentric/verifier-bot --prod --legacy --ignore-scripts \
-  --config.allowUnusedPatches=true deploy /deploy
+# Flatten the prod dependency closure into a self-contained node_modules with
+# `pnpm deploy`. inject-workspace-packages enables the non-legacy deploy (a
+# correct prod closure — no dev-only RN/Expo/build tooling) without changing the
+# monorepo's global (symlinked) install. HUSKY=0 (set above) no-ops the root
+# `prepare` so scripts can run and better-sqlite3's native binding is built.
+RUN pnpm --filter @polycentric/verifier-bot --prod \
+  --config.inject-workspace-packages=true --config.allowUnusedPatches=true \
+  deploy /deploy
 
 # Stage 2: Run
 FROM node:24-slim AS runner
@@ -76,7 +80,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium \
   && rm -rf /var/lib/apt/lists/*
 
-# The flattened prod deployment (node_modules + package.json) and the bot's
+# The self-contained deploy (node_modules + package.json) plus the bot's
 # tsc-compiled dist/. rs-core-uniffi-web's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules
