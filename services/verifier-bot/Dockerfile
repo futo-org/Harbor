@@ -41,11 +41,10 @@ COPY services/verifier-bot services/verifier-bot
 RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 # Compile the bot to dist/ against the prebuilt SDKs (this also typechecks).
 RUN pnpm --filter @polycentric/verifier-bot build
-# Prune to the prod-only dependency graph, then flatten into a self-contained
-# node_modules (drops tsx/typescript and the frontend toolchain).
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts \
-  --config.allowUnusedPatches=true --config.confirmModulesPurge=false
-RUN pnpm --filter @polycentric/verifier-bot --prod --legacy \
+# Flatten the prod dependency closure into a self-contained node_modules.
+# --prod drops devDependencies (tsx, typescript, the frontend toolchain);
+# --ignore-scripts skips the root `prepare` (husky), absent in prod.
+RUN pnpm --filter @polycentric/verifier-bot --prod --legacy --ignore-scripts \
   --config.allowUnusedPatches=true deploy /deploy
 
 # Stage 3: Run

@@ -59,17 +59,11 @@ RUN pnpm --filter @polycentric/js-core \
 RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
 RUN pnpm --filter @polycentric/verifier-bot build
 
-# Prune the store to the prod-only graph. This drops the build tooling
-# (uniffi-bindgen-react-native and its huge RN/Expo/hermes subtree, webpack,
-# biome, turbo, typescript) — all reachable only via devDependencies — using
-# the real dependency graph rather than name globs.
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts \
-  --config.allowUnusedPatches=true --config.confirmModulesPurge=false
-
-# Flatten the (now prod-only) store into a self-contained node_modules. Legacy
-# deploy copies whatever the virtual store contains, so pruning first is what
-# keeps it small; the injected workspace deps bring their built dist/ along.
-RUN pnpm --filter @polycentric/verifier-bot --prod --legacy \
+# Flatten the prod dependency closure into a self-contained node_modules.
+# --prod drops devDependencies — including the uniffi/RN/Expo/webpack build
+# toolchain — so only runtime deps (and the workspace packages' built dist/) are
+# copied. --ignore-scripts skips the root `prepare` (husky), absent in prod.
+RUN pnpm --filter @polycentric/verifier-bot --prod --legacy --ignore-scripts \
   --config.allowUnusedPatches=true deploy /deploy
 
 # Stage 2: Run
