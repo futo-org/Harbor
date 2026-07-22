@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "test:ci": "tsx --test --test-name-pattern=\"CI\" --test-reporter=junit --test-reporter-destination=./junit.xml \"src/**/*.test.ts\"",
+    "test:ci": "tsx --test --test-name-pattern=\"CI\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js"
@@ -28,6 +28,7 @@
     "puppeteer": "catalog:",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin": "^3.2.3",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "qs": "^6.15.3",
     "tough-cookie": "^6.0.2",
     "twitter-api-v2": "^1.29.0"
@@ -37,8 +38,8 @@
     "@types/body-parser": "^1.19.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/qs": "^6.14.0",
     "@types/node": "catalog:",
+    "@types/qs": "^6.14.0",
     "@types/tough-cookie": "^4.0.5",
     "tsx": "^4.20.0",
     "typescript": "catalog:"

@@ -17,7 +17,6 @@ two methods:
 
 | Platform | Method | OAuth credentials required |
 |---|---|---|
-| Dailymotion | Text | — |
 | Discord | OAuth | Yes |
 | GitHub | Text | — |
 | GitLab | Text | — |

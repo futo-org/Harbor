@@ -17,7 +17,6 @@ import { Vimeo } from './vimeo.js';
 import { X } from './x.js';
 import { Youtube } from './youtube.js';
 import { Website } from './website.js';
-import { Dailymotion } from './dailymotion.js';
 
 export const platforms = [
   Discord,
@@ -39,5 +38,4 @@ export const platforms = [
   X,
   Youtube,
   Website,
-  Dailymotion,
 ];

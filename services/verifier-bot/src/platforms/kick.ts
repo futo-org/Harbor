@@ -1,6 +1,10 @@
 import parse from 'node-html-parser';
 import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import type { Browser } from 'puppeteer-extra-plugin/dist/puppeteer';
+
+// Kick's bot protection blocks vanilla headless Chrome outright.
+puppeteer.use(StealthPlugin());
 import type { ClaimField, Platform } from '../models.js';
 import { Result } from '../result.js';
 import {
@@ -70,7 +74,19 @@ class KickTextVerifier extends TextVerifier {
     }
 
     const content = body[0].textContent;
-    const data = JSON.parse(content);
+    let data: { user?: { bio?: string } };
+    try {
+      data = JSON.parse(content);
+    } catch {
+      data = {};
+    }
+    if (typeof data.user?.bio !== 'string') {
+      return Result.err({
+        message:
+          'The verifier encountered unknown error occurred verifying your Kick account',
+        extendedMessage: `Unexpected response from Kick API: ${content}`,
+      });
+    }
     return Result.ok(data.user.bio);
   }
 

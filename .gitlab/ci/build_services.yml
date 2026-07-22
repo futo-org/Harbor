@@ -323,16 +323,12 @@ verifier-bot-biome-check:
   rules:
     - !reference [.verifier-bot-workflow, rules]
 
-# Bot test suite (`test:ci` runs the CI-tagged tests and writes a JUnit report).
-# Consumes the CI-built js SDK + rs-core-uniffi-web dist; installs Chromium for
-# the Puppeteer-based verifiers (Kick). Credentials come from the
-# VERIFIER_BOT_ENV_VARS CI/CD file variable (base64-encoded .env), decoded into
+# Credentials come from the VERIFIER_BOT_ENV_VARS CI/CD file variable (base64-encoded .env), decoded into
 # the .test.env the suite loads.
-# allow_failure: the health checks hit live third-party platforms and can flake.
 verifier-bot-tests:
   extends: .verifier-bot-workflow
   image: node:24-slim
-  stage: build
+  stage: test
   allow_failure: true
   needs:
     - job: js-sdks-build
