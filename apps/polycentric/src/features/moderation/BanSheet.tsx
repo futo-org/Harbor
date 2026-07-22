@@ -76,9 +76,7 @@ function ServerBanRow({
   const onPress = async () => {
     const ok = await confirm({
       title: banned ? 'Unban User' : 'Ban User',
-      message: banned
-        ? `Unban this user on ${server}?`
-        : `Ban this user on ${server}?`,
+      message: banned ? 'Unban this user?' : 'Ban this user?',
       confirmText: banned ? 'Unban' : 'Ban',
     });
     if (!ok) return;
