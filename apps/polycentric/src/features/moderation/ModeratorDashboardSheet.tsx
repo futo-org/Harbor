@@ -1,6 +1,7 @@
 import { Button, Text } from '@/src/common/components';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
+import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useState } from 'react';
@@ -174,6 +175,12 @@ function BanListRow({
   const [isUnbanning, setIsUnbanning] = useState<boolean>(false);
 
   const onPress = async () => {
+    const ok = await confirm({
+      title: 'Unban User',
+      message: 'Unban this user?',
+      confirmText: 'Unban',
+    });
+    if (!ok) return;
     setIsUnbanning(true);
     try {
       await unban(identity);

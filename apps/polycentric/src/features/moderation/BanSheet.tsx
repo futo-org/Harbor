@@ -1,5 +1,6 @@
 import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
+import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { ActivityIndicator, View } from 'react-native';
 import useBanStatus from './hooks/useBanStatus';
@@ -73,6 +74,14 @@ function ServerBanRow({
   );
 
   const onPress = async () => {
+    const ok = await confirm({
+      title: banned ? 'Unban User' : 'Ban User',
+      message: banned
+        ? `Unban this user on ${server}?`
+        : `Ban this user on ${server}?`,
+      confirmText: banned ? 'Unban' : 'Ban',
+    });
+    if (!ok) return;
     try {
       await setBanned(!banned);
     } catch (err) {
