@@ -308,9 +308,57 @@ scraper-image:
     SERVICE_NAME: verifier-bot
     SERVICE_DIR: verifier-bot
 
+# Biome lint for the bot. Lints source only, so it needs no build artifacts.
+verifier-bot-biome-check:
+  extends: .verifier-bot-workflow
+  image: node:24-slim
+  stage: check
+  allow_failure: true
+  before_script:
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install --ignore-scripts
+  script:
+    - pnpm exec biome check services/verifier-bot --diagnostic-level=error
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+
+# Bot test suite (`test:ci` runs the CI-tagged tests and writes a JUnit report).
+# Consumes the CI-built js SDK + rs-core-uniffi-web dist; installs Chromium for
+# the Puppeteer-based verifiers (Kick). Credentials come from the
+# VERIFIER_BOT_ENV_VARS CI/CD file variable (base64-encoded .env), decoded into
+# the .test.env the suite loads.
+# allow_failure: the health checks hit live third-party platforms and can flake.
+verifier-bot-tests:
+  extends: .verifier-bot-workflow
+  image: node:24-slim
+  stage: build
+  allow_failure: true
+  needs:
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-core-uniffi-web-build
+      artifacts: true
+  variables:
+    PUPPETEER_SKIP_DOWNLOAD: '1'
+    POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends chromium python3 make g++ && rm -rf /var/lib/apt/lists/*
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+    - if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then base64 -d "$VERIFIER_BOT_ENV_VARS" > services/verifier-bot/.test.env; fi
+  script:
+    - pnpm --filter @polycentric/verifier-bot test:ci
+  artifacts:
+    when: always
+    reports:
+      junit: services/verifier-bot/junit.xml
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+
 # The bot consumes the CI-built js SDKs and rs-core-uniffi-web dist (pulled in
-# as artifacts); the image build typechecks the bot (see Dockerfile), so there's
-# no separate check job.
+# as artifacts); the image build typechecks the bot (see Dockerfile).
 verifier-bot-image:
   extends:
     - .verifier-bot-workflow

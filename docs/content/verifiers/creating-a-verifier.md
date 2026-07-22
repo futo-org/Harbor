@@ -19,7 +19,7 @@ platforms use a single field with `key: 0` holding the username/handle.
 Extend `TextVerifier` when ownership can be proven by the user placing their
 token in a public bio/description. Implement `getText` (fetch the bio for a
 claim field) and `getClaimFieldsByUrl` (derive claim fields from a profile URL).
-Optional `testData*` arrays drive the `healthCheck` endpoint.
+Optional `testData*` arrays drive the `health-check` endpoint.
 
 ```typescript
 import type { ClaimField, Platform } from '../models.js';

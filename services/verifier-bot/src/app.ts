@@ -125,6 +125,21 @@ async function loadClient(): Promise<PolycentricClient> {
     next();
   });
 
+  // The Polycentric identity the bot publishes verifications under. Clients
+  // need this to recognise (and trust) verifications produced by this bot.
+  app.get('/identity', (_req, res) => {
+    try {
+      res.status(200).json({ identity: client.activeIdentityKey });
+    } catch (e: unknown) {
+      const requestId: string = new ObjectId().toString();
+      console.error(`[500 ERROR] (${requestId}) GET /identity \n${String(e)}`);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        message: `An unknown error has occurred (Request Id: ${requestId})`,
+        extendedMessage: 'Internal server error while getting the bot identity',
+      });
+    }
+  });
+
   app.get('/platforms', (_req, res) => {
     try {
       res
@@ -383,7 +398,7 @@ async function loadClient(): Promise<PolycentricClient> {
 
       if (verifier instanceof TextVerifier) {
         app.post(
-          `/platforms/${name}/${verifier.verifierType}/getClaimFieldsByUrl`,
+          `/platforms/${name}/${verifier.verifierType}/get-claim-fields-by-url`,
           async (req, res) => {
             try {
               return writeResult(
@@ -395,7 +410,7 @@ async function loadClient(): Promise<PolycentricClient> {
               console.error(
                 `[500 ERROR] (${requestId}) POST /platforms/${name}/${
                   verifier.verifierType
-                }/getClaimFieldsByUrl \n${String(e)}`,
+                }/get-claim-fields-by-url \n${String(e)}`,
               );
               res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
                 message: `An unknown error has occurred (Request Id: ${requestId})`,
@@ -408,7 +423,7 @@ async function loadClient(): Promise<PolycentricClient> {
       }
 
       app.get(
-        `/platforms/${name}/${verifier.verifierType}/healthCheck`,
+        `/platforms/${name}/${verifier.verifierType}/health-check`,
         async (_req, res) => {
           try {
             return writeResult(res, await verifier.healthCheck());
@@ -417,7 +432,7 @@ async function loadClient(): Promise<PolycentricClient> {
             console.error(
               `[500 ERROR] (${requestId}) GET /platforms/${name}/${
                 verifier.verifierType
-              }/healthCheck \n${String(e)}`,
+              }/health-check \n${String(e)}`,
             );
             res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
               message: `An unknown error has occurred (Request Id: ${requestId})`,

@@ -9,7 +9,7 @@ import {
 class YoutubeTextVerifier extends TextVerifier {
   private internalIdRegex =
     /https:\/\/(?:www\.)?youtube\.com\/channel\/([^/]+)\/?/;
-  private handleRegex = /https:\/\/(?:www\.)?youtube\.com\/@([^/]+)\/?/;
+  private handleRegex = /https:\/\/(?:www\.)?youtube\.com\/(@[^/]+)\/?/;
 
   protected testDataVerification: TextVerifierVerificationTestData[] = [
     {

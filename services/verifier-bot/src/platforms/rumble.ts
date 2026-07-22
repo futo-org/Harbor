@@ -12,10 +12,6 @@ class RumbleTextVerifier extends TextVerifier {
   protected testDataVerification: TextVerifierVerificationTestData[] = [
     {
       expectedText: '8YTgkgK6jTImETJdUa+kd7HURgZrhKjLVDL6yp5ETik=',
-      claimFields: <ClaimField[]>[{ key: 0, value: 'koenfuto' }],
-    },
-    {
-      expectedText: '8YTgkgK6jTImETJdUa+kd7HURgZrhKjLVDL6yp5ETik=',
       claimFields: <ClaimField[]>[{ key: 1, value: 'c-3366838' }],
     },
   ];
@@ -76,7 +72,7 @@ class RumbleTextVerifier extends TextVerifier {
   private async getTextFromUser(id: string): Promise<Result<string>> {
     const client = createCookieEnabledAxios();
     const profileResult = await client({
-      url: `https://rumble.com/user/${id}`,
+      url: `https://rumble.com/user/${id}/about`,
     });
     if (profileResult.status !== 200) {
       return Result.err({
@@ -87,29 +83,12 @@ class RumbleTextVerifier extends TextVerifier {
       });
     }
 
-    const match = /(\/v.+html)/.exec(profileResult.data.toString());
-    if (!match) {
-      return Result.err({
-        message: `Verifier failed to find regex video match on user id '${id}'.`,
-        extendedMessage: 'Failed to find video URL',
-      });
-    }
-
-    const firstVideoUrl = `https://rumble.com${match[1]}`;
-    const videoResult = await client.get(firstVideoUrl);
-    if (videoResult.status !== 200) {
-      return Result.err({
-        message: `Verifier failed download first video on url '${firstVideoUrl}'.`,
-        extendedMessage: `Failed to get Video page (${videoResult.status}): '${videoResult.statusText}'`,
-      });
-    }
-
-    const root = parse(videoResult.data);
-    const node = root.querySelector('.media-description');
+    const root = parse(profileResult.data);
+    const node = root.querySelector('.channel-about--description');
     if (!node) {
       return Result.err({
-        message: `Verifier failed to find media-description on url '${firstVideoUrl}'.`,
-        extendedMessage: "Failed to find node '.media-description'",
+        message: `Verifier failed to find channel-about--description on user id ${id}.`,
+        extendedMessage: "Failed to find node '.channel-about--description'",
       });
     }
 

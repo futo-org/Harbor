@@ -49,18 +49,19 @@ class SubstackTextVerifier extends TextVerifier {
     }
 
     const root = parse(profileResponse.data.toString());
-    const node = root.querySelector('.publication-tagline');
+    const node = root.querySelector('meta[property="og:description"]');
+    const description = node?.getAttribute('content');
 
-    if (!node) {
+    if (!description) {
       return Result.err({
         message:
           'Verifier encountered an error attempting to check your profile description',
-        extendedMessage: "Failed to find node '.publication-tagline'.",
+        extendedMessage: "Failed to find 'og:description' meta tag.",
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       });
     }
 
-    return Result.ok(node.textContent.trim());
+    return Result.ok(description.trim());
   }
 
   public async getClaimFieldsByUrl(url: string): Promise<Result<ClaimField[]>> {
