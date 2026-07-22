@@ -63,7 +63,8 @@ RUN pnpm --filter @polycentric/verifier-bot build
 # (uniffi-bindgen-react-native and its huge RN/Expo/hermes subtree, webpack,
 # biome, turbo, typescript) — all reachable only via devDependencies — using
 # the real dependency graph rather than name globs.
-RUN pnpm install --prod --frozen-lockfile --config.allowUnusedPatches=true
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts \
+  --config.allowUnusedPatches=true --config.confirmModulesPurge=false
 
 # Flatten the (now prod-only) store into a self-contained node_modules. Legacy
 # deploy copies whatever the virtual store contains, so pruning first is what

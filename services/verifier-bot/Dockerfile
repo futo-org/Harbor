@@ -43,7 +43,8 @@ RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 RUN pnpm --filter @polycentric/verifier-bot build
 # Prune to the prod-only dependency graph, then flatten into a self-contained
 # node_modules (drops tsx/typescript and the frontend toolchain).
-RUN pnpm install --prod --frozen-lockfile --config.allowUnusedPatches=true
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts \
+  --config.allowUnusedPatches=true --config.confirmModulesPurge=false
 RUN pnpm --filter @polycentric/verifier-bot --prod --legacy \
   --config.allowUnusedPatches=true deploy /deploy
 
