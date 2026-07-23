@@ -7,9 +7,9 @@ import {
   usePolycentric,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
-import ModeratorDashboardSheet from '@/src/features/moderation/ModeratorDashboardSheet';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -24,7 +24,6 @@ export function ServersSettingsSheet() {
   const [isEditing, setIsEditing] = useState(false);
   const [newServerUrl, setNewServerUrl] = useState('');
   const [isBusy, setIsBusy] = useState(false);
-  const [dashboardServer, setDashboardServer] = useState<string | null>(null);
 
   const moderatedServers = useModerationStatus((s) => s.moderatedServers);
   const refreshModerationStatus = useModerationStatus((s) => s.refresh);
@@ -128,7 +127,18 @@ export function ServersSettingsSheet() {
                         color="primary_600"
                       />
                     )}
-                    onPress={() => setDashboardServer(server)}
+                    onPress={() => {
+                      // Close the servers sheet (its normal route-back
+                      // dismissal), then open the dashboard on top. A
+                      // cross-navigator `replace` can't reach the sibling
+                      // `moderation` group, so push after dismissing.
+                      if (router.canGoBack()) router.back();
+                      router.push(
+                        `${Routes.tabs.moderation.dashboard}?server=${encodeURIComponent(
+                          server,
+                        )}`,
+                      );
+                    }}
                   />
                 )}
                 {isEditing && (
@@ -176,15 +186,6 @@ export function ServersSettingsSheet() {
           </View>
         )}
       </Sheet.Content>
-
-      {/* Modals */}
-      {dashboardServer !== null && (
-        <ModeratorDashboardSheet
-          server={dashboardServer}
-          open={true}
-          onClose={() => setDashboardServer(null)}
-        />
-      )}
     </Sheet>
   );
 }

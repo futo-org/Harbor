@@ -72,6 +72,7 @@ function RootStack() {
             }}
           />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="moderation" />
           <Stack.Screen
             name="[identityId]/edit"
             options={{
