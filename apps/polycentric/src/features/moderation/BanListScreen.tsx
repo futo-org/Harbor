@@ -1,31 +1,27 @@
 import { Button, Text, TextInput } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
-import { List } from '@/src/common/components/List';
-import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { ScrollView } from '@/src/common/components/ScrollView';
 import { confirm } from '@/src/common/lib/dialogs/alert';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, type TextStyle, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useBanList from './hooks/useBanList';
 
 // Delay before a keystroke triggers a new query, so typing doesn't fire
-// a request (and reset the list) on every character.
+// a request (and reset to the first page) on every character.
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * The identities banned on a server, searchable and paginated by
- * infinite scroll, with an unban action per row. Reached from the
- * moderator dashboard; the target server is carried in the `server`
- * route param.
+ * The identities banned on a server — searchable and navigated a page at
+ * a time — with an unban action per row. Reached from the moderator
+ * dashboard; the target server is carried in the `server` route param.
  */
 export default function BanListScreen() {
   const { server } = useLocalSearchParams<{ server: string }>();
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
 
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -34,16 +30,18 @@ export default function BanListScreen() {
     return () => clearTimeout(id);
   }, [search]);
 
-  const { isLoading, isLoadingMore, bans, hasMore, loadMore, unban } =
+  const { isLoading, bans, page, hasPrev, hasNext, goPrev, goNext, unban } =
     useBanList(server ?? '', debouncedSearch, !!server);
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <List<string>
-          HeaderComponent={<Topbar title="Ban list" />}
-          ListHeaderComponent={
-            <View style={[Atoms.p_lg, Atoms.gap_md]}>
+        <View style={[Atoms.flex_1]}>
+          <ScrollView
+            HeaderComponent={<Topbar title="Ban list" />}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={[Atoms.p_lg, Atoms.gap_lg]}>
               <Text
                 variant="secondary"
                 color="neutral_500"
@@ -52,6 +50,7 @@ export default function BanListScreen() {
               >
                 {server}
               </Text>
+
               <TextInput
                 placeholder="Search banned identities"
                 value={search}
@@ -59,48 +58,64 @@ export default function BanListScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+
+              {isLoading ? (
+                <View style={[Atoms.items_center, Atoms.p_lg]}>
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.palette.primary_500}
+                    accessibilityLabel="Loading ban list"
+                  />
+                </View>
+              ) : bans.length === 0 ? (
+                <Text variant="secondary" color="neutral_500">
+                  {debouncedSearch
+                    ? 'No banned users match your search.'
+                    : 'No banned users.'}
+                </Text>
+              ) : (
+                <View style={Atoms.gap_sm}>
+                  {bans.map((identity) => (
+                    <BanListRow
+                      key={identity}
+                      identity={identity}
+                      unban={unban}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {(hasPrev || hasNext) && (
+                <View
+                  style={[
+                    Atoms.flex_row,
+                    Atoms.items_center,
+                    Atoms.justify_between,
+                    Atoms.gap_md,
+                  ]}
+                >
+                  <Button
+                    size="sm"
+                    variant="tertiary"
+                    title="Previous"
+                    disabled={!hasPrev || isLoading}
+                    onPress={goPrev}
+                  />
+                  <Text variant="secondary" color="neutral_500">
+                    Page {page}
+                  </Text>
+                  <Button
+                    size="sm"
+                    variant="tertiary"
+                    title="Next"
+                    disabled={!hasNext || isLoading}
+                    onPress={goNext}
+                  />
+                </View>
+              )}
             </View>
-          }
-          data={bans}
-          keyExtractor={(identity) => identity}
-          renderItem={({ item }) => (
-            <View style={[Atoms.px_lg, Atoms.pb_sm]}>
-              <BanListRow identity={item} unban={unban} />
-            </View>
-          )}
-          ListEmptyComponent={
-            isLoading ? (
-              <View style={[Atoms.items_center, Atoms.p_lg]}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.primary_500}
-                  accessibilityLabel="Loading ban list"
-                />
-              </View>
-            ) : (
-              <ListEmpty>
-                {debouncedSearch
-                  ? 'No banned users match your search.'
-                  : 'No banned users.'}
-              </ListEmpty>
-            )
-          }
-          ListFooterComponent={
-            isLoadingMore && bans.length > 0 ? (
-              <View style={[Atoms.items_center, Atoms.p_lg]}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.neutral_500}
-                  accessibilityLabel="Loading more"
-                />
-              </View>
-            ) : null
-          }
-          onEndReached={hasMore ? loadMore : undefined}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
-          showsVerticalScrollIndicator={false}
-        />
+          </ScrollView>
+        </View>
       </Screen.PrimaryColumn>
     </Screen>
   );
