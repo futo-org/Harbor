@@ -45,6 +45,23 @@ pub async fn handle(
         .filter(|q| !q.is_empty())
         .map(str::to_lowercase);
 
+    // A query with any non-hex character can't be the prefix of a (hex)
+    // identity, so short-circuit to an empty page. This also keeps LIKE
+    // metacharacters (`_`, `%`, `\`) from reaching the query as wildcards.
+    if let Some(q) = &query
+        && !q.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        return Ok(ListBansResponse {
+            banned_identities: Vec::new(),
+            page_info: Some(PageInfo {
+                start_cursor: String::new(),
+                end_cursor: String::new(),
+                has_previous_page: after.is_some(),
+                has_next_page: false,
+            }),
+        });
+    }
+
     // Over-fetch one to detect a following page.
     let mut rows = id_repo::Query::list_bans(
         &ctx.db,

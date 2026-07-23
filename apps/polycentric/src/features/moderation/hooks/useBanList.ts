@@ -91,9 +91,18 @@ export default function useBanList(
   const unban = useCallback(
     async (identity: string) => {
       await client.setBanStatus(server, identity, false);
-      setBans((prev) => prev.filter((banned) => banned !== identity));
+      const remaining = bans.filter((banned) => banned !== identity);
+      setBans(remaining);
+      // Unbanning the last row would leave an empty page still showing
+      // stale Prev/Next controls and a page number. Reload so pagination
+      // reflects the server: step back a page when possible, otherwise
+      // reload the first page (which pulls later rows up, or settles to a
+      // clean empty state when nothing remains).
+      if (remaining.length === 0) {
+        loadPage(Math.max(0, pageIndex - 1));
+      }
     },
-    [client, server],
+    [client, server, bans, pageIndex, loadPage],
   );
 
   return {

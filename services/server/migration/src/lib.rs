@@ -22,6 +22,7 @@ mod m20260714_000001_add_url_info_cache_table;
 mod m20260715_000001_add_moderator_table;
 mod m20260717_000001_add_url_info_cache_raw_response;
 mod m20260721_000001_add_ban_table;
+mod m20260723_000001_add_ban_pagination_index;
 
 pub struct Migrator;
 
@@ -53,6 +54,7 @@ impl MigratorTrait for Migrator {
             ),
             Box::new(m20260715_000001_add_moderator_table::Migration),
             Box::new(m20260721_000001_add_ban_table::Migration),
+            Box::new(m20260723_000001_add_ban_pagination_index::Migration),
         ]
     }
 }

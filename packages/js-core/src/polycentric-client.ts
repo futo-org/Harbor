@@ -318,8 +318,8 @@ export class PolycentricClient {
    * List a page of the identities banned on `server`
    * (`IdentityService.ListBans`). The active identity must be a
    * moderator on `server`. Pass `after` (from a previous page's
-   * `endCursor`) to page forward and `query` to filter by an identity
-   * substring.
+   * `endCursor`) to page forward and `query` to keep only identities
+   * that begin with it (a case-insensitive prefix match).
    */
   async listBans(
     server: string,
