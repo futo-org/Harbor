@@ -72,6 +72,23 @@ export interface PolycentricClientConfig {
   seedServers?: string[];
 }
 
+export interface ListBansOptions {
+  // Max entries to return; the server clamps to its own bounds.
+  limit?: number;
+  // Cursor from a previous page's `endCursor`, to page forward.
+  after?: string;
+  // Case-insensitive prefix filter: keep only identities beginning with
+  // this value.
+  query?: string;
+}
+
+export interface ListBansPage {
+  bans: string[];
+  // Cursor to pass as `after` for the next page.
+  endCursor: string;
+  hasNextPage: boolean;
+}
+
 /**
  * PolycentricClient is the top level API for the Polycentric SDK.
  */
@@ -298,20 +315,33 @@ export class PolycentricClient {
   }
 
   /**
-   * List the identities banned on `server`
+   * List a page of the identities banned on `server`
    * (`IdentityService.ListBans`). The active identity must be a
-   * moderator on `server`.
+   * moderator on `server`. Pass `after` (from a previous page's
+   * `endCursor`) to page forward and `query` to filter by an identity
+   * substring.
    */
-  async listBans(server: string): Promise<string[]> {
+  async listBans(
+    server: string,
+    options: ListBansOptions = {},
+  ): Promise<ListBansPage> {
     const body = Proto.ListBansRequest.toBinary(
-      Proto.ListBansRequest.create({}),
+      Proto.ListBansRequest.create({
+        limit: options.limit,
+        after: options.after,
+        query: options.query,
+      }),
     );
     const bytes = await this.core.listBans(
       server,
       await this.signModerationRequest(server, body),
     );
-    return Proto.ListBansResponse.fromBinary(new Uint8Array(bytes))
-      .bannedIdentities;
+    const response = Proto.ListBansResponse.fromBinary(new Uint8Array(bytes));
+    return {
+      bans: response.bannedIdentities,
+      endCursor: response.pageInfo?.endCursor ?? '',
+      hasNextPage: response.pageInfo?.hasNextPage ?? false,
+    };
   }
 
   /**

@@ -37,6 +37,8 @@ export type {
   KeyPair,
   PrivateKey,
   IdentityState,
+  ListBansOptions,
+  ListBansPage,
 } from './polycentric-client';
 
 export * from './errors';
