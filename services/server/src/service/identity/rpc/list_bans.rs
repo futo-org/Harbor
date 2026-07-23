@@ -13,7 +13,7 @@ use chrono::DateTime;
 use prost::Message;
 use tonic::Status;
 
-const DEFAULT_LIMIT: u32 = 50;
+const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 200;
 
 pub async fn handle(
@@ -37,7 +37,7 @@ pub async fn handle(
     };
 
     // Identities are lowercase hex, so lowercasing the query makes the
-    // substring match effectively case-insensitive.
+    // prefix match effectively case-insensitive.
     let query = body
         .query
         .as_deref()

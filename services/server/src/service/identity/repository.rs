@@ -161,8 +161,8 @@ impl Query {
     /// A page of banned identities, most recently banned first. Ordered
     /// by `(created_at, identity)` descending so the cursor is stable
     /// even when timestamps collide. `after` continues after a previous
-    /// page's last row; `query` filters by a case-insensitive substring
-    /// of the identity. Returns up to `limit` rows.
+    /// page's last row; `query` keeps only identities that begin with it
+    /// (case-insensitive prefix). Returns up to `limit` rows.
     pub async fn list_bans(
         db: &DbConn,
         limit: u64,
@@ -195,7 +195,7 @@ impl Query {
         }
 
         if let Some(query) = query {
-            q = q.filter(BanModel::Column::Identity.contains(query));
+            q = q.filter(BanModel::Column::Identity.starts_with(query));
         }
 
         q.all(db).await
