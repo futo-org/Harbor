@@ -1,3 +1,4 @@
+import { Button, Text } from '@/src/common/components';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -8,7 +9,8 @@ import { type VerifierType, verifierApi } from '../../utils/verifier-api';
 
 // The platform grid, narrowed to what the verifier servers support and
 // tagged with the verifier type (text preferred over oauth). If no server is
-// reachable the full list is shown; the verify step reports the real error.
+// reachable (or none support any platform) an error with retry is shown —
+// listing unverifiable platforms would only dead-end at the verify step.
 export function ClaimCreatePlatformPicker({
   onSelect,
 }: {
@@ -18,13 +20,12 @@ export function ClaimCreatePlatformPicker({
   const [available, setAvailable] = useState<
     { platform: Platform; verifierType: VerifierType }[] | null
   >(null);
+  const [failed, setFailed] = useState(false);
 
+  // Fetches on mount and again whenever retry() clears `failed`.
   useEffect(() => {
+    if (failed) return;
     let alive = true;
-    const fallback = PLATFORMS.map((platform) => ({
-      platform,
-      verifierType: 'text' as const,
-    }));
     verifierApi
       .platformVerifiers()
       .then((verifiers) => {
@@ -37,15 +38,33 @@ export function ClaimCreatePlatformPicker({
             : 'oauth';
           return [{ platform, verifierType }];
         });
-        setAvailable(supported.length > 0 ? supported : fallback);
+        if (supported.length > 0) setAvailable(supported);
+        else setFailed(true);
       })
       .catch(() => {
-        if (alive) setAvailable(fallback);
+        if (alive) setFailed(true);
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [failed]);
+
+  const retry = () => {
+    setAvailable(null);
+    setFailed(false);
+  };
+
+  if (failed) {
+    return (
+      <View style={[Atoms.gap_md, Atoms.items_start]}>
+        <Text variant="body" style={theme.atoms.text_neutral_medium}>
+          Could not reach any of the configured verification servers. Check your
+          connection and try again.
+        </Text>
+        <Button title="Try again" variant="secondary" onPress={retry} />
+      </View>
+    );
+  }
 
   if (!available) {
     return (
