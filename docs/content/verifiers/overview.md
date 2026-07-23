@@ -44,9 +44,10 @@ Routes are derived from each platform's slug (`slug(name)`, e.g. `GitHub` →
 | Method & path | Purpose |
 |---|---|
 | `GET /identity` | The bot's Polycentric identity — `{ identity }` (the identity key it publishes verifications under). Clients use this to recognise and trust the bot's verifications. |
-| `GET /platforms` | List platforms as `{ name, slug }`. |
+| `GET /platforms` | List platforms as `{ name, slug, verifiers }`. |
 | `GET /platforms/:slug` | Platform detail: `{ verifierType, platform, slug }`. |
 | `POST /platforms/:slug/:type/verify` | Verify the referenced claim and publish a verification. |
+| `POST /platforms/:slug/:type/check` | Stateless pre-check (no claim needed): text takes `{ claimFields, token }`, OAuth takes `{ claimFields, challengeResponse }`. Clients run this before publishing a claim. |
 | `GET /platforms/:slug/:type/health-check` | Run the verifier's self-test. |
 | `GET /platforms/:slug/oauth/url` | (OAuth) Get the URL to send the user to. |
 | `GET /platforms/:slug/oauth/callback` | (OAuth) Redirect target; bounces back to the web app. |

@@ -108,7 +108,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
 }));
 
-import type { DecodedClaim } from '../hooks/useClaimById';
+import type { DecodedClaim } from '../../hooks/useClaimById';
 
 const EXISTING_CLAIM: DecodedClaim = {
   id: 'aabb',
@@ -120,7 +120,7 @@ const EXISTING_CLAIM: DecodedClaim = {
   createdAt: 0n,
 };
 
-jest.mock('../hooks/useClaimsList', () => ({
+jest.mock('../../hooks/useClaimsList', () => ({
   useClaimsList: () => ({
     claims: [EXISTING_CLAIM],
     isLoading: false,
@@ -129,12 +129,12 @@ jest.mock('../hooks/useClaimsList', () => ({
 }));
 
 const mockRequestSubmit = jest.fn(async () => undefined);
-jest.mock('../hooks/useRequestVerification', () => ({
+jest.mock('../../hooks/useRequestVerification', () => ({
   __esModule: true,
   default: () => ({ isPending: false, submit: mockRequestSubmit }),
 }));
 
-jest.mock('../hooks/useCreateClaim', () => ({
+jest.mock('../../hooks/useCreateClaim', () => ({
   __esModule: true,
   default: undefined,
 }));
@@ -160,8 +160,11 @@ jest.mock('./ClaimCreatePlatformPicker', () => ({
 jest.mock('./ClaimCreatePlatformLink', () => ({
   ClaimCreatePlatformLink: () => null,
 }));
+jest.mock('./ClaimCreatePlatformOAuth', () => ({
+  ClaimCreatePlatformOAuth: () => null,
+}));
 
-jest.mock('./ClaimListItem', () => {
+jest.mock('../ClaimListItem', () => {
   const react = require('react');
   const { Text } = require('react-native');
   return {

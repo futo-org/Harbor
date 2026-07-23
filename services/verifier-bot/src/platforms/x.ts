@@ -1,5 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
-import TwitterApi, { ApiResponseError } from 'twitter-api-v2';
+// Named import: the default resolves to the module object under tsx's CJS
+// interop ("TwitterApi is not a constructor").
+import { ApiResponseError, TwitterApi } from 'twitter-api-v2';
 import type { ClaimField, Platform, TokenResponse } from '../models.js';
 import { Result } from '../result.js';
 import {

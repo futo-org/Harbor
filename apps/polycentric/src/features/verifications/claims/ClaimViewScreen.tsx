@@ -1,18 +1,16 @@
-import { Button, Text } from '@/src/common/components';
+import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, Linking, View } from 'react-native';
 import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
-import useVerifyClaim from '../hooks/useVerifyClaim';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimVerifiersList } from './ClaimVerifiersList';
-import { RequestVerificationSheet } from '../RequestVerificationSheet';
+import { ClaimVerifyActions } from './ClaimVerifyActions';
 import { resolveClaimTitle } from '../utils/render';
 import { Toolbar } from './toolbar';
 import { StatusChip } from './toolbar/StatusChip';
@@ -40,19 +38,7 @@ export default function ViewClaimScreen() {
     sequence ? BigInt(sequence) : undefined,
   );
 
-  const [sheetOpen, setSheetOpen] = useState(requestVerification === '1');
-
   const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
-
-  const { identityKey } = useCurrentIdentity();
-  const { verify, isPending: isVerifyPending } = useVerifyClaim();
-
-  // Only the claim author can request verifications; a viewer asked to
-  // verify gets a verify button instead, disabled once they have verified.
-  const isAuthor = !!claim && claim.identity === identityKey;
-  const isVerifyRequested = isAuthor
-    ? undefined
-    : verifiers.find((v) => v.identity === identityKey);
 
   const { title, bodyFields } = useMemo<{
     title: string;
@@ -117,27 +103,45 @@ export default function ViewClaimScreen() {
                 </View>
 
                 <View style={Atoms.gap_md}>
-                  {bodyFields.map((field) => (
-                    <View key={field.key} style={Atoms.gap_xs}>
-                      <Text
-                        variant="small"
-                        style={theme.atoms.text_neutral_medium}
-                        fontWeight="semibold"
-                      >
-                        {field.label}
-                      </Text>
-                      <Text
-                        variant="body"
-                        style={
-                          field.value.trim()
-                            ? theme.atoms.text
-                            : theme.atoms.text_neutral_medium
-                        }
-                      >
-                        {field.value.trim() ? field.value : 'N/A'}
-                      </Text>
-                    </View>
-                  ))}
+                  {bodyFields.map((field) => {
+                    const value = field.value.trim();
+                    // URL values (e.g. a Platform claim's profile URL) open
+                    // the linked account.
+                    const isLink = /^https?:\/\//i.test(value);
+                    return (
+                      <View key={field.key} style={Atoms.gap_xs}>
+                        <Text
+                          variant="small"
+                          style={theme.atoms.text_neutral_medium}
+                          fontWeight="semibold"
+                        >
+                          {field.label}
+                        </Text>
+                        {isLink ? (
+                          <Text
+                            variant="body"
+                            color="primary_500"
+                            onPress={() =>
+                              void Linking.openURL(value).catch(() => {})
+                            }
+                          >
+                            {value}
+                          </Text>
+                        ) : (
+                          <Text
+                            variant="body"
+                            style={
+                              value
+                                ? theme.atoms.text
+                                : theme.atoms.text_neutral_medium
+                            }
+                          >
+                            {value || 'N/A'}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
 
                 <ClaimVerifiersList verifiers={verifiers} />
@@ -147,38 +151,14 @@ export default function ViewClaimScreen() {
                   identity={claim.identity}
                   createdAt={claim.createdAt}
                   schemaName={claim.schemaName}
+                  fields={claim.fields}
                 />
 
-                {isAuthor && (
-                  <>
-                    <Button
-                      title="Request verification"
-                      variant="primary"
-                      onPress={() => setSheetOpen(true)}
-                      style={[Atoms.w_full]}
-                    />
-
-                    <RequestVerificationSheet
-                      open={sheetOpen}
-                      onClose={() => setSheetOpen(false)}
-                      claimId={claim.id}
-                    />
-                  </>
-                )}
-
-                {isVerifyRequested && (
-                  <Button
-                    title={
-                      isVerifyRequested.verified
-                        ? 'Verified'
-                        : 'Verify this claim'
-                    }
-                    variant="primary"
-                    disabled={isVerifyRequested.verified || isVerifyPending}
-                    onPress={() => verify({ claimId: claim.id })}
-                    style={[Atoms.w_full]}
-                  />
-                )}
+                <ClaimVerifyActions
+                  claim={claim}
+                  verifiers={verifiers}
+                  requestOnOpen={requestVerification === '1'}
+                />
               </>
             )}
           </View>

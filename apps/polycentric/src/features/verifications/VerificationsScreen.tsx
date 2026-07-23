@@ -5,7 +5,7 @@ import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
-import { ClaimCreateSheet } from './claims/ClaimCreateSheet';
+import { ClaimCreateSheet } from './claims/create/ClaimCreateSheet';
 import { ClaimList } from './claims/ClaimList';
 
 export default function VerificationsScreen() {

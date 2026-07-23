@@ -4,6 +4,7 @@ import {
   Breakpoints,
   Spacing,
   useTheme,
+  ZIndex,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     padding: 16,
     // Sit above expo-router's transparentModal drawer, which mounts to
     // document.body via vaul and would otherwise eat backdrop clicks.
-    zIndex: 9999,
+    zIndex: ZIndex.modal,
   },
   webBackdrop: {
     // Fixed so it keeps covering the viewport while the overlay scrolls.

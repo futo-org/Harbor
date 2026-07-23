@@ -2,9 +2,9 @@ import { Text, TextInput } from '@/src/common/components';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
-import type { ClaimType, FormField } from '../utils/forms';
-import useCreateClaim, { type ClaimRef } from '../hooks/useCreateClaim';
-import { formToSchema } from '../utils/schemas';
+import type { ClaimType, FormField } from '../../utils/forms';
+import useCreateClaim, { type ClaimRef } from '../../hooks/useCreateClaim';
+import { formToSchema } from '../../utils/schemas';
 
 // Submission is driven from outside (the sheet header's Create button), so
 // the form reports its current state upward instead of rendering a button.

@@ -17,17 +17,18 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { DecodedClaim } from '../hooks/useClaimById';
-import { useClaimsList } from '../hooks/useClaimsList';
-import type { ClaimRef } from '../hooks/useCreateClaim';
-import useRequestVerification from '../hooks/useRequestVerification';
-import { CLAIM_TYPES, type ClaimType } from '../utils/forms';
-import type { Platform } from '../utils/platforms';
+import type { DecodedClaim } from '../../hooks/useClaimById';
+import { useClaimsList } from '../../hooks/useClaimsList';
+import type { ClaimRef } from '../../hooks/useCreateClaim';
+import useRequestVerification from '../../hooks/useRequestVerification';
+import { CLAIM_TYPES, type ClaimType } from '../../utils/forms';
+import type { Platform } from '../../utils/platforms';
 import { ClaimCreateProvider } from './ClaimCreateContext';
 import { ClaimCreateForm, type ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
+import { ClaimCreatePlatformOAuth } from './ClaimCreatePlatformOAuth';
 import { ClaimCreatePlatformPicker } from './ClaimCreatePlatformPicker';
-import { ClaimListItem } from './ClaimListItem';
+import { ClaimListItem } from '../ClaimListItem';
 
 // One sheet screen per step of the create-claim flow; steps form a stack so
 // the back chevron retraces the path. With `requestFrom` the flow starts at
@@ -38,7 +39,8 @@ type Step =
   | { kind: 'type' }
   | { kind: 'form'; claimType: ClaimType }
   | { kind: 'platform' }
-  | { kind: 'platform-link'; platform: Platform };
+  | { kind: 'platform-link'; platform: Platform }
+  | { kind: 'platform-oauth'; platform: Platform };
 
 function stepTitle(step: Step): string {
   switch (step.kind) {
@@ -56,6 +58,8 @@ function stepTitle(step: Step): string {
       return step.platform.generic
         ? 'Link your website'
         : `Link ${step.platform.name}`;
+    case 'platform-oauth':
+      return `Link ${step.platform.name}`;
   }
 }
 
@@ -66,6 +70,8 @@ function stepKey(step: Step): string {
       return `form-${step.claimType.name}`;
     case 'platform-link':
       return `platform-link-${step.platform.name}`;
+    case 'platform-oauth':
+      return `platform-oauth-${step.platform.name}`;
     default:
       return step.kind;
   }
@@ -139,6 +145,22 @@ export function ClaimCreateSheet({
           ref.keyFingerprint,
           ref.sequence,
         )}?requestVerification=1`,
+      );
+    }
+  };
+
+  // Platform claims are verified by the verifier servers during the flow, so
+  // the claim view opens without the request-verification prompt.
+  const handleVerified = (ref: ClaimRef) => {
+    toast.success('Account verified');
+    close();
+    if (!requestFrom) {
+      router.push(
+        Routes.tabs.verification(
+          ref.identity,
+          ref.keyFingerprint,
+          ref.sequence,
+        ),
       );
     }
   };
@@ -281,8 +303,12 @@ export function ClaimCreateSheet({
               {step.kind === 'platform' && (
                 <View style={Atoms.px_lg}>
                   <ClaimCreatePlatformPicker
-                    onSelect={(platform) =>
-                      push({ kind: 'platform-link', platform })
+                    onSelect={(platform, verifierType) =>
+                      push(
+                        verifierType === 'oauth'
+                          ? { kind: 'platform-oauth', platform }
+                          : { kind: 'platform-link', platform },
+                      )
                     }
                   />
                 </View>
@@ -290,7 +316,19 @@ export function ClaimCreateSheet({
 
               {step.kind === 'platform-link' && (
                 <View style={Atoms.px_lg}>
-                  <ClaimCreatePlatformLink platform={step.platform} />
+                  <ClaimCreatePlatformLink
+                    platform={step.platform}
+                    onVerified={handleVerified}
+                  />
+                </View>
+              )}
+
+              {step.kind === 'platform-oauth' && (
+                <View style={Atoms.px_lg}>
+                  <ClaimCreatePlatformOAuth
+                    platform={step.platform}
+                    onVerified={handleVerified}
+                  />
                 </View>
               )}
             </Animated.View>

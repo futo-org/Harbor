@@ -14,7 +14,6 @@ import {
   SyncStrategy,
   type Collection,
 } from './constants';
-import { HTTPClient } from './http';
 import { sha256 } from '@noble/hashes/sha2.js';
 import type {
   ICryptoManager,
@@ -82,8 +81,6 @@ export class PolycentricClient {
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
-
-  public readonly httpClient = new HTTPClient();
 
   private state = ClientState.UNINITIALIZED;
   public step = '';
