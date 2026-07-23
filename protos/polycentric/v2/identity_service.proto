@@ -66,7 +66,8 @@ message ListBansRequest {
   optional uint32 limit = 1;
   // Opaque cursor from a previous response's `page_info.end_cursor`.
   optional string after = 2;
-  // Case-insensitive substring filter over the banned identity key.
+  // Case-insensitive prefix filter: keep only identities beginning with
+  // this value.
   optional string query = 3;
 }
 

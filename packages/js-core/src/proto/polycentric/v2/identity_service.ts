@@ -137,7 +137,8 @@ export interface ListBansRequest {
      */
     after?: string;
     /**
-     * Case-insensitive substring filter over the banned identity key.
+     * Case-insensitive prefix filter: keep only identities beginning with
+     * this value.
      *
      * @generated from protobuf field: optional string query = 3
      */
