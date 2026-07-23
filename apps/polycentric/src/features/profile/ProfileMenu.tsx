@@ -60,7 +60,7 @@ export default function ProfileMenu() {
                 },
               ]}
             >
-              <Icon name="more" color="neutral_500" size={20} />
+              <Icon name="dotsVertical" color="neutral_500" size={20} />
             </View>
           )}
         </DropdownMenu.Trigger>
