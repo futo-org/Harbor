@@ -78,6 +78,32 @@ describe('useModerationStatus.refresh', () => {
     expect(state.isModerator).toBe(true);
   });
 
+  it('keeps only the moderator servers when moderator, not-moderator, and errored servers are mixed', async () => {
+    await useModerationStatus.getState().refresh(
+      mockClient(
+        'me',
+        [
+          'http://mod-a',
+          'http://plain-b',
+          'http://error-c',
+          'http://mod-d',
+          'http://error-e',
+        ],
+        async (server) => {
+          if (server === 'http://error-c' || server === 'http://error-e') {
+            throw new Error('unreachable');
+          }
+          return server === 'http://mod-a' || server === 'http://mod-d';
+        },
+      ),
+    );
+
+    const state = useModerationStatus.getState();
+    expect(state.moderatedServers).toEqual(['http://mod-a', 'http://mod-d']);
+    expect(state.isModerator).toBe(true);
+    expect(state.isLoading).toBe(false);
+  });
+
   it('reports not-a-moderator when no servers are configured', async () => {
     await useModerationStatus
       .getState()
