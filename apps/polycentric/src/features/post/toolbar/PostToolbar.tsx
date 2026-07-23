@@ -1,8 +1,15 @@
-import { openCompose } from '@/src/common/constants';
+import {
+  openCompose,
+  POLYCENTRIC_APP_URL,
+  Routes,
+} from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms, useTheme } from '@/src/common/theme';
+import * as Sharing from 'expo-sharing';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
+import useCanShare from '../hooks/useCanShare';
 import usePostActions from '../hooks/usePostActions';
 import PostActionButton from './PostActionButton';
 import PostReactionButton from './PostReactionButton';
@@ -21,6 +28,7 @@ export type PostToolbarProps = {
  */
 export function PostToolbar({ post, style }: PostToolbarProps) {
   const { theme } = useTheme();
+  const canShare = useCanShare();
 
   usePostActions(post);
 
@@ -30,7 +38,14 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
     openCompose({ replyTo: post.id });
   };
 
-  const onSharePress = () => {};
+  const onSharePress = () => {
+    const path = Routes.tabs.post(
+      post.identity,
+      getKeyFingerprint(post.signedBy) ?? '',
+      post.sequence,
+    );
+    void Sharing.shareAsync(`${POLYCENTRIC_APP_URL}${path}`).catch(() => {});
+  };
 
   return (
     <View
@@ -50,7 +65,7 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
       />
       <PostReactionButton post={post} />
       <RepostButton post={post} />
-      <PostActionButton icon="share" onPress={onSharePress} />
+      {canShare && <PostActionButton icon="share" onPress={onSharePress} />}
       <View style={[Atoms.flex_1]} />
       <PostReactionOutput post={post} />
     </View>
