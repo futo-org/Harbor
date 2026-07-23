@@ -39,6 +39,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 120;
 
+/** Exported for viewport-aware content sizing. */
+export const SHEET_OVERLAY_PADDING = 16;
+
 type CommonProps = {
   children: ReactNode;
   detents?: SheetDetent[];
@@ -359,7 +362,7 @@ function WebModal({
           compact && styles.webCardCompact,
           {
             backgroundColor: theme.palette.neutral_0,
-            borderRadius: compact ? 0 : BorderRadius.xl,
+            borderRadius: BorderRadius.xl,
           },
         ]}
       >
@@ -388,7 +391,7 @@ const styles = StyleSheet.create({
     // `justifyContent` — auto margins collapse to 0 when the card is taller
     // than the viewport, so the top never gets clipped out of reach.
     overflowY: 'auto' as 'scroll',
-    padding: 16,
+    padding: SHEET_OVERLAY_PADDING,
     // Sit above expo-router's transparentModal drawer, which mounts to
     // document.body via vaul and would otherwise eat backdrop clicks.
     zIndex: ZIndex.modal,

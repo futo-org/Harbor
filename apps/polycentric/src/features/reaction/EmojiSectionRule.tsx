@@ -1,32 +1,20 @@
 import React from 'react';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
+import { SECTION_RULE_PADDING } from './emojiData';
 
-type EmojiSectionRuleProps = {
-  /** Whether this is the first section. If so, do not render a rule above. */
-  first: boolean;
-};
-
-/**
- * A full-width horizontal rule between emoji categories.
- * The very first section gets only a small top spacer, no rule.
- */
+/** Horizontal rule between emoji categories. */
 export const EmojiSectionRule = React.memo(function EmojiSectionRule({
-  first,
-}: EmojiSectionRuleProps) {
+  onLayout,
+}: {
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
   const { theme } = useTheme();
 
-  if (first) {
-    return <View style={[Atoms.pt_sm]} />;
-  }
-
   return (
-    <View
-      style={{
-        borderBottomWidth: 1,
-        borderBottomColor: theme.palette.neutral_200,
-        marginVertical: Spacing.xs,
-      }}
-    />
+    <View style={{ paddingVertical: SECTION_RULE_PADDING }} onLayout={onLayout}>
+      <View style={{ height: 1, backgroundColor: theme.palette.neutral_200 }} />
+    </View>
   );
 });

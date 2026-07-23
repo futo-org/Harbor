@@ -6,8 +6,8 @@ import {
 import { memo, useRef, useState } from 'react';
 import { type GestureResponderEvent, View } from 'react-native';
 import { DEFAULT_REACTION_EMOJI } from '../../reaction/consts';
-import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import { EmojiPickerFull } from '../../reaction/EmojiPickerFull';
+import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
 import PostActionButton from './PostActionButton';
 
@@ -32,7 +32,6 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
 
   const onEmojiSelect = (emoji: string) => {
     triggerRef.current?.close();
-    setPickerOpen(false);
     if (hasReaction && reaction.emoji === emoji) {
       // Reselecting the same emoji clears it.
       removeReaction(client, post);
@@ -78,11 +77,13 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
           />
         </HoverCard.Content>
       </HoverCard>
-
       <EmojiPickerFull
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onSelect={onEmojiSelect}
+        onSelect={(emoji) => {
+          setPickerOpen(false);
+          onEmojiSelect(emoji);
+        }}
         selectedEmoji={reaction?.emoji}
       />
     </View>

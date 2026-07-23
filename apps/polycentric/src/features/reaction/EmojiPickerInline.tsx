@@ -1,6 +1,12 @@
+import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { useCallback } from 'react';
 import { View } from 'react-native';
-import { Emoji } from './Emoji';
+import { Emoji, EmojiLikeButton } from './Emoji';
+import { INLINE_EMOJIS } from './emojiData';
+
+/** The size (width/height) of an inline emoji picker button */
+const INLINE_SIZE = 36;
 
 type EmojiPickerInlineProps = {
   selectedEmoji?: string | null;
@@ -15,6 +21,11 @@ export default function EmojiPickerInline({
 }: EmojiPickerInlineProps) {
   const { theme } = useTheme();
 
+  const handleSelect = useCallback(
+    (emoji: string) => onSelect?.(emoji),
+    [onSelect],
+  );
+
   return (
     <View
       style={[
@@ -26,26 +37,25 @@ export default function EmojiPickerInline({
         Atoms.rounded_full,
       ]}
     >
-      {recommendedEmojis.map((emoji) => (
+      {INLINE_EMOJIS.map((emoji) => (
         <Emoji
           key={emoji.name}
           emoji={emoji.emoji}
-          onPress={() => onSelect?.(emoji.emoji)}
-          style={[Atoms.p_xs]}
+          onSelect={handleSelect}
+          size={INLINE_SIZE}
           selected={selectedEmoji === emoji.emoji}
+          color={theme.palette.neutral_1000}
+          highlightColor={theme.palette.neutral_100}
         />
       ))}
       {onShowMore && (
-        <Emoji emoji="…" onPress={onShowMore} style={[Atoms.p_xs]} />
+        <EmojiLikeButton
+          onPress={onShowMore}
+          highlightColor={theme.palette.neutral_100}
+        >
+          <Icon name="dotsVertical" size={20} color="neutral_1000" />
+        </EmojiLikeButton>
       )}
     </View>
   );
 }
-
-const recommendedEmojis = [
-  { code: ['1F602'], emoji: '😂', name: 'face with tears of joy' },
-  { code: ['1F923'], emoji: '🤣', name: 'rolling on the floor laughing' },
-  { code: ['1F60D'], emoji: '😍', name: 'smiling face with heart-eyes' },
-  { code: ['1F44D'], emoji: '👍', name: 'thumbs up' },
-  { code: ['1F4AA'], emoji: '💪', name: 'flexed biceps' },
-];

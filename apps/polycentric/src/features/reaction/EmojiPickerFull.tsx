@@ -1,19 +1,38 @@
-import { Sheet } from '@/src/common/components/sheet';
-import { Atoms, Spacing } from '@/src/common/theme';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
-import type { ViewToken } from 'react-native';
+import { Sheet, SHEET_OVERLAY_PADDING } from '@/src/common/components/sheet';
+import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
+import { Atoms, Breakpoints, Spacing, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import { buildEmojiItems, categories } from './emojiData';
-import type { PickerItem } from './emojiData';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useWindowDimensions, View } from 'react-native';
+import type {
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
+import {
+  categories,
+  computeSectionOffsets,
+  GRID_COLUMNS,
+  EMOJI_ROWS,
+  type EmojiListItem,
+} from './emojiData';
+import { BottomFade } from './BottomFade';
 import { EmojiGridRow } from './EmojiGridRow';
 import { EmojiPickerCategoryTabs } from './EmojiPickerCategoryTabs';
 import { EmojiSectionRule } from './EmojiSectionRule';
 
-const GRID_BUTTON_SIZE = 36;
+// How far beyond the viewport the `FlashList` will render. This is kept small
+// because it seems smooth enough during scrolling, and we want good first-load
+// performance.
+const DRAW_DISTANCE = 100;
+const COMPACT_MARGIN =
+  2 * SHEET_OVERLAY_PADDING + TOPBAR_HEIGHT + 2 * Spacing.lg;
+const FADE_HEIGHT = 64;
+const GRID_HORIZONTAL_PADDING = Spacing.sm;
+const LIST_MAX_HEIGHT = 420;
 const TAB_BUTTON_SIZE = 44;
 const TAB_RAIL_WIDTH = 56;
-const LIST_MAX_HEIGHT = 420;
 
 type EmojiPickerFullProps = {
   open: boolean;
@@ -22,85 +41,106 @@ type EmojiPickerFullProps = {
   selectedEmoji?: string | null;
 };
 
+const keyExtractor = (item: EmojiListItem) => item.key;
+const getItemType = (item: EmojiListItem) => item.type;
+
+/**
+ * Emoji picker sheet with a category rail and a scrollable grid, using
+ * `FlashList` over a set of emojis in `emojiData`.
+ */
 export function EmojiPickerFull({
   open,
   onClose,
   onSelect,
   selectedEmoji,
 }: EmojiPickerFullProps) {
-  const [panelWidth, setPanelWidth] = useState(0);
+  const { theme } = useTheme();
+  const listRef = useRef<FlashListRef<EmojiListItem>>(null);
   const [activeSection, setActiveSection] = useState(categories[0]!.key);
-  const listRef = useRef<FlashListRef<PickerItem>>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+  const [measuredRowHeight, setMeasuredRowHeight] = useState(0);
+  const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState(0);
 
-  const columns = useMemo(() => {
-    if (panelWidth <= 0) return 1;
-    return Math.max(
-      1,
-      Math.floor(
-        (panelWidth + Spacing['2xs']) / (GRID_BUTTON_SIZE + Spacing['2xs']),
+  const { width, height: windowHeight } = useWindowDimensions();
+  const compact = isWeb && width < Breakpoints.sm;
+  const listHeight = compact ? windowHeight - COMPACT_MARGIN : LIST_MAX_HEIGHT;
+
+  // The row height can be estimated using the size of the circular emoji buttons,
+  // which depend on column width, which depends on row width.
+  const estimatedRowHeight = useMemo(
+    () =>
+      gridWidth > 0
+        ? (gridWidth - 2 * GRID_HORIZONTAL_PADDING) / GRID_COLUMNS
+        : 0,
+    [gridWidth],
+  );
+
+  // Rather than scrolling by FlashList index, which will render items to get
+  // the correct scroll offset, we compute the offset using the emoji data.
+  // This makes section scrolling fast.
+  const sectionOffsets = useMemo(
+    () =>
+      computeSectionOffsets(
+        // Prefer measured dimensions over estimated
+        measuredRowHeight || estimatedRowHeight,
+        measuredHeaderHeight || undefined,
       ),
-    );
-  }, [panelWidth]);
-
-  const { items, sectionOffset } = useMemo(
-    () => buildEmojiItems(categories, columns),
-    [columns],
+    [measuredRowHeight, estimatedRowHeight, measuredHeaderHeight],
   );
 
-  const handleSelect = useCallback(
-    (emoji: string) => {
-      onSelect(emoji);
-      onClose();
-    },
-    [onSelect, onClose],
-  );
+  const onGridLayout = useCallback((e: LayoutChangeEvent) => {
+    setGridWidth(e.nativeEvent.layout.width);
+  }, []);
 
-  const renderItem = useCallback(
-    ({ item }: { item: PickerItem }) => {
-      if (item.type === 'header') {
-        return <EmojiSectionRule first={item.first} />;
-      }
-      return (
-        <EmojiGridRow
-          emojis={item.emojis}
-          onSelect={handleSelect}
-          selectedEmoji={selectedEmoji}
-          buttonSize={GRID_BUTTON_SIZE}
-        />
-      );
-    },
-    [handleSelect, selectedEmoji],
-  );
+  const onRowLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setMeasuredRowHeight((prev) => (Math.abs(prev - h) < 0.5 ? prev : h));
+  }, []);
+
+  const onHeaderLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    setMeasuredHeaderHeight((prev) => (Math.abs(prev - h) < 0.5 ? prev : h));
+  }, []);
 
   const scrollToSection = useCallback(
     (key: string) => {
-      const offset = sectionOffset[key];
+      const offset = sectionOffsets[key];
       if (offset === undefined) return;
       listRef.current?.scrollToOffset({ offset, animated: true });
     },
-    [sectionOffset],
+    [sectionOffsets],
   );
 
-  // Stable viewability callback — ref ensures FlashList doesn't re-create layout.
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      for (const v of viewableItems) {
-        const item = v.item as PickerItem | undefined;
-        if (item?.type === 'header') {
-          setActiveSection(item.categoryKey);
-          break;
-        }
+  // Set the active tab to be that of the previous section offset relative to
+  // the viewport top.
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      let active = categories[0]!.key;
+      for (const c of categories) {
+        if ((sectionOffsets[c.key] ?? 0) - 1 <= y) active = c.key;
+        else break;
       }
+      setActiveSection((prev) => (prev === active ? prev : active));
     },
-  ).current;
+    [sectionOffsets],
+  );
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 }).current;
-
-  const onLayout = useCallback(
-    (e: { nativeEvent: { layout: { width: number } } }) => {
-      setPanelWidth(e.nativeEvent.layout.width);
-    },
-    [],
+  const renderItem = useCallback(
+    ({ item }: { item: EmojiListItem }) =>
+      item.type === 'header' ? (
+        <EmojiSectionRule onLayout={onHeaderLayout} />
+      ) : (
+        <EmojiGridRow
+          emojis={item.emojis}
+          onSelect={onSelect}
+          selectedEmoji={selectedEmoji}
+          color={theme.palette.neutral_1000}
+          highlightColor={theme.palette.neutral_100}
+          onLayout={onRowLayout}
+        />
+      ),
+    [onSelect, selectedEmoji, theme.palette, onRowLayout, onHeaderLayout],
   );
 
   return (
@@ -112,44 +152,57 @@ export function EmojiPickerFull({
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
     >
       <Sheet.Content
-        style={[{ maxHeight: LIST_MAX_HEIGHT, flexDirection: 'row' }]}
+        style={[
+          Atoms.flex_row,
+          {
+            maxHeight: compact ? listHeight + 2 * Spacing.lg : LIST_MAX_HEIGHT,
+          },
+        ]}
       >
-        <View
-          style={{
-            width: TAB_RAIL_WIDTH,
-            borderRightWidth: 1,
-            borderRightColor: '#e0e0e0',
-          }}
-        >
+        <View style={{ width: TAB_RAIL_WIDTH }}>
+          <View
+            pointerEvents="none"
+            style={[
+              Atoms.absolute,
+              {
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: 1,
+                backgroundColor: theme.palette.neutral_200,
+              },
+            ]}
+          />
           <EmojiPickerCategoryTabs
             categories={categories}
             activeKey={activeSection}
             onSelect={scrollToSection}
             tabSize={TAB_BUTTON_SIZE}
+            bottomInset={FADE_HEIGHT}
           />
+          <BottomFade height={FADE_HEIGHT} id="emojiTabsFade" />
         </View>
+
         <View
-          style={[
-            Atoms.flex_1,
-            Atoms.pt_sm,
-            { paddingHorizontal: Spacing.sm, height: LIST_MAX_HEIGHT },
-          ]}
-          onLayout={onLayout}
+          style={[Atoms.flex_1, { height: listHeight }]}
+          onLayout={onGridLayout}
         >
-          {panelWidth > 0 ? (
-            <FlashList
-              key={columns}
-              ref={listRef}
-              data={items}
-              keyExtractor={(_item, index) => String(index)}
-              renderItem={renderItem}
-              getItemType={(item) => item.type}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={[Atoms.py_xs]}
-            />
-          ) : null}
+          <FlashList
+            ref={listRef}
+            data={EMOJI_ROWS}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            getItemType={getItemType}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            drawDistance={DRAW_DISTANCE}
+            contentContainerStyle={{
+              ...Atoms.px_sm,
+              paddingBottom: FADE_HEIGHT,
+            }}
+          />
+          <BottomFade height={FADE_HEIGHT} id="emojiGridFade" />
         </View>
       </Sheet.Content>
     </Sheet>

@@ -1,3 +1,4 @@
+import { Spacing } from '@/src/common/theme';
 import rawData from './emojis.json';
 
 export type EmojiEntry = {
@@ -15,15 +16,9 @@ export type EmojiCategory = {
   emojis: EmojiEntry[];
 };
 
-export type PickerItem =
-  | { type: 'header'; categoryKey: string; first: boolean }
-  | { type: 'row'; categoryKey: string; emojis: EmojiEntry[] };
-
 const data = rawData as { emojis: EmojiEntry[] };
 
-/**
- * Group emojis by category, preserving original order from the JSON.
- */
+/** Group emojis by category, preserving the order they appear in. */
 function groupByCategory(): EmojiCategory[] {
   const map = new Map<string, EmojiEntry[]>();
 
@@ -48,55 +43,77 @@ function groupByCategory(): EmojiCategory[] {
 export const categories: EmojiCategory[] = groupByCategory();
 
 const categoryByKey: Record<string, EmojiCategory> = {};
-for (const cat of categories) {
-  categoryByKey[cat.key] = cat;
+for (const c of categories) {
+  categoryByKey[c.key] = c;
 }
 
 export function getCategory(key: string): EmojiCategory | undefined {
   return categoryByKey[key];
 }
 
-/**
- * Build an array of emoji rows for the emoji picker suitable for a
- * `FlashList`. (The `FlashList` would not be able to virtualize individual
- * emoji buttons.) Additionally, return a lookup table from category key
- * to the index of that category's start in the list.
- *
- * Each category emits one header item followed by as many row items as
- * needed to hold its emojis chunked at `columns` per row.
- *
- * Note that the first header will include a field `first: true`.
- */
-export function buildEmojiItems(
-  categories: EmojiCategory[],
-  columns: number,
-): {
-  items: PickerItem[];
-  sectionIndex: Record<string, number>;
-  sectionOffset: Record<string, number>;
-} {
-  const items: PickerItem[] = [];
-  const sectionIndex: Record<string, number> = {};
-  const sectionOffset: Record<string, number> = {};
-  let y = 0;
+export const GRID_COLUMNS = 10;
+export type EmojiListItem =
+  | { type: 'header'; key: string; categoryKey: string }
+  | { type: 'row'; key: string; categoryKey: string; emojis: EmojiEntry[] };
 
-  for (let i = 0; i < categories.length; i++) {
-    const c = categories[i]!;
-    sectionIndex[c.key] = items.length;
-    sectionOffset[c.key] = y;
-    items.push({ type: 'header', categoryKey: c.key, first: i === 0 });
-    y += 26; // HEADER_HEIGHT
+function buildRows(): EmojiListItem[] {
+  const items: EmojiListItem[] = [];
 
-    const emojis = c.emojis;
-    for (let j = 0; j < emojis.length; j += columns) {
+  categories.forEach((c, i) => {
+    if (i > 0) {
+      items.push({ type: 'header', key: `h:${c.key}`, categoryKey: c.key });
+    }
+
+    for (let j = 0; j < c.emojis.length; j += GRID_COLUMNS) {
       items.push({
         type: 'row',
+        key: `r:${c.key}:${j}`,
         categoryKey: c.key,
-        emojis: emojis.slice(j, j + columns),
+        emojis: c.emojis.slice(j, j + GRID_COLUMNS),
       });
-      y += 44; // ROW_HEIGHT
     }
-  }
+  });
 
-  return { items, sectionIndex, sectionOffset };
+  return items;
+}
+
+/** Rows for the emoji picker to display. */
+export const EMOJI_ROWS = buildRows();
+
+export const INLINE_EMOJIS: { code: string[]; emoji: string; name: string }[] =
+  [
+    { code: ['1F602'], emoji: '😂', name: 'face with tears of joy' },
+    { code: ['1F923'], emoji: '🤣', name: 'rolling on the floor laughing' },
+    { code: ['1F60D'], emoji: '😍', name: 'smiling face with heart-eyes' },
+    { code: ['1F44D'], emoji: '👍', name: 'thumbs up' },
+    { code: ['1F4AA'], emoji: '💪', name: 'flexed biceps' },
+  ];
+
+export const EMOJI_FONT_SIZE = 26;
+export const SECTION_RULE_PADDING = Spacing.xs;
+export const HEADER_HEIGHT = 2 * SECTION_RULE_PADDING + 1;
+
+/**
+ * Compute section scroll offsets from the rendered row and header heights, so
+ * that we don't rely on full `FlashList` renders to scroll to sections.
+ * The offset for each section points at the top of its divider (or the top of
+ * the first row for the initial section, which has no divider).
+ */
+export function computeSectionOffsets(
+  rowHeight: number,
+  headerHeight: number = HEADER_HEIGHT,
+): Record<string, number> {
+  const offsets: Record<string, number> = {};
+  let y = 0;
+
+  categories.forEach((c, i) => {
+    offsets[c.key] = y;
+    if (i > 0) {
+      y += headerHeight;
+    }
+    const rows = Math.ceil(c.emojis.length / GRID_COLUMNS);
+    y += rows * rowHeight;
+  });
+
+  return offsets;
 }
