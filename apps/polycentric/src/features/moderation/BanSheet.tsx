@@ -4,7 +4,7 @@ import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { ActivityIndicator, View } from 'react-native';
 import useBanStatus from './hooks/useBanStatus';
-import useModeratedServers from './hooks/useModeratedServers';
+import useModerationStatus from './hooks/useModerationStatus';
 
 type BanSheetProps = {
   // Identity being moderated.
@@ -23,7 +23,8 @@ export default function BanSheet({
   onClose,
 }: BanSheetProps) {
   const { theme } = useTheme();
-  const { isLoading, servers } = useModeratedServers(open);
+  const isLoading = useModerationStatus((s) => s.isLoading);
+  const servers = useModerationStatus((s) => s.moderatedServers);
 
   return (
     <Sheet

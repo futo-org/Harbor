@@ -8,7 +8,7 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import useModeratedServers from '@/src/features/moderation/hooks/useModeratedServers';
+import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
 import ModeratorDashboardSheet from '@/src/features/moderation/ModeratorDashboardSheet';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -26,7 +26,8 @@ export function ServersSettingsSheet() {
   const [isBusy, setIsBusy] = useState(false);
   const [dashboardServer, setDashboardServer] = useState<string | null>(null);
 
-  const { servers: moderatedServers } = useModeratedServers(true);
+  const moderatedServers = useModerationStatus((s) => s.moderatedServers);
+  const refreshModerationStatus = useModerationStatus((s) => s.refresh);
 
   const refreshServers = useCallback(() => {
     setServers([...client.servers]);
@@ -46,6 +47,7 @@ export function ServersSettingsSheet() {
       client.servers.push(url);
       setNewServerUrl('');
       refreshServers();
+      void refreshModerationStatus(client);
       store.getState().clearFeed('explore');
       client.sync().catch(() => {});
     } catch (err) {
@@ -67,6 +69,7 @@ export function ServersSettingsSheet() {
       // TODO: Remove server not yet implemented in v2
       console.warn('Remove server not yet implemented in v2');
       refreshServers();
+      void refreshModerationStatus(client);
       store.getState().clearFeed('explore');
       client.sync().catch(() => {});
     } catch (err) {

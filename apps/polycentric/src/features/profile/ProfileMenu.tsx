@@ -1,11 +1,11 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
-import { useSettings } from '@/src/common/settings';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useState } from 'react';
 import { View } from 'react-native';
 import BanSheet from '../moderation/BanSheet';
+import useModerationStatus from '../moderation/hooks/useModerationStatus';
 import { useProfileContext } from './ProfileContext';
 
 type MenuItem = {
@@ -23,12 +23,12 @@ type MenuItem = {
 export default function ProfileMenu() {
   const { theme } = useTheme();
   const { identityKey, isSelf } = useProfileContext();
-  const moderatorMode = useSettings((s) => s.moderatorMode);
+  const isModerator = useModerationStatus((s) => s.isModerator);
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
 
   const items: MenuItem[] = [];
-  if (moderatorMode && !isSelf) {
+  if (isModerator && !isSelf) {
     items.push({
       key: 'ban',
       icon: 'ban',
