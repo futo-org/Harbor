@@ -6,6 +6,7 @@ import { Pressable, View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import type { ClaimVerificationStatus } from '../utils/claim-status';
 import { CLAIM_TYPES } from '../utils/forms';
+import { getPlatformFromClaim } from '../utils/platforms';
 import { resolveClaimTitle } from '../utils/render';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { IdentityChip } from './toolbar/IdentityChip';
@@ -27,6 +28,8 @@ export function ClaimListItem({
   const { theme } = useTheme();
   const { title } = resolveClaimTitle(claim.schemaName, claim.fields);
   const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
+  // Platform claims chip as their platform (brand logo + name).
+  const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
 
   return (
     <Pressable
@@ -78,9 +81,10 @@ export function ClaimListItem({
         >
           {showOwner && <IdentityChip identity={claim.identity} />}
           <ClaimTypeChip
-            name={claim.schemaName}
+            name={platform?.name ?? claim.schemaName}
             icon={claimType?.icon ?? 'verify'}
-            color={claimType?.color}
+            logo={platform?.logo}
+            color={platform?.color ?? claimType?.color}
           />
           <TimeChip createdAt={claim.createdAt} />
           <StatusChip

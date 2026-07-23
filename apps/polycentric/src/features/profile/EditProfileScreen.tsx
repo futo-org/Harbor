@@ -7,7 +7,7 @@ import {
   useProfileEdit,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, ZIndex } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -91,7 +91,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
                 Atoms.flex_row,
                 Atoms.items_center,
                 Atoms.gap_xs,
-                { zIndex: 1 },
+                { zIndex: ZIndex.raised },
               ]}
             >
               <Text variant="small" color="neutral_500">

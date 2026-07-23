@@ -1,4 +1,10 @@
-import { Atoms, Breakpoints, typography, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  Breakpoints,
+  typography,
+  useTheme,
+  ZIndex,
+} from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { type ExternalPathString, Link } from 'expo-router';
@@ -174,7 +180,7 @@ function Screen({
               right: 0,
               height: insets.top,
               backgroundColor: theme.palette.neutral_0,
-              zIndex: 1,
+              zIndex: ZIndex.raised,
             },
           ]}
         />

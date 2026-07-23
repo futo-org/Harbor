@@ -1,6 +1,8 @@
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
+import type { ClaimField } from '../../hooks/useClaimById';
 import { CLAIM_TYPES } from '../../utils/forms';
+import { getPlatformFromClaim } from '../../utils/platforms';
 import { ClaimTypeChip } from './ClaimTypeChip';
 import { IdentityChip } from './IdentityChip';
 import { TimeChip } from './TimeChip';
@@ -10,12 +12,16 @@ export function Toolbar({
   identity,
   createdAt,
   schemaName,
+  fields = [],
 }: {
   identity: string;
   createdAt: bigint;
   schemaName: string;
+  fields?: ClaimField[];
 }) {
   const claimType = CLAIM_TYPES.find((t) => t.name === schemaName);
+  // Platform claims chip as their platform (brand logo + name).
+  const platform = getPlatformFromClaim(schemaName, fields);
 
   return (
     <View
@@ -29,9 +35,10 @@ export function Toolbar({
       <IdentityChip identity={identity} />
       <TimeChip createdAt={createdAt} />
       <ClaimTypeChip
-        name={schemaName}
+        name={platform?.name ?? schemaName}
         icon={claimType?.icon ?? 'verify'}
-        color={claimType?.color}
+        logo={platform?.logo}
+        color={platform?.color ?? claimType?.color}
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import { Atoms } from '@/src/common/theme';
+import { Atoms, ZIndex } from '@/src/common/theme';
 import React, { isValidElement, useState, type ReactNode } from 'react';
 import {
   type LayoutChangeEvent,
@@ -113,6 +113,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1,
+    zIndex: ZIndex.raised,
   } satisfies ViewStyle,
 });

@@ -10,6 +10,7 @@ import {
 import type { ClaimField, TokenResponse } from './models.js';
 import type { XOAuthURLResult } from './platforms/x.js';
 import { Result } from './result.js';
+import { slug } from './utility.js';
 
 export enum VerifierType {
   OAuth = 'oauth',
@@ -74,6 +75,13 @@ export abstract class Verifier {
     if (claim.schemaName !== SCHEMA_NAME) {
       return Result.errMsg(
         `Claim schema '${claim.schemaName}' is not a '${SCHEMA_NAME}' claim.`,
+      );
+    }
+
+    // The claim's platform must match the verifier handling it.
+    if (claim.platform && claim.platform !== slug(this.platform)) {
+      return Result.errMsg(
+        `Claim is for platform '${claim.platform}', not '${slug(this.platform)}'.`,
       );
     }
 
@@ -154,11 +162,15 @@ export abstract class TextVerifier extends Verifier {
     super(VerifierType.Text, platform);
   }
 
-  protected async shouldVerify(claim: DecodedClaim): Promise<Result<void>> {
-    const expectedToken = claim.expectedToken;
-    console.info(`Expected token: '${expectedToken}'.`);
-
-    for (const claimField of claim.fields) {
+  /**
+   * Check the profile the fields point at contains the loop-back token.
+   * Used to verify published claims and as the client pre-check.
+   */
+  public async checkFields(
+    claimFields: ClaimField[],
+    expectedToken: string,
+  ): Promise<Result<void>> {
+    for (const claimField of claimFields) {
       const descriptionResult = await this.getText(claimField);
       if (!descriptionResult.success) {
         return Result.err(descriptionResult.error);
@@ -175,6 +187,11 @@ export abstract class TextVerifier extends Verifier {
     }
 
     return Result.ok();
+  }
+
+  protected async shouldVerify(claim: DecodedClaim): Promise<Result<void>> {
+    console.info(`Expected token: '${claim.expectedToken}'.`);
+    return this.checkFields(claim.fields, claim.expectedToken);
   }
 
   public async healthCheck(): Promise<Result<void>> {

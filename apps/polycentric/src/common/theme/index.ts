@@ -18,6 +18,7 @@ export {
   Spacing,
   Spacing as spacing,
   typography,
+  ZIndex,
 } from './tokens';
 export type {
   BorderRadiusToken,
@@ -25,5 +26,6 @@ export type {
   FontWeightToken,
   LineHeightToken,
   SpacingToken,
+  ZIndexToken,
 } from './tokens';
 export { useBreakpoint } from './useBreakpoint';

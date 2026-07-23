@@ -78,6 +78,23 @@ export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
   return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:3001`];
 })();
 
+/**
+ * Comma-separated list of verifier-bot base URLs that 'Platform' claims
+ * request verification from. Read from
+ * `EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS`; falls back to
+ * `http://<host>:3002` for local dev (the verifier bot's default port).
+ */
+export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
+  const raw = (
+    process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS ?? ''
+  ).trim();
+  const parsed = raw
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter((s) => s.length > 0);
+  return parsed.length > 0 ? parsed : [`http://${DEFAULT_HOST}:3002`];
+})();
+
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;

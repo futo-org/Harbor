@@ -1,7 +1,7 @@
 import { Button, Screen } from '@/src/common/components';
 import { AppFooter } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants/routes';
-import { Atoms, themes, useTheme } from '@/src/common/theme';
+import { Atoms, themes, useTheme, ZIndex } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -25,7 +25,8 @@ export default function OnboardingWelcomeScreen() {
           Atoms.flex_1,
           Atoms.justify_center,
           Atoms.items_center,
-          { zIndex: 2 },
+          // Keeps the logo above the splash image, which renders after it.
+          { zIndex: ZIndex.raised },
         ]}
       >
         <Image

@@ -3,31 +3,25 @@ import type { ClaimField } from './models.js';
 import { Result } from './result.js';
 
 // ─────────────────────────────────────────────────────────────────────────
-// PROVISIONAL verification-claim contract.
-//
-// The new app's social-platform ("loop-back") claim flow is not finished yet
-// (see apps/polycentric .../ClaimCreatePlatformLink.tsx — "TODO: start the
-// platform loop-back verification flow"), so the exact claim shape isn't
-// pinned down. Everything we had to invent lives HERE so that, once the app
-// defines it, reconciliation is a single-file change:
+// Verification-claim contract, shared with the app's platform loop-back flow
+// (apps/polycentric .../hooks/useVerifyPlatformClaim.ts):
 //   • SCHEMA_NAME  — all platform claims share ONE `VerificationSchema` (the
 //                    app's "Platform" claim type); the schema name does NOT
-//                    encode the platform. Which platform a claim is for is
-//                    determined by the verifier/route it's sent to, not the
-//                    schema. `requestVerify` only checks the claim uses this
-//                    shared schema.
-//   • field order  — the old bot addressed claim fields by numeric index
-//                    (key 0 = handle, key 1 = channel id, …). New claims key
-//                    fields by string, so we expose them as ordinal
-//                    `ClaimField`s in the schema's declared field order, which
-//                    keeps every platform's proof logic untouched.
+//                    encode the platform. `requestVerify` only checks the
+//                    claim uses this shared schema.
+//   • field names  — verifiers address account fields by numeric index
+//                    (key 0 = handle, key 1 = channel id, …); claims key them
+//                    `account`, `account_id`, `field_2`, `field_3`, ….
+//                    A claim also carries display metadata the verifiers
+//                    don't proof-check: `platform` (the platform's route
+//                    slug, checked against the verifier handling the claim)
+//                    and `url` (the profile URL).
 //   • expectedToken — the loop-back token a user puts in their profile. The
-//                    old system used base64(claimant public key); we use the
-//                    claim author's signing key the same way until the app
-//                    settles the token format.
+//                    app's loop-back link is `<app-url>/<identity key>`, so
+//                    the token is the claim's `EventKey.identity`.
 // ─────────────────────────────────────────────────────────────────────────
 
-// The single schema shared by every platform verification claim (provisional).
+// The single schema shared by every platform verification claim.
 export const SCHEMA_NAME = 'Platform';
 
 export interface DecodedClaim {
@@ -35,10 +29,20 @@ export interface DecodedClaim {
   eventKey: v2.EventKey;
   // `VerificationSchema.name` — which verifier should handle this claim.
   schemaName: string;
-  // Fields in the schema's declared order, keyed by ordinal index.
+  // Account fields keyed by the ordinal index the verifiers address.
   fields: ClaimField[];
-  // Provisional loop-back token to look for in the claimant's profile.
+  // The platform route slug the claim was made for, when recorded.
+  platform?: string;
+  // Loop-back token to look for in the claimant's profile.
   expectedToken: string;
+}
+
+/** Ordinal a schema field key addresses, or undefined for metadata fields. */
+function fieldOrdinal(key: string): number | undefined {
+  if (key === 'account') return 0;
+  if (key === 'account_id') return 1;
+  const match = /^field_(\d+)$/.exec(key);
+  return match ? Number(match[1]) : undefined;
 }
 
 const hexToBytes = (hex: string): Uint8Array =>
@@ -116,20 +120,28 @@ export async function fetchClaim(
     const schema = v2.VerificationSchema.fromBinary(schemaBytes);
 
     const decoder = new TextDecoder();
-    const fields: ClaimField[] = schema.fields.map((field, index) => ({
-      key: index,
-      value: decoder.decode(
-        verificationClaim.fields[field.key] ?? new Uint8Array(),
-      ),
-    }));
+    const decode = (key: string) =>
+      decoder.decode(verificationClaim.fields[key] ?? new Uint8Array());
+
+    const fields: ClaimField[] = [];
+    let platform: string | undefined;
+    for (const field of schema.fields) {
+      const ordinal = fieldOrdinal(field.key);
+      if (ordinal !== undefined) {
+        fields.push({ key: ordinal, value: decode(field.key) });
+      } else if (field.key === 'platform') {
+        platform = decode(field.key);
+      }
+      // Anything else (e.g. `url`) is display metadata — not proof-checked.
+    }
+    fields.sort((a, b) => a.key - b.key);
 
     return Result.ok({
       eventKey: event.key,
       schemaName: schema.name,
       fields,
-      expectedToken: Buffer.from(
-        event.key.signedBy?.key ?? new Uint8Array(),
-      ).toString('base64'),
+      platform,
+      expectedToken: event.key.identity,
     });
   } catch (e) {
     return Result.errMsg(

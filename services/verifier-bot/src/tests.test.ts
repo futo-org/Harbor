@@ -78,6 +78,26 @@ class DummyVerifier extends TextVerifier {
   }
 }
 
+describe('text pre-check', () => {
+  const verifier = new DummyVerifier('X', 'my bio with token-abc inside');
+
+  test('CI: passes when the profile contains the token', async () => {
+    const result = await verifier.checkFields(
+      [{ key: 0, value: 'someuser' }],
+      'token-abc',
+    );
+    assert.ok(result.success);
+  });
+
+  test('CI: fails when the token is missing', async () => {
+    const result = await verifier.checkFields(
+      [{ key: 0, value: 'someuser' }],
+      'other-token',
+    );
+    assert.equal(result.success, false);
+  });
+});
+
 describe('requestVerify input validation', () => {
   const verifier = new DummyVerifier('X', 'token');
 
@@ -208,11 +228,13 @@ async function publishClaim(
 describe('requestVerify flow', () => {
   test('CI: text success', async () => {
     const client = await makeClient();
-    const token = Buffer.from(
-      client.currentKeyPair?.publicKey.key ?? new Uint8Array(),
-    ).toString('base64');
+    // The loop-back token is the claim author's identity key (see claims.ts).
+    const token = client.activeIdentityKey ?? '';
+    // `platform` and `url` are display metadata — only `account` is proofed.
     const claimId = await publishClaim(client, SCHEMA_NAME, {
+      platform: 'hackernews',
       account: 'test',
+      url: 'https://news.ycombinator.com/user?id=test',
     });
 
     const verifier = new DummyVerifier('HackerNews', token);
@@ -236,6 +258,26 @@ describe('requestVerify flow', () => {
     const claimId = await publishClaim(client, 'Freeform', { name: 'test' });
 
     const verifier = new DummyVerifier('HackerNews', 'token');
+    await verifier.init();
+    const result = await verifier.requestVerify(client, {
+      body: { claimId },
+      headers: { 'content-type': 'application/json' },
+      url: 'https://fake.com',
+    });
+    await verifier.dispose();
+
+    assert.equal(result.success, false);
+  });
+
+  test('CI: text fail on platform mismatch', async () => {
+    const client = await makeClient();
+    const token = client.activeIdentityKey ?? '';
+    const claimId = await publishClaim(client, SCHEMA_NAME, {
+      platform: 'youtube',
+      account: 'test',
+    });
+
+    const verifier = new DummyVerifier('HackerNews', token);
     await verifier.init();
     const result = await verifier.requestVerify(client, {
       body: { claimId },

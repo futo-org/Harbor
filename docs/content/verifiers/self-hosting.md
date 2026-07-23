@@ -46,6 +46,8 @@ and fill it in.
 | `POLYCENTRIC_VERIFIER_BOT_WEB_APP_URL` | Base URL of the web app (OAuth callbacks redirect back here). |
 | `POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |
 | `POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick). |
+| `POLYCENTRIC_VERIFIER_BOT_PROFILE_NAME` | Display name published for the bot's identity on first run. |
+| `POLYCENTRIC_VERIFIER_BOT_PROFILE_DESCRIPTION` | Profile description published alongside the name. |
 
 ### OAuth credentials
 

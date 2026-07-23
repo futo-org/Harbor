@@ -57,6 +57,4 @@ export const Defaults = {
     BATCH_SIZE: 100,
   },
   USER_AGENT: 'polycentric-core-ts',
-  VERIFIER_SERVER: 'https://verify.polycentric.io',
-  VERIFIER_ASSOCIATED_SERVERS: ['https://serv1.polycentric.io'],
 } as const;

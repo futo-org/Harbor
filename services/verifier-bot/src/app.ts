@@ -15,7 +15,12 @@ import {
 } from './utility.js';
 import { OAuthVerifier, TextVerifier } from './verifier.js';
 
-import type { PolycentricClient } from '@polycentric/js-core';
+import {
+  COLLECTION,
+  type PolycentricClient,
+  SyncStrategy,
+  v2,
+} from '@polycentric/js-core';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 
 const oauthSecrets = new Map<
@@ -85,6 +90,39 @@ async function loadClient(): Promise<PolycentricClient> {
   return client;
 }
 
+/** Publish the bot's profile (name shown next to its verifications) once. */
+async function ensureProfile(client: PolycentricClient): Promise<void> {
+  if (!client.activeIdentityKey) return;
+  try {
+    const existing = await client.listEvents({
+      identity: client.activeIdentityKey,
+      collection: COLLECTION.PROFILE,
+    });
+    if (existing.length > 0) return;
+
+    const content = v2.Content.create({
+      contentBody: {
+        oneofKind: 'profileUpdate',
+        profileUpdate: {
+          name: process.env.POLYCENTRIC_VERIFIER_BOT_PROFILE_NAME || 'Verifier',
+          description:
+            process.env.POLYCENTRIC_VERIFIER_BOT_PROFILE_DESCRIPTION ||
+            'Automated verifier of platform claims.',
+        },
+      },
+    });
+    await client.contentManager.save(content);
+    const event = await client.buildEvent(content, COLLECTION.PROFILE);
+    const signedEvent = await client.signEvent(event);
+    await client.commitEvent(signedEvent, content);
+    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    console.log('Published bot profile');
+  } catch (e) {
+    // Non-fatal: verifying still works, the bot just shows unnamed.
+    console.warn('Failed to publish bot profile:', e);
+  }
+}
+
 (async () => {
   const client = await loadClient();
   console.log(
@@ -95,6 +133,8 @@ async function loadClient(): Promise<PolycentricClient> {
     ).toString('base64')})`,
   );
 
+  await ensureProfile(client);
+
   const app = express();
   app.use(express.json());
 
@@ -102,7 +142,7 @@ async function loadClient(): Promise<PolycentricClient> {
     cors({
       origin: (
         process.env.POLYCENTRIC_VERIFIER_BOT_ALLOWED_ORIGINS ||
-        'https://localhost:3000,http://localhost:3000,https://app.polycentric.io,https://staging-web.polycentric.io,https://web.polycentric.io,https://polycentric.io'
+        'http://localhost:3002,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
       ).split(','),
       credentials: true,
       methods: ['GET', 'POST', 'OPTIONS'],
@@ -145,7 +185,12 @@ async function loadClient(): Promise<PolycentricClient> {
       res
         .json(
           platforms.map((platform) => {
-            return { name: platform.name, slug: slug(platform.name) };
+            return {
+              name: platform.name,
+              slug: slug(platform.name),
+              // 'text'/'oauth' — which flows the bot supports.
+              verifiers: platform.verifiers.map((v) => v.verifierType),
+            };
           }),
         )
         .status(200);
@@ -205,7 +250,7 @@ async function loadClient(): Promise<PolycentricClient> {
 
       const webAppBaseUrl =
         process.env.POLYCENTRIC_VERIFIER_BOT_WEB_APP_URL ||
-        'https://polycentric.io';
+        'http://localhost:8081';
       const webAppCallbackPath = '/oauth/callback';
 
       const redirectState = JSON.stringify({
@@ -394,6 +439,42 @@ async function loadClient(): Promise<PolycentricClient> {
             }
           },
         );
+
+        // Pre-check without a claim: does the token's account match?
+        app.post(
+          `/platforms/${name}/${verifier.verifierType}/check`,
+          async (req, res) => {
+            try {
+              const { claimFields, challengeResponse } = req.body ?? {};
+              if (
+                !Array.isArray(claimFields) ||
+                typeof challengeResponse !== 'string'
+              ) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                  message:
+                    'Expected { claimFields: [], challengeResponse: string }.',
+                });
+                return;
+              }
+              return writeResult(
+                res,
+                await verifier.isTokenValid(challengeResponse, claimFields),
+              );
+            } catch (e: unknown) {
+              const requestId: string = new ObjectId().toString();
+              console.error(
+                `[500 ERROR] (${requestId}) POST /platforms/${name}/${
+                  verifier.verifierType
+                }/check \n${String(e)}`,
+              );
+              res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+                message: `An unknown error has occurred (Request Id: ${requestId})`,
+                extendedMessage:
+                  'Internal server error while checking the OAuth token',
+              });
+            }
+          },
+        );
       }
 
       if (verifier instanceof TextVerifier) {
@@ -416,6 +497,38 @@ async function loadClient(): Promise<PolycentricClient> {
                 message: `An unknown error has occurred (Request Id: ${requestId})`,
                 extendedMessage:
                   'Internal server error while fetching claim fields',
+              });
+            }
+          },
+        );
+
+        // Pre-check without a claim: is the token in the profile?
+        app.post(
+          `/platforms/${name}/${verifier.verifierType}/check`,
+          async (req, res) => {
+            try {
+              const { claimFields, token } = req.body ?? {};
+              if (!Array.isArray(claimFields) || typeof token !== 'string') {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                  message: 'Expected { claimFields: [], token: string }.',
+                });
+                return;
+              }
+              return writeResult(
+                res,
+                await verifier.checkFields(claimFields, token),
+              );
+            } catch (e: unknown) {
+              const requestId: string = new ObjectId().toString();
+              console.error(
+                `[500 ERROR] (${requestId}) POST /platforms/${name}/${
+                  verifier.verifierType
+                }/check \n${String(e)}`,
+              );
+              res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+                message: `An unknown error has occurred (Request Id: ${requestId})`,
+                extendedMessage:
+                  'Internal server error while checking claim fields',
               });
             }
           },

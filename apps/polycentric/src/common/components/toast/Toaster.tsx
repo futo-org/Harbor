@@ -1,4 +1,4 @@
-import { Atoms, Breakpoints, Spacing } from '@/src/common/theme';
+import { Atoms, Breakpoints, Spacing, ZIndex } from '@/src/common/theme';
 import { Portal } from '@rn-primitives/portal';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,8 @@ export function Toaster() {
           Atoms.gap_sm,
           { maxWidth: Breakpoints['sm'] },
           { margin: 'auto' },
+          // Above modals so toasts never hide behind open sheets.
+          { zIndex: ZIndex.toast },
           // Safe-area inset is dynamic, so it stays out of the Atoms list.
           { paddingTop: insets.top + Spacing.sm },
         ]}

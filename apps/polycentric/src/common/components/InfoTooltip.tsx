@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { Dimensions, Pressable, View } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import Icon from './Icon';
 import { Text } from './primitives';
@@ -95,7 +95,7 @@ export function InfoTooltip({
                     Dimensions.get('window').width - BUBBLE_WIDTH - EDGE_MARGIN,
                   ),
                 ),
-                zIndex: 10000,
+                zIndex: ZIndex.tooltipOverlay,
               },
             ]}
           >
@@ -112,7 +112,7 @@ export function InfoTooltip({
               position: 'absolute',
               top: size + 6,
               left: 0,
-              zIndex: 1000,
+              zIndex: ZIndex.tooltip,
               elevation: 8,
             },
           ]}
