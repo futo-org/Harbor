@@ -3500,8 +3500,9 @@ export interface PolycentricCoreLike {
   invalidateQuery(queryKey: Array<string>): void;
   /**
    * Ask a server whether an identity is banned. `signed_message_bytes`
-   * is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
-   * one of the moderator's authorized keys.
+   * is a serialized `SignedMessage` wrapping a `ModerationRequest`
+   * (body: `IsBannedRequest`) signed by one of the moderator's
+   * authorized keys.
    * Returns serialized `IsBannedResponse` proto bytes.
    */
   isBanned(
@@ -3511,8 +3512,9 @@ export interface PolycentricCoreLike {
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
    * Ask a server whether an identity is a moderator.
-   * `signed_message_bytes` is a serialized `SignedMessage` wrapping an
-   * `IsModeratorBody` signed by one of the identity's authorized keys.
+   * `signed_message_bytes` is a serialized `SignedMessage` wrapping a
+   * `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
+   * the identity's authorized keys.
    * Returns serialized `IsModeratorResponse` proto bytes.
    */
   isModerator(
@@ -3532,8 +3534,9 @@ export interface PolycentricCoreLike {
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
    * List the identities banned on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ListBansBody` signed by one
-   * of the moderator's authorized keys.
+   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+   * `ListBansRequest`) signed by one of the moderator's authorized
+   * keys.
    * Returns serialized `ListBansResponse` proto bytes.
    */
   listBans(
@@ -3612,8 +3615,9 @@ export interface PolycentricCoreLike {
   ) /*throws*/ : Promise<void>;
   /**
    * Ban or unban an identity on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
-   * one of the moderator's authorized keys.
+   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+   * `SetBanStatusRequest`) signed by one of the moderator's authorized
+   * keys.
    * Returns serialized `SetBanStatusResponse` proto bytes.
    */
   setBanStatus(
@@ -4068,8 +4072,9 @@ export class PolycentricCore
 
   /**
    * Ask a server whether an identity is banned. `signed_message_bytes`
-   * is a serialized `SignedMessage` wrapping an `IsBannedBody` signed by
-   * one of the moderator's authorized keys.
+   * is a serialized `SignedMessage` wrapping a `ModerationRequest`
+   * (body: `IsBannedRequest`) signed by one of the moderator's
+   * authorized keys.
    * Returns serialized `IsBannedResponse` proto bytes.
    */
   async isBanned(
@@ -4126,8 +4131,9 @@ export class PolycentricCore
 
   /**
    * Ask a server whether an identity is a moderator.
-   * `signed_message_bytes` is a serialized `SignedMessage` wrapping an
-   * `IsModeratorBody` signed by one of the identity's authorized keys.
+   * `signed_message_bytes` is a serialized `SignedMessage` wrapping a
+   * `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
+   * the identity's authorized keys.
    * Returns serialized `IsModeratorResponse` proto bytes.
    */
   async isModerator(
@@ -4241,8 +4247,9 @@ export class PolycentricCore
 
   /**
    * List the identities banned on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ListBansBody` signed by one
-   * of the moderator's authorized keys.
+   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+   * `ListBansRequest`) signed by one of the moderator's authorized
+   * keys.
    * Returns serialized `ListBansResponse` proto bytes.
    */
   async listBans(
@@ -4666,8 +4673,9 @@ export class PolycentricCore
 
   /**
    * Ban or unban an identity on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `SetBanStatusBody` signed by
-   * one of the moderator's authorized keys.
+   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
+   * `SetBanStatusRequest`) signed by one of the moderator's authorized
+   * keys.
    * Returns serialized `SetBanStatusResponse` proto bytes.
    */
   async setBanStatus(
@@ -5243,7 +5251,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
-    24367
+    32585
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
@@ -5251,7 +5259,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    44154
+    9716
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",
@@ -5267,7 +5275,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
-    4158
+    45188
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
@@ -5347,7 +5355,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
-    58787
+    34061
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",
