@@ -233,3 +233,71 @@ scraper-deploy-manifest-staging:
     MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/scraper.yml:staging
   needs:
     - scraper-deploy-image-staging
+
+########################################################################
+# verifier-bot
+########################################################################
+
+.verifier-bot-deploy-workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - packages/js-*/**/*
+        - packages/rs-core-uniffi-web/**/*
+        - services/verifier-bot/**/*
+        - .gitlab/ci/build_services.yml
+        - .gitlab/ci/deploy_services.yml
+  variables:
+    SERVICE_NAME: verifier-bot
+
+########################################
+# Tag the image with environment label #
+########################################
+
+verifier-bot-deploy-image-staging:
+  extends:
+    - .verifier-bot-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/verifier-bot
+  needs:
+    - job: verifier-bot-image
+      artifacts: false
+
+verifier-bot-deploy-image-production:
+  extends:
+    - .verifier-bot-deploy-workflow
+    - .service-deploy-image
+  when: manual
+  environment:
+    name: production/verifier-bot
+  needs:
+    - job: verifier-bot-image
+      artifacts: false
+
+###############################
+# Rolling restart on Manifest #
+###############################
+
+verifier-bot-deploy-manifest-staging:
+  extends:
+    - .verifier-bot-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:staging
+  needs:
+    - verifier-bot-deploy-image-staging
+
+verifier-bot-deploy-manifest-production:
+  extends:
+    - .verifier-bot-deploy-workflow
+    - .service-deploy-manifest
+  variables:
+    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:polycentriceast
+  needs:
+    - verifier-bot-deploy-image-production
