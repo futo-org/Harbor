@@ -12,6 +12,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { PageInfo } from "./common";
 /**
  * *
  * The signed envelope for every moderation request. Wrapped in a
@@ -118,22 +119,44 @@ export interface IsBannedResponse {
 }
 /**
  * *
- * ListBans: no extra fields.
+ * ListBans: paginated, optionally filtered list of banned identities.
  *
  * @generated from protobuf message polycentric.v2.ListBansRequest
  */
 export interface ListBansRequest {
+    /**
+     * Max entries to return; the server clamps to its own bounds.
+     *
+     * @generated from protobuf field: optional uint32 limit = 1
+     */
+    limit?: number;
+    /**
+     * Opaque cursor from a previous response's `page_info.end_cursor`.
+     *
+     * @generated from protobuf field: optional string after = 2
+     */
+    after?: string;
+    /**
+     * Case-insensitive substring filter over the banned identity key.
+     *
+     * @generated from protobuf field: optional string query = 3
+     */
+    query?: string;
 }
 /**
  * @generated from protobuf message polycentric.v2.ListBansResponse
  */
 export interface ListBansResponse {
     /**
-     * Identity keys banned on this server.
+     * Identity keys banned on this server, most recently banned first.
      *
      * @generated from protobuf field: repeated string banned_identities = 1
      */
     bannedIdentities: string[];
+    /**
+     * @generated from protobuf field: polycentric.v2.PageInfo page_info = 2
+     */
+    pageInfo?: PageInfo;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ModerationRequest$Type extends MessageType<ModerationRequest> {
@@ -481,7 +504,11 @@ export const IsBannedResponse = new IsBannedResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ListBansRequest$Type extends MessageType<ListBansRequest> {
     constructor() {
-        super("polycentric.v2.ListBansRequest", []);
+        super("polycentric.v2.ListBansRequest", [
+            { no: 1, name: "limit", kind: "scalar", opt: true, T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "query", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
     }
     create(value?: PartialMessage<ListBansRequest>): ListBansRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
@@ -494,6 +521,15 @@ class ListBansRequest$Type extends MessageType<ListBansRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
+                case /* optional uint32 limit */ 1:
+                    message.limit = reader.uint32();
+                    break;
+                case /* optional string after */ 2:
+                    message.after = reader.string();
+                    break;
+                case /* optional string query */ 3:
+                    message.query = reader.string();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -506,6 +542,15 @@ class ListBansRequest$Type extends MessageType<ListBansRequest> {
         return message;
     }
     internalBinaryWrite(message: ListBansRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional uint32 limit = 1; */
+        if (message.limit !== undefined)
+            writer.tag(1, WireType.Varint).uint32(message.limit);
+        /* optional string after = 2; */
+        if (message.after !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.after);
+        /* optional string query = 3; */
+        if (message.query !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.query);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -520,7 +565,8 @@ export const ListBansRequest = new ListBansRequest$Type();
 class ListBansResponse$Type extends MessageType<ListBansResponse> {
     constructor() {
         super("polycentric.v2.ListBansResponse", [
-            { no: 1, name: "banned_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "banned_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "page_info", kind: "message", T: () => PageInfo }
         ]);
     }
     create(value?: PartialMessage<ListBansResponse>): ListBansResponse {
@@ -538,6 +584,9 @@ class ListBansResponse$Type extends MessageType<ListBansResponse> {
                 case /* repeated string banned_identities */ 1:
                     message.bannedIdentities.push(reader.string());
                     break;
+                case /* polycentric.v2.PageInfo page_info */ 2:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -553,6 +602,9 @@ class ListBansResponse$Type extends MessageType<ListBansResponse> {
         /* repeated string banned_identities = 1; */
         for (let i = 0; i < message.bannedIdentities.length; i++)
             writer.tag(1, WireType.LengthDelimited).string(message.bannedIdentities[i]);
+        /* polycentric.v2.PageInfo page_info = 2; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

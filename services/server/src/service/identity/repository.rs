@@ -20,6 +20,14 @@ pub struct AuthorizedKey {
     pub is_rotation_key: bool,
 }
 
+/// Keyset position in the banned-identity list, ordered by
+/// `(created_at, identity)` descending.
+#[derive(Debug, Clone)]
+pub struct BanCursor {
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub identity: String,
+}
+
 pub struct Query;
 
 impl Query {
@@ -150,15 +158,47 @@ impl Query {
             .is_some())
     }
 
-    /// Every banned identity, most recently banned first.
-    pub async fn list_bans(db: &DbConn) -> Result<Vec<String>, DbErr> {
-        Ok(BanModel::Entity::find()
+    /// A page of banned identities, most recently banned first. Ordered
+    /// by `(created_at, identity)` descending so the cursor is stable
+    /// even when timestamps collide. `after` continues after a previous
+    /// page's last row; `query` filters by a case-insensitive substring
+    /// of the identity. Returns up to `limit` rows.
+    pub async fn list_bans(
+        db: &DbConn,
+        limit: u64,
+        after: Option<&BanCursor>,
+        query: Option<&str>,
+    ) -> Result<Vec<BanModel::Model>, DbErr> {
+        let mut q = BanModel::Entity::find()
             .order_by_desc(BanModel::Column::CreatedAt)
-            .all(db)
-            .await?
-            .into_iter()
-            .map(|row| row.identity)
-            .collect())
+            .order_by_desc(BanModel::Column::Identity)
+            .limit(limit);
+
+        if let Some(cursor) = after {
+            // Keyset: rows strictly "older" than the cursor in the
+            // (created_at, identity) descending order.
+            q = q.filter(
+                Condition::any()
+                    .add(BanModel::Column::CreatedAt.lt(cursor.created_at))
+                    .add(
+                        Condition::all()
+                            .add(
+                                BanModel::Column::CreatedAt
+                                    .eq(cursor.created_at),
+                            )
+                            .add(
+                                BanModel::Column::Identity
+                                    .lt(cursor.identity.clone()),
+                            ),
+                    ),
+            );
+        }
+
+        if let Some(query) = query {
+            q = q.filter(BanModel::Column::Identity.contains(query));
+        }
+
+        q.all(db).await
     }
 
     /// Every IDENTITY-collection event (full chain) for each of

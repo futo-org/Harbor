@@ -1,6 +1,7 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/common.proto";
 import "polycentric/v2/server.proto";
 
 /**
@@ -58,13 +59,21 @@ message IsBannedResponse {
 }
 
 /**
- * ListBans: no extra fields.
+ * ListBans: paginated, optionally filtered list of banned identities.
  */
-message ListBansRequest {}
+message ListBansRequest {
+  // Max entries to return; the server clamps to its own bounds.
+  optional uint32 limit = 1;
+  // Opaque cursor from a previous response's `page_info.end_cursor`.
+  optional string after = 2;
+  // Case-insensitive substring filter over the banned identity key.
+  optional string query = 3;
+}
 
 message ListBansResponse {
-  // Identity keys banned on this server.
+  // Identity keys banned on this server, most recently banned first.
   repeated string banned_identities = 1;
+  PageInfo page_info = 2;
 }
 
 /**
