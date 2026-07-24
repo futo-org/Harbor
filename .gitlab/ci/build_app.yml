@@ -71,6 +71,7 @@ app-web-image:
         --local context=. \
         --local dockerfile=./apps/polycentric \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
+        --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
         --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_DEFAULT_BRANCH \
         --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG \
