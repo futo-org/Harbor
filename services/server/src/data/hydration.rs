@@ -10,8 +10,7 @@ pub struct HydrationState {
     pub deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,
     pub identity_events: Vec<EventWithContentRow>,
     pub profile_events: Vec<EventWithContentRow>,
-    pub quote_post_events: Vec<EventWithContentRow>,
-    pub repost_events: Vec<EventWithContentRow>,
+    pub referenced_post_events: Vec<EventWithContentRow>,
     pub reply_counts: HashMap<TargetEventKey, i64>,
     pub label_events: Vec<EventWithContentRow>,
 }

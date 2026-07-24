@@ -49,10 +49,8 @@ async fn fetch(
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events(
         &ctx.db,
-        params.common.limit + 1, // Check for next page
+        params.common.limit + 1,
         &params.common.cursor_filter,
-        &params.common.omit_labels,
-        ctx.trusted_moderator.as_deref(),
     )
     .await
     .map_err(map_db_err)?;
@@ -74,7 +72,8 @@ async fn filter(
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration).await
+    feeds_pipeline::filter(fetched, hydration, &_params.common.omit_labels)
+        .await
 }
 
 async fn view(
