@@ -103,9 +103,12 @@ async function loadClient(): Promise<PolycentricClient> {
   // better-sqlite3 won't create missing parent directories.
   mkdirSync('./state/blobs', { recursive: true });
 
-  // Reusing the same paths keeps a stable bot identity across restarts: the
-  // key pair (and its published Identity) are restored from SQLite on boot.
+  // Reusing the same storage keeps a stable bot identity across restarts:
+  // the key pair (and its published Identity) are restored on boot. Set
+  // DATABASE_URL (postgres://, optionally ?schema=<name>) to use postgres
+  // instead of the local sqlite file.
   const client = await createPolycentricNodeClient({
+    databaseUrl: process.env.POLYCENTRIC_VERIFIER_BOT_DATABASE_URL,
     databasePath: './state/polycentric.db',
     blobDirectory: './state/blobs',
     seedServers: servers,

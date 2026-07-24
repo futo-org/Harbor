@@ -34,6 +34,7 @@ COPY tools tools
 # the job's artifacts.
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
+COPY packages/js-storage-postgres packages/js-storage-postgres
 COPY packages/js-node packages/js-node
 COPY packages/rs-core-uniffi-web packages/rs-core-uniffi-web
 COPY services/verifier-bot services/verifier-bot

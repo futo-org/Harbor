@@ -20,15 +20,18 @@
   "dependencies": {
     "@noble/curves": "catalog:",
     "@polycentric/js-core": "workspace:*",
+    "@polycentric/js-storage-postgres": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-uniffi-web": "workspace:*",
     "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
+    "@types/pg": "^8.20.0",
     "typescript": "catalog:"
   }
 }
