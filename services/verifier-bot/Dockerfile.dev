@@ -46,6 +46,7 @@ COPY patches patches
 COPY packages/rs-core-uniffi-web packages/rs-core-uniffi-web
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
+COPY packages/js-storage-postgres packages/js-storage-postgres
 COPY packages/js-node packages/js-node
 
 # allowUnusedPatches: patchedDependencies target frontend packages absent here.
@@ -57,6 +58,7 @@ RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 RUN pnpm --filter @polycentric/rs-core-uniffi-web build
 RUN pnpm --filter @polycentric/js-core \
          --filter @polycentric/js-storage-sqlite \
+         --filter @polycentric/js-storage-postgres \
          --filter @polycentric/js-node build
 RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
 RUN pnpm --filter @polycentric/verifier-bot build

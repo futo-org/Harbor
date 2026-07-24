@@ -90,11 +90,14 @@ services:
       - ${POLYCENTRIC_VERIFIER_BOT_PORT:-3002}:3002
     environment:
       - POLYCENTRIC_VERIFIER_BOT_SERVERS=http://server:3000
-    volumes:
-      - verifier-bot-state:/app/services/verifier-bot/state
+      # The bot's identity persists in postgres under its own schema, so no
+      # sqlite state volume is needed.
+      - POLYCENTRIC_VERIFIER_BOT_DATABASE_URL=postgres://postgres:testing@postgres:5432?schema=verifier_bot
     depends_on:
       server:
         condition: service_started
+      postgres:
+        condition: service_healthy
 
   rustfs:
     image: rustfs/rustfs:latest
@@ -175,4 +178,3 @@ volumes:
   postgres-data:
   rustfs-data:
   kafka-data:
-  verifier-bot-state:
