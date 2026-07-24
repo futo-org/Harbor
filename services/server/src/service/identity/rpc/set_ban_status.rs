@@ -30,12 +30,17 @@ pub async fn handle(
         eprintln!("set_ban_status txn begin error: {e}");
         Status::internal("internal server error")
     })?;
-    id_repo::Mutation::set_banned(&txn, &body.target_identity, body.banned)
-        .await
-        .map_err(|e| {
-            eprintln!("set_ban_status db error: {e}");
-            Status::internal("internal server error")
-        })?;
+    id_repo::Mutation::set_banned(
+        &txn,
+        &body.target_identity,
+        body.banned,
+        &request.moderator_identity,
+    )
+    .await
+    .map_err(|e| {
+        eprintln!("set_ban_status db error: {e}");
+        Status::internal("internal server error")
+    })?;
     if body.banned {
         id_repo::Mutation::erase_identity_content(&txn, &body.target_identity)
             .await

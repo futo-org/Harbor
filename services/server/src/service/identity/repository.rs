@@ -226,22 +226,28 @@ pub struct Mutation;
 
 impl Mutation {
     /// Sets whether `identity` is banned: inserts or deletes its `ban`
-    /// row. Idempotent in both directions.
+    /// row. When banning, records `banned_by` as the issuing moderator.
+    /// Idempotent in both directions.
     pub async fn set_banned<C: ConnectionTrait>(
         db: &C,
         identity: &str,
         banned: bool,
+        banned_by: &str,
     ) -> Result<(), DbErr> {
         if banned {
             let now = chrono::Utc::now();
             BanModel::Entity::insert(BanModel::ActiveModel {
                 identity: Set(identity.to_string()),
+                banned_by: Set(Some(banned_by.to_string())),
                 created_at: Set(now),
                 updated_at: Set(now),
             })
             .on_conflict(
                 sea_query::OnConflict::column(BanModel::Column::Identity)
-                    .do_nothing()
+                    .update_columns([
+                        BanModel::Column::BannedBy,
+                        BanModel::Column::UpdatedAt,
+                    ])
                     .to_owned(),
             )
             .exec_without_returning(db)
