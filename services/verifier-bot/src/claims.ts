@@ -77,30 +77,50 @@ export async function fetchClaim(
   client: PolycentricClient,
   eventKey: v2.EventKey,
 ): Promise<Result<DecodedClaim>> {
-  let bundles: v2.EventBundle[];
-  try {
-    bundles = await client.listEvents({
+  const findBundle = async (attempt: number) => {
+    const bundles = await client.listEvents({
       identity: eventKey.identity,
       collection: COLLECTION.VERIFICATIONS,
+      // Unique key so each attempt queries the servers instead of a cache.
+      queryKey: [
+        'verifier-claim',
+        eventKey.identity,
+        eventKey.sequence.toString(),
+        attempt.toString(),
+        Date.now().toString(),
+      ],
     });
+    return bundles.find((b) => {
+      if (!b.signedEvent) return false;
+      try {
+        const event = v2.Event.fromBinary(b.signedEvent.eventBytes);
+        return event.key?.sequence === eventKey.sequence;
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  // Clients verify right after publishing; retry while the claim propagates
+  // to the servers the bot reads from.
+  let bundle: v2.EventBundle | undefined;
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1500));
+      bundle = await findBundle(attempt);
+      if (bundle) break;
+    }
   } catch (e) {
     return Result.errMsg(
       `Could not load claims for identity: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
 
-  const bundle = bundles.find((b) => {
-    if (!b.signedEvent) return false;
-    try {
-      const event = v2.Event.fromBinary(b.signedEvent.eventBytes);
-      return event.key?.sequence === eventKey.sequence;
-    } catch {
-      return false;
-    }
-  });
-
   if (!bundle?.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return Result.errMsg('Could not find the referenced claim event.');
+    return Result.err({
+      message: 'Could not find the referenced claim event.',
+      extendedMessage: `No event with sequence ${eventKey.sequence} in collection ${COLLECTION.VERIFICATIONS} for identity '${eventKey.identity}' on the servers this bot syncs with.`,
+    });
   }
 
   try {

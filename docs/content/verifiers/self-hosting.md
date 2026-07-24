@@ -42,6 +42,7 @@ and fill it in.
 | Variable | Description |
 |---|---|
 | `POLYCENTRIC_VERIFIER_BOT_SERVERS` | Polycentric server(s) to sync with. Comma-delimited for multiple. |
+| `POLYCENTRIC_VERIFIER_BOT_DATABASE_URL` | Postgres connection string (`?schema=<name>` scopes the tables). Unset uses a local sqlite file under `./state`. |
 | `POLYCENTRIC_VERIFIER_BOT_ALLOWED_ORIGINS` | Comma-delimited CORS allow-list. |
 | `POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS` | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links). |
 | `POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |

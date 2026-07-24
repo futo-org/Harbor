@@ -1,0 +1,34 @@
+{
+  "name": "@polycentric/js-storage-postgres",
+  "version": "0.0.0",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsc -p . --watch",
+    "clean": "rm -rf dist",
+    "test": "echo 'No tests'"
+  },
+  "peerDependencies": {
+    "@polycentric/js-core": "workspace:*"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@polycentric/js-core": "workspace:*",
+    "@polycentric/tsconfig": "workspace:*",
+    "@types/pg": "^8.15.0",
+    "typescript": "catalog:"
+  }
+}
