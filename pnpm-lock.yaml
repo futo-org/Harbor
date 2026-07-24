@@ -86,7 +86,7 @@ importers:
         version: 5.2.14(dcf317b904ee5027a33c8caac99363f2)
       '@lodev09/react-native-true-sheet':
         specifier: ^3.10.1
-        version: 3.11.6(be273744d94c07265e52769214ce7280)
+        version: 3.11.9(be273744d94c07265e52769214ce7280)
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -3112,8 +3112,8 @@ packages:
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
 
-  '@lodev09/react-native-true-sheet@3.11.6':
-    resolution: {integrity: sha512-Y81k6lXGGwsKJfrsGke8L7+jrIn4uSbBMtRe7h2VYxjkJ5sNSbZodAybH6dRVJpSz/fdfMvAdgcqedU3NHlrGA==}
+  '@lodev09/react-native-true-sheet@3.11.9':
+    resolution: {integrity: sha512-nDvaw7w5UF0XGQnKpKvThmuz6WB4pHDUPImILhWRMIem6tkj2dVqp7j+r3/+Sc0l+p/Xnr6Pfpp8lFa4T+29+w==}
     peerDependencies:
       '@radix-ui/react-dialog': '>=1'
       '@radix-ui/react-presence': '>=1'
@@ -3828,8 +3828,8 @@ packages:
     peerDependencies:
       react: '>= 18.2.0'
 
-  '@react-navigation/routers@7.6.3':
-    resolution: {integrity: sha512-9IEO8xX1/w+3R+EV4GB1+jRm7q4Utjl0shtAvJTEk0fpNXLqh1Val2DLkpyWV4vR2XBOaGnj0AnAPYQqsE6NdQ==}
+  '@react-navigation/routers@7.6.4':
+    resolution: {integrity: sha512-GI7eJm8/KsZUQaYcXvEExikKurRZRgEsSzyZ7faENfi65yqJBCXjDMwyN1pF6pNW1MoLH1ErDwDivFxY6BzD3w==}
 
   '@remusao/guess-url-type@2.1.0':
     resolution: {integrity: sha512-zI3dlTUxpjvx2GCxp9nLOSK5yEIqDCpxlAVGwb2Y49RKkS72oeNaxxo+VWS5+XQ5+Mf8Zfp9ZXIlk+G5eoEN8A==}
@@ -9531,8 +9531,8 @@ packages:
     resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.20:
-    resolution: {integrity: sha512-lW616l85ucIQL+FocMmL7pQFPqBmwejrCMg+iPxyImlrANNJG9NHq/RkyCZopDhd8C3LA03PHRJDjkbGu8vvug==}
+  postcss@8.5.22:
+    resolution: {integrity: sha512-KBDEIpLrvpv16pp3K0Fw+UCoZfopFjjgeB+0tA/aaThfEE74kKDLrgg603YvOWJyg3+WYtyq3xYsQWsIyZlPqQ==}
     engines: {node: ^10 || ^12 || >=14}
 
   prebuild-install@7.1.3:
@@ -9821,6 +9821,9 @@ packages:
 
   react-is@19.2.7:
     resolution: {integrity: sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==}
+
+  react-is@19.2.8:
+    resolution: {integrity: sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ==}
 
   react-json-view-lite@2.5.0:
     resolution: {integrity: sha512-tk7o7QG9oYyELWHL8xiMQ8x4WzjCzbWNyig3uexmkLb54r8jO0yH3WCWx8UZS0c49eSA4QUmG5caiRJ8fAn58g==}
@@ -15542,7 +15545,7 @@ snapshots:
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
-  '@lodev09/react-native-true-sheet@3.11.6(be273744d94c07265e52769214ce7280)':
+  '@lodev09/react-native-true-sheet@3.11.9(be273744d94c07265e52769214ce7280)':
     dependencies:
       react: 19.2.3
       react-native: 0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
@@ -16726,9 +16729,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -16755,18 +16756,18 @@ snapshots:
 
   '@react-navigation/core@7.21.5(react@19.2.3)':
     dependencies:
-      '@react-navigation/routers': 7.6.3
+      '@react-navigation/routers': 7.6.4
       escape-string-regexp: 4.0.0
       fast-deep-equal: 3.1.3
       nanoid: 3.3.16
       query-string: 7.1.3
       react: 19.2.3
-      react-is: 19.2.7
+      react-is: 19.2.8
       use-latest-callback: 0.2.6(react@19.2.3)
       use-sync-external-store: 1.6.0(react@19.2.3)
     optional: true
 
-  '@react-navigation/routers@7.6.3':
+  '@react-navigation/routers@7.6.4':
     dependencies:
       nanoid: 3.3.16
     optional: true
@@ -23570,7 +23571,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postcss@8.5.20:
+  postcss@8.5.22:
     dependencies:
       nanoid: 3.3.16
       picocolors: 1.1.1
@@ -23615,7 +23616,7 @@ snapshots:
       '@jest/schemas': 30.4.1
       ansi-styles: 5.2.0
       react-is-18: react-is@18.3.1
-      react-is-19: react-is@19.2.7
+      react-is-19: react-is@19.2.8
 
   pretty-ms@7.0.1:
     dependencies:
@@ -23889,6 +23890,8 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.7: {}
+
+  react-is@19.2.8: {}
 
   react-json-view-lite@2.5.0(react@19.2.3):
     dependencies:
@@ -25706,7 +25709,7 @@ snapshots:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.5)
       picomatch: 4.0.5
-      postcss: 8.5.20
+      postcss: 8.5.22
       rollup: 4.62.2
       tinyglobby: 0.2.17
     optionalDependencies:
