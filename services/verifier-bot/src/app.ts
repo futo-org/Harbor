@@ -47,6 +47,49 @@ function retrieveOAuthSecret(token: string): string | undefined {
   return undefined;
 }
 
+// Callback URLs clients may ask to be redirected to (comma-delimited
+// prefixes). Native apps pass their deep-link URL — an https redirect can't
+// close a mobile auth session.
+const allowedCallbacks = (
+  process.env.POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS ||
+  'harbor://,exp://,exps://,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
+)
+  .split(',')
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0);
+
+function isAllowedCallback(redirect: unknown): redirect is string {
+  return (
+    typeof redirect === 'string' &&
+    allowedCallbacks.some((prefix) => redirect.startsWith(prefix))
+  );
+}
+
+// Per-session redirect, keyed by `state` (OAuth2) or request token (OAuth1).
+const oauthRedirects = new Map<
+  string,
+  { redirect: string; timeoutId: NodeJS.Timeout }
+>();
+
+function storeOAuthRedirect(key: string, redirect: string) {
+  clearTimeout(oauthRedirects.get(key)?.timeoutId);
+  const timeoutId = setTimeout(() => {
+    oauthRedirects.delete(key);
+  }, OAUTH_SECRET_TIMEOUT_MS);
+  oauthRedirects.set(key, { redirect, timeoutId });
+}
+
+function retrieveOAuthRedirect(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  const entry = oauthRedirects.get(key);
+  if (entry) {
+    clearTimeout(entry.timeoutId);
+    oauthRedirects.delete(key);
+    return entry.redirect;
+  }
+  return undefined;
+}
+
 async function loadClient(): Promise<PolycentricClient> {
   // Comma-delimited list of servers.
   const servers = (
@@ -248,19 +291,25 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
         'base64',
       );
 
-      const webAppBaseUrl =
-        process.env.POLYCENTRIC_VERIFIER_BOT_WEB_APP_URL ||
-        'http://localhost:8081';
-      const webAppCallbackPath = '/oauth/callback';
+      // The client registered its return URL when it asked for the
+      // sign-in URL.
+      const redirectBase = retrieveOAuthRedirect(
+        typeof state === 'string' ? state : (oauth_token as string),
+      );
+      if (!redirectBase) {
+        res
+          .status(StatusCodes.BAD_REQUEST)
+          .send('OAuth session expired or invalid.');
+        return;
+      }
 
       const redirectState = JSON.stringify({
         data: encodedData,
         claimType: platformIdentifier,
       });
-      const redirectUrl = `${webAppBaseUrl.replace(
-        /\/$/,
-        '',
-      )}${webAppCallbackPath}?state=${encodeURIComponent(redirectState)}`;
+      const redirectUrl = `${redirectBase}?state=${encodeURIComponent(
+        redirectState,
+      )}`;
       res.redirect(redirectUrl);
     } catch (e: unknown) {
       const requestId: string = new ObjectId().toString();
@@ -357,12 +406,31 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
       if (verifier instanceof OAuthVerifier) {
         app.get(
           `/platforms/${name}/${verifier.verifierType}/url`,
-          async (_req, res) => {
+          async (req, res) => {
             try {
+              // Where the callback sends the browser afterwards. Must be on
+              // the ALLOWED_CALLBACKS list.
+              const redirect = req.query.redirect;
+              if (!isAllowedCallback(redirect)) {
+                res.status(StatusCodes.BAD_REQUEST).json({
+                  message: 'redirect is missing or not an allowed callback.',
+                });
+                return;
+              }
+
               const result = await verifier.getOAuthURL();
               if (result.success) {
                 if (typeof result.value === 'string') {
-                  res.status(StatusCodes.OK).json({ url: result.value });
+                  // OAuth2: the provider echoes `state` back — key the
+                  // session by it, adding one if the verifier didn't.
+                  const url = new URL(result.value);
+                  let state = url.searchParams.get('state');
+                  if (!state) {
+                    state = new ObjectId().toString();
+                    url.searchParams.set('state', state);
+                  }
+                  storeOAuthRedirect(state, redirect);
+                  res.status(StatusCodes.OK).json({ url: url.toString() });
                 } else if (
                   typeof result.value === 'object' &&
                   'url' in result.value &&
@@ -370,6 +438,8 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
                   'secret' in result.value
                 ) {
                   storeOAuthSecret(result.value.token, result.value.secret);
+                  // OAuth1: the callback carries the request token.
+                  storeOAuthRedirect(result.value.token, redirect);
                   res.status(StatusCodes.OK).json({ url: result.value.url });
                 } else {
                   console.error(

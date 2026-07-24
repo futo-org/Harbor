@@ -1,4 +1,3 @@
-import { POLYCENTRIC_APP_URL } from '@/src/common/constants';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { isWeb } from '@/src/common/util/platform';
@@ -35,13 +34,17 @@ function oauthDataFromCallbackUrl(url: string): string {
 export async function oauthSignIn(
   platform: Platform,
 ): Promise<{ server: string; username: string; token: string }> {
-  const { server, url } = await verifierApi.getOAuthUrl(platform.slug);
-
-  // On web the return URL must be this origin so the pop-up can hand the
-  // URL back; native uses the public app URL.
+  // The bot's callback redirects here. On web that's this origin so the
+  // pop-up can hand the URL back; on native it must be the app's own scheme
+  // — the auth session only auto-closes on a redirect to it.
   const returnUrl = isWeb
     ? `${window.location.origin}/oauth/callback`
-    : `${POLYCENTRIC_APP_URL}/oauth/callback`;
+    : Linking.createURL('oauth/callback');
+  const { server, url } = await verifierApi.getOAuthUrl(
+    platform.slug,
+    returnUrl,
+  );
+
   const result = await WebBrowser.openAuthSessionAsync(url, returnUrl);
   if (result.type !== 'success') {
     throw new Error('Sign-in was cancelled');

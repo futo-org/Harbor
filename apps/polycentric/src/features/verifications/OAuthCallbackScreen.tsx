@@ -6,7 +6,8 @@ import { ActivityIndicator, View } from 'react-native';
 
 // The OAuth pop-up lands here on web; this hands the callback URL back to
 // `openAuthSessionAsync` and closes the pop-up. Module scope on purpose — it
-// should run before anything renders.
+// should run before anything renders. Native flows never reach this page:
+// the bot redirects them to the app scheme directly.
 WebBrowser.maybeCompleteAuthSession();
 
 export default function OAuthCallbackScreen() {

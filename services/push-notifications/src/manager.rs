@@ -285,7 +285,7 @@ impl NotificationManager {
 
     /// Build an app-openable deep link to a specific post, mirroring the
     /// client's `Routes.tabs.post(identity, keyFingerprint, sequence)`:
-    /// `polycentric:///{identity}/post/{keyFingerprint}/{sequence}`.
+    /// `harbor:///{identity}/post/{keyFingerprint}/{sequence}`.
     ///
     /// `signing_key` is the post's signing key (`EventKey.signed_by`); its
     /// first 8 bytes as lowercase hex form the fingerprint, matching the
@@ -297,16 +297,16 @@ impl NotificationManager {
             .map(|b| format!("{b:02x}"))
             .collect();
 
-        // `polycentric` is the app's registered URL scheme (app.config.ts).
+        // `harbor` is the app's registered URL scheme (app.config.ts).
         // The empty authority (`:///`) makes expo-router parse the whole tail
         // as the route path.
-        format!("polycentric:///{identity}/post/{key_fingerprint}/{sequence}")
+        format!("harbor:///{identity}/post/{key_fingerprint}/{sequence}")
     }
 
     /// Build an app-openable deep link to an identity's profile, mirroring the
-    /// client's `Routes.tabs.profile(identity)`: `polycentric:///{identity}`.
+    /// client's `Routes.tabs.profile(identity)`: `harbor:///{identity}`.
     fn profile_url(identity: &str) -> String {
-        format!("polycentric:///{identity}")
+        format!("harbor:///{identity}")
     }
 
     /// Build the rich-content image (avatar) for a notification, when the
@@ -722,7 +722,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author/post/abababababababab/1"}}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied: hi","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"harbor:///id-author/post/abababababababab/1"}}]"#
                     .to_string(),
             ))
             .with_status(200)
@@ -936,7 +936,7 @@ mod tests {
             .mock("POST", "/--/api/v2/push/send")
             .match_header("content-type", "application/json")
             .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"polycentric:///id-author"}}]"#
+                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"harbor:///id-author"}}]"#
                     .to_string(),
             ))
             .with_status(200)

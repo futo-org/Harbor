@@ -19,7 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: process.env.APP_VERSION ?? PKG_VERSION ?? '0.0.1',
   orientation: 'default',
   icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
-  scheme: 'polycentric',
+  scheme: 'harbor',
   web: {
     output: 'server',
   },

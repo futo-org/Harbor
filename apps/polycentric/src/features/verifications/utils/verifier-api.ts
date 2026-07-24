@@ -182,16 +182,22 @@ export class VerifierApi {
       : new Error('No verifier server reachable');
   }
 
-  /** Sign-in URL, plus the server that owns the OAuth session. */
+  /**
+   * Sign-in URL, plus the server that owns the OAuth session. `redirect` is
+   * where the bot's callback sends the browser afterwards; it must be on
+   * the bot's allowed-callbacks list.
+   */
   async getOAuthUrl(
     platformSlug: string,
+    redirect: string,
   ): Promise<{ server: string; url: string }> {
+    const query = `?redirect=${encodeURIComponent(redirect)}`;
     let lastError: Error = new Error('No verifier server reachable');
     for (const server of this.servers) {
       try {
         const res = await this.request(
           server,
-          `/platforms/${platformSlug}/oauth/url`,
+          `/platforms/${platformSlug}/oauth/url${query}`,
         );
         if (!res.ok) throw new Error(await errorMessage(res));
         const { url } = (await res.json()) as { url: string };

@@ -60,6 +60,7 @@ jest.mock('expo-web-browser', () => ({
 }));
 
 jest.mock('expo-linking', () => ({
+  createURL: (path: string) => `harbor://${path}`,
   parse: (url: string) => ({
     queryParams: {
       state: url.includes('state=STATE')

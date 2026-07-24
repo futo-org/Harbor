@@ -43,7 +43,7 @@ and fill it in.
 |---|---|
 | `POLYCENTRIC_VERIFIER_BOT_SERVERS` | Polycentric server(s) to sync with. Comma-delimited for multiple. |
 | `POLYCENTRIC_VERIFIER_BOT_ALLOWED_ORIGINS` | Comma-delimited CORS allow-list. |
-| `POLYCENTRIC_VERIFIER_BOT_WEB_APP_URL` | Base URL of the web app (OAuth callbacks redirect back here). |
+| `POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS` | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links). |
 | `POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |
 | `POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick). |
 | `POLYCENTRIC_VERIFIER_BOT_PROFILE_NAME` | Display name published for the bot's identity on first run. |
