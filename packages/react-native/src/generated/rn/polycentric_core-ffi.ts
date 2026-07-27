@@ -323,12 +323,21 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_banned(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
+    requestBytes: Uint8Array,
+    keyid: Uint8Array,
+    publicKey: Uint8Array,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_moderator(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
+    keyid: Uint8Array,
+    publicKey: Uint8Array,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
     uniffiSelf: bigint,
@@ -338,7 +347,12 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_bans(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
+    requestBytes: Uint8Array,
+    keyid: Uint8Array,
+    publicKey: Uint8Array,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
     uniffiSelf: bigint,
@@ -396,7 +410,12 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
+    requestBytes: Uint8Array,
+    keyid: Uint8Array,
+    publicKey: Uint8Array,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
     uniffiSelf: bigint,

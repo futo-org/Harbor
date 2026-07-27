@@ -3499,27 +3499,35 @@ export interface PolycentricCoreLike {
    */
   invalidateQuery(queryKey: Array<string>): void;
   /**
-   * Ask a server whether an identity is banned. `signed_message_bytes`
-   * is a serialized `SignedMessage` wrapping a `ModerationRequest`
-   * (body: `IsBannedRequest`) signed by one of the moderator's
-   * authorized keys.
+   * Ask a server whether an identity is banned. `request_bytes` is a
+   * serialized `IsBannedRequest`; the call is authenticated by signed
+   * gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `IsBannedResponse` proto bytes.
    */
   isBanned(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * Ask a server whether an identity is a moderator.
-   * `signed_message_bytes` is a serialized `SignedMessage` wrapping a
-   * `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
-   * the identity's authorized keys.
+   * Ask a server whether the signer is a moderator. Authenticated by
+   * signed gRPC metadata (`keyid` is the subject); `public_key` is the
+   * signer's raw ed25519 key, `created_ms`/`expires_ms` bound the
+   * signature's validity, and `signer` produces the signature.
    * Returns serialized `IsModeratorResponse` proto bytes.
    */
   isModerator(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3533,15 +3541,19 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
-   * List the identities banned on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-   * `ListBansRequest`) signed by one of the moderator's authorized
-   * keys.
+   * List the identities banned on a server. `request_bytes` is a
+   * serialized `ListBansRequest`; the call is authenticated by signed
+   * gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `ListBansResponse` proto bytes.
    */
   listBans(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3614,15 +3626,19 @@ export interface PolycentricCoreLike {
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<void>;
   /**
-   * Ban or unban an identity on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-   * `SetBanStatusRequest`) signed by one of the moderator's authorized
-   * keys.
+   * Ban or unban an identity on a server. `request_bytes` is a
+   * serialized `SetBanStatusRequest`; the call is authenticated by
+   * signed gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `SetBanStatusResponse` proto bytes.
    */
   setBanStatus(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -4071,15 +4087,19 @@ export class PolycentricCore
   }
 
   /**
-   * Ask a server whether an identity is banned. `signed_message_bytes`
-   * is a serialized `SignedMessage` wrapping a `ModerationRequest`
-   * (body: `IsBannedRequest`) signed by one of the moderator's
-   * authorized keys.
+   * Ask a server whether an identity is banned. `request_bytes` is a
+   * serialized `IsBannedRequest`; the call is authenticated by signed
+   * gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `IsBannedResponse` proto bytes.
    */
   async isBanned(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4094,7 +4114,18 @@ export class PolycentricCore
               nativeModule().rustbuffer_alloc,
             ),
             FfiConverterArrayBuffer.lower(
-              signedMessageBytes,
+              requestBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
+            FfiConverterArrayBuffer.lower(
+              publicKey,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
+            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
+            FfiConverterTypeSignEventCallback.lower(
+              signer,
               nativeModule().rustbuffer_alloc,
             ),
           );
@@ -4130,15 +4161,19 @@ export class PolycentricCore
   }
 
   /**
-   * Ask a server whether an identity is a moderator.
-   * `signed_message_bytes` is a serialized `SignedMessage` wrapping a
-   * `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
-   * the identity's authorized keys.
+   * Ask a server whether the signer is a moderator. Authenticated by
+   * signed gRPC metadata (`keyid` is the subject); `public_key` is the
+   * signer's raw ed25519 key, `created_ms`/`expires_ms` bound the
+   * signature's validity, and `signer` produces the signature.
    * Returns serialized `IsModeratorResponse` proto bytes.
    */
   async isModerator(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4152,8 +4187,15 @@ export class PolycentricCore
               serverUrl,
               nativeModule().rustbuffer_alloc,
             ),
+            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
             FfiConverterArrayBuffer.lower(
-              signedMessageBytes,
+              publicKey,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
+            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
+            FfiConverterTypeSignEventCallback.lower(
+              signer,
               nativeModule().rustbuffer_alloc,
             ),
           );
@@ -4246,15 +4288,19 @@ export class PolycentricCore
   }
 
   /**
-   * List the identities banned on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-   * `ListBansRequest`) signed by one of the moderator's authorized
-   * keys.
+   * List the identities banned on a server. `request_bytes` is a
+   * serialized `ListBansRequest`; the call is authenticated by signed
+   * gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `ListBansResponse` proto bytes.
    */
   async listBans(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4269,7 +4315,18 @@ export class PolycentricCore
               nativeModule().rustbuffer_alloc,
             ),
             FfiConverterArrayBuffer.lower(
-              signedMessageBytes,
+              requestBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
+            FfiConverterArrayBuffer.lower(
+              publicKey,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
+            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
+            FfiConverterTypeSignEventCallback.lower(
+              signer,
               nativeModule().rustbuffer_alloc,
             ),
           );
@@ -4672,15 +4729,19 @@ export class PolycentricCore
   }
 
   /**
-   * Ban or unban an identity on a server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-   * `SetBanStatusRequest`) signed by one of the moderator's authorized
-   * keys.
+   * Ban or unban an identity on a server. `request_bytes` is a
+   * serialized `SetBanStatusRequest`; the call is authenticated by
+   * signed gRPC metadata (`keyid` is the moderator identity).
    * Returns serialized `SetBanStatusResponse` proto bytes.
    */
   async setBanStatus(
     serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
+    requestBytes: ArrayBuffer,
+    keyid: string,
+    publicKey: ArrayBuffer,
+    createdMs: bigint,
+    expiresMs: bigint,
+    signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4695,7 +4756,18 @@ export class PolycentricCore
               nativeModule().rustbuffer_alloc,
             ),
             FfiConverterArrayBuffer.lower(
-              signedMessageBytes,
+              requestBytes,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
+            FfiConverterArrayBuffer.lower(
+              publicKey,
+              nativeModule().rustbuffer_alloc,
+            ),
+            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
+            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
+            FfiConverterTypeSignEventCallback.lower(
+              signer,
               nativeModule().rustbuffer_alloc,
             ),
           );
@@ -5251,7 +5323,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
-    32585
+    47654
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
@@ -5259,7 +5331,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    9716
+    43557
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",
@@ -5275,7 +5347,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
-    45188
+    14476
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
@@ -5355,7 +5427,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
-    34061
+    49313
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",

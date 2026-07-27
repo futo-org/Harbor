@@ -1,10 +1,15 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
 use crate::sync;
+use base64::Engine as _;
+use polycentric_common::http_sig::{
+    self, SCHEME_VERSION, SigParams, content_digest, signature_base,
+};
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
+    GetServerInfoRequest, Identity, IsBannedRequest, IsModeratorRequest, JoinPairingSessionRequest,
+    ListBansRequest, ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest,
+    SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
@@ -15,6 +20,8 @@ use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse}
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
 use std::sync::{Arc, Mutex};
+
+const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
 compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
@@ -89,6 +96,62 @@ pub enum Query {
 #[async_trait::async_trait]
 pub trait SignEventCallback: Send + Sync {
     async fn sign(&self, event_bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
+}
+
+/// Sign a request and wrap it in a tonic `Request` carrying the signed
+/// auth metadata (content-digest, signature-input, public key,
+/// signature). Transport-agnostic and reusable for any signed gRPC call:
+/// `operation` is the gRPC method path bound into the signature,
+/// `authority` is the target server URL (anti-relay), and the body is
+/// bound by a digest of the encoded `request`. The nonce is zero for now
+/// — replay protection (a server-side nonce store) is not yet
+/// implemented, so its value is inert.
+async fn signed_request<T: Message>(
+    operation: &str,
+    authority: &str,
+    request: T,
+    keyid: String,
+    public_key: Vec<u8>,
+    created_ms: i64,
+    expires_ms: i64,
+    signer: &Arc<dyn SignEventCallback>,
+) -> Result<tonic::Request<T>, CoreError> {
+    let digest = content_digest(&request.encode_to_vec());
+    let input = SigParams {
+        version: SCHEME_VERSION,
+        created_ms,
+        expires_ms,
+        keyid,
+        nonce: [0u8; 16],
+    }
+    .to_header_value();
+    let base = signature_base(operation, authority, &digest, &input);
+    let signature = signer.sign(base).await?;
+
+    let bad = |what: &str| CoreError::Encode(format!("invalid {what} metadata"));
+    let mut req = tonic::Request::new(request);
+    let md = req.metadata_mut();
+    md.insert(
+        http_sig::META_CONTENT_DIGEST,
+        digest.parse().map_err(|_| bad("content-digest"))?,
+    );
+    md.insert(
+        http_sig::META_SIGNATURE_INPUT,
+        input.parse().map_err(|_| bad("signature-input"))?,
+    );
+    md.insert(
+        http_sig::META_PUBLIC_KEY,
+        B64.encode(&public_key)
+            .parse()
+            .map_err(|_| bad("public key"))?,
+    );
+    md.insert(
+        http_sig::META_SIGNATURE,
+        B64.encode(&signature)
+            .parse()
+            .map_err(|_| bad("signature"))?,
+    );
+    Ok(req)
 }
 
 #[derive(uniffi::Object)]
@@ -490,81 +553,139 @@ impl PolycentricCore {
         Ok(())
     }
 
-    /// Ask a server whether an identity is a moderator.
-    /// `signed_message_bytes` is a serialized `SignedMessage` wrapping a
-    /// `ModerationRequest` (body: `IsModeratorRequest`) signed by one of
-    /// the identity's authorized keys.
+    /// Ask a server whether the signer is a moderator. Authenticated by
+    /// signed gRPC metadata (`keyid` is the subject); `public_key` is the
+    /// signer's raw ed25519 key, `created_ms`/`expires_ms` bound the
+    /// signature's validity, and `signer` produces the signature.
     /// Returns serialized `IsModeratorResponse` proto bytes.
     pub async fn is_moderator(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        keyid: String,
+        public_key: Vec<u8>,
+        created_ms: i64,
+        expires_ms: i64,
+        signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let req = signed_request(
+            "/polycentric.v2.IdentityService/IsModerator",
+            &server_url,
+            IsModeratorRequest {},
+            keyid,
+            public_key,
+            created_ms,
+            expires_ms,
+            &signer,
+        )
+        .await?;
         let mut client = IdentityServiceClient::new(channel(&server_url)?);
         let response = client
-            .is_moderator(signed)
+            .is_moderator(req)
             .await
             .map_err(|e| CoreError::Network(format!("is_moderator: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
-    /// Ban or unban an identity on a server. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-    /// `SetBanStatusRequest`) signed by one of the moderator's authorized
-    /// keys.
+    /// Ban or unban an identity on a server. `request_bytes` is a
+    /// serialized `SetBanStatusRequest`; the call is authenticated by
+    /// signed gRPC metadata (`keyid` is the moderator identity).
     /// Returns serialized `SetBanStatusResponse` proto bytes.
     pub async fn set_ban_status(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        request_bytes: Vec<u8>,
+        keyid: String,
+        public_key: Vec<u8>,
+        created_ms: i64,
+        expires_ms: i64,
+        signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let request = SetBanStatusRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SetBanStatusRequest: {e}")))?;
+        let req = signed_request(
+            "/polycentric.v2.IdentityService/SetBanStatus",
+            &server_url,
+            request,
+            keyid,
+            public_key,
+            created_ms,
+            expires_ms,
+            &signer,
+        )
+        .await?;
         let mut client = IdentityServiceClient::new(channel(&server_url)?);
         let response = client
-            .set_ban_status(signed)
+            .set_ban_status(req)
             .await
             .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
-    /// Ask a server whether an identity is banned. `signed_message_bytes`
-    /// is a serialized `SignedMessage` wrapping a `ModerationRequest`
-    /// (body: `IsBannedRequest`) signed by one of the moderator's
-    /// authorized keys.
+    /// Ask a server whether an identity is banned. `request_bytes` is a
+    /// serialized `IsBannedRequest`; the call is authenticated by signed
+    /// gRPC metadata (`keyid` is the moderator identity).
     /// Returns serialized `IsBannedResponse` proto bytes.
     pub async fn is_banned(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        request_bytes: Vec<u8>,
+        keyid: String,
+        public_key: Vec<u8>,
+        created_ms: i64,
+        expires_ms: i64,
+        signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let request = IsBannedRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode IsBannedRequest: {e}")))?;
+        let req = signed_request(
+            "/polycentric.v2.IdentityService/IsBanned",
+            &server_url,
+            request,
+            keyid,
+            public_key,
+            created_ms,
+            expires_ms,
+            &signer,
+        )
+        .await?;
         let mut client = IdentityServiceClient::new(channel(&server_url)?);
         let response = client
-            .is_banned(signed)
+            .is_banned(req)
             .await
             .map_err(|e| CoreError::Network(format!("is_banned: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
-    /// List the identities banned on a server. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a `ModerationRequest` (body:
-    /// `ListBansRequest`) signed by one of the moderator's authorized
-    /// keys.
+    /// List the identities banned on a server. `request_bytes` is a
+    /// serialized `ListBansRequest`; the call is authenticated by signed
+    /// gRPC metadata (`keyid` is the moderator identity).
     /// Returns serialized `ListBansResponse` proto bytes.
     pub async fn list_bans(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        request_bytes: Vec<u8>,
+        keyid: String,
+        public_key: Vec<u8>,
+        created_ms: i64,
+        expires_ms: i64,
+        signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let request = ListBansRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode ListBansRequest: {e}")))?;
+        let req = signed_request(
+            "/polycentric.v2.IdentityService/ListBans",
+            &server_url,
+            request,
+            keyid,
+            public_key,
+            created_ms,
+            expires_ms,
+            &signer,
+        )
+        .await?;
         let mut client = IdentityServiceClient::new(channel(&server_url)?);
         let response = client
-            .list_bans(signed)
+            .list_bans(req)
             .await
             .map_err(|e| CoreError::Network(format!("list_bans: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
