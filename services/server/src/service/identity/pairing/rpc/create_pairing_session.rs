@@ -3,15 +3,14 @@
 
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::repository as id_repo;
-use crate::service::identity::rpc::common::{
-    check_timestamp_skew, verify_signed_message,
-};
+use crate::service::identity::rpc::common::verify_signed_message;
 use crate::service::proto as Proto;
 use crate::service::proto::{
     CreatePairingSessionRequest, CreatePairingSessionResponse,
 };
 use crate::util;
 use chrono::Utc;
+use polycentric_common::http_sig;
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
@@ -29,7 +28,10 @@ pub async fn handle(
         Proto::InitialPairingSession::decode(&msg.message_bytes[..])
             .map_err(|_| Status::invalid_argument("invalid session"))?;
 
-    check_timestamp_skew(initial_session.timestamp)?;
+    http_sig::check_timestamp_skew(
+        initial_session.timestamp,
+        Utc::now().timestamp_millis(),
+    )?;
 
     let created_at = Utc::now();
     let expires_at = created_at

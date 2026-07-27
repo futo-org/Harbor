@@ -4,30 +4,33 @@
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository::{self as id_repo, BanCursor};
 use crate::service::identity::rpc::common::{
-    require_moderator, validate_moderation_request,
+    authorize_signer, require_moderator,
 };
-use crate::service::proto as Proto;
-use crate::service::proto::{ListBansResponse, PageInfo, SignedMessage};
+use crate::service::proto::{ListBansRequest, ListBansResponse, PageInfo};
 use ::entity::ban_model;
-use chrono::DateTime;
-use prost::Message;
-use tonic::Status;
+use chrono::{DateTime, Utc};
+use polycentric_common::http_sig;
+use tonic::{Request, Status};
 
 const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 200;
+const OPERATION: &str = "/polycentric.v2.IdentityService/ListBans";
 
 pub async fn handle(
     ctx: &ServiceContext,
     server_name: &str,
-    msg: SignedMessage,
+    request: Request<ListBansRequest>,
 ) -> Result<ListBansResponse, Status> {
-    let request = validate_moderation_request(ctx, server_name, msg).await?;
-    require_moderator(ctx, &request.moderator_identity).await?;
+    let verified = http_sig::verify_signed_request(
+        server_name,
+        OPERATION,
+        request.metadata(),
+        Utc::now().timestamp_millis(),
+    )?;
+    authorize_signer(ctx, &verified).await?;
+    require_moderator(ctx, &verified.keyid).await?;
 
-    let body =
-        Proto::ListBansRequest::decode(&request.body[..]).map_err(|_| {
-            Status::invalid_argument("body is not a ListBansRequest")
-        })?;
+    let body = request.into_inner();
 
     let limit = body.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
 

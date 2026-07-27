@@ -1,3 +1,4 @@
+use crate::grpc::content_digest::ContentDigestLayer;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
 use crate::service::server::rpc::ServerConfig;
@@ -65,7 +66,10 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(content_service))
         .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
-        .add_service(grpc_web.layer(identity_service))
+        // The digest layer sits inside grpc-web so it checks the digest
+        // header against canonical gRPC framing on both paths; signed
+        // identity RPCs rely on it for body binding.
+        .add_service(grpc_web.layer(ContentDigestLayer.layer(identity_service)))
         .add_service(grpc_web.layer(server_info_service))
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))

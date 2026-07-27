@@ -3713,6 +3713,7 @@ dependencies = [
 name = "polycentric-common"
 version = "0.0.0"
 dependencies = [
+ "base64",
  "ed25519-dalek",
  "hmac-sha256",
  "prost",
@@ -5009,6 +5010,7 @@ version = "0.0.1"
 dependencies = [
  "axum",
  "base64",
+ "bytes",
  "chrono",
  "common-dotenv",
  "common-kafka",
@@ -5016,6 +5018,7 @@ dependencies = [
  "ed25519-dalek",
  "entity",
  "http 1.4.2",
+ "http-body-util",
  "log",
  "migration",
  "mockito",
@@ -5035,6 +5038,7 @@ dependencies = [
  "tonic-prost-build",
  "tonic-reflection",
  "tonic-web",
+ "tower",
  "tower-http 0.7.0",
  "tower-layer",
 ]

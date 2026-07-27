@@ -2,31 +2,19 @@ syntax = "proto3";
 package polycentric.v2;
 
 import "polycentric/v2/common.proto";
-import "polycentric/v2/server.proto";
 
 /**
- * The signed envelope for every moderation request. Wrapped in a
- * SignedMessage; the server validates the signature, server binding,
- * freshness, and signer authorization centrally before decoding `body`.
- * Which endpoint the request is for is implied by the RPC it is sent to.
+ * Every moderation RPC is authenticated by signed gRPC metadata
+ * (`polycentric-signature-input` + `polycentric-signature`), not a
+ * request-body envelope. The server verifies the signature over a
+ * canonical base covering the operation, its own authority (anti-relay),
+ * a digest of the request message (body binding), and the signed params
+ * (created/expires/keyid/nonce) before dispatching. The `keyid` names the
+ * moderator identity; the signature must be by one of its authorized keys.
  */
-message ModerationRequest {
-  // Identity key of the moderator issuing the request; the signature
-  // must be by one of its authorized keys.
-  string moderator_identity = 1;
-  // Client timestamp in unix milliseconds; must be within the server's
-  // acceptable skew window.
-  int64 timestamp = 2;
-  // URL of the server the request is addressed to. The server rejects
-  // requests addressed to other servers.
-  string server_url = 3;
-  // Serialized endpoint-specific request message (see below), or empty
-  // where the endpoint needs no extra fields.
-  bytes body = 4;
-}
 
 /**
- * IsModerator: no extra fields — the subject is `moderator_identity`.
+ * IsModerator: no extra fields — the subject is the signer (`keyid`).
  */
 message IsModeratorRequest {}
 
@@ -78,21 +66,20 @@ message ListBansResponse {
 }
 
 /**
- * Identity APIs. Every method takes a SignedMessage wrapping a
- * serialized ModerationRequest (and, in `body`, the serialized
- * endpoint-specific request), signed by one of `moderator_identity`'s
- * authorized keys.
+ * Identity APIs. Every method is authenticated by signed gRPC metadata
+ * (see above); the signer is identified by the metadata `keyid` and must
+ * be one of that identity's authorized keys.
  */
 service IdentityService {
-  // Returns whether `moderator_identity` is a moderator on this server.
-  rpc IsModerator(SignedMessage) returns (IsModeratorResponse);
+  // Returns whether the signer is a moderator on this server.
+  rpc IsModerator(IsModeratorRequest) returns (IsModeratorResponse);
   // Bans or unbans an identity on this server. Requires the signer to be
   // a moderator.
-  rpc SetBanStatus(SignedMessage) returns (SetBanStatusResponse);
+  rpc SetBanStatus(SetBanStatusRequest) returns (SetBanStatusResponse);
   // Returns whether an identity is banned on this server. Requires the
   // signer to be a moderator.
-  rpc IsBanned(SignedMessage) returns (IsBannedResponse);
+  rpc IsBanned(IsBannedRequest) returns (IsBannedResponse);
   // Lists the identities banned on this server. Requires the signer to
   // be a moderator.
-  rpc ListBans(SignedMessage) returns (ListBansResponse);
+  rpc ListBans(ListBansRequest) returns (ListBansResponse);
 }
