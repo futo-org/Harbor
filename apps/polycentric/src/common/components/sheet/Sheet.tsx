@@ -15,6 +15,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -60,13 +61,22 @@ export type SheetProps =
 export function Sheet(props: SheetProps) {
   const portalId = useId();
   const navigation = useSheetNavigation();
-  if (props.open === false) return null;
+  const [rendered, setRendered] = useState(props.open !== false);
+  useEffect(() => {
+    if (props.open !== false) setRendered(true);
+  }, [props.open]);
+
+  if (isWeb ? props.open === false : !rendered) return null;
   return (
     <Portal name={`sheet-${portalId}`}>
       {isWeb ? (
         <WebModal {...props} navigation={navigation} />
       ) : (
-        <NativeSheet {...props} navigation={navigation} />
+        <NativeSheet
+          {...props}
+          navigation={navigation}
+          onDismissed={() => setRendered(false)}
+        />
       )}
     </Portal>
   );
@@ -167,12 +177,16 @@ type Navigation = ReturnType<typeof useSheetNavigation>;
 type WithNavigation<T> = T & {
   navigation: Navigation;
 };
-type NativeInternalProps = WithNavigation<SheetProps>;
+type NativeInternalProps = WithNavigation<SheetProps> & {
+  /** Fired once the native dismiss animation has finished. */
+  onDismissed?: () => void;
+};
 type WebInternalProps = WithNavigation<SheetProps>;
 
 function NativeSheet({
   open,
   onClose,
+  onDismissed,
   children,
   detents = [0.5],
   dismissible = true,
@@ -231,10 +245,12 @@ function NativeSheet({
       onDidDismiss={() => {
         if (suppressOnCloseRef.current) {
           suppressOnCloseRef.current = false;
+          onDismissed?.();
           return;
         }
         if (isInline) {
           onClose?.();
+          onDismissed?.();
           return;
         }
         if (animatedDismissRef.current) return;
