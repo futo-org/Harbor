@@ -49,11 +49,11 @@ pub const SCHEME_VERSION: u8 = 1;
 
 /// Accepted difference between a signed timestamp and the verifier's
 /// clock, absorbing clock drift between client and server.
-const CLOCK_SKEW_MS: i64 = 30 * 60 * 1000;
+const CLOCK_SKEW_MS: i64 = 2 * 60 * 1000;
 
 /// Longest signature validity window (`expires - created`) accepted,
 /// bounding how long a captured signature stays usable.
-const MAX_TTL_MS: i64 = 30 * 60 * 1000;
+const MAX_TTL_MS: i64 = 2 * 60 * 1000;
 
 const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -532,6 +532,27 @@ mod tests {
         assert_eq!(
             verify_signed_request("srv", "/op", &headers, now).unwrap_err(),
             HttpSigError::MissingPublicKey
+        );
+    }
+
+    #[test]
+    fn verify_rejects_malformed_base64() {
+        let now = 1_700_000_000_000;
+
+        // '@' is outside the base64 alphabet, so decoding fails. The
+        // public key is decoded before the signature.
+        let (mut headers, _) = signed_headers("/op", "srv", now, b"msg");
+        headers.insert(META_PUBLIC_KEY, "@@@@".parse().unwrap());
+        assert_eq!(
+            verify_signed_request("srv", "/op", &headers, now).unwrap_err(),
+            HttpSigError::MalformedPublicKey
+        );
+
+        let (mut headers, _) = signed_headers("/op", "srv", now, b"msg");
+        headers.insert(META_SIGNATURE, "@@@@".parse().unwrap());
+        assert_eq!(
+            verify_signed_request("srv", "/op", &headers, now).unwrap_err(),
+            HttpSigError::MalformedSignature
         );
     }
 
