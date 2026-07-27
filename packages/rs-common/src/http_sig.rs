@@ -49,11 +49,11 @@ pub const SCHEME_VERSION: u8 = 1;
 
 /// Accepted difference between a signed timestamp and the verifier's
 /// clock, absorbing clock drift between client and server.
-pub const CLOCK_SKEW_MS: i64 = 30 * 60 * 1000;
+const CLOCK_SKEW_MS: i64 = 30 * 60 * 1000;
 
 /// Longest signature validity window (`expires - created`) accepted,
 /// bounding how long a captured signature stays usable.
-pub const MAX_TTL_MS: i64 = 30 * 60 * 1000;
+const MAX_TTL_MS: i64 = 30 * 60 * 1000;
 
 const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -75,13 +75,14 @@ pub enum HttpSigError {
     MalformedSignature,
     /// Scheme version is absent or not [`SCHEME_VERSION`].
     UnsupportedVersion,
-    /// A lone timestamp is outside the ±[`CLOCK_SKEW_MS`] window.
+    /// A lone timestamp is outside the accepted clock-skew window.
     TimestampSkew,
     /// `now` is past `expires` (beyond skew tolerance).
     Expired,
     /// `created` is in the future (beyond skew tolerance).
     NotYetValid,
-    /// `expires - created` exceeds [`MAX_TTL_MS`] (or is negative).
+    /// `expires - created` exceeds the longest accepted validity window
+    /// (or is negative).
     ValidityWindowTooLong,
     /// The signature did not verify against the presented public key.
     InvalidSignature,
@@ -181,7 +182,7 @@ impl SigParams {
     /// Parse a `polycentric-signature-input` value for semantic checks
     /// (freshness, keyid). The parsed struct is never used to rebuild
     /// the base — [`signature_base`] takes the literal string.
-    pub fn parse(value: &str) -> Result<SigParams, HttpSigError> {
+    fn parse(value: &str) -> Result<SigParams, HttpSigError> {
         let mut version = None;
         let mut created_ms = None;
         let mut expires_ms = None;
@@ -251,9 +252,10 @@ pub fn content_digest(encoded_message: &[u8]) -> String {
     format!("sha-256=:{}:", B64.encode(digest))
 }
 
-/// Reject a lone timestamp (unix ms) outside ±[`CLOCK_SKEW_MS`] of
-/// `now_ms`. Saturating arithmetic so extreme timestamps can't wrap the
-/// difference back inside the window. Pure: the caller supplies `now_ms`.
+/// Reject a lone timestamp (unix ms) outside the accepted clock-skew
+/// window around `now_ms`. Saturating arithmetic so extreme timestamps
+/// can't wrap the difference back inside the window. Pure: the caller
+/// supplies `now_ms`.
 pub fn check_timestamp_skew(timestamp_ms: i64, now_ms: i64) -> Result<(), HttpSigError> {
     if timestamp_ms.saturating_sub(now_ms).saturating_abs() > CLOCK_SKEW_MS {
         return Err(HttpSigError::TimestampSkew);
@@ -264,7 +266,7 @@ pub fn check_timestamp_skew(timestamp_ms: i64, now_ms: i64) -> Result<(), HttpSi
 /// Reject a `created`/`expires` validity window that is malformed, too
 /// long, not yet valid, or expired relative to `now_ms` (skew-tolerant).
 /// Saturating arithmetic throughout so extreme values can't wrap.
-pub fn check_freshness(created_ms: i64, expires_ms: i64, now_ms: i64) -> Result<(), HttpSigError> {
+fn check_freshness(created_ms: i64, expires_ms: i64, now_ms: i64) -> Result<(), HttpSigError> {
     let window = expires_ms.saturating_sub(created_ms);
     if !(0..=MAX_TTL_MS).contains(&window) {
         return Err(HttpSigError::ValidityWindowTooLong);
