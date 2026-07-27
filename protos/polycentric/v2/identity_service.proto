@@ -4,13 +4,20 @@ package polycentric.v2;
 import "polycentric/v2/common.proto";
 
 /**
- * Every moderation RPC is authenticated by signed gRPC metadata
- * (`polycentric-signature-input` + `polycentric-signature`), not a
- * request-body envelope. The server verifies the signature over a
- * canonical base covering the operation, its own authority (anti-relay),
- * a digest of the request message (body binding), and the signed params
- * (created/expires/keyid/nonce) before dispatching. The `keyid` names the
- * moderator identity; the signature must be by one of its authorized keys.
+ * Every moderation RPC is authenticated by signed gRPC metadata. Four
+ * metadata entries are all required:
+ *   - polycentric-content-digest: `sha-256=:<base64(sha256(message))>:`
+ *     over the encoded request message (body binding)
+ *   - polycentric-signature-input: `v=<n>;created=<ms>;expires=<ms>;
+ *     keyid=<identity hex>;nonce=<base64>`
+ *   - polycentric-public-key: base64 of the signer's raw ed25519 key
+ *   - polycentric-signature: base64 ed25519 signature
+ * The signature covers a canonical base over the operation (the gRPC
+ * method path), the server's own authority (anti-relay), the
+ * content-digest header (body binding), and the signature-input line.
+ * The server checks freshness, verifies the signature against the
+ * public key, and confirms the key is one of `keyid`'s authorized keys
+ * before dispatching.
  */
 
 /**
