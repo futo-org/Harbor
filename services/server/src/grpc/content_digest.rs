@@ -12,7 +12,7 @@
 //! ContentDigestLayer.layer(svc))`) so the framing seen here is
 //! canonical gRPC on both the native and web paths.
 
-use http_body_util::{BodyExt as _, Full, Limited};
+use http_body_util::{BodyExt as _, Full, LengthLimitError, Limited};
 use polycentric_common::http_sig::{META_CONTENT_DIGEST, content_digest};
 use std::convert::Infallible;
 use std::future::Future;
@@ -84,14 +84,24 @@ where
             let bytes = match Limited::new(body, MAX_BODY_BYTES).collect().await
             {
                 Ok(collected) => collected.to_bytes(),
-                // Over the cap (or a transport read error): the body is
-                // already partially consumed, so refuse rather than
-                // forward something corrupt.
-                Err(_) => {
-                    return Ok(grpc_error(
-                        tonic::Code::ResourceExhausted,
-                        "request body too large",
-                    ));
+                // The body is already partially consumed, so refuse
+                // rather than forward something corrupt. Distinguish the
+                // size cap from other read failures (transport resets,
+                // grpc-web decode errors) so neither is mislabeled.
+                Err(err) => {
+                    return Ok(
+                        if err.downcast_ref::<LengthLimitError>().is_some() {
+                            grpc_error(
+                                tonic::Code::ResourceExhausted,
+                                "request body too large",
+                            )
+                        } else {
+                            grpc_error(
+                                tonic::Code::Internal,
+                                "failed to read request body",
+                            )
+                        },
+                    );
                 }
             };
 
