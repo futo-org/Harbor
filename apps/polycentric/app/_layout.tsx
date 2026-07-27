@@ -4,10 +4,9 @@ import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
-import { fetchLatestRelease } from '@/src/common/lib/releases/fetchLatestRelease';
 import { APP_NAME } from '@/src/common/constants';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
-import Constants from 'expo-constants';
+import { UpdateModal } from '@/src/features/updates/UpdateModal';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
@@ -16,14 +15,12 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import Head from 'expo-router/head';
-import { isNewerVersion } from '@/src/common/lib/releases/isNewerVersion';
 
 // Anchor the root stack on the tabs so that deep-linking directly
 // into a modal route (e.g. `/feed/compose`, `/settings/identity`)
@@ -111,23 +108,6 @@ export default function RootLayout() {
   const onInitialized = useCallback(() => setReady(true), []);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
-
-    void fetchLatestRelease()
-      .then((release) => {
-        const currentVersion = Constants.expoConfig?.version ?? '0.0.0';
-        console.log(`[releases] Current version: ${currentVersion}`);
-        const isNewer = isNewerVersion(release.tagName, currentVersion);
-        if (isNewer) {
-          console.log(`[releases] New version available: ${release.tagName}`);
-        }
-      })
-      .catch(() =>
-        console.log('[releases] Failed to check for latest release'),
-      );
-  }, []);
-
-  useEffect(() => {
     if (!ready) {
       return;
     }
@@ -151,6 +131,7 @@ export default function RootLayout() {
                 </TrueSheetProvider>
               </PolycentricProvider>
             </LinkPreviewsProvider>
+            <UpdateModal />
           </ThemeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

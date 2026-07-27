@@ -36,6 +36,7 @@
     "@types/react-native-web": "^0.19.2",
     "better-sqlite3": "^12.10.0",
     "expo": "~57.0.4",
+    "expo-application": "~57.0.0",
     "expo-blur": "~57.0.0",
     "expo-build-properties": "~57.0.3",
     "expo-clipboard": "~57.0.0",
