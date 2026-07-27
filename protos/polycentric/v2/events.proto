@@ -160,6 +160,20 @@ message ListHeadsResponse {
   repeated EventKey heads = 1;
 }
 
+message GetReactionsRequest {
+  // Event key of the event to get reactions for
+  EventKey target = 1;
+  // Return only reactions with this emoji set
+  optional string emoji_filter = 2;
+  optional PageParams page_params = 3;
+}
+
+message GetReactionsResponse {
+  repeated EventBundle event_bundles = 1;
+  repeated EventHint event_hints = 2;
+  optional PageInfo page_info = 3;
+}
+
 // Sync between clients and servers
 service EventSyncService {
   // Returns a list of events (with content) from the server
@@ -169,4 +183,6 @@ service EventSyncService {
   // Returns the latest sequence number seen by the server for each
   // (signing key, collection) for the given identity
   rpc ListHeads(ListHeadsRequest) returns (ListHeadsResponse);
+  // Get the reactions targeting an event.
+  rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
 }

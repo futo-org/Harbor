@@ -1,6 +1,7 @@
 //! gRPC `EventSyncService` impl. Each method delegates to a handler
 //! under `events/rpc/`.
 
+pub mod get_reactions;
 pub mod list_events;
 pub mod list_heads;
 pub mod put_events;
@@ -10,7 +11,8 @@ use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
 use crate::service::proto::{
-    ListEventsRequest, ListEventsResponse, PutEventsRequest, PutEventsResponse,
+    GetReactionsRequest, GetReactionsResponse, ListEventsRequest,
+    ListEventsResponse, PutEventsRequest, PutEventsResponse,
 };
 use polycentric_common::models::protos_v2::{
     ListHeadsRequest, ListHeadsResponse,
@@ -48,6 +50,15 @@ impl EventSyncService for EventSyncServiceImpl {
     ) -> Result<Response<ListHeadsResponse>, Status> {
         Ok(Response::new(
             list_heads::handle(&self.ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_reactions(
+        &self,
+        request: Request<GetReactionsRequest>,
+    ) -> Result<Response<GetReactionsResponse>, Status> {
+        Ok(Response::new(
+            get_reactions::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }
