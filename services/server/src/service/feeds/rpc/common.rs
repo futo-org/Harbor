@@ -194,14 +194,16 @@ pub async fn hydrate(
         rows.iter()
             .map(|(event, content)| (event, content.as_ref())),
     );
-    let referenced_keys = collect_referenced_keys(rows);
-    let referenced_set = to_target_event_keys(&referenced_keys);
+    let (quote_keys, repost_keys) = collect_referenced_keys(rows);
+    let quote_set = to_target_event_keys(&quote_keys);
+    let repost_set = to_target_event_keys(&repost_keys);
 
     // Event keys for all referenced post events that may be displayed by the client.
     // Fetch labels and additional metadata for these.
     let display_keys: Vec<TargetEventKey> = {
         let mut set: HashSet<TargetEventKey> = keys.iter().cloned().collect();
-        set.extend(referenced_set.iter().cloned());
+        set.extend(quote_set.iter().cloned());
+        set.extend(repost_set.iter().cloned());
         set.into_iter().collect()
     };
 
@@ -216,7 +218,9 @@ pub async fn hydrate(
     let identity_events_fut = list_identity_events(ctx, identities.clone());
     let profile_events_fut = list_profile_events(ctx, identities);
     let referenced_fut = async {
-        FeedsRepository::list_events_by_keys(&ctx.db, &referenced_keys)
+        let all_keys: Vec<EventKey> =
+            quote_keys.iter().chain(&repost_keys).cloned().collect();
+        FeedsRepository::list_events_by_keys(&ctx.db, &all_keys)
             .await
             .map_err(map_db_err)
     };
@@ -252,24 +256,34 @@ pub async fn hydrate(
         reply_counts_fut,
     )?;
 
-    let referenced_post_events: Vec<EventWithContentRow> = referenced
-        .into_iter()
-        .filter(|row| referenced_set.contains(&TargetEventKey::of(&row.0)))
-        .collect();
+    let mut quote_post_events = Vec::new();
+    let mut repost_events = Vec::new();
+    for row in referenced {
+        let key = TargetEventKey::of(&row.0);
+        if quote_set.contains(&key) {
+            quote_post_events.push(row);
+        } else if repost_set.contains(&key) {
+            repost_events.push(row);
+        }
+    }
 
     Ok(HydrationState {
         deletes_by_target,
         identity_events,
         profile_events,
-        referenced_post_events,
+        quote_post_events,
+        repost_events,
         label_events,
         reply_counts,
     })
 }
 
 /// Collect every EventKey referenced by feed rows (quotes and repost targets).
-fn collect_referenced_keys(rows: &[EventWithContentRow]) -> Vec<EventKey> {
-    let mut keys = Vec::new();
+fn collect_referenced_keys(
+    rows: &[EventWithContentRow],
+) -> (Vec<EventKey>, Vec<EventKey>) {
+    let mut quote_keys = Vec::new();
+    let mut repost_keys = Vec::new();
     for (_event, content) in rows {
         let Some(content) = content else {
             continue;
@@ -281,18 +295,18 @@ fn collect_referenced_keys(rows: &[EventWithContentRow]) -> Vec<EventKey> {
         match decoded.content_body {
             Some(ContentBody::Post(post)) => {
                 if let Some(quote) = post.quote {
-                    keys.push(quote);
+                    quote_keys.push(quote);
                 }
             }
             Some(ContentBody::Repost(repost)) => {
                 if let Some(target) = repost.post {
-                    keys.push(target);
+                    repost_keys.push(target);
                 }
             }
             _ => {}
         }
     }
-    keys
+    (quote_keys, repost_keys)
 }
 
 /// Convert proto `EventKey`s into [`TargetEventKey`]s (the shared
@@ -448,8 +462,9 @@ pub async fn filter(
 
     // Filter hint rows
     let event_hints: Vec<EventWithContentRow> = hydration
-        .referenced_post_events
+        .quote_post_events
         .iter()
+        .chain(hydration.repost_events.iter())
         .filter(|row| {
             let key = TargetEventKey::of(&row.0);
             !is_omitted(&key)
@@ -923,7 +938,7 @@ mod tests {
         hydration
             .deletes_by_target
             .insert(target, vec![EventBundle::default()]);
-        hydration.referenced_post_events = vec![hint];
+        hydration.repost_events = vec![hint];
         let fetched = make_fetched(vec![]);
         let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.event_hints.is_empty());
@@ -935,7 +950,7 @@ mod tests {
         let hint = ewc(10, "bob", 2, 1, &default_post_content());
         let hydration = HydrationState {
             label_events: vec![make_label_event(&target, &["spam"])],
-            referenced_post_events: vec![hint],
+            repost_events: vec![hint],
             ..Default::default()
         };
         let fetched = make_fetched(vec![]);
@@ -949,7 +964,7 @@ mod tests {
     async fn filter_hint_clean_included() {
         let hint = ewc(10, "bob", 2, 1, &default_post_content());
         let hydration = HydrationState {
-            referenced_post_events: vec![hint],
+            repost_events: vec![hint],
             ..Default::default()
         };
         let fetched = make_fetched(vec![]);
