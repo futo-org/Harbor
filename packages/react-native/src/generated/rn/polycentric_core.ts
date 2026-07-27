@@ -1284,6 +1284,65 @@ const FfiConverterTypeQueryResultFfi = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * Per-request signing inputs for a signed gRPC call: the signer
+ * identity (`keyid`), its raw ed25519 `public_key`, and the
+ * `created_ms`/`expires_ms` validity window. The signing callback is
+ * passed separately — callbacks can't live in a uniffi record.
+ */
+export type SigningInputs = {
+  keyid: string;
+  publicKey: ArrayBuffer;
+  createdMs: bigint;
+  expiresMs: bigint;
+};
+
+/**
+ * Generated factory for {@link SigningInputs} record objects.
+ */
+export const SigningInputs = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<SigningInputs, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<SigningInputs>,
+  });
+})();
+
+const FfiConverterTypeSigningInputs = (() => {
+  type TypeName = SigningInputs;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    read(from: RustBuffer): TypeName {
+      return {
+        keyid: FfiConverterString.read(from),
+        publicKey: FfiConverterArrayBuffer.read(from),
+        createdMs: FfiConverterInt64.read(from),
+        expiresMs: FfiConverterInt64.read(from),
+      };
+    }
+    write(value: TypeName, into: RustBuffer): void {
+      FfiConverterString.write(value.keyid, into);
+      FfiConverterArrayBuffer.write(value.publicKey, into);
+      FfiConverterInt64.write(value.createdMs, into);
+      FfiConverterInt64.write(value.expiresMs, into);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.keyid) +
+        FfiConverterArrayBuffer.allocationSize(value.publicKey) +
+        FfiConverterInt64.allocationSize(value.createdMs) +
+        FfiConverterInt64.allocationSize(value.expiresMs)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Flat error type: CoreError
 export enum CoreError_Tags {
   Decode = "Decode",
@@ -3507,10 +3566,7 @@ export interface PolycentricCoreLike {
   isBanned(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
@@ -3523,10 +3579,7 @@ export interface PolycentricCoreLike {
    */
   isModerator(
     serverUrl: string,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
@@ -3549,10 +3602,7 @@ export interface PolycentricCoreLike {
   listBans(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
@@ -3634,10 +3684,7 @@ export interface PolycentricCoreLike {
   setBanStatus(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
@@ -4095,10 +4142,7 @@ export class PolycentricCore
   async isBanned(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
@@ -4117,13 +4161,10 @@ export class PolycentricCore
               requestBytes,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
-            FfiConverterArrayBuffer.lower(
-              publicKey,
+            FfiConverterTypeSigningInputs.lower(
+              signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
-            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
             FfiConverterTypeSignEventCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
@@ -4169,10 +4210,7 @@ export class PolycentricCore
    */
   async isModerator(
     serverUrl: string,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
@@ -4187,13 +4225,10 @@ export class PolycentricCore
               serverUrl,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
-            FfiConverterArrayBuffer.lower(
-              publicKey,
+            FfiConverterTypeSigningInputs.lower(
+              signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
-            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
             FfiConverterTypeSignEventCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
@@ -4296,10 +4331,7 @@ export class PolycentricCore
   async listBans(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
@@ -4318,13 +4350,10 @@ export class PolycentricCore
               requestBytes,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
-            FfiConverterArrayBuffer.lower(
-              publicKey,
+            FfiConverterTypeSigningInputs.lower(
+              signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
-            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
             FfiConverterTypeSignEventCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
@@ -4737,10 +4766,7 @@ export class PolycentricCore
   async setBanStatus(
     serverUrl: string,
     requestBytes: ArrayBuffer,
-    keyid: string,
-    publicKey: ArrayBuffer,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: SigningInputs,
     signer: SignEventCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
@@ -4759,13 +4785,10 @@ export class PolycentricCore
               requestBytes,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterString.lower(keyid, nativeModule().rustbuffer_alloc),
-            FfiConverterArrayBuffer.lower(
-              publicKey,
+            FfiConverterTypeSigningInputs.lower(
+              signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterInt64.lower(createdMs, nativeModule().rustbuffer_alloc),
-            FfiConverterInt64.lower(expiresMs, nativeModule().rustbuffer_alloc),
             FfiConverterTypeSignEventCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
@@ -5323,7 +5346,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
-    47654
+    58002
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
@@ -5331,7 +5354,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    43557
+    54729
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",
@@ -5347,7 +5370,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
-    14476
+    10830
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
@@ -5427,7 +5450,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
-    49313
+    46088
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",
@@ -5570,6 +5593,7 @@ export default Object.freeze({
     FfiConverterTypeQueryResultFfi,
     FfiConverterTypeQueryStatus,
     FfiConverterTypeSignEventCallback,
+    FfiConverterTypeSigningInputs,
     FfiConverterTypeSubscription,
     FfiConverterTypeUpdateMode,
   },

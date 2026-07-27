@@ -98,6 +98,18 @@ pub trait SignEventCallback: Send + Sync {
     async fn sign(&self, event_bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
 }
 
+/// Per-request signing inputs for a signed gRPC call: the signer
+/// identity (`keyid`), its raw ed25519 `public_key`, and the
+/// `created_ms`/`expires_ms` validity window. The signing callback is
+/// passed separately — callbacks can't live in a uniffi record.
+#[derive(uniffi::Record)]
+pub struct SigningInputs {
+    pub keyid: String,
+    pub public_key: Vec<u8>,
+    pub created_ms: i64,
+    pub expires_ms: i64,
+}
+
 /// Sign a request and wrap it in a tonic `Request` carrying the signed
 /// auth metadata (content-digest, signature-input, public key,
 /// signature). Transport-agnostic and reusable for any signed gRPC call:
@@ -110,18 +122,15 @@ async fn signed_request<T: Message>(
     operation: &str,
     authority: &str,
     request: T,
-    keyid: String,
-    public_key: Vec<u8>,
-    created_ms: i64,
-    expires_ms: i64,
+    signing: &SigningInputs,
     signer: &Arc<dyn SignEventCallback>,
 ) -> Result<tonic::Request<T>, CoreError> {
     let digest = content_digest(&request.encode_to_vec());
     let input = SigParams {
         version: SCHEME_VERSION,
-        created_ms,
-        expires_ms,
-        keyid,
+        created_ms: signing.created_ms,
+        expires_ms: signing.expires_ms,
+        keyid: signing.keyid.clone(),
         nonce: [0u8; 16],
     }
     .to_header_value();
@@ -141,7 +150,7 @@ async fn signed_request<T: Message>(
     );
     md.insert(
         http_sig::META_PUBLIC_KEY,
-        B64.encode(&public_key)
+        B64.encode(&signing.public_key)
             .parse()
             .map_err(|_| bad("public key"))?,
     );
@@ -561,20 +570,14 @@ impl PolycentricCore {
     pub async fn is_moderator(
         &self,
         server_url: String,
-        keyid: String,
-        public_key: Vec<u8>,
-        created_ms: i64,
-        expires_ms: i64,
+        signing: SigningInputs,
         signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let req = signed_request(
             "/polycentric.v2.IdentityService/IsModerator",
             &server_url,
             IsModeratorRequest {},
-            keyid,
-            public_key,
-            created_ms,
-            expires_ms,
+            &signing,
             &signer,
         )
         .await?;
@@ -594,10 +597,7 @@ impl PolycentricCore {
         &self,
         server_url: String,
         request_bytes: Vec<u8>,
-        keyid: String,
-        public_key: Vec<u8>,
-        created_ms: i64,
-        expires_ms: i64,
+        signing: SigningInputs,
         signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = SetBanStatusRequest::decode(request_bytes.as_slice())
@@ -606,10 +606,7 @@ impl PolycentricCore {
             "/polycentric.v2.IdentityService/SetBanStatus",
             &server_url,
             request,
-            keyid,
-            public_key,
-            created_ms,
-            expires_ms,
+            &signing,
             &signer,
         )
         .await?;
@@ -629,10 +626,7 @@ impl PolycentricCore {
         &self,
         server_url: String,
         request_bytes: Vec<u8>,
-        keyid: String,
-        public_key: Vec<u8>,
-        created_ms: i64,
-        expires_ms: i64,
+        signing: SigningInputs,
         signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = IsBannedRequest::decode(request_bytes.as_slice())
@@ -641,10 +635,7 @@ impl PolycentricCore {
             "/polycentric.v2.IdentityService/IsBanned",
             &server_url,
             request,
-            keyid,
-            public_key,
-            created_ms,
-            expires_ms,
+            &signing,
             &signer,
         )
         .await?;
@@ -664,10 +655,7 @@ impl PolycentricCore {
         &self,
         server_url: String,
         request_bytes: Vec<u8>,
-        keyid: String,
-        public_key: Vec<u8>,
-        created_ms: i64,
-        expires_ms: i64,
+        signing: SigningInputs,
         signer: Arc<dyn SignEventCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = ListBansRequest::decode(request_bytes.as_slice())
@@ -676,10 +664,7 @@ impl PolycentricCore {
             "/polycentric.v2.IdentityService/ListBans",
             &server_url,
             request,
-            keyid,
-            public_key,
-            created_ms,
-            expires_ms,
+            &signing,
             &signer,
         )
         .await?;

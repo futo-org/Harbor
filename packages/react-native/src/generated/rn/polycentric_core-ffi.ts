@@ -324,19 +324,13 @@ interface NativeModuleInterface {
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
     requestBytes: Uint8Array,
-    keyid: Uint8Array,
-    publicKey: Uint8Array,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: Uint8Array,
     signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_moderator(
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
-    keyid: Uint8Array,
-    publicKey: Uint8Array,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: Uint8Array,
     signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
@@ -348,10 +342,7 @@ interface NativeModuleInterface {
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
     requestBytes: Uint8Array,
-    keyid: Uint8Array,
-    publicKey: Uint8Array,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: Uint8Array,
     signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
@@ -411,10 +402,7 @@ interface NativeModuleInterface {
     uniffiSelf: bigint,
     serverUrl: Uint8Array,
     requestBytes: Uint8Array,
-    keyid: Uint8Array,
-    publicKey: Uint8Array,
-    createdMs: bigint,
-    expiresMs: bigint,
+    signing: Uint8Array,
     signer: bigint,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
