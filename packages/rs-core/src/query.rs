@@ -13,6 +13,7 @@ pub mod moderation;
 pub mod notification;
 pub mod profile;
 pub mod query_observable;
+pub mod reactions;
 pub mod transport;
 pub(crate) mod validation;
 pub mod verifications;

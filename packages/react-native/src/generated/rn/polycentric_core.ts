@@ -561,6 +561,59 @@ const FfiConverterTypeGetProfileArgs = (() => {
     return new FFIConverter();
 })();
 
+export type GetReactionsArgs = {
+    /**
+     * Event key of the event whose reactions we want.
+     */
+    target: EventKey,
+    /**
+     * Filter out reactions that don't have this emoji, if provided.
+     */
+    emojiFilter?: string,
+    limit?: number
+}
+
+/**
+ * Generated factory for {@link GetReactionsArgs} record objects.
+ */
+export const GetReactionsArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<GetReactionsArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<GetReactionsArgs>,
+    });
+})();
+
+const FfiConverterTypeGetReactionsArgs = (() => {
+    type TypeName = GetReactionsArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                target: FfiConverterTypeEventKey.read(from), 
+                emojiFilter: FfiConverterOptionalString.read(from), 
+                limit: FfiConverterOptionalInt32.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterTypeEventKey.write(value.target, into);
+            FfiConverterOptionalString.write(value.emojiFilter, into);
+            FfiConverterOptionalInt32.write(value.limit, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterTypeEventKey.allocationSize(value.target) +
+             FfiConverterOptionalString.allocationSize(value.emojiFilter) +
+             FfiConverterOptionalInt32.allocationSize(value.limit);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
 export type IsBannedArgs = {
     targetIdentity: string
 }
@@ -1686,7 +1739,8 @@ export enum Query_Tags {
     ListFollowers = "ListFollowers",
     IsModerator = "IsModerator",
     IsBanned = "IsBanned",
-    ListBans = "ListBans"
+    ListBans = "ListBans",
+    GetReactions = "GetReactions"
 }
 /**
  * Discriminated union over every observable RPC. `fetch_query`
@@ -2257,6 +2311,39 @@ Readonly<
 
     }
 
+    type GetReactions__interface = {
+        tag: Query_Tags.GetReactions;
+        inner: 
+Readonly<
+[GetReactionsArgs
+]>
+    };
+    class GetReactions_ extends UniffiEnum implements GetReactions__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.GetReactions;
+        readonly inner: 
+Readonly<
+[GetReactionsArgs
+]>;
+        constructor(v0: GetReactionsArgs) {
+            super("Query", "GetReactions");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: GetReactionsArgs): GetReactions_ {
+            return new GetReactions_(v0);
+        }
+
+        static instanceOf(obj: any): obj is GetReactions_ {
+            return obj.tag === Query_Tags.GetReactions;
+        }
+
+    }
+
     function instanceOf(obj: any): obj is Query {
         return obj[uniffiTypeNameSymbol] === "Query";
     }
@@ -2279,7 +2366,8 @@ Readonly<
   ListFollowers: ListFollowers_, 
   IsModerator: IsModerator_, 
   IsBanned: IsBanned_, 
-  ListBans: ListBans_
+  ListBans: ListBans_, 
+  GetReactions: GetReactions_
     });
 
 })();
@@ -2290,7 +2378,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'IsModerator' | 'IsBanned' | 'ListBans']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -2317,6 +2405,7 @@ const FfiConverterTypeQuery = (() => {
                 case 15: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
                 case 16: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
                 case 17: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
+                case 18: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -2422,6 +2511,12 @@ const FfiConverterTypeQuery = (() => {
                     ordinalConverter.write(17, into);
                     const inner = value.inner;
                     FfiConverterTypeListBansArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.GetReactions: {
+                    ordinalConverter.write(18, into);
+                    const inner = value.inner;
+                    FfiConverterTypeGetReactionsArgs.write(inner[0], into);
                     return;
                 }
                 default:
@@ -2531,6 +2626,12 @@ const FfiConverterTypeQuery = (() => {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(17);
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.GetReactions: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(18);
+                    size += FfiConverterTypeGetReactionsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
@@ -4966,6 +5067,7 @@ export default Object.freeze({
     FfiConverterTypeGetIdentityFeedArgs,
     FfiConverterTypeGetPostThreadArgs,
     FfiConverterTypeGetProfileArgs,
+    FfiConverterTypeGetReactionsArgs,
     FfiConverterTypeIsBannedArgs,
     FfiConverterTypeIsModeratorArgs,
     FfiConverterTypeListBansArgs,
