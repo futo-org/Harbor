@@ -3,7 +3,7 @@
   "author": "FUTO",
   "packageManager": "pnpm@10.34.5",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --concurrency=20",
     "build": "turbo run build",
     "clean:cache": "rm -rf .turbo node_modules/.cache/turbo",
     "format": "biome format",
