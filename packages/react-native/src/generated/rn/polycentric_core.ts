@@ -13,7 +13,7 @@ import {
   type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver,
   type UniffiForeignFutureResultRustBuffer,
   type UniffiForeignFutureCompleterustBuffer,
-  type UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback,
+  type UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
 } from "./polycentric_core-ffi";
 import {
   type FfiConverter,
@@ -3247,18 +3247,18 @@ const FfiConverterTypeQueryObservable = new FfiConverterObject(
   uniffiTypeQueryObservableImplObjectFactory,
 );
 
-export interface SignEventCallback {
+export interface SignBytesCallback {
   sign(
-    eventBytes: ArrayBuffer,
+    bytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
 }
 
-export class SignEventCallbackImpl
+export class SignBytesCallbackImpl
   extends UniffiAbstractObject
-  implements SignEventCallback
+  implements SignBytesCallback
 {
-  readonly [uniffiTypeNameSymbol] = "SignEventCallbackImpl";
+  readonly [uniffiTypeNameSymbol] = "SignBytesCallbackImpl";
   readonly [destructorGuardSymbol]: UniffiGcObject;
   readonly [pointerLiteralSymbol]: UniffiHandle;
   // No primary constructor declared for this class.
@@ -3266,11 +3266,11 @@ export class SignEventCallbackImpl
     super();
     this[pointerLiteralSymbol] = pointer;
     this[destructorGuardSymbol] =
-      uniffiTypeSignEventCallbackImplObjectFactory.bless(pointer);
+      uniffiTypeSignBytesCallbackImplObjectFactory.bless(pointer);
   }
 
   async sign(
-    eventBytes: ArrayBuffer,
+    bytes: ArrayBuffer,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -3278,10 +3278,10 @@ export class SignEventCallbackImpl
       return await uniffiRustCallAsync(
         /*rustCaller:*/ uniffiCaller,
         /*rustFutureFunc:*/ () => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign(
-            uniffiTypeSignEventCallbackImplObjectFactory.clonePointer(this),
+          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_signbytescallback_sign(
+            uniffiTypeSignBytesCallbackImplObjectFactory.clonePointer(this),
             FfiConverterArrayBuffer.lower(
-              eventBytes,
+              bytes,
               nativeModule().rustbuffer_alloc,
             ),
           );
@@ -3320,33 +3320,33 @@ export class SignEventCallbackImpl
     const ptr = (this as any)[destructorGuardSymbol];
     if (ptr !== undefined) {
       const pointer =
-        uniffiTypeSignEventCallbackImplObjectFactory.pointer(this);
-      uniffiTypeSignEventCallbackImplObjectFactory.freePointer(pointer);
-      uniffiTypeSignEventCallbackImplObjectFactory.unbless(ptr);
+        uniffiTypeSignBytesCallbackImplObjectFactory.pointer(this);
+      uniffiTypeSignBytesCallbackImplObjectFactory.freePointer(pointer);
+      uniffiTypeSignBytesCallbackImplObjectFactory.unbless(ptr);
       delete (this as any)[destructorGuardSymbol];
     }
   }
 
-  static instanceOf(obj_: any): obj_ is SignEventCallbackImpl {
-    return uniffiTypeSignEventCallbackImplObjectFactory.isConcreteType(obj_);
+  static instanceOf(obj_: any): obj_ is SignBytesCallbackImpl {
+    return uniffiTypeSignBytesCallbackImplObjectFactory.isConcreteType(obj_);
   }
 }
 
-const uniffiTypeSignEventCallbackImplObjectFactory: UniffiObjectFactory<SignEventCallback> =
+const uniffiTypeSignBytesCallbackImplObjectFactory: UniffiObjectFactory<SignBytesCallback> =
   (() => {
     return {
-      create(pointer: UniffiHandle): SignEventCallback {
-        const instance = Object.create(SignEventCallbackImpl.prototype);
+      create(pointer: UniffiHandle): SignBytesCallback {
+        const instance = Object.create(SignBytesCallbackImpl.prototype);
         instance[pointerLiteralSymbol] = pointer;
         instance[destructorGuardSymbol] = this.bless(pointer);
-        instance[uniffiTypeNameSymbol] = "SignEventCallbackImpl";
+        instance[uniffiTypeNameSymbol] = "SignBytesCallbackImpl";
         return instance;
       },
 
       bless(p: UniffiHandle): UniffiGcObject {
         return uniffiCaller.rustCall(
           /*caller:*/ (status) =>
-            nativeModule().ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(
+            nativeModule().ubrn_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer(
               p,
               status,
             ),
@@ -3358,18 +3358,18 @@ const uniffiTypeSignEventCallbackImplObjectFactory: UniffiObjectFactory<SignEven
         ptr_.markDestroyed();
       },
 
-      pointer(obj_: SignEventCallback): UniffiHandle {
+      pointer(obj_: SignBytesCallback): UniffiHandle {
         if ((obj_ as any)[destructorGuardSymbol] === undefined) {
           throw new UniffiInternalError.UnexpectedNullPointer();
         }
         return (obj_ as any)[pointerLiteralSymbol];
       },
 
-      clonePointer(obj_: SignEventCallback): UniffiHandle {
+      clonePointer(obj_: SignBytesCallback): UniffiHandle {
         const pointer = this.pointer(obj_);
         return uniffiCaller.rustCall(
           /*caller:*/ (callStatus) =>
-            nativeModule().ubrn_uniffi_polycentric_core_fn_clone_signeventcallback(
+            nativeModule().ubrn_uniffi_polycentric_core_fn_clone_signbytescallback(
               pointer,
               callStatus,
             ),
@@ -3380,7 +3380,7 @@ const uniffiTypeSignEventCallbackImplObjectFactory: UniffiObjectFactory<SignEven
       freePointer(pointer: UniffiHandle): void {
         uniffiCaller.rustCall(
           /*caller:*/ (callStatus) =>
-            nativeModule().ubrn_uniffi_polycentric_core_fn_free_signeventcallback(
+            nativeModule().ubrn_uniffi_polycentric_core_fn_free_signbytescallback(
               pointer,
               callStatus,
             ),
@@ -3388,22 +3388,22 @@ const uniffiTypeSignEventCallbackImplObjectFactory: UniffiObjectFactory<SignEven
         );
       },
 
-      isConcreteType(obj_: any): obj_ is SignEventCallback {
+      isConcreteType(obj_: any): obj_ is SignBytesCallback {
         return (
           obj_[destructorGuardSymbol] &&
-          obj_[uniffiTypeNameSymbol] === "SignEventCallbackImpl"
+          obj_[uniffiTypeNameSymbol] === "SignBytesCallbackImpl"
         );
       },
     };
   })();
-const FfiConverterTypeSignEventCallback = new FfiConverterObjectWithCallbacks(
-  uniffiTypeSignEventCallbackImplObjectFactory,
+const FfiConverterTypeSignBytesCallback = new FfiConverterObjectWithCallbacks(
+  uniffiTypeSignBytesCallbackImplObjectFactory,
 );
 
-// Add a vtable for the callbacks that go in SignEventCallback.
+// Add a vtable for the callbacks that go in SignBytesCallback.
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
-const uniffiCallbackInterfaceSignEventCallback: {
+const uniffiCallbackInterfaceSignBytesCallback: {
   vtable: any;
   register: () => void;
 } = {
@@ -3412,15 +3412,15 @@ const uniffiCallbackInterfaceSignEventCallback: {
   vtable: {
     sign: (
       uniffiHandle: bigint,
-      eventBytes: Uint8Array,
+      bytes: Uint8Array,
       uniffiFutureCallback: UniffiForeignFutureCompleterustBuffer,
       uniffiCallbackData: bigint,
     ) => {
       const uniffiMakeCall = async (
         signal: AbortSignal,
       ): Promise<ArrayBuffer> => {
-        const jsCallback = FfiConverterTypeSignEventCallback.lift(uniffiHandle);
-        return await jsCallback.sign(FfiConverterArrayBuffer.lift(eventBytes), {
+        const jsCallback = FfiConverterTypeSignBytesCallback.lift(uniffiHandle);
+        return await jsCallback.sign(FfiConverterArrayBuffer.lift(bytes), {
           signal,
         });
       };
@@ -3463,15 +3463,15 @@ const uniffiCallbackInterfaceSignEventCallback: {
     },
     uniffi_free: (uniffiHandle: UniffiHandle): void => {
       // this will throw a stale handle error if the handle isn't found.
-      FfiConverterTypeSignEventCallback.drop(uniffiHandle);
+      FfiConverterTypeSignBytesCallback.drop(uniffiHandle);
     },
     uniffi_clone: (uniffiHandle: UniffiHandle): UniffiHandle => {
-      return FfiConverterTypeSignEventCallback.clone(uniffiHandle);
+      return FfiConverterTypeSignBytesCallback.clone(uniffiHandle);
     },
   },
   register: () => {
-    nativeModule().ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(
-      uniffiCallbackInterfaceSignEventCallback.vtable,
+    nativeModule().ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(
+      uniffiCallbackInterfaceSignBytesCallback.vtable,
     );
   },
 };
@@ -3567,7 +3567,7 @@ export interface PolycentricCoreLike {
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3580,7 +3580,7 @@ export interface PolycentricCoreLike {
   isModerator(
     serverUrl: string,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3603,7 +3603,7 @@ export interface PolycentricCoreLike {
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3685,7 +3685,7 @@ export interface PolycentricCoreLike {
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -3701,7 +3701,7 @@ export interface PolycentricCoreLike {
    */
   signEvent(
     eventBytes: ArrayBuffer,
-    callback: SignEventCallback,
+    callback: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ) /*throws*/ : Promise<ArrayBuffer>;
   /**
@@ -4143,7 +4143,7 @@ export class PolycentricCore
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4165,7 +4165,7 @@ export class PolycentricCore
               signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterTypeSignEventCallback.lower(
+            FfiConverterTypeSignBytesCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
             ),
@@ -4211,7 +4211,7 @@ export class PolycentricCore
   async isModerator(
     serverUrl: string,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4229,7 +4229,7 @@ export class PolycentricCore
               signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterTypeSignEventCallback.lower(
+            FfiConverterTypeSignBytesCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
             ),
@@ -4332,7 +4332,7 @@ export class PolycentricCore
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4354,7 +4354,7 @@ export class PolycentricCore
               signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterTypeSignEventCallback.lower(
+            FfiConverterTypeSignBytesCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
             ),
@@ -4767,7 +4767,7 @@ export class PolycentricCore
     serverUrl: string,
     requestBytes: ArrayBuffer,
     signing: SigningInputs,
-    signer: SignEventCallback,
+    signer: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4789,7 +4789,7 @@ export class PolycentricCore
               signing,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterTypeSignEventCallback.lower(
+            FfiConverterTypeSignBytesCallback.lower(
               signer,
               nativeModule().rustbuffer_alloc,
             ),
@@ -4853,7 +4853,7 @@ export class PolycentricCore
    */
   async signEvent(
     eventBytes: ArrayBuffer,
-    callback: SignEventCallback,
+    callback: SignBytesCallback,
     asyncOpts_?: { signal: AbortSignal },
   ): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -4867,7 +4867,7 @@ export class PolycentricCore
               eventBytes,
               nativeModule().rustbuffer_alloc,
             ),
-            FfiConverterTypeSignEventCallback.lower(
+            FfiConverterTypeSignBytesCallback.lower(
               callback,
               nativeModule().rustbuffer_alloc,
             ),
@@ -5346,7 +5346,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
-    58002
+    59583
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
@@ -5354,7 +5354,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    54729
+    59258
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",
@@ -5370,7 +5370,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
-    10830
+    3141
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
@@ -5450,7 +5450,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
-    46088
+    47259
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",
@@ -5466,7 +5466,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event() !==
-    25082
+    43916
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       "uniffi_polycentric_core_checksum_method_polycentriccore_sign_event",
@@ -5529,11 +5529,11 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign() !==
-    57859
+    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign() !==
+    9080
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_signeventcallback_sign",
+      "uniffi_polycentric_core_checksum_method_signbytescallback_sign",
     );
   }
   if (
@@ -5556,7 +5556,7 @@ function uniffiEnsureInitialized() {
   uniffiCallbackInterfaceLogger.register();
   uniffiCallbackInterfaceObserver.register();
   uniffiCallbackInterfaceQueryObserver.register();
-  uniffiCallbackInterfaceSignEventCallback.register();
+  uniffiCallbackInterfaceSignBytesCallback.register();
 }
 
 export default Object.freeze({
@@ -5592,7 +5592,7 @@ export default Object.freeze({
     FfiConverterTypeQueryOpts,
     FfiConverterTypeQueryResultFfi,
     FfiConverterTypeQueryStatus,
-    FfiConverterTypeSignEventCallback,
+    FfiConverterTypeSignBytesCallback,
     FfiConverterTypeSigningInputs,
     FfiConverterTypeSubscription,
     FfiConverterTypeUpdateMode,

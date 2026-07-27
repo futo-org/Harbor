@@ -206,11 +206,11 @@ interface NativeModuleInterface {
     ptr: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_signeventcallback(
+  ubrn_uniffi_polycentric_core_fn_clone_signbytescallback(
     ptr: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_signeventcallback(
+  ubrn_uniffi_polycentric_core_fn_free_signbytescallback(
     ptr: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
@@ -231,8 +231,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_fn_init_callback_vtable_queryobserver(
     vtable: UniffiVTableCallbackInterfacePolycentricCoreQueryObserver,
   ): void;
-  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(
-    vtable: UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback,
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(
+    vtable: UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
   ): void;
   ubrn_uniffi_polycentric_core_fn_func_set_log_level(
     level: Uint8Array,
@@ -449,9 +449,9 @@ interface NativeModuleInterface {
     uniffiSelf: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
-  ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign(
+  ubrn_uniffi_polycentric_core_fn_method_signbytescallback_sign(
     uniffiSelf: bigint,
-    eventBytes: Uint8Array,
+    bytes: Uint8Array,
   ): bigint;
   ubrn_uniffi_polycentric_core_fn_method_subscription_is_closed(
     uniffiSelf: bigint,
@@ -502,7 +502,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_error(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_complete(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign(): number;
   ubrn_uniffi_polycentric_core_checksum_method_subscription_is_closed(): number;
   ubrn_uniffi_polycentric_core_checksum_method_subscription_unsubscribe(): number;
   ubrn_uniffi_internal_fn_method_logger_ffi__bless_pointer(
@@ -525,7 +525,7 @@ interface NativeModuleInterface {
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(
+  ubrn_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): UniffiGcObject;
@@ -626,22 +626,22 @@ export type UniffiForeignFutureCompleterustBuffer = (
   callbackData: bigint,
   result: UniffiForeignFutureResultRustBuffer,
 ) => void;
-type UniffiCallbackInterfacePolycentricCoreSignEventCallbackMethod0 = (
+type UniffiCallbackInterfacePolycentricCoreSignBytesCallbackMethod0 = (
   uniffiHandle: bigint,
-  eventBytes: Uint8Array,
+  bytes: Uint8Array,
   uniffiFutureCallback: UniffiForeignFutureCompleterustBuffer,
   uniffiCallbackData: bigint,
 ) => UniffiForeignFutureDroppedCallbackStruct;
-type UniffiCallbackInterfaceClonePolycentricCoreSignEventCallback = (
+type UniffiCallbackInterfaceClonePolycentricCoreSignBytesCallback = (
   handle: bigint,
 ) => UniffiResult<void>;
-type UniffiCallbackInterfaceFreePolycentricCoreSignEventCallback = (
+type UniffiCallbackInterfaceFreePolycentricCoreSignBytesCallback = (
   handle: bigint,
 ) => void;
-export type UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback = {
-  uniffi_free: UniffiCallbackInterfaceFreePolycentricCoreSignEventCallback;
-  uniffi_clone: UniffiCallbackInterfaceClonePolycentricCoreSignEventCallback;
-  sign: UniffiCallbackInterfacePolycentricCoreSignEventCallbackMethod0;
+export type UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback = {
+  uniffi_free: UniffiCallbackInterfaceFreePolycentricCoreSignBytesCallback;
+  uniffi_clone: UniffiCallbackInterfaceClonePolycentricCoreSignBytesCallback;
+  sign: UniffiCallbackInterfacePolycentricCoreSignBytesCallbackMethod0;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

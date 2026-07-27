@@ -94,8 +94,8 @@ pub enum Query {
 
 #[uniffi::export(with_foreign)]
 #[async_trait::async_trait]
-pub trait SignEventCallback: Send + Sync {
-    async fn sign(&self, event_bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
+pub trait SignBytesCallback: Send + Sync {
+    async fn sign(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
 }
 
 /// Per-request signing inputs for a signed gRPC call: the signer
@@ -123,7 +123,7 @@ async fn signed_request<T: Message>(
     authority: &str,
     request: T,
     signing: &SigningInputs,
-    signer: &Arc<dyn SignEventCallback>,
+    signer: &Arc<dyn SignBytesCallback>,
 ) -> Result<tonic::Request<T>, CoreError> {
     let digest = content_digest(&request.encode_to_vec());
     let input = SigParams {
@@ -315,7 +315,7 @@ impl PolycentricCore {
     pub async fn sign_event(
         &self,
         event_bytes: Vec<u8>,
-        callback: Arc<dyn SignEventCallback>,
+        callback: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         Event::decode(event_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Invalid event bytes: {e}")))?;
@@ -571,7 +571,7 @@ impl PolycentricCore {
         &self,
         server_url: String,
         signing: SigningInputs,
-        signer: Arc<dyn SignEventCallback>,
+        signer: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let req = signed_request(
             "/polycentric.v2.IdentityService/IsModerator",
@@ -598,7 +598,7 @@ impl PolycentricCore {
         server_url: String,
         request_bytes: Vec<u8>,
         signing: SigningInputs,
-        signer: Arc<dyn SignEventCallback>,
+        signer: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = SetBanStatusRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SetBanStatusRequest: {e}")))?;
@@ -627,7 +627,7 @@ impl PolycentricCore {
         server_url: String,
         request_bytes: Vec<u8>,
         signing: SigningInputs,
-        signer: Arc<dyn SignEventCallback>,
+        signer: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = IsBannedRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode IsBannedRequest: {e}")))?;
@@ -656,7 +656,7 @@ impl PolycentricCore {
         server_url: String,
         request_bytes: Vec<u8>,
         signing: SigningInputs,
-        signer: Arc<dyn SignEventCallback>,
+        signer: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         let request = ListBansRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode ListBansRequest: {e}")))?;
