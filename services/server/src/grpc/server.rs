@@ -1,4 +1,3 @@
-use crate::grpc::content_digest::ContentDigestLayer;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
 use crate::service::server::rpc::ServerConfig;
@@ -6,6 +5,7 @@ use crate::service::{self, notifications::rpc::build_notifications_service};
 use axum::Router;
 use common_kafka::FutureProducer;
 use http::header::HeaderName;
+use polycentric_common::http_sig;
 use sea_orm::DatabaseConnection;
 use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
@@ -66,10 +66,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(content_service))
         .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
-        // The digest layer sits inside grpc-web so it checks the digest
-        // header against canonical gRPC framing on both paths; signed
-        // identity RPCs rely on it for body binding.
-        .add_service(grpc_web.layer(ContentDigestLayer.layer(identity_service)))
+        .add_service(grpc_web.layer(identity_service))
         .add_service(grpc_web.layer(server_info_service))
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))
@@ -81,6 +78,12 @@ pub fn build_grpc_router(
             HeaderName::from_static("content-type"),
             HeaderName::from_static("x-grpc-web"),
             HeaderName::from_static("grpc-timeout"),
+            // Signed-request auth metadata (browsers must be allowed to
+            // send these on grpc-web moderation calls).
+            HeaderName::from_static(http_sig::META_CONTENT_DIGEST),
+            HeaderName::from_static(http_sig::META_SIGNATURE_INPUT),
+            HeaderName::from_static(http_sig::META_PUBLIC_KEY),
+            HeaderName::from_static(http_sig::META_SIGNATURE),
         ])
         .expose_headers([
             HeaderName::from_static("grpc-status"),

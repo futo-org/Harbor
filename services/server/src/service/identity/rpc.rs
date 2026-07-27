@@ -7,6 +7,7 @@ pub mod is_moderator;
 pub mod list_bans;
 pub mod set_ban_status;
 
+use crate::grpc::content_digest::{ContentDigestLayer, ContentDigestService};
 use crate::service::context::ServiceContext;
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
@@ -18,6 +19,7 @@ use crate::service::proto::{
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
+use tower_layer::Layer;
 
 pub struct IdentityServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -66,15 +68,21 @@ impl IdentityService for IdentityServiceImpl {
     }
 }
 
-/// Creates the gRPC service implementation for identity APIs.
+/// Creates the identity gRPC service, wrapped in the content-digest
+/// middleware. The two are inseparable by construction: signed-request
+/// verification trusts the `polycentric-content-digest` header, and this
+/// layer is what binds that header to the actual request body. Returning
+/// the layered service makes an identity service without body binding
+/// unrepresentable — callers can only ever register the safe form.
 pub fn build_identity_service(
     ctx: Arc<ServiceContext>,
-) -> IdentityServiceServer<IdentityServiceImpl> {
-    IdentityServiceServer::new(IdentityServiceImpl {
+) -> ContentDigestService<IdentityServiceServer<IdentityServiceImpl>> {
+    let service = IdentityServiceServer::new(IdentityServiceImpl {
         ctx,
         server_name: std::env::var("POLYCENTRIC_SERVER_NAME")
             .unwrap_or_default(),
-    })
+    });
+    ContentDigestLayer.layer(service)
 }
 
 #[cfg(test)]
