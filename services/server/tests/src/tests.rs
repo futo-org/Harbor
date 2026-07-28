@@ -33,6 +33,7 @@ async fn put_then_list_round_trip() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -94,6 +95,7 @@ async fn invalid_signature_rejected() {
         rotation_keys: vec![public_key_of(&key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -143,6 +145,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -216,6 +219,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
             root_after_1.clone(),
             1,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -317,6 +321,7 @@ async fn post_revocation_event_returns_without_proof() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -386,6 +391,7 @@ async fn post_revocation_event_returns_without_proof() {
             root_after_1.clone(),
             1,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -472,6 +478,7 @@ async fn rewritten_event_invalidates_proofs() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -559,6 +566,7 @@ async fn rewritten_event_invalidates_proofs() {
             root_after_2_original.clone(),
             2,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -639,6 +647,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -747,6 +756,7 @@ async fn publish_genesis(
         rotation_keys: vec![public_key_of(key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
@@ -865,6 +875,7 @@ async fn trusted_labels_served_in_feed_response() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -967,6 +978,7 @@ async fn omit_labels_hides_labeled_post() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -1034,6 +1046,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -1123,6 +1136,7 @@ async fn untrusted_labels_not_indexed() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     // Impostor — a random key that is NOT the configured moderator.
@@ -1131,6 +1145,7 @@ async fn untrusted_labels_not_indexed() {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     publish_genesis(
@@ -1219,6 +1234,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     let impostor_key = generate_signing_key();
@@ -1226,6 +1242,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     publish_genesis(
@@ -1299,6 +1316,7 @@ async fn thread_no_labels_returns_post() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     publish_genesis(
@@ -1369,6 +1387,7 @@ async fn thread_omit_labels_matching_hides_post() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -1452,6 +1471,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();

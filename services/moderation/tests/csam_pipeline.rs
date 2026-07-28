@@ -354,6 +354,7 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         rotation_keys: vec![public_key_of(key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = hex(&sha256(&content.encode_to_vec()));
     let bundle = signed_bundle(

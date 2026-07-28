@@ -32,14 +32,7 @@ export class ContentRepository implements IContentRepository {
       LIMIT 1
     `);
     if (rows.length === 0) return null;
-    try {
-      return Proto.Content.fromBinary(rows[0]!.content_bytes);
-    } catch (error) {
-      // A row that no longer decodes (corruption, wire-format change) is
-      // treated as missing rather than failing the caller.
-      console.warn('Skipping undecodable content row:', error);
-      return null;
-    }
+    return Proto.Content.fromBinary(rows[0]!.content_bytes);
   }
 
   async getAll(): Promise<
@@ -48,20 +41,9 @@ export class ContentRepository implements IContentRepository {
     const rows = await this.db.all<ContentRow>(sql`
       SELECT digest_bytes, content_bytes FROM content
     `);
-    const results: { digest: Proto.ContentDigest; content: Proto.Content }[] =
-      [];
-    for (const r of rows) {
-      try {
-        results.push({
-          digest: Proto.ContentDigest.fromBinary(r.digest_bytes),
-          content: Proto.Content.fromBinary(r.content_bytes),
-        });
-      } catch (error) {
-        // A row that no longer decodes (corruption, wire-format change)
-        // must not prevent the rest of the store from loading.
-        console.warn('Skipping undecodable content row:', error);
-      }
-    }
-    return results;
+    return rows.map((r) => ({
+      digest: Proto.ContentDigest.fromBinary(r.digest_bytes),
+      content: Proto.Content.fromBinary(r.content_bytes),
+    }));
   }
 }
