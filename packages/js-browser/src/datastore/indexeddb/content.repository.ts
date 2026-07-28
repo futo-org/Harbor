@@ -71,7 +71,18 @@ export class IndexedDBContentRepository implements IContentRepository {
         | undefined
       >(store.get(this.digestToHex(digestBytes)));
 
-      return result ? Proto.Content.fromBinary(result.contentBytes) : null;
+      if (!result) return null;
+      try {
+        return Proto.Content.fromBinary(result.contentBytes);
+      } catch (error) {
+        // A row that no longer decodes (corruption, wire-format change) is
+        // treated as missing rather than failing the caller.
+        console.warn(
+          `Skipping undecodable content row ${result.digestHex}:`,
+          error,
+        );
+        return null;
+      }
     } catch (error) {
       throw new DatabaseError('Failed to get content: ', error);
     }
@@ -93,16 +104,28 @@ export class IndexedDBContentRepository implements IContentRepository {
         { digestHex: string; contentBytes: Uint8Array }[]
       >(store.getAll());
 
-      return rows.map((row) => {
-        // digestHex encodes the full serialized ContentDigest proto.
-        const digestBytes = new Uint8Array(
-          row.digestHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-        );
-        return {
-          digest: Proto.ContentDigest.fromBinary(digestBytes),
-          content: Proto.Content.fromBinary(row.contentBytes),
-        };
-      });
+      const results: { digest: Proto.ContentDigest; content: Proto.Content }[] =
+        [];
+      for (const row of rows) {
+        try {
+          // digestHex encodes the full serialized ContentDigest proto.
+          const digestBytes = new Uint8Array(
+            row.digestHex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
+          );
+          results.push({
+            digest: Proto.ContentDigest.fromBinary(digestBytes),
+            content: Proto.Content.fromBinary(row.contentBytes),
+          });
+        } catch (error) {
+          // A row that no longer decodes (corruption, wire-format change)
+          // must not prevent the rest of the store from loading.
+          console.warn(
+            `Skipping undecodable content row ${row.digestHex}:`,
+            error,
+          );
+        }
+      }
+      return results;
     } catch (error) {
       throw new DatabaseError('Failed to get all content: ', error);
     }

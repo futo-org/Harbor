@@ -288,6 +288,17 @@ export class QueryError extends WrapperError {
 }
 
 /**
+ * Error thrown when adding a server that is already on the identity document.
+ */
+export class ServerAlreadyAddedError extends WrapperError {
+  constructor(message = 'Server already added', originalError?: unknown) {
+    super(message, originalError);
+    Object.setPrototypeOf(this, ServerAlreadyAddedError.prototype);
+    this.name = 'ServerAlreadyAddedError';
+  }
+}
+
+/**
  * Error thrown when an HTTP request fails.
  *
  * This error is thrown when an HTTP request fails, such as when a server

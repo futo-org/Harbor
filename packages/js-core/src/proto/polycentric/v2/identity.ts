@@ -35,6 +35,23 @@ export interface Identity {
      * @generated from protobuf field: repeated polycentric.v2.RevocationBound revocation_bounds = 3
      */
     revocationBounds: RevocationBound[];
+    /**
+     * Preferred servers of this identity (where they push and pull from).
+     * Absent means the identity has not configured a server list yet and
+     * clients fall back to their defaults; present-but-empty is intentional.
+     *
+     * @generated from protobuf field: polycentric.v2.ServerList servers = 4
+     */
+    servers?: ServerList;
+}
+/**
+ * @generated from protobuf message polycentric.v2.ServerList
+ */
+export interface ServerList {
+    /**
+     * @generated from protobuf field: repeated string urls = 1
+     */
+    urls: string[];
 }
 /**
  * @generated from protobuf message polycentric.v2.RevocationBound
@@ -90,7 +107,8 @@ class Identity$Type extends MessageType<Identity> {
         super("polycentric.v2.Identity", [
             { no: 1, name: "rotation_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
             { no: 2, name: "signing_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
-            { no: 3, name: "revocation_bounds", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => RevocationBound }
+            { no: 3, name: "revocation_bounds", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => RevocationBound },
+            { no: 4, name: "servers", kind: "message", T: () => ServerList }
         ]);
     }
     create(value?: PartialMessage<Identity>): Identity {
@@ -116,6 +134,9 @@ class Identity$Type extends MessageType<Identity> {
                 case /* repeated polycentric.v2.RevocationBound revocation_bounds */ 3:
                     message.revocationBounds.push(RevocationBound.internalBinaryRead(reader, reader.uint32(), options));
                     break;
+                case /* polycentric.v2.ServerList servers */ 4:
+                    message.servers = ServerList.internalBinaryRead(reader, reader.uint32(), options, message.servers);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -137,6 +158,9 @@ class Identity$Type extends MessageType<Identity> {
         /* repeated polycentric.v2.RevocationBound revocation_bounds = 3; */
         for (let i = 0; i < message.revocationBounds.length; i++)
             RevocationBound.internalBinaryWrite(message.revocationBounds[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.ServerList servers = 4; */
+        if (message.servers)
+            ServerList.internalBinaryWrite(message.servers, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -147,6 +171,53 @@ class Identity$Type extends MessageType<Identity> {
  * @generated MessageType for protobuf message polycentric.v2.Identity
  */
 export const Identity = new Identity$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ServerList$Type extends MessageType<ServerList> {
+    constructor() {
+        super("polycentric.v2.ServerList", [
+            { no: 1, name: "urls", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ServerList>): ServerList {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.urls = [];
+        if (value !== undefined)
+            reflectionMergePartial<ServerList>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ServerList): ServerList {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated string urls */ 1:
+                    message.urls.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ServerList, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated string urls = 1; */
+        for (let i = 0; i < message.urls.length; i++)
+            writer.tag(1, WireType.LengthDelimited).string(message.urls[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ServerList
+ */
+export const ServerList = new ServerList$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class RevocationBound$Type extends MessageType<RevocationBound> {
     constructor() {

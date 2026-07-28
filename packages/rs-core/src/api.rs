@@ -392,6 +392,12 @@ impl PolycentricCore {
         self.query_client.invalidate(&query_key);
     }
 
+    /// Clear the cache of every query key, e.g. after the configured
+    /// server list changes.
+    pub fn invalidate_all_queries(&self) {
+        self.query_client.invalidate_all();
+    }
+
     /// Push event bundles to a server.
     /// Returns the response from the server with any errors and missing blobs.
     pub async fn put_events(
