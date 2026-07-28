@@ -79,9 +79,9 @@ export async function createIdentity(
   }
 
   const currentKey = client.currentKeyPair.publicKey;
-  await client.identityManager.publish(null, [currentKey], []);
 
   if (!client.servers.includes(server)) {
     client.servers.push(server);
   }
+  await client.identityManager.publish(null, [currentKey], [], client.servers);
 }

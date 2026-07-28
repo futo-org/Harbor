@@ -15,6 +15,15 @@ message Identity {
   // In order to retain valid events from a revoked keypair, we store their last known
   // signature.
   repeated RevocationBound revocation_bounds = 3;
+
+  // Preferred servers of this identity (where they push and pull from).
+  // Absent means the identity has not configured a server list yet and
+  // clients fall back to their defaults; present-but-empty is intentional.
+  ServerList servers = 4;
+}
+
+message ServerList {
+  repeated string urls = 1;
 }
 
 message RevocationBound {

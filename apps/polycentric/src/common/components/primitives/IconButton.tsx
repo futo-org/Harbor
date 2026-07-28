@@ -107,6 +107,7 @@ export function IconButton({
               ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
               : {}),
           },
+          hovered && { opacity: 0.8 },
         ]}
         {...props}
       >

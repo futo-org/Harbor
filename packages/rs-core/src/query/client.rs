@@ -371,6 +371,17 @@ where
             state.next_fanout(UpdateMode::Replace);
         }
     }
+
+    /// Clear the data cache of every query key. No subscribers are
+    /// notified — orchestration of in-flight observables lives outside
+    /// the core.
+    pub fn invalidate_all(&self) {
+        for state in self.queries.lock().unwrap().values() {
+            let mut state = state.lock().unwrap();
+            state.data.clear();
+            state.next_fanout(UpdateMode::Replace);
+        }
+    }
 }
 
 /// Resolve the target server list for a fan-out: the caller's

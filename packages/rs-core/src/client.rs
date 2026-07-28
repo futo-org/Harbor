@@ -591,6 +591,7 @@ mod tests {
                 rotation_keys: rotation,
                 signing_keys: signing,
                 revocation_bounds,
+                servers: None,
             })),
         };
         let bytes = content.encode_to_vec();
@@ -688,6 +689,7 @@ mod tests {
             rotation_keys: rotation.clone(),
             signing_keys: signing.clone(),
             revocation_bounds: Vec::new(),
+            servers: None,
         };
         let id_string = identity
             .map(|s| s.to_string())
@@ -777,6 +779,7 @@ mod tests {
             rotation_keys: rotation,
             signing_keys: signing,
             revocation_bounds,
+            servers: None,
         };
 
         let dedup = signer_identity_content.deduplicated_keys();
@@ -1227,6 +1230,7 @@ mod tests {
             rotation_keys: vec![a.public.clone()],
             signing_keys: vec![],
             revocation_bounds: vec![],
+            servers: None,
         };
         let identity = add_identity_event(
             &mut client,

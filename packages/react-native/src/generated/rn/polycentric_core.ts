@@ -3273,6 +3273,11 @@ export interface PolycentricCoreLike {
  */
     getServers(): Array<string>;
 /**
+ * Clear the cache of every query key, e.g. after the configured
+ * server list changes.
+ */
+    invalidateAllQueries(): void;
+/**
  * Clear the cache for a query key and discard the responses for any
  * in-flight merge queries.
  */
@@ -3614,6 +3619,19 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
+    }
+    
+/**
+ * Clear the cache of every query key, e.g. after the configured
+ * server list changes.
+ */
+    invalidateAllQueries(): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_all_queries(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
     }
     
 /**
@@ -4243,6 +4261,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers() !== 49206) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_servers");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries() !== 19825) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query() !== 44746) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query");

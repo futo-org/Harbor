@@ -533,6 +533,7 @@ mod tests {
                                 rotation_keys: vec![],
                                 signing_keys: self.identity_keys.clone(),
                                 revocation_bounds: vec![],
+                                servers: None,
                             })),
                         })]
                     }

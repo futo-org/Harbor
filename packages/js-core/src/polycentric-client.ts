@@ -155,7 +155,7 @@ export class PolycentricClient {
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
       // `getIdentityFeed`) actually have somewhere to call.
-      this.core.setServers(this.servers);
+      await this.refreshServers();
 
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
@@ -886,6 +886,24 @@ export class PolycentricClient {
     this.activeIdentityKey = await this.storageDriver.loadActiveIdentityKey(
       keyPair.publicKey.key,
     );
+    if (this.storageHandle) {
+      await this.refreshServers();
+    }
+  }
+
+  /**
+   * Derive `servers` from the active identity's latest Identity document.
+   * Identities that have never configured a server list keep the current
+   * (seed) list.
+   */
+  public async refreshServers(): Promise<void> {
+    if (this.activeIdentityKey) {
+      const { servers } = await this.identityManager.getCurrent();
+      if (servers) {
+        this.servers = [...servers];
+      }
+    }
+    this.core.setServers(this.servers);
   }
 
   /**

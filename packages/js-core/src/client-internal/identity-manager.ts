@@ -1,6 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 import { COLLECTION, SyncStrategy } from '../constants';
+import { ServerAlreadyAddedError } from '../errors';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
@@ -16,6 +17,12 @@ export interface IdentityState {
   rotationKeys: Proto.PublicKey[];
   /** Signing keys authorized to sign events */
   signingKeys: Proto.PublicKey[];
+  /**
+   * Servers this identity pushes to and pulls from. `null` when the
+   * identity has never configured its list (clients fall back to their
+   * defaults); an empty array is an intentionally empty list.
+   */
+  servers: string[] | null;
 }
 
 /**
@@ -38,6 +45,7 @@ export class IdentityManager {
       identityKey: null,
       rotationKeys: [],
       signingKeys: [],
+      servers: null,
     };
 
     if (!this.client.activeIdentityKey) return state;
@@ -65,6 +73,7 @@ export class IdentityManager {
         state.identityKey = event.key.identity;
         state.rotationKeys = [...identity.rotationKeys];
         state.signingKeys = [...identity.signingKeys];
+        state.servers = identity.servers ? [...identity.servers.urls] : null;
       }
     }
 
@@ -81,12 +90,17 @@ export class IdentityManager {
     identityKey: string | null,
     rotationKeys: Proto.PublicKey[],
     signingKeys: Proto.PublicKey[],
+    servers: string[] | null = null,
   ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
     if (!this.client.currentKeyPair) {
       throw new Error('No active key pair');
     }
 
-    const identity = Proto.Identity.create({ rotationKeys, signingKeys });
+    const identity = Proto.Identity.create({
+      rotationKeys,
+      signingKeys,
+      servers: servers ? { urls: servers } : undefined,
+    });
     const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },
     });
@@ -137,6 +151,14 @@ export class IdentityManager {
 
     const signedEvent = await this.client.signEvent(event);
     await this.client.commitEvent(signedEvent, content);
+
+    // The identity document is the source of truth for the server list, so
+    // adopt it before syncing — a newly added server receives the push.
+    if (servers) {
+      this.client.servers = [...servers];
+      this.client.core.setServers(this.client.servers);
+    }
+
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
     return { identityKey: resolvedIdentityKey, signedEvent };
@@ -232,6 +254,7 @@ export class IdentityManager {
       identityKey,
       rotationKeys: [...identity.rotationKeys],
       signingKeys: [...identity.signingKeys],
+      servers: identity.servers ? [...identity.servers.urls] : null,
     };
   }
 
@@ -256,7 +279,12 @@ export class IdentityManager {
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.
-    await this.publish(identityKey, state.rotationKeys, state.signingKeys);
+    await this.publish(
+      identityKey,
+      state.rotationKeys,
+      state.signingKeys,
+      state.servers,
+    );
 
     return state;
   }
@@ -347,6 +375,7 @@ export class IdentityManager {
       state.identityKey,
       state.rotationKeys,
       signingKeys,
+      state.servers,
     );
     return signedEvent;
   }
@@ -367,6 +396,7 @@ export class IdentityManager {
       state.identityKey,
       state.rotationKeys,
       signingKeys,
+      state.servers,
     );
     return signedEvent;
   }
@@ -390,6 +420,7 @@ export class IdentityManager {
       state.identityKey,
       rotationKeys,
       state.signingKeys,
+      state.servers,
     );
     return signedEvent;
   }
@@ -410,6 +441,56 @@ export class IdentityManager {
       state.identityKey,
       rotationKeys,
       state.signingKeys,
+      state.servers,
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Adds a server to the current identity document and publishes the update.
+   * Calls the server's `GetInfo` first — an unreachable server is not added.
+   */
+  async addServer(url: string): Promise<Proto.SignedEvent> {
+    const state = await this.getCurrent();
+    if (!state.identityKey) throw new Error('No active identity');
+
+    // An identity that has never configured its list starts from the
+    // client's effective (default) servers.
+    const servers = state.servers ?? this.client.servers;
+    if (servers.includes(url)) {
+      throw new ServerAlreadyAddedError();
+    }
+
+    await this.client.core.getServerInfo(url);
+
+    const { signedEvent } = await this.publish(
+      state.identityKey,
+      state.rotationKeys,
+      state.signingKeys,
+      [...servers, url],
+    );
+    return signedEvent;
+  }
+
+  /**
+   * Removes a server from the current identity document and publishes the
+   * update.
+   */
+  async removeServer(url: string): Promise<Proto.SignedEvent> {
+    const state = await this.getCurrent();
+    if (!state.identityKey) throw new Error('No active identity');
+
+    const current = state.servers ?? this.client.servers;
+    const servers = current.filter((s) => s !== url);
+    if (servers.length === current.length) {
+      throw new Error('Server not found');
+    }
+
+    const { signedEvent } = await this.publish(
+      state.identityKey,
+      state.rotationKeys,
+      state.signingKeys,
+      servers,
     );
     return signedEvent;
   }
