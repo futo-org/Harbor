@@ -18,9 +18,11 @@ use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{ActiveModelTrait, NotSet, Set};
 
 use crate::service::context::ServiceContext;
+use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::identity::service::rows_to_bundles;
 use crate::service::proofs::service::attach_proofs;
+use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
 
 /// Identifies this server as the source of produced notification events, so
@@ -81,18 +83,49 @@ impl NotificationWorker {
         Ok(bundles.into_iter().next())
     }
 
-    // Emit a Notification event to Kafka, that can be consumed by the push-notifications service
+    /// Whether `verifier` was asked — via a VerificationTarget published by
+    /// the claim's own owner — to verify the claim at `claim_key`.
+    async fn verification_was_requested(
+        &self,
+        claim_key: &Option<EventKey>,
+        verifier: &str,
+    ) -> Result<bool, WorkerError> {
+        let Some(claim_key) = claim_key else {
+            return Ok(false);
+        };
+        let (public_key_type, public_key) = claim_key
+            .signed_by
+            .as_ref()
+            .map(|pk| (pk.key_type as i16, pk.key.clone()))
+            .unwrap_or_default();
+        let key = TargetEventKey {
+            collection: claim_key.collection as i16,
+            identity: claim_key.identity.clone(),
+            public_key_type,
+            public_key,
+            sequence: claim_key.sequence as i64,
+        };
+        Ok(VerificationsRepository::was_verification_requested(
+            &self.ctx.db,
+            &key,
+            verifier,
+        )
+        .await?)
+    }
+
+    // Emit a Notification event to Kafka, that can be consumed by the
+    // push-notifications service. The message key carries the recipient.
     async fn emit(
         &self,
         to_identity: &str,
-        notification_type: NotificationKind,
+        kind: NotificationKind,
         trigger: EventBundle,
         target_event: Option<EventBundle>,
     ) -> Result<(), WorkerError> {
         let payload = Notification {
             trigger_event: Some(trigger),
             target_event,
-            kind: notification_type as i32,
+            kind: kind as i32,
         }
         .encode_to_vec();
 
@@ -148,19 +181,41 @@ impl MessageHandler for NotificationWorker {
             return Outcome::Commit;
         };
 
-        // Not every event produces a notification (and self-actions never
+        // Not every event produces notifications (and self-actions never
         // do).
-        let Some(Derived {
-            notification_type,
-            to_identity,
-            target,
-        }) = derive(&trigger_key.identity, &content)
+        let notifications =
+            build_notifications(&trigger_key.identity, &content);
+        let Some(PendingNotification { kind, target, .. }) =
+            notifications.first()
         else {
             return Outcome::Commit;
         };
+        let kind = *kind;
+        let recipients: Vec<&String> =
+            notifications.iter().map(|n| &n.to_identity).collect();
+
+        // A completed verification only notifies when the claim's owner
+        // actually requested it from this verifier — unsolicited verify
+        // events produce nothing.
+        if kind == NotificationKind::VerificationComplete {
+            match self
+                .verification_was_requested(target, &trigger_key.identity)
+                .await
+            {
+                Ok(true) => {}
+                Ok(false) => return Outcome::Commit,
+                Err(e) => {
+                    eprintln!(
+                        "[{}] failed to check for a verification request: {e}",
+                        Self::NAME
+                    );
+                    return Outcome::Retry;
+                }
+            }
+        }
 
         println!(
-            "[{}] processing {notification_type:?} notification: from={} to={to_identity}",
+            "[{}] processing {kind:?} notification: from={} to={recipients:?}",
             Self::NAME,
             trigger_key.identity,
         );
@@ -171,35 +226,45 @@ impl MessageHandler for NotificationWorker {
             target.as_ref().map(KeyColumns::from).unwrap_or_default();
         let now = Utc::now();
 
-        // NOTE: a redelivered message (rebalance / crash before commit) will
-        // insert a duplicate row until a unique dedup index exists to make
-        // this an upsert.
-        let row = notification::ActiveModel {
-            id: NotSet,
-            kind: Set(notification_type as i32),
-            from_identity: Set(trigger.identity.clone()),
-            to_identity: Set(to_identity.clone()),
-            trigger_event_key_collection: Set(trigger.collection),
-            trigger_event_key_identity: Set(trigger.identity),
-            trigger_event_key_public_key_type: Set(trigger.public_key_type),
-            trigger_event_key_public_key: Set(trigger.public_key),
-            trigger_event_key_sequence: Set(trigger.sequence),
-            target_event_key_collection: Set(target_cols.collection),
-            target_event_key_identity: Set(target_cols.identity),
-            target_event_key_public_key_type: Set(target_cols.public_key_type),
-            target_event_key_public_key: Set(target_cols.public_key),
-            target_event_key_sequence: Set(target_cols.sequence),
-            created_at: Set(now),
-            updated_at: Set(now),
-        };
+        for to_identity in &recipients {
+            // NOTE: a redelivered message (rebalance / crash before commit)
+            // will insert a duplicate row until a unique dedup index exists
+            // to make this an upsert.
+            let row = notification::ActiveModel {
+                id: NotSet,
+                kind: Set(kind as i32),
+                from_identity: Set(trigger.identity.clone()),
+                to_identity: Set((*to_identity).clone()),
+                trigger_event_key_collection: Set(trigger.collection),
+                trigger_event_key_identity: Set(trigger.identity.clone()),
+                trigger_event_key_public_key_type: Set(trigger.public_key_type),
+                trigger_event_key_public_key: Set(trigger.public_key.clone()),
+                trigger_event_key_sequence: Set(trigger.sequence),
+                target_event_key_collection: Set(target_cols.collection),
+                target_event_key_identity: Set(target_cols.identity.clone()),
+                target_event_key_public_key_type: Set(
+                    target_cols.public_key_type
+                ),
+                target_event_key_public_key: Set(target_cols
+                    .public_key
+                    .clone()),
+                target_event_key_sequence: Set(target_cols.sequence),
+                created_at: Set(now),
+                updated_at: Set(now),
+            };
 
-        if let Err(e) = row.insert(&self.ctx.db).await {
-            eprintln!("[{}] failed to insert notification: {e}", Self::NAME);
-            return Outcome::Retry;
+            if let Err(e) = row.insert(&self.ctx.db).await {
+                eprintln!(
+                    "[{}] failed to insert notification: {e}",
+                    Self::NAME
+                );
+                return Outcome::Retry;
+            }
         }
 
         // Hydrate the target event (the post replied to / reposted / reacted
-        // to) so the produced `Notification` carries it. Follows have none.
+        // to, or the claim to verify) so the produced `Notification` carries
+        // it. Follows have none.
         let target_event = match target.as_ref() {
             Some(key) => match self.hydrate_target(key).await {
                 Ok(bundle) => bundle,
@@ -214,91 +279,128 @@ impl MessageHandler for NotificationWorker {
             None => None,
         };
 
-        match self
-            .emit(&to_identity, notification_type, bundle, target_event)
-            .await
-        {
-            Ok(()) => {
-                println!(
-                    "[{}] created {notification_type:?} notification for {to_identity}",
-                    Self::NAME
-                );
-                Outcome::Commit
-            }
-            Err(e) => {
+        // One message per recipient — the push service reads the recipient
+        // from the message key.
+        for to_identity in &recipients {
+            if let Err(e) = self
+                .emit(to_identity, kind, bundle.clone(), target_event.clone())
+                .await
+            {
                 eprintln!(
                     "[{}] failed to produce notification: {e}",
                     Self::NAME
                 );
-                Outcome::Retry
+                return Outcome::Retry;
             }
         }
+
+        println!(
+            "[{}] created {kind:?} notification for {recipients:?}",
+            Self::NAME
+        );
+        Outcome::Commit
     }
 }
 
-/// A derived notification: its type, the recipient, and the event it refers
-/// to (absent for follows).
-struct Derived {
-    notification_type: NotificationKind,
+/// A notification waiting to be recorded and delivered: its kind, the
+/// recipient, and the event it refers to (absent for follows).
+struct PendingNotification {
+    kind: NotificationKind,
     to_identity: String,
     target: Option<EventKey>,
 }
 
-/// Determine the notification a single event produces, if any. `author` is
-/// the identity of the triggering event; self-actions (replying to your own
-/// post, following yourself, …) produce nothing.
-fn derive(author: &str, content: &Content) -> Option<Derived> {
-    let make =
-        |notification_type, to_identity: &str, target: Option<EventKey>| {
-            (to_identity != author).then(|| Derived {
-                notification_type,
+/// The notifications a single event produces, if any. `author` is the
+/// identity of the triggering event; self-actions (replying to your own
+/// post, following yourself, …) produce nothing. Every notification an
+/// event produces shares its kind and target — only the recipient varies.
+fn build_notifications(
+    author: &str,
+    content: &Content,
+) -> Vec<PendingNotification> {
+    let mut notifications = Vec::new();
+    let mut notify = |kind, to_identity: &str, target: Option<EventKey>| {
+        if to_identity != author {
+            notifications.push(PendingNotification {
+                kind,
                 to_identity: to_identity.to_string(),
                 target,
-            })
-        };
+            });
+        }
+    };
 
-    match content.content_body.as_ref()? {
+    match content.content_body.as_ref() {
         // A post is a reply (notify the parent's author) or a quote (notify
         // the quoted post's author). Reply takes precedence when both are set.
-        ContentBody::Post(post) => {
+        Some(ContentBody::Post(post)) => {
             if let Some(parent) =
                 post.reply.as_ref().and_then(|reply| reply.parent.as_ref())
             {
-                make(
+                notify(
                     NotificationKind::Reply,
                     &parent.identity,
                     Some(parent.clone()),
-                )
+                );
             } else if let Some(quote) = post.quote.as_ref() {
-                make(
+                notify(
                     NotificationKind::Quote,
                     &quote.identity,
                     Some(quote.clone()),
-                )
-            } else {
-                None
+                );
             }
         }
         // Repost -> notify the author of the reposted post.
-        ContentBody::Repost(repost) => {
-            let post = repost.post.as_ref()?;
-            make(NotificationKind::Repost, &post.identity, Some(post.clone()))
+        Some(ContentBody::Repost(repost)) => {
+            if let Some(post) = repost.post.as_ref() {
+                notify(
+                    NotificationKind::Repost,
+                    &post.identity,
+                    Some(post.clone()),
+                );
+            }
         }
         // Reaction -> notify the author of the reacted-to event.
-        ContentBody::Reaction(reaction) => {
-            let target = reaction.event_key.as_ref()?;
-            make(
-                NotificationKind::Reaction,
-                &target.identity,
-                Some(target.clone()),
-            )
+        Some(ContentBody::Reaction(reaction)) => {
+            if let Some(target) = reaction.event_key.as_ref() {
+                notify(
+                    NotificationKind::Reaction,
+                    &target.identity,
+                    Some(target.clone()),
+                );
+            }
         }
         // Follow -> notify the followed identity (no target event).
-        ContentBody::Follow(follow) => {
-            make(NotificationKind::Follow, &follow.identity, None)
+        Some(ContentBody::Follow(follow)) => {
+            notify(NotificationKind::Follow, &follow.identity, None);
         }
-        _ => None,
+        // Verification target -> notify every identity requested to verify
+        // the claim, with the claim event as the target.
+        Some(ContentBody::VerificationTarget(target)) => {
+            for identity in &target.target_identities {
+                notify(
+                    NotificationKind::VerificationRequest,
+                    identity,
+                    target.claim_event_key.clone(),
+                );
+            }
+        }
+        // Verification verify -> notify the claim's owner their claim was
+        // verified, with the claim event as the target. Whether the
+        // verification was actually requested is checked against the DB in
+        // `handle` — unsolicited verifies produce nothing.
+        Some(ContentBody::VerificationVerify(verify)) => {
+            if let Some(claim) = verify.claim_event_key.as_ref() {
+                notify(
+                    NotificationKind::VerificationComplete,
+                    &claim.identity,
+                    Some(claim.clone()),
+                );
+            }
+        }
+        _ => {}
     }
+
+    notifications
 }
 
 /// An `EventKey` flattened into the columns the `notification` table stores.
@@ -335,6 +437,7 @@ mod tests {
     use super::*;
     use polycentric_common::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
+        VerificationTarget, VerificationVerify,
     };
 
     /// A fully-populated `EventKey` for `identity`.
@@ -356,6 +459,13 @@ mod tests {
         }
     }
 
+    /// The lone notification, when the event produced exactly one.
+    fn single(
+        mut notifications: Vec<PendingNotification>,
+    ) -> Option<PendingNotification> {
+        (notifications.len() == 1).then(|| notifications.remove(0))
+    }
+
     #[test]
     fn reply_to_another_user_notifies_the_parent_author() {
         let parent = event_key("bob");
@@ -367,10 +477,11 @@ mod tests {
             ..Default::default()
         }));
 
-        let derived = derive("alice", &c).expect("reply should notify");
-        assert_eq!(derived.notification_type, NotificationKind::Reply);
-        assert_eq!(derived.to_identity, "bob");
-        assert_eq!(derived.target, Some(parent));
+        let notification = single(build_notifications("alice", &c))
+            .expect("reply should notify");
+        assert_eq!(notification.kind, NotificationKind::Reply);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, Some(parent));
     }
 
     #[test]
@@ -382,13 +493,13 @@ mod tests {
             }),
             ..Default::default()
         }));
-        assert!(derive("alice", &c).is_none());
+        assert!(build_notifications("alice", &c).is_empty());
     }
 
     #[test]
     fn post_without_a_reply_does_not_notify() {
         let c = content(ContentBody::Post(Post::default()));
-        assert!(derive("alice", &c).is_none());
+        assert!(build_notifications("alice", &c).is_empty());
     }
 
     #[test]
@@ -399,10 +510,11 @@ mod tests {
             ..Default::default()
         }));
 
-        let derived = derive("alice", &c).expect("quote should notify");
-        assert_eq!(derived.notification_type, NotificationKind::Quote);
-        assert_eq!(derived.to_identity, "bob");
-        assert_eq!(derived.target, Some(quoted));
+        let notification = single(build_notifications("alice", &c))
+            .expect("quote should notify");
+        assert_eq!(notification.kind, NotificationKind::Quote);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, Some(quoted));
     }
 
     #[test]
@@ -412,10 +524,11 @@ mod tests {
             post: Some(target.clone()),
         }));
 
-        let derived = derive("alice", &c).expect("repost should notify");
-        assert_eq!(derived.notification_type, NotificationKind::Repost);
-        assert_eq!(derived.to_identity, "bob");
-        assert_eq!(derived.target, Some(target));
+        let notification = single(build_notifications("alice", &c))
+            .expect("repost should notify");
+        assert_eq!(notification.kind, NotificationKind::Repost);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, Some(target));
     }
 
     #[test]
@@ -427,10 +540,11 @@ mod tests {
             positive: true,
         }));
 
-        let derived = derive("alice", &c).expect("reaction should notify");
-        assert_eq!(derived.notification_type, NotificationKind::Reaction);
-        assert_eq!(derived.to_identity, "bob");
-        assert_eq!(derived.target, Some(target));
+        let notification = single(build_notifications("alice", &c))
+            .expect("reaction should notify");
+        assert_eq!(notification.kind, NotificationKind::Reaction);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, Some(target));
     }
 
     #[test]
@@ -439,10 +553,11 @@ mod tests {
             identity: "bob".to_string(),
         }));
 
-        let derived = derive("alice", &c).expect("follow should notify");
-        assert_eq!(derived.notification_type, NotificationKind::Follow);
-        assert_eq!(derived.to_identity, "bob");
-        assert_eq!(derived.target, None);
+        let notification = single(build_notifications("alice", &c))
+            .expect("follow should notify");
+        assert_eq!(notification.kind, NotificationKind::Follow);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, None);
     }
 
     #[test]
@@ -450,7 +565,7 @@ mod tests {
         let c = content(ContentBody::Follow(Follow {
             identity: "alice".to_string(),
         }));
-        assert!(derive("alice", &c).is_none());
+        assert!(build_notifications("alice", &c).is_empty());
     }
 
     #[test]
@@ -458,12 +573,83 @@ mod tests {
         let c = content(ContentBody::Block(Block {
             identity: "bob".to_string(),
         }));
-        assert!(derive("alice", &c).is_none());
+        assert!(build_notifications("alice", &c).is_empty());
     }
 
     #[test]
     fn empty_content_does_not_notify() {
-        assert!(derive("alice", &Content { content_body: None }).is_none());
+        assert!(
+            build_notifications("alice", &Content { content_body: None })
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn verification_target_notifies_every_target_identity() {
+        let claim = event_key("alice");
+        let c = content(ContentBody::VerificationTarget(VerificationTarget {
+            claim_event_key: Some(claim.clone()),
+            target_identities: vec!["bob".to_string(), "carol".to_string()],
+        }));
+
+        let notifications = build_notifications("alice", &c);
+        assert_eq!(notifications.len(), 2);
+        for (d, expected) in notifications.iter().zip(["bob", "carol"]) {
+            assert_eq!(d.kind, NotificationKind::VerificationRequest);
+            assert_eq!(d.to_identity, expected);
+            assert_eq!(d.target, Some(claim.clone()));
+        }
+    }
+
+    #[test]
+    fn verification_target_excludes_the_author() {
+        let c = content(ContentBody::VerificationTarget(VerificationTarget {
+            claim_event_key: Some(event_key("alice")),
+            target_identities: vec!["alice".to_string(), "bob".to_string()],
+        }));
+
+        let notifications = build_notifications("alice", &c);
+        assert_eq!(notifications.len(), 1);
+        assert_eq!(notifications[0].to_identity, "bob");
+    }
+
+    #[test]
+    fn verification_verify_notifies_the_claim_owner() {
+        let claim = event_key("bob");
+        let c = content(ContentBody::VerificationVerify(VerificationVerify {
+            claim_event_key: Some(claim.clone()),
+        }));
+
+        let notification = single(build_notifications("alice", &c))
+            .expect("a verify of another identity's claim should notify");
+        assert_eq!(notification.kind, NotificationKind::VerificationComplete);
+        assert_eq!(notification.to_identity, "bob");
+        assert_eq!(notification.target, Some(claim));
+    }
+
+    #[test]
+    fn verifying_your_own_claim_does_not_notify() {
+        let c = content(ContentBody::VerificationVerify(VerificationVerify {
+            claim_event_key: Some(event_key("alice")),
+        }));
+        assert!(build_notifications("alice", &c).is_empty());
+    }
+
+    #[test]
+    fn verification_verify_without_claim_key_does_not_notify() {
+        let c = content(ContentBody::VerificationVerify(VerificationVerify {
+            claim_event_key: None,
+        }));
+        assert!(build_notifications("alice", &c).is_empty());
+    }
+
+    #[test]
+    fn verification_target_without_targets_does_not_notify() {
+        let c = content(ContentBody::VerificationTarget(VerificationTarget {
+            claim_event_key: Some(event_key("alice")),
+            target_identities: vec![],
+        }));
+        assert!(build_notifications("alice", &c).is_empty());
     }
 
     #[test]

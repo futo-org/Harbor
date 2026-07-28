@@ -2,10 +2,11 @@ use super::repository as token_repository;
 use crate::{
     context::Context,
     expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
+    render,
 };
 use log::{debug, warn};
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, Event, EventBundle, EventKey, PublicKey, content::ContentBody,
+    Content, ContentDigest, Event, Notification, NotificationKind, PublicKey,
 };
 use prost::Message;
 use sea_orm::{DbConn, DbErr, EnumIter};
@@ -116,29 +117,43 @@ impl NotificationManager {
         Ok(())
     }
 
-    /// Handle the sending of all notifications relevant to a given event.
-    pub async fn process_event(
+    /// Send the push (if any) for a notification addressed to `to_identity`.
+    /// The kind decides the message; the worker that produced the
+    /// notification has already picked the recipient, excluded self-actions,
+    /// and dropped unsolicited verifications.
+    pub async fn process_notification(
         &self,
         ctx: &Context,
-        event: &EventBundle,
+        to_identity: &str,
+        notification: &Notification,
     ) -> Result<(), NotificationError> {
-        // Decode the signed event (for the author identity) and its
-        // content (to detect replies). Anything that doesn't decode just
-        // produces no notification.
-        let Some(signed) = event.signed_event.as_ref() else {
-            return Ok(());
-        };
-        let Ok(decoded) = Event::decode(signed.event_bytes.as_slice()) else {
-            return Ok(());
-        };
-        let Some(key) = decoded.key.as_ref() else {
+        let Ok(kind) = NotificationKind::try_from(notification.kind) else {
             return Ok(());
         };
 
-        let Some(serialized) = event.serialized_content.as_ref() else {
+        // Decode the triggering event (for the author identity and collapse
+        // id) and its content (for the message body and deep link). Anything
+        // that doesn't decode just produces no push.
+        let Some(bundle) = notification.trigger_event.as_ref() else {
+            return Ok(());
+        };
+        let Some(signed) = bundle.signed_event.as_ref() else {
+            return Ok(());
+        };
+        let Ok(event) = Event::decode(signed.event_bytes.as_slice()) else {
+            return Ok(());
+        };
+        let Some(key) = event.key.as_ref() else {
+            return Ok(());
+        };
+        let Some(serialized) = bundle.serialized_content.as_ref() else {
             return Ok(());
         };
         let Ok(content) = Content::decode(serialized.content_bytes.as_slice()) else {
+            return Ok(());
+        };
+
+        let Some(rendered) = render::render(kind, key, &content) else {
             return Ok(());
         };
 
@@ -149,208 +164,35 @@ impl NotificationManager {
             .map(|b| format!("{b:02x}"))
             .collect();
 
-        self.process_reply_notifications(ctx, &collapse_id, key, &content)
-            .await?;
-
-        self.process_follower_notifications(ctx, &collapse_id, key, &content)
-            .await?;
-
-        Ok(())
-    }
-
-    /// Dispatches a notification to a user whose post has been replied to (if applicable)
-    async fn process_reply_notifications(
-        &self,
-        ctx: &Context,
-        collapse_id: &str,
-        key: &EventKey,
-        content: &Content,
-    ) -> Result<(), NotificationError> {
-        let Some(ContentBody::Post(post)) = &content.content_body else {
-            return Ok(());
-        };
-
-        let author = &key.identity;
-
-        // The reply target, when this is a post replying to someone other
-        // than the author (self-replies don't notify).
-        let Some(reply_recipient) = post
-            .reply
-            .as_ref()
-            .and_then(|reply| reply.parent.as_ref())
-            .map(|parent| parent.identity.clone())
-            .filter(|target| target != author)
-        else {
-            return Ok(());
-        };
-
         // Author's profile (display name + avatar), fetched over gRPC.
-        let profile = ctx.polycentric.profile(author).await;
-        let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
-
-        let body = match post.text.is_empty() {
-            true => "Replied to your post".to_string(),
-            false => "Replied: ".to_string() + &post.text.clone(),
-        };
-
-        // Deep link to this reply post, when it carries a signing key.
-        let data = key.signed_by.as_ref().map(|signed_by| ExpoPushData {
-            url: Self::post_url(author, &signed_by.key, key.sequence),
-        });
-
-        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
-
-        debug!("Firing reply notification: from={author} to={reply_recipient} key={key:?}");
-
-        let response = self
-            .send_to_identity(
-                ctx,
-                &reply_recipient,
-                NotificationData {
-                    collapse_id: collapse_id.to_owned(),
-                    title,
-                    body,
-                    data,
-                    rich_content,
-                },
-            )
-            .await?;
-
-        if let Some(errors) = Self::ticket_errors(&response) {
-            warn!(
-                "Reply notification errors: from={author} to={reply_recipient} key={key:?} errors=[{errors}]"
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Dispatches a notification to a user who is now being followed (if applicable)
-    async fn process_follower_notifications(
-        &self,
-        ctx: &Context,
-        collapse_id: &str,
-        key: &EventKey,
-        content: &Content,
-    ) -> Result<(), NotificationError> {
-        let Some(ContentBody::Follow(follow)) = &content.content_body else {
-            return Ok(());
-        };
-
         let author = &key.identity;
-
-        if &follow.identity == author {
-            return Ok(());
-        }
-
-        // Follower's profile (display name + avatar), fetched over gRPC.
         let profile = ctx.polycentric.profile(author).await;
         let title = profile.name.unwrap_or_else(|| "Anonymous".to_string());
+        let rich_content = avatar_rich_content(ctx, profile.avatar).await;
 
-        // Deep link to the follower's profile.
-        let data = Some(ExpoPushData {
-            url: Self::profile_url(author),
-        });
-
-        let rich_content = Self::avatar_rich_content(ctx, profile.avatar).await;
-
-        debug!(
-            "Firing follow notification: from={author} to={} key={key:?}",
-            follow.identity
-        );
+        debug!("Firing {kind:?} notification: from={author} to={to_identity} key={key:?}");
 
         let response = self
             .send_to_identity(
                 ctx,
-                &follow.identity,
+                to_identity,
                 NotificationData {
-                    collapse_id: collapse_id.to_owned(),
+                    collapse_id,
                     title,
-                    body: "Followed you".to_string(),
-                    data,
+                    body: rendered.body,
+                    data: rendered.url.map(|url| ExpoPushData { url }),
                     rich_content,
                 },
             )
             .await?;
 
-        if let Some(errors) = Self::ticket_errors(&response) {
+        if let Some(errors) = ticket_errors(&response) {
             warn!(
-                "Follow notification errors: from={author} to={} key={key:?} errors=[{errors}]",
-                follow.identity
+                "{kind:?} notification errors: from={author} to={to_identity} key={key:?} errors=[{errors}]"
             );
         }
 
         Ok(())
-    }
-
-    /// Build an app-openable deep link to a specific post, mirroring the
-    /// client's `Routes.tabs.post(identity, keyFingerprint, sequence)`:
-    /// `harbor:///{identity}/post/{keyFingerprint}/{sequence}`.
-    ///
-    /// `signing_key` is the post's signing key (`EventKey.signed_by`); its
-    /// first 8 bytes as lowercase hex form the fingerprint, matching the
-    /// client's `getKeyFingerprint`.
-    fn post_url(identity: &str, signing_key: &[u8], sequence: u64) -> String {
-        let key_fingerprint: String = signing_key
-            .iter()
-            .take(8)
-            .map(|b| format!("{b:02x}"))
-            .collect();
-
-        // `harbor` is the app's registered URL scheme (app.config.ts).
-        // The empty authority (`:///`) makes expo-router parse the whole tail
-        // as the route path.
-        format!("harbor:///{identity}/post/{key_fingerprint}/{sequence}")
-    }
-
-    /// Build an app-openable deep link to an identity's profile, mirroring the
-    /// client's `Routes.tabs.profile(identity)`: `harbor:///{identity}`.
-    fn profile_url(identity: &str) -> String {
-        format!("harbor:///{identity}")
-    }
-
-    /// Build the rich-content image (avatar) for a notification, when the
-    /// profile has an avatar and a CDN URL can be resolved. Returns `None`
-    /// otherwise — a missing avatar is never an error.
-    async fn avatar_rich_content(
-        ctx: &Context,
-        avatar: Option<ContentDigest>,
-    ) -> Option<ExpoRichContent> {
-        let digest = avatar?;
-        let cdn_url = ctx.polycentric.cdn_url().await?;
-        Some(ExpoRichContent {
-            image: Self::avatar_url(&cdn_url, &digest),
-        })
-    }
-
-    /// Build a public blob URL for `digest`, mirroring the server's
-    /// `/blob/{type}_{hex(value)}` route (and the client's `blobUrl`).
-    fn avatar_url(cdn_url: &str, digest: &ContentDigest) -> String {
-        let hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
-        format!("{cdn_url}/blob/{}_{}", digest.r#type, hex)
-    }
-
-    /// The error details of any failed tickets in a push response,
-    /// comma-separated, or `None` when every ticket succeeded. Lets callers
-    /// log failures while staying silent on success.
-    fn ticket_errors(response: &ExpoPushResponse) -> Option<String> {
-        let errors: Vec<&str> = response
-            .data
-            .iter()
-            .filter(|ticket| ticket.status == "error")
-            .map(|ticket| {
-                ticket
-                    .details
-                    .as_ref()
-                    .and_then(|details| details.error.as_deref())
-                    .unwrap_or("unknown error")
-            })
-            // DeviceNotRegistered is already handled by
-            // clean_unregistered_push_tokens
-            .filter(|error| *error != "DeviceNotRegistered")
-            .collect();
-
-        (!errors.is_empty()).then(|| errors.join(","))
     }
 
     /// Sends a push notification to every authorized key of an identity that
@@ -469,255 +311,67 @@ impl NotificationManager {
     }
 }
 
+/// Build the rich-content image (avatar) for a notification, when the
+/// profile has an avatar and a CDN URL can be resolved. Returns `None`
+/// otherwise — a missing avatar is never an error.
+async fn avatar_rich_content(
+    ctx: &Context,
+    avatar: Option<ContentDigest>,
+) -> Option<ExpoRichContent> {
+    let digest = avatar?;
+    let cdn_url = ctx.polycentric.cdn_url().await?;
+    // Public blob URL, mirroring the server's `/blob/{type}_{hex(value)}`
+    // route (and the client's `blobUrl`).
+    let hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
+    Some(ExpoRichContent {
+        image: format!("{cdn_url}/blob/{}_{}", digest.r#type, hex),
+    })
+}
+
+/// The error details of any failed tickets in a push response,
+/// comma-separated, or `None` when every ticket succeeded. Lets callers
+/// log failures while staying silent on success.
+fn ticket_errors(response: &ExpoPushResponse) -> Option<String> {
+    let errors: Vec<&str> = response
+        .data
+        .iter()
+        .filter(|ticket| ticket.status == "error")
+        .map(|ticket| {
+            ticket
+                .details
+                .as_ref()
+                .and_then(|details| details.error.as_deref())
+                .unwrap_or("unknown error")
+        })
+        // DeviceNotRegistered is already handled by
+        // clean_unregistered_push_tokens
+        .filter(|error| *error != "DeviceNotRegistered")
+        .collect();
+
+    (!errors.is_empty()).then(|| errors.join(","))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{NotificationManager, PushService};
-    use crate::{context::Context, polycentric::PolycentricClient};
-    use polycentric_common::models::{
-        collections,
-        protos_v2::{
-            Content, Event, EventBundle, EventKey, Follow, Identity, KeyType, ListEventsRequest,
-            ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post, PostReply,
-            ProfileUpdate, PublicKey, PutEventsRequest, PutEventsResponse, SerializedContent,
-            SignedEvent,
-            content::ContentBody,
-            event_sync_service_server::{EventSyncService, EventSyncServiceServer},
-        },
-    };
-    use prost::Message;
-    use push_notifications_entity::push_token_model as PushTokenModel;
-    use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockExecResult};
-    use time::OffsetDateTime;
-    use tokio_stream::wrappers::TcpListenerStream;
-    use tonic::{Request, Response, Status};
+    use crate::testing::*;
+    use polycentric_common::models::protos_v2::{EventBundle, Notification, NotificationKind};
+    use sea_orm::{DbBackend, MockDatabase, MockExecResult};
 
-    /// A mock `EventSyncService` that answers `ListEvents` with canned data
-    /// per collection: a PROFILE event carrying `profile_name`, and an
-    /// IDENTITY event carrying `identity_keys`. Every other query is empty.
-    #[derive(Clone)]
-    struct MockEventSync {
-        profile_name: Option<String>,
-        identity_keys: Vec<PublicKey>,
-    }
-
-    #[tonic::async_trait]
-    impl EventSyncService for MockEventSync {
-        async fn list_events(
-            &self,
-            request: Request<ListEventsRequest>,
-        ) -> Result<Response<ListEventsResponse>, Status> {
-            let collection = request.into_inner().filters.and_then(|f| f.collection);
-
-            let event_bundles = match collection {
-                Some(c) if c == collections::PROFILE => self
-                    .profile_name
-                    .clone()
-                    .map(|name| {
-                        vec![canned_bundle(Content {
-                            content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
-                                name: Some(name),
-                                avatar: None,
-                                banner: None,
-                                description: None,
-                                alias: None,
-                            })),
-                        })]
-                    })
-                    .unwrap_or_default(),
-                Some(c) if c == collections::IDENTITY => {
-                    if self.identity_keys.is_empty() {
-                        vec![]
-                    } else {
-                        vec![canned_bundle(Content {
-                            content_body: Some(ContentBody::Identity(Identity {
-                                rotation_keys: vec![],
-                                signing_keys: self.identity_keys.clone(),
-                                revocation_bounds: vec![],
-                                servers: None,
-                            })),
-                        })]
-                    }
-                }
-                _ => vec![],
-            };
-
-            Ok(Response::new(ListEventsResponse {
-                event_bundles,
-                event_hints: vec![],
-            }))
-        }
-
-        async fn put_events(
-            &self,
-            _request: Request<PutEventsRequest>,
-        ) -> Result<Response<PutEventsResponse>, Status> {
-            Ok(Response::new(PutEventsResponse {
-                errors: vec![],
-                requested_blobs: vec![],
-            }))
-        }
-
-        async fn list_heads(
-            &self,
-            _request: Request<ListHeadsRequest>,
-        ) -> Result<Response<ListHeadsResponse>, Status> {
-            Err(Status::unimplemented("not needed for these tests"))
+    /// A `Notification` of `kind` triggered by `trigger`, as the worker
+    /// produces them.
+    fn notification(kind: NotificationKind, trigger: EventBundle) -> Notification {
+        Notification {
+            trigger_event: Some(trigger),
+            target_event: None,
+            kind: kind as i32,
         }
     }
 
-    /// Spawn `mock` on an ephemeral local port and return a client pointed
-    /// at it. The listener is bound before serving, so the lazily-connecting
-    /// client never races the bind.
-    async fn spawn_polycentric(mock: MockEventSync) -> PolycentricClient {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        tokio::spawn(async move {
-            tonic::transport::Server::builder()
-                .add_service(EventSyncServiceServer::new(mock))
-                .serve_with_incoming(TcpListenerStream::new(listener))
-                .await
-                .unwrap();
-        });
-        PolycentricClient::new(vec![format!("http://{addr}")])
-    }
-
-    /// Wrap `content` in a minimal bundle. `latest_content` only decodes —
-    /// it never verifies — so an unsigned, sequence-1 event suffices.
-    fn canned_bundle(content: Content) -> EventBundle {
-        authored_bundle("", content)
-    }
-
-    /// Build a bundle authored by `author` carrying `content`.
-    fn authored_bundle(author: &str, content: Content) -> EventBundle {
-        let event = Event {
-            key: Some(EventKey {
-                collection: collections::FEED,
-                identity: author.to_string(),
-                // Known signing key so post_url's fingerprint (first 8 bytes
-                // as hex → "abababababababab") is deterministic/assertable.
-                signed_by: Some(PublicKey {
-                    key_type: KeyType::Ed25519 as i32,
-                    key: vec![0xAB; 32],
-                }),
-                sequence: 1,
-            }),
-            identity_sequence: 0,
-            vector_clock: None,
-            previous_signature: vec![],
-            content_digest: None,
-            created_at: 0,
-            previous_root: vec![],
-        };
-        EventBundle {
-            signed_event: Some(SignedEvent {
-                // Non-empty 64-byte signature (bytes 0x00..0x3f) so collapse_id
-                // derivation — hex of the first 28 bytes, with no type prefix —
-                // is exercised and assertable by the happy-path tests.
-                signature: (0u8..64).collect(),
-                event_bytes: event.encode_to_vec(),
-            }),
-            serialized_content: Some(SerializedContent {
-                content_bytes: content.encode_to_vec(),
-            }),
-            event_proofs: vec![],
-            meta: None,
-        }
-    }
-
-    /// A post by `author` replying to a post by `parent_identity`, carrying
-    /// the given `text` body.
-    fn reply_post_bundle_with_text(author: &str, parent_identity: &str, text: &str) -> EventBundle {
-        authored_bundle(
-            author,
-            Content {
-                content_body: Some(ContentBody::Post(Post {
-                    text: text.to_string(),
-                    reply: Some(PostReply {
-                        root: None,
-                        parent: Some(EventKey {
-                            collection: collections::FEED,
-                            identity: parent_identity.to_string(),
-                            signed_by: None,
-                            sequence: 1,
-                        }),
-                    }),
-                    images: vec![],
-                    links: vec![],
-                    quote: None,
-                })),
-            },
-        )
-    }
-
-    /// A post by `author` replying to a post by `parent_identity` (body "hi").
-    fn reply_post_bundle(author: &str, parent_identity: &str) -> EventBundle {
-        reply_post_bundle_with_text(author, parent_identity, "hi")
-    }
-
-    /// A plain (non-reply) post by `author`.
-    fn plain_post_bundle(author: &str) -> EventBundle {
-        authored_bundle(
-            author,
-            Content {
-                content_body: Some(ContentBody::Post(Post {
-                    text: "hi".to_string(),
-                    reply: None,
-                    images: vec![],
-                    links: vec![],
-                    quote: None,
-                })),
-            },
-        )
-    }
-
-    /// A follow of `followee` authored by `author`.
-    fn follow_bundle(author: &str, followee: &str) -> EventBundle {
-        authored_bundle(
-            author,
-            Content {
-                content_body: Some(ContentBody::Follow(Follow {
-                    identity: followee.to_string(),
-                })),
-            },
-        )
-    }
-
-    /// A registered Expo `push_token` row for `public_key`.
-    fn token_row(public_key: &[u8], token: &str) -> PushTokenModel::Model {
-        PushTokenModel::Model {
-            public_key_type: KeyType::Ed25519 as i16,
-            public_key: public_key.to_vec(),
-            service: PushService::Expo.as_ref().to_string(),
-            token: token.to_string(),
-            created_at: OffsetDateTime::UNIX_EPOCH,
-            updated_at: OffsetDateTime::UNIX_EPOCH,
-        }
-    }
-
-    fn test_public_key(byte: u8) -> PublicKey {
-        PublicKey {
-            key_type: KeyType::Ed25519 as i32,
-            key: vec![byte; 32],
-        }
-    }
-
-    fn make_ctx(
-        db: DatabaseConnection,
-        expo_push_url: String,
-        polycentric: PolycentricClient,
-    ) -> Context {
-        Context {
-            db,
-            notification_manager: NotificationManager::with_custom_push_url(None, expo_push_url),
-            polycentric,
-            main_server: String::new(),
-        }
-    }
-
-    /// Reply path end-to-end: a reply post triggers exactly one Expo push to
-    /// the reply recipient, titled with the author's RPC-fetched display name.
+    /// Happy path end-to-end: a reply notification triggers exactly one Expo
+    /// push to the recipient, titled with the author's RPC-fetched display
+    /// name and carrying the rendered body and deep link.
     #[tokio::test]
-    async fn process_event_notifies_reply_recipient_via_expo() {
+    async fn notifies_the_recipient_via_expo() {
         let mut expo_server = mockito::Server::new_async().await;
         let send_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
@@ -749,77 +403,51 @@ mod tests {
             .into_connection();
 
         let ctx = make_ctx(db, expo_push_url, polycentric);
-        let bundle = reply_post_bundle("id-author", "id-recipient");
+        let n = notification(NotificationKind::Reply, reply_post_bundle("id-author"));
 
         ctx.notification_manager
-            .process_event(&ctx, &bundle)
+            .process_notification(&ctx, "id-recipient", &n)
             .await
-            .expect("process_event should succeed");
+            .expect("process_notification should succeed");
 
         send_mock.assert_async().await;
     }
 
-    /// A reply with an empty text body falls back to the generic
-    /// "Replied to your post" body rather than "Replied: ".
+    /// Kinds without a push message (repost, reaction, quote) never call Expo.
     #[tokio::test]
-    async fn process_event_reply_with_no_text_uses_generic_body() {
+    async fn skips_kinds_that_render_nothing() {
         let mut expo_server = mockito::Server::new_async().await;
         let send_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
-            .match_header("content-type", "application/json")
-            .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Replied to your post","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b"}]"#
-                    .to_string(),
-            ))
             .with_status(200)
-            .with_header("content-type", "application/json; charset=utf-8")
-            .with_body(
-                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
-            )
-            .expect(1)
+            .with_body("{}")
+            .expect(0)
             .create_async()
             .await;
         let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
 
-        let pk = test_public_key(1);
         let polycentric = spawn_polycentric(MockEventSync {
             profile_name: Some("Alice".to_string()),
-            identity_keys: vec![pk.clone()],
+            identity_keys: vec![],
         })
         .await;
 
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
-            .into_connection();
-
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let ctx = make_ctx(db, expo_push_url, polycentric);
-        let bundle = reply_post_bundle_with_text("id-author", "id-recipient", "");
+        let n = notification(NotificationKind::Repost, reply_post_bundle("id-author"));
 
         ctx.notification_manager
-            .process_event(&ctx, &bundle)
+            .process_notification(&ctx, "id-recipient", &n)
             .await
-            .expect("process_event should succeed");
+            .expect("process_notification should succeed");
 
         send_mock.assert_async().await;
     }
 
     /// A `DeviceNotRegistered` ticket from Expo removes the token via a
     /// DELETE on `push_token`.
-    /// Whether the mock DB recorded a DELETE against `push_token`. Consumes
-    /// the connection (it drains the transaction log).
-    fn saw_push_token_delete(db: DatabaseConnection) -> bool {
-        db.into_transaction_log().iter().any(|tx| {
-            tx.statements().iter().any(|stmt| {
-                let sql = stmt.sql.to_ascii_uppercase();
-                sql.starts_with("DELETE") && sql.contains("PUSH_TOKEN")
-            })
-        })
-    }
-
-    /// A `DeviceNotRegistered` ticket from Expo removes the token via a
-    /// DELETE on `push_token`.
     #[tokio::test]
-    async fn process_event_unregisters_token_on_device_not_registered() {
+    async fn unregisters_token_on_device_not_registered() {
         let mut expo_server = mockito::Server::new_async().await;
         let send_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
@@ -850,12 +478,12 @@ mod tests {
             .into_connection();
 
         let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
-        let bundle = reply_post_bundle("id-author", "id-recipient");
+        let n = notification(NotificationKind::Reply, reply_post_bundle("id-author"));
 
         ctx.notification_manager
-            .process_event(&ctx, &bundle)
+            .process_notification(&ctx, "id-recipient", &n)
             .await
-            .expect("process_event should succeed");
+            .expect("process_notification should succeed");
 
         send_mock.assert_async().await;
 
@@ -865,152 +493,12 @@ mod tests {
         );
     }
 
-    /// A non-reply post produces no notification, so Expo is never called.
-    #[tokio::test]
-    async fn process_event_ignores_post_without_reply() {
-        let mut expo_server = mockito::Server::new_async().await;
-        let send_mock = expo_server
-            .mock("POST", "/--/api/v2/push/send")
-            .with_status(200)
-            .with_body("{}")
-            .expect(0)
-            .create_async()
-            .await;
-        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
-
-        let polycentric = spawn_polycentric(MockEventSync {
-            profile_name: Some("Alice".to_string()),
-            identity_keys: vec![],
-        })
-        .await;
-
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = make_ctx(db, expo_push_url, polycentric);
-        let bundle = plain_post_bundle("id-author");
-
-        ctx.notification_manager
-            .process_event(&ctx, &bundle)
-            .await
-            .expect("process_event should succeed");
-
-        send_mock.assert_async().await;
-    }
-
-    /// Replying to your own post is not a notification to yourself.
-    #[tokio::test]
-    async fn process_event_skips_self_reply() {
-        let mut expo_server = mockito::Server::new_async().await;
-        let send_mock = expo_server
-            .mock("POST", "/--/api/v2/push/send")
-            .with_status(200)
-            .with_body("{}")
-            .expect(0)
-            .create_async()
-            .await;
-        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
-
-        let polycentric = spawn_polycentric(MockEventSync {
-            profile_name: Some("Alice".to_string()),
-            identity_keys: vec![],
-        })
-        .await;
-
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = make_ctx(db, expo_push_url, polycentric);
-        // Author replies to themselves → filtered out.
-        let bundle = reply_post_bundle("id-author", "id-author");
-
-        ctx.notification_manager
-            .process_event(&ctx, &bundle)
-            .await
-            .expect("process_event should succeed");
-
-        send_mock.assert_async().await;
-    }
-
-    /// Follow path end-to-end: a follow triggers exactly one Expo push to the
-    /// followed profile, titled with the follower's RPC-fetched display name.
-    #[tokio::test]
-    async fn process_event_notifies_followed_profile_via_expo() {
-        let mut expo_server = mockito::Server::new_async().await;
-        let send_mock = expo_server
-            .mock("POST", "/--/api/v2/push/send")
-            .match_header("content-type", "application/json")
-            .match_body(mockito::Matcher::PartialJsonString(
-                r#"[{"to":["ExponentPushToken[abc123]"],"title":"Alice","body":"Followed you","collapseId":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b","data":{"url":"harbor:///id-author"}}]"#
-                    .to_string(),
-            ))
-            .with_status(200)
-            .with_header("content-type", "application/json; charset=utf-8")
-            .with_body(
-                r#"{"data":[{"status":"ok","id":"00000000-0000-0000-0000-000000000001"}]}"#,
-            )
-            .expect(1)
-            .create_async()
-            .await;
-        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
-
-        let pk = test_public_key(1);
-        let polycentric = spawn_polycentric(MockEventSync {
-            profile_name: Some("Alice".to_string()),
-            identity_keys: vec![pk.clone()],
-        })
-        .await;
-
-        let db = MockDatabase::new(DbBackend::Postgres)
-            // token_for_public_key(followee's authorized key) → one token
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
-            .into_connection();
-
-        let ctx = make_ctx(db, expo_push_url, polycentric);
-        let bundle = follow_bundle("id-author", "id-followee");
-
-        ctx.notification_manager
-            .process_event(&ctx, &bundle)
-            .await
-            .expect("process_event should succeed");
-
-        send_mock.assert_async().await;
-    }
-
-    /// Following yourself is not a notification to yourself.
-    #[tokio::test]
-    async fn process_event_skips_self_follow() {
-        let mut expo_server = mockito::Server::new_async().await;
-        let send_mock = expo_server
-            .mock("POST", "/--/api/v2/push/send")
-            .with_status(200)
-            .with_body("{}")
-            .expect(0)
-            .create_async()
-            .await;
-        let expo_push_url = format!("{}/--/api/v2/push/send", expo_server.url());
-
-        let polycentric = spawn_polycentric(MockEventSync {
-            profile_name: Some("Alice".to_string()),
-            identity_keys: vec![],
-        })
-        .await;
-
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = make_ctx(db, expo_push_url, polycentric);
-        // Author follows themselves → filtered out.
-        let bundle = follow_bundle("id-author", "id-author");
-
-        ctx.notification_manager
-            .process_event(&ctx, &bundle)
-            .await
-            .expect("process_event should succeed");
-
-        send_mock.assert_async().await;
-    }
-
     /// When Expo returns a ticket count that doesn't match the number of
     /// tokens sent, positional correlation is unreliable, so the unregister
     /// pass is skipped entirely — no token is removed (even though the
     /// tickets say `DeviceNotRegistered`).
     #[tokio::test]
-    async fn process_event_skips_token_cleanup_on_ticket_count_mismatch() {
+    async fn skips_token_cleanup_on_ticket_count_mismatch() {
         let mut expo_server = mockito::Server::new_async().await;
         let send_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
@@ -1040,12 +528,12 @@ mod tests {
             .into_connection();
 
         let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
-        let bundle = reply_post_bundle("id-author", "id-recipient");
+        let n = notification(NotificationKind::Reply, reply_post_bundle("id-author"));
 
         ctx.notification_manager
-            .process_event(&ctx, &bundle)
+            .process_notification(&ctx, "id-recipient", &n)
             .await
-            .expect("process_event should succeed");
+            .expect("process_notification should succeed");
 
         send_mock.assert_async().await;
         assert!(
@@ -1057,7 +545,7 @@ mod tests {
     /// A ticket error other than `DeviceNotRegistered` (e.g. a transient
     /// `MessageRateExceeded`) must not unregister the token.
     #[tokio::test]
-    async fn process_event_keeps_token_on_non_device_not_registered_error() {
+    async fn keeps_token_on_non_device_not_registered_error() {
         let mut expo_server = mockito::Server::new_async().await;
         let send_mock = expo_server
             .mock("POST", "/--/api/v2/push/send")
@@ -1084,12 +572,12 @@ mod tests {
             .into_connection();
 
         let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
-        let bundle = reply_post_bundle("id-author", "id-recipient");
+        let n = notification(NotificationKind::Reply, reply_post_bundle("id-author"));
 
         ctx.notification_manager
-            .process_event(&ctx, &bundle)
+            .process_notification(&ctx, "id-recipient", &n)
             .await
-            .expect("process_event should succeed");
+            .expect("process_notification should succeed");
 
         send_mock.assert_async().await;
         assert!(

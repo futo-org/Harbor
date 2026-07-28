@@ -236,6 +236,36 @@ impl Query {
             .collect())
     }
 
+    /// True when the claim's own owner has published a VerificationTarget
+    /// naming `target_identity` for `claim_key` — i.e. that identity was
+    /// requested to verify the claim.
+    pub async fn was_verification_requested(
+        db: &DbConn,
+        claim_key: &TargetEventKey,
+        target_identity: &str,
+    ) -> Result<bool, DbErr> {
+        let count = EventModel::Entity::find()
+            .join(JoinType::InnerJoin, content_join())
+            .join(JoinType::InnerJoin, target_join())
+            .filter(EventModel::Column::Collection.eq(VERIFICATIONS_COLLECTION))
+            .filter(TargetModel::Column::TargetIdentity.eq(target_identity))
+            .filter(claim_keys_condition!(
+                TargetModel,
+                std::slice::from_ref(claim_key)
+            ))
+            // Only the claim's own owner can ask for its verification.
+            .filter(
+                Expr::col((EventModel::Entity, EventModel::Column::Identity))
+                    .equals((
+                        TargetModel::Entity,
+                        TargetModel::Column::ClaimEventKeyIdentity,
+                    )),
+            )
+            .count(db)
+            .await?;
+        Ok(count > 0)
+    }
+
     /// VerificationClaim events matching the given keys exactly. Newest
     /// first by sequence, tombstones NOT yet filtered.
     pub async fn list_claim_events_by_keys(
