@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Linking, Modal, Platform, View } from 'react-native';
+import { fetch } from 'expo/fetch';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Button, Text } from '@/src/common/components';
 import * as Application from 'expo-application';
+
+type ApkBuildProfile = 'preview' | 'production-apk';
+
+const RELEASE_URL = process.env.EXPO_PUBLIC_RELEASE_URL;
+const BUILD_PROFILE = process.env.EXPO_PUBLIC_BUILD_PROFILE;
 
 export interface LatestRelease {
   buildNumber: number;
@@ -11,13 +17,18 @@ export interface LatestRelease {
   apkUrl: string;
 }
 
-export async function fetchLatestRelease(): Promise<LatestRelease> {
-  return {
-    buildNumber: 42,
-    version: 'v2.0.9',
-    apkUrl:
-      'https://gitlab.futo.org/polycentric/polycentric/-/releases/v2.0.9/downloads/polycentric-android.apk',
-  };
+export async function fetchLatestRelease(
+  buildProfile: ApkBuildProfile,
+): Promise<LatestRelease> {
+  const response = await fetch(
+    `${RELEASE_URL}/android/${buildProfile}/latest.json`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Release check failed: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export function UpdateModal() {
@@ -31,9 +42,15 @@ export function UpdateModal() {
   };
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (
+      Platform.OS !== 'android' ||
+      !RELEASE_URL ||
+      (BUILD_PROFILE !== 'preview' && BUILD_PROFILE !== 'production-apk')
+    ) {
+      return;
+    }
 
-    void fetchLatestRelease().then((release) => {
+    void fetchLatestRelease(BUILD_PROFILE).then((release) => {
       const installedBuildNumber = Number(Application.nativeBuildVersion);
       if (
         Number.isNaN(installedBuildNumber) ||
@@ -61,14 +78,8 @@ export function UpdateModal() {
             justifyContent: 'center',
           }}
         >
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 320,
-              gap: Spacing['4xl'],
-            }}
-          >
-            <View style={{ gap: Spacing.md }}>
+          <View style={[Atoms.w_full, Atoms.gap_3xl, { maxWidth: 320 }]}>
+            <View style={[Atoms.gap_md]}>
               <Text variant="title" fontSize={32} lineHeight={32}>
                 New Update
                 {'\n'}
@@ -81,7 +92,7 @@ export function UpdateModal() {
               </Text>
             </View>
 
-            <View style={{ width: '100%', gap: Spacing.sm }}>
+            <View style={[Atoms.w_full, Atoms.gap_sm]}>
               <Button title="Update Now" fullWidth onPress={onUpdateNow} />
               <Button
                 variant="tertiary"
