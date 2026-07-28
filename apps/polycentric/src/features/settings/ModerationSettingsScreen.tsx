@@ -53,7 +53,7 @@ function SegmentedOption({
         justifyContent: 'center',
         gap: 3,
         paddingVertical: 6,
-        paddingHorizontal: 4,
+        paddingHorizontal: 8,
         borderRadius: 8,
         backgroundColor: isActive ? theme.palette.primary_500 : 'transparent',
       }}
@@ -74,7 +74,13 @@ function SegmentedOption({
   );
 }
 
-function ModerationLabelRow({ labelKey }: { labelKey: LabelKey }) {
+function ModerationLabelRow({
+  labelKey,
+  index,
+}: {
+  labelKey: LabelKey;
+  index: number;
+}) {
   const { theme } = useTheme();
   const moderation = useSettings((s) => s.moderation);
   const setModeration = useSettings((s) => s.setModeration);
@@ -83,7 +89,22 @@ function ModerationLabelRow({ labelKey }: { labelKey: LabelKey }) {
   const currentLevel = moderation[labelKey];
 
   return (
-    <View style={[Atoms.flex_row, Atoms.items_center, Atoms.justify_between]}>
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.items_center,
+        Atoms.justify_between,
+        Atoms.py_sm,
+        Atoms.px_sm,
+        Atoms.rounded_sm,
+        {
+          backgroundColor:
+            index % 2 !== 0
+              ? withHexOpacity(theme.palette.neutral_500, '20')
+              : 'transparent',
+        },
+      ]}
+    >
       <Text variant="body" fontWeight="semibold">
         {entry.name}
       </Text>
@@ -93,7 +114,6 @@ function ModerationLabelRow({ labelKey }: { labelKey: LabelKey }) {
           Atoms.rounded_md,
           {
             overflow: 'hidden',
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
           },
         ]}
       >
@@ -120,9 +140,9 @@ export function ModerationSettingsSheet() {
         title="Content Moderation"
         onClose={() => router.canGoBack() && router.back()}
       />
-      <Sheet.Content style={[Atoms.gap_md]}>
-        {labelKeys.map((key) => (
-          <ModerationLabelRow key={key} labelKey={key} />
+      <Sheet.Content style={[Atoms.gap_0]}>
+        {labelKeys.map((key, i) => (
+          <ModerationLabelRow key={key} labelKey={key} index={i} />
         ))}
       </Sheet.Content>
     </Sheet>
