@@ -23,8 +23,7 @@ use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
-use crate::service::stats::repository::Query as StatsRepository;
-use crate::service::stats::service::rows_to_bundles_with_meta;
+use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
@@ -234,8 +233,8 @@ pub async fn hydrate(
         .map_err(map_db_err)
     };
 
-    let reply_counts_fut = async {
-        StatsRepository::count_replies(&ctx.db, display_keys.clone())
+    let stats_fut = async {
+        gather_stats_for(&ctx.db, &display_keys)
             .await
             .map_err(map_db_err)
     };
@@ -246,14 +245,14 @@ pub async fn hydrate(
         profile_events,
         referenced,
         label_events,
-        reply_counts,
+        stats,
     ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
         profile_events_fut,
         referenced_fut,
         labels_fut,
-        reply_counts_fut,
+        stats_fut,
     )?;
 
     let mut quote_post_events = Vec::new();
@@ -274,7 +273,7 @@ pub async fn hydrate(
         quote_post_events,
         repost_events,
         label_events,
-        reply_counts,
+        stats,
     })
 }
 
@@ -497,11 +496,11 @@ pub async fn view(
         identity_events,
         profile_events,
         label_events,
-        reply_counts,
+        stats,
         ..
     } = hydration;
 
-    let mut event_bundles = rows_to_bundles_with_meta(live_rows, &reply_counts);
+    let mut event_bundles = assemble_bundles(live_rows, &stats);
 
     let mut label_bundles = rows_to_bundles(label_events);
 
@@ -519,7 +518,7 @@ pub async fn view(
         .chain(event_hints)
         .collect();
 
-    let mut event_hints = rows_to_bundles_with_meta(hint_rows, &reply_counts)
+    let mut event_hints = assemble_bundles(hint_rows, &stats)
         .into_iter()
         .map(|bundle| EventHint {
             event_bundle: Some(bundle),

@@ -1,9 +1,12 @@
 //! Shared bundle/hint merge and deduplication helpers used by many RPCs
 
+use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::{cmp, mem};
 
-use polycentric_common::models::protos_v2::{Event, EventBundle, EventHint, EventMetadata};
+use polycentric_common::models::protos_v2::{
+    Event, EventBundle, EventHint, EventMetadata, ReactionTally,
+};
 use prost::Message;
 
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
@@ -75,10 +78,7 @@ pub fn merge_bundle(left: EventBundle, right: EventBundle) -> EventBundle {
         right.event_proofs
     };
 
-    let meta = match (left.meta, right.meta) {
-        (Some(left), Some(right)) => Some(merge_bundle_meta(left, right)),
-        _ => left.meta.or(right.meta),
-    };
+    let meta = merge_opt(left.meta, right.meta, merge_bundle_meta);
 
     EventBundle {
         signed_event,
@@ -135,10 +135,61 @@ pub fn merge_event_hints(hints: &mut Vec<EventHint>) {
 }
 
 fn merge_bundle_meta(left: EventMetadata, right: EventMetadata) -> EventMetadata {
-    let reply_count = match (left.reply_count, right.reply_count) {
-        (Some(left), Some(right)) => Some(cmp::max(left, right)),
-        _ => left.reply_count.or(right.reply_count),
-    };
+    let reply_count = cmp::max(left.reply_count, right.reply_count);
+    let reaction_count = cmp::max(left.reaction_count, right.reaction_count);
+    let upvote_count = cmp::max(left.upvote_count, right.upvote_count);
+    let downvote_count = cmp::max(left.downvote_count, right.downvote_count);
+    let emoji_reactions = merge_reactions(left.emoji_reactions, right.emoji_reactions);
 
-    EventMetadata { reply_count }
+    EventMetadata {
+        reply_count,
+        reaction_count,
+        upvote_count,
+        downvote_count,
+        emoji_reactions,
+    }
+}
+
+fn merge_reactions(left: Vec<ReactionTally>, right: Vec<ReactionTally>) -> Vec<ReactionTally> {
+    let mut merged = HashMap::<(String, bool), i32>::new();
+
+    // Iterate over all reactions and deduplicate.
+    for tally in left.into_iter().chain(right) {
+        let key = (tally.emoji, tally.positive);
+
+        merged
+            .entry(key)
+            .and_modify(|count| *count = cmp::max(*count, tally.count))
+            .or_insert(tally.count);
+    }
+
+    // Collect back into a vector and sort by most popular.
+    let mut merged: Vec<ReactionTally> = merged
+        .into_iter()
+        .map(|((emoji, positive), count)| ReactionTally {
+            emoji,
+            positive,
+            count,
+        })
+        .collect();
+
+    merged.sort_unstable_by(|a, b| {
+        let left = Reverse((a.count, &a.emoji, a.positive));
+        let right = Reverse((b.count, &b.emoji, b.positive));
+        left.cmp(&right)
+    });
+
+    merged
+}
+
+/// Merge an optional value using `merge()` only if both values are present.
+fn merge_opt<T, MergeFn: FnOnce(T, T) -> T>(
+    left: Option<T>,
+    right: Option<T>,
+    merge: MergeFn,
+) -> Option<T> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(merge(left, right)),
+        (left, right) => left.or(right),
+    }
 }

@@ -8,9 +8,21 @@ import {
   type QueryKey,
   useQueryStore,
 } from '@/src/common/query/hooks/useQuery';
+import {
+  CounterOverlay,
+  type Reaction,
+  ReactionOverlay,
+  type PostEntry,
+  type PostOverlay,
+} from './overlayTypes';
 import { v2 } from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { create } from 'zustand';
+import {
+  applyPostOverlay,
+  patchPostOverlay,
+  updatePostEntry,
+} from './overlayOps';
 
 export const feedQueryKeys = {
   following: (): string[] => ['following_feed'],
@@ -32,153 +44,6 @@ function postId(post: PostData): string {
 
 /** Use this as a stable reference for an empty feed output */
 const EMPTY_FEED: PostData[] = Object.freeze([] as PostData[]) as PostData[];
-
-/**
- * Stores the overlay for one counter.
- * Use this when we have a local changes that may take time to be present in
- * server responses.
- * We store a local offset from the server's value and only discard it once
- * the server's value equals or exceeds our believed value.
- * If remote changes happen concurrently with our overlay, it is possible that
- * we never discard the overlay (but this is probably an acceptable outcome).
- * This type is immutable so that updating overlay state can be a pure function.
- */
-class CounterOverlay {
-  /** Latest server value that we know of */
-  readonly original: number;
-
-  /** Our offset from `original` */
-  readonly localOffset: number;
-
-  constructor(count: number, offset: number) {
-    this.original = count;
-    this.localOffset = offset;
-  }
-
-  /** Resolve the local value of the counter */
-  get(): number {
-    return this.original + this.localOffset;
-  }
-
-  /**
-   * Change the local offset so that the local value of the counter resolves
-   * to `count`.
-   * Returns `undefined` iff the new overlay would have a offset of 0.
-   */
-  localUpdate(count: number | undefined): CounterOverlay | undefined {
-    if (count === undefined) return this;
-
-    const newOffset = count - this.original;
-    if (newOffset === 0) return undefined;
-
-    return new CounterOverlay(this.original, newOffset);
-  }
-
-  /**
-   * Acknowledge a new server value of `count` and update our local state.
-   * Returns `undefined` iff we should discard the overlay and take the server's
-   * data.
-   */
-  remoteUpdate(count: number | undefined): CounterOverlay | undefined {
-    if (count === undefined) return this;
-    const newOffset = this.get() - count;
-
-    // Check whether the server has reached or exceeded our offset
-    if (newOffset * this.localOffset <= 0) {
-      return undefined;
-    }
-
-    return new CounterOverlay(count, newOffset);
-  }
-}
-
-/**
- * Stores the overlay for a `PostData` object.
- * This accounts for local state that a server may not have taken into account
- * when it sends a post to us.
- */
-type PostOverlay = {
-  replyCount: CounterOverlay | undefined;
-};
-
-const EMPTY_POST_OVERLAY: PostOverlay = Object.freeze({
-  replyCount: undefined,
-} as PostOverlay);
-
-/** Apply the patch to the overlay or return `undefined` if all of the overlays are undefined now. */
-function patchPostOverlay(
-  orig: PostOverlay | undefined,
-  patch: Partial<PostOverlay>,
-): PostOverlay | undefined {
-  const overlay: PostOverlay = {
-    ...(orig ?? EMPTY_POST_OVERLAY),
-    ...patch,
-  };
-
-  return overlay.replyCount ? overlay : undefined;
-}
-
-/** Get the new post overlay, if any, after taking the latest data into account. */
-function updatePostOverlay(
-  orig: PostOverlay | undefined,
-  latest: PostData,
-): PostOverlay | undefined {
-  const replyCount = orig?.replyCount?.remoteUpdate(latest.replyCount);
-  return patchPostOverlay(orig, { replyCount });
-}
-
-/**
- * Mutate `post` to have `overlay` applied.
- * Should never be used on a `PostData` object that is already referenced by
- * the store.
- */
-function applyPostOverlay(post: PostData, overlay?: PostOverlay) {
-  const replyCount = overlay?.replyCount?.get();
-  if (replyCount !== undefined) {
-    post.replyCount = replyCount;
-  }
-}
-
-/**
- * Store a canonical `PostData` object for a post with the overlay applied,
- * along with the overlay that was used.
- * This object and its fields should be treated as immutable.
- */
-type PostEntry = {
-  post: PostData;
-  overlay: PostOverlay | undefined;
-};
-
-/**
- * Assume that `orig` and `updated` have the same post id and check whether any
- * metadata has changed.
- */
-function postChanged(orig: PostData, updated: PostData): boolean {
-  return orig.replyCount !== updated.replyCount;
-}
-
-/**
- * Consume both `orig` and `latest`, returning one of them.
- * The goal is to ensure that the reference is stable when the data stays the
- * same and that a new reference is used whenever the data changes.
- * If `orig` is returned, then it has not been mutated.
- * If `latest` is returned, then `orig` is left untouched.
- * `latest` may be mutated either way.
- * If `orig` is undefined, create a new entry with `latest` and no overlay.
- */
-function updatePostEntry(
-  orig: PostEntry | undefined,
-  latest: PostData,
-): PostEntry {
-  if (!orig) {
-    return { post: latest, overlay: undefined };
-  }
-
-  const overlay = updatePostOverlay(orig.overlay, latest);
-  applyPostOverlay(latest, overlay);
-  const post = postChanged(orig.post, latest) ? latest : orig.post;
-  return { post, overlay };
-}
 
 /**
  * Snapshot of a feed's posts and overlays.
@@ -252,6 +117,17 @@ type FeedDataStoreState = {
    * the post's reply count by `amount`.
    */
   alterReplyCount: (queryKey: string, postId: string, amount: number) => void;
+
+  /**
+   * Merge existing overlay with updated client reaction state for a post.
+   */
+  injectReaction: (
+    queryKey: string,
+    postId: string,
+    prev: Reaction | undefined,
+    next: Reaction | undefined,
+    overlayTallies: boolean,
+  ) => void;
 };
 
 /**
@@ -336,7 +212,8 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       const upstreamEntry = updatePostEntry(posts.get(repost.id), asNonRepost);
       posts.set(repost.id, upstreamEntry);
 
-      // Update repost
+      // Fake the repost object to look like the original post + overlay but
+      // directly from the server.
       applyPostOverlay(repost, upstreamEntry.overlay);
       const repostEntry = updatePostEntry(posts.get(repost.repostId), repost);
       posts.set(repost.repostId, repostEntry);
@@ -507,6 +384,39 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
     return { queryData, feedData, existing, purgeCachedEntry };
   };
 
+  /**
+   * Boilerplate for functions that alter a single post's overlay.
+   * `update` receives the current entry and returns the new overlay.
+   */
+  const modifyPostOverlay = (
+    state: FeedDataStoreState,
+    queryKey: string,
+    postId: string,
+    update: (oldPost: PostEntry) => PostOverlay | undefined,
+  ): Partial<FeedDataStoreState> => {
+    const { queryData, feedData, existing, purgeCachedEntry } =
+      prepareOverlayMod(state, queryKey);
+
+    if (!queryData) return state;
+    if (!existing) return state;
+
+    const oldPost = existing.posts.get(postId);
+    if (!oldPost) return state;
+
+    purgeCachedEntry();
+
+    const overlay = update(oldPost);
+
+    // Reapply the overlay to a fresh copy of the untouched server data.
+    const newPost = { ...oldPost.originalPost };
+    applyPostOverlay(newPost, overlay);
+
+    const posts = new Map(existing.posts);
+    posts.set(postId, { ...oldPost, post: newPost, overlay });
+    feedData.set(queryKey, { ...existing, output: undefined, posts });
+    return { feedData };
+  };
+
   return {
     feedData: new Map(),
 
@@ -560,7 +470,11 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
         ];
         const posts: Map<string, PostEntry> = new Map(existing.posts);
         if (!posts.has(postId(post)))
-          posts.set(postId(post), { post: post, overlay: undefined });
+          posts.set(postId(post), {
+            originalPost: post,
+            post,
+            overlay: undefined,
+          });
 
         const next: FeedEntry = {
           output: undefined,
@@ -586,7 +500,11 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
 
         const posts: Map<string, PostEntry> = new Map(existing.posts);
         if (!posts.has(postId(post)))
-          posts.set(postId(post), { post: post, overlay: undefined });
+          posts.set(postId(post), {
+            originalPost: post,
+            post,
+            overlay: undefined,
+          });
 
         const parentId = post.reply?.parentId;
         if (!parentId) return state;
@@ -613,46 +531,29 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
     },
 
     alterReplyCount: (queryKey, postId, amount) => {
-      set((state) => {
-        const { queryData, feedData, existing, purgeCachedEntry } =
-          prepareOverlayMod(state, queryKey);
+      set((state) =>
+        modifyPostOverlay(state, queryKey, postId, (oldPost) => {
+          const base =
+            oldPost.overlay?.replyCount ??
+            new CounterOverlay(oldPost.originalPost.replyCount ?? 0, 0);
+          const capped = Math.max(amount, -base.get());
+          const replyCount = base.localUpdate(capped, true);
+          return patchPostOverlay(oldPost.overlay, { replyCount });
+        }),
+      );
+    },
 
-        if (!queryData) return state;
-        if (!existing) return state;
-
-        const oldPost = existing.posts.get(postId);
-        if (!oldPost) return state;
-
-        purgeCachedEntry();
-
-        // Compute new overlay
-        const oldCount = oldPost.post.replyCount ?? 0;
-        const newCount = Math.max(0, oldCount + amount);
-        const base =
-          oldPost.overlay?.replyCount ?? new CounterOverlay(oldCount, 0);
-        const replyOverlay = base.localUpdate(newCount);
-        const overlay = patchPostOverlay(oldPost.overlay, {
-          replyCount: replyOverlay,
-        });
-
-        // Make new post
-        const newPost = { ...oldPost.post };
-        applyPostOverlay(newPost, overlay);
-
-        // Normally, we initialize based on a server's response when the overlay
-        // is removed.
-        // In this case, we need to manually use the base to avoid leaving stale
-        // data.
-        if (replyOverlay === undefined && newPost.replyCount !== undefined) {
-          newPost.replyCount = base.original;
-        }
-
-        // Update entry
-        const posts = new Map(existing.posts);
-        posts.set(postId, { post: newPost, overlay });
-        feedData.set(queryKey, { ...existing, output: undefined, posts });
-        return { feedData };
-      });
+    injectReaction: (queryKey, postId, prev, next, overlayTallies) => {
+      set((state) =>
+        modifyPostOverlay(state, queryKey, postId, (oldPost) => {
+          const oldReaction = oldPost.overlay?.reaction;
+          const server = oldPost.originalPost;
+          const reaction = oldReaction
+            ? oldReaction.localUpdate(prev, next, server, overlayTallies)
+            : ReactionOverlay.create(prev, next, server, overlayTallies);
+          return patchPostOverlay(oldPost.overlay, { reaction });
+        }),
+      );
     },
   };
 });
@@ -768,4 +669,25 @@ export function alterPostReplyCount(
 ): void {
   const key = queryKey.join('\0');
   useFeedDataStore.getState().alterReplyCount(key, parentPostId, amount);
+}
+
+/**
+ * Optimistically overlay the current identity's reaction change onto
+ * `post` in the given query.
+ * Any previous reaction should be given as `prev` and the new reaction
+ * should be `next`.
+ * `overlayTallies` should only be true on queries where the server responds
+ * with tallies.
+ */
+export function injectReactionIntoFeedCache(
+  queryKey: string[],
+  postId: string,
+  prev: Reaction | undefined,
+  next: Reaction | undefined,
+  overlayTallies: boolean,
+): void {
+  const key = queryKey.join('\0');
+  useFeedDataStore
+    .getState()
+    .injectReaction(key, postId, prev, next, overlayTallies);
 }

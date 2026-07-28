@@ -45,8 +45,11 @@ impl StatsWorker {
 
         match input.content_body {
             ContentBody::Post(post) => {
-                // Begin tracking the new post's reply count.
-                Mutation::init_reply_count_for(&self.ctx.db, input.key).await?;
+                // Begin tracking the new post's reply and reaction counts.
+                Mutation::init_reply_count_for(&self.ctx.db, input.key.clone())
+                    .await?;
+                Mutation::init_reaction_summary_for(&self.ctx.db, input.key)
+                    .await?;
 
                 let parent_key = get_post_parent(post);
 
@@ -55,24 +58,88 @@ impl StatsWorker {
                     Mutation::count_reply_for(&self.ctx.db, parent).await?;
                 }
             }
+            ContentBody::Reaction(reaction) => {
+                let Some(target) = reaction.event_key.and_then(to_target_key)
+                else {
+                    return Ok(());
+                };
+
+                // Count the reaction toward the target's upvote/downvote total
+                Mutation::count_reaction_for(
+                    &self.ctx.db,
+                    target.clone(),
+                    reaction.positive,
+                )
+                .await?;
+
+                // Also tally the emoji if the reaction has one
+                if let Some(emoji) = reaction.emoji {
+                    Mutation::count_reaction_tally_for(
+                        &self.ctx.db,
+                        target,
+                        emoji,
+                        reaction.positive,
+                    )
+                    .await?;
+                }
+            }
             ContentBody::Delete(delete) => {
                 let Some(target) = delete.event_key else {
                     return Ok(());
                 };
 
-                // Try retrieving the content of the deleted event and decrement its
-                // parent's reply count if needed.
+                // Skip events where the target and author identity don't match
+                if target.identity != input.key.identity {
+                    return Ok(());
+                }
 
-                let Some(post) = find_post_by_key(&self.ctx.db, target).await?
+                // Try retrieving the content of the deleted event
+                let Some(content_body) =
+                    find_content_by_key(&self.ctx.db, target).await?
                 else {
                     return Ok(());
                 };
 
-                let Some(parent) = get_post_parent(post) else {
-                    return Ok(());
-                };
+                match content_body {
+                    // Decrement parent post's reply count if needed
+                    ContentBody::Post(post) => {
+                        let Some(parent) = get_post_parent(post) else {
+                            return Ok(());
+                        };
 
-                Mutation::remove_reply_for(&self.ctx.db, parent).await?;
+                        Mutation::remove_reply_for(&self.ctx.db, parent)
+                            .await?;
+                    }
+
+                    // Remove the deleted reaction from reaction counters
+                    ContentBody::Reaction(reaction) => {
+                        let Some(target) =
+                            reaction.event_key.and_then(to_target_key)
+                        else {
+                            return Ok(());
+                        };
+
+                        // Decrement the target's upvote/downvote total
+                        Mutation::remove_reaction_for(
+                            &self.ctx.db,
+                            target.clone(),
+                            reaction.positive,
+                        )
+                        .await?;
+
+                        // Also decrement the emoji tally if there was one
+                        if let Some(emoji) = reaction.emoji {
+                            Mutation::remove_reaction_tally_for(
+                                &self.ctx.db,
+                                target,
+                                emoji,
+                                reaction.positive,
+                            )
+                            .await?;
+                        }
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
@@ -153,24 +220,24 @@ async fn find_event_by_key(
     Ok(event)
 }
 
-/// Try to find the post event with event key `key`.
+/// Try to find the content for the event with key `key`.
 /// Returns `Ok(None)` on failures other than DB errors.
-async fn find_post_by_key(
+async fn find_content_by_key(
     db: &DbConn,
     key: EventKey,
-) -> Result<Option<Post>, WorkerError> {
+) -> Result<Option<ContentBody>, WorkerError> {
     let Some((_, Some(content_row))) = find_event_by_key(db, key).await? else {
         return Ok(None);
     };
 
     let Ok(Content {
-        content_body: Some(ContentBody::Post(post)),
+        content_body: Some(content_body),
     }) = Content::decode(content_row.serialized_bytes.as_slice())
     else {
         return Ok(None);
     };
 
-    Ok(Some(post))
+    Ok(Some(content_body))
 }
 
 fn get_post_parent(post: Post) -> Option<TargetEventKey> {

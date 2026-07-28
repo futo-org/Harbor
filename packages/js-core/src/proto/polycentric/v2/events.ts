@@ -160,6 +160,49 @@ export interface EventMetadata {
      * @generated from protobuf field: optional int32 reply_count = 1
      */
     replyCount?: number;
+    /**
+     * This server's estimate for the total number of reactions a post has.
+     *
+     * @generated from protobuf field: optional int32 reaction_count = 2
+     */
+    reactionCount?: number;
+    /**
+     * This server's estimate for the total number of positive reactions a post has.
+     *
+     * @generated from protobuf field: optional int32 upvote_count = 3
+     */
+    upvoteCount?: number;
+    /**
+     * This server's estimate for the total number of negative reactions a post has.
+     *
+     * @generated from protobuf field: optional int32 downvote_count = 4
+     */
+    downvoteCount?: number;
+    /**
+     * This server's estimate for the count for each reaction type a post has.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.ReactionTally emoji_reactions = 5
+     */
+    emojiReactions: ReactionTally[];
+}
+/**
+ * Conveys the number of times a specific reaction was given.
+ *
+ * @generated from protobuf message polycentric.v2.ReactionTally
+ */
+export interface ReactionTally {
+    /**
+     * @generated from protobuf field: string emoji = 1
+     */
+    emoji: string;
+    /**
+     * @generated from protobuf field: bool positive = 2
+     */
+    positive: boolean;
+    /**
+     * @generated from protobuf field: int32 count = 3
+     */
+    count: number;
 }
 /**
  * Hints are additional events that the server provides that may be
@@ -655,11 +698,16 @@ export const EventProof = new EventProof$Type();
 class EventMetadata$Type extends MessageType<EventMetadata> {
     constructor() {
         super("polycentric.v2.EventMetadata", [
-            { no: 1, name: "reply_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
+            { no: 1, name: "reply_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 2, name: "reaction_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "upvote_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 4, name: "downvote_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 5, name: "emoji_reactions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ReactionTally }
         ]);
     }
     create(value?: PartialMessage<EventMetadata>): EventMetadata {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.emojiReactions = [];
         if (value !== undefined)
             reflectionMergePartial<EventMetadata>(this, message, value);
         return message;
@@ -671,6 +719,18 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
             switch (fieldNo) {
                 case /* optional int32 reply_count */ 1:
                     message.replyCount = reader.int32();
+                    break;
+                case /* optional int32 reaction_count */ 2:
+                    message.reactionCount = reader.int32();
+                    break;
+                case /* optional int32 upvote_count */ 3:
+                    message.upvoteCount = reader.int32();
+                    break;
+                case /* optional int32 downvote_count */ 4:
+                    message.downvoteCount = reader.int32();
+                    break;
+                case /* repeated polycentric.v2.ReactionTally emoji_reactions */ 5:
+                    message.emojiReactions.push(ReactionTally.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -687,6 +747,18 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
         /* optional int32 reply_count = 1; */
         if (message.replyCount !== undefined)
             writer.tag(1, WireType.Varint).int32(message.replyCount);
+        /* optional int32 reaction_count = 2; */
+        if (message.reactionCount !== undefined)
+            writer.tag(2, WireType.Varint).int32(message.reactionCount);
+        /* optional int32 upvote_count = 3; */
+        if (message.upvoteCount !== undefined)
+            writer.tag(3, WireType.Varint).int32(message.upvoteCount);
+        /* optional int32 downvote_count = 4; */
+        if (message.downvoteCount !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.downvoteCount);
+        /* repeated polycentric.v2.ReactionTally emoji_reactions = 5; */
+        for (let i = 0; i < message.emojiReactions.length; i++)
+            ReactionTally.internalBinaryWrite(message.emojiReactions[i], writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -697,6 +769,69 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
  * @generated MessageType for protobuf message polycentric.v2.EventMetadata
  */
 export const EventMetadata = new EventMetadata$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ReactionTally$Type extends MessageType<ReactionTally> {
+    constructor() {
+        super("polycentric.v2.ReactionTally", [
+            { no: 1, name: "emoji", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "positive", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 3, name: "count", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ReactionTally>): ReactionTally {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.emoji = "";
+        message.positive = false;
+        message.count = 0;
+        if (value !== undefined)
+            reflectionMergePartial<ReactionTally>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ReactionTally): ReactionTally {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string emoji */ 1:
+                    message.emoji = reader.string();
+                    break;
+                case /* bool positive */ 2:
+                    message.positive = reader.bool();
+                    break;
+                case /* int32 count */ 3:
+                    message.count = reader.int32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ReactionTally, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string emoji = 1; */
+        if (message.emoji !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.emoji);
+        /* bool positive = 2; */
+        if (message.positive !== false)
+            writer.tag(2, WireType.Varint).bool(message.positive);
+        /* int32 count = 3; */
+        if (message.count !== 0)
+            writer.tag(3, WireType.Varint).int32(message.count);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ReactionTally
+ */
+export const ReactionTally = new ReactionTally$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class EventHint$Type extends MessageType<EventHint> {
     constructor() {

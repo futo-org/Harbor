@@ -60,8 +60,7 @@ export interface ListFollowsResponse {
      */
     pageInfo?: PageInfo;
     /**
-     * Identity-chain and profile events for every identity referenced by the
-     * bundles, so clients can validate and render them without extra queries.
+     * Relevant events for the users in the follow events
      *
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 3
      */

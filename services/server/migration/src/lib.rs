@@ -20,6 +20,7 @@ mod m20260707_164130_add_indices_for_sorting;
 mod m20260707_191447_add_reply_counts_table;
 mod m20260714_000001_add_url_info_cache_table;
 mod m20260717_000001_add_url_info_cache_raw_response;
+mod m20260720_164457_add_reaction_counters;
 
 pub struct Migrator;
 
@@ -49,6 +50,7 @@ impl MigratorTrait for Migrator {
             Box::new(
                 m20260717_000001_add_url_info_cache_raw_response::Migration,
             ),
+            Box::new(m20260720_164457_add_reaction_counters::Migration),
         ]
     }
 }
