@@ -64,22 +64,15 @@ export type SheetProps =
 export function Sheet(props: SheetProps) {
   const portalId = useId();
   const navigation = useSheetNavigation();
-  const [rendered, setRendered] = useState(props.open !== false);
-  useEffect(() => {
-    if (props.open !== false) setRendered(true);
-  }, [props.open]);
-
-  if (isWeb ? props.open === false : !rendered) return null;
+  // Web hides instantly, but Native should stay mounted so that the dismiss
+  // animation can play before teardown
+  if (isWeb && props.open === false) return null;
   return (
     <Portal name={`sheet-${portalId}`}>
       {isWeb ? (
         <WebModal {...props} navigation={navigation} />
       ) : (
-        <NativeSheet
-          {...props}
-          navigation={navigation}
-          onDismissed={() => setRendered(false)}
-        />
+        <NativeSheet {...props} navigation={navigation} />
       )}
     </Portal>
   );
@@ -180,16 +173,12 @@ type Navigation = ReturnType<typeof useSheetNavigation>;
 type WithNavigation<T> = T & {
   navigation: Navigation;
 };
-type NativeInternalProps = WithNavigation<SheetProps> & {
-  /** Fired once the native dismiss animation has finished. */
-  onDismissed?: () => void;
-};
+type NativeInternalProps = WithNavigation<SheetProps>;
 type WebInternalProps = WithNavigation<SheetProps>;
 
 function NativeSheet({
   open,
   onClose,
-  onDismissed,
   children,
   detents = [0.5],
   dismissible = true,
@@ -203,9 +192,6 @@ function NativeSheet({
   /** Once the sheet's dismiss animation has run (or is running) we
    * shouldn't loop it again on the follow-up navigation dispatch. */
   const animatedDismissRef = useRef(false);
-  /** Suppress `onClose` for the next `onDidDismiss` — set when we're
-   * tearing down because of an external `open=false` transition. */
-  const suppressOnCloseRef = useRef(false);
 
   const isInline = open !== undefined;
 
@@ -224,16 +210,47 @@ function NativeSheet({
     });
   }, [navigation, isInline]);
 
-  // Inline mode: external `open=false` triggers a silent dismiss
-  // animation (no `onClose` callback — the caller already knows).
+  const [mounted, setMounted] = useState(!!open);
+  const openRef = useRef(open);
+  openRef.current = open;
+  // TrueSheet warns when asked to present or dismiss redundantly, so we track state
+  const presentedRef = useRef(!!open);
+
+  // Inline mode: drive the native sheet from the `open` prop.
   useEffect(() => {
     if (!isInline) return;
-    if (open) return;
-    suppressOnCloseRef.current = true;
-    void sheetRef.current?.dismiss().catch(() => {});
-  }, [isInline, open]);
+    if (open) {
+      // Mounting presents the sheet by itself.
+      if (!mounted) {
+        presentedRef.current = true;
+        setMounted(true);
+        return;
+      }
+      if (presentedRef.current) return;
+      // Mounted but down (reopened while dismiss was still running).
+      presentedRef.current = true;
+      void sheetRef.current?.present().catch(() => {});
+      return;
+    }
+    if (!mounted) return;
+    // If marked down, complete tear down
+    if (!presentedRef.current) {
+      setMounted(false);
+      return;
+    }
+    // Otherwise stay mounted until the dismiss animation finishes.
+    presentedRef.current = false;
+    void sheetRef.current
+      ?.dismiss()
+      .catch(() => {})
+      .finally(() => {
+        if (!openRef.current) setMounted(false);
+      });
+  }, [isInline, open, mounted]);
 
   const surface = theme.palette.neutral_0;
+
+  if (isInline && !mounted) return null;
 
   return (
     <TrueSheet
@@ -244,16 +261,16 @@ function NativeSheet({
       initialDetentIndex={0}
       dismissible={dismissible}
       scrollable={scrollable}
-      onDidPresent={() => props.onPresented?.()}
+      onDidPresent={() => {
+        presentedRef.current = true;
+        props.onPresented?.();
+      }}
       onDidDismiss={() => {
-        if (suppressOnCloseRef.current) {
-          suppressOnCloseRef.current = false;
-          onDismissed?.();
-          return;
-        }
+        presentedRef.current = false;
         if (isInline) {
-          onClose?.();
-          onDismissed?.();
+          // Report only a dismissal the caller doesn't already know about: if
+          // `open` is still true this was the user swiping the sheet away.
+          if (openRef.current) onClose?.();
           return;
         }
         if (animatedDismissRef.current) return;

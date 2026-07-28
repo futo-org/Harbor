@@ -3,9 +3,7 @@ import React from 'react';
 import { View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 import { Emoji } from './Emoji';
-import { EMOJI_FONT_SIZE, GRID_COLUMNS, type EmojiEntry } from './emojiData';
-
-const CELL_WIDTH = `${100 / GRID_COLUMNS}%` as const;
+import { EMOJI_FONT_SIZE, type EmojiEntry } from './emojiData';
 
 type EmojiGridRowProps = {
   emojis: EmojiEntry[];
@@ -13,6 +11,8 @@ type EmojiGridRowProps = {
   selectedEmoji?: string | null;
   color: string;
   highlightColor: string;
+  /** Number of columns in the grid; sets each cell's width. */
+  columns: number;
   onLayout?: (e: LayoutChangeEvent) => void;
 };
 
@@ -22,8 +22,10 @@ export const EmojiGridRow = React.memo(function EmojiGridRow({
   selectedEmoji,
   color,
   highlightColor,
+  columns,
   onLayout,
 }: EmojiGridRowProps) {
+  const cellWidth = `${100 / columns}%`;
   return (
     <View style={Atoms.flex_row} onLayout={onLayout}>
       {emojis.map((entry) => (
@@ -34,7 +36,7 @@ export const EmojiGridRow = React.memo(function EmojiGridRow({
           selected={selectedEmoji === entry.emoji}
           color={color}
           highlightColor={highlightColor}
-          size={CELL_WIDTH}
+          size={cellWidth}
           style={[Atoms.text_center, { fontSize: EMOJI_FONT_SIZE }]}
         />
       ))}

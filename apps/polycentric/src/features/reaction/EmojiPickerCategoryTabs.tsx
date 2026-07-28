@@ -10,8 +10,11 @@ type EmojiPickerCategoryTabsProps = {
   activeKey: string;
   onSelect: (key: string) => void;
   tabSize: number;
-  /** Bottom padding so the last tab clears the bottom fade. */
-  bottomInset?: number;
+  /** Lay the tabs horizontally on native, and vertically on web */
+  horizontal?: boolean;
+  /** Trailing padding so the last tab can scroll clear of the fade overlay. */
+  endInset?: number;
+  iconFontSize?: number;
 };
 
 export function EmojiPickerCategoryTabs({
@@ -19,57 +22,67 @@ export function EmojiPickerCategoryTabs({
   activeKey,
   onSelect,
   tabSize,
-  bottomInset = 0,
+  horizontal = false,
+  endInset = 0,
+  iconFontSize,
 }: EmojiPickerCategoryTabsProps) {
   const { theme } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
-  const viewportHeight = useRef(0);
-  const scrollY = useRef(0);
+  const viewportExtent = useRef(0);
+  const scrollOffset = useRef(0);
   const activeIndex = categories.findIndex((c) => c.key === activeKey);
 
-  // Keep the active tab visible as the grid scrolls. Note that `bottomInset` reserves space
-  // for the fade.
+  // Keep the active tab visible as the grid scrolls
   useEffect(() => {
     if (activeIndex < 0) return;
-    const vh = viewportHeight.current;
-    if (vh <= 0) return;
+    const extent = viewportExtent.current;
+    if (extent <= 0) return;
 
-    const stride = tabSize + Spacing.xs; // tab height + gap_xs
-    const top = Spacing.xs + activeIndex * stride; // py_xs top padding
-    const bottom = top + tabSize;
-    const y = scrollY.current;
+    const stride = tabSize + Spacing.xs;
+    const start = Spacing.xs + activeIndex * stride;
+    const end = start + tabSize;
+    const offset = scrollOffset.current;
 
-    if (top < y) {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, top - Spacing.xs),
-        animated: true,
-      });
-    } else if (bottom > y + vh - bottomInset) {
-      scrollRef.current?.scrollTo({
-        y: bottom - vh + bottomInset,
-        animated: true,
-      });
+    // Scroll forward/backward to bring the tab into view, clear of the fade
+    if (start < offset) {
+      const target = Math.max(0, start - Spacing.xs);
+      scrollRef.current?.scrollTo(
+        horizontal
+          ? { x: target, animated: true }
+          : { y: target, animated: true },
+      );
+    } else if (end > offset + extent - endInset) {
+      const target = end - extent + endInset;
+      scrollRef.current?.scrollTo(
+        horizontal
+          ? { x: target, animated: true }
+          : { y: target, animated: true },
+      );
     }
-  }, [activeIndex, tabSize, bottomInset]);
+  }, [activeIndex, tabSize, horizontal, endInset]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    scrollY.current = e.nativeEvent.contentOffset.y;
+    const { x, y } = e.nativeEvent.contentOffset;
+    scrollOffset.current = horizontal ? x : y;
   };
 
   return (
     <ScrollView
       ref={scrollRef}
+      horizontal={horizontal}
       showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       scrollEventThrottle={16}
       onScroll={onScroll}
       onLayout={(e) => {
-        viewportHeight.current = e.nativeEvent.layout.height;
+        const { width, height } = e.nativeEvent.layout;
+        viewportExtent.current = horizontal ? width : height;
       }}
       contentContainerStyle={[
         Atoms.gap_xs,
-        Atoms.py_xs,
         Atoms.align_center,
-        { paddingBottom: bottomInset },
+        horizontal ? Atoms.px_xs : Atoms.py_xs,
+        horizontal ? { paddingRight: endInset } : { paddingBottom: endInset },
       ]}
     >
       {categories.map((cat) => {
@@ -84,6 +97,7 @@ export function EmojiPickerCategoryTabs({
             selected={active}
             color={theme.palette.neutral_1000}
             highlightColor={theme.palette.neutral_100}
+            style={iconFontSize ? { fontSize: iconFontSize } : undefined}
           />
         );
       })}

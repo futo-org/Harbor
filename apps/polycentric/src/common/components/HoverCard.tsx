@@ -35,9 +35,11 @@ function RevealView({ children }: { children: ReactNode }) {
     transform: [{ scale: 0.8 + 0.2 * progress.value }],
   }));
 
+  // Create a wrapper for the exit animation, so that there aren't overlapping
+  // animations for opacity.
   return (
-    <Animated.View style={style} exiting={FadeOut.duration(120)}>
-      {children}
+    <Animated.View exiting={FadeOut.duration(120)}>
+      <Animated.View style={style}>{children}</Animated.View>
     </Animated.View>
   );
 }

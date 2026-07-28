@@ -4,8 +4,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
-import { type GestureResponderEvent, View } from 'react-native';
-import { DEFAULT_REACTION_EMOJI } from '../../reaction/consts';
+import { View } from 'react-native';
 import { EmojiPickerFull } from '../../reaction/EmojiPickerFull';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
@@ -47,20 +46,10 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
     setPickerOpen(true);
   };
 
-  const onReactionPress = (e: GestureResponderEvent) => {
-    e.preventDefault();
-    onEmojiSelect(reaction?.emoji ?? DEFAULT_REACTION_EMOJI);
-  };
-
   return (
     <View style={[]}>
       <HoverCard openDelay={0} onOpenChange={setOpen}>
-        <HoverCard.Trigger
-          asChild
-          ref={triggerRef}
-          onPress={onReactionPress}
-          onLongPress={triggerRef.current?.open}
-        >
+        <HoverCard.Trigger asChild ref={triggerRef}>
           <PostActionButton
             icon={hasReaction ? 'reaction' : 'reactionOutline'}
             active={hasReaction}

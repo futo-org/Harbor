@@ -51,25 +51,30 @@ export function getCategory(key: string): EmojiCategory | undefined {
   return categoryByKey[key];
 }
 
-export const GRID_COLUMNS = 10;
+export const DEFAULT_GRID_COLUMNS = 10;
 export type EmojiListItem =
-  | { type: 'header'; key: string; categoryKey: string }
+  | { type: 'header'; key: string; categoryKey: string; hidden?: boolean }
   | { type: 'row'; key: string; categoryKey: string; emojis: EmojiEntry[] };
 
-function buildRows(): EmojiListItem[] {
+export function buildRows(columns: number): EmojiListItem[] {
   const items: EmojiListItem[] = [];
 
   categories.forEach((c, i) => {
-    if (i > 0) {
-      items.push({ type: 'header', key: `h:${c.key}`, categoryKey: c.key });
-    }
+    items.push({
+      type: 'header',
+      key: `h:${c.key}`,
+      categoryKey: c.key,
+      // We render an invisible section divider at the top, because `FlashList`
+      // needs to measure its size for accurate scroll offsets.
+      hidden: i === 0,
+    });
 
-    for (let j = 0; j < c.emojis.length; j += GRID_COLUMNS) {
+    for (let j = 0; j < c.emojis.length; j += columns) {
       items.push({
         type: 'row',
         key: `r:${c.key}:${j}`,
         categoryKey: c.key,
-        emojis: c.emojis.slice(j, j + GRID_COLUMNS),
+        emojis: c.emojis.slice(j, j + columns),
       });
     }
   });
@@ -77,11 +82,9 @@ function buildRows(): EmojiListItem[] {
   return items;
 }
 
-/** Rows for the emoji picker to display. */
-export const EMOJI_ROWS = buildRows();
-
 export const INLINE_EMOJIS: { code: string[]; emoji: string; name: string }[] =
   [
+    { code: ['2764'], emoji: '❤️', name: 'red heart' },
     { code: ['1F602'], emoji: '😂', name: 'face with tears of joy' },
     { code: ['1F923'], emoji: '🤣', name: 'rolling on the floor laughing' },
     { code: ['1F60D'], emoji: '😍', name: 'smiling face with heart-eyes' },
@@ -95,25 +98,23 @@ export const HEADER_HEIGHT = 2 * SECTION_RULE_PADDING + 1;
 
 /**
  * Compute section scroll offsets from the rendered row and header heights, so
- * that we don't rely on full `FlashList` renders to scroll to sections.
- * The offset for each section points at the top of its divider (or the top of
- * the first row for the initial section, which has no divider).
+ * that we don't rely on full `FlashList` renders to scroll to sections. Should
+ * match `buildRows`.
  */
 export function computeSectionOffsets(
   rowHeight: number,
   headerHeight: number = HEADER_HEIGHT,
+  columns: number = DEFAULT_GRID_COLUMNS,
 ): Record<string, number> {
   const offsets: Record<string, number> = {};
   let y = 0;
 
-  categories.forEach((c, i) => {
+  for (const c of categories) {
     offsets[c.key] = y;
-    if (i > 0) {
-      y += headerHeight;
-    }
-    const rows = Math.ceil(c.emojis.length / GRID_COLUMNS);
+    y += headerHeight;
+    const rows = Math.ceil(c.emojis.length / columns);
     y += rows * rowHeight;
-  });
+  }
 
   return offsets;
 }

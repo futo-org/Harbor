@@ -1,5 +1,5 @@
 import Icon from '@/src/common/components/Icon';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { Emoji, EmojiLikeButton } from './Emoji';
@@ -51,6 +51,8 @@ export default function EmojiPickerInline({
       {onShowMore && (
         <EmojiLikeButton
           onPress={onShowMore}
+          size={INLINE_SIZE}
+          hitSlop={Spacing.sm}
           highlightColor={theme.palette.neutral_100}
         >
           <Icon name="dotsVertical" size={20} color="neutral_1000" />

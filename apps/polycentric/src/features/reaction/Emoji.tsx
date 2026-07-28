@@ -2,7 +2,7 @@ import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { memo, useCallback, type ReactNode } from 'react';
 import { Pressable, Text } from 'react-native';
-import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import type { Insets, StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 // Scale/timing/opacity for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
@@ -21,6 +21,8 @@ type EmojiLikePressableProps = {
   selected?: boolean;
   /** Width/height of the button */
   size?: string | number;
+  /** Extends the touch target beyond the visual bounds on native. */
+  hitSlop?: number | Insets;
   children: ReactNode;
 };
 
@@ -31,10 +33,12 @@ function EmojiLikePressable({
   highlightColor,
   selected = false,
   size,
+  hitSlop,
 }: EmojiLikePressableProps) {
   return (
     <Pressable
       onPress={onPress}
+      hitSlop={hitSlop}
       style={(state) => [
         Atoms.rounded_full,
         Atoms.align_center,
@@ -124,6 +128,8 @@ type EmojiLikeButtonProps = {
   highlightColor: string;
   children: ReactNode;
   size?: number;
+  /** Extends the touch target beyond the visual bounds on native. */
+  hitSlop?: number | Insets;
 };
 
 /** Circular button styled similar to an emoji button, for use outside of the emoji grid. */
@@ -132,11 +138,13 @@ export function EmojiLikeButton({
   highlightColor,
   children,
   size,
+  hitSlop,
 }: EmojiLikeButtonProps) {
   return (
     <EmojiLikePressable
       onPress={onPress}
       size={size}
+      hitSlop={hitSlop}
       highlightColor={highlightColor}
     >
       {children}
