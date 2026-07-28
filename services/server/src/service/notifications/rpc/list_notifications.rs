@@ -13,7 +13,7 @@ use crate::{
             EventBundle, EventHint, EventKey, ListNotificationsRequest,
             ListNotificationsResponse, Notification, PageInfo, PublicKey,
         },
-        stats::repository::Query as StatsRepository,
+        stats::service::{gather_stats_for, include_stats},
     },
 };
 use ::entity::notification;
@@ -134,8 +134,8 @@ async fn hydrate(
     let mut bundles: HashMap<TargetEventKey, EventBundle> =
         fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
-    let reply_count_fut = async {
-        StatsRepository::count_replies(&ctx.db, fetched_keys)
+    let stats_fut = async {
+        gather_stats_for(&ctx.db, &fetched_keys)
             .await
             .map_err(map_db_err)
     };
@@ -155,11 +155,11 @@ async fn hydrate(
     // Author identity, profile, and moderation label events all ship as hints.
     let identities: Vec<String> = identities.into_iter().collect();
 
-    let (identity_events, profile_events, label_rows, reply_counts) = tokio::try_join!(
+    let (identity_events, profile_events, label_rows, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
         label_fut,
-        reply_count_fut
+        stats_fut
     )?;
 
     let mut label_bundles = rows_to_bundles(label_rows);
@@ -177,12 +177,8 @@ async fn hydrate(
         event_bundle: Some(b),
     }));
 
-    for (key, reply_count) in reply_counts {
-        if let Some(bundle) = bundles.get_mut(&key) {
-            let meta = bundle.meta.get_or_insert_default();
-            meta.reply_count =
-                Some(i32::try_from(reply_count).unwrap_or(i32::MAX));
-        }
+    for (key, bundle) in bundles.iter_mut() {
+        include_stats(&mut bundle.meta, key, &stats);
     }
 
     Ok(Hydrated {

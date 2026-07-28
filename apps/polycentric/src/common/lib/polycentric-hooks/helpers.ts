@@ -49,8 +49,27 @@ export type PostData = {
    *  key so a repost is distinct from the original post. */
   repostId?: string;
 
+  // --- Metadata that may change ---
+  // Events and content are immutable, but metadata can be updated over time.
+  // We should still create a new PostData object with the updated metadata
+  // instead of directly mutating existing objects.
+
   /** Our estimation for how many replies this post has. */
   replyCount?: number;
+
+  /** Our estimation for how many reactions this post has. */
+  totalReactionCount?: number;
+
+  /** Our estimation for how many positive reactions this post has. */
+  upvoteCount?: number;
+
+  /** Our estimation for how many negative reactions this post has. */
+  downvoteCount?: number;
+
+  /** Our estimation of the per-emoji reaction breakdown, most popular first. */
+  reactionTallies?: v2.ReactionTally[];
+
+  // --- End of metadata ---
 
   signedEvent: v2.SignedEvent;
 };
@@ -160,6 +179,10 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       reply,
       quoteId,
       replyCount: bundle.meta?.replyCount,
+      totalReactionCount: bundle.meta?.reactionCount,
+      upvoteCount: bundle.meta?.upvoteCount,
+      downvoteCount: bundle.meta?.downvoteCount,
+      reactionTallies: bundle.meta?.emojiReactions,
       signedEvent: v2.SignedEvent.create({
         eventBytes: signedEvent.eventBytes,
         signature: signedEvent.signature,

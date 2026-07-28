@@ -72,6 +72,22 @@ message EventProof {
 message EventMetadata {
   // This server's estimate for how many replies a post has.
   optional int32 reply_count = 1;
+  // This server's estimate for the total number of reactions a post has.
+  optional int32 reaction_count = 2;
+  // This server's estimate for the total number of positive reactions a post has.
+  optional int32 upvote_count = 3;
+  // This server's estimate for the total number of negative reactions a post has.
+  optional int32 downvote_count = 4;
+
+  // This server's estimate for the count for each reaction type a post has.
+  repeated ReactionTally emoji_reactions = 5;
+}
+
+// Conveys the number of times a specific reaction was given.
+message ReactionTally {
+  string emoji = 1;
+  bool positive = 2;
+  int32 count = 3;
 }
 
 // Hints are additional events that the server provides that may be

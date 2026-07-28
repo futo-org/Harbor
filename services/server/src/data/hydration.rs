@@ -4,6 +4,7 @@ use polycentric_common::models::protos_v2::{EventBundle, EventHint};
 
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
+use crate::service::stats::service::EventStats;
 
 #[derive(Default)]
 pub struct HydrationState {
@@ -12,7 +13,7 @@ pub struct HydrationState {
     pub profile_events: Vec<EventWithContentRow>,
     pub quote_post_events: Vec<EventWithContentRow>,
     pub repost_events: Vec<EventWithContentRow>,
-    pub reply_counts: HashMap<TargetEventKey, i64>,
+    pub stats: EventStats,
     pub label_events: Vec<EventWithContentRow>,
 }
 
