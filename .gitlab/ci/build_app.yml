@@ -86,7 +86,7 @@ app-web-image:
     - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
-    - apt-get update && apt-get install -y --no-install-recommends git
+    - apt-get update && apt-get install -y --no-install-recommends git jq
     # Tag builds use the tag version; others use the latest release + a patch.
     - export APP_VERSION=$(node "$CI_PROJECT_DIR/tools/expo/resolve-version.js")
     - echo "Building app version ${APP_VERSION}"
@@ -127,6 +127,32 @@ app-android-apk:
       npx eas-cli build --platform android --profile "$EAS_PROFILE" --non-interactive --wait --json > eas-build.json
     # eas only builds remotely; download the resulting APK so it is a CI artifact.
     - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json polycentric.apk
+    - |
+      if [ "$CI_PIPELINE_SOURCE" != "merge_request_event" ]; then
+        export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_R2_API_TOKEN"
+        APP_BUILD_NUMBER=$(jq -r '.[0].appBuildVersion' eas-build.json)
+        APK_KEY="android/$EAS_PROFILE/builds/$APP_BUILD_NUMBER/harbor-v$APP_VERSION.apk"
+        APK_URL="${EXPO_PUBLIC_RELEASE_URL%/}/$APK_KEY"
+
+        jq -n \
+          --argjson buildNumber "$APP_BUILD_NUMBER" \
+          --arg version "$APP_VERSION" \
+          --arg apkUrl "$APK_URL" \
+          '{ buildNumber: $buildNumber, version: $version, apkUrl: $apkUrl }' \
+          > latest.json
+
+        npx --yes wrangler@4 r2 object put "$R2_BUCKET_NAME/$APK_KEY" \
+          --file polycentric.apk \
+          --content-type application/vnd.android.package-archive \
+          --cache-control "public, max-age=31536000, immutable" \
+          --remote
+
+        npx --yes wrangler@4 r2 object put "$R2_BUCKET_NAME/android/$EAS_PROFILE/latest.json" \
+          --file latest.json \
+          --content-type application/json \
+          --cache-control no-store \
+          --remote
+      fi
   artifacts:
     paths:
       - apps/polycentric/polycentric.apk
