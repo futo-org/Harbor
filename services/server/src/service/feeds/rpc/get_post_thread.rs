@@ -11,12 +11,8 @@ use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
 use crate::service::feeds::util::{PageInfo, map_db_err};
-use crate::service::proto::content::ContentBody;
-use crate::service::proto::{
-    Content, EventBundle, GetPostThreadRequest, GetPostThreadResponse,
-};
-use prost::Message;
-use std::collections::{HashMap, HashSet};
+use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
+use std::collections::HashMap;
 use tonic::Status;
 
 const PARENT_HEIGHT_LIMIT: i32 = 50;
@@ -177,67 +173,7 @@ async fn filter(
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    let omit_label_set: HashSet<&str> =
-        params.omit_labels.iter().map(|s| s.as_str()).collect();
-    let mut live_rows: Vec<EventWithContentRow> =
-        Vec::with_capacity(fetched.rows.len());
-    let mut tombstone_bundles: Vec<EventBundle> = Vec::new();
-
-    for row in fetched.rows {
-        let key = TargetEventKey::of(&row.0);
-
-        // Check tombstone
-        if let Some(bundles) = hydration.deletes_by_target.get(&key) {
-            tombstone_bundles.extend(bundles.iter().cloned());
-            continue;
-        }
-
-        if has_matching_label(&hydration.label_events, &key, &omit_label_set) {
-            continue;
-        }
-
-        live_rows.push(row);
-    }
-
-    Ok(GetFeedResponseFilter {
-        live_rows,
-        tombstone_bundles,
-        page_info: fetched.page_info,
-    })
-}
-
-/// Returns `true` when `key` has at least one label whose value is in
-/// `omit_label_set`.
-fn has_matching_label(
-    label_events: &[EventWithContentRow],
-    key: &TargetEventKey,
-    omit_label_set: &HashSet<&str>,
-) -> bool {
-    for label_row in label_events {
-        if let Some(label_content) = &label_row.1
-            && let Ok(content) =
-                Content::decode(label_content.serialized_bytes.as_slice())
-            && let Some(ContentBody::Labels(labels)) = content.content_body
-            && let Some(lk) = labels.event_key
-            && let Some(signed_by) = lk.signed_by
-        {
-            let label_key = TargetEventKey {
-                collection: lk.collection as i16,
-                identity: lk.identity,
-                public_key_type: signed_by.key_type as i16,
-                public_key: signed_by.key,
-                sequence: lk.sequence as i64,
-            };
-
-            if label_key == *key {
-                return labels
-                    .label_values
-                    .iter()
-                    .any(|v| omit_label_set.contains(v.as_str()));
-            }
-        }
-    }
-    false
+    feeds_pipeline::filter(fetched, hydration, &params.omit_labels).await
 }
 
 async fn view(
