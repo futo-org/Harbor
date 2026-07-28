@@ -74,6 +74,8 @@ export type VerificationCompleteNotification = NotificationBase & {
   kind: 'verificationComplete';
   /** Key of the verified claim (for navigation), when it was carried. */
   claimKey?: v2.EventKey;
+  /** The verified claim, when the notification carried its event. */
+  claim?: DecodedClaim;
 };
 
 export type NotificationData =
@@ -179,14 +181,19 @@ function decodeNotification(
     }
 
     case v2.NotificationKind.VERIFICATION_COMPLETE: {
-      // The claim key travels in the trigger's VerificationVerify content.
+      // The claim key travels in the trigger's VerificationVerify content;
+      // the claim event itself is the notification's target.
       const verify = notification.triggerEvent
         ? decodeBundle(notification.triggerEvent, 'verificationVerify')
         : null;
+      const claim = notification.targetEvent
+        ? (decodeClaimBundle(notification.targetEvent) ?? undefined)
+        : undefined;
       return {
         ...base,
         kind: 'verificationComplete',
         claimKey: verify?.content.claimEventKey,
+        claim,
       };
     }
 

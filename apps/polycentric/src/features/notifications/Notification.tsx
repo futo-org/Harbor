@@ -179,8 +179,10 @@ function InteractionNotification({
           </View>
         ) : null}
 
-        {/* The claim awaiting verification: its type and title. */}
-        {notification.kind === 'verificationRequest' && notification.claim ? (
+        {/* The claim in question: its type and title. */}
+        {(notification.kind === 'verificationRequest' ||
+          notification.kind === 'verificationComplete') &&
+        notification.claim ? (
           <ClaimSummary claim={notification.claim} />
         ) : null}
       </View>

@@ -264,7 +264,7 @@ describe('decodeNotifications', () => {
     }
   });
 
-  it('decodes a completed verification with its claim key', () => {
+  it('decodes a completed verification with its claim key and claim', () => {
     const claimKey = makeEventKey(TARGET_IDENTITY, 3);
     const [item] = decodeOne(
       v2.Notification.create({
@@ -276,6 +276,7 @@ describe('decodeNotifications', () => {
             }),
           },
         } as v2.Content),
+        targetEvent: claimBundle(TARGET_IDENTITY),
         kind: v2.NotificationKind.VERIFICATION_COMPLETE,
       }),
     );
@@ -283,6 +284,8 @@ describe('decodeNotifications', () => {
     if (item.kind === 'verificationComplete') {
       expect(item.fromIdentity).toBe(ACTOR);
       expect(item.claimKey).toEqual(claimKey);
+      expect(item.claim?.schemaName).toBe('X Verification');
+      expect(item.claim?.identity).toBe(TARGET_IDENTITY);
     }
   });
 
