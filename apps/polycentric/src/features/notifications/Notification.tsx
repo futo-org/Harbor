@@ -9,8 +9,13 @@ import {
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
+import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
+import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
+import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
+import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
+import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 import type {
@@ -43,6 +48,10 @@ function summary(
       return notification.emoji
         ? `reacted ${notification.emoji} to your post`
         : 'reacted to your post';
+    case 'verificationRequest':
+      return 'requested a verification from you';
+    case 'verificationComplete':
+      return 'completed your verification request';
   }
 }
 
@@ -55,7 +64,36 @@ function quotedPost(
     case 'repost':
       return notification.targetPost;
     case 'follow':
+    case 'verificationRequest':
+    case 'verificationComplete':
       return undefined;
+  }
+}
+
+/** Where tapping the notification navigates, beyond the actor's profile. */
+function notificationRoute(
+  notification: Exclude<NotificationData, PostNotification>,
+): Href | null {
+  switch (notification.kind) {
+    case 'follow':
+      return null;
+    case 'reaction':
+    case 'repost':
+      return notification.targetPost
+        ? postRoute(notification.targetPost)
+        : null;
+    case 'verificationRequest':
+    case 'verificationComplete': {
+      const key = notification.claimKey;
+      const fingerprint = getKeyFingerprint(key?.signedBy);
+      return key && fingerprint
+        ? Routes.tabs.verification(
+            key.identity,
+            fingerprint,
+            String(key.sequence),
+          )
+        : null;
+    }
   }
 }
 
@@ -89,18 +127,16 @@ function InteractionNotification({
   const quoted = quotedPost(notification);
 
   const handlePress = useCallback(() => {
-    const post =
-      notification.kind === 'follow' ? undefined : notification.targetPost;
-    const route = post ? postRoute(post) : null;
-    router.push(route ?? Routes.tabs.profile(notification.fromIdentity));
+    router.push(
+      notificationRoute(notification) ??
+        Routes.tabs.profile(notification.fromIdentity),
+    );
   }, [notification]);
 
   const openProfile = useCallback(
     () => router.push(Routes.tabs.profile(notification.fromIdentity)),
     [notification.fromIdentity],
   );
-
-  const dim = withHexOpacity(theme.palette.neutral_500, '40');
 
   return (
     <Pressable
@@ -142,7 +178,36 @@ function InteractionNotification({
             </Text>
           </View>
         ) : null}
+
+        {/* The claim in question: its type and title. */}
+        {(notification.kind === 'verificationRequest' ||
+          notification.kind === 'verificationComplete') &&
+        notification.claim ? (
+          <ClaimSummary claim={notification.claim} />
+        ) : null}
       </View>
     </Pressable>
+  );
+}
+
+/** A claim's type chip and title, as the verifications inbox titles them. */
+function ClaimSummary({ claim }: { claim: DecodedClaim }) {
+  const { title } = resolveClaimTitle(claim.schemaName, claim.fields);
+  const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
+  // Platform claims chip as their platform (brand logo + name).
+  const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
+
+  return (
+    <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
+      <ClaimTypeChip
+        name={platform?.name ?? claim.schemaName}
+        icon={claimType?.icon ?? 'verify'}
+        logo={platform?.logo}
+        color={platform?.color ?? claimType?.color}
+      />
+      <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+        {title}
+      </Text>
+    </View>
   );
 }

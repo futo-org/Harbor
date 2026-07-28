@@ -17,6 +17,15 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => {
   };
 });
 
+// Pulled in via `decodeClaimBundle`'s module; evaluates query state from the
+// native barrel at import time, which the decode path never touches.
+jest.mock('@/src/common/query/hooks/useQuery', () => ({}));
+
+// ESM-only package jest can't parse; the decode path only hashes schemas.
+jest.mock('@noble/hashes/sha2.js', () => ({
+  sha256: (bytes: Uint8Array) => bytes,
+}));
+
 import { v2 } from '@polycentric/react-native';
 import { decodeNotifications } from './utils';
 
@@ -96,6 +105,51 @@ function reactionContent(eventKey: v2.EventKey, emoji?: string): v2.Content {
 function repostContent(post: v2.EventKey): v2.Content {
   return v2.Content.create({
     contentBody: { oneofKind: 'repost', repost: v2.Repost.create({ post }) },
+  });
+}
+
+/** A verification claim (an X handle) made by `owner`. */
+function claimBundle(owner: string): v2.EventBundle {
+  const schema = v2.VerificationSchema.create({
+    name: 'X Verification',
+    fields: [
+      {
+        key: 'handle',
+        kind: v2.FieldKind.STRING,
+        description: 'Handle',
+        required: true,
+      },
+    ],
+  });
+  return makeBundle(
+    owner,
+    v2.Content.create({
+      contentBody: {
+        oneofKind: 'verificationClaim',
+        verificationClaim: v2.VerificationClaim.create({
+          schema: v2.SerializedVerificationSchema.create({
+            schemaBytes: v2.VerificationSchema.toBinary(schema),
+          }),
+          fields: { handle: new TextEncoder().encode('@mark') },
+        }),
+      },
+    }),
+    3,
+  );
+}
+
+function verificationTargetContent(
+  claimEventKey: v2.EventKey | undefined,
+  targetIdentities: string[],
+): v2.Content {
+  return v2.Content.create({
+    contentBody: {
+      oneofKind: 'verificationTarget',
+      verificationTarget: v2.VerificationTarget.create({
+        claimEventKey,
+        targetIdentities,
+      }),
+    },
   });
 }
 
@@ -189,6 +243,87 @@ describe('decodeNotifications', () => {
     expect(item.kind).toBe('repost');
     if (item.kind === 'repost') {
       expect(item.targetPost?.content).toBe('your original post');
+    }
+  });
+
+  it('decodes a verification request with its claim key', () => {
+    const claimKey = makeEventKey(ACTOR, 3);
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          verificationTargetContent(claimKey, [TARGET_IDENTITY]),
+        ),
+        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+      }),
+    );
+    expect(item.kind).toBe('verificationRequest');
+    if (item.kind === 'verificationRequest') {
+      expect(item.fromIdentity).toBe(ACTOR);
+      expect(item.claimKey).toEqual(claimKey);
+    }
+  });
+
+  it('decodes a completed verification with its claim key and claim', () => {
+    const claimKey = makeEventKey(TARGET_IDENTITY, 3);
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(ACTOR, {
+          contentBody: {
+            oneofKind: 'verificationVerify',
+            verificationVerify: v2.VerificationVerify.create({
+              claimEventKey: claimKey,
+            }),
+          },
+        } as v2.Content),
+        targetEvent: claimBundle(TARGET_IDENTITY),
+        kind: v2.NotificationKind.VERIFICATION_COMPLETE,
+      }),
+    );
+    expect(item.kind).toBe('verificationComplete');
+    if (item.kind === 'verificationComplete') {
+      expect(item.fromIdentity).toBe(ACTOR);
+      expect(item.claimKey).toEqual(claimKey);
+      expect(item.claim?.schemaName).toBe('X Verification');
+      expect(item.claim?.identity).toBe(TARGET_IDENTITY);
+    }
+  });
+
+  it('decodes a verification request with the claim it targets', () => {
+    const claimKey = makeEventKey(ACTOR, 3);
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          verificationTargetContent(claimKey, [TARGET_IDENTITY]),
+        ),
+        targetEvent: claimBundle(ACTOR),
+        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+      }),
+    );
+    expect(item.kind).toBe('verificationRequest');
+    if (item.kind === 'verificationRequest') {
+      expect(item.claim?.schemaName).toBe('X Verification');
+      expect(item.claim?.identity).toBe(ACTOR);
+      expect(item.claim?.fields).toEqual([
+        { key: 'handle', label: 'Handle', value: '@mark' },
+      ]);
+    }
+  });
+
+  it('decodes a verification request without a claim key', () => {
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          verificationTargetContent(undefined, [TARGET_IDENTITY]),
+        ),
+        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+      }),
+    );
+    expect(item.kind).toBe('verificationRequest');
+    if (item.kind === 'verificationRequest') {
+      expect(item.claimKey).toBeUndefined();
     }
   });
 

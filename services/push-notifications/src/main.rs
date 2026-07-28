@@ -3,8 +3,11 @@ mod db;
 mod expo_client;
 mod manager;
 mod polycentric;
+mod render;
 mod repository;
 mod rpc;
+#[cfg(test)]
+mod testing;
 
 use context::Context;
 use manager::NotificationManager;
@@ -187,13 +190,20 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         None => return Outcome::Commit,
     };
 
-    // The triggering event drives the push — its content determines the
-    // reply/follow message. A notification without one is a no-op.
-    let Some(trigger) = notification.trigger_event else {
+    // The worker keys each message by the notification's recipient.
+    let Some(to_identity) = message
+        .key()
+        .and_then(|key| std::str::from_utf8(key).ok())
+        .filter(|identity| !identity.is_empty())
+    else {
         return Outcome::Commit;
     };
 
-    match ctx.notification_manager.process_event(ctx, &trigger).await {
+    match ctx
+        .notification_manager
+        .process_notification(ctx, to_identity, &notification)
+        .await
+    {
         Ok(_) => Outcome::Commit,
         Err(e) => {
             warn!("Push notification processing error: {}", e);
