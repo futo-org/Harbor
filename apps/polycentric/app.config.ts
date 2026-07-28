@@ -4,6 +4,9 @@ import fs from 'fs';
 const { version: PKG_VERSION } = require('./package.json');
 
 const IS_DEV = process.env.APP_VARIANT === 'dev';
+const BUILD_PROFILE = process.env.EXPO_PUBLIC_BUILD_PROFILE;
+const IS_APK_BUILD =
+  BUILD_PROFILE === 'preview' || BUILD_PROFILE === 'production-apk';
 
 const NAME = IS_DEV ? 'Harbor Dev' : 'Harbor';
 const ID = IS_DEV ? 'org.futo.polycentric.dev' : 'org.futo.polycentric';
@@ -49,7 +52,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#FF6A00',
     },
     package: ID,
-    permissions: ['android.permission.CAMERA'],
+    permissions: [
+      'android.permission.CAMERA',
+      ...(IS_APK_BUILD ? ['android.permission.REQUEST_INSTALL_PACKAGES'] : []),
+    ],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
   },
   plugins: [

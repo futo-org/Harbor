@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Platform, View } from 'react-native';
+import { Modal, Platform, View } from 'react-native';
 import { fetch } from 'expo/fetch';
+import { File, Paths } from 'expo-file-system';
+import { getContentUriAsync } from 'expo-file-system/legacy';
+import { startActivityAsync } from 'expo-intent-launcher';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Button, Text } from '@/src/common/components';
@@ -36,9 +39,21 @@ export function UpdateModal() {
     useState<LatestRelease | null>(null);
   const { theme } = useTheme();
 
-  const onUpdateNow = () => {
+  const onUpdateNow = async () => {
     if (!availableRelease) return;
-    Linking.openURL(availableRelease.apkUrl);
+
+    const apk = await File.downloadFileAsync(
+      availableRelease.apkUrl,
+      new File(Paths.cache, 'polycentric-update.apk'),
+      { idempotent: true },
+    );
+    const contentUri = await getContentUriAsync(apk.uri);
+
+    await startActivityAsync('android.intent.action.VIEW', {
+      data: contentUri,
+      flags: 1,
+      type: 'application/vnd.android.package-archive',
+    });
   };
 
   useEffect(() => {
@@ -93,7 +108,11 @@ export function UpdateModal() {
             </View>
 
             <View style={[Atoms.w_full, Atoms.gap_sm]}>
-              <Button title="Update Now" fullWidth onPress={onUpdateNow} />
+              <Button
+                title="Update Now"
+                fullWidth
+                onPress={() => void onUpdateNow()}
+              />
               <Button
                 variant="tertiary"
                 title="Dismiss"
