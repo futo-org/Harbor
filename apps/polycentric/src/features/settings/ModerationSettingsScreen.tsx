@@ -15,13 +15,12 @@ type LabelKey = keyof ModerationPreferences;
 const LABEL_ENTRIES: {
   key: LabelKey;
   name: string;
-  icon: IconName;
 }[] = [
-  { key: 'hate', name: 'Hate', icon: 'ban' },
-  { key: 'selfHarm', name: 'Self-Harm', icon: 'ban' },
-  { key: 'sexual', name: 'Sexual', icon: 'flag' },
-  { key: 'porn', name: 'Porn', icon: 'flag' },
-  { key: 'graphicMedia', name: 'Graphic Media', icon: 'ban' },
+  { key: 'hate', name: 'Hate' },
+  { key: 'selfHarm', name: 'Self-Harm' },
+  { key: 'sexual', name: 'Sexual' },
+  { key: 'porn', name: 'Porn' },
+  { key: 'graphicMedia', name: 'Graphic Media' },
 ];
 
 const LEVELS: { level: ModerationLevel; icon: IconName; label: string }[] = [
@@ -52,21 +51,21 @@ function SegmentedOption({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        paddingVertical: 8,
-        paddingHorizontal: 6,
+        gap: 3,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
         borderRadius: 8,
         backgroundColor: isActive ? theme.palette.primary_500 : 'transparent',
       }}
     >
       <Icon
         name={icon}
-        size={14}
+        size={12}
         color={isActive ? 'neutral_0' : 'neutral_500'}
       />
       <Text
         variant="small"
-        fontWeight="medium"
+        fontWeight="semibold"
         color={isActive ? 'neutral_0' : 'neutral_500'}
       >
         {label}
@@ -84,29 +83,17 @@ function ModerationLabelRow({ labelKey }: { labelKey: LabelKey }) {
   const currentLevel = moderation[labelKey];
 
   return (
-    <View
-      style={[
-        Atoms.gap_md,
-        Atoms.p_md,
-        Atoms.rounded_md,
-        {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
-      ]}
-    >
-      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md]}>
-        <Icon name={entry.icon} size={20} color="neutral_700" />
-        <Text variant="body" fontWeight="semibold">
-          {entry.name}
-        </Text>
-      </View>
+    <View style={[Atoms.flex_row, Atoms.items_center, Atoms.justify_between]}>
+      <Text variant="body" fontWeight="semibold">
+        {entry.name}
+      </Text>
       <View
         style={[
           Atoms.flex_row,
           Atoms.rounded_md,
           {
             overflow: 'hidden',
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '15'),
+            backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
           },
         ]}
       >
@@ -124,7 +111,6 @@ function ModerationLabelRow({ labelKey }: { labelKey: LabelKey }) {
     </View>
   );
 }
-
 export function ModerationSettingsSheet() {
   const labelKeys = LABEL_ENTRIES.map((e) => e.key);
 
@@ -134,7 +120,7 @@ export function ModerationSettingsSheet() {
         title="Content Moderation"
         onClose={() => router.canGoBack() && router.back()}
       />
-      <Sheet.Content style={[Atoms.gap_lg]}>
+      <Sheet.Content style={[Atoms.gap_md]}>
         {labelKeys.map((key) => (
           <ModerationLabelRow key={key} labelKey={key} />
         ))}
