@@ -146,12 +146,15 @@ jest.mock('@/src/features/verifications/claims/ClaimActionRow', () => {
 
 type SheetProps = { open: boolean; requestFrom?: string };
 let mockSheetProps: SheetProps | null = null;
-jest.mock('@/src/features/verifications/claims/ClaimCreateSheet', () => ({
-  ClaimCreateSheet: (props: SheetProps) => {
-    mockSheetProps = props;
-    return null;
-  },
-}));
+jest.mock(
+  '@/src/features/verifications/claims/create/ClaimCreateSheet',
+  () => ({
+    ClaimCreateSheet: (props: SheetProps) => {
+      mockSheetProps = props;
+      return null;
+    },
+  }),
+);
 
 import { fireEvent, render } from '@testing-library/react-native';
 import * as React from 'react';

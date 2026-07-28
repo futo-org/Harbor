@@ -12,12 +12,14 @@ import {
   typography,
   BorderRadius,
   type PaletteColorToken,
+  type BorderRadiusToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
   variant?: 'default' | 'plain';
+  rounded?: BorderRadiusToken;
   placeholderTextColor?: PaletteColorToken;
   disabled?: boolean;
   error?: boolean;
@@ -31,6 +33,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       style,
       placeholderTextColor,
       variant = 'default',
+      rounded = 'md',
       disabled = false,
       error = false,
       autoCorrect = false,
@@ -109,7 +112,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
         style={[
           styles.blurContainer,
           {
-            borderRadius: BorderRadius.md,
+            borderRadius: BorderRadius[rounded],
             borderColor: error
               ? withHexOpacity(theme.palette.negative_500, '80')
               : isFocused

@@ -23,8 +23,7 @@ use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
-use crate::service::stats::repository::Query as StatsRepository;
-use crate::service::stats::service::rows_to_bundles_with_meta;
+use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
@@ -79,6 +78,7 @@ pub struct Fetched {
 pub struct GetFeedResponseFilter {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
+    pub event_hints: Vec<EventWithContentRow>,
     pub page_info: PageInfo<FeedCursor>,
 }
 
@@ -194,7 +194,6 @@ pub async fn hydrate(
             .map(|(event, content)| (event, content.as_ref())),
     );
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
-
     let quote_set = to_target_event_keys(&quote_keys);
     let repost_set = to_target_event_keys(&repost_keys);
 
@@ -209,15 +208,14 @@ pub async fn hydrate(
 
     // Returns valid (as far as the server is concerned) tombstones related to queried events
     let tombstones_fut = async {
-        let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
-            .await
-            .map_err(map_db_err)?;
+        let raw =
+            tombstone::list_tombstones_for_event_keys(&ctx.db, &display_keys)
+                .await
+                .map_err(map_db_err)?;
         tombstone::validate_tombstones(ctx, raw).await
     };
     let identity_events_fut = list_identity_events(ctx, identities.clone());
     let profile_events_fut = list_profile_events(ctx, identities);
-    // One query for both quote + repost targets; split the result by
-    // matching each fetched row against the two key sets.
     let referenced_fut = async {
         let all_keys: Vec<EventKey> =
             quote_keys.iter().chain(&repost_keys).cloned().collect();
@@ -235,8 +233,8 @@ pub async fn hydrate(
         .map_err(map_db_err)
     };
 
-    let reply_counts_fut = async {
-        StatsRepository::count_replies(&ctx.db, display_keys.clone())
+    let stats_fut = async {
+        gather_stats_for(&ctx.db, &display_keys)
             .await
             .map_err(map_db_err)
     };
@@ -247,14 +245,14 @@ pub async fn hydrate(
         profile_events,
         referenced,
         label_events,
-        reply_counts,
+        stats,
     ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
         profile_events_fut,
         referenced_fut,
         labels_fut,
-        reply_counts_fut,
+        stats_fut,
     )?;
 
     let mut quote_post_events = Vec::new();
@@ -275,12 +273,11 @@ pub async fn hydrate(
         quote_post_events,
         repost_events,
         label_events,
-        reply_counts,
+        stats,
     })
 }
 
-/// Collect the EventKeys feed rows reference — a Post's `quote` target
-/// and a Repost's target — split by kind.
+/// Collect every EventKey referenced by feed rows (quotes and repost targets).
 fn collect_referenced_keys(
     rows: &[EventWithContentRow],
 ) -> (Vec<EventKey>, Vec<EventKey>) {
@@ -329,28 +326,155 @@ fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
         .collect()
 }
 
-/// Remove all rows that have been marked as deleted.
+/// Whether a row's content references another event as a quote or repost.
+#[derive(Debug)]
+enum Referenced {
+    Quote(TargetEventKey),
+    Repost(TargetEventKey),
+}
+
+/// Extract the referenced target key from a feed row, if any.
+fn referenced_target(row: &EventWithContentRow) -> Option<Referenced> {
+    let (_event, content) = row;
+    let Some(content) = content else {
+        return None;
+    };
+    let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
+    else {
+        return None;
+    };
+    match decoded.content_body {
+        Some(ContentBody::Post(post)) => post.quote.and_then(|key| {
+            let sb = key.signed_by.as_ref()?;
+            Some(Referenced::Quote(TargetEventKey {
+                collection: key.collection as i16,
+                identity: key.identity,
+                public_key_type: sb.key_type as i16,
+                public_key: sb.key.clone(),
+                sequence: key.sequence as i64,
+            }))
+        }),
+        Some(ContentBody::Repost(repost)) => repost.post.and_then(|key| {
+            let sb = key.signed_by.as_ref()?;
+            Some(Referenced::Repost(TargetEventKey {
+                collection: key.collection as i16,
+                identity: key.identity,
+                public_key_type: sb.key_type as i16,
+                public_key: sb.key.clone(),
+                sequence: key.sequence as i64,
+            }))
+        }),
+        _ => None,
+    }
+}
+
+/// Returns `true` when `key` has at least one label whose value is in
+/// `omit_label_set`.
+pub fn has_matching_label(
+    label_events: &[EventWithContentRow],
+    key: &TargetEventKey,
+    omit_label_set: &HashSet<&str>,
+) -> bool {
+    for label_row in label_events {
+        if let Some(label_content) = &label_row.1
+            && let Ok(content) =
+                Content::decode(label_content.serialized_bytes.as_slice())
+            && let Some(ContentBody::Labels(labels)) = content.content_body
+            && let Some(lk) = labels.event_key
+            && let Some(signed_by) = lk.signed_by
+        {
+            let label_key = TargetEventKey {
+                collection: lk.collection as i16,
+                identity: lk.identity,
+                public_key_type: signed_by.key_type as i16,
+                public_key: signed_by.key,
+                sequence: lk.sequence as i64,
+            };
+
+            if label_key == *key {
+                return labels
+                    .label_values
+                    .iter()
+                    .any(|v| omit_label_set.contains(v.as_str()));
+            }
+        }
+    }
+    false
+}
+
+/// Remove rows that are tombstoned, omit-labeled, or whose indirect
+/// targets (quote/repost) are tombstoned or omit-labeled. Hint rows
+/// (referenced posts) are filtered alongside live rows.
 pub async fn filter(
     fetched: Fetched,
     hydration: &HydrationState,
+    omit_labels: &[String],
 ) -> Result<GetFeedResponseFilter, Status> {
     let Fetched { rows, page_info } = fetched;
+    let omit_set: HashSet<&str> =
+        omit_labels.iter().map(|s| s.as_str()).collect();
+
+    let is_omitted = |key: &TargetEventKey| -> bool {
+        hydration.deletes_by_target.contains_key(key)
+            || (!omit_set.is_empty()
+                && has_matching_label(&hydration.label_events, key, &omit_set))
+    };
 
     let mut live_rows: Vec<EventWithContentRow> =
         Vec::with_capacity(rows.len());
     let mut tombstone_bundles: Vec<EventBundle> = Vec::new();
 
+    // Filter live rows
     for row in rows {
         let key = TargetEventKey::of(&row.0);
+
+        // If tombstoned, drop but add a hint
         if let Some(bundles) = hydration.deletes_by_target.get(&key) {
             tombstone_bundles.extend(bundles.iter().cloned());
-        } else {
-            live_rows.push(row);
+            continue;
         }
+
+        // If omit-labeled, drop
+        if !omit_set.is_empty()
+            && has_matching_label(&hydration.label_events, &key, &omit_set)
+        {
+            continue;
+        }
+
+        match referenced_target(&row) {
+            // If repost of deleted/omitted target, drop
+            Some(Referenced::Repost(target)) if is_omitted(&target) => {
+                continue;
+            }
+            // If quote of deleted/omitted target, allow and bring tombstone bundle if it exists
+            Some(Referenced::Quote(target)) => {
+                if let Some(bundles) = hydration.deletes_by_target.get(&target)
+                {
+                    tombstone_bundles.extend(bundles.iter().cloned());
+                }
+            }
+            _ => {}
+        }
+
+        live_rows.push(row);
     }
+
+    // Filter hint rows
+    let event_hints: Vec<EventWithContentRow> = hydration
+        .quote_post_events
+        .iter()
+        .chain(hydration.repost_events.iter())
+        .filter(|row| {
+            let key = TargetEventKey::of(&row.0);
+            !is_omitted(&key)
+        })
+        .cloned()
+        .collect();
+
     Ok(GetFeedResponseFilter {
         live_rows,
         tombstone_bundles,
+        event_hints,
         page_info,
     })
 }
@@ -365,19 +489,18 @@ pub async fn view(
     let GetFeedResponseFilter {
         live_rows,
         mut tombstone_bundles,
+        event_hints,
         page_info,
     } = filtered;
     let HydrationState {
         identity_events,
         profile_events,
-        quote_post_events,
-        repost_events,
         label_events,
-        reply_counts,
+        stats,
         ..
     } = hydration;
 
-    let mut event_bundles = rows_to_bundles_with_meta(live_rows, &reply_counts);
+    let mut event_bundles = assemble_bundles(live_rows, &stats);
 
     let mut label_bundles = rows_to_bundles(label_events);
 
@@ -392,11 +515,10 @@ pub async fn view(
     let hint_rows: Vec<EventWithContentRow> = identity_events
         .into_iter()
         .chain(profile_events)
-        .chain(quote_post_events)
-        .chain(repost_events)
+        .chain(event_hints)
         .collect();
 
-    let mut event_hints = rows_to_bundles_with_meta(hint_rows, &reply_counts)
+    let mut event_hints = assemble_bundles(hint_rows, &stats)
         .into_iter()
         .map(|bundle| EventHint {
             event_bundle: Some(bundle),
@@ -411,4 +533,443 @@ pub async fn view(
         event_hints,
         page_info,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{
+        Content, EventBundle, EventKey, Labels, Post, PublicKey, Repost,
+    };
+    use ::entity::content_model as ContentModel;
+    use ::entity::event_model as EventModel;
+    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use std::collections::HashSet;
+
+    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
+        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    }
+
+    fn event_row(
+        id: i64,
+        identity: &str,
+        collection: i16,
+        sequence: i64,
+    ) -> EventModel::Model {
+        EventModel::Model {
+            id,
+            collection,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![id as u8]),
+            signature: vec![id as u8],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![id as u8],
+            created_at: ts(id),
+            synced_at: ts(id),
+        }
+    }
+
+    fn content_row(id: i64, content: &Content) -> ContentModel::Model {
+        ContentModel::Model {
+            id,
+            digest_type: 1,
+            digest_bytes: vec![id as u8],
+            serialized_bytes: content.encode_to_vec(),
+            synced_at: ts(id),
+        }
+    }
+
+    fn ewc(
+        id: i64,
+        identity: &str,
+        collection: i16,
+        sequence: i64,
+        content: &Content,
+    ) -> EventWithContentRow {
+        (
+            event_row(id, identity, collection, sequence),
+            Some(content_row(id, content)),
+        )
+    }
+
+    fn make_key(identity: &str, sequence: i64) -> TargetEventKey {
+        TargetEventKey {
+            collection: 2,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence,
+        }
+    }
+
+    fn to_event_key(target: &TargetEventKey) -> EventKey {
+        EventKey {
+            collection: target.collection as i32,
+            identity: target.identity.clone(),
+            signed_by: Some(PublicKey {
+                key_type: target.public_key_type as i32,
+                key: target.public_key.clone(),
+            }),
+            sequence: target.sequence as u64,
+        }
+    }
+
+    fn make_label_event(
+        target: &TargetEventKey,
+        values: &[&str],
+    ) -> EventWithContentRow {
+        let content = Content {
+            content_body: Some(ContentBody::Labels(Labels {
+                event_key: Some(to_event_key(target)),
+                label_values: values.iter().map(|s| s.to_string()).collect(),
+            })),
+        };
+        ewc(999, "moderator", 1, 1, &content)
+    }
+
+    fn default_post_content() -> Content {
+        Content {
+            content_body: Some(ContentBody::Post(Post::default())),
+        }
+    }
+
+    fn quote_content(target: &TargetEventKey) -> Content {
+        Content {
+            content_body: Some(ContentBody::Post(Post {
+                quote: Some(to_event_key(target)),
+                ..Default::default()
+            })),
+        }
+    }
+
+    fn repost_content(target: &TargetEventKey) -> Content {
+        Content {
+            content_body: Some(ContentBody::Repost(Repost {
+                post: Some(to_event_key(target)),
+            })),
+        }
+    }
+
+    fn make_fetched(rows: Vec<EventWithContentRow>) -> Fetched {
+        Fetched {
+            rows,
+            page_info: PageInfo {
+                backward_cursor: FeedCursor::End,
+                forward_cursor: FeedCursor::End,
+                has_previous_page: false,
+                has_next_page: false,
+            },
+        }
+    }
+
+    #[test]
+    fn has_matching_label_empty_list() {
+        let key = make_key("alice", 1);
+        let set: HashSet<&str> = ["spam"].into();
+        assert!(!has_matching_label(&[], &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_no_label_targets_key() {
+        let key = make_key("alice", 1);
+        let other = make_key("bob", 1);
+        let labels = vec![make_label_event(&other, &["spam"])];
+        let set: HashSet<&str> = ["spam"].into();
+        assert!(!has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_value_not_in_omit_set() {
+        let key = make_key("alice", 1);
+        let labels = vec![make_label_event(&key, &["spam"])];
+        let set: HashSet<&str> = ["hate"].into();
+        assert!(!has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_value_matches() {
+        let key = make_key("alice", 1);
+        let labels = vec![make_label_event(&key, &["spam"])];
+        let set: HashSet<&str> = ["spam"].into();
+        assert!(has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_multiple_labels_one_matches() {
+        let key = make_key("alice", 1);
+        let labels = vec![make_label_event(&key, &["hate", "spam"])];
+        let set: HashSet<&str> = ["spam"].into();
+        assert!(has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_empty_omit_set() {
+        let key = make_key("alice", 1);
+        let labels = vec![make_label_event(&key, &["spam"])];
+        let set: HashSet<&str> = HashSet::new();
+        assert!(!has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn referenced_target_no_content() {
+        let row: EventWithContentRow = (event_row(1, "alice", 2, 1), None);
+        assert!(referenced_target(&row).is_none());
+    }
+
+    #[test]
+    fn referenced_target_non_post_repost_content() {
+        let row = ewc(1, "alice", 2, 1, &Content::default());
+        assert!(referenced_target(&row).is_none());
+    }
+
+    #[test]
+    fn referenced_target_post_without_quote() {
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        assert!(referenced_target(&row).is_none());
+    }
+
+    #[test]
+    fn referenced_target_post_with_quote() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &quote_content(&target));
+        let result = referenced_target(&row);
+        match result {
+            Some(Referenced::Quote(k)) => assert_eq!(k, target),
+            other => panic!("expected Referenced::Quote, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn referenced_target_repost() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &repost_content(&target));
+        let result = referenced_target(&row);
+        match result {
+            Some(Referenced::Repost(k)) => assert_eq!(k, target),
+            other => panic!("expected Referenced::Repost, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn filter_clean_rows_pass_through() {
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let fetched = make_fetched(vec![row]);
+        let hydration = HydrationState::default();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_tombstoned_own_key() {
+        let target = make_key("alice", 1);
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let mut hydration = HydrationState::default();
+        hydration
+            .deletes_by_target
+            .insert(target, vec![EventBundle::default()]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+        assert_eq!(result.tombstone_bundles.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn filter_omit_labeled_own_key() {
+        let target = make_key("alice", 1);
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let labels = vec![make_label_event(&target, &["spam"])];
+        let hydration = HydrationState {
+            label_events: labels,
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert!(result.live_rows.is_empty());
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_non_matching_label_keeps_row() {
+        let key = make_key("alice", 1);
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let labels = vec![make_label_event(&key, &["spam"])];
+        let hydration = HydrationState {
+            label_events: labels,
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &["hate".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_empty_omit_labels_disables_label_filtering() {
+        let key = make_key("alice", 1);
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let labels = vec![make_label_event(&key, &["spam"])];
+        let hydration = HydrationState {
+            label_events: labels,
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_repost_of_tombstoned_target() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &repost_content(&target));
+        let mut hydration = HydrationState::default();
+        hydration
+            .deletes_by_target
+            .insert(target, vec![EventBundle::default()]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_repost_of_omit_labeled_target() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &repost_content(&target));
+        let labels = vec![make_label_event(&target, &["spam"])];
+        let hydration = HydrationState {
+            label_events: labels,
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert!(result.live_rows.is_empty());
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_repost_of_clean_target() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &repost_content(&target));
+        let hydration = HydrationState::default();
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_quote_of_tombstoned_target() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &quote_content(&target));
+        let mut hydration = HydrationState::default();
+        hydration
+            .deletes_by_target
+            .insert(target, vec![EventBundle::default()]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert_eq!(result.tombstone_bundles.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn filter_quote_of_omit_labeled_target() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &quote_content(&target));
+        let labels = vec![make_label_event(&target, &["spam"])];
+        let hydration = HydrationState {
+            label_events: labels,
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_mixed_rows() {
+        let clean = ewc(1, "alice", 2, 1, &default_post_content());
+        let tombstoned = ewc(2, "bob", 2, 2, &default_post_content());
+        let labeled = ewc(3, "charlie", 2, 3, &default_post_content());
+
+        let mut hydration = HydrationState::default();
+        hydration
+            .deletes_by_target
+            .insert(make_key("bob", 2), vec![EventBundle::default()]);
+        hydration.label_events =
+            vec![make_label_event(&make_key("charlie", 3), &["spam"])];
+
+        let fetched = make_fetched(vec![clean, tombstoned, labeled]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+        assert_eq!(
+            TargetEventKey::of(&result.live_rows[0].0),
+            make_key("alice", 1)
+        );
+        assert_eq!(result.tombstone_bundles.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn filter_hint_tombstoned_excluded() {
+        let target = make_key("bob", 1);
+        let hint = ewc(10, "bob", 2, 1, &default_post_content());
+        let mut hydration = HydrationState::default();
+        hydration
+            .deletes_by_target
+            .insert(target, vec![EventBundle::default()]);
+        hydration.repost_events = vec![hint];
+        let fetched = make_fetched(vec![]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.event_hints.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_hint_omit_labeled_excluded() {
+        let target = make_key("bob", 1);
+        let hint = ewc(10, "bob", 2, 1, &default_post_content());
+        let hydration = HydrationState {
+            label_events: vec![make_label_event(&target, &["spam"])],
+            repost_events: vec![hint],
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert!(result.event_hints.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_hint_clean_included() {
+        let hint = ewc(10, "bob", 2, 1, &default_post_content());
+        let hydration = HydrationState {
+            repost_events: vec![hint],
+            ..Default::default()
+        };
+        let fetched = make_fetched(vec![]);
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(result.event_hints.len(), 1);
+    }
 }

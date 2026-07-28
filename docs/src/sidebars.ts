@@ -12,6 +12,16 @@ const sidebars: SidebarsConfig = {
       label: 'Protocol',
       items: ['protocol/overview', 'protocol/data-model', 'protocol/grpc'],
     },
+    {
+      type: 'category',
+      label: 'Verifiers',
+      items: [
+        'verifiers/overview',
+        'verifiers/platforms',
+        'verifiers/self-hosting',
+        'verifiers/creating-a-verifier',
+      ],
+    },
     'contributing',
     'support',
     'privacy-policy',

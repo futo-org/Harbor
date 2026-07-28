@@ -5,7 +5,7 @@ import { truncateName, useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ClaimActionRow } from '@/src/features/verifications/claims/ClaimActionRow';
-import { ClaimCreateSheet } from '@/src/features/verifications/claims/ClaimCreateSheet';
+import { ClaimCreateSheet } from '@/src/features/verifications/claims/create/ClaimCreateSheet';
 import { ClaimListItem } from '@/src/features/verifications/claims/ClaimListItem';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
 import { useClaimsList } from '@/src/features/verifications/hooks/useClaimsList';

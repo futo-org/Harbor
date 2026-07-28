@@ -2,16 +2,21 @@ import {
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  eventKeyId,
+  getKeyFingerprint,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
-import { useClaimCreateOptions } from '../claims/ClaimCreateContext';
+import { useClaimCreateOptions } from '../claims/create/ClaimCreateContext';
 import { encodeFieldValue, serializeSchema } from '../utils/schemas';
 import { publishVerificationTarget } from './useRequestVerification';
 
 // Identifies a created claim event for routing to its view.
 export interface ClaimRef {
+  // Hex-encoded event key (`DecodedClaim.id`).
+  id: string;
   identity: string;
   keyFingerprint: string;
   sequence: string;
@@ -105,6 +110,7 @@ export default function useCreateClaim() {
         const key = event.key;
         if (!key?.signedBy) return undefined;
         return {
+          id: eventKeyId(key),
           identity: key.identity,
           keyFingerprint: getKeyFingerprint(key.signedBy) ?? '',
           sequence: key.sequence.toString(),

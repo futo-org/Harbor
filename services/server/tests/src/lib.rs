@@ -322,6 +322,7 @@ pub fn test_moderator_identity() -> String {
         rotation_keys: vec![public_key_of(&key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     derive_identity_string(&initial)
 }

@@ -40,6 +40,10 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 
 jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
   getKeyFingerprint: (key?: unknown) => (key ? 'fingerprint' : undefined),
+  eventKeyId: (key: unknown) => {
+    const { v2 } = jest.requireMock('@polycentric/react-native');
+    return Buffer.from(v2.EventKey.toBinary(key)).toString('hex');
+  },
 }));
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
@@ -47,7 +51,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 }));
 
 let mockRequestFrom: string | undefined;
-jest.mock('../claims/ClaimCreateContext', () => ({
+jest.mock('../claims/create/ClaimCreateContext', () => ({
   useClaimCreateOptions: () => ({ requestFrom: mockRequestFrom }),
 }));
 
@@ -116,6 +120,7 @@ describe('useCreateClaim', () => {
       'me',
     ]);
     expect(ref).toEqual({
+      id: expect.any(String),
       identity: 'me',
       keyFingerprint: 'fingerprint',
       sequence: '1',

@@ -417,6 +417,162 @@ describe('useComposer link previews', () => {
     expect(built.post.links).toHaveLength(1);
   });
 
+  it('drops the stale card as soon as the url is swapped', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      // The loading state waits for the debounced fetch to actually start.
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).not.toBeNull();
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      // Swap the url: the stale card disappears right away, before the new
+      // fetch (and its loading state) kicks in.
+      act(() => result.current.setText('now https://other.example instead'));
+      expect(result.current.linkPreview).toBeNull();
+      expect(result.current.linkPreviewLoading).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://other.example',
+      });
+      expect(result.current.linkPreviewLoading).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('disables posting until the preview finishes loading', async () => {
+    jest.useFakeTimers();
+    try {
+      const unfurl = deferred<Awaited<ReturnType<typeof mockClient.urlInfo>>>();
+      mockClient.urlInfo.mockReturnValueOnce(unfurl.promise);
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+
+      // Debounce elapses, the fetch starts: posting is held.
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreviewLoading).toBe(true);
+      expect(result.current.canPost).toBe(false);
+
+      await act(async () => {
+        unfurl.resolve({
+          url: 'https://example.com',
+          title: 't',
+          description: 'd',
+          image: 'i',
+        });
+      });
+      expect(result.current.linkPreviewLoading).toBe(false);
+      expect(result.current.canPost).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('re-enables posting when a loading preview is removed', async () => {
+    jest.useFakeTimers();
+    try {
+      // Never resolves: the user removes the preview instead of waiting.
+      mockClient.urlInfo.mockReturnValueOnce(new Promise(() => {}));
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.canPost).toBe(false);
+
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreviewLoading).toBe(false);
+      expect(result.current.canPost).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('revives previews when a different link is typed after dismissal', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).not.toBeNull();
+
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreview).toBeNull();
+
+      act(() => result.current.setText('now https://other.example instead'));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://other.example',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('revives previews when the same link is deleted and retyped', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result } = await renderComposer();
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      act(() => result.current.handleRemoveLinkPreview());
+      expect(result.current.linkPreview).toBeNull();
+
+      // Delete the link and let the draft settle: the removal enters the
+      // diff baseline, so retyping the very same url counts as newly typed
+      // and unfurls again. (Deleting and retyping within one debounce window
+      // coalesces into "no change" — the settled diff never sees it.)
+      act(() => result.current.setText('check  out'));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      act(() => result.current.setText(draftWithUrl));
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(result.current.linkPreview).toMatchObject({
+        url: 'https://example.com',
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('drops the preview and stops embedding once dismissed', async () => {
+    const { result } = await renderComposer();
+    act(() => result.current.setText(draftWithUrl));
+
+    act(() => result.current.handleRemoveLinkPreview());
+    expect(result.current.linkPreview).toBeNull();
+    expect(result.current.linkPreviewLoading).toBe(false);
+
+    await act(async () => {
+      await result.current.handlePost();
+    });
+
+    expect(mockClient.urlInfo).not.toHaveBeenCalled();
+    const built = mockClient.contentManager.build.mock.calls[0][0];
+    expect(built.post.links).toHaveLength(0);
+  });
+
   it('skips link preview generation when disabled', async () => {
     mockLinkPreviewsEnabled = false;
     const { result } = await renderComposer();

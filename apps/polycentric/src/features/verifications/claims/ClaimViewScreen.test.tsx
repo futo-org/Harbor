@@ -78,10 +78,20 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: mockIdentityKey }),
 }));
 
+const mockToast = { success: jest.fn(), error: jest.fn() };
+jest.mock('@/src/common/components/toast', () => ({
+  useToast: () => mockToast,
+}));
+
 const mockVerify = jest.fn(async () => undefined);
 jest.mock('../hooks/useVerifyClaim', () => ({
   __esModule: true,
   default: () => ({ verify: mockVerify, isPending: false }),
+}));
+
+jest.mock('../hooks/useRequestPlatformVerification', () => ({
+  __esModule: true,
+  default: () => ({ isPending: false, submit: jest.fn(async () => undefined) }),
 }));
 
 jest.mock('../hooks/useClaimById', () => ({

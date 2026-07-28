@@ -314,6 +314,21 @@ export function invalidateQuery(
 }
 
 /**
+ * Invalidate every cached query: the rust-side cache is dropped wholesale
+ * and every active subscription starts a lazy refresh (existing data stays
+ * visible until new data arrives). Use after changes that affect what any
+ * query could return, e.g. the identity's server list changing.
+ */
+export function invalidateAllQueries(client: PolycentricClient) {
+  client.core.invalidateAllQueries();
+
+  const state = useQueryStore.getState();
+  for (const key of state.subscriptions.keys()) {
+    state.refresh(RefreshStrategy.Lazy, key);
+  }
+}
+
+/**
  * Returns the current cache for a query key
  */
 export function getQueryCache(queryKey: QueryKey): QueryRef | undefined {

@@ -64,6 +64,26 @@ export const Breakpoints = {
   '2xl': 1400,
 } as const;
 
+/**
+ * Every `zIndex` in the app comes from here. Only relative order matters;
+ * the gaps leave room for new layers.
+ */
+export const ZIndex = {
+  // Above static siblings within a screen (sticky headers, etc).
+  raised: 1,
+  // Inline (native) tooltip bubble.
+  tooltip: 1000,
+  // Modal overlays (the Sheet's web overlay). Above expo-router's
+  // transparentModal drawer, which vaul mounts to document.body.
+  modal: 9999,
+  // Web tooltip portal — tooltips can open from inside modals.
+  tooltipOverlay: 10000,
+  // Toasts sit above everything.
+  toast: 10100,
+} as const;
+
+export type ZIndexToken = keyof typeof ZIndex;
+
 const atomStyles = {
   /**
    * Position

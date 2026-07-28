@@ -16,8 +16,7 @@ use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
     EventHint, EventKey, ListEventsRequest, ListEventsResponse, PublicKey,
 };
-use crate::service::stats::repository::Query as StatsRepository;
-use crate::service::stats::service::rows_to_bundles_with_meta;
+use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use polycentric_common::models::protos_v2::EventBundle;
 use sea_orm::DbErr;
 use tonic::Status;
@@ -103,21 +102,18 @@ async fn hydrate(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect::<Vec<_>>();
 
-    let reply_counts_fut = async {
-        StatsRepository::count_replies(&ctx.db, keys)
-            .await
-            .map_err(map_db_err)
-    };
+    let stats_fut =
+        async { gather_stats_for(&ctx.db, &keys).await.map_err(map_db_err) };
 
-    let (identity_events, profile_events, reply_counts) = tokio::try_join!(
+    let (identity_events, profile_events, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
-        reply_counts_fut,
+        stats_fut,
     )?;
     Ok(HydrationState {
         identity_events,
         profile_events,
-        reply_counts,
+        stats,
         ..Default::default()
     })
 }
@@ -141,11 +137,11 @@ async fn view(
     let HydrationState {
         identity_events,
         profile_events,
-        reply_counts,
+        stats,
         ..
     } = hydration;
 
-    let mut event_bundles = rows_to_bundles_with_meta(live_rows, &reply_counts);
+    let mut event_bundles = assemble_bundles(live_rows, &stats);
     attach_proofs(ctx, &mut event_bundles).await?;
 
     let event_hints = rows_to_hints(

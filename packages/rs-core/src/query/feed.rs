@@ -479,6 +479,7 @@ pub fn get_post_thread(
     let request = GetPostThreadRequest {
         event_key: Some(event_key.into()),
         limit,
+        omit_labels: vec![],
     };
 
     let client = query_client.client().clone();

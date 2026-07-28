@@ -1,1 +1,1 @@
-export { default } from '@/src/features/settings/ServersSettingsScreen';
+export { default } from '@/src/features/settings/servers/ServersSettingsScreen';

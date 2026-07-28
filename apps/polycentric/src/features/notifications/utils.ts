@@ -4,6 +4,10 @@ import {
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  decodeClaimBundle,
+  type DecodedClaim,
+} from '@/src/features/verifications/hooks/useClaimById';
 import { v2 } from '@polycentric/react-native';
 
 /** Fields common to every notification. */
@@ -55,12 +59,33 @@ export type QuoteNotification = NotificationBase & {
   targetPost?: PostData;
 };
 
+/** Someone requested you verify a claim of theirs. */
+export type VerificationRequestNotification = NotificationBase & {
+  kind: 'verificationRequest';
+  /** Key of the claim to verify (for navigation), when it was carried. */
+  claimKey?: v2.EventKey;
+  /** The claim itself, when the notification carried its event — rendered
+   *  as the same card the verifications inbox shows. */
+  claim?: DecodedClaim;
+};
+
+/** Someone completed a verification you requested. */
+export type VerificationCompleteNotification = NotificationBase & {
+  kind: 'verificationComplete';
+  /** Key of the verified claim (for navigation), when it was carried. */
+  claimKey?: v2.EventKey;
+  /** The verified claim, when the notification carried its event. */
+  claim?: DecodedClaim;
+};
+
 export type NotificationData =
   | FollowNotification
   | ReplyNotification
   | RepostNotification
   | ReactionNotification
-  | QuoteNotification;
+  | QuoteNotification
+  | VerificationRequestNotification
+  | VerificationCompleteNotification;
 
 /** The author identity, a stable hex id, and creation time from a bundle's
  *  event key. `null` when the bundle is missing or unparseable. */
@@ -135,6 +160,40 @@ function decodeNotification(
         kind: 'reaction',
         emoji: reaction?.content.emoji || undefined,
         targetPost,
+      };
+    }
+
+    case v2.NotificationKind.VERIFICATION_REQUEST: {
+      // The claim key travels in the trigger's VerificationTarget content;
+      // the claim event itself is the notification's target.
+      const target = notification.triggerEvent
+        ? decodeBundle(notification.triggerEvent, 'verificationTarget')
+        : null;
+      const claim = notification.targetEvent
+        ? (decodeClaimBundle(notification.targetEvent) ?? undefined)
+        : undefined;
+      return {
+        ...base,
+        kind: 'verificationRequest',
+        claimKey: target?.content.claimEventKey,
+        claim,
+      };
+    }
+
+    case v2.NotificationKind.VERIFICATION_COMPLETE: {
+      // The claim key travels in the trigger's VerificationVerify content;
+      // the claim event itself is the notification's target.
+      const verify = notification.triggerEvent
+        ? decodeBundle(notification.triggerEvent, 'verificationVerify')
+        : null;
+      const claim = notification.targetEvent
+        ? (decodeClaimBundle(notification.targetEvent) ?? undefined)
+        : undefined;
+      return {
+        ...base,
+        kind: 'verificationComplete',
+        claimKey: verify?.content.claimEventKey,
+        claim,
       };
     }
 

@@ -9,7 +9,6 @@ import { DEFAULT_REACTION_EMOJI } from '../../reaction/consts';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
 import PostActionButton from './PostActionButton';
-import { isWeb } from '@/src/common/util/platform';
 
 type PostReactionButtonProps = {
   post: PostData;
@@ -21,29 +20,24 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
   const triggerRef = useRef<TriggerRef>(null);
 
   const reaction = useReactions((s) => s.reactions.get(post.id));
-  const count = useReactions((s) => {
-    const counts = s.reactionCounts.get(post.id);
-    if (!counts) return 0;
-    let total = 0;
-    for (const v of Object.values(counts)) total += v;
-    return total;
-  });
+  const count = post.upvoteCount;
   const addReaction = useReactions((s) => s.addReaction);
   const removeReaction = useReactions((s) => s.removeReaction);
+  const changeReaction = useReactions((s) => s.changeReaction);
 
   const [open, setOpen] = useState(false);
   const hasReaction = !!reaction;
 
-  // Toggle: re-selecting the same emoji clears it
-  const onEmojiSelect = async (emoji: string) => {
+  const onEmojiSelect = (emoji: string) => {
     triggerRef.current?.close();
-    if (hasReaction) {
-      await removeReaction(client, post.id);
-
-      if (reaction.emoji === emoji) return; // Same emoji means we removed it
+    if (hasReaction && reaction.emoji === emoji) {
+      // Reselecting the same emoji clears it.
+      removeReaction(client, post);
+    } else if (hasReaction) {
+      changeReaction(client, post, { emoji, positive: true });
+    } else {
+      addReaction(client, post, { emoji, positive: true });
     }
-
-    addReaction(client, { targetId: post.id, emoji, positive: true });
   };
 
   const onReactionPress = (e: GestureResponderEvent) => {

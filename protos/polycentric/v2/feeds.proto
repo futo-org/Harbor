@@ -50,6 +50,8 @@ message GetPostThreadRequest {
   // Parent post to return the thread for
   EventKey event_key = 1;
   int32 limit = 2;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
 }
 
 /**

@@ -113,7 +113,7 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={() => router.push(Routes.tabs.settings.servers)}
                 >
-                  <Text variant="body">Polycentric servers</Text>
+                  <Text variant="body">Configure servers</Text>
                 </ListItemWrapper>
               </ListItemGroup>
 

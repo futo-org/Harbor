@@ -45,6 +45,7 @@ export const IconsMap = {
   closeSharp: defineIcon(Ionicons, 'close-sharp'),
   copy: defineIcon(Ionicons, 'copy-outline'),
   dotsVertical: defineIcon(MaterialCommunityIcons, 'dots-vertical'),
+  edit: defineIcon(MaterialCommunityIcons, 'pencil-outline'),
   emoji: defineIcon(MaterialIcons, 'emoji-emotions'),
   flag: defineIcon(Ionicons, 'flag-outline'),
   form: defineIcon(MaterialCommunityIcons, 'form-select'),

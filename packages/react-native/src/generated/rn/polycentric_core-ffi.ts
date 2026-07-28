@@ -15,452 +15,116 @@ import {
 } from "@ubjs/core";
 
 interface NativeModuleInterface {
-  ubrn_uniffi_internal_fn_func_ffi__string_to_byte_length(
-    string: string,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
-  ubrn_uniffi_internal_fn_func_ffi__string_to_buffer(
-    string: string,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_internal_fn_func_ffi__string_from_buffer(
-    buffer: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): string;
-  ubrn_uniffi_internal_fn_func_ffi__read_string_from_buffer(
-    buffer: any,
-    offset: number,
-    length: number,
-  ): string;
-  ubrn_ffi_polycentric_core_rust_future_poll_u8(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_uniffi_internal_fn_func_ffi__string_to_byte_length(string: string, uniffi_out_err: UniffiRustCallStatus): number;
+  ubrn_uniffi_internal_fn_func_ffi__string_to_buffer(string: string, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_internal_fn_func_ffi__string_from_buffer(buffer: Uint8Array, uniffi_out_err: UniffiRustCallStatus): string;
+  ubrn_uniffi_internal_fn_func_ffi__read_string_from_buffer(buffer: any, offset: number, length: number): string;
+  ubrn_ffi_polycentric_core_rust_future_poll_u8(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_u8(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_u8(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_u8(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_u8(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_i8(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_i8(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_i8(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_i8(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_i8(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_i8(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_u16(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_u16(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_u16(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_u16(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_u16(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_u16(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_i16(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_i16(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_i16(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_i16(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_i16(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_i16(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_u32(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_u32(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_u32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_u32(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_u32(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_u32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_i32(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_i32(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_i32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_i32(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_i32(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_i32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_u64(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_u64(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_u64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_u64(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
+  ubrn_ffi_polycentric_core_rust_future_complete_u64(handle: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
   ubrn_ffi_polycentric_core_rust_future_free_u64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_i64(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_i64(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_i64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_i64(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
+  ubrn_ffi_polycentric_core_rust_future_complete_i64(handle: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
   ubrn_ffi_polycentric_core_rust_future_free_i64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_f32(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_f32(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_f32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_f32(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_f32(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_f32(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_f64(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_f64(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_f64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_f64(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
+  ubrn_ffi_polycentric_core_rust_future_complete_f64(handle: bigint, uniffi_out_err: UniffiRustCallStatus): number;
   ubrn_ffi_polycentric_core_rust_future_free_f64(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
-  ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer(
-    handle: bigint,
-  ): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
+  ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
+  ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer(handle: bigint): void;
+  ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer(handle: bigint, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
   ubrn_ffi_polycentric_core_rust_future_free_rust_buffer(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_poll_void(
-    handle: bigint,
-    callback: UniffiRustFutureContinuationCallback,
-    callbackData: bigint,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_poll_void(handle: bigint, callback: UniffiRustFutureContinuationCallback, callbackData: bigint): void;
   ubrn_ffi_polycentric_core_rust_future_cancel_void(handle: bigint): void;
-  ubrn_ffi_polycentric_core_rust_future_complete_void(
-    handle: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
+  ubrn_ffi_polycentric_core_rust_future_complete_void(handle: bigint, uniffi_out_err: UniffiRustCallStatus): void;
   ubrn_ffi_polycentric_core_rust_future_free_void(handle: bigint): void;
-  ubrn_uniffi_polycentric_core_fn_clone_logger(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_logger(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_observer(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_observer(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_polycentriccore(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_polycentriccore(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_queryobservable(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_queryobservable(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_queryobserver(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_queryobserver(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_signbytescallback(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_signbytescallback(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_clone_subscription(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_free_subscription(
-    ptr: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_logger(
-    vtable: UniffiVTableCallbackInterfacePolycentricCoreLogger,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_observer(
-    vtable: UniffiVTableCallbackInterfacePolycentricCoreObserver,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_queryobserver(
-    vtable: UniffiVTableCallbackInterfacePolycentricCoreQueryObserver,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(
-    vtable: UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_func_set_log_level(
-    level: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_func_set_logger(
-    logger: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_logger_log(
-    uniffiSelf: bigint,
-    message: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_observer_next(
-    uniffiSelf: bigint,
-    value: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_observer_error(
-    uniffiSelf: bigint,
-    message: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_observer_complete(
-    uniffiSelf: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_constructor_polycentriccore_new(
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    collection: number,
-    identitySequence: bigint,
-    signedBy: Uint8Array,
-    currentSequence: bigint,
-    identityContent: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(
-    uniffiSelf: bigint,
-    contents: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_events(
-    uniffiSelf: bigint,
-    signedEvents: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_create_pairing_session(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(
-    uniffiSelf: bigint,
-    queryKey: Uint8Array,
-    query: Uint8Array,
-    opts: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    signer: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    pairingSessionSignature: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_servers(
-    uniffiSelf: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_query(
-    uniffiSelf: bigint,
-    queryKey: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_banned(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array,
-    signing: Uint8Array,
-    signer: bigint,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_is_moderator(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    signing: Uint8Array,
-    signer: bigint,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_bans(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array,
-    signing: Uint8Array,
-    signer: bigint,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    collection: number,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_next_sequence(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    collection: number,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    collection: number,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    collection: number,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(
-    uniffiSelf: bigint,
-    image: Uint8Array,
-    width: number,
-    height: number,
-    mode: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(
-    uniffiSelf: bigint,
-    identity: Uint8Array,
-    server: Uint8Array,
-    partial: number,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_events(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    eventBundlesBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    signedMessageBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array,
-    signing: Uint8Array,
-    signer: bigint,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
-    uniffiSelf: bigint,
-    servers: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_sign_event(
-    uniffiSelf: bigint,
-    eventBytes: Uint8Array,
-    callback: bigint,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    requestBytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_url_info(
-    uniffiSelf: bigint,
-    serverUrl: Uint8Array,
-    url: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(
-    uniffiSelf: bigint,
-    signedEvent: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): Uint8Array;
-  ubrn_uniffi_polycentric_core_fn_method_queryobservable_subscribe(
-    uniffiSelf: bigint,
-    observer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_queryobserver_next(
-    uniffiSelf: bigint,
-    result: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_queryobserver_error(
-    uniffiSelf: bigint,
-    message: Uint8Array,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_queryobserver_complete(
-    uniffiSelf: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
-  ubrn_uniffi_polycentric_core_fn_method_signbytescallback_sign(
-    uniffiSelf: bigint,
-    bytes: Uint8Array,
-  ): bigint;
-  ubrn_uniffi_polycentric_core_fn_method_subscription_is_closed(
-    uniffiSelf: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): number;
-  ubrn_uniffi_polycentric_core_fn_method_subscription_unsubscribe(
-    uniffiSelf: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): void;
+  ubrn_uniffi_polycentric_core_fn_clone_logger(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_logger(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_observer(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_observer(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_polycentriccore(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_polycentriccore(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_queryobservable(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_queryobservable(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_queryobserver(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_queryobserver(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_signeventcallback(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_signeventcallback(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_clone_subscription(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_free_subscription(ptr: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_logger(vtable: UniffiVTableCallbackInterfacePolycentricCoreLogger): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_observer(vtable: UniffiVTableCallbackInterfacePolycentricCoreObserver): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_queryobserver(vtable: UniffiVTableCallbackInterfacePolycentricCoreQueryObserver): void;
+  ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(vtable: UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback): void;
+  ubrn_uniffi_polycentric_core_fn_func_set_log_level(level: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_func_set_logger(logger: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_logger_log(uniffiSelf: bigint, message: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_next(uniffiSelf: bigint, value: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_error(uniffiSelf: bigint, message: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_observer_complete(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_constructor_polycentriccore_new(uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(uniffiSelf: bigint, identity: Uint8Array, collection: number, identitySequence: bigint, signedBy: Uint8Array, currentSequence: bigint, identityContent: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(uniffiSelf: bigint, contents: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_events(uniffiSelf: bigint, signedEvents: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_create_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(uniffiSelf: bigint, queryKey: Uint8Array, query: Uint8Array, opts: Uint8Array, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(uniffiSelf: bigint, identity: Uint8Array, signer: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, pairingSessionSignature: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(uniffiSelf: bigint, serverUrl: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_servers(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_all_queries(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_invalidate_query(uniffiSelf: bigint, queryKey: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_join_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_heads(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events(uniffiSelf: bigint, identity: Uint8Array, collection: number, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_next_sequence(uniffiSelf: bigint, identity: Uint8Array, collection: number, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(uniffiSelf: bigint, identity: Uint8Array, collection: number, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(uniffiSelf: bigint, identity: Uint8Array, collection: number, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(uniffiSelf: bigint, image: Uint8Array, width: number, height: number, mode: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(uniffiSelf: bigint, identity: Uint8Array, server: Uint8Array, partial: number): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_events(uniffiSelf: bigint, serverUrl: Uint8Array, eventBundlesBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(uniffiSelf: bigint, servers: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_sign_event(uniffiSelf: bigint, eventBytes: Uint8Array, callback: bigint): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_url_info(uniffiSelf: bigint, serverUrl: Uint8Array, url: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(uniffiSelf: bigint, signedEvent: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+  ubrn_uniffi_polycentric_core_fn_method_queryobservable_subscribe(uniffiSelf: bigint, observer: bigint, uniffi_out_err: UniffiRustCallStatus): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_queryobserver_next(uniffiSelf: bigint, result: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_queryobserver_error(uniffiSelf: bigint, message: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_queryobserver_complete(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
+  ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign(uniffiSelf: bigint, eventBytes: Uint8Array): bigint;
+  ubrn_uniffi_polycentric_core_fn_method_subscription_is_closed(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): number;
+  ubrn_uniffi_polycentric_core_fn_method_subscription_unsubscribe(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
   ubrn_ffi_polycentric_core_uniffi_contract_version(): number;
   ubrn_uniffi_polycentric_core_checksum_func_set_log_level(): number;
   ubrn_uniffi_polycentric_core_checksum_func_set_logger(): number;
@@ -478,11 +142,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence(): number;
@@ -492,7 +154,6 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
   ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;
@@ -502,37 +163,16 @@ interface NativeModuleInterface {
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_error(): number;
   ubrn_uniffi_polycentric_core_checksum_method_queryobserver_complete(): number;
-  ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign(): number;
+  ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign(): number;
   ubrn_uniffi_polycentric_core_checksum_method_subscription_is_closed(): number;
   ubrn_uniffi_polycentric_core_checksum_method_subscription_unsubscribe(): number;
-  ubrn_uniffi_internal_fn_method_logger_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_observer_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_queryobserver_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_subscription_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_queryobservable_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
-  ubrn_uniffi_internal_fn_method_polycentriccore_ffi__bless_pointer(
-    pointer: bigint,
-    uniffi_out_err: UniffiRustCallStatus,
-  ): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_logger_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_observer_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_queryobserver_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_subscription_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_queryobservable_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
+  ubrn_uniffi_internal_fn_method_polycentriccore_ffi__bless_pointer(pointer: bigint, uniffi_out_err: UniffiRustCallStatus): UniffiGcObject;
   // Codegen call sites use these via `nativeModule().rustbuffer_alloc(...)`
   // and `nativeModule().rustbuffer_free(...)`. The JSI host object exposes
   // them as properties; see `props["rustbuffer_alloc"]` / `props["rustbuffer_free"]`

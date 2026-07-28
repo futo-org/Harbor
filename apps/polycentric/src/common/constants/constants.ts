@@ -15,5 +15,5 @@ export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
  * slashes are stripped so callers can append paths directly.
  */
 export const POLYCENTRIC_APP_URL = (
-  process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL ?? 'https://polycentric.io'
+  process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL ?? 'https://harbor.social'
 ).replace(/\/+$/, '');

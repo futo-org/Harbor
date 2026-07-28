@@ -28,18 +28,11 @@
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
 
-app-format-check:
+app-biome-check:
   extends: .app-check-base
   stage: check
   script:
-    - pnpm format apps/polycentric
-  allow_failure: true
-
-app-lint-check:
-  extends: .app-check-base
-  stage: check
-  script:
-    - pnpm --filter polycentric-app lint
+    - pnpm exec biome check apps/polycentric --diagnostic-level=error
   allow_failure: true
 
 app-tests:
@@ -78,6 +71,7 @@ app-web-image:
         --local context=. \
         --local dockerfile=./apps/polycentric \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
+        --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
         --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_DEFAULT_BRANCH \
         --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG \

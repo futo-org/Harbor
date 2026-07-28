@@ -123,6 +123,12 @@ export interface GetPostThreadRequest {
      * @generated from protobuf field: int32 limit = 2
      */
     limit: number;
+    /**
+     * Label values for which the requester does not want to see content
+     *
+     * @generated from protobuf field: repeated string omit_labels = 3
+     */
+    omitLabels: string[];
 }
 /**
  * @generated from protobuf enum polycentric.v2.FeedAlgorithm
@@ -448,12 +454,14 @@ class GetPostThreadRequest$Type extends MessageType<GetPostThreadRequest> {
     constructor() {
         super("polycentric.v2.GetPostThreadRequest", [
             { no: 1, name: "event_key", kind: "message", T: () => EventKey },
-            { no: 2, name: "limit", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
+            { no: 2, name: "limit", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<GetPostThreadRequest>): GetPostThreadRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.limit = 0;
+        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<GetPostThreadRequest>(this, message, value);
         return message;
@@ -468,6 +476,9 @@ class GetPostThreadRequest$Type extends MessageType<GetPostThreadRequest> {
                     break;
                 case /* int32 limit */ 2:
                     message.limit = reader.int32();
+                    break;
+                case /* repeated string omit_labels */ 3:
+                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -487,6 +498,9 @@ class GetPostThreadRequest$Type extends MessageType<GetPostThreadRequest> {
         /* int32 limit = 2; */
         if (message.limit !== 0)
             writer.tag(2, WireType.Varint).int32(message.limit);
+        /* repeated string omit_labels = 3; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

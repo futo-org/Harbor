@@ -33,6 +33,7 @@ async fn put_then_list_round_trip() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -94,6 +95,7 @@ async fn invalid_signature_rejected() {
         rotation_keys: vec![public_key_of(&key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -143,6 +145,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -216,6 +219,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
             root_after_1.clone(),
             1,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -317,6 +321,7 @@ async fn post_revocation_event_returns_without_proof() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -386,6 +391,7 @@ async fn post_revocation_event_returns_without_proof() {
             root_after_1.clone(),
             1,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -472,6 +478,7 @@ async fn rewritten_event_invalidates_proofs() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -559,6 +566,7 @@ async fn rewritten_event_invalidates_proofs() {
             root_after_2_original.clone(),
             2,
         )],
+        servers: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -639,6 +647,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         rotation_keys: vec![public_key_of(&rotation_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let identity = derive_identity_string(&initial);
 
@@ -747,6 +756,7 @@ async fn publish_genesis(
         rotation_keys: vec![public_key_of(key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     };
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
@@ -865,6 +875,7 @@ async fn trusted_labels_served_in_feed_response() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -967,6 +978,7 @@ async fn omit_labels_hides_labeled_post() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -1034,6 +1046,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
@@ -1123,6 +1136,7 @@ async fn untrusted_labels_not_indexed() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     // Impostor — a random key that is NOT the configured moderator.
@@ -1131,6 +1145,7 @@ async fn untrusted_labels_not_indexed() {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     publish_genesis(
@@ -1219,6 +1234,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     let impostor_key = generate_signing_key();
@@ -1226,6 +1242,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
+        servers: None,
     });
 
     publish_genesis(
@@ -1287,4 +1304,244 @@ async fn omit_labels_untrusted_label_does_not_hide() {
             .unwrap_or(false)),
         "untrusted label must not be filterable via omit_labels — post should still appear",
     );
+}
+
+#[tokio::test]
+async fn thread_no_labels_returns_post() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    });
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "thread test post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+
+    let resp = feed
+        .get_post_thread(GetPostThreadRequest {
+            event_key: Some(target_key),
+            limit: 10,
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_post_thread failed")
+        .into_inner();
+
+    // Post is present in the thread.
+    assert!(
+        resp.thread.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned in thread when no omit_labels",
+    );
+
+    // No label bundles in event_hints (no labels were published).
+    for hint in &resp.event_hints {
+        if let Some(bundle) = &hint.event_bundle {
+            if let Some(se) = &bundle.signed_event {
+                if let Ok(event) = Event::decode(se.event_bytes.as_slice()) {
+                    if let Some(ek) = &event.key {
+                        if ek.collection == COLLECTION_LABELS {
+                            panic!(
+                                "no Labels events should appear in hints without labels being published"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn thread_omit_labels_matching_hides_post() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "hide-me thread post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    let labels_sig = publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key.clone(),
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+    let resp = feed
+        .get_post_thread(GetPostThreadRequest {
+            event_key: Some(target_key.clone()),
+            limit: 10,
+            omit_labels: vec!["sexual".to_string()],
+        })
+        .await
+        .expect("get_post_thread failed")
+        .into_inner();
+
+    // Post is hidden from the thread.
+    assert!(
+        !resp.thread.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be hidden from thread when omit_labels matches",
+    );
+
+    // Label event is present in event_hints.
+    let label_bundle = resp
+        .event_hints
+        .iter()
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
+                .as_ref()
+                .map(|se| se.signature == labels_sig)
+                .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .expect("Labels event should appear in event_hints");
+
+    assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
+}
+
+#[tokio::test]
+async fn thread_omit_labels_not_matching_keeps_post() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "warn thread post",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    let labels_sig = publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key.clone(),
+        vec!["sexual".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    let resp = feed
+        .get_post_thread(GetPostThreadRequest {
+            event_key: Some(target_key),
+            limit: 10,
+            omit_labels: vec!["hate".to_string()],
+        })
+        .await
+        .expect("get_post_thread failed")
+        .into_inner();
+
+    // Post is present.
+    assert!(
+        resp.thread.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned when omit_labels doesn't match its label",
+    );
+
+    // Label event is still in event_hints.
+    let _label_bundle = resp
+        .event_hints
+        .iter()
+        .find_map(|h| {
+            let b = h.event_bundle.as_ref()?;
+            if b.signed_event
+                .as_ref()
+                .map(|se| se.signature == labels_sig)
+                .unwrap_or(false)
+            {
+                Some(b)
+            } else {
+                None
+            }
+        })
+        .expect(
+            "Labels event should still be present in event_hints for non-matching omit",
+        );
 }

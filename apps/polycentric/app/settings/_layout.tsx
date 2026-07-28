@@ -6,6 +6,10 @@ const sheetScreenOptions = {
   contentStyle: { backgroundColor: 'transparent' },
 } as const;
 
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function SettingsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>

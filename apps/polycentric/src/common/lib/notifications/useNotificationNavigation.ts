@@ -7,15 +7,15 @@ import { Platform } from 'react-native';
 /**
  * Navigate in response to a tapped push notification. The notifications
  * service attaches a deep-link URL as `data.url`
- * (e.g. `polycentric:///{identity}/post/{keyFingerprint}/{sequence}` or
- * `polycentric:///{identity}`); we parse its path and route to it in-app.
+ * (e.g. `harbor:///{identity}/post/{keyFingerprint}/{sequence}` or
+ * `harbor:///{identity}`); we parse its path and route to it in-app.
  */
 function navigateFromResponse(response: Notifications.NotificationResponse) {
   const data = response.notification.request.content.data;
   const url = typeof data?.url === 'string' ? data.url : undefined;
   if (!url) return;
 
-  // `polycentric:///id/post/fp/seq` -> path "id/post/fp/seq" -> route "/id/post/fp/seq".
+  // `harbor:///id/post/fp/seq` -> path "id/post/fp/seq" -> route "/id/post/fp/seq".
   const { path } = Linking.parse(url);
   if (!path) return;
 

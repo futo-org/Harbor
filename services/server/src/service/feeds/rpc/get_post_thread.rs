@@ -28,6 +28,7 @@ pub struct Params {
     pub public_key: Vec<u8>,
     pub sequence: i64,
     pub descendants_limit: u64,
+    pub omit_labels: Vec<String>,
 }
 
 pub async fn handle(
@@ -49,6 +50,7 @@ pub async fn handle(
         public_key: event_key.public_key,
         sequence: event_key.sequence,
         descendants_limit,
+        omit_labels: req.omit_labels,
     };
 
     let result =
@@ -167,11 +169,11 @@ async fn hydrate(
 
 async fn filter(
     _ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration).await
+    feeds_pipeline::filter(fetched, hydration, &params.omit_labels).await
 }
 
 async fn view(
