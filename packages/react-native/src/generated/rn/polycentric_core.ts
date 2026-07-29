@@ -2276,9 +2276,8 @@ const FfiConverterTypeQuery = (() => {
 })();
 
 /**
- * Mints the token authenticating the current identity against a server.
- * Implemented by the embedder; only called when no unexpired token is
- * cached for the server.
+ * Mints auth tokens. Implemented by the embedder, called only when no
+ * unexpired token is cached for the server.
  */
 export interface AuthTokenProvider {
     
@@ -2291,9 +2290,8 @@ export interface AuthTokenProvider {
 
 
 /**
- * Mints the token authenticating the current identity against a server.
- * Implemented by the embedder; only called when no unexpired token is
- * cached for the server.
+ * Mints auth tokens. Implemented by the embedder, called only when no
+ * unexpired token is cached for the server.
  */
 export class AuthTokenProviderImpl extends UniffiAbstractObject implements AuthTokenProvider {
 
@@ -4509,7 +4507,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_logger() !== 12935) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_logger");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token() !== 22109) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token() !== 62336) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_logger_log() !== 49060) {
@@ -4593,7 +4591,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 33093) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 38042) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !== 60336) {
