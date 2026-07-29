@@ -2,6 +2,7 @@ import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import useBanStatus from './hooks/useBanStatus';
 import useModerationStatus from './hooks/useModerationStatus';
@@ -15,7 +16,9 @@ type BanSheetProps = {
 
 /**
  * Lists every server the active identity is a moderator on, with a
- * ban/unban button per server for the viewed identity.
+ * ban/unban button per server for the viewed identity. The per-server
+ * ban statuses come from a single fan-out query limited to the
+ * moderated servers, fetched once per open.
  */
 export default function BanSheet({
   identityKey,
@@ -23,8 +26,12 @@ export default function BanSheet({
   onClose,
 }: BanSheetProps) {
   const { theme } = useTheme();
-  const isLoading = useModerationStatus((s) => s.isLoading);
+  const isModeratorLoading = useModerationStatus((s) => s.isLoading);
   const servers = useModerationStatus((s) => s.moderatedServers);
+  const { isLoading, bannedByServer, setBanned } = useBanStatus(
+    identityKey,
+    open,
+  );
 
   return (
     <Sheet
@@ -35,7 +42,7 @@ export default function BanSheet({
       header={<Sheet.Header title="Ban user" onClose={onClose} />}
     >
       <Sheet.Content style={[Atoms.gap_lg]}>
-        {isLoading ? (
+        {isModeratorLoading || isLoading ? (
           <ActivityIndicator
             size="small"
             color={theme.palette.primary_500}
@@ -51,7 +58,8 @@ export default function BanSheet({
               <ServerBanRow
                 key={server}
                 server={server}
-                identityKey={identityKey}
+                banned={bannedByServer.get(server) ?? false}
+                setBanned={setBanned}
               />
             ))}
           </View>
@@ -63,16 +71,15 @@ export default function BanSheet({
 
 function ServerBanRow({
   server,
-  identityKey,
+  banned,
+  setBanned,
 }: {
   server: string;
-  identityKey: string;
+  banned: boolean;
+  setBanned: (server: string, banned: boolean) => Promise<void>;
 }) {
   const { theme } = useTheme();
-  const { isLoading, isUpdating, banned, setBanned } = useBanStatus(
-    server,
-    identityKey,
-  );
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const onPress = async () => {
     const ok = await confirm({
@@ -81,10 +88,13 @@ function ServerBanRow({
       confirmText: banned ? 'Unban' : 'Ban',
     });
     if (!ok) return;
+    setIsUpdating(true);
     try {
-      await setBanned(!banned);
+      await setBanned(server, !banned);
     } catch (err) {
       console.error('Failed to update ban status:', err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -109,7 +119,7 @@ function ServerBanRow({
       >
         {server}
       </Text>
-      {isLoading || isUpdating ? (
+      {isUpdating ? (
         <ActivityIndicator
           size="small"
           color={theme.palette.primary_500}

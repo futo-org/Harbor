@@ -297,14 +297,20 @@ export class PolycentricClient {
 
   /**
    * Whether `targetIdentity` is banned, per server
-   * (`IdentityService.IsBanned`). Fans out across the configured servers
-   * and returns a `serverUrl -> isBanned` map; a server that fails to
-   * respond is absent from the map.
+   * (`IdentityService.IsBanned`). Fans out across `servers` — pass the
+   * servers the active identity moderates, since the endpoint is
+   * moderator-gated — or every configured server when omitted. Returns a
+   * `serverUrl -> isBanned` map; a server that fails to respond is
+   * absent from the map.
    */
-  async isBanned(targetIdentity: string): Promise<Map<string, boolean>> {
+  async isBanned(
+    targetIdentity: string,
+    servers?: string[],
+  ): Promise<Map<string, boolean>> {
     const bytes = await this.runModerationQuery(
       undefined,
       new Query.IsBanned({ targetIdentity }),
+      servers,
     );
     return decodeStatusByServer(bytes);
   }

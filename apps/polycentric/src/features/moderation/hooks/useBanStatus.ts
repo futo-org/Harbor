@@ -1,38 +1,51 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCallback, useEffect, useState } from 'react';
+import useModerationStatus from './useModerationStatus';
 
 export interface BanStatusState {
-  // True while the initial IsBanned query is in flight.
+  // True while the IsBanned query is in flight.
   isLoading: boolean;
-  // True while a SetBanStatus mutation is in flight.
-  isUpdating: boolean;
-  banned: boolean;
-  setBanned: (banned: boolean) => Promise<void>;
+  // serverUrl -> banned, for the servers that answered. A server that
+  // failed to answer is absent (i.e. counts as "not banned").
+  bannedByServer: Map<string, boolean>;
+  // Bans or unbans `targetIdentity` on one server
+  // (`IdentityService.SetBanStatus`), updating the map on success.
+  setBanned: (server: string, banned: boolean) => Promise<void>;
 }
 
 /**
- * Whether `targetIdentity` is banned on `server`
- * (`IdentityService.IsBanned`), plus a mutation to change it
- * (`IdentityService.SetBanStatus`). The active identity must be a
- * moderator on `server`.
+ * Which of the active identity's moderated servers (from
+ * `useModerationStatus`) the identity `targetIdentity` is banned on —
+ * one `IdentityService.IsBanned` fan-out limited to those servers, as
+ * the endpoint is moderator-gated — plus a mutation to change one
+ * server's status (`IdentityService.SetBanStatus`). Queries only while
+ * `enabled` is true, refetching when it flips back to true.
  */
 export default function useBanStatus(
-  server: string,
   targetIdentity: string,
+  enabled: boolean,
 ): BanStatusState {
   const client = usePolycentric();
+  const servers = useModerationStatus((s) => s.moderatedServers);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
-  const [banned, setBannedState] = useState<boolean>(false);
+  const [bannedByServer, setBannedByServer] = useState<Map<string, boolean>>(
+    new Map(),
+  );
 
   useEffect(() => {
+    if (!enabled) return;
+    if (servers.length === 0) {
+      setBannedByServer(new Map());
+      setIsLoading(false);
+      return;
+    }
     let cancelled = false;
     setIsLoading(true);
-    setBannedState(false);
+    setBannedByServer(new Map());
     client
-      .isBanned(targetIdentity)
+      .isBanned(targetIdentity, servers)
       .then((byServer) => {
-        if (!cancelled) setBannedState(byServer.get(server) ?? false);
+        if (!cancelled) setBannedByServer(byServer);
       })
       .catch((err) => {
         console.error('Failed to fetch ban status:', err);
@@ -43,20 +56,15 @@ export default function useBanStatus(
     return () => {
       cancelled = true;
     };
-  }, [client, server, targetIdentity]);
+  }, [client, targetIdentity, servers, enabled]);
 
   const setBanned = useCallback(
-    async (next: boolean) => {
-      setIsUpdating(true);
-      try {
-        await client.setBanStatus(server, targetIdentity, next);
-        setBannedState(next);
-      } finally {
-        setIsUpdating(false);
-      }
+    async (server: string, next: boolean) => {
+      await client.setBanStatus(server, targetIdentity, next);
+      setBannedByServer((prev) => new Map(prev).set(server, next));
     },
-    [client, server, targetIdentity],
+    [client, targetIdentity],
   );
 
-  return { isLoading, isUpdating, banned, setBanned };
+  return { isLoading, bannedByServer, setBanned };
 }
