@@ -60,14 +60,14 @@ server-deploy-image-production:
 # Rolling restart on Manifest #
 ###############################
 
-server-deploy-manifest-staging:
-  extends:
-    - .server-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:staging
-  needs:
-    - server-deploy-image-staging
+# server-deploy-manifest-staging:
+#   extends:
+#     - .server-deploy-workflow
+#     - .service-deploy-manifest
+#   variables:
+#     MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:staging
+#   needs:
+#     - server-deploy-image-staging
 
 server-deploy-manifest-production:
   extends:
