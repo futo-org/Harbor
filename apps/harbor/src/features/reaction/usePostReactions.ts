@@ -1,9 +1,14 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import {
   decodeBundle,
+  eventKeyId,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
-import { useQuery, type QueryKey } from '@/src/common/query/hooks/useQuery';
+import {
+  RefreshStrategy,
+  useQuery,
+  type QueryKey,
+} from '@/src/common/query/hooks/useQuery';
 import {
   COLLECTION,
   Query,
@@ -13,10 +18,28 @@ import {
 import { useMemo } from 'react';
 import useReactions from './useReactions';
 
-/** The identities that reacted to a post with a particular emoji. */
+/** Info for a single reaction event */
+export type ReactionInfo = {
+  identity: string;
+  emoji: string;
+};
+
+/** Reaction info from the reaction events for a particular emoji. */
 export type ReactionGroup = {
   emoji: string;
-  identities: string[];
+  reactions: ReactionInfo[];
+};
+
+/** Reaction data extracted from the query response data. */
+export type PostReactions = {
+  groups: Map<string, ReactionGroup>;
+  all: ReactionInfo[];
+};
+
+/** Reaction data + query fields */
+export type PostReactionsResult = PostReactions & {
+  isLoading: boolean;
+  refresh: () => void;
 };
 
 /** Placeholder query key when we don't have a post to query for yet. */
@@ -26,10 +49,6 @@ const DUMMY_EVENT_KEY: EventKey = {
   signedBy: { keyType: 0, key: new ArrayBuffer(0) },
   sequence: 0n,
 };
-
-/** Stable references returned for posts with no reactions to display. */
-const EMPTY_GROUPS: ReactionGroup[] = [];
-const EMPTY_REACTORS: Map<string, string[]> = new Map();
 
 /**
  * Query cache key for the reactions of a single post.
@@ -42,24 +61,29 @@ export function postReactionsQueryKey(
 }
 
 /**
- * Decode a `GetReactionsResponse` into a mapping of emoji to identities that
- * reacted with that emoji.
+ * Decode a `GetReactionsResponse` value and extract the reactions targeting `postId`.
  */
-function decodeResponse(data: ArrayBuffer | undefined): Map<string, string[]> {
-  if (!data) return EMPTY_REACTORS;
+function decodeResponse(
+  data: ArrayBuffer | undefined,
+  postId: string | undefined,
+): ReactionInfo[] {
+  if (!data || !postId) return [];
 
   let response: v2.GetReactionsResponse;
   try {
     response = v2.GetReactionsResponse.fromBinary(new Uint8Array(data));
   } catch {
-    return EMPTY_REACTORS;
+    return [];
   }
 
-  // Collect the reaction events as a map from emoji to list of identities
-  const reactions = new Map<string, string[]>();
+  const reactions: ReactionInfo[] = [];
+
   for (const bundle of response.eventBundles) {
     const decoded = decodeBundle(bundle, 'reaction');
     if (!decoded) continue;
+
+    const targetKey = decoded.content.eventKey;
+    if (!targetKey || eventKeyId(targetKey) !== postId) continue;
 
     const emoji = decoded.content.emoji;
     if (!emoji || !decoded.content.positive) continue;
@@ -67,58 +91,49 @@ function decodeResponse(data: ArrayBuffer | undefined): Map<string, string[]> {
     const identity = decoded.event.key?.identity;
     if (!identity) continue;
 
-    const identities = reactions.get(emoji);
-    if (identities) identities.push(identity);
-    else reactions.set(emoji, [identity]);
+    reactions.push({ emoji, identity });
   }
 
   return reactions;
 }
 
 /**
- * Prepare the reaction data for consumption, overlaying the user's reaction
- * if it is not present.
+ * Prepare the reaction data for consumption, ensuring that if the user has a
+ * reaction, then it appears at the beginning.
  */
 function view(
-  reactions: Map<string, string[]>,
+  reactions: ReactionInfo[],
   identity: string | undefined,
   myEmoji: string | undefined,
-): ReactionGroup[] {
-  // Ensure that the user's reaction matches our local state
-  if (identity !== undefined) {
-    const overlayedReactions = new Map<string, string[]>();
-    for (const [emoji, identities] of reactions) {
-      // Remove any reaction from the user's identity
-      const others = identities.filter((id) => id !== identity);
-      if (others.length > 0) overlayedReactions.set(emoji, others);
-    }
+): PostReactions {
+  const groups = new Map<string, ReactionGroup>();
+  const all: ReactionInfo[] = [];
 
-    if (myEmoji !== undefined) {
-      const existing = overlayedReactions.get(myEmoji);
-      if (existing) existing.push(identity);
-      else overlayedReactions.set(myEmoji, [identity]);
-    }
-
-    reactions = overlayedReactions;
+  // Ensure that the user's emoji is at the front everywhere that it appears
+  if (myEmoji && identity) {
+    const reaction = { identity, emoji: myEmoji };
+    all.push(reaction);
+    groups.set(myEmoji, { emoji: myEmoji, reactions: [reaction] });
   }
 
-  if (reactions.size === 0) return EMPTY_GROUPS;
+  for (const reaction of reactions) {
+    // We have already included the user's reaction
+    if (myEmoji && reaction.identity === identity) continue;
 
-  const groups: ReactionGroup[] = [];
+    all.push(reaction);
 
-  for (const [emoji, identities] of reactions) {
-    groups.push({ emoji, identities });
+    const group = groups.get(reaction.emoji);
+    if (group) {
+      group.reactions.push(reaction);
+    } else {
+      groups.set(reaction.emoji, {
+        emoji: reaction.emoji,
+        reactions: [reaction],
+      });
+    }
   }
 
-  groups.sort((a, b) => {
-    if (a.identities.length !== b.identities.length) {
-      return b.identities.length - a.identities.length;
-    }
-
-    return a.emoji < b.emoji ? -1 : 1;
-  });
-
-  return groups;
+  return { groups, all };
 }
 
 /**
@@ -127,7 +142,7 @@ function view(
 export function usePostReactions(
   post: PostData | undefined,
   options?: { limit?: number },
-): ReactionGroup[] {
+): PostReactionsResult {
   const client = usePolycentric();
 
   const eventKey: EventKey = useMemo(() => {
@@ -157,7 +172,10 @@ export function usePostReactions(
     post ? s.reactions.get(post.id) : undefined,
   );
 
-  const reactions = useMemo(() => decodeResponse(query.data), [query.data]);
+  const reactions = useMemo(
+    () => decodeResponse(query.data, post?.id),
+    [query.data, post?.id],
+  );
 
   const myIdentity = client.activeIdentityKey ?? undefined;
   const myEmoji =
@@ -165,10 +183,16 @@ export function usePostReactions(
       ? myReaction.emoji
       : undefined;
 
-  return useMemo(
+  const reactionsView = useMemo(
     () => view(reactions, myIdentity, myEmoji),
     [reactions, myIdentity, myEmoji],
   );
+
+  return {
+    isLoading: query.isLoading,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
+    ...reactionsView,
+  };
 }
 
 export default usePostReactions;
