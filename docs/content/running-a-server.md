@@ -31,7 +31,7 @@ cd polycentric
 docker compose up -d --build
 
 # Apply the database schema.
-docker compose run --rm server /app/migration fresh
+docker compose exec -T server /app/migration fresh
 ```
 
 The bundled `compose.yml` starts PostgreSQL, RustFS (with its `polycentric-blobs`
@@ -108,17 +108,20 @@ the server process itself always binds `3000` inside the container.
 
 ## Database migrations
 
-Schema changes are applied with the `migration` binary, which ships in the same image.
+Schema changes are applied with the `migration` binary, which can be used from the same image.
 
 ```bash
 # Drop all tables and reapply every migration (use for a fresh database).
-docker compose run --rm server /app/migration fresh
+docker compose exec -T server /app/migration fresh
 
 # Apply only pending migrations (use when upgrading).
-docker compose run --rm server /app/migration up
+docker compose exec -T server /app/migration up
 
 # Roll back the most recent migration.
-docker compose run --rm server /app/migration down
+docker compose exec -T server /app/migration down
+
+# Show which migrations are applied.
+docker compose exec -T server /app/migration status
 ```
 
 ## HTTP endpoints
