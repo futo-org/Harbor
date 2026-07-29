@@ -7,13 +7,13 @@ sidebar_position: 3
 # Setting Up an Alias
 
 An alias is a human-readable name like `you@yourdomain.com` that points at your
-polycentric identity, so people can find you by a memorable handle instead of a
+Harbor identity, so people can find you by a memorable handle instead of a
 long key.
 
 **Before you start, you need:**
 
 - A **domain you control** and can serve a file from over HTTPS.
-- Your **polycentric identity** — the long hex string that identifies your
+- Your **Harbor identity** — the long hex string that identifies your
   account. 
 
 ## 1. Publish the lookup file

@@ -5,13 +5,18 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Polycentric Docs',
+  title: 'Harbor Docs',
   tagline: 'An open-source, distributed social network',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+      // The cascade-layers polyfill boosts Infima's specificity above
+      // custom.css, so :root overrides there never apply.
+      useCssCascadeLayers: false,
+    },
   },
 
   url: 'https://docs.polycentric.io',
@@ -56,9 +61,9 @@ const config: Config = {
       disableSwitch: false,
     },
     navbar: {
-      title: 'Polycentric Docs',
+      title: 'Harbor Docs',
       logo: {
-        alt: 'Polycentric',
+        alt: 'Harbor',
         src: 'img/logo.png',
         srcDark: 'img/logo-dark.png',
       },
@@ -76,7 +81,7 @@ const config: Config = {
         {
           title: 'Download',
           items: [
-            { label: 'Web app', href: 'https://polycentric.io' },
+            { label: 'Web app', href: 'https://harbor.social' },
             {
               label: 'Android APK',
               href: 'https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk',
@@ -108,7 +113,7 @@ const config: Config = {
         {
           title: 'More',
           items: [
-            { label: 'App', href: 'https://polycentric.io' },
+            { label: 'App', href: 'https://harbor.social' },
             {
               label: 'GitLab',
               href: 'https://gitlab.futo.org/polycentric/polycentric',

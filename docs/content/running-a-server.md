@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Running Your Own Server
 
-A Polycentric server is a single Rust binary. It listens on `0.0.0.0:3000` and
+A Harbor server is a single Rust binary. It listens on `0.0.0.0:3000` and
 multiplexes three protocols on that one port:
 
 - gRPC (HTTP/2 cleartext, h2c)
@@ -44,7 +44,7 @@ Confirm it is up:
 curl http://localhost:3000/status   # -> OK.
 ```
 
-Add the server to your profile in a Polycentric client to start using it.
+Add the server to your profile in a Harbor client to start using it.
 
 ## Running from source
 
@@ -135,7 +135,7 @@ See [Protocol → gRPC](/protocol/grpc) for the gRPC services.
 
 ## Content moderation & removal
 
-Moderation on Polycentric is per-server: each server decides what it serves and
+Moderation on Harbor is per-server: each server decides what it serves and
 curates its own discovery feeds, while signed content stays reachable from other
 servers.
 

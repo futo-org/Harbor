@@ -9,7 +9,7 @@ const sidebars: SidebarsConfig = {
     'setting-up-an-alias',
     {
       type: 'category',
-      label: 'Protocol',
+      label: 'Polycentric Protocol',
       items: [
         'protocol/overview',
         'protocol/data-model',
