@@ -6717,9 +6717,9 @@ uniffi::polycentric_core::cb::rustfuturecontinuationcallback::cleanup();
     // Cleanup for callback function ForeignFutureDroppedCallback
 uniffi::polycentric_core::cb::foreignfuturedroppedcallback::cleanup();
     // Cleanup for "free" callback function CallbackInterfaceFree
-uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacelogger::vtablecallbackinterfacelogger::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceauthtokenprovider::vtablecallbackinterfaceauthtokenprovider::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobservable::vtablecallbackinterfacequeryobservable::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobserver::vtablecallbackinterfacequeryobserver::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceobserver::vtablecallbackinterfaceobserver::free::cleanup();
-uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback::cleanup();
-uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback::cleanup();
+uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacelogger::vtablecallbackinterfacelogger::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceauthtokenprovider::vtablecallbackinterfaceauthtokenprovider::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobservable::vtablecallbackinterfacequeryobservable::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobserver::vtablecallbackinterfacequeryobserver::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceobserver::vtablecallbackinterfaceobserver::free::cleanup();
+uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback::cleanup();
+uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacelogger::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceloggermethod0::vtablecallbackinterfacelogger::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfaceauthtokenprovider::cleanup();
