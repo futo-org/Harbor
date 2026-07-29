@@ -42,14 +42,13 @@ jest.mock('./useCreateClaim', () => ({
   default: () => ({ isPending: false, submit: mockCreateSubmit }),
 }));
 
-const mockDeleteClaim = jest.fn(async () => undefined);
+const mockDeleteClaim = jest.fn(async (..._args: unknown[]) => undefined);
 jest.mock('./useClaimActions', () => ({
-  deleteClaim: (...args: unknown[]) =>
-    mockDeleteClaim(...(args as [never, never])),
+  deleteClaim: (...args: unknown[]) => mockDeleteClaim(...args),
 }));
 
 const mockOpenAuthSession = jest.fn(
-  async (): Promise<{ type: string; url?: string }> => ({
+  async (..._args: unknown[]): Promise<{ type: string; url?: string }> => ({
     type: 'success',
     url: 'https://app/oauth/callback?state=STATE',
   }),

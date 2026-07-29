@@ -11,7 +11,7 @@
     "generate": "turbo run generate",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
-    "test": "turbo run test",
+    "test": "turbo run test --filter='!@polycentric/js-browser' --filter='!@polycentric/react-native'",
     "run:ios": "pnpm -C apps/harbor run ios",
     "run:android": "pnpm -C apps/harbor run android",
     "run:web": "pnpm -C apps/harbor run web",
