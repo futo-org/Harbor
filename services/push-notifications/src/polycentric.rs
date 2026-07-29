@@ -94,7 +94,7 @@ impl PolycentricClient {
     }
 
     async fn fetch_cdn_url(&self, server: &str) -> Result<Option<String>, String> {
-        let mut client = ServerServiceClient::new(channel(server)?);
+        let mut client = ServerServiceClient::new(channel(server).await?);
         let response = client
             .get_info(GetServerInfoRequest {})
             .await
@@ -141,7 +141,7 @@ impl PolycentricClient {
         collection: i32,
         identity: &str,
     ) -> Result<Option<Content>, String> {
-        let mut client = EventSyncServiceClient::new(channel(server)?);
+        let mut client = EventSyncServiceClient::new(channel(server).await?);
         let response = client
             .list_events(ListEventsRequest {
                 filters: Some(ListEventsFilters {

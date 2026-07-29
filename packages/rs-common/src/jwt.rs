@@ -53,7 +53,7 @@ impl VerifiedJwt {
     /// Check the token is for one of `allowed_audiences` and not expired
     /// at `now` (unix seconds).
     pub fn validate(&self, allowed_audiences: &[String], now: u64) -> Result<(), JwtError> {
-        if !allowed_audiences.iter().any(|aud| *aud == self.claims.aud) {
+        if !allowed_audiences.contains(&self.claims.aud) {
             return Err(JwtError::Audience);
         }
         if now >= self.claims.exp {
@@ -103,7 +103,7 @@ fn decode_segment<T: for<'a> Deserialize<'a>>(segment: &str) -> Result<T, JwtErr
 }
 
 fn hex_decode(hex: &str) -> Option<Vec<u8>> {
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
     (0..hex.len())

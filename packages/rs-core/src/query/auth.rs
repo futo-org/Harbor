@@ -75,10 +75,10 @@ pub async fn interceptor_for(server_url: &str) -> AuthInterceptor {
 /// The bearer header for `server_url`, cached until near expiry.
 async fn bearer_for(server_url: &str) -> Option<AsciiMetadataValue> {
     let now = now_secs();
-    if let Some(cached) = TOKENS.read().unwrap().get(server_url) {
-        if now < cached.expires_at.saturating_sub(EXPIRY_MARGIN_SECONDS) {
-            return Some(cached.bearer.clone());
-        }
+    if let Some(cached) = TOKENS.read().unwrap().get(server_url)
+        && now < cached.expires_at.saturating_sub(EXPIRY_MARGIN_SECONDS)
+    {
+        return Some(cached.bearer.clone());
     }
 
     let provider = PROVIDER.read().unwrap().clone()?;
