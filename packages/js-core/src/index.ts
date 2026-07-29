@@ -64,3 +64,4 @@ export {
   isIdentityKey,
 } from './http/alias-resolver';
 export { CryptoManager } from './crypto/crypto-manager';
+export { createServerJwt, type ServerJwtClaims } from './crypto/server-jwt';

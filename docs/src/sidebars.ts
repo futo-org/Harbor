@@ -9,8 +9,13 @@ const sidebars: SidebarsConfig = {
     'setting-up-an-alias',
     {
       type: 'category',
-      label: 'Protocol',
-      items: ['protocol/overview', 'protocol/data-model', 'protocol/grpc'],
+      label: 'Polycentric Protocol',
+      items: [
+        'protocol/overview',
+        'protocol/data-model',
+        'protocol/grpc',
+        'protocol/server-auth',
+      ],
     },
     {
       type: 'category',

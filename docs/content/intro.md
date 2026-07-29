@@ -5,18 +5,24 @@ slug: /
 sidebar_position: 1
 ---
 
-# Polycentric
+# Harbor
 
-Polycentric is an open-source, distributed social network. Content is published to
+Harbor is an open-source, distributed social network. Content is published to
 multiple servers at once. If one server stops serving a user's content, clients
 fetch it from another server that holds a copy.
 
-The [web client and app](https://polycentric.io) and the
+Harbor is the flagship implementation of the
+[**Polycentric Protocol**](/protocol/overview), defined in the
+[`protos`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/protos)
+directory of the repository. Anyone can build their own client or server against
+the same protocol and interoperate with Harbor.
+
+The [web client and app](https://harbor.social) and the
 [source code](https://gitlab.futo.org/polycentric/polycentric) are public.
 
 ## Download
 
-- **Web app** — [polycentric.io](https://polycentric.io)
+- **Web app** — [harbor.social](https://harbor.social)
 - **Android** — [latest APK](https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk)
 - **iOS** — [TestFlight beta](https://testflight.apple.com/join/bZ8py7Ny)
 
@@ -40,7 +46,7 @@ The [web client and app](https://polycentric.io) and the
 
 ## Compared to federated networks
 
-Polycentric shares goals with federated networks like
+Harbor shares goals with federated networks like
 [Mastodon](https://joinmastodon.org/) (built on ActivityPub): no single company owns
 the network, anyone can run a server, and users can follow each other across servers.
 
@@ -48,17 +54,17 @@ The main difference is where identity and content live.
 
 - **Identity.** On a federated network your account belongs to your home server
   (`@user@server`); losing or leaving that server means migrating, and your old
-  address breaks. On Polycentric your identity is a set of keys you hold, independent
+  address breaks. On Harbor your identity is a set of keys you hold, independent
   of any server.
 - **Content location.** Federated servers each store their own copy and push updates
-  to each other. On Polycentric a user publishes to several servers at once, and
+  to each other. On Harbor a user publishes to several servers at once, and
   clients read from whichever server has the data — so one server going down or
   refusing to serve content does not take a user offline.
 - **Trust.** Federation is server-to-server: you trust your home server, and servers
-  trust each other to relay accurately. On Polycentric every event is signed by the
+  trust each other to relay accurately. On Harbor every event is signed by the
   user, so a server cannot forge or alter content, and clients verify it directly.
 - **Moderation.** Federated moderation is per-server, including defederating whole
-  servers. Polycentric servers curate their own discovery feeds, but content stays
+  servers. Harbor servers curate their own discovery feeds, but content stays
   reachable from other servers regardless of any one server's choices.
 
 ## Cryptography
@@ -69,6 +75,6 @@ revoke them, so a user can move between devices without handing control to a ser
 
 ## Why not a blockchain
 
-Polycentric provides distributed synchronization and censorship resistance without
+Harbor provides distributed synchronization and censorship resistance without
 consensus. There is no global ordering requirement and no proof-of-work, so the
 network avoids the latency and throughput costs of blockchain consensus.

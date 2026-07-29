@@ -133,7 +133,7 @@ pub fn list_following(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
-            let mut response = GraphServiceClient::new(channel(&server_url)?)
+            let mut response = GraphServiceClient::new(channel(&server_url).await?)
                 .list_following(ListFollowingRequest {
                     identity,
                     page_params: Some(PageParams {
@@ -191,7 +191,7 @@ pub fn list_followers(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
-            let mut response = GraphServiceClient::new(channel(&server_url)?)
+            let mut response = GraphServiceClient::new(channel(&server_url).await?)
                 .list_followers(ListFollowersRequest {
                     identity,
                     page_params: Some(PageParams {

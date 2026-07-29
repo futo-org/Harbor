@@ -7,7 +7,7 @@ sidebar_position: 7
 # Contributing
 
 :::warning[Project direction]
-Polycentric is in an early stage, and FUTO is directing its design and roadmap during
+Harbor is in an early stage, and FUTO is directing its design and roadmap during
 this period. We are therefore less likely to accept outside contributions for now,
 especially larger or architectural changes. You are welcome to read the code, run a
 server, file issues, and discuss — but please open an issue before investing time in a

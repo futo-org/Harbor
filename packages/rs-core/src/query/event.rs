@@ -100,7 +100,7 @@ pub fn list_events(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = EventSyncServiceClient::new(channel(&server_url)?)
+            let response = EventSyncServiceClient::new(channel(&server_url).await?)
                 .list_events(request)
                 .await
                 .map_err(|e| format!("list_events [{server_url}]: {e}"))?
@@ -214,7 +214,7 @@ pub fn get_event(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = EventSyncServiceClient::new(channel(&server_url)?)
+            let response = EventSyncServiceClient::new(channel(&server_url).await?)
                 .list_events(request)
                 .await
                 .map_err(|e| format!("get_event [{server_url}]: {e}"))?

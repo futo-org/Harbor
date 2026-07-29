@@ -1,13 +1,7 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { useTheme, withHexOpacity } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
-import {
-  Pressable,
-  type PressableProps,
-  StyleSheet,
-  View,
-  type ViewProps,
-} from 'react-native';
+import { Pressable, StyleSheet, View, type ViewProps } from 'react-native';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -57,13 +51,12 @@ export function Avatar({
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
   const { style: imageStyle, ...restImageProps } = imageProps;
+  const label = imageProps.accessibilityLabel ?? imageProps.alt;
 
   const size = resolveAvatarSize(sizeProp);
-  const showHoverDim = !!onPress && hovered;
 
   const radius = size / 2;
-  const circleStyle: PressableProps['style'] = ({ pressed }) => [
-    pressed && { opacity: 0.5 },
+  const circleStyle = [
     styles.clip,
     {
       width: size,
@@ -78,23 +71,41 @@ export function Avatar({
     containerProps?.style,
   ];
 
+  const image = (
+    <Image
+      {...restImageProps}
+      source={source}
+      recyclingKey={recyclingKey ?? sourceUri(source)}
+      contentFit="cover"
+      style={[styles.image, imageStyle]}
+    />
+  );
+
+  if (!onPress) {
+    return (
+      <View
+        accessibilityRole={label ? 'image' : undefined}
+        accessibilityLabel={label}
+        {...containerProps}
+        style={circleStyle}
+      >
+        {image}
+      </View>
+    );
+  }
+
   return (
     <Pressable
-      {...containerProps}
+      accessibilityLabel={label}
       accessibilityRole="button"
+      {...containerProps}
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
-      style={circleStyle}
+      style={({ pressed }) => [circleStyle, pressed && { opacity: 0.5 }]}
     >
-      <Image
-        {...restImageProps}
-        source={source}
-        recyclingKey={recyclingKey ?? sourceUri(source)}
-        contentFit="cover"
-        style={[styles.image, imageStyle]}
-      />
-      <HoverOverlay visible={showHoverDim} borderRadius={size / 2} />
+      {image}
+      <HoverOverlay visible={hovered} borderRadius={radius} />
     </Pressable>
   );
 }

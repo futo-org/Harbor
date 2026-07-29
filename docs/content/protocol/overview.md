@@ -6,11 +6,12 @@ sidebar_position: 1
 
 # Protocol Overview
 
-This documentation is preliminary and tracks the v2 protocol, defined in the
+Harbor is the flagship implementation of the **Polycentric Protocol**. This
+documentation is preliminary and tracks the v2 protocol, defined in the
 `protos/polycentric/v2` directory of the
-[Polycentric code repository](https://gitlab.futo.org/polycentric/polycentric).
+[Harbor code repository](https://gitlab.futo.org/polycentric/polycentric).
 
-Polycentric is built on three ideas:
+The Polycentric Protocol is built on three ideas:
 
 - **Asymmetric cryptography** — every event is signed by a key the user controls.
 - **Append-only event collections** — each signer writes a sequentially numbered,

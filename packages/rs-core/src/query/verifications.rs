@@ -176,7 +176,7 @@ pub fn list_verification_claims(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = VerificationsServiceClient::new(channel(&server_url)?)
+            let response = VerificationsServiceClient::new(channel(&server_url).await?)
                 .list_verification_claims(request)
                 .await
                 .map_err(|e| format!("list_verification_claims [{server_url}]: {e}"))?
@@ -222,7 +222,7 @@ pub fn list_verification_targets(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = VerificationsServiceClient::new(channel(&server_url)?)
+            let response = VerificationsServiceClient::new(channel(&server_url).await?)
                 .list_verification_targets(request)
                 .await
                 .map_err(|e| format!("list_verification_targets [{server_url}]: {e}"))?
@@ -267,7 +267,7 @@ pub fn list_verification_verifies(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = VerificationsServiceClient::new(channel(&server_url)?)
+            let response = VerificationsServiceClient::new(channel(&server_url).await?)
                 .list_verification_verifies(request)
                 .await
                 .map_err(|e| format!("list_verification_verifies [{server_url}]: {e}"))?
@@ -313,7 +313,7 @@ pub fn list_targeted_verification_claims(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = VerificationsServiceClient::new(channel(&server_url)?)
+            let response = VerificationsServiceClient::new(channel(&server_url).await?)
                 .list_targeted_verification_claims(request)
                 .await
                 .map_err(|e| format!("list_targeted_verification_claims [{server_url}]: {e}"))?

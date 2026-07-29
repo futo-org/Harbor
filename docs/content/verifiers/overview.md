@@ -6,16 +6,16 @@ sidebar_position: 1
 
 # Verifiers
 
-A **verifier** is an automated way to confirm that the owner of a Polycentric
+A **verifier** is an automated way to confirm that the owner of a Harbor
 identity also controls an account on some external platform (X, GitHub,
-YouTube, …). When a user makes a *claim* ("this Polycentric identity owns the
+YouTube, …). When a user makes a *claim* ("this Harbor identity owns the
 GitHub account `futo-org`"), the verifier independently checks the platform and,
 if the check passes, publishes a signed **verification** vouching for that
 claim.
 
 Verifiers run inside the **verifier bot** (`services/verifier-bot`), a small
-Node HTTP service. The bot holds its own Polycentric identity and publishes
-verifications as that identity, syncing them to the configured Polycentric
+Node HTTP service. The bot holds its own Harbor identity and publishes
+verifications as that identity, syncing them to the configured Harbor
 server(s).
 
 ## How a verification works
@@ -43,7 +43,7 @@ Routes are derived from each platform's slug (`slug(name)`, e.g. `GitHub` →
 
 | Method & path | Purpose |
 |---|---|
-| `GET /identity` | The bot's Polycentric identity — `{ identity }` (the identity key it publishes verifications under). Clients use this to recognise and trust the bot's verifications. |
+| `GET /identity` | The bot's Harbor identity — `{ identity }` (the identity key it publishes verifications under). Clients use this to recognise and trust the bot's verifications. |
 | `GET /platforms` | List platforms as `{ name, slug, verifiers }`. |
 | `GET /platforms/:slug` | Platform detail: `{ verifierType, platform, slug }`. |
 | `POST /platforms/:slug/:type/verify` | Verify the referenced claim and publish a verification. |

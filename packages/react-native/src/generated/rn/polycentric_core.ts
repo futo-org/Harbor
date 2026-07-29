@@ -4,53 +4,9 @@
 /* eslint-disable */
 // @ts-nocheck
 import nativeModule from "./polycentric_core-ffi";
-import {
-  type UniffiRustFutureContinuationCallback,
-  type UniffiForeignFutureDroppedCallback,
-  type UniffiForeignFutureDroppedCallbackStruct,
-  type UniffiVTableCallbackInterfacePolycentricCoreLogger,
-  type UniffiVTableCallbackInterfacePolycentricCoreObserver,
-  type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver,
-  type UniffiForeignFutureResultRustBuffer,
-  type UniffiForeignFutureCompleterustBuffer,
-  type UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
+import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct, type UniffiForeignFutureResultRustBuffer, type UniffiForeignFutureCompleterustBuffer, type UniffiVTableCallbackInterfacePolycentricCoreAuthTokenProvider, type UniffiVTableCallbackInterfacePolycentricCoreLogger, type UniffiVTableCallbackInterfacePolycentricCoreObserver, type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver, type UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback,
 } from "./polycentric_core-ffi";
-import {
-  type FfiConverter,
-  type UniffiByteArray,
-  type UniffiGcObject,
-  type UniffiHandle,
-  type UniffiObjectFactory,
-  type UniffiReferenceHolder,
-  type UniffiRustCallStatus,
-  AbstractFfiConverterByteArray,
-  FfiConverterArray,
-  FfiConverterArrayBuffer,
-  FfiConverterBool,
-  FfiConverterInt32,
-  FfiConverterInt64,
-  FfiConverterObject,
-  FfiConverterObjectWithCallbacks,
-  FfiConverterOptional,
-  FfiConverterUInt32,
-  FfiConverterUInt64,
-  FfiConverterUInt8,
-  RustBuffer,
-  UniffiAbstractObject,
-  UniffiEnum,
-  UniffiError,
-  UniffiInternalError,
-  UniffiResult,
-  UniffiRustCaller,
-  destructorGuardSymbol,
-  pointerLiteralSymbol,
-  uniffiCreateFfiConverterString,
-  uniffiCreateRecord,
-  uniffiRustCallAsync,
-  uniffiTraitInterfaceCall,
-  uniffiTraitInterfaceCallAsyncWithError,
-  uniffiTypeNameSymbol,
-  variantOrdinalSymbol,
+import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -93,51 +49,6 @@ export function setLogger(logger: Logger): void {
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
 }
-
-export type ContentEntry = {
-  digestBytes: ArrayBuffer;
-  contentBytes: ArrayBuffer;
-};
-
-/**
- * Generated factory for {@link ContentEntry} record objects.
- */
-export const ContentEntry = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<ContentEntry, ReturnType<typeof defaults>>(
-      defaults,
-    );
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<ContentEntry>,
-  });
-})();
-
-const FfiConverterTypeContentEntry = (() => {
-  type TypeName = ContentEntry;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    read(from: RustBuffer): TypeName {
-      return {
-        digestBytes: FfiConverterArrayBuffer.read(from),
-        contentBytes: FfiConverterArrayBuffer.read(from),
-      };
-    }
-    write(value: TypeName, into: RustBuffer): void {
-      FfiConverterArrayBuffer.write(value.digestBytes, into);
-      FfiConverterArrayBuffer.write(value.contentBytes, into);
-    }
-    allocationSize(value: TypeName): number {
-      return (
-        FfiConverterArrayBuffer.allocationSize(value.digestBytes) +
-        FfiConverterArrayBuffer.allocationSize(value.contentBytes)
-      );
-    }
-  }
-  return new FFIConverter();
-})();
 
 // Hermes (React Native ≥ 0.74) ships TextEncoder and encodeInto, but not
 // TextDecoder. For single-string decode (bytesToString), we polyfill via the
@@ -201,24 +112,114 @@ const stringConverter = (() => {
 })();
 const FfiConverterString = uniffiCreateFfiConverterString(stringConverter);
 
-export type PublicKey = {
-  keyType: number;
-  key: ArrayBuffer;
-};
+/**
+ * A bearer token and when it expires (seconds since the unix epoch).
+ */
+export type AuthToken = {
+    token: string,
+    expiresAt: bigint
+}
 
 /**
- * Generated factory for {@link PublicKey} record objects.
+ * Generated factory for {@link AuthToken} record objects.
+ */
+export const AuthToken = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<AuthToken, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<AuthToken>,
+    });
+})();
+
+const FfiConverterTypeAuthToken = (() => {
+    type TypeName = AuthToken;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                token: FfiConverterString.read(from), 
+                expiresAt: FfiConverterUInt64.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterString.write(value.token, into);
+            FfiConverterUInt64.write(value.expiresAt, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.token) +
+             FfiConverterUInt64.allocationSize(value.expiresAt);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export type ContentEntry = {
+    digestBytes: ArrayBuffer,
+    contentBytes: ArrayBuffer
+}
+
+/**
+ * Generated factory for {@link ContentEntry} record objects.
+ */
+export const ContentEntry = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<ContentEntry, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<ContentEntry>,
+    });
+})();
+
+const FfiConverterTypeContentEntry = (() => {
+    type TypeName = ContentEntry;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                digestBytes: FfiConverterArrayBuffer.read(from), 
+                contentBytes: FfiConverterArrayBuffer.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterArrayBuffer.write(value.digestBytes, into);
+            FfiConverterArrayBuffer.write(value.contentBytes, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterArrayBuffer.allocationSize(value.digestBytes) +
+             FfiConverterArrayBuffer.allocationSize(value.contentBytes);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export type PublicKey = {
+    keyType: number,
+    key: ArrayBuffer
+}
+
+/**
+ * Generated factory for {@link AuthToken} record objects.
  */
 export const PublicKey = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<PublicKey, ReturnType<typeof defaults>>(defaults);
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<PublicKey>,
-  });
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<PublicKey, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<PublicKey>,
+    });
 })();
 
 const FfiConverterTypePublicKey = (() => {
@@ -2393,32 +2394,239 @@ const FfiConverterTypeQuery = (() => {
   return new FFIConverter();
 })();
 
-export interface Logger {
-  log(message: string): void;
+/**
+ * Mints the token authenticating the current identity against a server.
+ * Implemented by the embedder; only called when no unexpired token is
+ * cached for the server.
+ */
+export interface AuthTokenProvider {
+    
+/**
+ * A fresh token for `server_url`, or `None` to send requests to it
+ * unauthenticated.
+ */
+    authToken(serverUrl: string, asyncOpts_?: { signal: AbortSignal }): Promise<AuthToken | undefined>;
 }
 
-export class LoggerImpl extends UniffiAbstractObject implements Logger {
-  readonly [uniffiTypeNameSymbol] = "LoggerImpl";
-  readonly [destructorGuardSymbol]: UniffiGcObject;
-  readonly [pointerLiteralSymbol]: UniffiHandle;
-  // No primary constructor declared for this class.
-  private constructor(pointer: UniffiHandle) {
+
+/**
+ * Mints the token authenticating the current identity against a server.
+ * Implemented by the embedder; only called when no unexpired token is
+ * cached for the server.
+ */
+export class AuthTokenProviderImpl extends UniffiAbstractObject implements AuthTokenProvider {
+
+    readonly [uniffiTypeNameSymbol] = "AuthTokenProviderImpl";
+    readonly [destructorGuardSymbol]: UniffiGcObject;
+    readonly [pointerLiteralSymbol]: UniffiHandle;
+    // No primary constructor declared for this class.
+private constructor(pointer: UniffiHandle) {
     super();
     this[pointerLiteralSymbol] = pointer;
-    this[destructorGuardSymbol] =
-      uniffiTypeLoggerImplObjectFactory.bless(pointer);
-  }
+    this[destructorGuardSymbol] = uniffiTypeAuthTokenProviderImplObjectFactory.bless(pointer);
+}
 
-  log(message: string): void {
-    uniffiCaller.rustCall(
-      /*caller:*/ (callStatus) => {
-        nativeModule().ubrn_uniffi_polycentric_core_fn_method_logger_log(
-          uniffiTypeLoggerImplObjectFactory.clonePointer(this),
-          FfiConverterString.lower(message, nativeModule().rustbuffer_alloc),
-          callStatus,
+    
+
+    
+/**
+ * A fresh token for `server_url`, or `None` to send requests to it
+ * unauthenticated.
+ */
+    async authToken(serverUrl: string, asyncOpts_?: { signal: AbortSignal }): Promise<AuthToken | undefined> {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_authtokenprovider_auth_token(
+                    uniffiTypeAuthTokenProviderImplObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            /*liftFunc:*/ FfiConverterOptionalTypeAuthToken.lift.bind(FfiConverterOptionalTypeAuthToken),
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            
         );
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
+    }
+    
+
+    uniffiDestroy(): void {
+        const ptr = (this as any)[destructorGuardSymbol];
+        if (ptr !== undefined) {
+            const pointer = uniffiTypeAuthTokenProviderImplObjectFactory.pointer(this);
+            uniffiTypeAuthTokenProviderImplObjectFactory.freePointer(pointer);
+            uniffiTypeAuthTokenProviderImplObjectFactory.unbless(ptr);
+            delete (this as any)[destructorGuardSymbol];
+        }
+    }
+
+    static instanceOf(obj_: any): obj_ is AuthTokenProviderImpl {
+        return uniffiTypeAuthTokenProviderImplObjectFactory.isConcreteType(obj_);
+    }
+
+    
+}
+
+const uniffiTypeAuthTokenProviderImplObjectFactory: UniffiObjectFactory<AuthTokenProvider> = (() => {
+    
+    return {
+    create(pointer: UniffiHandle): AuthTokenProvider {
+        const instance = Object.create(AuthTokenProviderImpl.prototype);
+        instance[pointerLiteralSymbol] = pointer;
+        instance[destructorGuardSymbol] = this.bless(pointer);
+        instance[uniffiTypeNameSymbol] = "AuthTokenProviderImpl";
+        return instance;
+    },
+
+    
+    bless(p: UniffiHandle): UniffiGcObject {
+        return uniffiCaller.rustCall(
+            /*caller:*/ (status) =>
+                nativeModule().ubrn_uniffi_internal_fn_method_authtokenprovider_ffi__bless_pointer(p, status),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    unbless(ptr_: UniffiGcObject) {
+        ptr_.markDestroyed();
+    },
+
+    pointer(obj_: AuthTokenProvider): UniffiHandle {
+        if ((obj_ as any)[destructorGuardSymbol] === undefined) {
+            throw new UniffiInternalError.UnexpectedNullPointer();
+        }
+        return (obj_ as any)[pointerLiteralSymbol];
+    },
+
+    clonePointer(obj_: AuthTokenProvider): UniffiHandle {
+        const pointer = this.pointer(obj_);
+        return uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => nativeModule().ubrn_uniffi_polycentric_core_fn_clone_authtokenprovider(pointer, callStatus),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    freePointer(pointer: UniffiHandle): void {
+        uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => nativeModule().ubrn_uniffi_polycentric_core_fn_free_authtokenprovider(pointer, callStatus),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    isConcreteType(obj_: any): obj_ is AuthTokenProvider {
+        return obj_[destructorGuardSymbol] && obj_[uniffiTypeNameSymbol] === "AuthTokenProviderImpl";
+    },
+}})();
+const FfiConverterTypeAuthTokenProvider = new FfiConverterObjectWithCallbacks(uniffiTypeAuthTokenProviderImplObjectFactory);
+
+// Add a vtable for the callbacks that go in AuthTokenProvider.
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+const uniffiCallbackInterfaceAuthTokenProvider: { vtable: any; register: () => void; } = {
+    // Create the VTable using a series of closures.
+    // ts automatically converts these into C callback functions.
+    vtable: {
+        auth_token: (
+            uniffiHandle: bigint,
+            serverUrl: Uint8Array,
+            uniffiFutureCallback: UniffiForeignFutureCompleterustBuffer,
+            uniffiCallbackData: bigint) => {
+            const uniffiMakeCall = 
+            async (signal: AbortSignal)
+            : Promise<AuthToken | undefined> => {
+                const jsCallback = FfiConverterTypeAuthTokenProvider.lift(uniffiHandle);
+                return await jsCallback.authToken(
+                    FfiConverterString.lift(serverUrl), { signal }
+                )
+            };
+            const uniffiHandleSuccess = (returnValue: AuthToken | undefined) => {
+                uniffiFutureCallback.call(
+                    uniffiFutureCallback,
+                    uniffiCallbackData,
+                    /* UniffiForeignFutureResultRustBuffer */{
+                        return_value: FfiConverterOptionalTypeAuthToken.lower(returnValue, nativeModule().rustbuffer_alloc),
+                        call_status: uniffiCaller.createCallStatus()
+                    }
+                );
+            };
+            const uniffiHandleError = (code: number, errorBuf: UniffiByteArray) => {
+                uniffiFutureCallback.call(
+                    uniffiFutureCallback,
+                    uniffiCallbackData,
+                    /* UniffiForeignFutureResultRustBuffer */{
+                        return_value: /*empty*/ new Uint8Array(0),
+                        // TODO create callstatus with error.
+                        call_status: uniffiCaller.createErrorStatus(code, errorBuf),
+                    }
+                );
+            };
+            const uniffiForeignFuture = uniffiTraitInterfaceCallAsync(
+                /*makeCall:*/ uniffiMakeCall,
+                /*handleSuccess:*/ uniffiHandleSuccess,
+                /*handleError:*/ uniffiHandleError,
+                /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+                /*alloc:*/ nativeModule().rustbuffer_alloc,
+            );
+            return uniffiForeignFuture;
+        },
+        uniffi_free: (uniffiHandle: UniffiHandle): void => {
+            // this will throw a stale handle error if the handle isn't found.
+            FfiConverterTypeAuthTokenProvider.drop(uniffiHandle);
+        },
+        uniffi_clone: (uniffiHandle: UniffiHandle): UniffiHandle => {
+            return FfiConverterTypeAuthTokenProvider.clone(uniffiHandle);
+        }
+    },
+    register: () => {nativeModule().ubrn_uniffi_polycentric_core_fn_init_callback_vtable_authtokenprovider(
+            uniffiCallbackInterfaceAuthTokenProvider.vtable
+        );
+    },
+};
+
+export interface Logger {
+    
+    log(message: string): void;
+}
+
+
+export class LoggerImpl extends UniffiAbstractObject implements Logger {
+
+    readonly [uniffiTypeNameSymbol] = "LoggerImpl";
+    readonly [destructorGuardSymbol]: UniffiGcObject;
+    readonly [pointerLiteralSymbol]: UniffiHandle;
+    // No primary constructor declared for this class.
+private constructor(pointer: UniffiHandle) {
+    super();
+    this[pointerLiteralSymbol] = pointer;
+    this[destructorGuardSymbol] = uniffiTypeLoggerImplObjectFactory.bless(pointer);
+}
+
+    
+
+    
+    log(message: string): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_logger_log(
+                uniffiTypeLoggerImplObjectFactory.clonePointer(this),
+        FfiConverterString.lower(message, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
   }
 
@@ -3477,260 +3685,152 @@ const uniffiCallbackInterfaceSignBytesCallback: {
 };
 
 export interface PolycentricCoreLike {
-  /**
-   * Build a vector clock (returns serialized `VectorClock` proto bytes).
-   * For identity events, callers should pass the new event's identity
-   * content as `identity_content` (serialized `Identity` proto bytes).
-   * For other events, leave it `None`.
-   */
-  buildVectorClock(
-    identity: string,
-    collection: number,
-    identitySequence: bigint,
-    signedBy: ArrayBuffer,
-    currentSequence: bigint,
-    identityContent: ArrayBuffer | undefined,
-  ) /*throws*/ : ArrayBuffer;
-  /**
-   * Insert each (digest, content) pair into the content store.
-   */
-  copyContents(contents: Array<ContentEntry>) /*throws*/ : void;
-  /**
-   * Verify each `SignedEvent` (decoding implicitly verifies the
-   * signature) and copy it into the local event store.
-   */
-  copyEvents(signedEvents: Array<ArrayBuffer>) /*throws*/ : void;
-  /**
-   * Create a pairing session on the server. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping an `InitialPairingSession`.
-   * Returns serialized `PairingSession` proto bytes.
-   */
-  createPairingSession(
-    serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Unified entry point for every observable RPC.
-   * `query` selects which RPC to run and supplies its parameters.
-   * `query_key` is the cache key shared across subscribers.
-   * Pass in `None` to bypass the cache.
-   * `opts` carries the optional fetch mode and per-call servers override.
-   * Always returns a `QueryObservable` regardless of variant.
-   */
-  fetchQuery(
-    queryKey: Array<string> | undefined,
-    query: Query,
-    opts: QueryOpts | undefined,
-  ): QueryObservable;
-  /**
-   * Max sequence of identity events signed by `signer` for `identity`,
-   * or `None` if this signer has no identity events.
-   */
-  getIdentitySequence(
-    identity: string,
-    signer: ArrayBuffer,
-  ) /*throws*/ : bigint | undefined;
-  /**
-   * Fetch a pairing session by its signature. Returns serialized
-   * `PairingSession` proto bytes.
-   */
-  getPairingSession(
-    serverUrl: string,
-    pairingSessionSignature: string,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Fetch a server's public info. Returns serialized
-   * `GetServerInfoResponse` proto bytes.
-   */
-  getServerInfo(
-    serverUrl: string,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Return a snapshot of the currently configured servers.
-   */
-  getServers(): Array<string>;
-  /**
-   * Clear the cache of every query key, e.g. after the configured
-   * server list changes.
-   */
-  invalidateAllQueries(): void;
-  /**
-   * Clear the cache for a query key and discard the responses for any
-   * in-flight merge queries.
-   */
-  invalidateQuery(queryKey: Array<string>): void;
-  /**
-   * Ask a server whether an identity is banned. `request_bytes` is a
-   * serialized `IsBannedRequest`; the call is authenticated by signed
-   * gRPC metadata (`keyid` is the moderator identity).
-   * Returns serialized `IsBannedResponse` proto bytes.
-   */
-  isBanned(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    signing: SigningInputs,
-    signer: SignBytesCallback,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Ask a server whether the signer is a moderator. Authenticated by
-   * signed gRPC metadata (`keyid` is the subject); `public_key` is the
-   * signer's raw ed25519 key, `created_ms`/`expires_ms` bound the
-   * signature's validity, and `signer` produces the signature.
-   * Returns serialized `IsModeratorResponse` proto bytes.
-   */
-  isModerator(
-    serverUrl: string,
-    signing: SigningInputs,
-    signer: SignBytesCallback,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Join an existing pairing session. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
-   * Returns serialized `PairingSession` proto bytes.
-   */
-  joinPairingSession(
-    serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * List the identities banned on a server. `request_bytes` is a
-   * serialized `ListBansRequest`; the call is authenticated by signed
-   * gRPC metadata (`keyid` is the moderator identity).
-   * Returns serialized `ListBansResponse` proto bytes.
-   */
-  listBans(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    signing: SigningInputs,
-    signer: SignBytesCallback,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * List latest known sequence numbers from a server for a single identity.
-   */
-  listHeads(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Returns serialized `ListEventsResponse` proto bytes for the
-   * non-tombstoned events on (identity, collection).
-   */
-  listValidEvents(
-    identity: string,
-    collection: number,
-  ) /*throws*/ : ArrayBuffer;
-  nextSequence(identity: string, collection: number): bigint;
-  /**
-   * Merkle root over the canonically-ordered signatures in
-   * `(identity, collection)`. Empty when no events exist.
-   */
-  previousRoot(identity: string, collection: number): ArrayBuffer;
-  /**
-   * Signature of the canonically-latest event in `(identity, collection)`.
-   * Empty when no events exist.
-   */
-  previousSignature(identity: string, collection: number): ArrayBuffer;
-  /**
-   * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
-   * "fit"), encode as JPEG.
-   */
-  processImageToJpeg(
-    image: ArrayBuffer,
-    width: number,
-    height: number,
-    mode: string,
-  ) /*throws*/ : ProcessedImage;
-  /**
-   * Push events belonging to `identity` to remote `server`.
-   * Pushes all relevant local events if `partial` is false.
-   * Otherwise, only push events that we believe the server to be missing.
-   * The server's response is returned (if there is one), so that the caller
-   * can handle error and/or push blobs.
-   */
-  pushLocalEvents(
-    identity: string,
-    server: string,
-    partial: boolean,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer | undefined>;
-  /**
-   * Push event bundles to a server.
-   * Returns the response from the server with any errors and missing blobs.
-   */
-  putEvents(
-    serverUrl: string,
-    eventBundlesBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Register a push notification token. `signed_message_bytes` is a
-   * serialized `SignedMessage` wrapping a
-   * `RegisterPushNotificationRequest`.
-   */
-  registerPushNotifications(
-    serverUrl: string,
-    signedMessageBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<void>;
-  /**
-   * Ban or unban an identity on a server. `request_bytes` is a
-   * serialized `SetBanStatusRequest`; the call is authenticated by
-   * signed gRPC metadata (`keyid` is the moderator identity).
-   * Returns serialized `SetBanStatusResponse` proto bytes.
-   */
-  setBanStatus(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    signing: SigningInputs,
-    signer: SignBytesCallback,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Replace the list of gRPC servers the core's `Observable`-returning
-   * methods will fan out to.
-   */
-  setServers(servers: Array<string>): void;
-  /**
-   * Sign event bytes via a foreign callback. Validates the inner
-   * `Event`, calls the callback to produce signature bytes, assembles
-   * a `SignedEvent`, and re-verifies before returning the canonical
-   * `SignedEvent` bytes.
-   */
-  signEvent(
-    eventBytes: ArrayBuffer,
-    callback: SignBytesCallback,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Upload a blob body to a server. The server verifies that `body`
-   * matches the declared `Blob.digest`.
-   */
-  uploadBlob(
-    serverUrl: string,
-    requestBytes: ArrayBuffer,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<void>;
-  /**
-   * Fetch link-preview metadata for `url` from a server's unfurl endpoint.
-   * Returns serialized `Link` proto bytes.
-   */
-  urlInfo(
-    serverUrl: string,
-    url: string,
-    asyncOpts_?: { signal: AbortSignal },
-  ) /*throws*/ : Promise<ArrayBuffer>;
-  /**
-   * Decode + verify a `SignedEvent`, returning its canonical bytes.
-   */
-  verifySignedEvent(signedEvent: ArrayBuffer) /*throws*/ : ArrayBuffer;
+    
+/**
+ * Build a vector clock (returns serialized `VectorClock` proto bytes).
+ * For identity events, callers should pass the new event's identity
+ * content as `identity_content` (serialized `Identity` proto bytes).
+ * For other events, leave it `None`.
+ */
+    buildVectorClock(identity: string, collection: number, identitySequence: bigint, signedBy: ArrayBuffer, currentSequence: bigint, identityContent: ArrayBuffer | undefined) /*throws*/: ArrayBuffer;
+/**
+ * Drop every cached auth token — e.g. when the active identity changes.
+ */
+    clearAuthTokens(): void;
+/**
+ * Insert each (digest, content) pair into the content store.
+ */
+    copyContents(contents: Array<ContentEntry>) /*throws*/: void;
+/**
+ * Verify each `SignedEvent` (decoding implicitly verifies the
+ * signature) and copy it into the local event store.
+ */
+    copyEvents(signedEvents: Array<ArrayBuffer>) /*throws*/: void;
+/**
+ * Create a pairing session on the server. `signed_message_bytes` is a
+ * serialized `SignedMessage` wrapping an `InitialPairingSession`.
+ * Returns serialized `PairingSession` proto bytes.
+ */
+    createPairingSession(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Unified entry point for every observable RPC.
+ * `query` selects which RPC to run and supplies its parameters.
+ * `query_key` is the cache key shared across subscribers.
+ * Pass in `None` to bypass the cache.
+ * `opts` carries the optional fetch mode and per-call servers override.
+ * Always returns a `QueryObservable` regardless of variant.
+ */
+    fetchQuery(queryKey: Array<string> | undefined, query: Query, opts: QueryOpts | undefined): QueryObservable;
+/**
+ * Max sequence of identity events signed by `signer` for `identity`,
+ * or `None` if this signer has no identity events.
+ */
+    getIdentitySequence(identity: string, signer: ArrayBuffer) /*throws*/: bigint | undefined;
+/**
+ * Fetch a pairing session by its signature. Returns serialized
+ * `PairingSession` proto bytes.
+ */
+    getPairingSession(serverUrl: string, pairingSessionSignature: string, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Fetch a server's public info. Returns serialized
+ * `GetServerInfoResponse` proto bytes.
+ */
+    getServerInfo(serverUrl: string, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Return a snapshot of the currently configured servers.
+ */
+    getServers(): Array<string>;
+/**
+ * Clear the cache of every query key, e.g. after the configured
+ * server list changes.
+ */
+    invalidateAllQueries(): void;
+/**
+ * Clear the cache for a query key and discard the responses for any
+ * in-flight merge queries.
+ */
+    invalidateQuery(queryKey: Array<string>): void;
+/**
+ * Join an existing pairing session. `signed_message_bytes` is a
+ * serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
+ * Returns serialized `PairingSession` proto bytes.
+ */
+    joinPairingSession(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * List latest known sequence numbers from a server for a single identity.
+ */
+    listHeads(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Returns serialized `ListEventsResponse` proto bytes for the
+ * non-tombstoned events on (identity, collection).
+ */
+    listValidEvents(identity: string, collection: number) /*throws*/: ArrayBuffer;
+    nextSequence(identity: string, collection: number): bigint;
+/**
+ * Merkle root over the canonically-ordered signatures in
+ * `(identity, collection)`. Empty when no events exist.
+ */
+    previousRoot(identity: string, collection: number): ArrayBuffer;
+/**
+ * Signature of the canonically-latest event in `(identity, collection)`.
+ * Empty when no events exist.
+ */
+    previousSignature(identity: string, collection: number): ArrayBuffer;
+/**
+ * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
+ * "fit"), encode as JPEG.
+ */
+    processImageToJpeg(image: ArrayBuffer, width: number, height: number, mode: string) /*throws*/: ProcessedImage;
+/**
+ * Push events belonging to `identity` to remote `server`.
+ * Pushes all relevant local events if `partial` is false.
+ * Otherwise, only push events that we believe the server to be missing.
+ * The server's response is returned (if there is one), so that the caller
+ * can handle error and/or push blobs.
+ */
+    pushLocalEvents(identity: string, server: string, partial: boolean, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer | undefined>;
+/**
+ * Push event bundles to a server.
+ * Returns the response from the server with any errors and missing blobs.
+ */
+    putEvents(serverUrl: string, eventBundlesBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Register a push notification token. `signed_message_bytes` is a
+ * serialized `SignedMessage` wrapping a
+ * `RegisterPushNotificationRequest`.
+ */
+    registerPushNotifications(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
+/**
+ * Register the provider consulted for the auth token attached to every
+ * outgoing gRPC request.
+ */
+    setAuthTokenProvider(provider: AuthTokenProvider): void;
+/**
+ * Replace the list of gRPC servers the core's `Observable`-returning
+ * methods will fan out to.
+ */
+    setServers(servers: Array<string>): void;
+/**
+ * Sign event bytes via a foreign callback. Validates the inner
+ * `Event`, calls the callback to produce signature bytes, assembles
+ * a `SignedEvent`, and re-verifies before returning the canonical
+ * `SignedEvent` bytes.
+ */
+    signEvent(eventBytes: ArrayBuffer, callback: SignEventCallback, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Upload a blob body to a server. The server verifies that `body`
+ * matches the declared `Blob.digest`.
+ */
+    uploadBlob(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
+/**
+ * Fetch link-preview metadata for `url` from a server's unfurl endpoint.
+ * Returns serialized `Link` proto bytes.
+ */
+    urlInfo(serverUrl: string, url: string, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
+ * Decode + verify a `SignedEvent`, returning its canonical bytes.
+ */
+    verifySignedEvent(signedEvent: ArrayBuffer) /*throws*/: ArrayBuffer;
 }
 /**
  * @deprecated Use `PolycentricCoreLike` instead.
@@ -3774,67 +3874,51 @@ export class PolycentricCore
     identityContent: ArrayBuffer | undefined,
   ): ArrayBuffer /*throws*/ {
     return ((__rb: Uint8Array) => {
-      try {
-        return FfiConverterArrayBuffer.lift(__rb);
-      } finally {
-        nativeModule().rustbuffer_free(__rb);
-      }
-    })(
-      uniffiCaller.rustCallWithError(
-        /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
-          FfiConverterTypeCoreError,
-        ),
-        /*caller:*/ (callStatus) => {
-          return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(
-            uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-            FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
-            FfiConverterInt32.lower(
-              collection,
-              nativeModule().rustbuffer_alloc,
-            ),
-            FfiConverterUInt64.lower(
-              identitySequence,
-              nativeModule().rustbuffer_alloc,
-            ),
-            FfiConverterArrayBuffer.lower(
-              signedBy,
-              nativeModule().rustbuffer_alloc,
-            ),
-            FfiConverterUInt64.lower(
-              currentSequence,
-              nativeModule().rustbuffer_alloc,
-            ),
-            FfiConverterOptionalBytes.lower(
-              identityContent,
-              nativeModule().rustbuffer_alloc,
-            ),
-            callStatus,
-          );
-        },
-        /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      ),
+        try {
+            return FfiConverterArrayBuffer.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+        FfiConverterInt32.lower(collection, nativeModule().rustbuffer_alloc),
+        FfiConverterUInt64.lower(identitySequence, nativeModule().rustbuffer_alloc),
+        FfiConverterArrayBuffer.lower(signedBy, nativeModule().rustbuffer_alloc),
+        FfiConverterUInt64.lower(currentSequence, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalBytes.lower(identityContent, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+    
+/**
+ * Drop every cached auth token — e.g. when the active identity changes.
+ */
+    clearAuthTokens(): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_clear_auth_tokens(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
-  }
-
-  /**
-   * Insert each (digest, content) pair into the content store.
-   */
-  copyContents(contents: Array<ContentEntry>): void /*throws*/ {
-    uniffiCaller.rustCallWithError(
-      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-      /*caller:*/ (callStatus) => {
-        nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(
-          uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-          FfiConverterSequenceTypeContentEntry.lower(
-            contents,
-            nativeModule().rustbuffer_alloc,
-          ),
-          callStatus,
-        );
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    }
+    
+/**
+ * Insert each (digest, content) pair into the content store.
+ */
+    copyContents(contents: Array<ContentEntry>): void /*throws*/ {uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterSequenceTypeContentEntry.lower(contents, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
   }
 
@@ -4844,25 +4928,33 @@ export class PolycentricCore
       }
       throw __error;
     }
-  }
-
-  /**
-   * Replace the list of gRPC servers the core's `Observable`-returning
-   * methods will fan out to.
-   */
-  setServers(servers: Array<string>): void {
-    uniffiCaller.rustCall(
-      /*caller:*/ (callStatus) => {
-        nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
-          uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-          FfiConverterSequenceString.lower(
-            servers,
-            nativeModule().rustbuffer_alloc,
-          ),
-          callStatus,
-        );
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    }
+    
+/**
+ * Register the provider consulted for the auth token attached to every
+ * outgoing gRPC request.
+ */
+    setAuthTokenProvider(provider: AuthTokenProvider): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterTypeAuthTokenProvider.lower(provider, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    }
+    
+/**
+ * Replace the list of gRPC servers the core's `Observable`-returning
+ * methods will fan out to.
+ */
+    setServers(servers: Array<string>): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterSequenceString.lower(servers, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
   }
 
@@ -5185,9 +5277,10 @@ const FfiConverterOptionalSequenceString = new FfiConverterOptional(
 );
 
 // FfiConverter for ArrayBuffer | undefined
-const FfiConverterOptionalBytes = new FfiConverterOptional(
-  FfiConverterArrayBuffer,
-);
+const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
+
+// FfiConverter for AuthToken | undefined
+const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterTypeAuthToken);
 
 // FfiConverter for Array<ContentEntry>
 const FfiConverterSequenceTypeContentEntry = new FfiConverterArray(
@@ -5218,379 +5311,155 @@ const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
  * It also initializes the machinery to enable Rust to talk back to Javascript.
  */
 function uniffiEnsureInitialized() {
-  // Get the bindings contract version from our ComponentInterface
-  const bindingsContractVersion = 30;
-  // Get the scaffolding contract version by calling the into the dylib
-  const scaffoldingContractVersion =
-    nativeModule().ubrn_ffi_polycentric_core_uniffi_contract_version();
-  if (bindingsContractVersion !== scaffoldingContractVersion) {
-    throw new UniffiInternalError.ContractVersionMismatch(
-      scaffoldingContractVersion,
-      bindingsContractVersion,
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !==
-    1521
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_func_set_log_level",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_logger() !==
-    12935
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_func_set_logger",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_logger_log() !==
-    49060
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_logger_log",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_next() !==
-    24656
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_observer_next",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_error() !==
-    49972
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_observer_error",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_complete() !==
-    23210
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_observer_complete",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new() !==
-    49425
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_constructor_polycentriccore_new",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !==
-    16886
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents() !==
-    8936
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events() !==
-    43572
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_copy_events",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session() !==
-    41985
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !==
-    52560
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !==
-    8615
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !==
-    24179
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info() !==
-    29065
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers() !==
-    49206
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_get_servers",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries() !==
-    19825
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query() !==
-    44746
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_banned() !==
-    59583
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_is_banned",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator() !==
-    59258
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_is_moderator",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session() !==
-    15965
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_bans() !==
-    3141
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_list_bans",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads() !==
-    64966
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_list_heads",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events() !==
-    62657
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence() !==
-    30106
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root() !==
-    20406
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_previous_root",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !==
-    18222
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !==
-    45203
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !==
-    13223
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events() !==
-    16446
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_put_events",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !==
-    8128
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status() !==
-    47259
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !==
-    60336
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_set_servers",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event() !==
-    43916
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_sign_event",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob() !==
-    61645
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_url_info() !==
-    20801
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_url_info",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event() !==
-    13132
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobservable_subscribe() !==
-    41978
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_queryobservable_subscribe",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next() !==
-    32990
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_queryobserver_next",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_error() !==
-    15141
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_queryobserver_error",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_complete() !==
-    39586
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_queryobserver_complete",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign() !==
-    9080
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_signbytescallback_sign",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_subscription_is_closed() !==
-    64556
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_subscription_is_closed",
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_polycentric_core_checksum_method_subscription_unsubscribe() !==
-    19047
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      "uniffi_polycentric_core_checksum_method_subscription_unsubscribe",
-    );
-  }
+    // Get the bindings contract version from our ComponentInterface
+    const bindingsContractVersion = 30;
+    // Get the scaffolding contract version by calling the into the dylib
+    const scaffoldingContractVersion = nativeModule().ubrn_ffi_polycentric_core_uniffi_contract_version();
+    if (bindingsContractVersion !== scaffoldingContractVersion) {
+        throw new UniffiInternalError.ContractVersionMismatch(scaffoldingContractVersion, bindingsContractVersion);
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !== 1521) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_log_level");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_logger() !== 12935) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_logger");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token() !== 22109) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_logger_log() !== 49060) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_logger_log");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_next() !== 24656) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_observer_next");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_error() !== 49972) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_observer_error");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_observer_complete() !== 23210) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_observer_complete");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new() !== 49425) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_constructor_polycentriccore_new");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !== 16886) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_clear_auth_tokens() !== 569) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_clear_auth_tokens");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents() !== 8936) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events() !== 43572) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_copy_events");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session() !== 41985) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_create_pairing_session");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !== 52560) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !== 8615) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !== 24179) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info() !== 29065) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_servers() !== 49206) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_servers");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries() !== 19825) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_all_queries");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query() !== 44746) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_invalidate_query");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session() !== 15965) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_join_pairing_session");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_heads() !== 64966) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_list_heads");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events() !== 62657) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_list_valid_events");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence() !== 30106) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_next_sequence");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_root() !== 20406) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_previous_root");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !== 18222) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !== 45203) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !== 13223) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events() !== 16446) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_put_events");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 33093) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !== 60336) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_servers");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event() !== 25082) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_sign_event");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob() !== 61645) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_url_info() !== 20801) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_url_info");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event() !== 13132) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobservable_subscribe() !== 41978) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_queryobservable_subscribe");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_next() !== 32990) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_queryobserver_next");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_error() !== 15141) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_queryobserver_error");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_queryobserver_complete() !== 39586) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_queryobserver_complete");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign() !== 57859) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_signeventcallback_sign");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_subscription_is_closed() !== 64556) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_subscription_is_closed");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_subscription_unsubscribe() !== 19047) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_subscription_unsubscribe");
+    }
 
-  uniffiCallbackInterfaceLogger.register();
-  uniffiCallbackInterfaceObserver.register();
-  uniffiCallbackInterfaceQueryObserver.register();
-  uniffiCallbackInterfaceSignBytesCallback.register();
-}
+    uniffiCallbackInterfaceAuthTokenProvider.register();
+    uniffiCallbackInterfaceLogger.register();
+    uniffiCallbackInterfaceObserver.register();
+    uniffiCallbackInterfaceQueryObserver.register();
+    uniffiCallbackInterfaceSignEventCallback.register();
+    }
 
 export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
+    FfiConverterTypeAuthToken,
+    FfiConverterTypeAuthTokenProvider,
     FfiConverterTypeContentEntry,
     FfiConverterTypeCoreError,
     FfiConverterTypeEventKey,

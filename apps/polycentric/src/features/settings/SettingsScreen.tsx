@@ -117,6 +117,16 @@ export default function SettingsTabScreen() {
                 </ListItemWrapper>
               </ListItemGroup>
 
+              <ListItemGroup label="Content Moderation">
+                <ListItemWrapper
+                  onPress={() =>
+                    router.push(Routes.tabs.settings.moderationSettings)
+                  }
+                >
+                  <Text variant="body">Moderation preferences</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
+
               <ListItemGroup>
                 <ListItemWrapper
                   onPress={() => Linking.openURL(REPORT_BUG_URL)}

@@ -1,19 +1,30 @@
 //! gRPC channel construction shared across transport-using modules.
 //! On wasm32 we use `tonic-web-wasm-client`; on native targets we use
-//! `tonic`'s built-in transport with optional TLS.
+//! `tonic`'s built-in transport with optional TLS. Channels are wrapped in
+//! an auth interceptor (see [`crate::query::auth`]).
+
+use crate::query::auth;
+use tonic::service::interceptor::InterceptedService;
 
 #[cfg(target_arch = "wasm32")]
-pub type GrpcChannel = tonic_web_wasm_client::Client;
+type RawChannel = tonic_web_wasm_client::Client;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-pub type GrpcChannel = tonic::transport::Channel;
+type RawChannel = tonic::transport::Channel;
+
+#[cfg(any(target_arch = "wasm32", feature = "native-transport"))]
+pub type GrpcChannel = InterceptedService<RawChannel, auth::AuthInterceptor>;
 
 #[cfg(target_arch = "wasm32")]
-pub fn channel(server_url: &str) -> Result<GrpcChannel, String> {
-    Ok(tonic_web_wasm_client::Client::new(server_url.to_string()))
+pub async fn channel(server_url: &str) -> Result<GrpcChannel, String> {
+    let client = tonic_web_wasm_client::Client::new(server_url.to_string());
+    Ok(InterceptedService::new(
+        client,
+        auth::interceptor_for(server_url).await,
+    ))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-pub fn channel(server_url: &str) -> Result<GrpcChannel, String> {
+pub async fn channel(server_url: &str) -> Result<GrpcChannel, String> {
     let mut endpoint = tonic::transport::Channel::from_shared(server_url.to_string())
         .map_err(|e| format!("Invalid server url: {e}"))?;
     if server_url.starts_with("https://") {
@@ -22,5 +33,8 @@ pub fn channel(server_url: &str) -> Result<GrpcChannel, String> {
             .tls_config(tls)
             .map_err(|e| format!("TLS config: {e}"))?;
     }
-    Ok(endpoint.connect_lazy())
+    Ok(InterceptedService::new(
+        endpoint.connect_lazy(),
+        auth::interceptor_for(server_url).await,
+    ))
 }
