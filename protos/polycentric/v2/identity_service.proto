@@ -61,8 +61,8 @@ message ListBansResponse {
 }
 
 /**
- * Identity APIs. Currently unprotected (see the note above); a new
- * authentication layer will re-protect these methods.
+ * Identity moderation APIs, authenticated by the caller's bearer JWT
+ * (see the note above).
  */
 service IdentityService {
   // Returns whether the calling identity is a moderator on this server.

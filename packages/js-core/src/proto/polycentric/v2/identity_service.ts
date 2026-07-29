@@ -13,9 +13,8 @@ import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { PageInfo } from "./common";
 // *
-// NOTE: these moderation RPCs are currently UNPROTECTED. The
-// request-signing authentication that used to guard them has been
-// removed; a new authentication layer will re-protect them.
+// The moderation RPCs are authenticated by the caller's bearer JWT
+// (see `auth_middleware`): the ban endpoints require a moderator.
 
 /**
  * *

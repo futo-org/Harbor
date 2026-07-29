@@ -17,8 +17,8 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Identity APIs. Currently unprotected (see the note above); a new
- * authentication layer will re-protect these methods.
+ * Identity moderation APIs, authenticated by the caller's bearer JWT
+ * (see the note above).
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
@@ -50,8 +50,8 @@ export interface IIdentityServiceClient {
 }
 /**
  * *
- * Identity APIs. Currently unprotected (see the note above); a new
- * authentication layer will re-protect these methods.
+ * Identity moderation APIs, authenticated by the caller's bearer JWT
+ * (see the note above).
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
