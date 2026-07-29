@@ -1,12 +1,9 @@
 //! `list_bans`: a paginated, optionally filtered list of the identities
-//! banned on this server.
-//!
-//! UNPROTECTED: the moderator-signature check that used to guard this
-//! endpoint has been removed. TODO(auth): require a moderator once the
-//! new auth layer lands.
+//! banned on this server. Requires the caller to be a moderator.
 
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository::{self as id_repo, BanCursor};
+use crate::service::identity::rpc::common::require_moderator;
 use crate::service::proto::{ListBansRequest, ListBansResponse, PageInfo};
 use ::entity::ban_model;
 use chrono::DateTime;
@@ -19,6 +16,8 @@ pub async fn handle(
     ctx: &ServiceContext,
     request: Request<ListBansRequest>,
 ) -> Result<ListBansResponse, Status> {
+    require_moderator(ctx, &request).await?;
+
     let body = request.into_inner();
 
     let limit = body.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;

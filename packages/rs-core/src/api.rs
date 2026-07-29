@@ -519,7 +519,7 @@ impl PolycentricCore {
     /// UNPROTECTED: request signing has been removed; the call is
     /// currently unauthenticated pending a new auth layer.
     pub async fn is_moderator(&self, server_url: String) -> Result<Vec<u8>, CoreError> {
-        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
         let response = client
             .is_moderator(tonic::Request::new(IsModeratorRequest {}))
             .await
@@ -540,7 +540,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let request = SetBanStatusRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SetBanStatusRequest: {e}")))?;
-        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
         let response = client
             .set_ban_status(tonic::Request::new(request))
             .await
@@ -561,7 +561,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let request = IsBannedRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode IsBannedRequest: {e}")))?;
-        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
         let response = client
             .is_banned(tonic::Request::new(request))
             .await
@@ -582,7 +582,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let request = ListBansRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode ListBansRequest: {e}")))?;
-        let mut client = IdentityServiceClient::new(channel(&server_url)?);
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
         let response = client
             .list_bans(tonic::Request::new(request))
             .await

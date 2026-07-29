@@ -1,10 +1,11 @@
 //! gRPC `IdentityService` impl. Each method delegates to a handler
 //! under `identity/rpc/`.
 //!
-//! NOTE: these moderation endpoints are currently unprotected. The
-//! request-signing auth that used to guard them has been removed; a new
-//! authentication layer will re-protect them.
+//! These moderation endpoints are gated on the caller's authenticated
+//! identity (populated by `auth_middleware` from the bearer JWT and read
+//! from the request extensions): the ban endpoints require a moderator.
 
+pub mod common;
 pub mod is_banned;
 pub mod is_moderator;
 pub mod list_bans;

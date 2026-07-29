@@ -140,10 +140,6 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `moderator` table.
-    // Currently unused: the moderation endpoints are unprotected while the
-    // request-signing auth is removed. Retained for the new auth layer,
-    // which will resolve the caller and gate on moderator status again.
-    #[allow(dead_code)]
     pub async fn is_moderator(
         db: &DbConn,
         identity: &str,
@@ -236,13 +232,13 @@ impl Mutation {
         db: &C,
         identity: &str,
         banned: bool,
-        banned_by: Option<&str>,
+        banned_by: &str,
     ) -> Result<(), DbErr> {
         if banned {
             let now = chrono::Utc::now();
             BanModel::Entity::insert(BanModel::ActiveModel {
                 identity: Set(identity.to_string()),
-                banned_by: Set(banned_by.map(str::to_string)),
+                banned_by: Set(Some(banned_by.to_string())),
                 created_at: Set(now),
                 updated_at: Set(now),
             })

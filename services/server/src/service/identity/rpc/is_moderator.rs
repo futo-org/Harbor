@@ -1,20 +1,24 @@
 //! `is_moderator`: returns whether the calling identity is a moderator on
-//! this server.
-//!
-//! UNPROTECTED: the request-signing auth that identified the caller has
-//! been removed, so there is no caller identity to check yet. Until a new
-//! auth layer supplies the authenticated identity, this fails closed.
-//! TODO(auth): resolve the caller from the new auth layer and check it.
+//! this server. Authenticated by the bearer JWT (the caller is the
+//! subject).
 
 use crate::service::context::ServiceContext;
+use crate::service::identity::repository as id_repo;
+use crate::service::identity::rpc::common::authenticated_identity;
 use crate::service::proto::{IsModeratorRequest, IsModeratorResponse};
 use tonic::{Request, Status};
 
 pub async fn handle(
-    _ctx: &ServiceContext,
-    _request: Request<IsModeratorRequest>,
+    ctx: &ServiceContext,
+    request: Request<IsModeratorRequest>,
 ) -> Result<IsModeratorResponse, Status> {
-    Ok(IsModeratorResponse {
-        is_moderator: false,
-    })
+    let identity = authenticated_identity(&request)
+        .ok_or_else(|| Status::unauthenticated("authentication required"))?;
+
+    let is_moderator =
+        id_repo::Query::is_moderator(&ctx.db, &identity)
+            .await
+            .map_err(|_| Status::internal("internal server error"))?;
+
+    Ok(IsModeratorResponse { is_moderator })
 }

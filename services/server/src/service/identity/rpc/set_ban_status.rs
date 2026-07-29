@@ -1,12 +1,10 @@
-//! `set_ban_status`: bans or unbans an identity on this server.
-//!
-//! UNPROTECTED: the moderator-signature check that used to guard this
-//! endpoint has been removed, so the banning moderator is unknown and the
-//! ban is recorded with no banner. TODO(auth): require a moderator and
-//! attribute the ban to them once the new auth layer lands.
+//! `set_ban_status`: bans or unbans an identity on this server after
+//! verifying the caller is a moderator. The ban is attributed to the
+//! authenticated moderator identity.
 
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository as id_repo;
+use crate::service::identity::rpc::common::require_moderator;
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 use polycentric_common::models::collections;
 use sea_orm::TransactionTrait;
@@ -16,6 +14,8 @@ pub async fn handle(
     ctx: &ServiceContext,
     request: Request<SetBanStatusRequest>,
 ) -> Result<SetBanStatusResponse, Status> {
+    let moderator_identity = require_moderator(ctx, &request).await?;
+
     let body = request.into_inner();
 
     let txn = ctx.db.begin().await.map_err(|e| {
@@ -26,7 +26,7 @@ pub async fn handle(
         &txn,
         &body.target_identity,
         body.banned,
-        None,
+        &moderator_identity,
     )
     .await
     .map_err(|e| {
@@ -47,7 +47,8 @@ pub async fn handle(
     })?;
 
     println!(
-        "set {}'s state to {}",
+        "{} set {}'s state to {}",
+        moderator_identity,
         body.target_identity,
         if body.banned { "banned" } else { "unbanned" },
     );
