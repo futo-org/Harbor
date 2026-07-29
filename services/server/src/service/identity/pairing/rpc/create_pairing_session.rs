@@ -2,15 +2,14 @@
 //! verifying the caller is a rotation key.
 
 use crate::service::identity::pairing::repository as pair_repo;
+use crate::service::identity::pairing::rpc::common::verify_signed_message;
 use crate::service::identity::repository as id_repo;
-use crate::service::identity::rpc::common::verify_signed_message;
 use crate::service::proto as Proto;
 use crate::service::proto::{
     CreatePairingSessionRequest, CreatePairingSessionResponse,
 };
 use crate::util;
 use chrono::Utc;
-use polycentric_common::http_sig;
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
@@ -28,12 +27,15 @@ pub async fn handle(
         Proto::InitialPairingSession::decode(&msg.message_bytes[..])
             .map_err(|_| Status::invalid_argument("invalid session"))?;
 
-    http_sig::check_timestamp_skew(
-        initial_session.timestamp,
-        Utc::now().timestamp_millis(),
-    )?;
+    let now = Utc::now();
+    let skew_ms: i64 = 30 * 60 * 1000;
+    if (initial_session.timestamp - now.timestamp_millis()).abs() > skew_ms {
+        return Err(Status::invalid_argument(
+            "session timestamp outside acceptable skew window",
+        ));
+    }
 
-    let created_at = Utc::now();
+    let created_at = now;
     let expires_at = created_at
         + chrono::Duration::seconds(
             pair_repo::PAIRING_SESSION_TTL_SECONDS as i64,

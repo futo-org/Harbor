@@ -3,8 +3,9 @@
 //! are deleted before returning an expiry error.
 
 use crate::service::identity::pairing::repository as pair_repo;
-use crate::service::identity::pairing::rpc::common::build_pairing_session;
-use crate::service::identity::rpc::common::verify_signed_message;
+use crate::service::identity::pairing::rpc::common::{
+    build_pairing_session, verify_signed_message,
+};
 use crate::service::proto::{
     JoinPairingSessionBody, JoinPairingSessionRequest,
     JoinPairingSessionResponse,

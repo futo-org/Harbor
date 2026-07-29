@@ -4,24 +4,13 @@ package polycentric.v2;
 import "polycentric/v2/common.proto";
 
 /**
- * Every moderation RPC is authenticated by signed gRPC metadata. Four
- * metadata entries are all required:
- *   - polycentric-content-digest: `sha-256=:<base64(sha256(message))>:`
- *     over the encoded request message (body binding)
- *   - polycentric-signature-input: `v=<n>;created=<ms>;expires=<ms>;
- *     keyid=<identity hex>;nonce=<base64>`
- *   - polycentric-public-key: base64 of the signer's raw ed25519 key
- *   - polycentric-signature: base64 ed25519 signature
- * The signature covers a canonical base over the operation (the gRPC
- * method path), the server's own authority (anti-relay), the
- * content-digest header (body binding), and the signature-input line.
- * The server checks freshness, verifies the signature against the
- * public key, and confirms the key is one of `keyid`'s authorized keys
- * before dispatching.
+ * NOTE: these moderation RPCs are currently UNPROTECTED. The
+ * request-signing authentication that used to guard them has been
+ * removed; a new authentication layer will re-protect them.
  */
 
 /**
- * IsModerator: no extra fields — the subject is the signer (`keyid`).
+ * IsModerator: no extra fields.
  */
 message IsModeratorRequest {}
 
@@ -73,20 +62,16 @@ message ListBansResponse {
 }
 
 /**
- * Identity APIs. Every method is authenticated by signed gRPC metadata
- * (see above); the signer is identified by the metadata `keyid` and must
- * be one of that identity's authorized keys.
+ * Identity APIs. Currently unprotected (see the note above); a new
+ * authentication layer will re-protect these methods.
  */
 service IdentityService {
-  // Returns whether the signer is a moderator on this server.
+  // Returns whether the calling identity is a moderator on this server.
   rpc IsModerator(IsModeratorRequest) returns (IsModeratorResponse);
-  // Bans or unbans an identity on this server. Requires the signer to be
-  // a moderator.
+  // Bans or unbans an identity on this server.
   rpc SetBanStatus(SetBanStatusRequest) returns (SetBanStatusResponse);
-  // Returns whether an identity is banned on this server. Requires the
-  // signer to be a moderator.
+  // Returns whether an identity is banned on this server.
   rpc IsBanned(IsBannedRequest) returns (IsBannedResponse);
-  // Lists the identities banned on this server. Requires the signer to
-  // be a moderator.
+  // Lists the identities banned on this server.
   rpc ListBans(ListBansRequest) returns (ListBansResponse);
 }

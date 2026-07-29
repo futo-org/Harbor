@@ -28,7 +28,6 @@ import { CryptoManager } from './crypto/crypto-manager';
 import type {
   PolycentricCoreLike,
   EventKey,
-  SigningInputs,
 } from '@polycentric/rs-core-uniffi-web';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
@@ -228,70 +227,25 @@ export class PolycentricClient {
     return null;
   }
 
-  // Validity window for a moderation request signature, in ms. Kept
-  // short (and well under the server's max) so a captured signature is
-  // only briefly replayable.
-  private static readonly SIGNATURE_TTL_MS = 60_000;
-
-  /**
-   * Signs the canonical base of a moderation request with the active
-   * key. The private key never leaves this layer; the core FFI receives
-   * only the resulting signature.
-   */
-  private readonly moderationSigner = {
-    sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-      if (!this.currentKeyPair) throw new Error('No active key pair');
-      const signature = await this.crypto.sign(
-        this.currentKeyPair.privateKey.key,
-        new Uint8Array(bytes),
-        this.currentKeyPair.keyType,
-      );
-      return signature.buffer.slice(
-        signature.byteOffset,
-        signature.byteOffset + signature.byteLength,
-      ) as ArrayBuffer;
-    },
-  };
-
-  /**
-   * The per-request signing inputs (identity, public key, validity
-   * window) the core FFI binds into a moderation request signature.
-   */
-  private moderationSigningInputs(): SigningInputs {
-    if (!this.currentKeyPair) throw new Error('No active key pair');
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-
-    const now = Date.now();
-    const rawKey = this.currentKeyPair.publicKey.key;
-    return {
-      keyid: this.activeIdentityKey,
-      publicKey: rawKey.buffer.slice(
-        rawKey.byteOffset,
-        rawKey.byteOffset + rawKey.byteLength,
-      ) as ArrayBuffer,
-      createdMs: BigInt(now),
-      expiresMs: BigInt(now + PolycentricClient.SIGNATURE_TTL_MS),
-    };
-  }
-
   /**
    * Ask `server` whether the active identity is a moderator
    * (`IdentityService.IsModerator`).
+   *
+   * UNPROTECTED: request signing has been removed, so this call is
+   * currently unauthenticated pending a new auth layer.
    */
   async isModerator(server: string): Promise<boolean> {
-    const bytes = await this.core.isModerator(
-      server,
-      this.moderationSigningInputs(),
-      this.moderationSigner,
-    );
+    const bytes = await this.core.isModerator(server);
     return Proto.IsModeratorResponse.fromBinary(new Uint8Array(bytes))
       .isModerator;
   }
 
   /**
    * Ban or unban `targetIdentity` on `server`
-   * (`IdentityService.SetBanStatus`). The active identity must be a
-   * moderator on `server`.
+   * (`IdentityService.SetBanStatus`).
+   *
+   * UNPROTECTED: request signing has been removed, so this call is
+   * currently unauthenticated pending a new auth layer.
    */
   async setBanStatus(
     server: string,
@@ -301,38 +255,32 @@ export class PolycentricClient {
     const body = Proto.SetBanStatusRequest.toBinary(
       Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
     );
-    await this.core.setBanStatus(
-      server,
-      body.buffer as ArrayBuffer,
-      this.moderationSigningInputs(),
-      this.moderationSigner,
-    );
+    await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
   }
 
   /**
    * Ask `server` whether `targetIdentity` is banned
-   * (`IdentityService.IsBanned`). The active identity must be a
-   * moderator on `server`.
+   * (`IdentityService.IsBanned`).
+   *
+   * UNPROTECTED: request signing has been removed, so this call is
+   * currently unauthenticated pending a new auth layer.
    */
   async isBanned(server: string, targetIdentity: string): Promise<boolean> {
     const body = Proto.IsBannedRequest.toBinary(
       Proto.IsBannedRequest.create({ targetIdentity }),
     );
-    const bytes = await this.core.isBanned(
-      server,
-      body.buffer as ArrayBuffer,
-      this.moderationSigningInputs(),
-      this.moderationSigner,
-    );
+    const bytes = await this.core.isBanned(server, body.buffer as ArrayBuffer);
     return Proto.IsBannedResponse.fromBinary(new Uint8Array(bytes)).isBanned;
   }
 
   /**
    * List a page of the identities banned on `server`
-   * (`IdentityService.ListBans`). The active identity must be a
-   * moderator on `server`. Pass `after` (from a previous page's
+   * (`IdentityService.ListBans`). Pass `after` (from a previous page's
    * `endCursor`) to page forward and `query` to keep only identities
    * that begin with it (a case-insensitive prefix match).
+   *
+   * UNPROTECTED: request signing has been removed, so this call is
+   * currently unauthenticated pending a new auth layer.
    */
   async listBans(
     server: string,
@@ -345,12 +293,7 @@ export class PolycentricClient {
         query: options.query,
       }),
     );
-    const bytes = await this.core.listBans(
-      server,
-      body.buffer as ArrayBuffer,
-      this.moderationSigningInputs(),
-      this.moderationSigner,
-    );
+    const bytes = await this.core.listBans(server, body.buffer as ArrayBuffer);
     const response = Proto.ListBansResponse.fromBinary(new Uint8Array(bytes));
     return {
       bans: response.bannedIdentities,

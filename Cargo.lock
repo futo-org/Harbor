@@ -3713,7 +3713,6 @@ dependencies = [
 name = "polycentric-common"
 version = "0.0.0"
 dependencies = [
- "base64",
  "ed25519-dalek",
  "hmac-sha256",
  "prost",

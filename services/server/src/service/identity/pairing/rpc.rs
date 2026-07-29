@@ -63,7 +63,7 @@ pub fn build_pairing_service(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::identity::rpc::common::verify_signed_message;
+    use crate::service::identity::pairing::rpc::common::verify_signed_message;
     use crate::service::proto as Proto;
     use crate::service::proto::SignedMessage;
     use chrono::Utc;

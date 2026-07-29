@@ -1,36 +1,21 @@
-//! `set_ban_status`: bans or unbans an identity on this server after
-//! verifying the request is signed by one of a moderator's authorized
-//! keys.
+//! `set_ban_status`: bans or unbans an identity on this server.
+//!
+//! UNPROTECTED: the moderator-signature check that used to guard this
+//! endpoint has been removed, so the banning moderator is unknown and the
+//! ban is recorded with no banner. TODO(auth): require a moderator and
+//! attribute the ban to them once the new auth layer lands.
 
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository as id_repo;
-use crate::service::identity::rpc::common::{
-    authorize_signer, require_moderator,
-};
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
-use chrono::Utc;
-use polycentric_common::http_sig;
 use polycentric_common::models::collections;
 use sea_orm::TransactionTrait;
 use tonic::{Request, Status};
 
-const OPERATION: &str = "/polycentric.v2.IdentityService/SetBanStatus";
-
 pub async fn handle(
     ctx: &ServiceContext,
-    server_name: &str,
     request: Request<SetBanStatusRequest>,
 ) -> Result<SetBanStatusResponse, Status> {
-    let verified = http_sig::verify_signed_request(
-        server_name,
-        OPERATION,
-        request.metadata(),
-        Utc::now().timestamp_millis(),
-    )?;
-    authorize_signer(ctx, &verified).await?;
-    require_moderator(ctx, &verified.keyid).await?;
-    let moderator_identity = verified.keyid;
-
     let body = request.into_inner();
 
     let txn = ctx.db.begin().await.map_err(|e| {
@@ -41,7 +26,7 @@ pub async fn handle(
         &txn,
         &body.target_identity,
         body.banned,
-        &moderator_identity,
+        None,
     )
     .await
     .map_err(|e| {
@@ -62,8 +47,7 @@ pub async fn handle(
     })?;
 
     println!(
-        "{} set {}'s state to {}",
-        moderator_identity,
+        "set {}'s state to {}",
         body.target_identity,
         if body.banned { "banned" } else { "unbanned" },
     );

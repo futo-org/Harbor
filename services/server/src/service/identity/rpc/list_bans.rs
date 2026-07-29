@@ -1,35 +1,24 @@
 //! `list_bans`: a paginated, optionally filtered list of the identities
-//! banned on this server. Requires the signer to be a moderator.
+//! banned on this server.
+//!
+//! UNPROTECTED: the moderator-signature check that used to guard this
+//! endpoint has been removed. TODO(auth): require a moderator once the
+//! new auth layer lands.
 
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository::{self as id_repo, BanCursor};
-use crate::service::identity::rpc::common::{
-    authorize_signer, require_moderator,
-};
 use crate::service::proto::{ListBansRequest, ListBansResponse, PageInfo};
 use ::entity::ban_model;
-use chrono::{DateTime, Utc};
-use polycentric_common::http_sig;
+use chrono::DateTime;
 use tonic::{Request, Status};
 
 const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 200;
-const OPERATION: &str = "/polycentric.v2.IdentityService/ListBans";
 
 pub async fn handle(
     ctx: &ServiceContext,
-    server_name: &str,
     request: Request<ListBansRequest>,
 ) -> Result<ListBansResponse, Status> {
-    let verified = http_sig::verify_signed_request(
-        server_name,
-        OPERATION,
-        request.metadata(),
-        Utc::now().timestamp_millis(),
-    )?;
-    authorize_signer(ctx, &verified).await?;
-    require_moderator(ctx, &verified.keyid).await?;
-
     let body = request.into_inner();
 
     let limit = body.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;

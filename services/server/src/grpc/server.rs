@@ -5,7 +5,6 @@ use crate::service::{self, notifications::rpc::build_notifications_service};
 use axum::Router;
 use common_kafka::FutureProducer;
 use http::header::HeaderName;
-use polycentric_common::http_sig;
 use sea_orm::DatabaseConnection;
 use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
@@ -78,12 +77,6 @@ pub fn build_grpc_router(
             HeaderName::from_static("content-type"),
             HeaderName::from_static("x-grpc-web"),
             HeaderName::from_static("grpc-timeout"),
-            // Signed-request auth metadata (browsers must be allowed to
-            // send these on grpc-web moderation calls).
-            HeaderName::from_static(http_sig::META_CONTENT_DIGEST),
-            HeaderName::from_static(http_sig::META_SIGNATURE_INPUT),
-            HeaderName::from_static(http_sig::META_PUBLIC_KEY),
-            HeaderName::from_static(http_sig::META_SIGNATURE),
         ])
         .expose_headers([
             HeaderName::from_static("grpc-status"),
