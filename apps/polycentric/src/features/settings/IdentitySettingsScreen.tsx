@@ -36,10 +36,7 @@ export function IdentitySettingsSheet({
       <Sheet.Content style={[Atoms.gap_xl]}>
         {/* Hero: avatar + name */}
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
-          <Link href={'/feed/compose'}>
-            <ProfileAvatar identityKey={identityKey} size="massive" />
-          </Link>
-
+          <ProfileAvatar identityKey={identityKey} size="massive" />
           <View style={[Atoms.items_center, Atoms.gap_xs]}>
             <Text
               variant="title"
