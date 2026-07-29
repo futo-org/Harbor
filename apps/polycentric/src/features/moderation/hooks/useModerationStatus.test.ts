@@ -1,18 +1,17 @@
 import type { PolycentricClient } from '@polycentric/react-native';
 import useModerationStatus from './useModerationStatus';
 
-type IsModeratorFn = (server: string) => Promise<boolean>;
+type IsModeratorFn = () => Promise<Map<string, boolean>>;
 
 // Minimal structural stand-in for the client — refresh only touches
-// activeIdentityKey, servers, and isModerator.
+// activeIdentityKey and isModerator() (which now fans out internally and
+// returns a serverUrl -> isModerator map).
 function mockClient(
   activeIdentityKey: string | null,
-  servers: string[],
   isModerator: IsModeratorFn,
 ): PolycentricClient {
   return {
     activeIdentityKey,
-    servers,
     isModerator,
   } as unknown as PolycentricClient;
 }
@@ -29,7 +28,7 @@ describe('useModerationStatus.refresh', () => {
   it('clears status when there is no active identity', async () => {
     await useModerationStatus
       .getState()
-      .refresh(mockClient(null, ['http://a'], async () => true));
+      .refresh(mockClient(null, async () => new Map([['http://a', true]])));
 
     expect(useModerationStatus.getState()).toMatchObject({
       isLoading: false,
@@ -39,15 +38,17 @@ describe('useModerationStatus.refresh', () => {
   });
 
   it('keeps only the servers that report moderator status, in order', async () => {
-    await useModerationStatus
-      .getState()
-      .refresh(
-        mockClient(
-          'me',
-          ['http://a', 'http://b', 'http://c'],
-          async (server) => server !== 'http://b',
-        ),
-      );
+    await useModerationStatus.getState().refresh(
+      mockClient(
+        'me',
+        async () =>
+          new Map([
+            ['http://a', true],
+            ['http://b', false],
+            ['http://c', true],
+          ]),
+      ),
+    );
 
     const state = useModerationStatus.getState();
     expect(state.moderatedServers).toEqual(['http://a', 'http://c']);
@@ -56,58 +57,50 @@ describe('useModerationStatus.refresh', () => {
   });
 
   it('reports not-a-moderator when no server confirms', async () => {
-    await useModerationStatus
-      .getState()
-      .refresh(mockClient('me', ['http://a', 'http://b'], async () => false));
+    await useModerationStatus.getState().refresh(
+      mockClient(
+        'me',
+        async () =>
+          new Map([
+            ['http://a', false],
+            ['http://b', false],
+          ]),
+      ),
+    );
 
     const state = useModerationStatus.getState();
     expect(state.moderatedServers).toEqual([]);
     expect(state.isModerator).toBe(false);
   });
 
-  it('treats a server that errors as not-a-moderator', async () => {
-    await useModerationStatus.getState().refresh(
-      mockClient('me', ['http://ok', 'http://bad'], async (server) => {
-        if (server === 'http://bad') throw new Error('unreachable');
-        return true;
-      }),
-    );
+  it('treats a server absent from the map as not-a-moderator', async () => {
+    // A server that fails to answer is simply missing from the map.
+    await useModerationStatus
+      .getState()
+      .refresh(mockClient('me', async () => new Map([['http://ok', true]])));
 
     const state = useModerationStatus.getState();
     expect(state.moderatedServers).toEqual(['http://ok']);
     expect(state.isModerator).toBe(true);
   });
 
-  it('keeps only the moderator servers when moderator, not-moderator, and errored servers are mixed', async () => {
+  it('treats a failed query as not-a-moderator', async () => {
     await useModerationStatus.getState().refresh(
-      mockClient(
-        'me',
-        [
-          'http://mod-a',
-          'http://plain-b',
-          'http://error-c',
-          'http://mod-d',
-          'http://error-e',
-        ],
-        async (server) => {
-          if (server === 'http://error-c' || server === 'http://error-e') {
-            throw new Error('unreachable');
-          }
-          return server === 'http://mod-a' || server === 'http://mod-d';
-        },
-      ),
+      mockClient('me', async () => {
+        throw new Error('unreachable');
+      }),
     );
 
     const state = useModerationStatus.getState();
-    expect(state.moderatedServers).toEqual(['http://mod-a', 'http://mod-d']);
-    expect(state.isModerator).toBe(true);
+    expect(state.moderatedServers).toEqual([]);
+    expect(state.isModerator).toBe(false);
     expect(state.isLoading).toBe(false);
   });
 
-  it('reports not-a-moderator when no servers are configured', async () => {
+  it('reports not-a-moderator when the map is empty', async () => {
     await useModerationStatus
       .getState()
-      .refresh(mockClient('me', [], async () => true));
+      .refresh(mockClient('me', async () => new Map()));
 
     const state = useModerationStatus.getState();
     expect(state.moderatedServers).toEqual([]);

@@ -9,6 +9,7 @@ pub mod client;
 pub mod event;
 pub mod feed;
 pub mod graph;
+pub mod moderation;
 pub mod notification;
 pub mod profile;
 pub mod query_observable;

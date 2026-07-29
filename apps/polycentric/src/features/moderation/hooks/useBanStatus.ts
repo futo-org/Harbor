@@ -30,9 +30,9 @@ export default function useBanStatus(
     setIsLoading(true);
     setBannedState(false);
     client
-      .isBanned(server, targetIdentity)
-      .then((isBanned) => {
-        if (!cancelled) setBannedState(isBanned);
+      .isBanned(targetIdentity)
+      .then((byServer) => {
+        if (!cancelled) setBannedState(byServer.get(server) ?? false);
       })
       .catch((err) => {
         console.error('Failed to fetch ban status:', err);

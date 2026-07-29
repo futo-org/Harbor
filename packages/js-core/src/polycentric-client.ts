@@ -90,6 +90,22 @@ export interface ListBansPage {
 }
 
 /**
+ * Decode the merged `serverUrl -> bool` JSON map emitted by the fan-out
+ * moderation queries (IsModerator / IsBanned). An empty or absent payload
+ * decodes to an empty map.
+ */
+function decodeStatusByServer(bytes: Uint8Array | null): Map<string, boolean> {
+  if (!bytes || bytes.length === 0) {
+    return new Map();
+  }
+  const record = JSON.parse(new TextDecoder().decode(bytes)) as Record<
+    string,
+    boolean
+  >;
+  return new Map(Object.entries(record));
+}
+
+/**
  * PolycentricClient is the top level API for the Polycentric SDK.
  */
 export class PolycentricClient {
@@ -250,24 +266,23 @@ export class PolycentricClient {
   }
 
   /**
-   * Ask `server` whether the active identity is a moderator
-   * (`IdentityService.IsModerator`).
-   *
-   * UNPROTECTED: request signing has been removed, so this call is
-   * currently unauthenticated pending a new auth layer.
+   * Whether the active identity is a moderator, per server
+   * (`IdentityService.IsModerator`). Fans out across the configured
+   * servers and returns a `serverUrl -> isModerator` map; a server that
+   * fails to respond is absent from the map.
    */
-  async isModerator(server: string): Promise<boolean> {
-    const bytes = await this.core.isModerator(server);
-    return Proto.IsModeratorResponse.fromBinary(new Uint8Array(bytes))
-      .isModerator;
+  async isModerator(): Promise<Map<string, boolean>> {
+    const bytes = await this.runModerationQuery(
+      undefined,
+      new Query.IsModerator({}),
+    );
+    return decodeStatusByServer(bytes);
   }
 
   /**
    * Ban or unban `targetIdentity` on `server`
-   * (`IdentityService.SetBanStatus`).
-   *
-   * UNPROTECTED: request signing has been removed, so this call is
-   * currently unauthenticated pending a new auth layer.
+   * (`IdentityService.SetBanStatus`). The active identity must be a
+   * moderator on `server`.
    */
   async setBanStatus(
     server: string,
@@ -281,42 +296,80 @@ export class PolycentricClient {
   }
 
   /**
-   * Ask `server` whether `targetIdentity` is banned
-   * (`IdentityService.IsBanned`).
-   *
-   * UNPROTECTED: request signing has been removed, so this call is
-   * currently unauthenticated pending a new auth layer.
+   * Whether `targetIdentity` is banned, per server
+   * (`IdentityService.IsBanned`). Fans out across the configured servers
+   * and returns a `serverUrl -> isBanned` map; a server that fails to
+   * respond is absent from the map.
    */
-  async isBanned(server: string, targetIdentity: string): Promise<boolean> {
-    const body = Proto.IsBannedRequest.toBinary(
-      Proto.IsBannedRequest.create({ targetIdentity }),
+  async isBanned(targetIdentity: string): Promise<Map<string, boolean>> {
+    const bytes = await this.runModerationQuery(
+      undefined,
+      new Query.IsBanned({ targetIdentity }),
     );
-    const bytes = await this.core.isBanned(server, body.buffer as ArrayBuffer);
-    return Proto.IsBannedResponse.fromBinary(new Uint8Array(bytes)).isBanned;
+    return decodeStatusByServer(bytes);
+  }
+
+  /**
+   * Run a one-shot moderation query, resolving with the merged response
+   * bytes once every server slot has reported (`null` if no server
+   * produced data). `servers` pins the fan-out to specific servers
+   * (used by the per-server `listBans`); omit it to use the configured
+   * server list.
+   */
+  private runModerationQuery(
+    queryKey: string[] | undefined,
+    query: Query,
+    servers?: string[],
+  ): Promise<Uint8Array | null> {
+    return new Promise((resolve, reject) => {
+      const opts = servers ? { servers } : undefined;
+      const observable = this.core.fetchQuery(queryKey, query, opts);
+      let latest: Uint8Array | null = null;
+      const subscription = observable.subscribe({
+        next: (result) => {
+          if (result.data) {
+            latest = new Uint8Array(result.data);
+          }
+          if (result.status === QueryStatus.Success) {
+            subscription.unsubscribe();
+            resolve(latest);
+          }
+        },
+        error: (message: string) => {
+          subscription.unsubscribe();
+          reject(new Error(message));
+        },
+        complete: () => {},
+      });
+    });
   }
 
   /**
    * List a page of the identities banned on `server`
-   * (`IdentityService.ListBans`). Pass `after` (from a previous page's
-   * `endCursor`) to page forward and `query` to keep only identities
-   * that begin with it (a case-insensitive prefix match).
-   *
-   * UNPROTECTED: request signing has been removed, so this call is
-   * currently unauthenticated pending a new auth layer.
+   * (`IdentityService.ListBans`). Pinned to `server` — bans are
+   * per-server — and the query key is scoped by server so each server's
+   * page is cached separately. Pass `after` (from a previous page's
+   * `endCursor`) to page forward and `query` to keep only identities that
+   * begin with it (a case-insensitive prefix match). The active identity
+   * must be a moderator on `server`.
    */
   async listBans(
     server: string,
     options: ListBansOptions = {},
   ): Promise<ListBansPage> {
-    const body = Proto.ListBansRequest.toBinary(
-      Proto.ListBansRequest.create({
+    const bytes = await this.runModerationQuery(
+      ['list_bans', server, options.after ?? '', options.query ?? ''],
+      new Query.ListBans({
         limit: options.limit,
         after: options.after,
         query: options.query,
       }),
+      [server],
     );
-    const bytes = await this.core.listBans(server, body.buffer as ArrayBuffer);
-    const response = Proto.ListBansResponse.fromBinary(new Uint8Array(bytes));
+    if (!bytes) {
+      return { bans: [], endCursor: '', hasNextPage: false };
+    }
+    const response = Proto.ListBansResponse.fromBinary(bytes);
     return {
       bans: response.bannedIdentities,
       endCursor: response.pageInfo?.endCursor ?? '',

@@ -24,15 +24,15 @@ const useModerationStatus = create<ModerationStatusState>((set) => ({
       return;
     }
     set({ isLoading: true });
-    const checks = await Promise.all(
-      client.servers.map(async (server) => ({
-        server,
-        isModerator: await client.isModerator(server).catch(() => false),
-      })),
-    );
-    const moderatedServers = checks
-      .filter((c) => c.isModerator)
-      .map((c) => c.server);
+    // One fan-out query returns a serverUrl -> isModerator map across the
+    // configured servers; a server that fails to answer is absent (i.e.
+    // counts as "not a moderator").
+    const byServer = await client
+      .isModerator()
+      .catch(() => new Map<string, boolean>());
+    const moderatedServers = [...byServer]
+      .filter(([, isModerator]) => isModerator)
+      .map(([server]) => server);
     set({
       isLoading: false,
       moderatedServers,

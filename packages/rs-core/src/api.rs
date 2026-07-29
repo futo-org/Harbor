@@ -3,10 +3,9 @@ use crate::media::process_image;
 use crate::sync;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, Identity, IsBannedRequest, IsModeratorRequest, JoinPairingSessionRequest,
-    ListBansRequest, ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest,
-    SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
-    content_service_client::ContentServiceClient,
+    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+    UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -86,6 +85,9 @@ pub enum Query {
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
+    IsModerator(crate::query::moderation::IsModeratorArgs),
+    IsBanned(crate::query::moderation::IsBannedArgs),
+    ListBans(crate::query::moderation::ListBansArgs),
 }
 
 #[uniffi::export(with_foreign)]
@@ -401,6 +403,15 @@ impl PolycentricCore {
             Query::ListFollowers(args) => {
                 crate::query::graph::list_followers(&self.query_client, query_key, args, opts)
             }
+            Query::IsModerator(args) => {
+                crate::query::moderation::is_moderator(&self.query_client, query_key, args, opts)
+            }
+            Query::IsBanned(args) => {
+                crate::query::moderation::is_banned(&self.query_client, query_key, args, opts)
+            }
+            Query::ListBans(args) => {
+                crate::query::moderation::list_bans(&self.query_client, query_key, args, opts)
+            }
         }
     }
 
@@ -513,26 +524,10 @@ impl PolycentricCore {
         Ok(())
     }
 
-    /// Ask a server whether the calling identity is a moderator.
-    /// Returns serialized `IsModeratorResponse` proto bytes.
-    ///
-    /// UNPROTECTED: request signing has been removed; the call is
-    /// currently unauthenticated pending a new auth layer.
-    pub async fn is_moderator(&self, server_url: String) -> Result<Vec<u8>, CoreError> {
-        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
-        let response = client
-            .is_moderator(tonic::Request::new(IsModeratorRequest {}))
-            .await
-            .map_err(|e| CoreError::Network(format!("is_moderator: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
-    }
-
     /// Ban or unban an identity on a server. `request_bytes` is a
     /// serialized `SetBanStatusRequest`. Returns serialized
-    /// `SetBanStatusResponse` proto bytes.
-    ///
-    /// UNPROTECTED: request signing has been removed; the call is
-    /// currently unauthenticated pending a new auth layer.
+    /// `SetBanStatusResponse` proto bytes. Requires the caller (bearer
+    /// JWT) to be a moderator on the server.
     pub async fn set_ban_status(
         &self,
         server_url: String,
@@ -545,48 +540,6 @@ impl PolycentricCore {
             .set_ban_status(tonic::Request::new(request))
             .await
             .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
-    }
-
-    /// Ask a server whether an identity is banned. `request_bytes` is a
-    /// serialized `IsBannedRequest`. Returns serialized `IsBannedResponse`
-    /// proto bytes.
-    ///
-    /// UNPROTECTED: request signing has been removed; the call is
-    /// currently unauthenticated pending a new auth layer.
-    pub async fn is_banned(
-        &self,
-        server_url: String,
-        request_bytes: Vec<u8>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let request = IsBannedRequest::decode(request_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode IsBannedRequest: {e}")))?;
-        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
-        let response = client
-            .is_banned(tonic::Request::new(request))
-            .await
-            .map_err(|e| CoreError::Network(format!("is_banned: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
-    }
-
-    /// List the identities banned on a server. `request_bytes` is a
-    /// serialized `ListBansRequest`. Returns serialized `ListBansResponse`
-    /// proto bytes.
-    ///
-    /// UNPROTECTED: request signing has been removed; the call is
-    /// currently unauthenticated pending a new auth layer.
-    pub async fn list_bans(
-        &self,
-        server_url: String,
-        request_bytes: Vec<u8>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let request = ListBansRequest::decode(request_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode ListBansRequest: {e}")))?;
-        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
-        let response = client
-            .list_bans(tonic::Request::new(request))
-            .await
-            .map_err(|e| CoreError::Network(format!("list_bans: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
