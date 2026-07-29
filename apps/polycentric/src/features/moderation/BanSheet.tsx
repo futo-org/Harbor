@@ -26,8 +26,8 @@ export default function BanSheet({
   onClose,
 }: BanSheetProps) {
   const { theme } = useTheme();
-  const isModeratorLoading = useModerationStatus((s) => s.isLoading);
-  const servers = useModerationStatus((s) => s.moderatedServers);
+  const { isLoading: isModeratorLoading, moderatedServers: servers } =
+    useModerationStatus();
   const { isLoading, bannedByServer, setBanned } = useBanStatus(
     identityKey,
     open,

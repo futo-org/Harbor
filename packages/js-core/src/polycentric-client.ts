@@ -72,39 +72,6 @@ export interface PolycentricClientConfig {
   seedServers?: string[];
 }
 
-export interface ListBansOptions {
-  // Max entries to return; the server clamps to its own bounds.
-  limit?: number;
-  // Cursor from a previous page's `endCursor`, to page forward.
-  after?: string;
-  // Case-insensitive prefix filter: keep only identities beginning with
-  // this value.
-  query?: string;
-}
-
-export interface ListBansPage {
-  bans: string[];
-  // Cursor to pass as `after` for the next page.
-  endCursor: string;
-  hasNextPage: boolean;
-}
-
-/**
- * Decode the merged `serverUrl -> bool` JSON map emitted by the fan-out
- * moderation queries (IsModerator / IsBanned). An empty or absent payload
- * decodes to an empty map.
- */
-function decodeStatusByServer(bytes: Uint8Array | null): Map<string, boolean> {
-  if (!bytes || bytes.length === 0) {
-    return new Map();
-  }
-  const record = JSON.parse(new TextDecoder().decode(bytes)) as Record<
-    string,
-    boolean
-  >;
-  return new Map(Object.entries(record));
-}
-
 /**
  * PolycentricClient is the top level API for the Polycentric SDK.
  */
@@ -266,20 +233,6 @@ export class PolycentricClient {
   }
 
   /**
-   * Whether the active identity is a moderator, per server
-   * (`IdentityService.IsModerator`). Fans out across the configured
-   * servers and returns a `serverUrl -> isModerator` map; a server that
-   * fails to respond is absent from the map.
-   */
-  async isModerator(): Promise<Map<string, boolean>> {
-    const bytes = await this.runModerationQuery(
-      undefined,
-      new Query.IsModerator({}),
-    );
-    return decodeStatusByServer(bytes);
-  }
-
-  /**
    * Ban or unban `targetIdentity` on `server`
    * (`IdentityService.SetBanStatus`). The active identity must be a
    * moderator on `server`.
@@ -293,94 +246,6 @@ export class PolycentricClient {
       Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
     );
     await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
-  }
-
-  /**
-   * Whether `targetIdentity` is banned, per server
-   * (`IdentityService.IsBanned`). Fans out across `servers` — pass the
-   * servers the active identity moderates, since the endpoint is
-   * moderator-gated — or every configured server when omitted. Returns a
-   * `serverUrl -> isBanned` map; a server that fails to respond is
-   * absent from the map.
-   */
-  async isBanned(
-    targetIdentity: string,
-    servers?: string[],
-  ): Promise<Map<string, boolean>> {
-    const bytes = await this.runModerationQuery(
-      undefined,
-      new Query.IsBanned({ targetIdentity }),
-      servers,
-    );
-    return decodeStatusByServer(bytes);
-  }
-
-  /**
-   * Run a one-shot moderation query, resolving with the merged response
-   * bytes once every server slot has reported (`null` if no server
-   * produced data). `servers` pins the fan-out to specific servers
-   * (used by the per-server `listBans`); omit it to use the configured
-   * server list.
-   */
-  private runModerationQuery(
-    queryKey: string[] | undefined,
-    query: Query,
-    servers?: string[],
-  ): Promise<Uint8Array | null> {
-    return new Promise((resolve, reject) => {
-      const opts = servers ? { servers } : undefined;
-      const observable = this.core.fetchQuery(queryKey, query, opts);
-      let latest: Uint8Array | null = null;
-      const subscription = observable.subscribe({
-        next: (result) => {
-          if (result.data) {
-            latest = new Uint8Array(result.data);
-          }
-          if (result.status === QueryStatus.Success) {
-            subscription.unsubscribe();
-            resolve(latest);
-          }
-        },
-        error: (message: string) => {
-          subscription.unsubscribe();
-          reject(new Error(message));
-        },
-        complete: () => {},
-      });
-    });
-  }
-
-  /**
-   * List a page of the identities banned on `server`
-   * (`IdentityService.ListBans`). Pinned to `server` — bans are
-   * per-server — and the query key is scoped by server so each server's
-   * page is cached separately. Pass `after` (from a previous page's
-   * `endCursor`) to page forward and `query` to keep only identities that
-   * begin with it (a case-insensitive prefix match). The active identity
-   * must be a moderator on `server`.
-   */
-  async listBans(
-    server: string,
-    options: ListBansOptions = {},
-  ): Promise<ListBansPage> {
-    const bytes = await this.runModerationQuery(
-      ['list_bans', server, options.after ?? '', options.query ?? ''],
-      new Query.ListBans({
-        limit: options.limit,
-        after: options.after,
-        query: options.query,
-      }),
-      [server],
-    );
-    if (!bytes) {
-      return { bans: [], endCursor: '', hasNextPage: false };
-    }
-    const response = Proto.ListBansResponse.fromBinary(bytes);
-    return {
-      bans: response.bannedIdentities,
-      endCursor: response.pageInfo?.endCursor ?? '',
-      hasNextPage: response.pageInfo?.hasNextPage ?? false,
-    };
   }
 
   /**

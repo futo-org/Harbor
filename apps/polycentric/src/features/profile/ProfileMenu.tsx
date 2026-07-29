@@ -23,7 +23,7 @@ type MenuItem = {
 export default function ProfileMenu() {
   const { theme } = useTheme();
   const { identityKey, isSelf } = useProfileContext();
-  const isModerator = useModerationStatus((s) => s.isModerator);
+  const { isModerator } = useModerationStatus();
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
 

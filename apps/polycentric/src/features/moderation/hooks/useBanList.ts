@@ -1,5 +1,11 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  RefreshStrategy,
+  setQueryCache,
+  useQuery,
+} from '@/src/common/query/hooks/useQuery';
+import { FetchMode, Query, v2 } from '@polycentric/react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface BanListState {
   // True while a page (for the current query) is loading.
@@ -20,8 +26,10 @@ export interface BanListState {
  * A page-navigated, filterable view of the identities banned on `server`
  * (`IdentityService.ListBans`), plus a mutation to unban one
  * (`IdentityService.SetBanStatus`). The active identity must be a
- * moderator on `server`. Resets to the first page whenever `query`
- * changes; queries only while `enabled` is true.
+ * moderator on `server`. Each page is one `useQuery` subscription pinned
+ * to `server` — bans are per-server — keyed by its cursor and the search
+ * query. Resets to the first page whenever `query` changes; queries only
+ * while `enabled` is true.
  *
  * The wire API only pages forward (a cursor per next page), so we
  * remember the `after` cursor for each visited page to allow going back.
@@ -32,81 +40,89 @@ export default function useBanList(
   enabled: boolean,
 ): BanListState {
   const client = usePolycentric();
-  const [bans, setBans] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [pageIndex, setPageIndex] = useState<number>(0);
-  const [hasNext, setHasNext] = useState<boolean>(false);
 
   // `after` cursor for each page index; index 0 is the unpaged first
-  // page (empty cursor). Loading page N records the cursor for N+1.
+  // page (empty cursor). Page N's response records the cursor for N+1.
   const cursorsRef = useRef<string[]>(['']);
-  // Bumped per load so a stale response (query changed mid-flight) is
-  // discarded on arrival.
-  const generationRef = useRef<number>(0);
 
-  const loadPage = useCallback(
-    (index: number) => {
-      if (!enabled) return;
-      const generation = ++generationRef.current;
-      setIsLoading(true);
+  // Reset paging in-render when the server or search query changes, so
+  // this same render already subscribes to the new first page.
+  const paramsRef = useRef({ server, query });
+  if (
+    paramsRef.current.server !== server ||
+    paramsRef.current.query !== query
+  ) {
+    paramsRef.current = { server, query };
+    cursorsRef.current = [''];
+    if (pageIndex !== 0) setPageIndex(0);
+  }
 
-      client
-        .listBans(server, {
-          query: query || undefined,
-          after: cursorsRef.current[index] || undefined,
-        })
-        .then((result) => {
-          if (generation !== generationRef.current) return;
-          setBans(result.bans);
-          setPageIndex(index);
-          setHasNext(result.hasNextPage);
-          // Cursor to fetch the page after this one.
-          cursorsRef.current[index + 1] = result.endCursor;
-        })
-        .catch((err) => {
-          console.error('Failed to fetch ban list:', err);
-        })
-        .finally(() => {
-          if (generation === generationRef.current) setIsLoading(false);
-        });
-    },
-    [client, server, query, enabled],
+  const after = cursorsRef.current[pageIndex] ?? '';
+  const queryKey = ['list_bans', server, after, query];
+  const result = useQuery(
+    queryKey,
+    new Query.ListBans({
+      after: after || undefined,
+      query: query || undefined,
+    }),
+    { fetchMode: FetchMode.Default, servers: [server] },
+    enabled,
   );
 
-  // Reset to the first page on mount and whenever the query/server
-  // changes (loadPage's identity changes with them).
+  const response = useMemo(
+    () =>
+      result.data
+        ? v2.ListBansResponse.fromBinary(new Uint8Array(result.data))
+        : undefined,
+    [result.data],
+  );
+  const bans = response?.bannedIdentities ?? [];
+  const hasNext = response?.pageInfo?.hasNextPage ?? false;
+
+  // Page N's response carries the cursor that fetches page N+1.
   useEffect(() => {
-    cursorsRef.current = [''];
-    loadPage(0);
-  }, [loadPage]);
+    if (response) {
+      cursorsRef.current[pageIndex + 1] = response.pageInfo?.endCursor ?? '';
+    }
+  }, [response, pageIndex]);
 
   const goPrev = useCallback(() => {
-    if (!isLoading && pageIndex > 0) loadPage(pageIndex - 1);
-  }, [isLoading, pageIndex, loadPage]);
+    if (!result.isLoading && pageIndex > 0) setPageIndex(pageIndex - 1);
+  }, [result.isLoading, pageIndex]);
 
   const goNext = useCallback(() => {
-    if (!isLoading && hasNext) loadPage(pageIndex + 1);
-  }, [isLoading, hasNext, pageIndex, loadPage]);
+    if (!result.isLoading && hasNext) setPageIndex(pageIndex + 1);
+  }, [result.isLoading, hasNext, pageIndex]);
 
-  const unban = useCallback(
-    async (identity: string) => {
-      await client.setBanStatus(server, identity, false);
-      const remaining = bans.filter((banned) => banned !== identity);
-      setBans(remaining);
-      // Unbanning the last row would leave an empty page still showing
-      // stale Prev/Next controls and a page number. Reload so pagination
-      // reflects the server: step back a page when possible, otherwise
-      // reload the first page (which pulls later rows up, or settles to a
-      // clean empty state when nothing remains).
-      if (remaining.length === 0) {
-        loadPage(Math.max(0, pageIndex - 1));
-      }
-    },
-    [client, server, bans, pageIndex, loadPage],
-  );
+  const unban = async (identity: string) => {
+    await client.setBanStatus(server, identity, false);
+    // The rust-side cache for this page still holds the unbanned
+    // identity; drop it so the next fan-out re-asks the server.
+    client.core.invalidateQuery(queryKey);
+    const remaining = bans.filter((banned) => banned !== identity);
+    if (remaining.length > 0 && response) {
+      // Drop the row from the cached page immediately.
+      const patched = v2.ListBansResponse.toBinary(
+        v2.ListBansResponse.create({
+          ...response,
+          bannedIdentities: remaining,
+        }),
+      );
+      setQueryCache(queryKey, { data: patched.buffer as ArrayBuffer });
+      return;
+    }
+    // Unbanning the last row would leave an empty page still showing
+    // stale Prev/Next controls and a page number. Reload so pagination
+    // reflects the server: step back a page when possible, otherwise
+    // refetch the first page (which pulls later rows up, or settles to a
+    // clean empty state when nothing remains).
+    if (pageIndex > 0) setPageIndex(pageIndex - 1);
+    else result.refresh(RefreshStrategy.Eager);
+  };
 
   return {
-    isLoading,
+    isLoading: result.isLoading,
     bans,
     page: pageIndex + 1,
     hasPrev: pageIndex > 0,

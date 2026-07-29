@@ -19,7 +19,7 @@ export function ServersSettingsSheet() {
     addServer,
     removeServer,
   } = useServerSettings();
-  const moderatedServers = useModerationStatus((s) => s.moderatedServers);
+  const { moderatedServers } = useModerationStatus();
 
   // The dashboard is a route outside this sheet's stack, so close the
   // sheet before pushing it.

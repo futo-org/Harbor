@@ -56,6 +56,17 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+// The real hook reaches the polycentric client (native modules) through
+// useQuery; none of these tests exercise the moderation affordances.
+jest.mock('@/src/features/moderation/hooks/useModerationStatus', () => ({
+  __esModule: true,
+  default: () => ({
+    isLoading: false,
+    moderatedServers: [] as string[],
+    isModerator: false,
+  }),
+}));
+
 const mockHook = {
   servers: [] as string[],
   suggestedServers: [] as string[],

@@ -1,6 +1,5 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import useFollows from '@/src/features/follow/hooks/useFollows';
-import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import {
   type PolycentricClient,
@@ -214,7 +213,6 @@ export function PolycentricProvider({
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
           useReactions.getState().refresh(c);
-          void useModerationStatus.getState().refresh(c);
           void c
             .sync()
             .then(() =>
@@ -239,7 +237,6 @@ export function PolycentricProvider({
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
           useReactions.getState().refresh(c);
-          void useModerationStatus.getState().refresh(c);
         });
 
         // Identity onboarding (create / claim) publishes an Identity event.
