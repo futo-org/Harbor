@@ -14,7 +14,8 @@ use crate::{api::CoreError, client::PolycentricClient, query::channel, store::ke
 
 /// Wrapper for executing a list_heads RPC
 pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>, CoreError> {
-    let mut rpc_client = EventSyncServiceClient::new(channel(server).map_err(CoreError::Network)?);
+    let mut rpc_client =
+        EventSyncServiceClient::new(channel(server).await.map_err(CoreError::Network)?);
 
     let request = ListHeadsRequest {
         identity: identity.to_string(),
@@ -127,7 +128,8 @@ pub async fn push_bundles(
         event_bundles: bundles,
     };
 
-    let mut rpc_client = EventSyncServiceClient::new(channel(server).map_err(CoreError::Network)?);
+    let mut rpc_client =
+        EventSyncServiceClient::new(channel(server).await.map_err(CoreError::Network)?);
 
     let response = rpc_client
         .put_events(req)

@@ -39,3 +39,4 @@ http = "1"
 [dev-dependencies]
 mockito = "1"
 tonic-prost-build = "*"
+tower = { version = "0.5", features = ["util"] }

@@ -24,6 +24,7 @@ import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { toDigestKey } from './utils/hex';
 import { CryptoManager } from './crypto/crypto-manager';
+import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
 import type {
   PolycentricCoreLike,
@@ -107,6 +108,27 @@ export class PolycentricClient {
     if (config.seedServers && config.seedServers.length > 0) {
       this.servers = [...config.seedServers];
     }
+
+    // Authenticate every outgoing gRPC request as the active identity. The
+    // core caches each server's token and only calls back when it expires.
+    this.core.setAuthTokenProvider({
+      authToken: async (serverUrl: string) => {
+        if (!this.currentKeyPair || !this.activeIdentityKey) {
+          return undefined;
+        }
+        const token = await createServerJwt({
+          keyPair: this.currentKeyPair,
+          iss: this.activeIdentityKey,
+          aud: serverUrl,
+        });
+        return {
+          token,
+          expiresAt: BigInt(
+            Math.floor(Date.now() / 1000) + DEFAULT_EXPIRY_SECONDS,
+          ),
+        };
+      },
+    });
   }
 
   public static async create(
@@ -911,6 +933,8 @@ export class PolycentricClient {
    */
   public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
     this.activeIdentityKey = identityKey;
+    // Tokens minted for the previous identity must not be reused.
+    this.core.clearAuthTokens();
     if (!this.currentKeyPair) return;
     await this.storageDriver.saveActiveIdentityKey(
       this.currentKeyPair.publicKey.key,

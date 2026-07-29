@@ -42,6 +42,7 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"], op
 tonic-web-wasm-client = "0.9"
 console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
 
 [dev-dependencies]
 uniffi = { workspace = true, features = ["build"] }

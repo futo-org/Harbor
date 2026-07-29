@@ -187,6 +187,31 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
     Status::internal("internal server error")
 }
 
+/// The latest valid identity document for `identity`, via the proof cache.
+pub async fn cached_identity_content(
+    ctx: &ServiceContext,
+    identity: &str,
+) -> Result<polycentric_common::models::protos_v2::Identity, Status> {
+    if let Some(content) = ctx.proof_cache.identity_content(identity).await {
+        return Ok(content);
+    }
+    let loaded = IdentityRepo::latest_valid_identity_content(&ctx.db, identity)
+        .await
+        .map_err(|e| {
+            eprintln!("identity content db error: {e}");
+            Status::internal("internal server error")
+        })?
+        .ok_or_else(|| {
+            Status::failed_precondition(
+                "no identity content for target — sync identity events first",
+            )
+        })?;
+    ctx.proof_cache
+        .warm_identity_content(identity, loaded.clone())
+        .await;
+    Ok(loaded)
+}
+
 /// Verify that `signer` is permitted to sign an event in
 /// `(target_identity, collection)`.
 ///
@@ -198,33 +223,8 @@ pub async fn authorize_event_signer(
     collection: i32,
     signature: &[u8],
 ) -> Result<(), Status> {
-    let identity_content = match ctx
-        .proof_cache
-        .identity_content(target_identity)
-        .await
-    {
-        Some(c) => c,
-        None => {
-            let loaded = IdentityRepo::latest_valid_identity_content(
-                &ctx.db,
-                target_identity,
-            )
-            .await
-            .map_err(|e| {
-                eprintln!("authorize_event_signer db error: {e}");
-                Status::internal("internal server error")
-            })?
-            .ok_or_else(|| {
-                Status::failed_precondition(
-                    "no identity content for target — sync identity events first",
-                )
-            })?;
-            ctx.proof_cache
-                .warm_identity_content(target_identity, loaded.clone())
-                .await;
-            loaded
-        }
-    };
+    let identity_content =
+        cached_identity_content(ctx, target_identity).await?;
 
     if identity_content.authorizes_signer(signer) {
         return Ok(());
