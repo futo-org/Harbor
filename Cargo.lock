@@ -3713,11 +3713,14 @@ dependencies = [
 name = "polycentric-common"
 version = "0.0.0"
 dependencies = [
+ "base64",
  "ed25519-dalek",
  "hmac-sha256",
  "prost",
  "prost-build",
  "prost-types",
+ "serde",
+ "serde_json",
  "sha2 0.11.0",
  "thiserror",
  "tonic",
@@ -3737,6 +3740,7 @@ dependencies = [
  "futures-timer",
  "hmac-sha256",
  "image",
+ "js-sys",
  "polycentric-common",
  "prost",
  "prost-build",
@@ -5035,6 +5039,7 @@ dependencies = [
  "tonic-prost-build",
  "tonic-reflection",
  "tonic-web",
+ "tower",
  "tower-http 0.7.0",
  "tower-layer",
 ]

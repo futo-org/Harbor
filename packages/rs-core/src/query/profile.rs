@@ -115,7 +115,7 @@ pub fn get_profile(
         let identity = identity.clone();
         let client = client.clone();
         async move {
-            let response = ProfileServiceClient::new(channel(&server_url)?)
+            let response = ProfileServiceClient::new(channel(&server_url).await?)
                 .get_profile(GetProfileRequest { identity })
                 .await
                 .map_err(|e| format!("get_profile [{server_url}]: {e}"))?

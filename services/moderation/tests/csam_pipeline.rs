@@ -267,7 +267,7 @@ async fn read_http_request(socket: &mut TcpStream) -> std::io::Result<()> {
 // ───────────────────────────── server clients ───────────────────────────────
 
 async fn put_events(bundles: Vec<EventBundle>) -> Result<(), String> {
-    let mut client = EventSyncServiceClient::new(channel(&server_endpoint())?);
+    let mut client = EventSyncServiceClient::new(channel(&server_endpoint()).await?);
     let errors = client
         .put_events(PutEventsRequest {
             event_bundles: bundles,
@@ -284,7 +284,7 @@ async fn put_events(bundles: Vec<EventBundle>) -> Result<(), String> {
 }
 
 async fn upload_blob(blob: Blob, body: Vec<u8>) -> Result<(), String> {
-    ContentServiceClient::new(channel(&server_endpoint())?)
+    ContentServiceClient::new(channel(&server_endpoint()).await?)
         .upload_blob(UploadBlobRequest {
             blob: Some(blob),
             body,
@@ -296,7 +296,7 @@ async fn upload_blob(blob: Blob, body: Vec<u8>) -> Result<(), String> {
 
 /// Whether a CHILD_SAFETY report targeting `target` exists under `identity`.
 async fn report_exists(identity: &str, target: &EventKey) -> Result<bool, String> {
-    let bundles = EventSyncServiceClient::new(channel(&server_endpoint())?)
+    let bundles = EventSyncServiceClient::new(channel(&server_endpoint()).await?)
         .list_events(ListEventsRequest {
             filters: Some(ListEventsFilters {
                 collection: Some(collections::REPORTS),

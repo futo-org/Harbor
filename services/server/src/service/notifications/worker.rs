@@ -3,7 +3,7 @@
 //! Consumes the `events` topic and turns relevant events (replies, follows,
 //! reposts, reactions) into rows in the `notification` table.
 
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 use std::time::Duration;
 
 use ::entity::notification;
@@ -25,11 +25,7 @@ use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
 
-/// Identifies this server as the source of produced notification events, so
-/// downstream consumers can filter by origin (matching the `events` topic).
-static SERVER_NAME: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("POLYCENTRIC_SERVER_NAME").unwrap_or_default()
-});
+use crate::config::SERVER_NAME;
 
 /// Kafka topic the materialized `Notification` messages are produced to.
 const NOTIFICATIONS_TOPIC: &str = "notifications";

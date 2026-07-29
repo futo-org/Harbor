@@ -338,7 +338,7 @@ pub fn get_identity_feed(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
-            let mut response = FeedsServiceClient::new(channel(&server_url)?)
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_identity_feed(GetIdentityFeedRequest {
                     identity,
                     page_params: Some(PageParams {
@@ -388,7 +388,7 @@ pub fn get_following_feed(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
-            let mut response = FeedsServiceClient::new(channel(&server_url)?)
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_following_feed(GetFollowingFeedRequest {
                     follower_identity,
                     page_params: Some(PageParams {
@@ -438,7 +438,7 @@ pub fn get_explore_feed(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
-            let mut response = FeedsServiceClient::new(channel(&server_url)?)
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_explore_feed(GetExploreFeedRequest {
                     identity: identity.clone(),
                     page_params: Some(PageParams {
@@ -488,7 +488,7 @@ pub fn get_post_thread(
         let request = request.clone();
         let client = client.clone();
         async move {
-            let response = FeedsServiceClient::new(channel(&server_url)?)
+            let response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_post_thread(request)
                 .await
                 .map_err(|e| format!("get_post_thread [{server_url}]: {e}"))?

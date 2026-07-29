@@ -137,7 +137,7 @@ impl PolycentricClient {
     }
 
     async fn fetch_identity_state(&self, server: &str) -> Result<usize, String> {
-        let chan = channel(server)?;
+        let chan = channel(server).await?;
         let mut client = EventSyncServiceClient::new(chan);
 
         let mut bundles = Vec::new();
@@ -312,7 +312,7 @@ fn max_identity_sequence(bundles: &[EventBundle]) -> u64 {
 /// Push a request to a single server, treating any per-event error the
 /// server reports for our event as a failure.
 async fn put_events(server: &str, request: PutEventsRequest) -> Result<(), String> {
-    let chan = channel(server)?;
+    let chan = channel(server).await?;
     let mut client = EventSyncServiceClient::new(chan);
     let response = client
         .put_events(request)

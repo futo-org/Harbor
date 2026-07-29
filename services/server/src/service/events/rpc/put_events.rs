@@ -25,13 +25,11 @@ use sea_orm::{
     ActiveValue::{NotSet, Set},
     TransactionTrait,
 };
-use std::{collections::HashSet, sync::LazyLock, time::Duration};
+use std::{collections::HashSet, time::Duration};
 use time::OffsetDateTime;
 use tonic::Status;
 
-static SERVER_NAME: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("POLYCENTRIC_SERVER_NAME").unwrap_or_default()
-});
+use crate::config::SERVER_NAME;
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`

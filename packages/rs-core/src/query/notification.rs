@@ -114,7 +114,7 @@ pub fn list_notifications(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
         async move {
-            let response = NotificationServiceClient::new(channel(&server_url)?)
+            let response = NotificationServiceClient::new(channel(&server_url).await?)
                 .list_notifications(ListNotificationsRequest {
                     identity,
                     first,

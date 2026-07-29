@@ -4,9 +4,9 @@
 /* eslint-disable */
 // @ts-nocheck
 import nativeModule from "./polycentric_core-ffi";
-import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct, type UniffiVTableCallbackInterfacePolycentricCoreLogger, type UniffiVTableCallbackInterfacePolycentricCoreObserver, type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver, type UniffiForeignFutureResultRustBuffer, type UniffiForeignFutureCompleterustBuffer, type UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback,
+import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct, type UniffiForeignFutureResultRustBuffer, type UniffiForeignFutureCompleterustBuffer, type UniffiVTableCallbackInterfacePolycentricCoreAuthTokenProvider, type UniffiVTableCallbackInterfacePolycentricCoreLogger, type UniffiVTableCallbackInterfacePolycentricCoreObserver, type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver, type UniffiVTableCallbackInterfacePolycentricCoreSignEventCallback,
 } from "./polycentric_core-ffi";
-import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -43,49 +43,6 @@ export function setLogger(logger: Logger): void {uniffiCaller.rustCall(
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
     }
-
-export type ContentEntry = {
-    digestBytes: ArrayBuffer,
-    contentBytes: ArrayBuffer
-}
-
-/**
- * Generated factory for {@link ContentEntry} record objects.
- */
-export const ContentEntry = (() => {
-    const defaults = () => ({
-    });
-    const create = (() => {
-        return uniffiCreateRecord<ContentEntry, ReturnType<typeof defaults>>(defaults);
-    })();
-    return Object.freeze({
-        create,
-        new: create,
-        defaults: () => Object.freeze(defaults()) as Partial<ContentEntry>,
-    });
-})();
-
-const FfiConverterTypeContentEntry = (() => {
-    type TypeName = ContentEntry;
-    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            return {
-                digestBytes: FfiConverterArrayBuffer.read(from), 
-                contentBytes: FfiConverterArrayBuffer.read(from)
-            };
-        }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterArrayBuffer.write(value.digestBytes, into);
-            FfiConverterArrayBuffer.write(value.contentBytes, into);
-        }
-        allocationSize(value: TypeName): number {
-            return FfiConverterArrayBuffer.allocationSize(value.digestBytes) +
-             FfiConverterArrayBuffer.allocationSize(value.contentBytes);
-            
-        }
-    };
-    return new FFIConverter();
-})();
 
 // Hermes (React Native ≥ 0.74) ships TextEncoder and encodeInto, but not
 // TextDecoder. For single-string decode (bytesToString), we polyfill via the
@@ -138,6 +95,95 @@ const stringConverter = (() => {
     };
 })();
 const FfiConverterString = uniffiCreateFfiConverterString(stringConverter);
+
+/**
+ * A bearer token and when it expires (seconds since the unix epoch).
+ */
+export type AuthToken = {
+    token: string,
+    expiresAt: bigint
+}
+
+/**
+ * Generated factory for {@link AuthToken} record objects.
+ */
+export const AuthToken = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<AuthToken, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<AuthToken>,
+    });
+})();
+
+const FfiConverterTypeAuthToken = (() => {
+    type TypeName = AuthToken;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                token: FfiConverterString.read(from), 
+                expiresAt: FfiConverterUInt64.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterString.write(value.token, into);
+            FfiConverterUInt64.write(value.expiresAt, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.token) +
+             FfiConverterUInt64.allocationSize(value.expiresAt);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export type ContentEntry = {
+    digestBytes: ArrayBuffer,
+    contentBytes: ArrayBuffer
+}
+
+/**
+ * Generated factory for {@link ContentEntry} record objects.
+ */
+export const ContentEntry = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<ContentEntry, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<ContentEntry>,
+    });
+})();
+
+const FfiConverterTypeContentEntry = (() => {
+    type TypeName = ContentEntry;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                digestBytes: FfiConverterArrayBuffer.read(from), 
+                contentBytes: FfiConverterArrayBuffer.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterArrayBuffer.write(value.digestBytes, into);
+            FfiConverterArrayBuffer.write(value.contentBytes, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterArrayBuffer.allocationSize(value.digestBytes) +
+             FfiConverterArrayBuffer.allocationSize(value.contentBytes);
+            
+        }
+    };
+    return new FFIConverter();
+})();
 
 export type PublicKey = {
     keyType: number,
@@ -2229,6 +2275,211 @@ const FfiConverterTypeQuery = (() => {
     return new FFIConverter();
 })();
 
+/**
+ * Mints the token authenticating the current identity against a server.
+ * Implemented by the embedder; only called when no unexpired token is
+ * cached for the server.
+ */
+export interface AuthTokenProvider {
+    
+/**
+ * A fresh token for `server_url`, or `None` to send requests to it
+ * unauthenticated.
+ */
+    authToken(serverUrl: string, asyncOpts_?: { signal: AbortSignal }): Promise<AuthToken | undefined>;
+}
+
+
+/**
+ * Mints the token authenticating the current identity against a server.
+ * Implemented by the embedder; only called when no unexpired token is
+ * cached for the server.
+ */
+export class AuthTokenProviderImpl extends UniffiAbstractObject implements AuthTokenProvider {
+
+    readonly [uniffiTypeNameSymbol] = "AuthTokenProviderImpl";
+    readonly [destructorGuardSymbol]: UniffiGcObject;
+    readonly [pointerLiteralSymbol]: UniffiHandle;
+    // No primary constructor declared for this class.
+private constructor(pointer: UniffiHandle) {
+    super();
+    this[pointerLiteralSymbol] = pointer;
+    this[destructorGuardSymbol] = uniffiTypeAuthTokenProviderImplObjectFactory.bless(pointer);
+}
+
+    
+
+    
+/**
+ * A fresh token for `server_url`, or `None` to send requests to it
+ * unauthenticated.
+ */
+    async authToken(serverUrl: string, asyncOpts_?: { signal: AbortSignal }): Promise<AuthToken | undefined> {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_authtokenprovider_auth_token(
+                    uniffiTypeAuthTokenProviderImplObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            /*liftFunc:*/ FfiConverterOptionalTypeAuthToken.lift.bind(FfiConverterOptionalTypeAuthToken),
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
+    }
+    
+
+    uniffiDestroy(): void {
+        const ptr = (this as any)[destructorGuardSymbol];
+        if (ptr !== undefined) {
+            const pointer = uniffiTypeAuthTokenProviderImplObjectFactory.pointer(this);
+            uniffiTypeAuthTokenProviderImplObjectFactory.freePointer(pointer);
+            uniffiTypeAuthTokenProviderImplObjectFactory.unbless(ptr);
+            delete (this as any)[destructorGuardSymbol];
+        }
+    }
+
+    static instanceOf(obj_: any): obj_ is AuthTokenProviderImpl {
+        return uniffiTypeAuthTokenProviderImplObjectFactory.isConcreteType(obj_);
+    }
+
+    
+}
+
+const uniffiTypeAuthTokenProviderImplObjectFactory: UniffiObjectFactory<AuthTokenProvider> = (() => {
+    
+    return {
+    create(pointer: UniffiHandle): AuthTokenProvider {
+        const instance = Object.create(AuthTokenProviderImpl.prototype);
+        instance[pointerLiteralSymbol] = pointer;
+        instance[destructorGuardSymbol] = this.bless(pointer);
+        instance[uniffiTypeNameSymbol] = "AuthTokenProviderImpl";
+        return instance;
+    },
+
+    
+    bless(p: UniffiHandle): UniffiGcObject {
+        return uniffiCaller.rustCall(
+            /*caller:*/ (status) =>
+                nativeModule().ubrn_uniffi_internal_fn_method_authtokenprovider_ffi__bless_pointer(p, status),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    unbless(ptr_: UniffiGcObject) {
+        ptr_.markDestroyed();
+    },
+
+    pointer(obj_: AuthTokenProvider): UniffiHandle {
+        if ((obj_ as any)[destructorGuardSymbol] === undefined) {
+            throw new UniffiInternalError.UnexpectedNullPointer();
+        }
+        return (obj_ as any)[pointerLiteralSymbol];
+    },
+
+    clonePointer(obj_: AuthTokenProvider): UniffiHandle {
+        const pointer = this.pointer(obj_);
+        return uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => nativeModule().ubrn_uniffi_polycentric_core_fn_clone_authtokenprovider(pointer, callStatus),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    freePointer(pointer: UniffiHandle): void {
+        uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => nativeModule().ubrn_uniffi_polycentric_core_fn_free_authtokenprovider(pointer, callStatus),
+            /*liftString:*/ FfiConverterString.lift
+        );
+    },
+
+    isConcreteType(obj_: any): obj_ is AuthTokenProvider {
+        return obj_[destructorGuardSymbol] && obj_[uniffiTypeNameSymbol] === "AuthTokenProviderImpl";
+    },
+}})();
+const FfiConverterTypeAuthTokenProvider = new FfiConverterObjectWithCallbacks(uniffiTypeAuthTokenProviderImplObjectFactory);
+
+// Add a vtable for the callbacks that go in AuthTokenProvider.
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+const uniffiCallbackInterfaceAuthTokenProvider: { vtable: any; register: () => void; } = {
+    // Create the VTable using a series of closures.
+    // ts automatically converts these into C callback functions.
+    vtable: {
+        auth_token: (
+            uniffiHandle: bigint,
+            serverUrl: Uint8Array,
+            uniffiFutureCallback: UniffiForeignFutureCompleterustBuffer,
+            uniffiCallbackData: bigint) => {
+            const uniffiMakeCall = 
+            async (signal: AbortSignal)
+            : Promise<AuthToken | undefined> => {
+                const jsCallback = FfiConverterTypeAuthTokenProvider.lift(uniffiHandle);
+                return await jsCallback.authToken(
+                    FfiConverterString.lift(serverUrl), { signal }
+                )
+            };
+            const uniffiHandleSuccess = (returnValue: AuthToken | undefined) => {
+                uniffiFutureCallback.call(
+                    uniffiFutureCallback,
+                    uniffiCallbackData,
+                    /* UniffiForeignFutureResultRustBuffer */{
+                        return_value: FfiConverterOptionalTypeAuthToken.lower(returnValue, nativeModule().rustbuffer_alloc),
+                        call_status: uniffiCaller.createCallStatus()
+                    }
+                );
+            };
+            const uniffiHandleError = (code: number, errorBuf: UniffiByteArray) => {
+                uniffiFutureCallback.call(
+                    uniffiFutureCallback,
+                    uniffiCallbackData,
+                    /* UniffiForeignFutureResultRustBuffer */{
+                        return_value: /*empty*/ new Uint8Array(0),
+                        // TODO create callstatus with error.
+                        call_status: uniffiCaller.createErrorStatus(code, errorBuf),
+                    }
+                );
+            };
+            const uniffiForeignFuture = uniffiTraitInterfaceCallAsync(
+                /*makeCall:*/ uniffiMakeCall,
+                /*handleSuccess:*/ uniffiHandleSuccess,
+                /*handleError:*/ uniffiHandleError,
+                /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+                /*alloc:*/ nativeModule().rustbuffer_alloc,
+            );
+            return uniffiForeignFuture;
+        },
+        uniffi_free: (uniffiHandle: UniffiHandle): void => {
+            // this will throw a stale handle error if the handle isn't found.
+            FfiConverterTypeAuthTokenProvider.drop(uniffiHandle);
+        },
+        uniffi_clone: (uniffiHandle: UniffiHandle): UniffiHandle => {
+            return FfiConverterTypeAuthTokenProvider.clone(uniffiHandle);
+        }
+    },
+    register: () => {nativeModule().ubrn_uniffi_polycentric_core_fn_init_callback_vtable_authtokenprovider(
+            uniffiCallbackInterfaceAuthTokenProvider.vtable
+        );
+    },
+};
+
 export interface Logger {
     
     log(message: string): void;
@@ -3230,6 +3481,10 @@ export interface PolycentricCoreLike {
  */
     buildVectorClock(identity: string, collection: number, identitySequence: bigint, signedBy: ArrayBuffer, currentSequence: bigint, identityContent: ArrayBuffer | undefined) /*throws*/: ArrayBuffer;
 /**
+ * Drop every cached auth token — e.g. when the active identity changes.
+ */
+    clearAuthTokens(): void;
+/**
  * Insert each (digest, content) pair into the content store.
  */
     copyContents(contents: Array<ContentEntry>) /*throws*/: void;
@@ -3333,6 +3588,11 @@ export interface PolycentricCoreLike {
  */
     registerPushNotifications(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
 /**
+ * Register the provider consulted for the auth token attached to every
+ * outgoing gRPC request.
+ */
+    setAuthTokenProvider(provider: AuthTokenProvider): void;
+/**
  * Replace the list of gRPC servers the core's `Observable`-returning
  * methods will fan out to.
  */
@@ -3415,6 +3675,18 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
+    }
+    
+/**
+ * Drop every cached auth token — e.g. when the active identity changes.
+ */
+    clearAuthTokens(): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_clear_auth_tokens(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
     }
     
 /**
@@ -3937,6 +4209,20 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Register the provider consulted for the auth token attached to every
+ * outgoing gRPC request.
+ */
+    setAuthTokenProvider(provider: AuthTokenProvider): void {uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterTypeAuthTokenProvider.lower(provider, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    }
+    
+/**
  * Replace the list of gRPC servers the core's `Observable`-returning
  * methods will fan out to.
  */
@@ -4183,6 +4469,9 @@ const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverter
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
 
+// FfiConverter for AuthToken | undefined
+const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterTypeAuthToken);
+
 // FfiConverter for Array<ContentEntry>
 const FfiConverterSequenceTypeContentEntry = new FfiConverterArray(FfiConverterTypeContentEntry);
 
@@ -4220,6 +4509,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_logger() !== 12935) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_logger");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token() !== 22109) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_logger_log() !== 49060) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_logger_log");
     }
@@ -4237,6 +4529,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !== 16886) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_clear_auth_tokens() !== 569) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_clear_auth_tokens");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents() !== 8936) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents");
@@ -4298,6 +4593,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 33093) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !== 60336) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_servers");
     }
@@ -4335,6 +4633,7 @@ function uniffiEnsureInitialized() {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_subscription_unsubscribe");
     }
 
+    uniffiCallbackInterfaceAuthTokenProvider.register();
     uniffiCallbackInterfaceLogger.register();
     uniffiCallbackInterfaceObserver.register();
     uniffiCallbackInterfaceQueryObserver.register();
@@ -4344,6 +4643,8 @@ function uniffiEnsureInitialized() {
 export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
+    FfiConverterTypeAuthToken,
+    FfiConverterTypeAuthTokenProvider,
     FfiConverterTypeContentEntry,
     FfiConverterTypeCoreError,
     FfiConverterTypeEventKey,

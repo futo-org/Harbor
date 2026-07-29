@@ -4,6 +4,7 @@
 //! etc.) is re-exported from this module so consumers don't depend on
 //! the internal file layout.
 
+pub mod auth;
 pub mod client;
 pub mod event;
 pub mod feed;

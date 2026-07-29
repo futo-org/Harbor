@@ -18,8 +18,10 @@ use std::sync::{Arc, Mutex};
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
 compile_error!("rs-core on a non-wasm target requires the `native-transport` feature.");
 
-fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreError> {
-    crate::query::channel(server_url).map_err(CoreError::Network)
+async fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreError> {
+    crate::query::channel(server_url)
+        .await
+        .map_err(CoreError::Network)
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -115,6 +117,20 @@ impl PolycentricCore {
     /// methods will fan out to.
     pub fn set_servers(&self, servers: Vec<String>) {
         self.client.lock().unwrap().set_servers(servers);
+    }
+
+    /// Register the provider consulted for the auth token attached to every
+    /// outgoing gRPC request.
+    pub fn set_auth_token_provider(
+        &self,
+        provider: Arc<dyn crate::query::auth::AuthTokenProvider>,
+    ) {
+        crate::query::auth::set_auth_token_provider(provider);
+    }
+
+    /// Drop every cached auth token — e.g. when the active identity changes.
+    pub fn clear_auth_tokens(&self) {
+        crate::query::auth::clear_auth_tokens();
     }
 
     /// Return a snapshot of the currently configured servers.
@@ -408,7 +424,7 @@ impl PolycentricCore {
         let request = PutEventsRequest::decode(event_bundles_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode PutEventsRequest: {e}")))?;
 
-        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
+        let mut client = EventSyncServiceClient::new(channel(&server_url).await?);
         let response = client
             .put_events(request)
             .await
@@ -428,7 +444,7 @@ impl PolycentricCore {
         let request = ListHeadsRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode ListHeadsRequest: {e}")))?;
 
-        let mut client = EventSyncServiceClient::new(channel(&server_url)?);
+        let mut client = EventSyncServiceClient::new(channel(&server_url).await?);
 
         let response = client
             .list_heads(request)
@@ -470,7 +486,7 @@ impl PolycentricCore {
     /// Fetch a server's public info. Returns serialized
     /// `GetServerInfoResponse` proto bytes.
     pub async fn get_server_info(&self, server_url: String) -> Result<Vec<u8>, CoreError> {
-        let mut client = ServerServiceClient::new(channel(&server_url)?);
+        let mut client = ServerServiceClient::new(channel(&server_url).await?);
         let response = client
             .get_info(GetServerInfoRequest {})
             .await
@@ -487,7 +503,7 @@ impl PolycentricCore {
     ) -> Result<(), CoreError> {
         let request = UploadBlobRequest::decode(request_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode UploadBlobRequest: {e}")))?;
-        let mut client = ContentServiceClient::new(channel(&server_url)?);
+        let mut client = ContentServiceClient::new(channel(&server_url).await?);
         client
             .upload_blob(request)
             .await
@@ -498,7 +514,7 @@ impl PolycentricCore {
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.
     /// Returns serialized `Link` proto bytes.
     pub async fn url_info(&self, server_url: String, url: String) -> Result<Vec<u8>, CoreError> {
-        let mut client = ContentServiceClient::new(channel(&server_url)?);
+        let mut client = ContentServiceClient::new(channel(&server_url).await?);
         let response = client
             .url_info(UrlInfoRequest { url })
             .await
@@ -516,7 +532,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let signed = SignedMessage::decode(signed_message_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
-        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let mut client = PairingServiceClient::new(channel(&server_url).await?);
         let response = client
             .create_pairing_session(CreatePairingSessionRequest {
                 signed_message: Some(signed),
@@ -537,7 +553,7 @@ impl PolycentricCore {
         server_url: String,
         pairing_session_signature: String,
     ) -> Result<Vec<u8>, CoreError> {
-        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let mut client = PairingServiceClient::new(channel(&server_url).await?);
         let response = client
             .get_pairing_session(GetPairingSessionRequest {
                 pairing_session_signature,
@@ -561,7 +577,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let signed = SignedMessage::decode(signed_message_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
-        let mut client = PairingServiceClient::new(channel(&server_url)?);
+        let mut client = PairingServiceClient::new(channel(&server_url).await?);
         let response = client
             .join_pairing_session(JoinPairingSessionRequest {
                 signed_message: Some(signed),
@@ -585,7 +601,7 @@ impl PolycentricCore {
     ) -> Result<(), CoreError> {
         let signed = SignedMessage::decode(signed_message_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
-        let mut client = NotificationServiceClient::new(channel(&server_url)?);
+        let mut client = NotificationServiceClient::new(channel(&server_url).await?);
         client
             .register_push_notifications(signed)
             .await

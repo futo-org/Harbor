@@ -74,6 +74,7 @@ pub fn build_grpc_router(
             HeaderName::from_static("content-type"),
             HeaderName::from_static("x-grpc-web"),
             HeaderName::from_static("grpc-timeout"),
+            HeaderName::from_static("authorization"),
         ])
         .expose_headers([
             HeaderName::from_static("grpc-status"),
@@ -82,5 +83,15 @@ pub fn build_grpc_router(
         .allow_methods([http::Method::POST, http::Method::OPTIONS])
         .max_age(std::time::Duration::from_secs(86400));
 
-    Ok(routes.into_axum_router().layer(cors))
+    // Populates the authenticated identity from `authorization` bearer
+    // tokens. Inside CORS so preflight requests skip it.
+    let auth = axum::middleware::from_fn_with_state(
+        service::auth::AuthState {
+            ctx,
+            allow_hosts: crate::config::ALLOW_HOSTS.clone(),
+        },
+        service::auth::auth_middleware,
+    );
+
+    Ok(routes.into_axum_router().layer(auth).layer(cors))
 }
