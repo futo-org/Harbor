@@ -53,7 +53,7 @@ export function getCategory(key: string): EmojiCategory | undefined {
 
 export const DEFAULT_GRID_COLUMNS = 10;
 export type EmojiListItem =
-  | { type: 'header'; key: string; categoryKey: string; hidden?: boolean }
+  | { type: 'header'; key: string; categoryKey: string; collapsed?: boolean }
   | { type: 'row'; key: string; categoryKey: string; emojis: EmojiEntry[] };
 
 export function buildRows(columns: number): EmojiListItem[] {
@@ -64,9 +64,7 @@ export function buildRows(columns: number): EmojiListItem[] {
       type: 'header',
       key: `h:${c.key}`,
       categoryKey: c.key,
-      // We render an invisible section divider at the top, because `FlashList`
-      // needs to measure its size for accurate scroll offsets.
-      hidden: i === 0,
+      collapsed: i === 0,
     });
 
     for (let j = 0; j < c.emojis.length; j += columns) {
@@ -109,12 +107,14 @@ export function computeSectionOffsets(
   const offsets: Record<string, number> = {};
   let y = 0;
 
-  for (const c of categories) {
+  categories.forEach((c, i) => {
     offsets[c.key] = y;
-    y += headerHeight;
+    // The leading divider is collapsed (see `buildRows`), so it contributes no
+    // height and the first section starts at zero.
+    if (i > 0) y += headerHeight;
     const rows = Math.ceil(c.emojis.length / columns);
     y += rows * rowHeight;
-  }
+  });
 
   return offsets;
 }

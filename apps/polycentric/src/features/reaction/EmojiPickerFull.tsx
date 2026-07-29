@@ -9,7 +9,7 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import type {
   LayoutChangeEvent,
@@ -170,6 +170,13 @@ export function EmojiPickerFull({
   // The section that the animated scroll is moving towards.
   const pendingSectionRef = useRef<string | null>(null);
 
+  // Reset the active section for the tab bar when the picker opens.
+  useEffect(() => {
+    if (!open) return;
+    pendingSectionRef.current = null;
+    setActiveSection(categories[0]!.key);
+  }, [open]);
+
   const scrollToSection = useCallback(
     (key: string) => {
       const offset = sectionOffsets[key];
@@ -189,6 +196,9 @@ export function EmojiPickerFull({
   // the viewport top.
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Until a row has been measured, the scroll offsets will not be accurate.
+      if (rowHeight <= 0) return;
+
       const y = e.nativeEvent.contentOffset.y;
       let active = categories[0]!.key;
       for (const c of categories) {
@@ -203,13 +213,16 @@ export function EmojiPickerFull({
       }
       setActiveSection((prev) => (prev === active ? prev : active));
     },
-    [sectionOffsets],
+    [sectionOffsets, rowHeight],
   );
 
   const renderItem = useCallback(
     ({ item }: { item: EmojiListItem }) =>
       item.type === 'header' ? (
-        <EmojiSectionRule onLayout={onHeaderLayout} hidden={item.hidden} />
+        <EmojiSectionRule
+          onLayout={onHeaderLayout}
+          collapsed={item.collapsed}
+        />
       ) : (
         <EmojiGridRow
           emojis={item.emojis}

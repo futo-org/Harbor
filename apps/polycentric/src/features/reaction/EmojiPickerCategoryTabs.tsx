@@ -44,21 +44,16 @@ export function EmojiPickerCategoryTabs({
     const offset = scrollOffset.current;
 
     // Scroll forward/backward to bring the tab into view, clear of the fade
-    if (start < offset) {
-      const target = Math.max(0, start - Spacing.xs);
-      scrollRef.current?.scrollTo(
-        horizontal
-          ? { x: target, animated: true }
-          : { y: target, animated: true },
-      );
-    } else if (end > offset + extent - endInset) {
-      const target = end - extent + endInset;
-      scrollRef.current?.scrollTo(
-        horizontal
-          ? { x: target, animated: true }
-          : { y: target, animated: true },
-      );
-    }
+    let target: number;
+    if (start < offset) target = Math.max(0, start - Spacing.xs);
+    else if (end > offset + extent - endInset) target = end - extent + endInset;
+    else return;
+    scrollOffset.current = target;
+    scrollRef.current?.scrollTo(
+      horizontal
+        ? { x: target, animated: true }
+        : { y: target, animated: true },
+    );
   }, [activeIndex, tabSize, horizontal, endInset]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {

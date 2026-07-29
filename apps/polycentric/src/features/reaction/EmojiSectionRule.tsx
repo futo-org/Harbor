@@ -6,24 +6,23 @@ import { SECTION_RULE_PADDING } from './emojiData';
 
 type EmojiSectionRuleProps = {
   onLayout?: (e: LayoutChangeEvent) => void;
-  hidden?: boolean;
+  /** Hide/collapse the first section rule. */
+  collapsed?: boolean;
 };
 
 /** Horizontal rule between emoji categories. */
 export const EmojiSectionRule = React.memo(function EmojiSectionRule({
   onLayout,
-  hidden = false,
+  collapsed = false,
 }: EmojiSectionRuleProps) {
   const { theme } = useTheme();
-
+  if (collapsed) return <View style={{ height: 0 }} />;
   return (
     <View style={{ paddingVertical: SECTION_RULE_PADDING }} onLayout={onLayout}>
       <View
         style={{
           height: 1,
-          backgroundColor: hidden
-            ? 'transparent'
-            : withHexOpacity(theme.palette.neutral_500, '20'),
+          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
         }}
       />
     </View>
