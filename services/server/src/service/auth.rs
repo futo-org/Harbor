@@ -22,10 +22,9 @@ pub struct AuthState {
 }
 
 /// Verifies `authorization: Bearer <jwt>` headers and puts the identity in
-/// the request extensions. No header passes through unauthenticated, a bad
-/// token is rejected. An issuer with no identity document here yet also
-/// passes through unauthenticated, otherwise a fresh identity could never
-/// complete the first sync that delivers its document.
+/// the request extensions. No header means anonymous, a bad token is
+/// rejected. A token we can't match against an identity document yet
+/// (first sync, or a freshly paired key) passes through as anonymous.
 pub async fn auth_middleware(
     State(state): State<AuthState>,
     mut request: Request,
@@ -90,7 +89,8 @@ pub async fn verify_auth_token(
         .validate(allow_hosts, now_secs())
         .map_err(unauthenticated)?;
 
-    // The signing key must belong to the issuer's identity document.
+    // The signing key must be in the issuer's identity document. Our copy
+    // may be stale (pairing), so fail as a precondition, not a rejection.
     let signer = PublicKey {
         key_type: KeyType::Ed25519 as i32,
         key: verified.signed_by,
@@ -98,8 +98,8 @@ pub async fn verify_auth_token(
     let identity_content =
         cached_identity_content(ctx, &verified.claims.iss).await?;
     if !identity_content.authorizes_signer(&signer) {
-        return Err(Status::unauthenticated(
-            "auth token: signing key is not authorized by the issuer",
+        return Err(Status::failed_precondition(
+            "auth token: signing key is not authorized by the issuer's identity document here",
         ));
     }
 
@@ -150,7 +150,7 @@ mod tests {
     }
 
     /// Mint a token matching js-core's `createServerJwt` format.
-    fn mint(aud: &str) -> String {
+    fn mint(iss: &str, aud: &str) -> String {
         let key = SigningKey::from_bytes(&[7u8; 32]);
         let kid: String = key
             .verifying_key()
@@ -161,7 +161,7 @@ mod tests {
         let exp = now_secs() + 3600;
         let header = format!(r#"{{"alg":"EdDSA","typ":"JWT","kid":"{kid}"}}"#);
         let claims =
-            format!(r#"{{"iss":"someone","aud":"{aud}","iat":0,"exp":{exp}}}"#);
+            format!(r#"{{"iss":"{iss}","aud":"{aud}","iat":0,"exp":{exp}}}"#);
         let signing_input = format!(
             "{}.{}",
             URL_SAFE_NO_PAD.encode(header),
@@ -223,7 +223,7 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let response = app(db)
             .await
-            .oneshot(request(Some(&mint("https://other.server"))))
+            .oneshot(request(Some(&mint("someone", "https://other.server"))))
             .await
             .unwrap();
 
@@ -239,7 +239,74 @@ mod tests {
             .into_connection();
         let response = app(db)
             .await
-            .oneshot(request(Some(&mint(AUD))))
+            .oneshot(request(Some(&mint("someone", AUD))))
+            .await
+            .unwrap();
+
+        assert_eq!(body_of(response).await, "anonymous");
+    }
+
+    #[tokio::test]
+    async fn a_signer_the_stored_identity_does_not_authorize_falls_through_unauthenticated()
+     {
+        use crate::service::proto::content::ContentBody;
+        use crate::service::proto::{Content, Identity};
+        use ::entity::{content_model, event_model};
+        use polycentric_common::models::collections;
+        use prost::Message;
+        use sea_orm::prelude::TimeDateTimeWithTimeZone;
+        use sha2::{Digest, Sha256};
+
+        // Identity document that doesn't know the minting key yet, as
+        // during pairing.
+        let identity_content = Identity {
+            rotation_keys: vec![
+                polycentric_common::models::protos_v2::PublicKey {
+                    key_type: KeyType::Ed25519 as i32,
+                    key: vec![0xbb; 32],
+                },
+            ],
+            ..Default::default()
+        };
+        let iss: String = Sha256::digest(identity_content.encode_to_vec())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        let content = Content {
+            content_body: Some(ContentBody::Identity(identity_content)),
+        };
+
+        let now = TimeDateTimeWithTimeZone::from_unix_timestamp(1).unwrap();
+        let event = event_model::Model {
+            id: 1,
+            collection: collections::IDENTITY as i16,
+            identity: iss.clone(),
+            public_key_type: KeyType::Ed25519 as i32 as i16,
+            public_key: vec![0xbb; 32],
+            sequence: 1,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![1]),
+            signature: vec![1],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![1],
+            created_at: now,
+            synced_at: now,
+        };
+        let content_row = content_model::Model {
+            id: 1,
+            digest_type: 1,
+            digest_bytes: vec![1],
+            serialized_bytes: content.encode_to_vec(),
+            synced_at: now,
+        };
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![(event, content_row)]])
+            .into_connection();
+        let response = app(db)
+            .await
+            .oneshot(request(Some(&mint(&iss, AUD))))
             .await
             .unwrap();
 
