@@ -100,5 +100,10 @@
     "install": {
       "exclude": ["@shopify/flash-list"]
     }
+  },
+  "jest-junit": {
+    "suiteNameTemplate": "{filepath}",
+    "classNameTemplate": "{classname}",
+    "titleTemplate": "{title}"
   }
 }
