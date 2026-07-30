@@ -21,6 +21,10 @@ RUN curl -L "https://github.com/mozilla/sccache/releases/download/v0.10.0/sccach
     | tar xz --strip-components=1 -C /usr/local/bin --wildcards "*/sccache" \
     && chmod +x /usr/local/bin/sccache
 
+# cargo-nextest
+RUN curl -L "https://get.nexte.st/0.9.140/linux" \
+    | tar xz -C /usr/local/bin
+
 # Android NDK
 RUN curl -L -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip" \
     && unzip -q /tmp/ndk.zip -d /opt \

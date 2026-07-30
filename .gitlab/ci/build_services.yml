@@ -35,7 +35,11 @@
 .service-test:
   extends: .service-rust-base
   script:
-    - cargo test --package ${SERVICE_NAME}
+    - cargo nextest run -P ci --package ${SERVICE_NAME}
+  artifacts:
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
 
 .service-image:
   image:

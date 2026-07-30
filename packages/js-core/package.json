@@ -19,7 +19,8 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=./junit.xml"
   },
   "dependencies": {
     "@noble/curves": "catalog:",
