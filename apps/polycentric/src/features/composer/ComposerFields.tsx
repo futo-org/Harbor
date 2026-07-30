@@ -3,7 +3,6 @@ import {
   ProfileAvatar,
   Text,
   TextArea,
-  type TextAreaProps,
 } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
@@ -75,6 +74,29 @@ export function ComposerFields({
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
+
+  // The text field is deliberately UNCONTROLLED: round-tripping every
+  // keystroke through a `value` prop makes Fabric re-apply the text natively,
+  // clobbering the cursor position whenever it isn't at the very end
+  // (Android, upstream: https://github.com/facebook/react-native/issues/34276).
+  // It is seeded once at mount (a `defaultValue` that keeps updating is
+  // forwarded to the native `text` prop each render, same as `value`) and the
+  // store is synced via `onChangeText`.
+  const inputRef = useRef<RNTextInput>(null);
+  const [initialText] = useState(text);
+  // Last text the field is known to contain (the seed, then user input).
+  const fieldTextRef = useRef(text);
+
+  useEffect(() => {
+    if (text === fieldTextRef.current) return;
+    // The draft changed outside the input. Only the reset to empty (on
+    // close/post) does this today; if the composer ever gains non-empty
+    // programmatic edits (e.g. draft prefill), remount the field with a new
+    // `key` instead of passing text back in.
+    fieldTextRef.current = text;
+    if (text === '') inputRef.current?.clear();
+  }, [text]);
+
   return (
     <ScrollView
       style={[Atoms.flex_1]}
@@ -115,15 +137,19 @@ export function ComposerFields({
           </View>
         ) : null}
         <View style={[Atoms.flex_1, Atoms.gap_sm]}>
-          <ComposerTextArea
+          <TextArea
             // `autoFocus` only fires on mount, so re-key when it flips
             // (false → true after the sheet presents) to actually focus.
             key={autoFocus ? 'autofocus' : 'no-autofocus'}
+            ref={inputRef}
             variant="plain"
             placeholder={placeholder}
             autoFocus={autoFocus}
-            text={text}
-            onChangeText={setText}
+            defaultValue={initialText}
+            onChangeText={(next) => {
+              fieldTextRef.current = next;
+              setText(next);
+            }}
             // disabled={submitting}
             maxLength={2000}
             numberOfLines={isWeb ? 1 : undefined}
@@ -149,59 +175,6 @@ export function ComposerFields({
         </View>
       </View>
     </ScrollView>
-  );
-}
-
-type ComposerTextAreaProps = Omit<
-  TextAreaProps,
-  'value' | 'defaultValue' | 'onChangeText'
-> & {
-  /** The draft text held in the composer store. */
-  text: string;
-  onChangeText: (next: string) => void;
-};
-
-/**
- * The draft text field. Deliberately UNCONTROLLED: round-tripping every
- * keystroke through a `value` prop makes Fabric re-apply the text natively,
- * clobbering the cursor position whenever it isn't at the very end (Android,
- * upstream: https://github.com/facebook/react-native/issues/34276).
- *
- * The field is seeded once per mount and the store is kept in sync via
- * `onChangeText`. The only external draft change today is the reset to empty
- * (on close/post), applied with `clear()`; if the composer ever gains
- * non-empty programmatic edits (e.g. draft prefill), remount this component
- * with a new `key` instead of passing text back in.
- */
-function ComposerTextArea({
-  text,
-  onChangeText,
-  ...rest
-}: ComposerTextAreaProps) {
-  const inputRef = useRef<RNTextInput>(null);
-  // Draft text at mount time, frozen: a `defaultValue` that keeps updating is
-  // forwarded to the native `text` prop on each render, same as `value`.
-  const [initialText] = useState(text);
-  // Last text the field is known to contain (the seed, then user input).
-  const fieldTextRef = useRef(text);
-
-  useEffect(() => {
-    if (text === fieldTextRef.current) return;
-    // The draft changed outside the input — only the reset does this today.
-    fieldTextRef.current = text;
-    if (text === '') inputRef.current?.clear();
-  }, [text]);
-
-  return (
-    <TextArea
-      ref={inputRef}
-      defaultValue={initialText}
-      onChangeText={(next) => {
-        fieldTextRef.current = next;
-        onChangeText(next);
-      }}
-      {...rest}
-    />
   );
 }
 
