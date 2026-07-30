@@ -1,15 +1,13 @@
 use crate::service::feeds::repository::{EventWithContentRow, content_join};
-use crate::service::proto::content::ContentBody;
-use crate::service::proto::{Content, Identity, PublicKey};
+use crate::service::identity::chain;
+use crate::service::proto::{Identity, PublicKey};
 use ::entity::{
     ban_model as BanModel, content_model as ContentModel,
     event_model as EventModel, moderator_model as ModeratorModel,
     notification as NotificationModel, reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
-use prost::Message;
 use sea_orm::*;
-use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
@@ -59,8 +57,9 @@ impl Query {
         Ok(keys)
     }
 
-    /// Walk the identity chain from genesis and return the head's content,
-    /// or `None` when no valid genesis exists.
+    /// Fetch an identity's IDENTITY-collection events and return its
+    /// validated chain head, or `None` when no valid genesis exists. The
+    /// chain walk itself is the pure `chain::validated_chain_head`.
     pub async fn latest_valid_identity_content(
         db: &DbConn,
         identity: &str,
@@ -70,61 +69,7 @@ impl Query {
             vec![identity.to_string()],
         )
         .await?;
-
-        let mut decoded: Vec<DecodedIdentityRow> = rows
-            .into_iter()
-            .filter_map(|(event, content)| {
-                let content_row = content?;
-                let signer = PublicKey {
-                    key_type: event.public_key_type as i32,
-                    key: event.public_key,
-                };
-                let content_msg =
-                    Content::decode(content_row.serialized_bytes.as_slice())
-                        .ok()?;
-                let identity_content = match content_msg.content_body? {
-                    ContentBody::Identity(i) => i,
-                    _ => return None,
-                };
-                Some(DecodedIdentityRow {
-                    sequence: event.sequence as u64,
-                    signer,
-                    content: identity_content,
-                })
-            })
-            .collect();
-        decoded.sort_by_key(|r| r.sequence);
-
-        // Genesis: the earliest event whose Identity content's sha256 matches
-        // the identity string.
-        let genesis = match decoded
-            .iter()
-            .find(|r| identity_matches_content(identity, &r.content))
-        {
-            Some(g) => g,
-            None => return Ok(None),
-        };
-
-        let mut head = genesis.content.clone();
-        let mut head_seq = genesis.sequence;
-        loop {
-            let next_seq = head_seq + 1;
-            let next = decoded
-                .iter()
-                .filter(|r| {
-                    r.sequence == next_seq
-                        && authorizes_rotation(&head, &r.signer)
-                })
-                .min_by(|a, b| a.signer.key.cmp(&b.signer.key));
-            match next {
-                Some(e) => {
-                    head = e.content.clone();
-                    head_seq = next_seq;
-                }
-                None => break,
-            }
-        }
-        Ok(Some(head))
+        Ok(chain::validated_chain_head(identity, &rows))
     }
 
     /// True when `public_key` is a rotation key on the latest identity state.
@@ -402,27 +347,4 @@ async fn delete_content_rows<C: ConnectionTrait>(
             .await?;
     }
     Ok(())
-}
-
-struct DecodedIdentityRow {
-    sequence: u64,
-    signer: PublicKey,
-    content: Identity,
-}
-
-/// True when `identity` is the hex sha256 of the encoded `Identity`
-/// content (the canonical genesis-identifier convention).
-fn identity_matches_content(identity: &str, content: &Identity) -> bool {
-    let mut h = Sha256::new();
-    h.update(content.encode_to_vec());
-    let hex: String =
-        h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
-    hex == identity
-}
-
-fn authorizes_rotation(content: &Identity, signer: &PublicKey) -> bool {
-    content
-        .rotation_keys
-        .iter()
-        .any(|k| k.key_type == signer.key_type && k.key == signer.key)
 }

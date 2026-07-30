@@ -6,11 +6,11 @@ use crate::service::context::ServiceContext;
 use crate::service::feeds::repository::{
     self as FeedsRepository, EventWithContentRow,
 };
+use crate::service::identity::chain;
 use crate::service::identity::repository::Query as IdentityRepo;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Content, EventBundle, EventHint, Identity, PublicKey, SerializedContent,
-    SignedEvent,
+    Content, EventBundle, EventHint, PublicKey, SerializedContent, SignedEvent,
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -118,32 +118,33 @@ pub async fn list_profile_events(
 
 /// Pass our the identity events through to the proof cache
 /// probably a better place for this
+///
+/// `rows` from `list_identity_events_for_identities` are an identity's
+/// complete IDENTITY-collection chain, so each identity's chain is
+/// validated in memory (no extra queries) and only the validated head is
+/// cached. Caching raw events instead would let a forged, unauthorized
+/// IDENTITY event poison the cache and impersonate the identity for
+/// everything that reads it (auth, event-write authorization, proofs).
 async fn warm_identity_cache(
     ctx: &ServiceContext,
     rows: &[EventWithContentRow],
 ) {
-    let mut latest: HashMap<&str, (i64, Option<&[u8]>)> = HashMap::new();
-    for (event, content) in rows {
-        let entry = latest.entry(event.identity.as_str()).or_insert((-1, None));
-        if event.sequence > entry.0 {
-            entry.0 = event.sequence;
-            entry.1 = content.as_ref().map(|c| c.serialized_bytes.as_slice());
-        }
+    let mut by_identity: HashMap<&str, Vec<&EventWithContentRow>> =
+        HashMap::new();
+    for row in rows {
+        by_identity
+            .entry(row.0.identity.as_str())
+            .or_default()
+            .push(row);
     }
-    for (identity, (_, bytes)) in latest {
-        if let Some(content) = bytes.and_then(decode_identity_content) {
+    for (identity, identity_rows) in by_identity {
+        if let Some(content) =
+            chain::validated_chain_head(identity, identity_rows)
+        {
             ctx.proof_cache
                 .warm_identity_content(identity, content)
                 .await;
         }
-    }
-}
-
-fn decode_identity_content(bytes: &[u8]) -> Option<Identity> {
-    let content = Content::decode(bytes).ok()?;
-    match content.content_body? {
-        ContentBody::Identity(i) => Some(i),
-        _ => None,
     }
 }
 
