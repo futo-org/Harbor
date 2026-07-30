@@ -6,9 +6,10 @@ import {
   type ModerationPreferences,
   useSettings,
 } from '@/src/common/settings';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
+import { isWeb } from '@/src/common/util/platform';
 
 type LabelKey = keyof ModerationPreferences;
 
@@ -18,9 +19,9 @@ const LABEL_ENTRIES: {
 }[] = [
   { key: 'hate', name: 'Hate' },
   { key: 'selfHarm', name: 'Self-Harm' },
-  { key: 'sexual', name: 'Sexual' },
-  { key: 'porn', name: 'Porn' },
-  { key: 'graphicMedia', name: 'Graphic Media' },
+  { key: 'sexuallySuggestive', name: 'Sexually Suggestive' },
+  { key: 'sexuallyExplicit', name: 'Sexually Explicit' },
+  { key: 'violence', name: 'Violence' },
 ];
 
 const LEVELS: { level: ModerationLevel; icon: IconName; label: string }[] = [
@@ -76,10 +77,10 @@ function SegmentedOption({
 
 function ModerationLabelRow({
   labelKey,
-  index,
+  isLast,
 }: {
   labelKey: LabelKey;
-  index: number;
+  isLast?: boolean;
 }) {
   const { theme } = useTheme();
   const moderation = useSettings((s) => s.moderation);
@@ -91,17 +92,15 @@ function ModerationLabelRow({
   return (
     <View
       style={[
-        Atoms.flex_row,
-        Atoms.items_center,
-        Atoms.justify_between,
+        isWeb ? Atoms.flex_row : Atoms.flex_col,
+        isWeb ? Atoms.items_center : Atoms.items_start,
+        isWeb ? Atoms.justify_between : undefined,
+        isWeb ? undefined : Atoms.gap_xs,
         Atoms.py_sm,
         Atoms.px_sm,
-        Atoms.rounded_sm,
         {
-          backgroundColor:
-            index % 2 !== 0
-              ? withHexOpacity(theme.palette.neutral_500, '20')
-              : 'transparent',
+          borderBottomWidth: isLast ? 0 : 1,
+          borderColor: theme.palette.neutral_25,
         },
       ]}
     >
@@ -141,8 +140,12 @@ export function ModerationSettingsSheet() {
         onClose={() => router.canGoBack() && router.back()}
       />
       <Sheet.Content style={[Atoms.gap_0]}>
-        {labelKeys.map((key, i) => (
-          <ModerationLabelRow key={key} labelKey={key} index={i} />
+        {labelKeys.map((key) => (
+          <ModerationLabelRow
+            key={key}
+            labelKey={key}
+            isLast={key === labelKeys[labelKeys.length - 1]}
+          />
         ))}
       </Sheet.Content>
     </Sheet>

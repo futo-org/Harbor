@@ -29,19 +29,19 @@ const LABEL_RULES: &[LabelRule] = &[
         max: MAX_SEVERITY,
     },
     LabelRule {
-        label: "sexual",
+        label: "sexually-suggestive",
         category: "Sexual",
         min: 2,
         max: 4,
     },
     LabelRule {
-        label: "porn",
+        label: "sexually-explicit",
         category: "Sexual",
         min: 5,
         max: MAX_SEVERITY,
     },
     LabelRule {
-        label: "graphic-media",
+        label: "violence",
         category: "Violence",
         min: 4,
         max: MAX_SEVERITY,
@@ -118,21 +118,21 @@ mod tests {
     }
 
     #[test]
-    fn sexual_moderate_band_is_sexual() {
+    fn sexual_moderate_band_is_sexually_suggestive() {
         for severity in [2, 4] {
             let response = json!({ "text": analysis(&[("Sexual", severity)]), "images": [] });
             assert_eq!(
                 labels_from_azure(&response),
-                vec!["sexual"],
-                "severity {severity} should be sexual only"
+                vec!["sexually-suggestive"],
+                "severity {severity} should be sexually-suggestive only"
             );
         }
     }
 
     #[test]
-    fn sexual_high_band_is_porn() {
+    fn sexual_high_band_is_sexually_explicit() {
         let response = json!({ "text": analysis(&[("Sexual", 6)]), "images": [] });
-        assert_eq!(labels_from_azure(&response), vec!["porn"]);
+        assert_eq!(labels_from_azure(&response), vec!["sexually-explicit"]);
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod tests {
             "text": Value::Null,
             "images": [analysis(&[("Violence", 0)]), analysis(&[("Violence", 6)])],
         });
-        assert_eq!(labels_from_azure(&response), vec!["graphic-media"]);
+        assert_eq!(labels_from_azure(&response), vec!["violence"]);
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod tests {
         });
         assert_eq!(
             labels_from_azure(&response),
-            vec!["hate", "self-harm", "porn", "graphic-media"]
+            vec!["hate", "self-harm", "sexually-explicit", "violence"]
         );
     }
 

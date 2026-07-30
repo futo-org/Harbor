@@ -14,7 +14,7 @@ type ModerationLevel = 1 | 2 | 3;
 
 interface ModerationSettings {
   violence: ModerationLevel;
-  sexual: ModerationLevel;
+  sexuallySuggestive: ModerationLevel;
   hate: ModerationLevel;
 }
 
@@ -40,7 +40,7 @@ const defaultData: SignupData = {
   avatarUri: null,
   moderation: {
     violence: 2,
-    sexual: 2,
+    sexuallySuggestive: 2,
     hate: 2,
   },
 };

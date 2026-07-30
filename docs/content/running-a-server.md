@@ -161,7 +161,7 @@ Beyond blob deletion and `Report` events, the moderation service can also
 **label** content by publishing a `Labels` event (collection 7, defined in
 [protocol → Labels](/protocol/data-model#labels)). A label is a string
 identifying the kind of violation detected — the vocabulary used by FUTO's
-service is `hate`, `self-harm`, `sexual`, `porn`, and `graphic-media`.
+service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and `violence`.
 
 #### Trusting a moderation service
 Set the **single** moderation service the server trusts via an environment

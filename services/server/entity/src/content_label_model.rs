@@ -13,7 +13,7 @@ pub struct Model {
     #[sea_orm(belongs_to, from = "content_id", to = "id")]
     pub parent: HasOne<super::content_model::Entity>,
 
-    // A single label value, e.g. "sexual" or "hate".
+    // A single label value, e.g. "sexually-suggestive" or "hate".
     #[sea_orm(primary_key, auto_increment = false)]
     pub label_value: String,
 

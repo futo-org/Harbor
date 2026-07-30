@@ -915,7 +915,7 @@ async fn trusted_labels_served_in_feed_response() {
         &mod_identity,
         &mod_key,
         target_key.clone(),
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
@@ -963,7 +963,11 @@ async fn trusted_labels_served_in_feed_response() {
         .expect("Labels event should appear in event_hints");
 
     // The label event content decodes to a Labels targeting our post.
-    assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
+    assert_is_labels_bundle(
+        label_bundle,
+        &target_key,
+        &["sexually-suggestive"],
+    );
 
     // The label event carries the moderator identity (labeler visible).
     let label_event = label_bundle
@@ -1018,12 +1022,12 @@ async fn omit_labels_hides_labeled_post() {
         &mod_identity,
         &mod_key,
         target_key,
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
 
-    // Query with omit_labels = ["sexual"] → post should be hidden.
+    // Query with omit_labels = ["sexually-suggestive"] → post should be hidden.
     let resp = feed
         .get_identity_feed(GetIdentityFeedRequest {
             identity: author_identity,
@@ -1031,7 +1035,7 @@ async fn omit_labels_hides_labeled_post() {
                 limit: Some(10),
                 ..Default::default()
             }),
-            omit_labels: vec!["sexual".to_string()],
+            omit_labels: vec!["sexually-suggestive".to_string()],
         })
         .await
         .expect("get_identity_feed failed")
@@ -1043,7 +1047,7 @@ async fn omit_labels_hides_labeled_post() {
             .as_ref()
             .map(|se| se.signature == post_sig)
             .unwrap_or(false)),
-        "post should be hidden when omit_labels contains 'sexual'",
+        "post should be hidden when omit_labels contains 'sexually-suggestive'",
     );
 }
 
@@ -1086,7 +1090,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &mod_identity,
         &mod_key,
         target_key.clone(),
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
@@ -1192,7 +1196,7 @@ async fn untrusted_labels_not_indexed() {
         &impostor_identity,
         &impostor_key,
         target_key.clone(),
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
@@ -1287,12 +1291,12 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &impostor_identity,
         &impostor_key,
         target_key,
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
 
-    // Query with omit_labels = ["sexual"] — the label came from an untrusted
+    // Query with omit_labels = ["sexually-suggestive"] — the label came from an untrusted
     // source so it was never indexed; the post should NOT be hidden.
     let resp = feed
         .get_identity_feed(GetIdentityFeedRequest {
@@ -1301,7 +1305,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
                 limit: Some(10),
                 ..Default::default()
             }),
-            omit_labels: vec!["sexual".to_string()],
+            omit_labels: vec!["sexually-suggestive".to_string()],
         })
         .await
         .expect("get_identity_feed failed")
@@ -1427,7 +1431,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &mod_identity,
         &mod_key,
         target_key.clone(),
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
@@ -1435,7 +1439,7 @@ async fn thread_omit_labels_matching_hides_post() {
         .get_post_thread(GetPostThreadRequest {
             event_key: Some(target_key.clone()),
             limit: 10,
-            omit_labels: vec!["sexual".to_string()],
+            omit_labels: vec!["sexually-suggestive".to_string()],
         })
         .await
         .expect("get_post_thread failed")
@@ -1469,7 +1473,11 @@ async fn thread_omit_labels_matching_hides_post() {
         })
         .expect("Labels event should appear in event_hints");
 
-    assert_is_labels_bundle(label_bundle, &target_key, &["sexual"]);
+    assert_is_labels_bundle(
+        label_bundle,
+        &target_key,
+        &["sexually-suggestive"],
+    );
 }
 
 #[tokio::test]
@@ -1511,7 +1519,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &mod_identity,
         &mod_key,
         target_key.clone(),
-        vec!["sexual".to_string()],
+        vec!["sexually-suggestive".to_string()],
         DEFAULT_CREATED_AT + 2 * HOUR,
     )
     .await;
