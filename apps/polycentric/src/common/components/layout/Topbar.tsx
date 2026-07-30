@@ -10,6 +10,9 @@ import { ProfileAvatar, Text } from '../primitives';
 
 const SIDE_WIDTH = 32;
 
+/** Exported so callers (e.g. sheet scrollable body) can reserve space. */
+export const TOPBAR_HEIGHT = 60;
+
 type TopbarProps = {
   title?: string;
   left?: ReactNode;
@@ -41,7 +44,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
         Atoms.px_md,
         Atoms.py_sm,
         Atoms.gap_md,
-        { height: 60 },
+        { height: TOPBAR_HEIGHT },
         { backgroundColor: theme.palette.neutral_0 },
         {
           borderBottomWidth: 1,

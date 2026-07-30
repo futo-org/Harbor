@@ -1,55 +1,153 @@
-import { Atoms, useTheme } from '@/src/common/theme';
-import type { ComponentProps } from 'react';
+import { Atoms } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+import { memo, useCallback, type ReactNode } from 'react';
 import { Pressable, Text } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import type { Insets, StyleProp, TextStyle, ViewStyle } from 'react-native';
 
-type EmojiProps = {
-  emoji: string;
-  onPress: () => void;
-  selected?: boolean;
-  style?: ComponentProps<typeof Pressable>['style'];
+// Scale/timing/opacity for the hover (on web) and press (on native) animations.
+export const EMOJI_POP_SCALE = 1.12;
+export const EMOJI_POP_MS = 120;
+export const EMOJI_PRESS_OPACITY = 0.6;
+
+// Web-only: transition descriptor for the Pressable style render function.
+const WEB_TRANSITION: ViewStyle = {
+  transitionProperty: 'transform, background-color',
+  transitionDuration: `${EMOJI_POP_MS}ms`,
 };
-export const Emoji = ({
-  style,
-  emoji,
+
+type EmojiLikePressableProps = {
+  onPress: () => void;
+  highlightColor: string;
+  selected?: boolean;
+  /** Width/height of the button */
+  size?: string | number;
+  /** Extends the touch target beyond the visual bounds on native. */
+  hitSlop?: number | Insets;
+  children: ReactNode;
+};
+
+/** A rounded, centered Pressable with hover/press animation. */
+function EmojiLikePressable({
   onPress,
+  children,
+  highlightColor,
   selected = false,
-}: EmojiProps) => {
-  const { theme } = useTheme();
-
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-  const bounceIn = () => {
-    scale.value = withSpring(1.25, { damping: 6, stiffness: 220, mass: 0.5 });
-  };
-  const bounceOut = () => {
-    scale.value = withSpring(1, { damping: 14, stiffness: 220, mass: 0.5 });
-  };
-
+  size,
+  hitSlop,
+}: EmojiLikePressableProps) {
   return (
     <Pressable
       onPress={onPress}
-      onHoverIn={bounceIn}
-      onHoverOut={bounceOut}
-      onPressIn={bounceIn}
-      onPressOut={bounceOut}
+      hitSlop={hitSlop}
       style={(state) => [
-        typeof style === 'function' ? style(state) : style,
         Atoms.rounded_full,
-        (state.hovered || selected) && {
-          backgroundColor: theme.palette.neutral_100,
-        },
+        Atoms.align_center,
+        Atoms.justify_center,
+        size ? { width: size, aspectRatio: 1 } : undefined,
+        isWeb ? WEB_TRANSITION : undefined,
+        selected ? { backgroundColor: highlightColor } : undefined,
+        // Hover/press animation
+        isWeb
+          ? state.hovered || state.pressed
+            ? {
+                backgroundColor: highlightColor,
+                transform: [{ scale: EMOJI_POP_SCALE }],
+              }
+            : undefined
+          : state.pressed
+            ? {
+                opacity: EMOJI_PRESS_OPACITY,
+                transform: [{ scale: EMOJI_POP_SCALE }],
+              }
+            : undefined,
       ]}
     >
-      <Animated.View style={animatedStyle}>
-        <Text style={{ fontSize: 20 }}>{emoji}</Text>
-      </Animated.View>
+      {children}
     </Pressable>
   );
+}
+
+type EmojiProps = {
+  emoji: string;
+  /** Click handler for when an emoji button is pressed */
+  onSelect: (value: string) => void;
+  value?: string;
+  selected?: boolean;
+  /** Width/height of the button */
+  size?: string | number;
+  // Color and highlightColor passed as a prop to avoid frequent theme subscriptions
+  color: string;
+  highlightColor: string;
+  style?: StyleProp<TextStyle>;
 };
+
+export const Emoji = memo(function Emoji({
+  style,
+  emoji,
+  onSelect,
+  value,
+  selected = false,
+  size,
+  color,
+  highlightColor,
+}: EmojiProps) {
+  const handlePress = useCallback(
+    () => onSelect(value ?? emoji),
+    [onSelect, value, emoji],
+  );
+  const isNumericSize = typeof size === 'number';
+
+  return (
+    <EmojiLikePressable
+      onPress={handlePress}
+      size={size}
+      highlightColor={highlightColor}
+      selected={selected}
+    >
+      <Text
+        style={[
+          isNumericSize
+            ? {
+                fontSize: size * 0.55,
+                lineHeight: size,
+              }
+            : Atoms.text_2xl,
+          Atoms.text_center,
+          { color },
+          style,
+        ]}
+      >
+        {emoji}
+      </Text>
+    </EmojiLikePressable>
+  );
+});
+
+type EmojiLikeButtonProps = {
+  onPress: () => void;
+  highlightColor: string;
+  children: ReactNode;
+  size?: number;
+  /** Extends the touch target beyond the visual bounds on native. */
+  hitSlop?: number | Insets;
+};
+
+/** Circular button styled similar to an emoji button, for use outside of the emoji grid. */
+export function EmojiLikeButton({
+  onPress,
+  highlightColor,
+  children,
+  size,
+  hitSlop,
+}: EmojiLikeButtonProps) {
+  return (
+    <EmojiLikePressable
+      onPress={onPress}
+      size={size}
+      hitSlop={hitSlop}
+      highlightColor={highlightColor}
+    >
+      {children}
+    </EmojiLikePressable>
+  );
+}

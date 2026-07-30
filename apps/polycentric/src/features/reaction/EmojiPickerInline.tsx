@@ -1,17 +1,41 @@
-import { Atoms, useTheme } from '@/src/common/theme';
+import Icon from '@/src/common/components/Icon';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
-import { Emoji } from './Emoji';
+import { Emoji, EmojiLikeButton } from './Emoji';
+import { INLINE_EMOJIS } from './emojiData';
+
+/** The size (width/height) of an inline emoji picker button */
+const INLINE_SIZE = 36;
 
 type EmojiPickerInlineProps = {
   selectedEmoji?: string | null;
   onSelect?: (emoji: string) => void;
+  onShowMore?: () => void;
 };
 
 export default function EmojiPickerInline({
   selectedEmoji,
   onSelect,
+  onShowMore,
 }: EmojiPickerInlineProps) {
   const { theme } = useTheme();
+
+  const handleSelect = useCallback(
+    (emoji: string) => onSelect?.(emoji),
+    [onSelect],
+  );
+
+  // A selected emoji that isn't one of the defaults (picked from the full
+  // sheet) leads the list, so the active reaction is always visible.
+  const emojis = useMemo(() => {
+    if (!selectedEmoji || INLINE_EMOJIS.some((e) => e.emoji === selectedEmoji))
+      return INLINE_EMOJIS;
+    return [
+      { code: [], emoji: selectedEmoji, name: selectedEmoji },
+      ...INLINE_EMOJIS,
+    ];
+  }, [selectedEmoji]);
 
   return (
     <View
@@ -24,23 +48,27 @@ export default function EmojiPickerInline({
         Atoms.rounded_full,
       ]}
     >
-      {recommendedEmojis.map((emoji) => (
+      {emojis.map((emoji) => (
         <Emoji
           key={emoji.name}
           emoji={emoji.emoji}
-          onPress={() => onSelect?.(emoji.emoji)}
-          style={[Atoms.p_xs]}
+          onSelect={handleSelect}
+          size={INLINE_SIZE}
           selected={selectedEmoji === emoji.emoji}
+          color={theme.palette.neutral_1000}
+          highlightColor={theme.palette.neutral_100}
         />
       ))}
+      {onShowMore && (
+        <EmojiLikeButton
+          onPress={onShowMore}
+          size={INLINE_SIZE}
+          hitSlop={Spacing.sm}
+          highlightColor={theme.palette.neutral_100}
+        >
+          <Icon name="dotsVertical" size={20} color="neutral_1000" />
+        </EmojiLikeButton>
+      )}
     </View>
   );
 }
-
-const recommendedEmojis = [
-  { code: ['1F602'], emoji: '😂', name: 'face with tears of joy' },
-  { code: ['1F923'], emoji: '🤣', name: 'rolling on the floor laughing' },
-  { code: ['1F60D'], emoji: '😍', name: 'smiling face with heart-eyes' },
-  { code: ['1F44D'], emoji: '👍', name: 'thumbs up' },
-  { code: ['1F4AA'], emoji: '💪', name: 'flexed biceps' },
-];

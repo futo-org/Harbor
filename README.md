@@ -51,8 +51,8 @@ pnpm prepare
 # Start the server process
 docker compose up -d --build
 
-# Apply the database schema if it has changed
-docker compose run --rm server /app/migration fresh
+# Apply the database schema if it has changed.
+docker compose exec -T server /app/migration fresh
 
 # Start the frontend dev server
 pnpm dev

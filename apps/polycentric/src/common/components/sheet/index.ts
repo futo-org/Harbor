@@ -1,1 +1,1 @@
-export { Sheet, type SheetProps } from './Sheet';
+export { Sheet, SHEET_OVERLAY_PADDING, type SheetProps } from './Sheet';

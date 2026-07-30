@@ -1,5 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2.js';
-import { emojis as emojiPickerData } from 'rn-emoji-picker/dist/data';
+import { categories } from '../reaction/emojiData';
 
 const FINGERPRINT_EMOJI_CATEGORIES = new Set([
   'smileys & emotion',
@@ -10,9 +10,10 @@ const FINGERPRINT_EMOJI_CATEGORIES = new Set([
   'objects',
 ]);
 
-const emojiFingerprintPool = emojiPickerData
-  .filter((emoji) => FINGERPRINT_EMOJI_CATEGORIES.has(emoji.category))
-  .map((emoji) => emoji.emoji);
+const emojiFingerprintPool = categories
+  .filter((cat) => FINGERPRINT_EMOJI_CATEGORIES.has(cat.name.toLowerCase()))
+  .flatMap((cat) => cat.emojis)
+  .map((e) => e.emoji);
 
 export function publicKeyEmojiFingerprint(
   seed: string,

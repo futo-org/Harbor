@@ -4,8 +4,8 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
-import { type GestureResponderEvent, View } from 'react-native';
-import { DEFAULT_REACTION_EMOJI } from '../../reaction/consts';
+import { View } from 'react-native';
+import { EmojiPickerSheet } from '../../reaction/EmojiPickerSheet';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
 import PostActionButton from './PostActionButton';
@@ -26,6 +26,7 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
   const changeReaction = useReactions((s) => s.changeReaction);
 
   const [open, setOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const hasReaction = !!reaction;
 
   const onEmojiSelect = (emoji: string) => {
@@ -40,20 +41,15 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
     }
   };
 
-  const onReactionPress = (e: GestureResponderEvent) => {
-    e.preventDefault();
-    onEmojiSelect(reaction?.emoji ?? DEFAULT_REACTION_EMOJI);
+  const onShowMore = () => {
+    triggerRef.current?.close();
+    setPickerOpen(true);
   };
 
   return (
     <View style={[]}>
       <HoverCard openDelay={0} onOpenChange={setOpen}>
-        <HoverCard.Trigger
-          asChild
-          ref={triggerRef}
-          onPress={onReactionPress}
-          onLongPress={triggerRef.current?.open}
-        >
+        <HoverCard.Trigger asChild ref={triggerRef}>
           <PostActionButton
             icon={hasReaction ? 'reaction' : 'reactionOutline'}
             active={hasReaction}
@@ -66,9 +62,19 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
           <EmojiPickerInline
             selectedEmoji={reaction?.emoji}
             onSelect={onEmojiSelect}
+            onShowMore={onShowMore}
           />
         </HoverCard.Content>
       </HoverCard>
+      <EmojiPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(emoji) => {
+          setPickerOpen(false);
+          onEmojiSelect(emoji);
+        }}
+        selectedEmoji={reaction?.emoji}
+      />
     </View>
   );
 }
