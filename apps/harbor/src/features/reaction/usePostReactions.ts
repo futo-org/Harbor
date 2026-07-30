@@ -118,7 +118,7 @@ function view(
 
   for (const reaction of reactions) {
     // We have already included the user's reaction
-    if (myEmoji && reaction.identity === identity) continue;
+    if (reaction.identity === identity) continue;
 
     all.push(reaction);
 

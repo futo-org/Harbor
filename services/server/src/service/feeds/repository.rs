@@ -486,7 +486,7 @@ impl Query {
 
     /// Get up to `limit` reaction events for the target post.
     /// Fetches in order of most-recent to least-recent so that we don't fetch
-    /// outdated reactions from a user that have been superceded without also
+    /// outdated reactions from a user that have been superseded without also
     /// getting the newest one.
     /// Optionally, filter events to only include reactions with `emoji`.
     pub async fn get_reactions(
@@ -531,6 +531,10 @@ impl Query {
             .order_by_desc(EventModel::Column::CreatedAt)
             .order_by_desc(EventModel::Column::Id);
 
+        // TODO: this is currently buggy when a user creates a new reaction
+        // without deleting the old one.
+        // We may filter out the newest reaction and send back an outdated reaction.
+        // With no tombstone, it will be rendered as active.
         if let Some(emoji) = emoji {
             query = query.filter(ContentReactionModel::Column::Emoji.eq(emoji));
         }

@@ -38,7 +38,7 @@ fn retain_newest_reaction_per_identity(bundles: &mut Vec<EventBundle>) {
         })
         .collect::<Vec<_>>();
 
-    // Sort from newest to oldest so we can filter out superceded reactions easily
+    // Sort from newest to oldest so we can filter out superseded reactions easily
     decoded.sort_by_key(|&(_, _, created_at)| Reverse(created_at));
 
     let mut seen: HashSet<String> = HashSet::new();
@@ -54,7 +54,7 @@ fn retain_newest_reaction_per_identity(bundles: &mut Vec<EventBundle>) {
         .collect();
 }
 
-/// Merge event bundles as normal, exept we also remove reactions that are superceded by newer ones.
+/// Merge event bundles as normal, except we also remove reactions that are superseded by newer ones.
 fn merge_reaction_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     let mut merged = GetReactionsResponse::default();
 

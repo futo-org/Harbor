@@ -79,7 +79,7 @@ async fn hydrate(
     })
 }
 
-/// Remove any deleted or superceded reaction events.
+/// Remove any deleted or superseded reaction events.
 async fn filter(
     _ctx: &ServiceContext,
     _params: &Params,
