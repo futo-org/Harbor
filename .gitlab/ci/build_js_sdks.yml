@@ -37,7 +37,11 @@ js-core-tests-check:
   stage: check
   allow_failure: true
   script:
-    - pnpm --filter js-core test:run
+    - pnpm --filter js-core test:ci
+  artifacts:
+    when: always
+    reports:
+      junit: packages/js-core/junit.xml
 
 js-sdks-build:
   extends: .js-sdks-base

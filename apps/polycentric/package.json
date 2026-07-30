@@ -12,6 +12,7 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "test": "jest",
+    "test:ci": "jest --reporters=default --reporters=jest-junit",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "prebuild": "APP_VARIANT=dev expo prebuild --clean",
@@ -90,6 +91,7 @@
     "@types/react-test-renderer": "^19.1.0",
     "jest": "catalog:",
     "jest-expo": "~57.0.1",
+    "jest-junit": "catalog:",
     "only-allow": "^1.2.2",
     "react-test-renderer": "19.2.3",
     "typescript": "~6.0.3"
@@ -98,5 +100,10 @@
     "install": {
       "exclude": ["@shopify/flash-list"]
     }
+  },
+  "jest-junit": {
+    "suiteNameTemplate": "{filepath}",
+    "classNameTemplate": "{classname}",
+    "titleTemplate": "{title}"
   }
 }

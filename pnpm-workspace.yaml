@@ -16,6 +16,7 @@ catalog:
   "@types/node": ^24.0.0
   "@ubjs/core": 0.31.0-3
   jest: ^29.7.0
+  jest-junit: ^17.0.0
   typescript: ^5.9.3
   uniffi-bindgen-react-native: 0.31.0-3
 

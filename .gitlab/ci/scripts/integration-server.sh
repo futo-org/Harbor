@@ -230,6 +230,11 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Running integration tests…"
-cargo test -p integration-tests 2>&1
+if [ "$CI_MODE" = true ]; then
+  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
+  cargo nextest run -P ci -p integration-tests 2>&1
+else
+  cargo test -p integration-tests 2>&1
+fi
 echo ""
 echo "==> Tests completed"

@@ -39,8 +39,12 @@ app-tests:
   extends: .app-check-base
   stage: check
   script:
-    - pnpm --filter polycentric-app test
+    - pnpm --filter polycentric-app test:ci
     # - pnpm --filter polycentric-app typecheck
+  artifacts:
+    when: always
+    reports:
+      junit: apps/polycentric/junit.xml
 
 .app-build-base:
   extends: .app-workflow

@@ -39,3 +39,7 @@ moderation-integration-csam:
   extends: .moderation-integration-workflow
   script:
     - .gitlab/ci/scripts/integration-moderation.sh
+  artifacts:
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml

@@ -43,3 +43,7 @@ server-integration:
   extends: .server-integration-workflow
   script:
     - .gitlab/ci/scripts/integration-server.sh --ci
+  artifacts:
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml

@@ -59,7 +59,11 @@ rs-core-tests:
   extends: .rust-check
   script:
     - cd packages/rs-core
-    - just test
+    - cargo nextest run -P ci
+  artifacts:
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
 
 rs-common-format-check:
   extends: .rust-check
@@ -77,7 +81,11 @@ rs-common-tests:
   extends: .rust-check
   script:
     - cd packages/rs-common
-    - cargo test
+    - cargo nextest run -P ci
+  artifacts:
+    when: always
+    reports:
+      junit: target/nextest/ci/junit.xml
 
 # rs-core-build:
 #   extends: .rs-core-workflow

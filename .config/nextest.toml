@@ -1,0 +1,4 @@
+# The `ci` profile writes a JUnit report (target/nextest/ci/junit.xml)
+# which CI jobs upload so test results appear in GitLab merge requests.
+[profile.ci.junit]
+path = "junit.xml"

@@ -103,4 +103,10 @@ echo "==> Applying server database migrations…"
 docker compose exec -T server /app/migration up
 
 echo "==> Running the moderation CSAM pipeline test…"
-cargo test -p moderation-service --test csam_pipeline -- --ignored --nocapture
+if [[ "${CI:-}" == "true" ]]; then
+  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
+  cargo nextest run -P ci -p moderation-service --test csam_pipeline \
+    --run-ignored ignored-only --no-capture
+else
+  cargo test -p moderation-service --test csam_pipeline -- --ignored --nocapture
+fi

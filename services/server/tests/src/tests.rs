@@ -8,6 +8,7 @@ use integration_tests::{
     public_key_of, *,
 };
 use prost::Message as ProstMessage;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 #[tokio::test]
@@ -739,11 +740,21 @@ async fn ensure_moderator_setup() {
 
 /// Monotonic sequence number for the moderator's Labels events — each test
 /// needs a unique (collection, identity, pub_key, sequence) tuple or the
-/// duplicate is silently dropped by the server.
-static NEXT_LABELS_SEQ: AtomicU64 = AtomicU64::new(1);
+/// duplicate is silently dropped by the server. Seeded from the clock because
+/// test runners like nextest run each test in its own process, so a fixed
+/// initial value would collide across concurrently running tests.
+static NEXT_LABELS_SEQ: OnceLock<AtomicU64> = OnceLock::new();
 
 async fn next_labels_seq() -> u64 {
-    NEXT_LABELS_SEQ.fetch_add(1, Ordering::Relaxed)
+    NEXT_LABELS_SEQ
+        .get_or_init(|| {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock before unix epoch")
+                .as_nanos() as u64;
+            AtomicU64::new(nanos)
+        })
+        .fetch_add(1, Ordering::Relaxed)
 }
 
 async fn publish_genesis(
