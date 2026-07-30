@@ -1,4 +1,3 @@
-import { Spacing } from '@/src/common/theme';
 import rawData from './emojis.json';
 
 export type EmojiEntry = {
@@ -35,7 +34,7 @@ function groupByCategory(): EmojiCategory[] {
   return Array.from(map.entries()).map(([name, emojis]) => ({
     key: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     name,
-    icon: emojis[0]!.emoji,
+    icon: emojis[0]?.emoji ?? '',
     emojis,
   }));
 }
@@ -51,35 +50,6 @@ export function getCategory(key: string): EmojiCategory | undefined {
   return categoryByKey[key];
 }
 
-export const DEFAULT_GRID_COLUMNS = 10;
-export type EmojiListItem =
-  | { type: 'header'; key: string; categoryKey: string; collapsed?: boolean }
-  | { type: 'row'; key: string; categoryKey: string; emojis: EmojiEntry[] };
-
-export function buildRows(columns: number): EmojiListItem[] {
-  const items: EmojiListItem[] = [];
-
-  categories.forEach((c, i) => {
-    items.push({
-      type: 'header',
-      key: `h:${c.key}`,
-      categoryKey: c.key,
-      collapsed: i === 0,
-    });
-
-    for (let j = 0; j < c.emojis.length; j += columns) {
-      items.push({
-        type: 'row',
-        key: `r:${c.key}:${j}`,
-        categoryKey: c.key,
-        emojis: c.emojis.slice(j, j + columns),
-      });
-    }
-  });
-
-  return items;
-}
-
 export const INLINE_EMOJIS: { code: string[]; emoji: string; name: string }[] =
   [
     { code: ['2764'], emoji: '❤️', name: 'red heart' },
@@ -89,32 +59,3 @@ export const INLINE_EMOJIS: { code: string[]; emoji: string; name: string }[] =
     { code: ['1F44D'], emoji: '👍', name: 'thumbs up' },
     { code: ['1F4AA'], emoji: '💪', name: 'flexed biceps' },
   ];
-
-export const EMOJI_FONT_SIZE = 26;
-export const SECTION_RULE_PADDING = Spacing.xs;
-export const HEADER_HEIGHT = 2 * SECTION_RULE_PADDING + 1;
-
-/**
- * Compute section scroll offsets from the rendered row and header heights, so
- * that we don't rely on full `FlashList` renders to scroll to sections. Should
- * match `buildRows`.
- */
-export function computeSectionOffsets(
-  rowHeight: number,
-  headerHeight: number = HEADER_HEIGHT,
-  columns: number = DEFAULT_GRID_COLUMNS,
-): Record<string, number> {
-  const offsets: Record<string, number> = {};
-  let y = 0;
-
-  categories.forEach((c, i) => {
-    offsets[c.key] = y;
-    // The leading divider is collapsed (see `buildRows`), so it contributes no
-    // height and the first section starts at zero.
-    if (i > 0) y += headerHeight;
-    const rows = Math.ceil(c.emojis.length / columns);
-    y += rows * rowHeight;
-  });
-
-  return offsets;
-}

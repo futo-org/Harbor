@@ -5,7 +5,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { EmojiPickerFull } from '../../reaction/EmojiPickerFull';
+import { EmojiPickerSheet } from '../../reaction/EmojiPickerSheet';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
 import PostActionButton from './PostActionButton';
@@ -66,7 +66,7 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
           />
         </HoverCard.Content>
       </HoverCard>
-      <EmojiPickerFull
+      <EmojiPickerSheet
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={(emoji) => {

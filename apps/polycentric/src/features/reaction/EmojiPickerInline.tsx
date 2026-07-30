@@ -1,6 +1,6 @@
 import Icon from '@/src/common/components/Icon';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Emoji, EmojiLikeButton } from './Emoji';
 import { INLINE_EMOJIS } from './emojiData';
@@ -26,6 +26,17 @@ export default function EmojiPickerInline({
     [onSelect],
   );
 
+  // A selected emoji that isn't one of the defaults (picked from the full
+  // sheet) leads the list, so the active reaction is always visible.
+  const emojis = useMemo(() => {
+    if (!selectedEmoji || INLINE_EMOJIS.some((e) => e.emoji === selectedEmoji))
+      return INLINE_EMOJIS;
+    return [
+      { code: [], emoji: selectedEmoji, name: selectedEmoji },
+      ...INLINE_EMOJIS,
+    ];
+  }, [selectedEmoji]);
+
   return (
     <View
       style={[
@@ -37,7 +48,7 @@ export default function EmojiPickerInline({
         Atoms.rounded_full,
       ]}
     >
-      {INLINE_EMOJIS.map((emoji) => (
+      {emojis.map((emoji) => (
         <Emoji
           key={emoji.name}
           emoji={emoji.emoji}
