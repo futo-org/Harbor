@@ -42,7 +42,6 @@ export function ServersSettingsSheet() {
         />
       }
       dismissible
-      scrollable
     >
       <Sheet.Content style={[Atoms.gap_lg]}>
         {servers.length === 0 ? (

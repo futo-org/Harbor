@@ -28,7 +28,7 @@ export function IdentitySettingsSheet({
   const displayName = profile.name;
 
   return (
-    <Sheet detents={[1]} dismissible scrollable>
+    <Sheet detents={[1]} dismissible>
       <Sheet.Header
         title="Identity"
         onClose={() => router.canGoBack() && router.back()}

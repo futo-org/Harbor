@@ -183,7 +183,6 @@ export default function PairIdentityIssuerScreen() {
         open={!!claimerStr}
         detents={[0.6, 1]}
         dismissible
-        scrollable
         onClose={closeAndDeny}
       >
         {(() => {

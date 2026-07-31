@@ -26,7 +26,6 @@ export default function ReactionDetailsSheet({
       open={open}
       onClose={onClose}
       detents={[0.5, 0.9]}
-      scrollable={true}
       header={<Sheet.Header title="Reactions" onClose={onClose} />}
     >
       <Sheet.Content>

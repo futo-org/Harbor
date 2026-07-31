@@ -38,7 +38,6 @@ export default function BanSheet({
       open={open}
       onClose={onClose}
       detents={[0.5, 1]}
-      scrollable={true}
       header={<Sheet.Header title="Ban user" onClose={onClose} />}
     >
       <Sheet.Content style={[Atoms.gap_lg]}>
