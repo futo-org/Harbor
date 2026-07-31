@@ -34,7 +34,7 @@ export default function FeedPostScreen() {
         <Screen.PrimaryColumn>
           <View style={[Atoms.mx_lg, Atoms.mt_lg]}>
             <BackButton onPress={handleBack} />
-            <View style={[Atoms.items_center, Atoms.mt_lg]}>
+            <View style={[Atoms.items_center, Atoms.py_3xl]}>
               <ActivityIndicator />
             </View>
           </View>
@@ -49,8 +49,8 @@ export default function FeedPostScreen() {
         <Screen.PrimaryColumn>
           <View style={[Atoms.mx_lg, Atoms.mt_lg]}>
             <BackButton onPress={handleBack} />
-            <View style={Atoms.mt_lg}>
-              <Text>Invalid post reference</Text>
+            <View style={[Atoms.items_center, Atoms.py_3xl]}>
+              <Text color="neutral_500">Post not found.</Text>
             </View>
           </View>
         </Screen.PrimaryColumn>

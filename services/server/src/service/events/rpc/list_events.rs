@@ -7,10 +7,12 @@ use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::repository::Query as EventsRepository;
-use crate::service::events::tombstone::EventWithContentRow;
+use crate::service::events::tombstone::{
+    self as tombstone, EventWithContentRow,
+};
 use crate::service::identity::service::{
-    collect_identities, list_identity_events, list_profile_events,
-    rows_to_hints,
+    bundles_to_hints, collect_identities, list_identity_events,
+    list_profile_events, rows_to_hints,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
@@ -105,15 +107,20 @@ async fn hydrate(
     let stats_fut =
         async { gather_stats_for(&ctx.db, &keys).await.map_err(map_db_err) };
 
-    let (identity_events, profile_events, stats) = tokio::try_join!(
+    let (identity_events, profile_events, deletes_by_target, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
+        // We won't filter out tombstoned events, but we still collect deletions
+        // so that we can send them as hints.
+        tombstone::validated_tombstones(ctx, &keys),
         stats_fut,
     )?;
+
     Ok(HydrationState {
         identity_events,
         profile_events,
         stats,
+        deletes_by_target,
         ..Default::default()
     })
 }
@@ -138,15 +145,24 @@ async fn view(
         identity_events,
         profile_events,
         stats,
+        deletes_by_target,
         ..
     } = hydration;
 
     let mut event_bundles = assemble_bundles(live_rows, &stats);
-    attach_proofs(ctx, &mut event_bundles).await?;
+    let mut tombstone_bundles: Vec<EventBundle> =
+        deletes_by_target.into_values().flatten().collect();
 
-    let event_hints = rows_to_hints(
+    tokio::try_join!(
+        attach_proofs(ctx, &mut event_bundles),
+        attach_proofs(ctx, &mut tombstone_bundles),
+    )?;
+
+    let mut event_hints = rows_to_hints(
         identity_events.into_iter().chain(profile_events).collect(),
     );
+
+    event_hints.extend(bundles_to_hints(tombstone_bundles));
 
     Ok(View {
         event_bundles,
