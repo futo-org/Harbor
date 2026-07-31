@@ -32,3 +32,40 @@ POLYCENTRIC_PHOTODNA_KEY=<subscription key> \
 POLYCENTRIC_PHOTODNA_TEST_IMAGES=/absolute/path/to/image/directory \
   cargo test -p moderation-service photodna_real_api_reports_match -- --ignored --nocapture
 ```
+
+## Our Labels and Azure AI Content Safety Ratings
+
+The service delegates content analysis to
+[Azure AI Content Safety](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/).
+Azure scores content across four categories: Hate, Sexual, Violence, and SelfHarm. Each category
+score may range from 0-6 in severity. The moderation service maps those ratings to the labels below.
+
+| Polycentric label | Azure category | Azure severity range |
+|---|---|---|
+| `hate` | Hate | 4–6 |
+| `self-harm` | SelfHarm | 4–6 |
+| `sexually-suggestive` | Sexual | 2–4 |
+| `sexually-explicit` | Sexual | 5–6 |
+| `violence` | Violence | 4–6 |
+
+### Azure categories
+Azure defines each category as follows:
+
+**Hate**: Content that attacks or uses discriminatory language with reference to a
+person or identity group based on race, ethnicity, nationality, gender identity and
+expression, sexual orientation, religion, personal appearance, disability status, or
+similar attributes. Includes harassment and bullying.
+
+**Sexual**: Language related to anatomical organs and genitals, romantic relationships
+and sexual acts, erotic or affectionate portrayals, nudity and pornography, prostitution,
+abuse, and child exploitation or grooming.
+
+**Violence**: Language related to physical actions intended to hurt, injure, damage, or
+kill someone or something; weapons, guns, and related entities; bullying, intimidation,
+terrorist and violent extremism, and stalking.
+
+**SelfHarm**: Language related to physical actions intended to purposely hurt, injure,
+damage one's body, or kill oneself; includes eating disorders and bullying.
+
+See [Harm categories in Azure AI Content Safety](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/concepts/harm-categories)
+for more details.

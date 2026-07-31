@@ -1,1 +1,1 @@
-export { default } from '@/src/features/settings/ModerationSettingsScreen';
+export { default } from '@/src/features/settings/ModerationSettingsSheet';

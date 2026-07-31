@@ -7,9 +7,9 @@ export type ModerationLevel = 'hide' | 'warn' | 'show';
 export interface ModerationPreferences {
   hate: ModerationLevel;
   selfHarm: ModerationLevel;
-  sexual: ModerationLevel;
-  porn: ModerationLevel;
-  graphicMedia: ModerationLevel;
+  sexuallySuggestive: ModerationLevel;
+  sexuallyExplicit: ModerationLevel;
+  violence: ModerationLevel;
 }
 
 export interface SettingsState {
@@ -34,9 +34,9 @@ export const useSettings = create<SettingsStore>()(
       moderation: {
         hate: 'warn',
         selfHarm: 'warn',
-        sexual: 'warn',
-        porn: 'warn',
-        graphicMedia: 'warn',
+        sexuallySuggestive: 'warn',
+        sexuallyExplicit: 'warn',
+        violence: 'warn',
       },
 
       setTheme: (theme) => set({ theme }),

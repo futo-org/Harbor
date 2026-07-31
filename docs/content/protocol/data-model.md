@@ -359,7 +359,7 @@ event's collection is 7 (`Labels`).
 message Labels {
   // Event being labeled
   EventKey event_key = 1;
-  // Label values applied, e.g. "sexual" or "hate".
+  // Label values applied, e.g. "sexually-suggestive" or "hate".
   repeated string label_values = 2;
 }
 ```
