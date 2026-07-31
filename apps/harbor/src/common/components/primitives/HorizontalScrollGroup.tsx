@@ -10,7 +10,7 @@ import {
   ZIndex,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type ComponentProps } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -60,14 +60,13 @@ type Side = 'left' | 'right';
 
 type HorizontalScrollGroupProps = {
   children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   /**
    * The background color sitting behind the group.
    * Used by the edge fade gradient.
    */
   surfaceColor?: string;
-};
+} & ComponentProps<typeof View>;
 
 /** Current scroll information that we mutate on update. */
 type Metrics = {
@@ -94,6 +93,7 @@ export function HorizontalScrollGroup({
   style,
   contentContainerStyle,
   surfaceColor,
+  ...props
 }: HorizontalScrollGroupProps) {
   const { theme } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
@@ -164,6 +164,7 @@ export function HorizontalScrollGroup({
 
   return (
     <View
+      {...props}
       style={[Atoms.relative, Atoms.overflow_hidden, style]}
       // Handle hover and coalesce `null` to `undefined` to make the type system happy.
       onPointerEnter={onHoverIn ?? undefined}

@@ -1,9 +1,9 @@
 import { Text } from '@/src/common/components';
-import { HorizontalScrollGroup } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
+import { Tabs } from '@/src/common/components/Tabs';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { FetchMode } from '@polycentric/react-native';
@@ -17,7 +17,7 @@ import {
   useState,
   type ReactElement,
 } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReactionRowSkeletonList } from './ReactionRowSkeleton';
 import usePostReactions, {
@@ -102,107 +102,13 @@ function deriveTabs(
   return tabs;
 }
 
-/**
- * Tab bar based off of `@/src/common/components/Tabs.tsx`, with a few differences:
- * - horizontally scrollable
- * - tabs are sized based on content
- * - content size doesn't change when a tab is selected
- */
-function ReactionTabs({
-  tabs,
-  selected,
-  onSelect,
-}: {
-  tabs: TabData[];
-  selected: TabData;
-  onSelect: (emoji: string | null) => void;
-}) {
-  const { theme } = useTheme();
-
-  return (
-    <HorizontalScrollGroup
-      style={[
-        Atoms.flex_grow_0,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-        },
-      ]}
-      contentContainerStyle={[Atoms.flex_row, Atoms.align_center, Atoms.px_lg]}
-    >
-      {tabs.map((tab) => {
-        const active = tab.emoji === selected.emoji;
-
-        return (
-          <Pressable
-            key={tab.emoji ?? 'all'}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={
-              tab.emoji === null ? 'All reactions' : `${tab.emoji} reactions`
-            }
-            onPress={() => onSelect(tab.emoji)}
-            style={({ hovered, pressed }) => [
-              Atoms.cursor_pointer,
-              (hovered || pressed) && {
-                backgroundColor: theme.palette.neutral_25,
-              },
-            ]}
-          >
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.align_center,
-                Atoms.justify_center,
-                Atoms.gap_sm,
-                Atoms.p_md,
-              ]}
-            >
-              {tab.emoji === null ? (
-                <Text
-                  variant="secondary"
-                  fontWeight="semibold"
-                  color={active ? 'neutral_900' : 'neutral_500'}
-                  selectable={false}
-                >
-                  {tab.countEstimate > 0 ? `All • ${tab.countEstimate}` : 'All'}
-                </Text>
-              ) : (
-                <>
-                  <Text style={{ fontSize: 18 }} selectable={false}>
-                    {tab.emoji}
-                  </Text>
-                  <Text
-                    variant="secondary"
-                    fontWeight="semibold"
-                    color={active ? 'neutral_900' : 'neutral_500'}
-                    selectable={false}
-                  >
-                    {tab.countEstimate}
-                  </Text>
-                </>
-              )}
-              {active && (
-                <View
-                  style={[
-                    Atoms.absolute,
-                    Atoms.self_center,
-                    Atoms.w_full,
-                    Atoms.rounded_full,
-                    {
-                      height: 4,
-                      bottom: 0,
-                      backgroundColor: theme.palette.primary_500,
-                    },
-                  ]}
-                />
-              )}
-            </View>
-          </Pressable>
-        );
-      })}
-    </HorizontalScrollGroup>
-  );
+/** Render the emoji and count for a tab as a string to display on the tab. */
+function tabLabel(tab: TabData): string {
+  if (tab.emoji === null) {
+    return tab.countEstimate > 0 ? `All • ${tab.countEstimate}` : 'All';
+  } else {
+    return `${tab.emoji}  ${tab.countEstimate}`;
+  }
 }
 
 /**
@@ -289,11 +195,20 @@ export default function ReactionDetailsSheet({
       header={<Sheet.Header title="Reactions" onClose={onClose} />}
     >
       <Sheet.Content style={{ padding: 0 }}>
-        <ReactionTabs
-          tabs={tabData}
-          selected={selected}
-          onSelect={handleSelect}
-        />
+        <Tabs expand={false}>
+          {tabData.map((tab) => (
+            <Tabs.Tab
+              key={tab.emoji ?? 'all'}
+              active={tab.emoji === selected.emoji}
+              accessibilityLabel={
+                tab.emoji === null ? 'All reactions' : `${tab.emoji} reactions`
+              }
+              onPress={() => handleSelect(tab.emoji)}
+            >
+              {tabLabel(tab)}
+            </Tabs.Tab>
+          ))}
+        </Tabs>
         <View
           // Maintain a reasonable size across tabs on all platforms.
           style={isWeb ? { height: 'clamp(360px, 60vh, 560px)' } : Atoms.flex_1}
