@@ -6,12 +6,12 @@ import {
 } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
   Pressable,
-  StyleSheet,
+  type TextInput as RNTextInput,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -22,7 +22,6 @@ import { singleImageAspectRatio } from './utils/attachmentLayout';
 import type { useComposer } from './hooks/useComposer';
 import { isWeb } from '@/src/common/util/platform';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ATTACHMENT_GAP = Spacing.sm;
 
@@ -75,6 +74,29 @@ export function ComposerFields({
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
+
+  // The text field is deliberately UNCONTROLLED: round-tripping every
+  // keystroke through a `value` prop makes Fabric re-apply the text natively,
+  // clobbering the cursor position whenever it isn't at the very end
+  // (Android, upstream: https://github.com/facebook/react-native/issues/34276).
+  // It is seeded once at mount (a `defaultValue` that keeps updating is
+  // forwarded to the native `text` prop each render, same as `value`) and the
+  // store is synced via `onChangeText`.
+  const inputRef = useRef<RNTextInput>(null);
+  const [initialText] = useState(text);
+  // Last text the field is known to contain (the seed, then user input).
+  const fieldTextRef = useRef(text);
+
+  useEffect(() => {
+    if (text === fieldTextRef.current) return;
+    // The draft changed outside the input. Only the reset to empty (on
+    // close/post) does this today; if the composer ever gains non-empty
+    // programmatic edits (e.g. draft prefill), remount the field with a new
+    // `key` instead of passing text back in.
+    fieldTextRef.current = text;
+    if (text === '') inputRef.current?.clear();
+  }, [text]);
+
   return (
     <ScrollView
       style={[Atoms.flex_1]}
@@ -119,11 +141,15 @@ export function ComposerFields({
             // `autoFocus` only fires on mount, so re-key when it flips
             // (false → true after the sheet presents) to actually focus.
             key={autoFocus ? 'autofocus' : 'no-autofocus'}
+            ref={inputRef}
             variant="plain"
             placeholder={placeholder}
             autoFocus={autoFocus}
-            value={text}
-            onChangeText={setText}
+            defaultValue={initialText}
+            onChangeText={(next) => {
+              fieldTextRef.current = next;
+              setText(next);
+            }}
             // disabled={submitting}
             maxLength={2000}
             numberOfLines={isWeb ? 1 : undefined}

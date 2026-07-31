@@ -1,19 +1,11 @@
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
-  useState,
 } from 'react';
-import {
-  Platform,
-  type TextInput as RNTextInput,
-  type TextInputContentSizeChangeEventData,
-  type NativeSyntheticEvent,
-  TextInputContentSizeChangeEvent,
-} from 'react-native';
+import { Platform, type TextInput as RNTextInput } from 'react-native';
 import { TextInput, type TextInputProps } from './primitives/TextInput';
 
 export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
@@ -25,18 +17,24 @@ export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
  * Multiline text input that auto-grows and auto-shrinks with content.
  */
 export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
-  ({ minHeight = 20, style, value, scrollEnabled, ...props }, ref) => {
+  (
+    { minHeight = 20, style, value, scrollEnabled, onChangeText, ...props },
+    ref,
+  ) => {
     const innerRef = useRef<RNTextInput>(null);
     useImperativeHandle(ref, () => innerRef.current as RNTextInput);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever `value` changes
-    useLayoutEffect(() => {
+    const autoGrow = useCallback(() => {
       if (Platform.OS !== 'web') return;
       const node = innerRef.current as unknown as HTMLTextAreaElement | null;
       if (!node?.style) return;
       node.style.height = 'auto';
       node.style.height = `${Math.max(minHeight, node.scrollHeight)}px`;
-    }, [value, minHeight]);
+    }, [minHeight]);
+
+    // Controlled usage: re-measure whenever `value` changes.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: `value` retriggers the measure
+    useLayoutEffect(autoGrow, [value, autoGrow]);
 
     return (
       <TextInput
@@ -44,6 +42,11 @@ export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
         multiline
         textAlignVertical="top"
         value={value}
+        // Uncontrolled usage: `value` never changes, so measure per keystroke.
+        onChangeText={(next) => {
+          onChangeText?.(next);
+          autoGrow();
+        }}
         style={[
           { minHeight },
           Platform.OS === 'web'
