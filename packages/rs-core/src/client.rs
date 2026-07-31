@@ -93,27 +93,22 @@ impl PolycentricClient {
         collection: i32,
         sequence: u64,
     ) -> Option<EventBundle> {
-        self.event_store
-            .by_identity_and_collection(identity, collection)
-            .filter(|(k, _)| k.sequence == sequence)
-            .find_map(|(k, signed_event)| {
-                let proofs = self.event_proofs_store.get(k);
-                self.validate_event(signed_event, proofs).ok()?;
-                let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
-                let content_bytes = event
-                    .content_digest
-                    .as_ref()
-                    .and_then(|d| self.content_store.get(d))
-                    .map(|b| b.to_vec());
-                let meta = self.meta_store.get(k).cloned();
-                Some(EventBundle {
-                    signed_event: Some(signed_event.clone()),
-                    serialized_content: content_bytes
-                        .map(|c| SerializedContent { content_bytes: c }),
-                    event_proofs: proofs.to_vec(),
-                    meta,
-                })
-            })
+        let candidates = self.list_valid_events(identity, collection).ok()?;
+
+        for bundle in candidates {
+            let bundle_sequence = bundle
+                .signed_event
+                .as_ref()
+                .and_then(|signed_event| Event::decode(signed_event.event_bytes.as_slice()).ok())
+                .and_then(|event| event.key)
+                .map(|key| key.sequence);
+
+            if bundle_sequence == Some(sequence) {
+                return Some(bundle);
+            }
+        }
+
+        None
     }
 
     pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {

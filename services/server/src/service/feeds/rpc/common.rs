@@ -206,14 +206,7 @@ pub async fn hydrate(
         set.into_iter().collect()
     };
 
-    // Returns valid (as far as the server is concerned) tombstones related to queried events
-    let tombstones_fut = async {
-        let raw =
-            tombstone::list_tombstones_for_event_keys(&ctx.db, &display_keys)
-                .await
-                .map_err(map_db_err)?;
-        tombstone::validate_tombstones(ctx, raw).await
-    };
+    let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
     let identity_events_fut = list_identity_events(ctx, identities.clone());
     let profile_events_fut = list_profile_events(ctx, identities);
     let referenced_fut = async {

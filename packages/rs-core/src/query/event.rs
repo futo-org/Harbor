@@ -1,7 +1,7 @@
 pub mod key;
 pub mod merge;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2;
 use polycentric_common::models::protos_v2::{
@@ -10,6 +10,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::client::PolycentricClient;
 use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{EventBundleResponse, merge_bundle_responses};
 use crate::query::{
@@ -128,41 +129,6 @@ pub fn list_events(
     ))
 }
 
-/// Merge function for `get_event`. Each per-server slot stores the
-/// bytes of a single `EventBundle` (or empty when that server had
-/// nothing). Picks the first non-empty value whose bundle validates;
-/// returns empty bytes if none do.
-fn merge_event(
-    values: &[Vec<u8>],
-    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
-) -> Vec<u8> {
-    let c = client.lock().unwrap();
-    let mut first_error: Option<String> = None;
-    for v in values {
-        if v.is_empty() {
-            continue;
-        }
-        let Ok(bundle) = EventBundle::decode(v.as_slice()) else {
-            continue;
-        };
-        let Some(signed) = bundle.signed_event.as_ref() else {
-            continue;
-        };
-        match c.validate_event(signed, &bundle.event_proofs) {
-            Ok(()) => return v.clone(),
-            Err(e) => {
-                first_error.get_or_insert_with(|| format!("{e:?}"));
-            }
-        }
-    }
-    if let Some(reason) = first_error {
-        crate::logging::log_debug(|| {
-            format!("[merge_event] no valid bundle; first reason: {reason}")
-        });
-    }
-    Vec::new()
-}
-
 /// Return a single event based on its key (or partial key)
 pub fn get_event(
     query_client: &QueryClient<Vec<u8>>,
@@ -199,7 +165,7 @@ pub fn get_event(
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
             collection: Some(collection),
-            identity: Some(identity),
+            identity: Some(identity.clone()),
             signed_by: None,
             sequence_gt: Some(sequence_i64.saturating_sub(1)),
             sequence_lt: Some(sequence_i64.saturating_add(1)),
@@ -210,33 +176,60 @@ pub fn get_event(
 
     let client = query_client.client().clone();
 
+    // The query function will copy event bundles and hints into the local store,
+    // so we can rely on the local store to handle tombstones properly.
+    let merge_fn = {
+        let identity = identity.clone();
+
+        move |_values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>| {
+            let bundle = client
+                .clone()
+                .lock()
+                .unwrap()
+                .find_event_bundle_by_sequence(&identity, collection, sequence);
+
+            bundle
+                .as_ref()
+                .map(EventBundle::encode_to_vec)
+                .unwrap_or_default()
+        }
+    };
+
     let query_fn = move |server_url: String| {
         let request = request.clone();
+        let identity = identity.clone();
         let client = client.clone();
+
         async move {
             let response = EventSyncServiceClient::new(channel(&server_url).await?)
                 .list_events(request)
                 .await
                 .map_err(|e| format!("get_event [{server_url}]: {e}"))?
                 .into_inner();
-            let bytes = response
-                .event_bundles
-                .first()
-                .map(EventBundle::encode_to_vec)
-                .unwrap_or_default();
+
             let hint_bundles: Vec<_> = response
                 .event_hints
                 .into_iter()
                 .filter_map(|h| h.event_bundle)
                 .collect();
-            {
+
+            // Copy events and content to local stores so that we can rely on
+            // the client to handle tombstone checking logic
+            let bundle = {
                 let mut c = client.lock().unwrap();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
-            }
+                c.find_event_bundle_by_sequence(&identity, collection, sequence)
+            };
+
+            let bytes = bundle
+                .as_ref()
+                .map(EventBundle::encode_to_vec)
+                .unwrap_or_default();
+
             Ok(bytes)
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, merge_event, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_fn, opts))
 }
