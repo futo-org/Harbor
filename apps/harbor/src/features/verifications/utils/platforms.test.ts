@@ -1,4 +1,3 @@
-jest.mock('@expo/vector-icons', () => ({ FontAwesome6: () => null }));
 jest.mock('@/src/common/theme', () => ({}));
 
 import { isProfileUrl } from './platforms';
