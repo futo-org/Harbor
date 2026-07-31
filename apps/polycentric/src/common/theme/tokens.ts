@@ -94,6 +94,9 @@ const atomStyles = {
   absolute: {
     position: 'absolute',
   },
+  fixed: {
+    position: 'fixed',
+  } as unknown as ViewStyle,
 
   inset_0: {
     top: 0,

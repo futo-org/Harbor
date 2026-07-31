@@ -34,6 +34,7 @@
     "@rn-primitives/radio-group": "^1.4.0",
     "@rn-primitives/toast": "^1.4.0",
     "@shopify/flash-list": "^2.3.2",
+    "@tanstack/react-virtual": "^3.14.9",
     "@types/react-native-web": "^0.19.2",
     "better-sqlite3": "^12.10.0",
     "expo": "~57.0.4",

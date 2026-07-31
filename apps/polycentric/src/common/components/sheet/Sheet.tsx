@@ -21,7 +21,6 @@ import {
 } from 'react';
 import {
   Pressable,
-  StyleSheet,
   useWindowDimensions,
   View,
   type ViewProps,
@@ -50,6 +49,8 @@ type CommonProps = {
    * Set to `false` to allow interacting with the screen behind instead. */
   dimmed?: boolean;
   scrollable?: boolean;
+  /** Web only: overrides the modal card's default 600px max width. */
+  maxWidth?: number;
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
@@ -280,7 +281,7 @@ function NativeSheet({
       header={props.header}
       footer={props.footer}
     >
-      <View style={[styles.sheetBody, { backgroundColor: surface }]}>
+      <View style={[Atoms.w_full, Atoms.flex_1, { backgroundColor: surface }]}>
         {children}
       </View>
     </TrueSheet>
@@ -321,6 +322,7 @@ function WebModal({
   onClose,
   children,
   dismissible = true,
+  maxWidth,
   navigation,
   header,
   footer,
@@ -365,18 +367,40 @@ function WebModal({
 
   return (
     <Reanimated.View
-      style={[styles.webOverlay, animatedStyle]}
+      style={[
+        Atoms.fixed,
+        Atoms.inset_0,
+        // Sit above expo-router's transparentModal drawer, which mounts to
+        // document.body via vaul and would otherwise eat backdrop clicks.
+        { padding: SHEET_OVERLAY_PADDING, zIndex: ZIndex.modal },
+        animatedStyle,
+      ]}
       pointerEvents="box-none"
     >
       <Pressable
         accessibilityLabel="Dismiss"
-        style={styles.webBackdrop}
+        style={[
+          Atoms.fixed,
+          Atoms.inset_0,
+          { backgroundColor: 'rgba(0,0,0,0.45)' },
+        ]}
         onPress={dismissible ? close : undefined}
       />
       <View
         style={[
-          styles.webCard,
-          compact && styles.webCardCompact,
+          Atoms.w_full,
+          // Content-sized up to the viewport; taller content scrolls inside
+          // the card body so the modal itself never exceeds the screen.
+          Atoms.max_h_full,
+          Atoms.overflow_hidden,
+          Atoms.flex_col,
+          { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
+          compact &&
+            ([
+              Atoms.max_w_full,
+              { marginVertical: 0, minHeight: '100%' },
+            ] as const),
+          maxWidth !== undefined && { maxWidth },
           {
             backgroundColor: theme.palette.neutral_0,
             borderRadius: BorderRadius.xl,
@@ -384,55 +408,15 @@ function WebModal({
         ]}
       >
         {header}
-        {children}
+        {/* The scroll container between the pinned header and footer. A
+            scroll container's automatic minimum size is 0, so it shrinks to
+            the space the card has left instead of forcing the card past its
+            max height. */}
+        <View style={[Atoms.flex_shrink_1, Atoms.overflow_auto]}>
+          {children}
+        </View>
         {footer}
       </View>
     </Reanimated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  sheetBody: {
-    width: '100%',
-    flex: 1,
-  },
-  webOverlay: {
-    // RN-Web honors `position: 'fixed'`; this branch is web-only at render time.
-    position: 'fixed' as 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // The overlay itself scrolls so the whole modal (card + content) grows
-    // and scrolls as one. The card is centered via `margin: auto` rather than
-    // `justifyContent` — auto margins collapse to 0 when the card is taller
-    // than the viewport, so the top never gets clipped out of reach.
-    overflowY: 'auto' as 'scroll',
-    padding: SHEET_OVERLAY_PADDING,
-    // Sit above expo-router's transparentModal drawer, which mounts to
-    // document.body via vaul and would otherwise eat backdrop clicks.
-    zIndex: ZIndex.modal,
-  },
-  webBackdrop: {
-    // Fixed so it keeps covering the viewport while the overlay scrolls.
-    position: 'fixed' as 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  webCard: {
-    width: '100%',
-    maxWidth: 600,
-    marginVertical: 'auto',
-    marginHorizontal: 'auto',
-    overflow: 'hidden',
-    flexDirection: 'column',
-  },
-  webCardCompact: {
-    maxWidth: '100%',
-    marginVertical: 0,
-    minHeight: '100%',
-  },
-});
