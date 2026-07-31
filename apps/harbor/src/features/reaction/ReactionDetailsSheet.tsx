@@ -151,7 +151,11 @@ export default function ReactionDetailsSheet({
           onClose();
           router.push(Routes.tabs.profile(item.identity));
         }}
-        trailing={<Text style={{ fontSize: 18 }}>{item.emoji}</Text>}
+        trailing={
+          <Text fontSize="lg" lineHeight="lg">
+            {item.emoji}
+          </Text>
+        }
       />
     ),
     [onClose],
