@@ -13,7 +13,7 @@ class NoActiveKeyPairException : PolycentricException("No active key pair")
 class NoActiveIdentityException : PolycentricException("No active identity")
 
 class ServerAlreadyAddedException :
-    PolycentricException("Server is already on the identity document")
+    PolycentricException("Server already added")
 
 class IdentityNotFoundException(identityKey: String) :
     PolycentricException("Identity $identityKey not found")

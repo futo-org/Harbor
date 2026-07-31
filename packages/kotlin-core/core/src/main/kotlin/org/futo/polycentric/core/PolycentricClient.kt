@@ -214,7 +214,7 @@ class PolycentricClient(
             sequence
         } else {
             core.getIdentitySequence(identity, signedByBytes)
-                ?: error("Current keypair has no identity event for the active identity (broken pairing?)")
+                ?: error("Cannot build event: current keypair has no identity event for the active identity (broken pairing?)")
         }
 
         val contentBytes = Content.ADAPTER.encode(content)
@@ -259,7 +259,7 @@ class PolycentricClient(
      * to sign (js-core `signEvent`).
      */
     suspend fun signEvent(event: Event): SignedEvent {
-        val keyPair = requireNotNull(currentKeyPair) { "No keypair set" }
+        val keyPair = requireNotNull(currentKeyPair) { "No keypair" }
         val eventBytes = Event.ADAPTER.encode(event)
 
         val signedBytes = core.signEvent(
@@ -438,6 +438,17 @@ class PolycentricClient(
         trySaveContent(event, bundle, blobs)
 
         if (events.getByEventKey(key) != null) return false
+
+        // js-core validates these inside EventStore.save; with no store
+        // layer here, the same rejection guards the one save site that
+        // takes untrusted (server-supplied) events.
+        if (signed.signature.size == 0) {
+            throw DatabaseException("SignedEvent must have a valid signature")
+        }
+        if (signed.event_bytes.size == 0) {
+            throw DatabaseException("SignedEvent must have valid event data")
+        }
+
         events.save(signed)
         true
     }.getOrElse { e ->
@@ -547,6 +558,7 @@ class PolycentricClient(
 
         for (server in targets) {
             runCatching { core.registerPushNotifications(server, signedMessageBytes) }
+                .onFailure { log.warning("registerPushNotifications failed for $server: $it") }
         }
     }
 
@@ -595,6 +607,7 @@ class PolycentricClient(
         )
         for (server in targets) {
             runCatching { core.uploadBlob(server, requestBytes) }
+                .onFailure { log.warning("uploadBlob failed for $server: $it") }
         }
     }
 

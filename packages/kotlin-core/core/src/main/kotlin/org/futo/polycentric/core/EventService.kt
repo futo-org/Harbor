@@ -38,7 +38,10 @@ class ContentCreatedPayload(
  *
  * Stateful signals (client state, hydration, progress) are [StateFlow]s
  * so late subscribers see the current value; one-shot signals (content
- * created, key pair changed, errors) are [SharedFlow]s.
+ * created, key pair changed, errors) are [SharedFlow]s whose emitters
+ * suspend when a slow collector's buffer is full — like eventemitter3's
+ * synchronous delivery, an emission is never silently dropped (with no
+ * collectors it is discarded, also like an emitter with no listeners).
  */
 class EventService {
     private val _state = MutableStateFlow(ClientState.UNINITIALIZED)
@@ -71,15 +74,15 @@ class EventService {
         _hydrationStatus.value = status
     }
 
-    internal fun emitKeyPairChanged(keyPair: StoredKeyPair?) {
-        _keyPairChanged.tryEmit(keyPair)
+    internal suspend fun emitKeyPairChanged(keyPair: StoredKeyPair?) {
+        _keyPairChanged.emit(keyPair)
     }
 
-    internal fun emitContentCreated(payload: ContentCreatedPayload) {
-        _contentCreated.tryEmit(payload)
+    internal suspend fun emitContentCreated(payload: ContentCreatedPayload) {
+        _contentCreated.emit(payload)
     }
 
-    internal fun emitError(error: Throwable) {
-        _errors.tryEmit(error)
+    internal suspend fun emitError(error: Throwable) {
+        _errors.emit(error)
     }
 }
