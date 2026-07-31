@@ -1,16 +1,23 @@
 package org.futo.polycentric.core
 
 import java.security.MessageDigest
+import java.util.logging.Logger
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString.Companion.toByteString
+import org.futo.polycentric.core.crypto.ServerJwt
 import org.futo.polycentric.core.platform.ICryptoManager
 import org.futo.polycentric.core.platform.IFileStoreDriver
 import org.futo.polycentric.core.platform.IStorageDriver
 import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.ffi.AuthToken
+import org.futo.polycentric.ffi.AuthTokenProvider
 import org.futo.polycentric.ffi.ContentEntry
 import org.futo.polycentric.ffi.ListEventsArgs
 import org.futo.polycentric.ffi.PolycentricCore
@@ -38,9 +45,6 @@ import polycentric.v2.VectorClock
  * vector clocks, validation, the networked query engine, and gRPC
  * transport (native tonic + TLS — no Kotlin transport code needed).
  * This class owns key custody, persistent storage, and control flow.
- *
- * Scaffold status: FFI plumbing verified against generated bindings;
- * bodies marked TODO need porting from the referenced js-core code.
  */
 class PolycentricClient(
     val core: PolycentricCore,
@@ -49,13 +53,16 @@ class PolycentricClient(
     seedServers: List<String> = emptyList(),
     val crypto: ICryptoManager = org.futo.polycentric.core.crypto.Ed25519CryptoManager(),
 ) {
+    @Volatile
     var currentKeyPair: StoredKeyPair? = null
         private set
 
     /** Identity key (hex sha256 of genesis Identity doc) the keypair acts as. */
+    @Volatile
     var activeIdentityKey: String? = null
         private set
 
+    @Volatile
     var servers: List<String> = seedServers.ifEmpty { listOf("http://localhost:3000") }
         private set
 
@@ -75,13 +82,50 @@ class PolycentricClient(
      */
     val eventService = EventService()
 
+    @Volatile
     var error: Throwable? = null
         private set
 
     val isReady: Boolean
         get() = eventService.state.value == ClientState.READY
 
+    /** The active device public key as a proto (js-core `currentSystem`). */
+    val currentSystem: PublicKey
+        get() = requireNotNull(currentKeyPair) { "No keypair set" }.toPublicKeyProto()
+
     private val http = OkHttpClient()
+
+    init {
+        // Authenticate every outgoing gRPC request as the active identity.
+        // The core caches each server's token and only calls back when it
+        // expires (js-core parity: the PolycentricClient constructor).
+        core.setAuthTokenProvider(object : AuthTokenProvider {
+            override suspend fun authToken(serverUrl: String): AuthToken? {
+                val keyPair = currentKeyPair ?: return null
+                val identity = activeIdentityKey ?: return null
+                val nowSeconds = System.currentTimeMillis() / 1000
+                return AuthToken(
+                    token = ServerJwt.create(crypto, keyPair, iss = identity, aud = serverUrl, nowSeconds = nowSeconds),
+                    expiresAt = (nowSeconds + ServerJwt.DEFAULT_EXPIRY_SECONDS).toULong(),
+                )
+            }
+        })
+    }
+
+    companion object {
+        private val log = Logger.getLogger("PolycentricClient")
+
+        /** Construct and initialize in one step (js-core `PolycentricClient.create`). */
+        suspend fun create(
+            core: PolycentricCore,
+            storageDriver: IStorageDriver,
+            filestore: IFileStoreDriver,
+            seedServers: List<String> = emptyList(),
+            crypto: ICryptoManager = org.futo.polycentric.core.crypto.Ed25519CryptoManager(),
+        ): PolycentricClient =
+            PolycentricClient(core, storageDriver, filestore, seedServers, crypto)
+                .also { it.initialize() }
+    }
 
     // ── Lifecycle (js-core: initialize) ────────────────────────────────
 
@@ -118,7 +162,11 @@ class PolycentricClient(
             eventService.emitStateChanged(ClientState.READY)
         } catch (e: Throwable) {
             error = e
-            eventService.emitHydrationStatus(HydrationStatus.FAILED)
+            // Only report a hydration failure when hydration is what failed;
+            // later steps (keypair restore, server refresh) leave it COMPLETED.
+            if (eventService.hydrationStatus.value == HydrationStatus.IN_PROGRESS) {
+                eventService.emitHydrationStatus(HydrationStatus.FAILED)
+            }
             eventService.emitStateChanged(ClientState.ERROR)
             eventService.emitError(e)
             throw e
@@ -257,7 +305,13 @@ class PolycentricClient(
         identity: String? = null,
         collection: Int? = null,
         limit: Int? = null,
+        signedBy: PublicKey? = null,
+        /** Exclusive lower bound on EventKey.sequence. */
+        sequenceGt: Long? = null,
+        /** Exclusive upper bound on EventKey.sequence. */
+        sequenceLt: Long? = null,
         heads: List<EventKey> = emptyList(),
+        queryKey: List<String>? = null,
     ): List<EventBundle> {
         val bytes = core.awaitQuery(
             Query.ListEvents(
@@ -265,12 +319,13 @@ class PolycentricClient(
                     size = limit,
                     identity = identity,
                     collection = collection,
-                    signedBy = null,
-                    sequenceGt = null,
-                    sequenceLt = null,
+                    signedBy = signedBy?.toFfi(),
+                    sequenceGt = sequenceGt,
+                    sequenceLt = sequenceLt,
                     heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
                 ),
             ),
+            queryKey = queryKey,
         ) ?: return emptyList()
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
@@ -293,11 +348,21 @@ class PolycentricClient(
     suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int = coroutineScope {
         val identity = activeIdentityKey ?: return@coroutineScope 0
 
+        // A pull failure must not cancel in-flight pushes (js-core joins
+        // both with allSettled): capture it and rethrow after the pushes.
         val pullTask = async {
-            when (strategy) {
-                SyncStrategy.FULL, SyncStrategy.FULL_PULL -> pull(partial = false)
-                SyncStrategy.PARTIAL, SyncStrategy.PARTIAL_PULL -> pull(partial = true)
-                else -> 0
+            try {
+                Result.success(
+                    when (strategy) {
+                        SyncStrategy.FULL, SyncStrategy.FULL_PULL -> pull(partial = false)
+                        SyncStrategy.PARTIAL, SyncStrategy.PARTIAL_PULL -> pull(partial = true)
+                        else -> 0
+                    },
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Result.failure(e)
             }
         }
 
@@ -311,12 +376,15 @@ class PolycentricClient(
                         val responseBytes = core.pushLocalEvents(identity, server, partialPush)
                             ?: return@async
                         val response = PutEventsResponse.ADAPTER.decode(responseBytes)
+                        for (pushError in response.errors) {
+                            log.warning("Error from event push: $pushError")
+                        }
                         for (blob in response.requested_blobs) {
                             val digest = blob.digest ?: continue
                             val body = filestore.get(digest) ?: continue
                             uploadBlob(blob, body, listOf(server))
                         }
-                    }.onFailure { /* best-effort per server, mirror js-core logging */ }
+                    }.onFailure { log.warning("Sync failed for $server: $it") }
                 }
             }
         } else {
@@ -324,7 +392,7 @@ class PolycentricClient(
         }
 
         pushTasks.awaitAll()
-        pullTask.await()
+        pullTask.await().getOrThrow()
     }
 
     private suspend fun pull(partial: Boolean): Int {
@@ -372,7 +440,10 @@ class PolycentricClient(
         if (events.getByEventKey(key) != null) return false
         events.save(signed)
         true
-    }.getOrDefault(false)
+    }.getOrElse { e ->
+        log.warning("Pull event: $e")
+        false
+    }
 
     /**
      * Absorb errors and return true only when the content is new and
@@ -397,7 +468,10 @@ class PolycentricClient(
         if (contents.get(digest) != null) return false
         contents.save(digest, contentBytes.toByteArray())
         true
-    }.getOrDefault(false)
+    }.getOrElse { e ->
+        log.warning("Pull event content: $e")
+        false
+    }
 
     // ── Blobs (js-core: commitBlob / fetchBlobBytes / uploadBlob) ──────
 
@@ -476,6 +550,23 @@ class PolycentricClient(
         }
     }
 
+    /**
+     * Ban or unban `targetIdentity` on `server`
+     * (`IdentityService.SetBanStatus`). The active identity must be a
+     * moderator on `server`.
+     */
+    suspend fun setBanStatus(server: String, targetIdentity: String, banned: Boolean) {
+        core.setBanStatus(
+            server,
+            polycentric.v2.SetBanStatusRequest.ADAPTER.encode(
+                polycentric.v2.SetBanStatusRequest(
+                    target_identity = targetIdentity,
+                    banned = banned,
+                ),
+            ),
+        )
+    }
+
     suspend fun commitBlob(bytes: ByteArray, mimeType: String): Blob {
         val digest = ContentDigest(
             type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
@@ -486,15 +577,16 @@ class PolycentricClient(
     }
 
     /** Plain-HTTP blob fetch with per-server fallback. */
-    fun fetchBlobBytes(digest: ContentDigest): ByteArray? {
+    suspend fun fetchBlobBytes(digest: ContentDigest): ByteArray? = withContext(Dispatchers.IO) {
         for (url in blobUrls(digest)) {
-            runCatching {
+            val bytes = runCatching {
                 http.newCall(Request.Builder().url(url).build()).execute().use { res ->
-                    if (res.isSuccessful) return res.body?.bytes()
+                    if (res.isSuccessful) res.body?.bytes() else null
                 }
-            }
+            }.getOrNull()
+            if (bytes != null) return@withContext bytes
         }
-        return null
+        null
     }
 
     suspend fun uploadBlob(blob: Blob, body: ByteArray, targets: List<String> = servers) {
@@ -524,6 +616,8 @@ class PolycentricClient(
 
     suspend fun setActiveIdentityKey(identityKey: String?) {
         activeIdentityKey = identityKey
+        // Tokens minted for the previous identity must not be reused.
+        core.clearAuthTokens()
         currentKeyPair?.let {
             storageDriver.saveActiveIdentityKey(it.publicKey, identityKey)
         }

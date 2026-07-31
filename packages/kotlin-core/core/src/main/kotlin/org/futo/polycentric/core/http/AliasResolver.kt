@@ -14,6 +14,8 @@ import org.json.JSONObject
  */
 object AliasResolver {
 
+    private val log = java.util.logging.Logger.getLogger("AliasResolver")
+
     /** Give up on a slow/unresponsive domain rather than hang the resolver. */
     private const val RESOLVE_TIMEOUT_MS = 10_000L
 
@@ -103,6 +105,10 @@ object AliasResolver {
                 JSONObject(body).optJSONObject("names")?.optString(parsed.local, "")
                     ?.takeIf { it.isNotEmpty() }
             }
+        }.onFailure {
+            // Network error / timeout / unparseable body: surface for
+            // debugging rather than swallowing silently (js-core parity).
+            log.warning("alias lookup failed for ${parsed.acct}: $it")
         }.getOrNull()
 
         identity?.takeIf { isIdentityKey(it) }

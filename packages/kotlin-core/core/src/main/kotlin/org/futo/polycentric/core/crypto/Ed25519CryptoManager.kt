@@ -6,9 +6,15 @@ import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
+import org.futo.polycentric.core.InvalidKeyLengthException
+import org.futo.polycentric.core.InvalidSignatureException
 import org.futo.polycentric.core.KeyTypes
 import org.futo.polycentric.core.platform.ICryptoManager
 import org.futo.polycentric.core.platform.StoredKeyPair
+
+private const val ED25519_PRIVATE_KEY_LENGTH = 32
+private const val ED25519_PUBLIC_KEY_LENGTH = 32
+private const val ED25519_SIGNATURE_LENGTH = 64
 
 /**
  * Ed25519 via BouncyCastle, mirroring js-core's @noble/curves CryptoManager.
@@ -33,8 +39,23 @@ class Ed25519CryptoManager : ICryptoManager {
         )
     }
 
+    override fun derivePublicKey(privateKey: ByteArray, keyType: Int): ByteArray {
+        require(keyType == KeyTypes.ED25519) { "Unsupported key type: $keyType" }
+        if (privateKey.size != ED25519_PRIVATE_KEY_LENGTH) {
+            throw InvalidKeyLengthException(
+                "Invalid private key length. Expected $ED25519_PRIVATE_KEY_LENGTH bytes, got ${privateKey.size}.",
+            )
+        }
+        return Ed25519PrivateKeyParameters(privateKey, 0).generatePublicKey().encoded
+    }
+
     override suspend fun sign(privateKey: ByteArray, message: ByteArray, keyType: Int): ByteArray {
         require(keyType == KeyTypes.ED25519) { "Unsupported key type: $keyType" }
+        if (privateKey.size != ED25519_PRIVATE_KEY_LENGTH) {
+            throw InvalidKeyLengthException(
+                "Invalid private key length for signing. Expected $ED25519_PRIVATE_KEY_LENGTH bytes, got ${privateKey.size}.",
+            )
+        }
         val signer = Ed25519Signer()
         signer.init(true, Ed25519PrivateKeyParameters(privateKey, 0))
         signer.update(message, 0, message.size)
@@ -43,14 +64,26 @@ class Ed25519CryptoManager : ICryptoManager {
 
     override fun verify(
         publicKey: ByteArray,
-        signature: ByteArray,
         message: ByteArray,
+        signature: ByteArray,
         keyType: Int,
     ): Boolean {
         require(keyType == KeyTypes.ED25519) { "Unsupported key type: $keyType" }
+        if (signature.size != ED25519_SIGNATURE_LENGTH) {
+            throw InvalidSignatureException(
+                "Invalid signature length. Expected $ED25519_SIGNATURE_LENGTH bytes, got ${signature.size}.",
+            )
+        }
+        if (publicKey.size != ED25519_PUBLIC_KEY_LENGTH) {
+            throw InvalidKeyLengthException(
+                "Invalid public key length for verification. Expected $ED25519_PUBLIC_KEY_LENGTH bytes, got ${publicKey.size}.",
+            )
+        }
         val verifier = Ed25519Signer()
         verifier.init(false, Ed25519PublicKeyParameters(publicKey, 0))
         verifier.update(message, 0, message.size)
         return verifier.verifySignature(signature)
     }
+
+    override fun getSupportedKeyTypes(): List<Int> = listOf(KeyTypes.ED25519)
 }

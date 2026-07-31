@@ -6,6 +6,9 @@ import org.futo.polycentric.ffi.GetFollowingFeedArgs
 import org.futo.polycentric.ffi.GetIdentityFeedArgs
 import org.futo.polycentric.ffi.GetPostThreadArgs
 import org.futo.polycentric.ffi.GetProfileArgs
+import org.futo.polycentric.ffi.IsBannedArgs
+import org.futo.polycentric.ffi.IsModeratorArgs
+import org.futo.polycentric.ffi.ListBansArgs
 import org.futo.polycentric.ffi.ListFollowersArgs
 import org.futo.polycentric.ffi.ListFollowingArgs
 import org.futo.polycentric.ffi.ListNotificationsArgs
@@ -14,11 +17,13 @@ import org.futo.polycentric.ffi.ListVerificationClaimsArgs
 import org.futo.polycentric.ffi.ListVerificationTargetsArgs
 import org.futo.polycentric.ffi.ListVerificationVerifiesArgs
 import org.futo.polycentric.ffi.Query
+import org.futo.polycentric.ffi.QueryOpts
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
 import polycentric.v2.GetFeedResponse
 import polycentric.v2.GetPostThreadResponse
 import polycentric.v2.GetProfileResponse
+import polycentric.v2.ListBansResponse
 import polycentric.v2.ListFollowsResponse
 import polycentric.v2.ListNotificationsResponse
 import polycentric.v2.ListTargetedVerificationClaimsResponse
@@ -27,13 +32,13 @@ import polycentric.v2.ListVerificationTargetsResponse
 import polycentric.v2.ListVerificationVerifiesResponse
 
 /**
- * Typed one-shot wrappers for every core `Query` variant (js-core apps
- * call `core.fetchQuery` with these directly; here each gets a method).
- * All fan out over the configured servers and resolve on the first
- * `Success` status via [awaitQuery]; use [queryFlow] directly for
- * live/observable consumption.
- *
- * `ListEvents` is on [PolycentricClient.listEvents].
+ * Typed one-shot wrappers for every core `Query` variant except
+ * `ListEvents`, which lives on [PolycentricClient.listEvents] (js-core
+ * apps call `core.fetchQuery` with these directly; here each gets a
+ * method). All fan out over the configured servers — except [listBans],
+ * which is pinned to one server — and resolve on the first `Success`
+ * status via [awaitQuery]; use [queryFlow] directly for live/observable
+ * consumption.
  */
 
 
@@ -146,3 +151,36 @@ suspend fun PolycentricClient.listTargetedVerificationClaims(
     core.awaitQuery(
         Query.ListTargetedVerificationClaims(ListTargetedVerificationClaimsArgs(targetIdentity)),
     )?.let { ListTargetedVerificationClaimsResponse.ADAPTER.decode(it) }
+
+/**
+ * For each configured server, whether the authenticated caller is a
+ * moderator there. Requires the auth token provider to be minting
+ * tokens (an active identity); servers that fail to respond are absent
+ * from the map.
+ */
+suspend fun PolycentricClient.isModerator(): Map<String, Boolean> =
+    core.awaitQuery(Query.IsModerator(IsModeratorArgs()))
+        ?.let { Moderation.decodeStatusByServer(it) } ?: emptyMap()
+
+/** For each configured server, whether `targetIdentity` is banned there. */
+suspend fun PolycentricClient.isBanned(targetIdentity: String): Map<String, Boolean> =
+    core.awaitQuery(Query.IsBanned(IsBannedArgs(targetIdentity)))
+        ?.let { Moderation.decodeStatusByServer(it) } ?: emptyMap()
+
+/**
+ * Page through the identities banned on a single server. Pagination only
+ * makes sense per server, so the query is pinned to [server] (and the
+ * query key scoped by it) rather than fanned out — same contract the
+ * rust core documents for `Query.ListBans`.
+ */
+suspend fun PolycentricClient.listBans(
+    server: String,
+    limit: Int? = null,
+    after: String? = null,
+    query: String? = null,
+): ListBansResponse? =
+    core.awaitQuery(
+        Query.ListBans(ListBansArgs(limit?.toUInt(), after, query)),
+        queryKey = listOf("list_bans", server, after ?: "", query ?: ""),
+        opts = QueryOpts(fetchMode = null, updateMode = null, servers = listOf(server)),
+    )?.let { ListBansResponse.ADAPTER.decode(it) }

@@ -2,6 +2,7 @@ package org.futo.polycentric.core.platform
 
 import polycentric.v2.ContentDigest
 import polycentric.v2.EventKey
+import polycentric.v2.PublicKey
 import polycentric.v2.SignedEvent
 
 /**
@@ -13,15 +14,27 @@ import polycentric.v2.SignedEvent
 
 interface IEventRepository {
     suspend fun save(signedEvent: SignedEvent)
+
+    /** Batch save; drivers with transactions should override this. */
+    suspend fun saveAll(signedEvents: List<SignedEvent>) {
+        for (signedEvent in signedEvents) save(signedEvent)
+    }
+
     suspend fun getAll(): List<SignedEvent>
     suspend fun getByEventKey(key: EventKey): SignedEvent?
 
     /**
-     * All events for an identity; with [headsOnly] return only the
-     * highest-sequence event per (signer, collection) stream — the
-     * anchors for a partial pull.
+     * Events for an identity, sorted by sequence ascending. Optional
+     * [signer] and [collection] narrow the scan. With [headsOnly] return
+     * only the highest-sequence event per (signer, collection) stream —
+     * the anchors for a partial pull.
      */
-    suspend fun getByIdentity(identity: String, headsOnly: Boolean = false): List<SignedEvent>
+    suspend fun getByIdentity(
+        identity: String,
+        signer: PublicKey? = null,
+        collection: Int? = null,
+        headsOnly: Boolean = false,
+    ): List<SignedEvent>
 }
 
 interface IContentRepository {
@@ -54,6 +67,7 @@ interface IEventAckRepository {
 interface IFileStoreDriver {
     suspend fun put(digest: ContentDigest, bytes: ByteArray)
     suspend fun get(digest: ContentDigest): ByteArray?
+    suspend fun delete(digest: ContentDigest)
     suspend fun has(digest: ContentDigest): Boolean = get(digest) != null
 }
 
@@ -68,8 +82,15 @@ interface IStorageDriver {
     suspend fun loadActiveIdentityKey(publicKey: ByteArray): String?
 }
 
+/**
+ * Parameter order matches js-core's ICryptoManager exactly — in
+ * particular `verify(publicKey, message, signature, keyType)` — so code
+ * ported between the two wrappers can't silently swap two ByteArrays.
+ */
 interface ICryptoManager {
     fun generateKeyPair(keyType: Int): StoredKeyPair
+    fun derivePublicKey(privateKey: ByteArray, keyType: Int): ByteArray
     suspend fun sign(privateKey: ByteArray, message: ByteArray, keyType: Int): ByteArray
-    fun verify(publicKey: ByteArray, signature: ByteArray, message: ByteArray, keyType: Int): Boolean
+    fun verify(publicKey: ByteArray, message: ByteArray, signature: ByteArray, keyType: Int): Boolean
+    fun getSupportedKeyTypes(): List<Int>
 }

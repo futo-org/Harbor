@@ -55,10 +55,12 @@ decodes with its own generated types — same contract js-core uses.
 | `client-internal/content-manager.ts` | `ContentManager.kt` | **ported** (buildDigest, save, collectBlobs, pullBlobs) |
 | `client-internal/keypair-manager.ts` | `KeyPairManager.kt` | **ported** (create/get/remove/switch) |
 | `client-internal/pairing-session-manager.ts` | `PairingSessionManager.kt` | **ported** (create/status/join) |
-| `crypto/crypto-manager.ts` | `crypto/Ed25519CryptoManager.kt` | done (BouncyCastle) |
+| `crypto/crypto-manager.ts` | `crypto/Ed25519CryptoManager.kt` | done (BouncyCastle; same interface incl. param order, `derivePublicKey`, length checks) |
+| `crypto/server-jwt.ts` | `crypto/ServerJwt.kt` | **ported** — the `AuthTokenProvider` registered in the client constructor mints an EdDSA JWT per server; tokens cleared on identity switch |
+| `utils/moderation.ts` | `Moderation.kt` | **ported** (`decodeStatusByServer`/`encodeStatusByServer`; `setBanStatus` on the client, `isModerator`/`isBanned`/`listBans` in `Queries.kt`) |
 | `client-internal/event-service.ts` | `EventService.kt` | **ported** (StateFlow for state/progress/hydration, SharedFlow for content-created/keypair/errors; named `client.eventService` since `client.events` is the event repository here) |
 | `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — CoreException covers FFI failures) |
-| — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 13 non-ListEvents Query variants with response decoding |
+| — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 16 non-ListEvents Query variants (incl. the moderation trio) with response decoding |
 | `platform-interfaces/*` | `platform/PlatformInterfaces.kt` | done |
 | `datastore/*` (drivers) | `storage/InMemoryStorageDriver.kt` | memory done; SQLite: salvage below |
 | `http/alias-resolver.ts` | `http/AliasResolver.kt` | **ported** (parse/normalize/resolve, wildcard `*`, 10s timeout; org.json — on the Android bootclasspath) |
@@ -124,16 +126,21 @@ are incompatible across versions.
 
 ## Known gaps / next steps
 
-1. First real build: fix up generated type-name mismatches in
-   `QueryFlows.kt` / `PolycentricClient.kt` (e.g. `ListEventsArgs`,
-   `ContentEntry` record shapes).
-2. js-core feature parity is complete at the source level (all managers,
-   client surface, event bus, alias resolver, errors, typed queries).
-3. SQLite storage driver (adapt kotlin-wrapper branch code to the v2 event
+1. js-core feature parity is complete at the source level (all managers,
+   client surface incl. auth JWTs and moderation, event bus, alias
+   resolver, errors, typed queries). Deliberate divergences from js-core,
+   all documented inline: no `StorageHandle` (repositories hang off the
+   client; the event bus is `client.eventService`), Kotlin Flows instead
+   of eventemitter3, byte-oriented repository payloads, a v2-shaped
+   `IEventAckRepository`, no v1 protos, and no `getBatch` (its only
+   js-core call site is a test mock).
+2. SQLite storage driver (adapt kotlin-wrapper branch code to the v2 event
    key: collection / identity / signed_by / sequence).
-4. Port the kotlin-wrapper instrumented test scenarios as the conformance
-   suite against a local dev server (`services/server`).
-5. Grayjay needs URL-anchored comment queries; when that lands in rs-core
+3. Port the kotlin-wrapper instrumented test scenarios as the conformance
+   suite against a local dev server (`services/server`), plus JVM unit
+   tests for the pure-Kotlin pieces (ServerJwt, AliasResolver parsing,
+   Moderation codec — js-core has suites for all three).
+4. Grayjay needs URL-anchored comment queries; when that lands in rs-core
    as a new `Query` variant it appears here automatically on regeneration —
    only a small Kotlin convenience wrapper will be needed.
-6. Measure per-ABI .so size (tokio + tonic + TLS + image crate).
+5. Measure per-ABI .so size (tokio + tonic + TLS + image crate).

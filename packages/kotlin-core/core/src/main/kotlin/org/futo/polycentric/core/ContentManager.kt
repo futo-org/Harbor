@@ -18,6 +18,8 @@ import polycentric.v2.ImageSet
 class ContentManager(private val client: PolycentricClient) {
 
     companion object {
+        private val log = java.util.logging.Logger.getLogger("ContentManager")
+
         /** Collect all blobs referenced in a post or profile update. */
         fun collectBlobs(content: Content): List<Blob> {
             val out = mutableListOf<Blob>()
@@ -50,7 +52,7 @@ class ContentManager(private val client: PolycentricClient) {
     /**
      * Download any blobs in the list that we don't have locally, so blobs
      * of an identity eventually persist on every device in that identity.
-     * Per-blob failures are absorbed (best-effort, like js-core).
+     * Per-blob failures are logged but absorbed (best-effort, like js-core).
      */
     suspend fun pullBlobs(blobs: List<Blob>): Unit = coroutineScope {
         val digests = blobs.mapNotNull { it.digest }
@@ -60,7 +62,7 @@ class ContentManager(private val client: PolycentricClient) {
                     if (client.filestore.has(digest)) return@async
                     val bytes = client.fetchBlobBytes(digest) ?: return@async
                     client.filestore.put(digest, bytes)
-                }
+                }.onFailure { log.warning("pullBlobs failed: $it") }
             }
         }.awaitAll()
     }

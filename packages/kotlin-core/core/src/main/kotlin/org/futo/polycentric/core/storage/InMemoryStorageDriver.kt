@@ -41,11 +41,23 @@ class InMemoryStorageDriver : IStorageDriver, IFileStoreDriver {
 
         override suspend fun getByEventKey(key: EventKey) = events[keyOf(key)]
 
-        override suspend fun getByIdentity(identity: String, headsOnly: Boolean): List<SignedEvent> {
+        override suspend fun getByIdentity(
+            identity: String,
+            signer: polycentric.v2.PublicKey?,
+            collection: Int?,
+            headsOnly: Boolean,
+        ): List<SignedEvent> {
             val mine = events.values
                 .map { it to Event.ADAPTER.decode(it.event_bytes).key!! }
-                .filter { (_, k) -> k.identity == identity }
-            if (!headsOnly) return mine.map { it.first }
+                .filter { (_, k) ->
+                    k.identity == identity &&
+                        (collection == null || k.collection == collection) &&
+                        (
+                            signer == null ||
+                                (k.signed_by?.key == signer.key && k.signed_by?.key_type == signer.key_type)
+                            )
+                }
+            if (!headsOnly) return mine.sortedBy { (_, k) -> k.sequence }.map { it.first }
             return mine
                 .groupBy { (_, k) -> "${k.collection}/${k.signed_by?.key?.hex()}" }
                 .values
@@ -99,6 +111,10 @@ class InMemoryStorageDriver : IStorageDriver, IFileStoreDriver {
     }
 
     override suspend fun get(digest: ContentDigest) = blobs[keyOf(digest)]
+
+    override suspend fun delete(digest: ContentDigest) {
+        blobs.remove(keyOf(digest))
+    }
 
     private fun ByteArray.toHexKey() = joinToString("") { "%02x".format(it) }
 }
