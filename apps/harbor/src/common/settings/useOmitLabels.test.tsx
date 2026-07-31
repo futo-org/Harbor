@@ -20,7 +20,7 @@ function renderOmitLabelsHook(): { result: { current: LabelsResult } } {
   return { result };
 }
 
-// Probes from earlier tests stay mounted, so a bare setState here re-renders
+// Probes from earlier tests stay mounted, so setState here re-renders
 // them outside act(). Wrap the reset so those renders are flushed by React.
 function resetModeration() {
   act(() => {
@@ -133,8 +133,7 @@ describe('useOmitLabels', () => {
 });
 
 // Test 2: Feed hooks pass omitLabels into the Query constructor
-// We only test useExploreFeed as a representative — the three feed hooks are
-// structurally identical in how they wire useOmitLabels into the query args.
+// We only test useExploreFeed, assuming it is representative of the other three feed hooks.
 
 // Capture the factory function useQuery receives so we can inspect its output.
 // The mocked Query stub copies its constructor args onto itself, so the built
