@@ -4,7 +4,7 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { timeAgo, truncateName } from '@/src/common/lib/polycentric-hooks';
+import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import {
   getKeyFingerprint,
   hexToBytes,
@@ -81,8 +81,13 @@ export function PostContentQuote({ quoteId }: { quoteId: string }) {
           size="xs"
           style={Atoms.mr_md}
         />
-        <Text variant="secondary" fontWeight="bold">
-          {truncateName(authorName || '…', 16)}
+        <Text
+          variant="secondary"
+          fontWeight="bold"
+          numberOfLines={1}
+          style={Atoms.flex_shrink_1}
+        >
+          {authorName || '…'}
         </Text>
         <IdentityTag identity={post.identity} />
         {time ? (

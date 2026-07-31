@@ -1,4 +1,5 @@
 import { StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
+import { isIOS } from '../util/platform';
 
 export const Spacing = {
   '0': 0,

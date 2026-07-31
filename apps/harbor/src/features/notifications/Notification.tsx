@@ -1,11 +1,7 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
-import {
-  timeAgo,
-  truncateName,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
+import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
@@ -122,7 +118,7 @@ function InteractionNotification({
 }) {
   const { theme } = useTheme();
   const profile = useProfile(notification.fromIdentity);
-  const name = truncateName(profile.name ?? 'Anonymous');
+  const name = profile.name ?? 'Anonymous';
 
   const quoted = quotedPost(notification);
 
@@ -157,18 +153,28 @@ function InteractionNotification({
         onPress={openProfile}
       />
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
-        <Text>
-          <Text fontWeight="bold" onPress={openProfile}>
+        <View
+          style={[Atoms.flex_row, Atoms.items_center, { flexWrap: 'wrap' }]}
+        >
+          <Text
+            fontWeight="bold"
+            numberOfLines={1}
+            style={Atoms.flex_shrink_1}
+            onPress={openProfile}
+          >
             {name}
-          </Text>{' '}
-          {summary(notification)}
-          {notification.createdAt > 0 ? (
-            <Text color="neutral_500">
-              {' '}
-              · {timeAgo(notification.createdAt)}
-            </Text>
-          ) : null}
-        </Text>
+          </Text>
+          <Text>
+            {' '}
+            {summary(notification)}
+            {notification.createdAt > 0 ? (
+              <Text color="neutral_500">
+                {' '}
+                · {timeAgo(notification.createdAt)}
+              </Text>
+            ) : null}
+          </Text>
+        </View>
 
         {/* The post the action was taken against, quoted. */}
         {quoted?.content ? (

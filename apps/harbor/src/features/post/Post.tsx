@@ -4,17 +4,18 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import {
-  timeAgo,
-  truncateName,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
+import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   getKeyFingerprint,
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  Atoms,
+  typography,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -163,9 +164,17 @@ export const Post = memo(function Post({
         </View>
 
         {/* Main post content */}
-        <View style={[Atoms.flex_1, Atoms.pb_md, Atoms.gap_2xs]}>
-          {/* Author name and other topbar items */}
-          <View style={[Atoms.flex_row, Atoms.align_center]}>
+        <View style={[Atoms.flex_1, Atoms.pb_sm, Atoms.gap_2xs]}>
+          {/* Author name and other topbar items. Fixed to the text's compact
+              line so the taller menu button centers without inflating it. */}
+          <View
+            style={[
+              Atoms.flex_row,
+              Atoms.align_center,
+              Atoms.gap_sm,
+              { height: typography.fontSize.md },
+            ]}
+          >
             <View
               style={[
                 Atoms.flex_1,
@@ -179,7 +188,7 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <IdentityTag identity={authorIdentity} />
+                <IdentityTag identity={authorIdentity} compact />
               ) : null}
 
               {time ? (
@@ -188,10 +197,11 @@ export const Post = memo(function Post({
                     variant="secondary"
                     color="neutral_500"
                     fontWeight="bold"
+                    compact
                   >
                     ·
                   </Text>
-                  <Text variant="secondary" color="neutral_500">
+                  <Text variant="secondary" color="neutral_500" compact>
                     {time}
                   </Text>
                 </>
@@ -276,8 +286,13 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
       <Text variant="secondary" color="neutral_500" fontWeight="regular">
         Replying to{' '}
       </Text>
-      <Text variant="secondary" color="primary_500">
-        {truncateName(parentName || '…', 24)}
+      <Text
+        variant="secondary"
+        color="primary_500"
+        numberOfLines={1}
+        style={Atoms.flex_shrink_1}
+      >
+        {parentName || '…'}
       </Text>
     </Pressable>
   );
@@ -293,13 +308,20 @@ function PostAuthorName({
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   return (
-    <Pressable onPress={onPress} onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+    <Pressable
+      onPress={onPress}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+      style={Atoms.flex_shrink_1}
+    >
       <Text
         variant="secondary"
         fontWeight="bold"
+        numberOfLines={1}
+        compact
         style={[hovered && { textDecorationLine: 'underline' }]}
       >
-        {truncateName(name, 16)}
+        {name}
       </Text>
     </Pressable>
   );

@@ -1,6 +1,5 @@
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { truncateName } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -77,14 +76,27 @@ function RepostHeader({ identity }: { identity: string }) {
       <View style={[Atoms.items_end, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
         <Icon size={16} name="repost" color="neutral_500" />
       </View>
-      <Text
-        variant="small"
-        color="neutral_500"
-        fontWeight="bold"
-        style={hovered && Atoms.text_underline}
-      >
-        {truncateName(name || '…', 24)} reposted
-      </Text>
+      <View style={[Atoms.flex_row, Atoms.flex_shrink_1]}>
+        <Text
+          variant="small"
+          color="neutral_500"
+          fontWeight="bold"
+          numberOfLines={1}
+          compact
+          style={[Atoms.flex_shrink_1, hovered && Atoms.text_underline]}
+        >
+          {name || '…'}
+        </Text>
+        <Text
+          variant="small"
+          color="neutral_500"
+          fontWeight="bold"
+          compact
+          style={hovered && Atoms.text_underline}
+        >
+          {' reposted'}
+        </Text>
+      </View>
     </Pressable>
   );
 }

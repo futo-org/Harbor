@@ -44,7 +44,7 @@ export default function PostMenu({ post }: PostMenuProps) {
           {({ pressed, hovered }) => (
             <View
               style={[
-                Atoms.p_xs,
+                Atoms.px_xs,
                 Atoms.rounded_full,
                 // overflow:hidden forces a rounded clip on native — without it the
                 // press background renders with square corners.
