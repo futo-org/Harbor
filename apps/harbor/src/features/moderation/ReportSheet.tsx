@@ -57,7 +57,6 @@ export default function ReportSheet({
       open={open}
       onClose={onClosePress}
       detents={[0.5, 0.75, 1]}
-      scrollable={true}
       header={
         <Sheet.Header
           title={

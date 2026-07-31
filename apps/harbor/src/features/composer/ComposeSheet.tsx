@@ -47,7 +47,6 @@ export function ComposeSheet({
   return (
     <Sheet
       detents={[1]}
-      scrollable
       onPresented={() => setAutoFocus(true)}
       footer={
         <ComposeSheetFooterBar
@@ -88,6 +87,7 @@ export function ComposeSheet({
       }
     >
       <Sheet.Content
+        scrollable={false}
         style={[
           Atoms.py_lg,
           Atoms.px_lg,

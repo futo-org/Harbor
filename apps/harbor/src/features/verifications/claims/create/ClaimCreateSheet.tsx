@@ -172,7 +172,6 @@ export function ClaimCreateSheet({
       open={open}
       onClose={close}
       detents={[0.5]}
-      scrollable
       header={
         <Sheet.Header
           title={stepTitle(step)}
@@ -208,7 +207,7 @@ export function ClaimCreateSheet({
     >
       {/* The sheet portals its subtree, so the provider must ride inside. */}
       <ClaimCreateProvider value={options}>
-        <Sheet.Content style={{ padding: 0 }}>
+        <Sheet.Content scrollable={false} style={{ padding: 0 }}>
           {/* TrueSheet's `scrollable` pins this ScrollView and insets it for
               the keyboard. */}
           <ScrollView

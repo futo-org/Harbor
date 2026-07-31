@@ -115,7 +115,7 @@ export function IdentitySwitcherSheet() {
 
   return (
     <IdentitySwitcherContext.Provider value={contextValue}>
-      <Sheet detents={[0.5, 1]} scrollable>
+      <Sheet detents={[0.5, 1]}>
         <Sheet.Header
           title={isEditing ? 'Editing identities' : 'Your identities'}
           onClose={dismiss}
@@ -129,7 +129,7 @@ export function IdentitySwitcherSheet() {
             </View>
           }
         />
-        <Sheet.Content>
+        <Sheet.Content scrollable={false}>
           {isEditing ? (
             <DraggableFlatList
               data={identities}

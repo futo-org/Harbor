@@ -88,11 +88,11 @@ export function EmojiPickerSheet({
       open={open}
       onClose={onClose}
       detents={[0.5]}
-      scrollable
       maxWidth={400}
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
     >
       <Sheet.Content
+        scrollable={false}
         style={Atoms.p_0}
         onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
       >

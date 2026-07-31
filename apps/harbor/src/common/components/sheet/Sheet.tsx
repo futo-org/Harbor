@@ -21,6 +21,7 @@ import {
 } from 'react';
 import {
   Pressable,
+  ScrollView,
   useWindowDimensions,
   View,
   type ViewProps,
@@ -48,6 +49,8 @@ type CommonProps = {
   /** Dim the background; tapping the dim area dismisses the sheet (native).
    * Set to `false` to allow interacting with the screen behind instead. */
   dimmed?: boolean;
+  /** Pins the first ScrollView in the content so it fits the sheet and
+   * insets for the keyboard (native). Defaults to `true`. */
   scrollable?: boolean;
   /** Web only: overrides the modal card's default 600px max width. */
   maxWidth?: number;
@@ -79,15 +82,39 @@ export function Sheet(props: SheetProps) {
   );
 }
 
-type SheetContentProps = ViewProps;
-function SheetContent({ children, style, ...props }: SheetContentProps) {
+type SheetContentProps = Omit<ViewProps, 'onScroll'> & {
+  /** Set to `false` when the content brings its own scroll container
+   * (list or ScrollView) so TrueSheet pins that one instead. */
+  scrollable?: boolean;
+};
+function SheetContent({
+  children,
+  style,
+  scrollable = true,
+  ...props
+}: SheetContentProps) {
+  // Web scrolls in the modal card body already; native needs a ScrollView
+  // here for TrueSheet to pin and inset when the keyboard shows.
+  if (isWeb || !scrollable) {
+    return (
+      <View
+        style={[Atoms.p_lg, Atoms.flex_1, { minHeight: 50 }, style]}
+        {...props}
+      >
+        {children}
+      </View>
+    );
+  }
   return (
-    <View
-      style={[Atoms.p_lg, Atoms.flex_1, { minHeight: 50 }, style]}
+    <ScrollView
+      style={Atoms.flex_1}
+      contentContainerStyle={[Atoms.p_lg, { minHeight: 50 }, style]}
+      keyboardShouldPersistTaps="handled"
+      alwaysBounceVertical={false}
       {...props}
     >
       {children}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -184,7 +211,7 @@ function NativeSheet({
   detents = [0.5],
   dismissible = true,
   dimmed = true,
-  scrollable = false,
+  scrollable = true,
   navigation,
   ...props
 }: NativeInternalProps) {

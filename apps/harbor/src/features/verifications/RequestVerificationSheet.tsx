@@ -48,10 +48,9 @@ export function RequestVerificationSheet({
       open={open}
       onClose={onClose}
       detents={[0.75]}
-      scrollable
       header={<Sheet.Header title="Request verification" onClose={onClose} />}
     >
-      <Sheet.Content style={{ padding: 0 }}>
+      <Sheet.Content scrollable={false} style={{ padding: 0 }}>
         {/* TrueSheet's `scrollable` pins this ScrollView and insets it for
             the keyboard; taps on suggestions must land while it's open. */}
         <ScrollView

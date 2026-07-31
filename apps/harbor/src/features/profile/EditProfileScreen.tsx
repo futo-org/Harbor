@@ -35,7 +35,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
   }, [edit, close, navigation]);
 
   return (
-    <Sheet detents={[1]} dismissible scrollable>
+    <Sheet detents={[1]} dismissible>
       <Sheet.Header
         title="Edit profile"
         right={

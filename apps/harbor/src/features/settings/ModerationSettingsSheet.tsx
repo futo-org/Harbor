@@ -111,7 +111,7 @@ function ModerationLabelRow({
 export default function ModerationSettingsSheet() {
   const labelKeys = LABEL_ENTRIES.map((e) => e.key);
   return (
-    <Sheet detents={[0.5, 1]} dismissible scrollable>
+    <Sheet detents={[0.5, 1]} dismissible>
       <Sheet.Header
         title="Content Moderation"
         onClose={() => router.canGoBack() && router.back()}
