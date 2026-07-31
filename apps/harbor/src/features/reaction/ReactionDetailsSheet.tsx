@@ -1,5 +1,6 @@
 import { Text } from '@/src/common/components';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { HorizontalScrollGroup } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
@@ -109,9 +110,7 @@ function ReactionTabs({
   const { theme } = useTheme();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
+    <HorizontalScrollGroup
       style={[
         Atoms.flex_grow_0,
         {
@@ -192,7 +191,7 @@ function ReactionTabs({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </HorizontalScrollGroup>
   );
 }
 
@@ -246,13 +245,11 @@ export default function ReactionDetailsSheet({
       header={<Sheet.Header title="Reactions" onClose={onClose} />}
     >
       <Sheet.Content style={{ padding: 0 }}>
-        <View>
-          <ReactionTabs
-            tabs={tabData}
-            selected={selected}
-            onSelect={setSelectedEmoji}
-          />
-        </View>
+        <ReactionTabs
+          tabs={tabData}
+          selected={selected}
+          onSelect={setSelectedEmoji}
+        />
         <ScrollView
           // Prevent the modal size from changing when switching tabs on web:
           style={isWeb ? { height: 'clamp(360px, 60vh, 560px)' } : Atoms.flex_1}
