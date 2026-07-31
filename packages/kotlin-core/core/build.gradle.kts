@@ -136,5 +136,8 @@ dependencies {
     implementation(libs.jna) { artifact { type = "aar" } }
 
     testImplementation(libs.junit)
+    // android.jar's org.json is a throwing stub on the host JVM; unit tests
+    // that exercise Moderation (and decode JWT segments) need the real one.
+    testImplementation(libs.orgjson)
     androidTestImplementation(libs.androidx.test.runner)
 }
