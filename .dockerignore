@@ -1,6 +1,6 @@
 **/target
 **/node_modules
-apps/polycentric/dist
+apps/harbor/dist
 **/.git
 
 # iOS-only artifacts produced by rn-ios-build — not used by the web image,

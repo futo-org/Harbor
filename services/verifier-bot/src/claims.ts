@@ -4,7 +4,7 @@ import { Result } from './result.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Verification-claim contract, shared with the app's platform loop-back flow
-// (apps/polycentric .../hooks/useVerifyPlatformClaim.ts):
+// (apps/harbor .../hooks/useVerifyPlatformClaim.ts):
 //   • SCHEMA_NAME  — all platform claims share ONE `VerificationSchema` (the
 //                    app's "Platform" claim type); the schema name does NOT
 //                    encode the platform. `requestVerify` only checks the

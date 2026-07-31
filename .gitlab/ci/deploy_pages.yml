@@ -8,11 +8,11 @@ fusmi-2026-web:
     - pnpm install
   script:
     # Set env for web build
-    - echo "EXPO_PUBLIC_POLYCENTRIC_SERVER=https://staging-serv1.polycentric.io" > apps/polycentric/.env
+    - echo "EXPO_PUBLIC_POLYCENTRIC_SERVER=https://staging-serv1.polycentric.io" > apps/harbor/.env
 
     # Build all workspace packages then export web
     - pnpm build
-    - cd apps/polycentric
+    - cd apps/harbor
     - pnpm build:web
 
     # Deploy to Cloudflare Pages

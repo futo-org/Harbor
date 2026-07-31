@@ -23,7 +23,7 @@ web-build/
 *.tsbuildinfo
 
 # The app's own web export isn't part of the native build.
-apps/polycentric/dist/
+apps/harbor/dist/
 
 # Test / CI artifacts
 coverage/
@@ -50,13 +50,13 @@ yarn-error.log*
 
 # Native build artifacts under the app. Patterns containing a `/`
 # match relative to this `.easignore`, so use the full project path.
-apps/polycentric/ios/Pods/
-apps/polycentric/ios/build/
-apps/polycentric/ios/DerivedData/
-apps/polycentric/android/.gradle/
-apps/polycentric/android/build/
-apps/polycentric/android/app/build/
-apps/polycentric/android/app/.cxx/
+apps/harbor/ios/Pods/
+apps/harbor/ios/build/
+apps/harbor/ios/DerivedData/
+apps/harbor/android/.gradle/
+apps/harbor/android/build/
+apps/harbor/android/app/build/
+apps/harbor/android/app/.cxx/
 *.xcuserstate
 *.iml
 

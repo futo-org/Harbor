@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Resolves the app version for EAS builds, writes it into
-// apps/polycentric/package.json, and prints it to stdout.
+// apps/harbor/package.json, and prints it to stdout.
 //
 //   * On a SemVer release tag (e.g. v2.0.0-alpha.1) -> that version
 //     (2.0.0-alpha.1).
@@ -23,7 +23,7 @@ const PKG_PATH = path.join(
   '..',
   '..',
   'apps',
-  'polycentric',
+  'harbor',
   'package.json',
 );
 

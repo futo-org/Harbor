@@ -32,7 +32,7 @@ app-biome-check:
   extends: .app-check-base
   stage: check
   script:
-    - pnpm exec biome check apps/polycentric --diagnostic-level=error
+    - pnpm exec biome check apps/harbor --diagnostic-level=error
   allow_failure: true
 
 app-tests:
@@ -44,7 +44,7 @@ app-tests:
   artifacts:
     when: always
     reports:
-      junit: apps/polycentric/junit.xml
+      junit: apps/harbor/junit.xml
 
 .app-build-base:
   extends: .app-workflow
@@ -73,7 +73,7 @@ app-web-image:
       buildctl-daemonless.sh build \
         --frontend dockerfile.v0 \
         --local context=. \
-        --local dockerfile=./apps/polycentric \
+        --local dockerfile=./apps/harbor \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
@@ -94,7 +94,7 @@ app-web-image:
     # Tag builds use the tag version; others use the latest release + a patch.
     - export APP_VERSION=$(node "$CI_PROJECT_DIR/tools/expo/resolve-version.js")
     - echo "Building app version ${APP_VERSION}"
-    - cd ./apps/polycentric
+    - cd ./apps/harbor
 
 # EAS builds run: manual on merge requests, automatic on the default branch and
 # on tags. Only the APK waits for completion (we download it); the others are
@@ -126,8 +126,8 @@ app-android-apk:
     - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json polycentric.apk
   artifacts:
     paths:
-      - apps/polycentric/polycentric.apk
-      - apps/polycentric/eas-build.json
+      - apps/harbor/polycentric.apk
+      - apps/harbor/eas-build.json
     expire_in: 1 week
 
 app-android-aab:

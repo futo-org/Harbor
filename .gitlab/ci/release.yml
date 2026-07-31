@@ -23,7 +23,7 @@ release-android-apk:
     - |
       APK_PACKAGE_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/polycentric-android/${CI_COMMIT_TAG}/polycentric-${CI_COMMIT_TAG}.apk"
       echo "Uploading APK to ${APK_PACKAGE_URL}"
-      curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file apps/polycentric/polycentric.apk "$APK_PACKAGE_URL"
+      curl -fsSL --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file apps/harbor/polycentric.apk "$APK_PACKAGE_URL"
       echo "APK_PACKAGE_URL=${APK_PACKAGE_URL}" > apk.env
   artifacts:
     reports:

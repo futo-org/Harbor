@@ -2,7 +2,7 @@
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
-        - apps/polycentric/**/*
+        - apps/harbor/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
 

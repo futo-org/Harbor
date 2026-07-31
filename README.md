@@ -1,5 +1,5 @@
 <p align="center">
-<img alt="harborlogo" src="https://gitlab.futo.org/polycentric/polycentric/-/raw/develop/apps/polycentric/src/common/assets/images/harbor-logo-256.png?ref_type=heads" width="50">
+<img alt="harborlogo" src="https://gitlab.futo.org/polycentric/polycentric/-/raw/develop/apps/harbor/src/common/assets/images/harbor-logo-256.png?ref_type=heads" width="50">
 
 </p>
 
@@ -99,7 +99,7 @@ also regenerate them with `pnpm ubrn:clean` followed by `pnpm build`.
 
 | App                | Description                                                         |
 | ------------------ | ------------------------------------------------------------------- |
-| `apps/polycentric` | The main social network application (Expo/React Native) |
+| `apps/harbor` | The main social network application (Expo/React Native) |
 
 ### Services
 
