@@ -1,5 +1,4 @@
 import { Text } from '@/src/common/components';
-import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { HorizontalScrollGroup } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants';
@@ -8,9 +7,17 @@ import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { FetchMode } from '@polycentric/react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReactionRowSkeletonList } from './ReactionRowSkeleton';
 import usePostReactions, {
@@ -20,6 +27,9 @@ import usePostReactions, {
 import { countReactionsFrom, type ReactionCount } from './util';
 
 const MAX_SKELETONS = 6;
+
+/** Key extractor for the reactions list flashlist */
+const keyExtractor = (item: ReactionInfo) => `${item.identity}-${item.emoji}`;
 
 type ReactionDetailsSheetProps = {
   post: PostData;
@@ -213,12 +223,33 @@ export default function ReactionDetailsSheet({
     [groups, all, reactionCounts, post.upvoteCount],
   );
 
+  const listRef = useRef<FlashListRef<ReactionInfo>>(null);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
   // Always open to the "all" tab.
   useEffect(() => {
     if (open) setSelectedEmoji(null);
   }, [open]);
+
+  const handleSelect = useCallback((emoji: string | null) => {
+    setSelectedEmoji(emoji);
+    listRef.current?.scrollToTop();
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ReactionInfo }) => (
+      <ProfileRow
+        identity={item.identity}
+        fetchMode={FetchMode.OfflineFirst}
+        onPress={() => {
+          onClose();
+          router.push(Routes.tabs.profile(item.identity));
+        }}
+        trailing={<Text style={{ fontSize: 18 }}>{item.emoji}</Text>}
+      />
+    ),
+    [onClose],
+  );
 
   // Fall back to the "all" tab if the selected tab was removed.
   const selected =
@@ -236,6 +267,19 @@ export default function ReactionDetailsSheet({
       )
     : 0;
 
+  // Below the list, we may need to show skeletons or an empty list indicator
+  // if the list is empty.
+  let footer: ReactElement | null = null;
+  if (skeletonCount > 0) {
+    footer = <ReactionRowSkeletonList count={skeletonCount} />;
+  } else if (selected.reactions.length === 0) {
+    footer = (
+      <View style={[Atoms.items_center, Atoms.px_lg, Atoms.py_3xl]}>
+        <Text color="neutral_500">No reactions to show.</Text>
+      </View>
+    );
+  }
+
   return (
     <Sheet
       open={open}
@@ -248,40 +292,23 @@ export default function ReactionDetailsSheet({
         <ReactionTabs
           tabs={tabData}
           selected={selected}
-          onSelect={setSelectedEmoji}
+          onSelect={handleSelect}
         />
-        <ScrollView
-          // Prevent the modal size from changing when switching tabs on web:
+        <View
+          // Maintain a reasonable size across tabs on all platforms.
           style={isWeb ? { height: 'clamp(360px, 60vh, 560px)' } : Atoms.flex_1}
-          contentContainerStyle={[
-            Atoms.flex_grow_1,
-            { paddingBottom: insets.bottom + Spacing.lg },
-          ]}
         >
-          {selected.reactions.length === 0 && skeletonCount === 0 ? (
-            <ListEmpty>No reactions to show</ListEmpty>
-          ) : (
-            <>
-              {selected.reactions.map((reaction) => (
-                <ProfileRow
-                  key={`${reaction.identity}-${reaction.emoji}`}
-                  identity={reaction.identity}
-                  fetchMode={FetchMode.OfflineFirst}
-                  onPress={() => {
-                    onClose();
-                    router.push(Routes.tabs.profile(reaction.identity));
-                  }}
-                  trailing={
-                    <Text style={{ fontSize: 18 }}>{reaction.emoji}</Text>
-                  }
-                />
-              ))}
-              {skeletonCount > 0 && (
-                <ReactionRowSkeletonList count={skeletonCount} />
-              )}
-            </>
-          )}
-        </ScrollView>
+          <FlashList
+            ref={listRef}
+            data={selected.reactions}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            ListFooterComponent={footer}
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + Spacing.lg,
+            }}
+          />
+        </View>
       </Sheet.Content>
     </Sheet>
   );
