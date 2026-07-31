@@ -18,7 +18,7 @@ const ALL = 'All';
 
 /** Grid cells stay close to this width; wider sheets get more columns. */
 const TARGET_CELL_WIDTH = 60;
-const MIN_COLUMNS = 6;
+const MIN_COLUMNS = 8;
 
 /** Every pickable emoji, in category order. */
 const ALL_EMOJIS = categories.flatMap((c) => c.emojis);
@@ -89,6 +89,7 @@ export function EmojiPickerSheet({
       onClose={onClose}
       detents={[0.5]}
       scrollable
+      maxWidth={400}
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
     >
       <Sheet.Content

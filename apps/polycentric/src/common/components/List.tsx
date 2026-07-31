@@ -6,6 +6,7 @@ import {
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
 import {
   cloneElement,
@@ -13,6 +14,7 @@ import {
   isValidElement,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -26,8 +28,10 @@ import { Text } from './primitives';
 // A reanimated-compatible FlashList.
 const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
 
-const WEB_INITIAL_VISIBLE = 12;
-const WEB_PAGE_SIZE = 12;
+const WEB_ESTIMATED_ITEM_HEIGHT = 150;
+// Call onEndReached once the last rendered row is within this many rows of
+// the end — roughly one viewport ahead, like the native onEndReachedThreshold.
+const WEB_END_REACHED_BUFFER = 4;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
@@ -160,24 +164,43 @@ function WebFeedViewer<T>({
   onEndReached,
   onLoad,
   contentContainerStyle,
-  stickyHeaderIndices,
   listRef,
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
-  const sentinelRef = useRef<View>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const items = (data as readonly T[] | null | undefined) ?? [];
+  const isEmpty = items.length === 0;
+  // The app shell scrolls in an inner `overflow-y: auto` div (body is
+  // overflow hidden), so virtualize against the nearest scrollable ancestor
+  // rather than the window. The container only exists once the list has
+  // rows, so rediscover when `isEmpty` flips.
+  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useLayoutEffect(() => {
+    if (isEmpty) return;
+    let el: HTMLElement | null = containerRef.current?.parentElement ?? null;
+    while (el) {
+      const { overflowY } = getComputedStyle(el);
+      if (overflowY === 'auto' || overflowY === 'scroll') break;
+      el = el.parentElement;
+    }
+    setScrollEl(el);
+    if (el && containerRef.current) {
+      setScrollMargin(
+        containerRef.current.getBoundingClientRect().top -
+          el.getBoundingClientRect().top +
+          el.scrollTop,
+      );
+    }
+  }, [isEmpty]);
   useImperativeHandle(
     listRef,
     () => ({
       scrollToTop: () => {
-        if (typeof window !== 'undefined') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        (scrollEl ?? window).scrollTo({ top: 0, behavior: 'smooth' });
       },
     }),
-    [],
+    [scrollEl],
   );
-  const items = (data as readonly T[] | null | undefined) ?? [];
-  const [visibleCount, setVisibleCount] = useState(WEB_INITIAL_VISIBLE);
-  const [atEnd, setAtEnd] = useState(false);
 
   // Keep parity with native `FlashList` by calling `onLoad`.
   const hasFiredOnLoad = useRef(false);
@@ -187,67 +210,76 @@ function WebFeedViewer<T>({
     onLoad?.({ elapsedTimeInMs: 0 });
   }, [onLoad]);
 
-  // Reset window when the underlying list shrinks (refresh, identity
-  // switch, etc.) so we don't keep stale slicing offsets.
-  useEffect(() => {
-    if (visibleCount > items.length) {
-      setVisibleCount(Math.max(WEB_INITIAL_VISIBLE, items.length));
-    }
-  }, [items.length, visibleCount]);
+  // Row heights vary, so each rendered row is measured via `measureElement`;
+  // scrollMargin accounts for the headers rendered above the rows.
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollEl,
+    estimateSize: () => WEB_ESTIMATED_ITEM_HEIGHT,
+    overscan: 8,
+    scrollMargin,
+    getItemKey: (index) =>
+      typeof keyExtractor === 'function'
+        ? keyExtractor(items[index], index)
+        : index,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
 
+  const lastRenderedIndex = virtualItems.length
+    ? virtualItems[virtualItems.length - 1].index
+    : -1;
   useEffect(() => {
-    const node = sentinelRef.current as unknown as Element | null;
-    if (!node || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const intersecting = entries.some((e) => e.isIntersecting);
-        setAtEnd(intersecting);
-        if (!intersecting) return;
-        // Grow the local window; the effect below delegates to the
-        // consumer's onEndReached once we've exhausted the data.
-        setVisibleCount((c) => (c < items.length ? c + WEB_PAGE_SIZE : c));
-      },
-      { rootMargin: '400px' },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [items.length]);
-
-  // Fetch more from the consumer once the local window is exhausted and
-  // the sentinel is in view. Kept out of the setVisibleCount updater so
-  // we never trigger a parent setState during render.
-  useEffect(() => {
-    if (atEnd && visibleCount >= items.length) {
+    if (
+      lastRenderedIndex >= 0 &&
+      lastRenderedIndex >= items.length - 1 - WEB_END_REACHED_BUFFER
+    ) {
       onEndReached?.();
     }
-  }, [atEnd, visibleCount, items.length, onEndReached]);
-
-  const isEmpty = items.length === 0;
-  const visibleItems = isEmpty ? items : items.slice(0, visibleCount);
+  }, [lastRenderedIndex, items.length, onEndReached]);
 
   return (
     <View style={[Atoms.flex_1, contentContainerStyle]}>
       {renderNode(HeaderComponent)}
       {renderNode(ListHeaderComponent)}
-      {isEmpty
-        ? renderNode(ListEmptyComponent)
-        : visibleItems.map((item, index) => {
-            const key =
-              typeof keyExtractor === 'function'
-                ? keyExtractor(item, index)
-                : `${index}`;
-            return (
-              <View key={key}>
-                {renderItem?.({
-                  item,
-                  index,
-                  target: 'Cell',
-                  extraData: undefined,
-                }) ?? null}
-              </View>
-            );
-          })}
-      {!isEmpty ? <View ref={sentinelRef} style={{ height: 1 }} /> : null}
+      {isEmpty ? (
+        renderNode(ListEmptyComponent)
+      ) : (
+        <div
+          ref={containerRef}
+          style={{
+            height: virtualizer.getTotalSize(),
+            // RNW ancestors are column flex containers; without this the
+            // spacer height gets flex-shrunk down to the viewport.
+            flexShrink: 0,
+            position: 'relative',
+            width: '100%',
+          }}
+        >
+          {virtualItems.map((vItem) => (
+            <div
+              key={vItem.key}
+              data-index={vItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${
+                  vItem.start - virtualizer.options.scrollMargin
+                }px)`,
+              }}
+            >
+              {renderItem?.({
+                item: items[vItem.index],
+                index: vItem.index,
+                target: 'Cell',
+                extraData: undefined,
+              }) ?? null}
+            </div>
+          ))}
+        </div>
+      )}
       {renderNode(ListFooterComponent)}
     </View>
   );
