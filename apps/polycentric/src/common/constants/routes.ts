@@ -66,6 +66,10 @@ export const Routes = {
       removeIdentities: '/settings/remove-identities',
       reportBug: '/settings/report-bug',
     },
+    moderation: {
+      dashboard: '/moderation/dashboard',
+      banList: '/moderation/ban-list',
+    },
   },
   onboarding: {
     index: '/',

@@ -7,6 +7,7 @@ use crate::{
         content::repository::Mutation as ContentChildRepository,
         context::ServiceContext,
         events::repository as EventsRepository,
+        identity::repository::Query as IdentityRepository,
         identity::service::authorize_event_signer,
         proto::{
             Content, Event, EventBundle, PublicKey, PutEventError,
@@ -116,6 +117,19 @@ async fn process_event(
         &signed_event.event_bytes,
     )
     .map_err(|e| Status::unauthenticated(e.to_string()))?;
+
+    // Banned identities' events are refused outright.
+    let banned = IdentityRepository::is_banned(&ctx.db, &key.identity)
+        .await
+        .map_err(|e| {
+            eprintln!("put_events ban check db error: {e}");
+            Status::internal("internal server error")
+        })?;
+    if banned {
+        return Err(Status::permission_denied(
+            "identity is banned on this server",
+        ));
+    }
 
     // Authorize the signer against the target identity's chain.
     // Identity events are chain-validated at read time (see

@@ -1,3 +1,4 @@
+pub mod ban_model;
 pub mod content_blob_model;
 pub mod content_block_model;
 pub mod content_delete_model;
@@ -15,6 +16,7 @@ pub mod content_verification_claim_model;
 pub mod content_verification_target_model;
 pub mod content_verification_verify_model;
 pub mod event_model;
+pub mod moderator_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;

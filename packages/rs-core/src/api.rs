@@ -4,9 +4,10 @@ use crate::sync;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
     GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
-    content_service_client::ContentServiceClient,
+    PutEventsRequest, SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+    UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
+    identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
     pairing_service_client::PairingServiceClient, server_service_client::ServerServiceClient,
 };
@@ -84,12 +85,15 @@ pub enum Query {
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
+    IsModerator(crate::query::moderation::IsModeratorArgs),
+    IsBanned(crate::query::moderation::IsBannedArgs),
+    ListBans(crate::query::moderation::ListBansArgs),
 }
 
 #[uniffi::export(with_foreign)]
 #[async_trait::async_trait]
-pub trait SignEventCallback: Send + Sync {
-    async fn sign(&self, event_bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
+pub trait SignBytesCallback: Send + Sync {
+    async fn sign(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
 }
 
 #[derive(uniffi::Object)]
@@ -258,7 +262,7 @@ impl PolycentricCore {
     pub async fn sign_event(
         &self,
         event_bytes: Vec<u8>,
-        callback: Arc<dyn SignEventCallback>,
+        callback: Arc<dyn SignBytesCallback>,
     ) -> Result<Vec<u8>, CoreError> {
         Event::decode(event_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Invalid event bytes: {e}")))?;
@@ -399,6 +403,15 @@ impl PolycentricCore {
             Query::ListFollowers(args) => {
                 crate::query::graph::list_followers(&self.query_client, query_key, args, opts)
             }
+            Query::IsModerator(args) => {
+                crate::query::moderation::is_moderator(&self.query_client, query_key, args, opts)
+            }
+            Query::IsBanned(args) => {
+                crate::query::moderation::is_banned(&self.query_client, query_key, args, opts)
+            }
+            Query::ListBans(args) => {
+                crate::query::moderation::list_bans(&self.query_client, query_key, args, opts)
+            }
         }
     }
 
@@ -509,6 +522,25 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("upload_blob: {e}")))?;
         Ok(())
+    }
+
+    /// Ban or unban an identity on a server. `request_bytes` is a
+    /// serialized `SetBanStatusRequest`. Returns serialized
+    /// `SetBanStatusResponse` proto bytes. Requires the caller (bearer
+    /// JWT) to be a moderator on the server.
+    pub async fn set_ban_status(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = SetBanStatusRequest::decode(request_bytes.as_slice())
+            .map_err(|e| CoreError::Decode(format!("Failed to decode SetBanStatusRequest: {e}")))?;
+        let mut client = IdentityServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .set_ban_status(tonic::Request::new(request))
+            .await
+            .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
     }
 
     /// Fetch link-preview metadata for `url` from a server's unfurl endpoint.

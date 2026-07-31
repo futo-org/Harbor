@@ -5,6 +5,7 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { APP_NAME } from '@/src/common/constants';
+import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
@@ -72,6 +73,7 @@ function RootStack() {
             }}
           />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="moderation" />
           <Stack.Screen
             name="[identityId]/edit"
             options={{
@@ -123,6 +125,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <LinkPreviewsProvider>
               <PolycentricProvider onInitialized={onInitialized}>
+                <ModerationStatusPrefetch />
                 <TrueSheetProvider>
                   <RootStack />
                   <PortalHost />

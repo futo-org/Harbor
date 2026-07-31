@@ -5013,6 +5013,7 @@ version = "0.0.1"
 dependencies = [
  "axum",
  "base64",
+ "bytes",
  "chrono",
  "common-dotenv",
  "common-kafka",
@@ -5020,6 +5021,7 @@ dependencies = [
  "ed25519-dalek",
  "entity",
  "http 1.4.2",
+ "http-body-util",
  "log",
  "migration",
  "mockito",

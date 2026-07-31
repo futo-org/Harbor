@@ -233,6 +233,22 @@ export class PolycentricClient {
   }
 
   /**
+   * Ban or unban `targetIdentity` on `server`
+   * (`IdentityService.SetBanStatus`). The active identity must be a
+   * moderator on `server`.
+   */
+  async setBanStatus(
+    server: string,
+    targetIdentity: string,
+    banned: boolean,
+  ): Promise<void> {
+    const body = Proto.SetBanStatusRequest.toBinary(
+      Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
+    );
+    await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {

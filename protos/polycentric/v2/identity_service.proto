@@ -1,0 +1,76 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+
+/**
+ * The moderation RPCs are authenticated by the caller's bearer JWT
+ * (see `auth_middleware`): the ban endpoints require a moderator.
+ */
+
+/**
+ * IsModerator: no extra fields.
+ */
+message IsModeratorRequest {}
+
+message IsModeratorResponse {
+  bool is_moderator = 1;
+}
+
+/**
+ * SetBanStatus: ban or unban an identity.
+ */
+message SetBanStatusRequest {
+  // Identity key being banned or unbanned.
+  string target_identity = 1;
+  // Desired ban state: true to ban, false to unban.
+  bool banned = 2;
+}
+
+message SetBanStatusResponse {}
+
+/**
+ * IsBanned: query whether an identity is banned.
+ */
+message IsBannedRequest {
+  // Identity key being asked about.
+  string target_identity = 1;
+}
+
+message IsBannedResponse {
+  bool is_banned = 1;
+}
+
+/**
+ * ListBans: paginated, optionally filtered list of banned identities.
+ */
+message ListBansRequest {
+  // Max entries to return; the server clamps to its own bounds.
+  optional uint32 limit = 1;
+  // Opaque cursor from a previous response's `page_info.end_cursor`.
+  optional string after = 2;
+  // Case-insensitive prefix filter: keep only identities beginning with
+  // this value.
+  optional string query = 3;
+}
+
+message ListBansResponse {
+  // Identity keys banned on this server, most recently banned first.
+  repeated string banned_identities = 1;
+  PageInfo page_info = 2;
+}
+
+/**
+ * Identity moderation APIs, authenticated by the caller's bearer JWT
+ * (see the note above).
+ */
+service IdentityService {
+  // Returns whether the calling identity is a moderator on this server.
+  rpc IsModerator(IsModeratorRequest) returns (IsModeratorResponse);
+  // Bans or unbans an identity on this server.
+  rpc SetBanStatus(SetBanStatusRequest) returns (SetBanStatusResponse);
+  // Returns whether an identity is banned on this server.
+  rpc IsBanned(IsBannedRequest) returns (IsBannedResponse);
+  // Lists the identities banned on this server.
+  rpc ListBans(ListBansRequest) returns (ListBansResponse);
+}

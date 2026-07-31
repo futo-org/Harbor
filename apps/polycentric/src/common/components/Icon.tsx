@@ -70,6 +70,7 @@ export const IconsMap = {
   searchOutline: defineIcon(Ionicons, 'search-outline'),
   settings: defineIcon(Ionicons, 'settings-outline'),
   share: defineIcon(Ionicons, 'share-social-outline'),
+  shieldAccount: defineIcon(MaterialCommunityIcons, 'shield-account-outline'),
   themeDark: defineIcon(Ionicons, 'moon'),
   themeLight: defineIcon(Ionicons, 'sunny'),
   time: defineIcon(Ionicons, 'time-outline'),

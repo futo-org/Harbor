@@ -45,6 +45,8 @@ pub fn build_grpc_router(
         );
     let pairing_service =
         service::identity::pairing::rpc::build_pairing_service(db.clone());
+    let identity_service =
+        service::identity::rpc::build_identity_service(ctx.clone());
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
     let verifications_service =
@@ -63,6 +65,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(content_service))
         .add_service(grpc_web.layer(notifications_service))
         .add_service(grpc_web.layer(pairing_service))
+        .add_service(grpc_web.layer(identity_service))
         .add_service(grpc_web.layer(server_info_service))
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))

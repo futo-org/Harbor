@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../protos/polycentric/v2/keypair.proto",
         "../../protos/polycentric/v2/event_key.proto",
         "../../protos/polycentric/v2/identity.proto",
+        "../../protos/polycentric/v2/identity_service.proto",
         "../../protos/polycentric/v2/events.proto",
         "../../protos/polycentric/v2/content.proto",
         "../../protos/polycentric/v2/feeds.proto",

@@ -12,7 +12,7 @@ use crate::service::identity::service::cached_identity_content;
 
 /// The verified identity of a request, available via request extensions.
 #[derive(Debug, Clone)]
-pub struct AuthenticatedIdentity(#[allow(dead_code)] pub String);
+pub struct AuthenticatedIdentity(pub String);
 
 #[derive(Clone)]
 pub struct AuthState {

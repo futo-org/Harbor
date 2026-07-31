@@ -1,6 +1,9 @@
-import { Text } from '@/src/common/components';
+import { IconButton, Text } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
+import { Routes } from '@/src/common/constants/routes';
 import { Atoms } from '@/src/common/theme';
+import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { AddServerForm } from './AddServerForm';
@@ -16,6 +19,18 @@ export function ServersSettingsSheet() {
     addServer,
     removeServer,
   } = useServerSettings();
+  const { moderatedServers } = useModerationStatus();
+
+  // The dashboard is a route outside this sheet's stack, so close the
+  // sheet before pushing it.
+  const openModerationDashboard = (server: string) => {
+    if (router.canGoBack()) router.back();
+    router.push(
+      `${Routes.tabs.moderation.dashboard}?server=${encodeURIComponent(
+        server,
+      )}`,
+    );
+  };
 
   return (
     <Sheet
@@ -42,6 +57,22 @@ export function ServersSettingsSheet() {
                 server={server}
                 action="remove"
                 onAction={() => removeServer(server)}
+                trailing={
+                  moderatedServers.includes(server) ? (
+                    <IconButton
+                      variant="ghost"
+                      compact
+                      icon={() => (
+                        <Icon
+                          name="shieldAccount"
+                          size={22}
+                          color="primary_500"
+                        />
+                      )}
+                      onPress={() => openModerationDashboard(server)}
+                    />
+                  ) : undefined
+                }
               />
             ))}
           </View>

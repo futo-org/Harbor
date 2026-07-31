@@ -1,15 +1,24 @@
 import { IconButton, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 interface ServerRowProps {
   server: string;
   action: 'add' | 'remove';
   onAction: () => void;
+  // Extra content shown before the action button (e.g. a moderation
+  // dashboard link). ServerRow stays agnostic about what it is.
+  trailing?: ReactNode;
 }
 
-export function ServerRow({ server, action, onAction }: ServerRowProps) {
+export function ServerRow({
+  server,
+  action,
+  onAction,
+  trailing,
+}: ServerRowProps) {
   const { theme } = useTheme();
   const isAdd = action === 'add';
 
@@ -22,6 +31,7 @@ export function ServerRow({ server, action, onAction }: ServerRowProps) {
       >
         {server}
       </Text>
+      {trailing}
       <IconButton
         variant="ghost"
         compact

@@ -130,9 +130,9 @@ extern "C" {
     UniffiForeignFutureResultVoid result
     );
     typedef void
-    (*UniffiCallbackInterfaceSignEventCallbackMethod0)(
+    (*UniffiCallbackInterfaceSignBytesCallbackMethod0)(
     uint64_t uniffi_handle, 
-    RustBuffer event_bytes, 
+    RustBuffer bytes, 
     UniffiForeignFutureCompleteRustBuffer uniffi_future_callback, 
     uint64_t uniffi_callback_data, 
     UniffiForeignFutureDroppedCallbackStruct * uniffi_out_dropped_callback
@@ -190,11 +190,11 @@ extern "C" {
     (*UniffiCallbackInterfaceObserverMethod2)(
     uint64_t uniffi_handle, 
     void * uniffi_out_return, RustCallStatus* rust_call_status
-    );typedef struct UniffiVTableCallbackInterfaceSignEventCallback {
+    );typedef struct UniffiVTableCallbackInterfaceSignBytesCallback {
         UniffiCallbackInterfaceFree uniffi_free;
         UniffiCallbackInterfaceClone uniffi_clone;
-        UniffiCallbackInterfaceSignEventCallbackMethod0 sign;
-    } UniffiVTableCallbackInterfaceSignEventCallback;typedef struct UniffiVTableCallbackInterfaceLogger {
+        UniffiCallbackInterfaceSignBytesCallbackMethod0 sign;
+    } UniffiVTableCallbackInterfaceSignBytesCallback;typedef struct UniffiVTableCallbackInterfaceLogger {
         UniffiCallbackInterfaceFree uniffi_free;
         UniffiCallbackInterfaceClone uniffi_clone;
         UniffiCallbackInterfaceLoggerMethod0 log;
@@ -356,6 +356,11 @@ extern "C" {
         /*handle*/ uint64_t provider, 
         RustCallStatus *uniffi_out_err
     );
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(
+        /*handle*/ uint64_t ptr, 
+        RustBuffer server_url, 
+        RustBuffer request_bytes
+    );
     void uniffi_polycentric_core_fn_method_polycentriccore_set_servers(
         /*handle*/ uint64_t ptr, 
         RustBuffer servers, 
@@ -381,20 +386,20 @@ extern "C" {
         RustBuffer signed_event, 
         RustCallStatus *uniffi_out_err
     );
-    /*handle*/ uint64_t uniffi_polycentric_core_fn_clone_signeventcallback(
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_clone_signbytescallback(
         /*handle*/ uint64_t handle, 
         RustCallStatus *uniffi_out_err
     );
-    void uniffi_polycentric_core_fn_free_signeventcallback(
+    void uniffi_polycentric_core_fn_free_signbytescallback(
         /*handle*/ uint64_t handle, 
         RustCallStatus *uniffi_out_err
     );
-    void uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(
-        UniffiVTableCallbackInterfaceSignEventCallback * vtable
+    void uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(
+        UniffiVTableCallbackInterfaceSignBytesCallback * vtable
     );
-    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_signeventcallback_sign(
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_signbytescallback_sign(
         /*handle*/ uint64_t ptr, 
-        RustBuffer event_bytes
+        RustBuffer bytes
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_clone_logger(
         /*handle*/ uint64_t handle, 
@@ -761,6 +766,8 @@ extern "C" {
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider(
     );
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(
+    );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(
@@ -771,7 +778,7 @@ extern "C" {
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(
     );
-    uint16_t uniffi_polycentric_core_checksum_method_signeventcallback_sign(
+    uint16_t uniffi_polycentric_core_checksum_method_signbytescallback_sign(
     );
     uint16_t uniffi_polycentric_core_checksum_method_logger_log(
     );
@@ -1277,7 +1284,7 @@ namespace uniffi::polycentric_core::cb::foreignfuturedroppedcallback {
     // Implementation of free callback function CallbackInterfaceFree
 
 
-// Callback function: uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free::UniffiCallbackInterfaceFree
+// Callback function: uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free::UniffiCallbackInterfaceFree
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -1289,7 +1296,7 @@ namespace uniffi::polycentric_core::cb::foreignfuturedroppedcallback {
 //
 // We then give the `callback` function pointer to Rust which will call the lambda sometime in the
 // future.
-namespace uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free {
+namespace uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free {
     using namespace facebook;
 
     // We need to store a lambda in a global so we can call it from
@@ -1347,7 +1354,7 @@ namespace uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback
     }
 
     [[maybe_unused]] static UniffiCallbackInterfaceFree
-    makeCallbackFunction( // uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free
+    makeCallbackFunction( // uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free
                     jsi::Runtime &rt,
                      std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
                      const jsi::Value &value) {
@@ -1390,7 +1397,7 @@ namespace uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback
         // then the pointer will no longer be left dangling.
         rsLambda = nullptr;
     }
-} // namespace uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free
+} // namespace uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free
 
 // Callback function: uniffi::polycentric_core::st::vtablecallbackinterfacelogger::vtablecallbackinterfacelogger::free::UniffiCallbackInterfaceFree
 //
@@ -2884,10 +2891,10 @@ template <> struct Bridging<UniffiForeignFutureCompleteVoid> {
   }
 };
 } // namespace uniffi::polycentric_core
-    // Implementation of CallbackInterfaceClone for vtable field uniffi_clone in VTableCallbackInterfaceSignEventCallback
+    // Implementation of CallbackInterfaceClone for vtable field uniffi_clone in VTableCallbackInterfaceSignBytesCallback
 
 
-// Callback function: uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback::UniffiCallbackInterfaceClone
+// Callback function: uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback::UniffiCallbackInterfaceClone
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -2899,7 +2906,7 @@ template <> struct Bridging<UniffiForeignFutureCompleteVoid> {
 //
 // We then give the `callback` function pointer to Rust which will call the lambda sometime in the
 // future.
-namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback {
+namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback {
     using namespace facebook;
 
     // We need to store a lambda in a global so we can call it from
@@ -2967,7 +2974,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackin
     }
 
     [[maybe_unused]] static UniffiCallbackInterfaceClone
-    makeCallbackFunction( // uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback
+    makeCallbackFunction( // uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback
                     jsi::Runtime &rt,
                      std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
                      const jsi::Value &value) {
@@ -3009,11 +3016,11 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackin
         // then the pointer will no longer be left dangling.
         rsLambda = nullptr;
     }
-} // namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback
-    // Implementation of CallbackInterfaceSignEventCallbackMethod0 for vtable field sign in VTableCallbackInterfaceSignEventCallback
+} // namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback
+    // Implementation of CallbackInterfaceSignBytesCallbackMethod0 for vtable field sign in VTableCallbackInterfaceSignBytesCallback
 
 
-// Callback function: uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback::UniffiCallbackInterfaceSignEventCallbackMethod0
+// Callback function: uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback::UniffiCallbackInterfaceSignBytesCallbackMethod0
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3025,7 +3032,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackin
 //
 // We then give the `callback` function pointer to Rust which will call the lambda sometime in the
 // future.
-namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback {
+namespace uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback {
     using namespace facebook;
 
     // We need to store a lambda in a global so we can call it from
@@ -3038,7 +3045,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
                      std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
                      std::shared_ptr<jsi::Value> callbackValue
             ,uint64_t rs_uniffiHandle
-            ,RustBuffer rs_eventBytes
+            ,RustBuffer rs_bytes
             ,UniffiForeignFutureCompleteRustBuffer rs_uniffiFutureCallback
             ,uint64_t rs_uniffiCallbackData
             ,UniffiForeignFutureDroppedCallbackStruct * rs_uniffiOutDroppedCallback) {
@@ -3046,7 +3053,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
-        auto js_eventBytes = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_eventBytes);
+        auto js_bytes = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_bytes);
         auto js_uniffiFutureCallback = uniffi::polycentric_core::Bridging<UniffiForeignFutureCompleteRustBuffer>::toJs(rt, callInvoker, rs_uniffiFutureCallback);
         auto js_uniffiCallbackData = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiCallbackData);
 
@@ -3056,7 +3063,7 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
         try {
             // Getting the callback function
             auto cb = callbackValue->asObject(rt).asFunction(rt);
-            auto uniffiResult = cb.call(rt, js_uniffiHandle, js_eventBytes, js_uniffiFutureCallback, js_uniffiCallbackData
+            auto uniffiResult = cb.call(rt, js_uniffiHandle, js_bytes, js_uniffiFutureCallback, js_uniffiCallbackData
             );
 
             
@@ -3071,13 +3078,13 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
                     rt, callInvoker, uniffiResult
                 );
         } catch (const jsi::JSError &error) {
-            std::cout << "Error in callback UniffiCallbackInterfaceSignEventCallbackMethod0: "
+            std::cout << "Error in callback UniffiCallbackInterfaceSignBytesCallbackMethod0: "
                     << error.what() << std::endl;
             throw error;
         }
     }
 
-    static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_eventBytes, UniffiForeignFutureCompleteRustBuffer rs_uniffiFutureCallback, uint64_t rs_uniffiCallbackData, UniffiForeignFutureDroppedCallbackStruct * rs_uniffiOutDroppedCallback) {
+    static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_bytes, UniffiForeignFutureCompleteRustBuffer rs_uniffiFutureCallback, uint64_t rs_uniffiCallbackData, UniffiForeignFutureDroppedCallbackStruct * rs_uniffiOutDroppedCallback) {
         // If the runtime has shutdown, then there is no point in trying to
         // call into Javascript. BUT how do we tell if the runtime has shutdown?
         //
@@ -3095,14 +3102,14 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
         // are all in the lambda.
         rsLambda(
             rs_uniffiHandle, 
-            rs_eventBytes, 
+            rs_bytes, 
             rs_uniffiFutureCallback, 
             rs_uniffiCallbackData, 
             rs_uniffiOutDroppedCallback);
     }
 
-    [[maybe_unused]] static UniffiCallbackInterfaceSignEventCallbackMethod0
-    makeCallbackFunction( // uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback
+    [[maybe_unused]] static UniffiCallbackInterfaceSignBytesCallbackMethod0
+    makeCallbackFunction( // uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback
                     jsi::Runtime &rt,
                      std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
                      const jsi::Value &value) {
@@ -3120,20 +3127,20 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
         }
         auto callbackFunction = value.asObject(rt).asFunction(rt);
         auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
-        rsLambda = [&rt, callInvoker, callbackValue](uint64_t rs_uniffiHandle, RustBuffer rs_eventBytes, UniffiForeignFutureCompleteRustBuffer rs_uniffiFutureCallback, uint64_t rs_uniffiCallbackData, UniffiForeignFutureDroppedCallbackStruct * rs_uniffiOutDroppedCallback) {
+        rsLambda = [&rt, callInvoker, callbackValue](uint64_t rs_uniffiHandle, RustBuffer rs_bytes, UniffiForeignFutureCompleteRustBuffer rs_uniffiFutureCallback, uint64_t rs_uniffiCallbackData, UniffiForeignFutureDroppedCallbackStruct * rs_uniffiOutDroppedCallback) {
                 // We immediately make a lambda which will do the work of transforming the
                 // arguments into JSI values and calling the callback.
                 uniffi_runtime::UniffiCallFunc jsLambda = [
                     callInvoker,
                     callbackValue
                     , rs_uniffiHandle
-                    , rs_eventBytes
+                    , rs_bytes
                     , rs_uniffiFutureCallback
                     , rs_uniffiCallbackData
                     , rs_uniffiOutDroppedCallback](jsi::Runtime &rt) mutable {
                     body(rt, callInvoker, callbackValue
                         , rs_uniffiHandle
-                        , rs_eventBytes
+                        , rs_bytes
                         , rs_uniffiFutureCallback
                         , rs_uniffiCallbackData
                         , rs_uniffiOutDroppedCallback);
@@ -3152,35 +3159,35 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod
         // then the pointer will no longer be left dangling.
         rsLambda = nullptr;
     }
-} // namespace uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback
+} // namespace uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback
 namespace uniffi::polycentric_core {
 using namespace facebook;
 using CallInvoker = uniffi_runtime::UniffiCallInvoker;
 
-template <> struct Bridging<UniffiVTableCallbackInterfaceSignEventCallback> {
-  static UniffiVTableCallbackInterfaceSignEventCallback fromJs(jsi::Runtime &rt,
+template <> struct Bridging<UniffiVTableCallbackInterfaceSignBytesCallback> {
+  static UniffiVTableCallbackInterfaceSignBytesCallback fromJs(jsi::Runtime &rt,
     std::shared_ptr<CallInvoker> callInvoker,
     const jsi::Value &jsValue
   ) {
     // Check if the input is an object
     if (!jsValue.isObject()) {
-      throw jsi::JSError(rt, "Expected an object for UniffiVTableCallbackInterfaceSignEventCallback");
+      throw jsi::JSError(rt, "Expected an object for UniffiVTableCallbackInterfaceSignBytesCallback");
     }
 
     // Get the object from the jsi::Value
     auto jsObject = jsValue.getObject(rt);
 
     // Create the vtable struct
-    UniffiVTableCallbackInterfaceSignEventCallback rsObject;
+    UniffiVTableCallbackInterfaceSignBytesCallback rsObject;
 
     // Create the vtable from the js callbacks.
-    rsObject.uniffi_free = uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free::makeCallbackFunction(
+    rsObject.uniffi_free = uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free::makeCallbackFunction(
           rt, callInvoker, jsObject.getProperty(rt, "uniffi_free")
         );
-    rsObject.uniffi_clone = uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback::makeCallbackFunction(
+    rsObject.uniffi_clone = uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback::makeCallbackFunction(
           rt, callInvoker, jsObject.getProperty(rt, "uniffi_clone")
         );
-    rsObject.sign = uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback::makeCallbackFunction(
+    rsObject.sign = uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback::makeCallbackFunction(
           rt, callInvoker, jsObject.getProperty(rt, "sign")
         );
 
@@ -5471,6 +5478,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status"),
+        3,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers"),
@@ -5511,36 +5526,36 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_clone_signeventcallback"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_polycentric_core_fn_clone_signbytescallback"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_clone_signeventcallback"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_clone_signbytescallback"),
         1,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_clone_signeventcallback(rt, thisVal, args, count);
+            return this->cpp_uniffi_polycentric_core_fn_clone_signbytescallback(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_free_signeventcallback"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_polycentric_core_fn_free_signbytescallback"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_free_signeventcallback"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_free_signbytescallback"),
         1,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_free_signeventcallback(rt, thisVal, args, count);
+            return this->cpp_uniffi_polycentric_core_fn_free_signbytescallback(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback"),
         1,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(rt, thisVal, args, count);
+            return this->cpp_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_polycentric_core_fn_method_signbytescallback_sign"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_signeventcallback_sign"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_signbytescallback_sign"),
         2,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_method_signeventcallback_sign(rt, thisVal, args, count);
+            return this->cpp_uniffi_polycentric_core_fn_method_signbytescallback_sign(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_fn_clone_logger"] = jsi::Function::createFromHostFunction(
@@ -6359,6 +6374,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers"),
@@ -6399,12 +6422,12 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_verify_signed_event(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_signeventcallback_sign"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_signbytescallback_sign"),
         0,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_checksum_method_signeventcallback_sign(rt, thisVal, args, count);
+            return this->cpp_uniffi_polycentric_core_checksum_method_signbytescallback_sign(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_checksum_method_logger_log"] = jsi::Function::createFromHostFunction(
@@ -6519,12 +6542,12 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_internal_fn_method_polycentriccore_ffi__bless_pointer(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer"] = jsi::Function::createFromHostFunction(
+    props["ubrn_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer"] = jsi::Function::createFromHostFunction(
         rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer"),
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer"),
         1,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(rt, thisVal, args, count);
+            return this->cpp_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_internal_fn_method_logger_ffi__bless_pointer"] = jsi::Function::createFromHostFunction(
@@ -6694,9 +6717,9 @@ uniffi::polycentric_core::cb::rustfuturecontinuationcallback::cleanup();
     // Cleanup for callback function ForeignFutureDroppedCallback
 uniffi::polycentric_core::cb::foreignfuturedroppedcallback::cleanup();
     // Cleanup for "free" callback function CallbackInterfaceFree
-uniffi::polycentric_core::st::vtablecallbackinterfacesigneventcallback::vtablecallbackinterfacesigneventcallback::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacelogger::vtablecallbackinterfacelogger::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceauthtokenprovider::vtablecallbackinterfaceauthtokenprovider::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobservable::vtablecallbackinterfacequeryobservable::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobserver::vtablecallbackinterfacequeryobserver::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceobserver::vtablecallbackinterfaceobserver::free::cleanup();
-uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesigneventcallback::cleanup();
-uniffi::polycentric_core::cb::callbackinterfacesigneventcallbackmethod0::vtablecallbackinterfacesigneventcallback::cleanup();
+uniffi::polycentric_core::st::vtablecallbackinterfacesignbytescallback::vtablecallbackinterfacesignbytescallback::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacelogger::vtablecallbackinterfacelogger::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceauthtokenprovider::vtablecallbackinterfaceauthtokenprovider::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobservable::vtablecallbackinterfacequeryobservable::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfacequeryobserver::vtablecallbackinterfacequeryobserver::free::cleanup();uniffi::polycentric_core::st::vtablecallbackinterfaceobserver::vtablecallbackinterfaceobserver::free::cleanup();
+uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacesignbytescallback::cleanup();
+uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod0::vtablecallbackinterfacesignbytescallback::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfacelogger::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceloggermethod0::vtablecallbackinterfacelogger::cleanup();
 uniffi::polycentric_core::cb::callbackinterfaceclone::vtablecallbackinterfaceauthtokenprovider::cleanup();
@@ -6737,11 +6760,11 @@ jsi::Value NativePolycentricCore::cpp_uniffi_internal_fn_func_ffi__read_string_f
     auto ptrObj = std::make_shared<uniffi_jsi::DestructibleObject>(pointer, destructor);
     auto obj = jsi::Object::createFromHostObject(rt, ptrObj);
     return jsi::Value(rt, obj);
-}jsi::Value NativePolycentricCore::cpp_uniffi_internal_fn_method_signeventcallback_ffi__bless_pointer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+}jsi::Value NativePolycentricCore::cpp_uniffi_internal_fn_method_signbytescallback_ffi__bless_pointer(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
     auto pointer = uniffi_jsi::Bridging<uint64_t>::fromJs(rt, callInvoker, args[0]);
     auto static destructor = [](uint64_t p) {
         RustCallStatus status = {0};
-        uniffi_polycentric_core_fn_free_signeventcallback(p, &status);
+        uniffi_polycentric_core_fn_free_signbytescallback(p, &status);
     };
     auto ptrObj = std::make_shared<uniffi_jsi::DestructibleObject>(pointer, destructor);
     auto obj = jsi::Object::createFromHostObject(rt, ptrObj);
@@ -7038,6 +7061,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
         
         return jsi::Value::undefined();
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2])
+        );
+
+        
+        return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         uniffi_polycentric_core_fn_method_polycentriccore_set_servers(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), 
@@ -7079,9 +7109,9 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
         
         return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_clone_signeventcallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_clone_signbytescallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
-        auto value = uniffi_polycentric_core_fn_clone_signeventcallback(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), 
+        auto value = uniffi_polycentric_core_fn_clone_signbytescallback(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), 
             &status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
@@ -7089,9 +7119,9 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_clone_signevent
         
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_free_signeventcallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_free_signbytescallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
-        uniffi_polycentric_core_fn_free_signeventcallback(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), 
+        uniffi_polycentric_core_fn_free_signbytescallback(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), 
             &status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
@@ -7099,25 +7129,25 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_free_signeventc
         
         return jsi::Value::undefined();
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
     auto vtableInstance =
-        uniffi::polycentric_core::Bridging<UniffiVTableCallbackInterfaceSignEventCallback>::fromJs(
+        uniffi::polycentric_core::Bridging<UniffiVTableCallbackInterfaceSignBytesCallback>::fromJs(
             rt,
             callInvoker,
             args[0]
         );
 
     std::lock_guard<std::mutex> lock(uniffi::polycentric_core::registry::vtableMutex);
-    uniffi_polycentric_core_fn_init_callback_vtable_signeventcallback(
+    uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(
         uniffi::polycentric_core::registry::putTable(
-            "UniffiVTableCallbackInterfaceSignEventCallback",
+            "UniffiVTableCallbackInterfaceSignBytesCallback",
             vtableInstance
         )
     );
     return jsi::Value::undefined();
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_signeventcallback_sign(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_signeventcallback_sign(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1])
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_signbytescallback_sign(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_fn_method_signbytescallback_sign(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1])
         );
 
         
@@ -7985,6 +8015,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
         
         return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(
         );
@@ -8020,8 +8057,8 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
         
         return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_signeventcallback_sign(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_checksum_method_signeventcallback_sign(
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_signbytescallback_sign(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_signbytescallback_sign(
         );
 
         

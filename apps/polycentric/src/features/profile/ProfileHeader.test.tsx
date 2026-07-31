@@ -51,6 +51,12 @@ jest.mock('../follow/FollowButton', () => ({
   __esModule: true,
   default: () => null,
 }));
+// ProfileMenu pulls in @rn-primitives/dropdown-menu, whose dist ships
+// untranspiled JSX that jest-expo does not transform.
+jest.mock('./ProfileMenu', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
 }));
