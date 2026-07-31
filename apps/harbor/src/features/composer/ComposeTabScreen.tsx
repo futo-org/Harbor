@@ -1,12 +1,13 @@
+import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { Button } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import type { types } from '@polycentric/react-native';
 import { router, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
 import { useComposer } from './hooks/useComposer';
@@ -41,6 +42,19 @@ export default function ComposeTabScreen() {
         <Sheet.Header
           title={composer.title}
           onClose={composer.handleClose}
+          // Sheet.Header hides its close button on native (sheets swipe to
+          // dismiss), but this is a plain screen — provide one explicitly.
+          left={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={composer.handleClose}
+              hitSlop={Spacing.lg}
+              style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            >
+              <Icon name="close" size={24} color="neutral_900" />
+            </Pressable>
+          }
           right={
             composer.submitting ? (
               <ActivityIndicator

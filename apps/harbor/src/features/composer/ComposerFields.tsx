@@ -20,7 +20,7 @@ import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import type { useComposer } from './hooks/useComposer';
-import { isWeb } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ScrollView } from '@/src/common/components/ScrollView';
 
 const ATTACHMENT_GAP = Spacing.sm;
@@ -75,13 +75,15 @@ export function ComposerFields({
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
 
-  // The text field is deliberately UNCONTROLLED: round-tripping every
+  // On Android the field is deliberately UNCONTROLLED: round-tripping every
   // keystroke through a `value` prop makes Fabric re-apply the text natively,
   // clobbering the cursor position whenever it isn't at the very end
-  // (Android, upstream: https://github.com/facebook/react-native/issues/34276).
+  // (upstream: https://github.com/facebook/react-native/issues/34276).
   // It is seeded once at mount (a `defaultValue` that keeps updating is
   // forwarded to the native `text` prop each render, same as `value`) and the
-  // store is synced via `onChangeText`.
+  // store is synced via `onChangeText`. iOS must stay CONTROLLED instead:
+  // uncontrolled multiline inputs there never re-measure, so the field stops
+  // auto-growing (https://github.com/facebook/react-native/issues/54570).
   const inputRef = useRef<RNTextInput>(null);
   const [initialText] = useState(text);
   // Last text the field is known to contain (the seed, then user input).
@@ -100,6 +102,7 @@ export function ComposerFields({
   return (
     <ScrollView
       style={[Atoms.flex_1]}
+      contentContainerStyle={Atoms.flex_grow_1}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
     >
@@ -129,7 +132,12 @@ export function ComposerFields({
 
       {/* Main block */}
       <View
-        style={[Atoms.flex_row, Atoms.gap_md, Atoms.flex_1, { minHeight: 200 }]}
+        style={[
+          Atoms.flex_row,
+          Atoms.gap_md,
+          Atoms.flex_grow_1,
+          { minHeight: 200 },
+        ]}
       >
         {currentIdentityKey ? (
           <View style={[Atoms.self_start]}>
@@ -145,7 +153,8 @@ export function ComposerFields({
             variant="plain"
             placeholder={placeholder}
             autoFocus={autoFocus}
-            defaultValue={initialText}
+            value={isIOS ? text : undefined}
+            defaultValue={isIOS ? undefined : initialText}
             onChangeText={(next) => {
               fieldTextRef.current = next;
               setText(next);
@@ -172,6 +181,12 @@ export function ComposerFields({
           />
           {/* Quote preview */}
           {!!quote && <ComposerPostEmbed post={quote} intentText="Quoting" />}
+          {/* Tap-to-focus filler for the space below the content */}
+          <Pressable
+            style={Atoms.flex_grow_1}
+            onPress={() => inputRef.current?.focus()}
+            accessible={false}
+          />
         </View>
       </View>
     </ScrollView>
@@ -279,13 +294,7 @@ function AttachmentGrid({
   return (
     <View
       onLayout={onLayout}
-      style={[
-        Atoms.flex_grow_1,
-        Atoms.flex_row,
-        Atoms.flex_wrap,
-        Atoms.gap_sm,
-        Atoms.mt_sm,
-      ]}
+      style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_sm, Atoms.mt_sm]}
     >
       {attachments.map((a) => (
         <AttachmentThumb
