@@ -7,13 +7,12 @@ import { Atoms, Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { FetchMode } from '@polycentric/react-native';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactElement,
 } from 'react';
@@ -129,18 +128,12 @@ export default function ReactionDetailsSheet({
     [groups, all, reactionCounts, post.upvoteCount],
   );
 
-  const listRef = useRef<FlashListRef<ReactionInfo>>(null);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
   // Always open to the "all" tab.
   useEffect(() => {
     if (open) setSelectedEmoji(null);
   }, [open]);
-
-  const handleSelect = useCallback((emoji: string | null) => {
-    setSelectedEmoji(emoji);
-    listRef.current?.scrollToTop();
-  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: ReactionInfo }) => (
@@ -207,7 +200,7 @@ export default function ReactionDetailsSheet({
               accessibilityLabel={
                 tab.emoji === null ? 'All reactions' : `${tab.emoji} reactions`
               }
-              onPress={() => handleSelect(tab.emoji)}
+              onPress={() => setSelectedEmoji(tab.emoji)}
             >
               {tabLabel(tab)}
             </Tabs.Tab>
@@ -218,7 +211,10 @@ export default function ReactionDetailsSheet({
           style={isWeb ? { height: 'clamp(360px, 60vh, 560px)' } : Atoms.flex_1}
         >
           <FlashList
-            ref={listRef}
+            // Ensure each tab gets its own flashlist, because otherwise flashlist
+            // will try to keep the same row in view when switching tabs,
+            // but we want it to start from the top each time.
+            key={selected.emoji ?? 'all'}
             data={selected.reactions}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
