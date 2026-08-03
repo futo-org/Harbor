@@ -88,6 +88,7 @@ pub enum Query {
     IsModerator(crate::query::moderation::IsModeratorArgs),
     IsBanned(crate::query::moderation::IsBannedArgs),
     ListBans(crate::query::moderation::ListBansArgs),
+    GetReactions(crate::query::reactions::GetReactionsArgs),
 }
 
 #[uniffi::export(with_foreign)]
@@ -411,6 +412,9 @@ impl PolycentricCore {
             }
             Query::ListBans(args) => {
                 crate::query::moderation::list_bans(&self.query_client, query_key, args, opts)
+            }
+            Query::GetReactions(args) => {
+                crate::query::reactions::get_reactions(&self.query_client, query_key, args, opts)
             }
         }
     }

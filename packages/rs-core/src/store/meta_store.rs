@@ -24,6 +24,25 @@ impl MetaStore {
         if let Some(reply_count) = meta.reply_count {
             stored.reply_count = Some(reply_count);
         }
+
+        if let Some(reaction_count) = meta.reaction_count {
+            stored.reaction_count = Some(reaction_count);
+        }
+
+        if let Some(upvote_count) = meta.upvote_count {
+            stored.upvote_count = Some(upvote_count);
+        }
+
+        if let Some(downvote_count) = meta.downvote_count {
+            stored.downvote_count = Some(downvote_count);
+        }
+
+        // Reactions tallies are a repeated field, so there is no way to
+        // distinguish between "empty" and "not present."
+        // We will use presence of tallies or a total reaction count as a heuristic.
+        if meta.reaction_count.is_some() || !meta.emoji_reactions.is_empty() {
+            stored.emoji_reactions = meta.emoji_reactions;
+        }
     }
 
     /// Get the cached metadata for an event, if it is present.

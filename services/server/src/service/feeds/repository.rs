@@ -2,7 +2,7 @@ pub use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::{events::TargetEventKey, feeds::util::PageCursor};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
-    event_model as EventModel,
+    content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
 use polycentric_common::models::collections;
 use sea_orm::{
@@ -482,6 +482,64 @@ impl Query {
             ],
         );
         DescendantRef::find_by_statement(stmt).all(db).await
+    }
+
+    /// Get up to `limit` reaction events for the target post.
+    /// Fetches in order of most-recent to least-recent so that we don't fetch
+    /// outdated reactions from a user that have been superseded without also
+    /// getting the newest one.
+    /// Optionally, filter events to only include reactions with `emoji`.
+    pub async fn get_reactions(
+        db: &DbConn,
+        target: &TargetEventKey,
+        emoji: Option<&str>,
+        limit: u64,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let mut query = EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            // Include content and reaction information:
+            .join(JoinType::InnerJoin, content_join())
+            .join(
+                JoinType::InnerJoin,
+                ContentModel::Entity::belongs_to(ContentReactionModel::Entity)
+                    .from(ContentModel::Column::Id)
+                    .to(ContentReactionModel::Column::ContentId)
+                    .into(),
+            )
+            // Keep only reactions targetting the requested post:
+            .filter(
+                ContentReactionModel::Column::EventKeyCollection
+                    .eq(target.collection),
+            )
+            .filter(
+                ContentReactionModel::Column::EventKeyIdentity
+                    .eq(target.identity.clone()),
+            )
+            .filter(
+                ContentReactionModel::Column::EventKeyPublicKeyType
+                    .eq(target.public_key_type),
+            )
+            .filter(
+                ContentReactionModel::Column::EventKeyPublicKey
+                    .eq(target.public_key.clone()),
+            )
+            .filter(
+                ContentReactionModel::Column::EventKeySequence
+                    .eq(target.sequence),
+            )
+            // Deterministically sort by newest
+            .order_by_desc(EventModel::Column::CreatedAt)
+            .order_by_desc(EventModel::Column::Id);
+
+        // TODO: this is currently buggy when a user creates a new reaction
+        // without deleting the old one.
+        // We may filter out the newest reaction and send back an outdated reaction.
+        // With no tombstone, it will be rendered as active.
+        if let Some(emoji) = emoji {
+            query = query.filter(ContentReactionModel::Column::Emoji.eq(emoji));
+        }
+
+        query.limit(limit).all(db).await
     }
 }
 

@@ -33,6 +33,7 @@ interface IconButtonProps {
   style?: StyleProp<ViewStyle>;
   /** Remove container padding (ghost variant only) */
   compact?: boolean;
+  accessibilityLabel?: string;
 }
 
 const SIZE_CONFIG: Record<
