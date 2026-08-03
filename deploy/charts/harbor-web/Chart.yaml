@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harbor-web
+description: Harbor web app — the Expo web export served by its Node server
+type: application
+version: 0.1.0
+appVersion: "0.0.1"

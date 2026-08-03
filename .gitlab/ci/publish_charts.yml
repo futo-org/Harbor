@@ -1,0 +1,42 @@
+.charts-workflow:
+  image:
+    name: alpine/helm:3.17.3
+    entrypoint: ['']
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - deploy/charts/**/*
+        - .gitlab/ci/publish_charts.yml
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - deploy/charts/**/*
+        - .gitlab/ci/publish_charts.yml
+
+charts-lint:
+  extends: .charts-workflow
+  stage: check
+  script:
+    - |
+      for chart in deploy/charts/*/; do
+        helm lint "$chart"
+        helm template "$(basename "$chart")" "$chart" > /dev/null
+      done
+
+charts-publish:
+  extends: .charts-workflow
+  stage: publish
+  before_script:
+    - apk add --no-cache crane
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | helm registry login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+    - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    - |
+      for chart in deploy/charts/*/; do
+        name=$(basename "$chart")
+        version=$(helm show chart "$chart" | awk '/^version:/ {print $2}')
+        helm package "$chart" --version "${version}-${CI_COMMIT_REF_SLUG}" --destination packaged
+        helm push "packaged/${name}-${version}-${CI_COMMIT_REF_SLUG}.tgz" "oci://$CI_REGISTRY_IMAGE/charts"
+        crane tag "$CI_REGISTRY_IMAGE/charts/${name}:${version}-${CI_COMMIT_REF_SLUG}" "$CI_COMMIT_REF_SLUG"
+      done
