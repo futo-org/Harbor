@@ -28,15 +28,22 @@ charts-publish:
   extends: .charts-workflow
   stage: publish
   before_script:
-    - apk add --no-cache crane
+    - apk add --no-cache curl jq crane
   script:
     - echo "$CI_REGISTRY_PASSWORD" | helm registry login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
     - crane auth login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
     - |
+      latest=$(curl -fsS --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases?per_page=1" \
+        | jq -r '.[0].tag_name // "0.0.0"') || latest=""
+      [ -n "$latest" ] || latest="0.0.0"
+      core=${latest#v}; core=${core%%-*}
+      oldIFS=$IFS; IFS=.; set -- $core; IFS=$oldIFS
+      version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${CI_COMMIT_REF_SLUG}"
+      echo "Publishing charts as version ${version}"
       for chart in deploy/charts/*/; do
         name=$(basename "$chart")
-        version=$(helm show chart "$chart" | awk '/^version:/ {print $2}')
-        helm package "$chart" --version "${version}-${CI_COMMIT_REF_SLUG}" --destination packaged
-        helm push "packaged/${name}-${version}-${CI_COMMIT_REF_SLUG}.tgz" "oci://$CI_REGISTRY_IMAGE/charts"
-        crane tag "$CI_REGISTRY_IMAGE/charts/${name}:${version}-${CI_COMMIT_REF_SLUG}" "$CI_COMMIT_REF_SLUG"
+        helm package "$chart" --version "$version" --destination packaged
+        helm push "packaged/${name}-${version}.tgz" "oci://$CI_REGISTRY_IMAGE/charts"
+        crane tag "$CI_REGISTRY_IMAGE/charts/${name}:${version}" "$CI_COMMIT_REF_SLUG"
       done
