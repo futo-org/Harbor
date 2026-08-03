@@ -1,0 +1,19 @@
+[package]
+name = "uniffi-bindgen"
+version = "0.0.0"
+edition = "2024"
+description = "Binding-generator CLI for rs-core foreign bindings (Kotlin, Swift, ...)."
+publish = false
+
+# Standalone (own [workspace]) so the root workspace doesn't need editing.
+# NOTE: this crate is REQUIRED by packages/kotlin-core's `uniffiGenerate`
+# Gradle task — it is build infrastructure, not disposable output. Its
+# uniffi version must match the workspace pin (=0.31.0) exactly.
+[workspace]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/main.rs"
+
+[dependencies]
+uniffi = { version = "=0.31.0", features = ["cli"] }
