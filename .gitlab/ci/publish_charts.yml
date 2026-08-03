@@ -9,7 +9,7 @@
         - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - deploy/charts/**/*
         - .gitlab/ci/publish_charts.yml
