@@ -23,27 +23,37 @@ export default function ReportSheet({
   const { theme } = useTheme();
   const { isPending, submit } = useReportAction();
 
-  const [selected, setSelected] = useState<string>();
-  const [additionalInfo, setAdditionalInfo] = useState<string>();
+  // Use empty string to mean "no value" so that the radio group is consistently
+  // controlled, since `value=undefined` would leave it uncontrolled.
+  // Additiona info just starts empty.
+  const [selected, setSelected] = useState<string>('');
+  const [additionalInfo, setAdditionalInfo] = useState<string>('');
   const [stage, setStage] = useState<'option' | 'additional'>('option');
 
   const isOption = stage === 'option';
 
-  const onClosePress = () => {
+  const reset = () => {
+    setStage('option');
+    setSelected('');
+    setAdditionalInfo('');
+  };
+
+  /** Go to previous stage or close the sheet. */
+  const onBackPress = () => {
     if (isOption) onClose();
     else setStage('option');
   };
 
   const onSubmit = async () => {
-    if (selected === undefined) return;
+    if (!selected) return;
+
     await submit({
       eventId,
       category: Number(selected) as v2.ReportCategory,
-      additionalInfo: additionalInfo ?? '',
+      additionalInfo,
     });
-    // Reset states
-    setStage('option');
-    setAdditionalInfo('');
+
+    reset();
     onClose();
   };
 
@@ -55,7 +65,7 @@ export default function ReportSheet({
   return (
     <Sheet
       open={open}
-      onClose={onClosePress}
+      onClose={onClose}
       detents={[0.5, 0.75, 1]}
       header={
         <Sheet.Header
@@ -63,7 +73,7 @@ export default function ReportSheet({
             isOption ? 'What are you reporting?' : 'Additional information'
           }
           closeIcon={isOption ? undefined : 'chevronBack'}
-          onClose={onClosePress}
+          onClose={onBackPress}
         />
       }
       footer={
@@ -100,7 +110,7 @@ export default function ReportSheet({
           <TextArea
             numberOfLines={3}
             placeholder="Please provide any additional information that you think may be helpful."
-            value={additionalInfo ?? ''}
+            value={additionalInfo}
             onChangeText={setAdditionalInfo}
           />
         )}
