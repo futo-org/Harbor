@@ -7,16 +7,22 @@
       changes:
         - pnpm-lock.yaml
         - apps/**/*
+        # Charts pin this commit's image SHA (appVersion), so the image must
+        # exist even for chart-only changes.
+        - deploy/charts/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - pnpm-lock.yaml
         - apps/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
+        - .gitlab/ci/publish_charts.yml
 
 # Lightweight base for checks (format, tests): node + pnpm install, no
 # SDK build artifacts needed.

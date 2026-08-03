@@ -7,12 +7,20 @@
       changes:
         - deploy/charts/**/*
         - .gitlab/ci/publish_charts.yml
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - deploy/charts/**/*
         - .gitlab/ci/publish_charts.yml
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
 
 charts-lint:
   extends: .charts-workflow
@@ -39,11 +47,20 @@ charts-publish:
       [ -n "$latest" ] || latest="0.0.0"
       core=${latest#v}; core=${core%%-*}
       oldIFS=$IFS; IFS=.; set -- $core; IFS=$oldIFS
-      version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${CI_COMMIT_REF_SLUG}"
+      # The short SHA makes the version unique per commit — helm-controller
+      # runs with DisableChartDigestTracking, so only a version change (not a
+      # re-push of the same version) triggers an upgrade.
+      version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${CI_COMMIT_REF_SLUG}.${CI_COMMIT_SHORT_SHA}"
       echo "Publishing charts as version ${version}"
       for chart in deploy/charts/*/; do
         name=$(basename "$chart")
-        helm package "$chart" --version "$version" --destination packaged
+        # appVersion pins image tags to the image built from this commit.
+        helm package "$chart" --version "$version" --app-version "$CI_COMMIT_SHA" --destination packaged
         helm push "packaged/${name}-${version}.tgz" "oci://$CI_REGISTRY_IMAGE/charts"
         crane tag "$CI_REGISTRY_IMAGE/charts/${name}:${version}" "$CI_COMMIT_REF_SLUG"
       done
+      # Hand the version to the deploy jobs (they re-tag charts per environment).
+      echo "CHART_VERSION=${version}" > charts.env
+  artifacts:
+    reports:
+      dotenv: charts.env

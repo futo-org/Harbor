@@ -3,12 +3,15 @@
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - apps/harbor/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
+        - .gitlab/ci/publish_charts.yml
 
-########################################
-# Tag the image with environment label #
-########################################
+################################################
+# Tag the image and chart with environment label #
+################################################
+
 
 .app-deploy-image:
   extends: .app-deploy-workflow
@@ -20,9 +23,12 @@
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
     - crane tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA $ENVIRONMENT_TAG
+    - crane tag $CI_REGISTRY_IMAGE/charts/harbor-web:$CHART_VERSION $ENVIRONMENT_TAG
   needs:
     - job: app-web-image
       artifacts: false
+    - job: charts-publish
+      artifacts: true
 
 app-deploy-image-staging:
   extends: .app-deploy-image
