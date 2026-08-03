@@ -6,6 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
+import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
   feedQueryKeys,
   useFeedPageInfo,
@@ -20,6 +21,7 @@ export function useExploreFeed(options?: {
   const enabled = options?.enabled ?? true;
   const identity = client.activeIdentityKey ?? '';
   const queryKey = feedQueryKeys.explore(identity);
+  const omitLabels = useOmitLabels();
 
   const query = useQuery(
     queryKey,
@@ -30,6 +32,7 @@ export function useExploreFeed(options?: {
         identity: identity === '' ? undefined : identity,
         limit: options?.perServerLimit,
         forwardToken,
+        omitLabels,
       });
     },
     { updateMode: UpdateMode.Merge },

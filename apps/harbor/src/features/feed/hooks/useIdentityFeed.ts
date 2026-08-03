@@ -1,4 +1,5 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
+import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
@@ -19,12 +20,18 @@ export function useIdentityFeed(
   const enabled = options?.enabled ?? true;
   const identity = identityId ?? '';
   const queryKey = feedQueryKeys.identity(identity);
+  const omitLabels = useOmitLabels();
 
   const query = useQuery(
     queryKey,
     (status, data) => {
       const forwardToken = extractFeedToken(status, data);
-      return new Query.GetIdentityFeed({ identity, limit, forwardToken });
+      return new Query.GetIdentityFeed({
+        identity,
+        limit,
+        forwardToken,
+        omitLabels,
+      });
     },
     { updateMode: UpdateMode.Merge },
     enabled,

@@ -8,3 +8,8 @@
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// `expo-font` requires `expo-asset` even though it is not declared as a
+// dependency. We set this mock to provide a placeholder icon component when
+// required.
+jest.mock('@expo/vector-icons', () => new Proxy({}, { get: () => () => null }));
