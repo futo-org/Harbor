@@ -1,7 +1,11 @@
 use super::{ChildContext, map_db_err};
-use crate::service::proto::Post;
+use crate::service::proto::{Post, attributed_to::To};
+use ::entity::content_post_attributed_url_model as ContentPostAttributedUrlModel;
 use ::entity::content_post_model as ContentPostModel;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ConnectionTrait, DbErr, EntityTrait,
+    sea_query::OnConflict,
+};
 use tonic::Status;
 
 pub(super) async fn add<C: ConnectionTrait>(
@@ -61,6 +65,40 @@ pub(super) async fn add<C: ConnectionTrait>(
     .insert(db)
     .await
     .map_err(map_db_err)?;
+
+    // Index each URL the post is attributed to so GetAttributionFeed can
+    // find it. The (content_id, url) primary key makes a given
+    // attribution unique per post, so a repeated URL just no-ops on
+    // conflict rather than failing the ingest. Empty URLs are skipped.
+    for attributed_to in post.attributed_to {
+        let Some(To::Link(link)) = attributed_to.to else {
+            continue;
+        };
+        if link.url.is_empty() {
+            continue;
+        }
+        let insert = ContentPostAttributedUrlModel::Entity::insert(
+            ContentPostAttributedUrlModel::ActiveModel {
+                content_id: Set(ctx.content_id),
+                url: Set(link.url),
+            },
+        )
+        .on_conflict(
+            OnConflict::columns([
+                ContentPostAttributedUrlModel::Column::ContentId,
+                ContentPostAttributedUrlModel::Column::Url,
+            ])
+            .do_nothing()
+            .to_owned(),
+        )
+        .exec(db)
+        .await;
+        match insert {
+            Ok(_)
+            | Err(DbErr::RecordNotInserted | DbErr::RecordNotFound(_)) => {}
+            Err(e) => return Err(map_db_err(e)),
+        }
+    }
 
     Ok(())
 }

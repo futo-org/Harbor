@@ -40,6 +40,17 @@ message Post {
   optional EventKey quote = 4;
   // Link previews for URLs in the post text
   repeated Link links = 5;
+  // Labels the creator / client applies themselves
+  repeated string labels = 6;
+  // If any, where the post is attributed to.
+  repeated AttributedTo attributed_to = 7;
+}
+
+message AttributedTo {
+  oneof to {
+    // Remote resource
+    Link link = 1;
+  }
 }
 
 message PostReply {

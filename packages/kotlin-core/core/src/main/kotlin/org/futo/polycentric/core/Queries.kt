@@ -1,5 +1,6 @@
 package org.futo.polycentric.core
 
+import org.futo.polycentric.ffi.GetAttributionFeedArgs
 import org.futo.polycentric.ffi.GetEventArgs
 import org.futo.polycentric.ffi.GetExploreFeedArgs
 import org.futo.polycentric.ffi.GetFollowingFeedArgs
@@ -18,6 +19,7 @@ import org.futo.polycentric.ffi.ListVerificationTargetsArgs
 import org.futo.polycentric.ffi.ListVerificationVerifiesArgs
 import org.futo.polycentric.ffi.Query
 import org.futo.polycentric.ffi.QueryOpts
+import polycentric.v2.AttributedTo
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
 import polycentric.v2.GetFeedResponse
@@ -92,6 +94,29 @@ suspend fun PolycentricClient.getExploreFeed(
 ): GetFeedResponse? =
     core.awaitQuery(
         Query.GetExploreFeed(GetExploreFeedArgs(identity, limit, backwardToken, forwardToken)),
+    )?.let { GetFeedResponse.ADAPTER.decode(it) }
+
+/**
+ * Posts attributed to the same target as [attributedTo] — e.g. all posts
+ * about a video URL. For a link, "same target" means the same URL,
+ * ignoring the other Link metadata. The whole AttributedTo crosses the
+ * FFI as serialized proto bytes.
+ */
+suspend fun PolycentricClient.getAttributionFeed(
+    attributedTo: AttributedTo,
+    limit: Int? = null,
+    backwardToken: String? = null,
+    forwardToken: String? = null,
+): GetFeedResponse? =
+    core.awaitQuery(
+        Query.GetAttributionFeed(
+            GetAttributionFeedArgs(
+                AttributedTo.ADAPTER.encode(attributedTo),
+                limit,
+                backwardToken,
+                forwardToken,
+            ),
+        ),
     )?.let { GetFeedResponse.ADAPTER.decode(it) }
 
 suspend fun PolycentricClient.listNotifications(
