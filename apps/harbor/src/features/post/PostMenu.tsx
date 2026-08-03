@@ -28,12 +28,23 @@ export default function PostMenu({ post }: PostMenuProps) {
 
   const onDeletePress = async () => {
     // Wait for confirm
-    await new Promise((resolve, reject) => {
-      Alert.alert('Are you sure?', 'Confirm you wish to delete this post', [
-        { text: 'Confirm', onPress: () => resolve(true), style: 'destructive' },
-        { text: 'Cancel', onPress: () => reject(), style: 'cancel' },
-      ]);
+    const userConfirmed = await new Promise((resolve) => {
+      Alert.alert(
+        'Are you sure?',
+        'Confirm you wish to delete this post',
+        [
+          {
+            text: 'Confirm',
+            onPress: () => resolve(true),
+            style: 'destructive',
+          },
+          { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+        ],
+        { onDismiss: () => resolve(false) },
+      );
     });
+
+    if (!userConfirmed) return;
     await deleteAsync();
   };
 
