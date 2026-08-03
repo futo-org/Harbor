@@ -10,6 +10,7 @@ pub mod notifications;
 pub mod profile;
 pub mod proofs;
 pub mod proto;
+pub mod search;
 pub mod server;
 pub mod stats;
 pub mod verifications;
