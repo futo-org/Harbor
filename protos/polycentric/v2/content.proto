@@ -95,6 +95,10 @@ message Reaction {
   optional string emoji = 2;
   // Upvote = true. Downvote = false.
   bool positive = 3;
+  // What the reaction is attributed to when it targets something that is not
+  // an in-network event — e.g. a URL (reacting to a video). Set exactly one
+  // of `event_key` or `attributed_to`.
+  optional AttributedTo attributed_to = 4;
 }
 
 message ProfileUpdate {
