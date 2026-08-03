@@ -9,9 +9,12 @@ React Native, Kotlin).
 > **Status: js-core feature parity at source level, compile-verified.**
 > All js-core modules are ported and `:core:compileDebugKotlin` passes
 > against the real uniffi-generated bindings and Wire-generated protos.
+> Includes `getAttributionFeed` (the URL/topic-anchor feed backed by the
+> `Post.attributed_to` field and the rs-core `Query::GetAttributionFeed`
+> variant) and a SQLite storage driver + filesystem blob store (ports of
+> `@polycentric/js-storage-sqlite` and js-node's `NodeFileStoreDriver`).
 > Not yet done: runtime testing against a live server (port the
-> kotlin-wrapper branch's instrumented suites), and the SQLite storage
-> driver (in-memory driver only so far).
+> kotlin-wrapper branch's instrumented suites).
 >
 > Naming conventions learned from the generated code (for future edits):
 > Wire keeps proto snake_case verbatim (`content_digest`, `created_at`,
@@ -62,7 +65,9 @@ decodes with its own generated types — same contract js-core uses.
 | `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — CoreException covers FFI failures) |
 | — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 16 non-ListEvents Query variants (incl. the moderation trio) with response decoding |
 | `platform-interfaces/*` | `platform/PlatformInterfaces.kt` | done |
-| `datastore/*` (drivers) | `storage/InMemoryStorageDriver.kt` | memory done; SQLite: salvage below |
+| `js-storage-sqlite` (DrizzleStorageDriver) | `storage/sqlite/SqliteStorageDriver.kt` + repos | **ported** — same schema (events/content/keys/active_identity_for_key), no-op ack repo, raw `SQLiteOpenHelper` (no extra deps); heads query uses a correlated MAX() subquery instead of a window function (SQLite on minSdk 24 predates window fns) |
+| js-node `NodeFileStoreDriver` | `storage/AndroidFileStoreDriver.kt` | **ported** — filesystem blob store, `{type}_{hex}` names, atomic temp+rename |
+| `datastore/*` (drivers) | `storage/InMemoryStorageDriver.kt` | in-memory driver for tests |
 | `http/alias-resolver.ts` | `http/AliasResolver.kt` | **ported** (parse/normalize/resolve, wildcard `*`, 10s timeout; org.json — on the Android bootclasspath) |
 | `datastore/event-ack-store.ts` | interface only | js-core's store is a vestigial v1-shaped pass-through with no call sites; the Kotlin `IEventAckRepository` is v2-shaped (server, EventKey) by design |
 | observable bridge | `QueryFlows.kt` | done (verify generated names) |
@@ -134,8 +139,9 @@ are incompatible across versions.
    of eventemitter3, byte-oriented repository payloads, a v2-shaped
    `IEventAckRepository`, no v1 protos, and no `getBatch` (its only
    js-core call site is a test mock).
-2. SQLite storage driver (adapt kotlin-wrapper branch code to the v2 event
-   key: collection / identity / signed_by / sequence).
+2. SQLite storage driver + filesystem blob store — **done**
+   (`storage/sqlite/`, `storage/AndroidFileStoreDriver.kt`), ported from
+   `@polycentric/js-storage-sqlite` and js-node's `NodeFileStoreDriver`.
 3. Port the kotlin-wrapper instrumented test scenarios as the conformance
    suite against a local dev server (`services/server`), plus JVM unit
    tests for the pure-Kotlin pieces (ServerJwt, AliasResolver parsing,
