@@ -76,6 +76,7 @@ message EventProofTarget {
 The unique identifier of an event.
 
 ```protobuf
+message EventKey {
   // Reserved collections:
   // 1 -> Identity, 2 -> Feed, 3 -> Profile,
   // 4 -> Interactions, 5 -> Social graph,

@@ -10,7 +10,8 @@
 ### 1. Start PostgreSQL
 
 ```sh
-docker compose up -d postgres
+# In the root of the repo.
+docker compose up -d postgres kafka
 ```
 
 This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
@@ -22,7 +23,13 @@ cd migration
 DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 ```
 
-### 3. Start the Server
+### 3. Setup .env file
+
+```sh
+cp .env.example .env
+```
+
+### 4. Start the Server
 
 ```sh
 cargo run -p server
@@ -37,6 +44,8 @@ The `DATABASE_URL` environment variable can be set to override the default conne
 
 The integration tests run against a live server, so the server must be running first.
 
+NOTE: not currently maintained.
+
 ```sh
 # In one terminal, start the server
 cargo run -p server
@@ -48,8 +57,8 @@ cargo test -p integration-tests
 ## Project Structure
 
 ```
+protos/polycentric/v2/ - Protobuf definitions
 services/server/
-  proto/          - Protobuf definitions
   src/            - Server source code
   entity/         - SeaORM entity models (shared by server and migration)
   migration/      - Database migrations
