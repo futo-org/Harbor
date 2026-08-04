@@ -23,8 +23,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# Extra environment variables for the server container. EXPO_PUBLIC_* values
-# are baked into the bundle at image build time and cannot be set here.
+# Extra environment variables for the server container.
 env: []
 
 # The port server.js listens on (PORT env in the Dockerfile).

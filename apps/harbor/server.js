@@ -9,6 +9,31 @@ const handler = createRequestHandler({
 });
 const port = process.env.PORT || 8080;
 
+// Any EXPO_PUBLIC_* set on the container overrides the baked-in value.
+const runtimeEnv = {};
+for (const [key, value] of Object.entries(process.env)) {
+  if (key.startsWith('EXPO_PUBLIC_')) runtimeEnv[key] = value;
+}
+// SSR reads the same global.
+globalThis.__POLYCENTRIC_ENV__ = runtimeEnv;
+
+// Substitute the runtime env into the +html.tsx script of every exported
+// HTML template. Matches the whole assignment, so restarts re-patch.
+const DIST_DIR = path.join(__dirname, 'dist');
+for (const entry of fs.readdirSync(DIST_DIR, {
+  recursive: true,
+  withFileTypes: true,
+})) {
+  if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
+  const file = path.join(entry.parentPath, entry.name);
+  const html = fs.readFileSync(file, 'utf8');
+  const patched = html.replace(
+    /globalThis\.__POLYCENTRIC_ENV__ = [^<]*/,
+    () => `globalThis.__POLYCENTRIC_ENV__ = ${JSON.stringify(runtimeEnv)};`,
+  );
+  if (patched !== html) fs.writeFileSync(file, patched);
+}
+
 const MIME_TYPES = {
   '.html': 'text/html',
   '.js': 'application/javascript',
