@@ -1,0 +1,64 @@
+replicaCount: 2
+
+image:
+  # Built by the push-notifications-image CI job.
+  repository: gitlab.futo.org:5050/harbor/harbor/push-notifications-service
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# DATABASE_URL, EXPO_ACCESS_TOKEN, POLYCENTRIC_MAIN_SERVER, … — put secrets
+# in a Secret referenced via envFrom.
+env: []
+envFrom: []
+
+# gRPC bind (POLYCENTRIC_NOTIFICATIONS_GRPC_ADDR defaults to 0.0.0.0:3001).
+containerPort: 3001
+
+# Run the migration binary shipped in the image as a pre-install/pre-upgrade
+# hook Job.
+migrations:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: notifications.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# gRPC service — probe the TCP socket.
+livenessProbe:
+  tcpSocket:
+    port: http
+readinessProbe:
+  tcpSocket:
+    port: http
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

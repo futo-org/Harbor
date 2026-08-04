@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harbor-moderation
+description: Harbor moderation service — Kafka worker for CSAM scanning and content labels
+type: application
+version: 0.1.0
+appVersion: "0.0.1"

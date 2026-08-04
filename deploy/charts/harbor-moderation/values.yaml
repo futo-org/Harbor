@@ -1,0 +1,40 @@
+# Kafka consumer — no listener, so no Service/Ingress and one replica by
+# default (consumer-group scaling is opt-in).
+replicaCount: 1
+
+image:
+  # Built by the moderation-image CI job.
+  repository: gitlab.futo.org:5050/harbor/harbor/moderation-service
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# DATABASE_URL, POLYCENTRIC_KAFKA_*, CONTENT_BLOB_OS_*, PhotoDNA config, … —
+# put secrets in a Secret referenced via envFrom.
+env: []
+envFrom: []
+
+# Run the migration binary shipped in the image as a pre-install/pre-upgrade
+# hook Job.
+migrations:
+  enabled: true
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

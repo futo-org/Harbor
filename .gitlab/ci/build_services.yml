@@ -131,8 +131,10 @@ server-image:
         - Cargo.lock
         - services/moderation/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -141,8 +143,10 @@ server-image:
         - Cargo.lock
         - services/moderation/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
     SERVICE_NAME: moderation-service
@@ -181,16 +185,20 @@ moderation-image:
         - Cargo.lock
         - services/push-notifications/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - services/push-notifications/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
     SERVICE_NAME: push-notifications-service
@@ -236,8 +244,10 @@ push-notifications-image:
         - tools/**/*
         - patches/**/*
         - services/scraper/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -248,8 +258,10 @@ push-notifications-image:
         - tools/**/*
         - patches/**/*
         - services/scraper/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: scraper
     SERVICE_DIR: scraper
@@ -298,8 +310,10 @@ scraper-image:
         - packages/js-*/**/*
         - packages/rs-core-uniffi-web/**/*
         - services/verifier-bot/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -312,8 +326,10 @@ scraper-image:
         - packages/js-*/**/*
         - packages/rs-core-uniffi-web/**/*
         - services/verifier-bot/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: verifier-bot
     SERVICE_DIR: verifier-bot

@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  # Built by the scraper-image CI job.
+  repository: gitlab.futo.org:5050/harbor/harbor/scraper
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+# The entrypoint programs an nftables egress firewall before dropping
+# privileges (see services/scraper/Dockerfile).
+securityContext:
+  capabilities:
+    add:
+      - NET_ADMIN
+
+# Reaps the headless-Chromium children (compose uses `init: true`).
+shareProcessNamespace: true
+
+env: []
+envFrom: []
+
+containerPort: 8855
+
+# No Ingress on purpose: the scraper fetches arbitrary user-supplied URLs
+# and must only be reachable by the server.
+service:
+  type: ClusterIP
+  port: 80
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  # The first check waits for the headless browser to come up.
+  initialDelaySeconds: 20
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 20
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

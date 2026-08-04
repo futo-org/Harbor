@@ -8,13 +8,17 @@
         - deploy/charts/**/*
         - .gitlab/ci/publish_charts.yml
         - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - packages/**/*
         - apps/**/*
-        - .gitlab/ci/build_app.yml
-        - .gitlab/ci/deploy_app.yml
         - Cargo.toml
         - Cargo.lock
-        - services/server/**/*
-        - services/common/**/*
+        - services/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
@@ -24,13 +28,17 @@
         - deploy/charts/**/*
         - .gitlab/ci/publish_charts.yml
         - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
+        - tools/**/*
+        - patches/**/*
+        - packages/**/*
         - apps/**/*
-        - .gitlab/ci/build_app.yml
-        - .gitlab/ci/deploy_app.yml
         - Cargo.toml
         - Cargo.lock
-        - services/server/**/*
-        - services/common/**/*
+        - services/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
 
@@ -46,7 +54,7 @@ charts-lint:
 
 charts-publish:
   extends: .charts-workflow
-  stage: publish
+  stage: build
   before_script:
     - apk add --no-cache curl jq crane
   script:

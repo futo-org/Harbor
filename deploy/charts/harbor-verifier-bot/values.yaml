@@ -1,0 +1,57 @@
+replicaCount: 1
+
+image:
+  # Built by the verifier-bot-image CI job.
+  repository: gitlab.futo.org:5050/harbor/harbor/verifier-bot
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# POLYCENTRIC_VERIFIER_BOT_* (servers, database URL, OAuth client secrets) —
+# put secrets in a Secret referenced via envFrom.
+env: []
+envFrom: []
+
+containerPort: 3002
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: verifier.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+livenessProbe:
+  tcpSocket:
+    port: http
+readinessProbe:
+  tcpSocket:
+    port: http
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
