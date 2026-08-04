@@ -1,5 +1,5 @@
 <p align="center">
-<img alt="harborlogo" src="https://gitlab.futo.org/polycentric/polycentric/-/raw/develop/apps/harbor/src/common/assets/images/harbor-logo-256.png?ref_type=heads" width="50">
+<img alt="harborlogo" src="https://gitlab.futo.org/harbor/harbor/-/raw/develop/apps/harbor/src/common/assets/images/harbor-logo-256.png?ref_type=heads" width="50">
 
 </p>
 
