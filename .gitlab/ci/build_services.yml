@@ -75,8 +75,12 @@
         - Cargo.lock
         - services/server/**/*
         - services/common/**/*
+        # Charts pin this commit's image SHA (appVersion), so the image must
+        # exist even for chart-only changes.
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -85,8 +89,10 @@
         - Cargo.lock
         - services/server/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     RUNNER_SCRIPT_TIMEOUT: 179m
     SERVICE_NAME: server

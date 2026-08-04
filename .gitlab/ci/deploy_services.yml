@@ -28,22 +28,31 @@
       changes:
         - services/server/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: server
 
-########################################
-# Tag the image with environment label #
-########################################
+##################################################
+# Tag the image and chart with environment label #
+##################################################
 
 .server-deploy-image:
   extends:
     - .server-deploy-workflow
     - .service-deploy-image
+  script:
+    - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+    - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
+    - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT_TAG
+    - crane tag $CI_REGISTRY_IMAGE/charts/harbor-server:$CHART_VERSION $ENVIRONMENT_TAG
   needs:
     - job: server-image
       artifacts: false
+    - job: charts-publish
+      artifacts: true
 
 server-deploy-image-staging:
   extends: .server-deploy-image
