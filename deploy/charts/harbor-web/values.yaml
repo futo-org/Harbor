@@ -23,9 +23,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# Extra environment variables for the server container. Only the keys in
-# server.js's RUNTIME_ENV_KEYS reach the browser; other EXPO_PUBLIC_* values
-# are baked in at image build time.
+# Extra environment variables for the server container.
 env: []
 
 # The port server.js listens on (PORT env in the Dockerfile).
