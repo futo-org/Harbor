@@ -1,0 +1,73 @@
+replicaCount: 2
+
+image:
+  # Built by the server-image CI job from services/server/Dockerfile.
+  repository: gitlab.futo.org:5050/harbor/harbor/server
+  # Defaults to the chart's appVersion — charts-publish packages every chart
+  # with --app-version $CI_COMMIT_SHA, pinning the image built from the same
+  # commit. Deploys happen by re-tagging the *chart* per environment
+  # (staging / production), not the image.
+  tag: ""
+  # SHA tags are immutable, so no need to re-pull.
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# Runtime configuration: DATABASE_URL, CONTENT_BLOB_OS_* (bucket, endpoint,
+# keys), POLYCENTRIC_KAFKA_BROKERS, POLYCENTRIC_SERVER_NAME,
+# POLYCENTRIC_ALLOW_HOSTS, POLYCENTRIC_MODERATION_IDENTITY, … (see
+# compose.yml for the full set). Put credential-bearing values in a Secret
+# and reference it via envFrom.
+env: []
+envFrom: []
+
+# The server binds 0.0.0.0:3000 (hardcoded, not configurable at runtime).
+containerPort: 3000
+
+# Run `/app/migration up` (shipped in the server image) as a
+# pre-install/pre-upgrade hook Job, with the same image and environment as
+# the server.
+migrations:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: harbor-server.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /status
+    port: http
+readinessProbe:
+  httpGet:
+    path: /status
+    port: http
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

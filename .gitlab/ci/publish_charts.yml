@@ -11,6 +11,11 @@
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
+        - Cargo.toml
+        - Cargo.lock
+        - services/server/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -21,6 +26,11 @@
         - apps/**/*
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
+        - Cargo.toml
+        - Cargo.lock
+        - services/server/**/*
+        - services/common/**/*
+        - .gitlab/ci/build_services.yml
 
 charts-lint:
   extends: .charts-workflow
