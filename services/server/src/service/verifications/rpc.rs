@@ -5,6 +5,7 @@ pub mod list_targeted_verification_claims;
 pub mod list_verification_claims;
 pub mod list_verification_targets;
 pub mod list_verification_verifies;
+pub mod resolve_verified_claims;
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::verifications_service_server::{
@@ -15,7 +16,8 @@ use crate::service::proto::{
     ListTargetedVerificationClaimsResponse, ListVerificationClaimsRequest,
     ListVerificationClaimsResponse, ListVerificationTargetsRequest,
     ListVerificationTargetsResponse, ListVerificationVerifiesRequest,
-    ListVerificationVerifiesResponse,
+    ListVerificationVerifiesResponse, ResolveVerifiedClaimsRequest,
+    ResolveVerifiedClaimsResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -66,6 +68,16 @@ impl VerificationsService for VerificationsServiceImpl {
                 request.into_inner(),
             )
             .await?,
+        ))
+    }
+
+    async fn resolve_verified_claims(
+        &self,
+        request: Request<ResolveVerifiedClaimsRequest>,
+    ) -> Result<Response<ResolveVerifiedClaimsResponse>, Status> {
+        Ok(Response::new(
+            resolve_verified_claims::handle(&self.ctx, request.into_inner())
+                .await?,
         ))
     }
 }

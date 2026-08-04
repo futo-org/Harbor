@@ -4,7 +4,8 @@ use ::entity::content_verification_target_model as TargetModel;
 use ::entity::content_verification_verify_model as VerifyModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
-use sea_orm::sea_query::Expr;
+use sea_orm::sea_query::extension::postgres::PgBinOper;
+use sea_orm::sea_query::{Alias, Expr};
 use sea_orm::*;
 use std::collections::HashSet;
 
@@ -107,6 +108,38 @@ impl Query {
             .join(JoinType::InnerJoin, claim_join())
             .filter(EventModel::Column::Collection.eq(VERIFICATIONS_COLLECTION))
             .filter(EventModel::Column::Identity.eq(identity))
+            .order_by_desc(EventModel::Column::Sequence)
+            .limit(MAX_ROWS)
+            .all(db)
+            .await
+    }
+
+    /// VerificationClaim events whose decoded `fields` contain every pair in
+    /// `match_fields` (JSONB containment), optionally restricted to a schema
+    /// by its digest. Newest first by sequence, tombstones NOT yet filtered.
+    pub async fn list_claim_events_by_fields(
+        db: &DbConn,
+        schema_digest: Option<(i32, Vec<u8>)>,
+        match_fields: serde_json::Value,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let mut select = EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(JoinType::InnerJoin, claim_join())
+            .filter(EventModel::Column::Collection.eq(VERIFICATIONS_COLLECTION))
+            .filter(
+                Expr::col((ClaimModel::Entity, ClaimModel::Column::Fields))
+                    .binary(
+                        PgBinOper::Contains,
+                        Expr::val(match_fields).cast_as(Alias::new("jsonb")),
+                    ),
+            );
+        if let Some((digest_type, digest_bytes)) = schema_digest {
+            select = select
+                .filter(ClaimModel::Column::SchemaDigestType.eq(digest_type))
+                .filter(ClaimModel::Column::SchemaDigestBytes.eq(digest_bytes));
+        }
+        select
             .order_by_desc(EventModel::Column::Sequence)
             .limit(MAX_ROWS)
             .all(db)

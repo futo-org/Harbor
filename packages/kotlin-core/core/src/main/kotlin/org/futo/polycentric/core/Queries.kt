@@ -17,6 +17,7 @@ import org.futo.polycentric.ffi.ListTargetedVerificationClaimsArgs
 import org.futo.polycentric.ffi.ListVerificationClaimsArgs
 import org.futo.polycentric.ffi.ListVerificationTargetsArgs
 import org.futo.polycentric.ffi.ListVerificationVerifiesArgs
+import org.futo.polycentric.ffi.ResolveVerifiedClaimsArgs
 import org.futo.polycentric.ffi.Query
 import org.futo.polycentric.ffi.QueryOpts
 import polycentric.v2.AttributedTo
@@ -32,6 +33,7 @@ import polycentric.v2.ListTargetedVerificationClaimsResponse
 import polycentric.v2.ListVerificationClaimsResponse
 import polycentric.v2.ListVerificationTargetsResponse
 import polycentric.v2.ListVerificationVerifiesResponse
+import polycentric.v2.ResolveVerifiedClaimsResponse
 
 /**
  * Typed one-shot wrappers for every core `Query` variant except
@@ -176,6 +178,28 @@ suspend fun PolycentricClient.listTargetedVerificationClaims(
     core.awaitQuery(
         Query.ListTargetedVerificationClaims(ListTargetedVerificationClaimsArgs(targetIdentity)),
     )?.let { ListTargetedVerificationClaimsResponse.ADAPTER.decode(it) }
+
+/**
+ * Reverse lookup: verified claims whose fields contain every pair in [fields],
+ * restricted to those verified by one of [verifiedByIdentities] (the trust
+ * roots), optionally scoped to a schema by its digest ([schemaDigest], sha256).
+ * Starts from claim field values (e.g. a platform channel id) rather than from
+ * an identity, and works for any claim type.
+ */
+suspend fun PolycentricClient.resolveVerifiedClaims(
+    fields: Map<String, String>,
+    verifiedByIdentities: List<String>,
+    schemaDigest: ByteArray? = null,
+): ResolveVerifiedClaimsResponse? =
+    core.awaitQuery(
+        Query.ResolveVerifiedClaims(
+            ResolveVerifiedClaimsArgs(
+                schemaDigest,
+                fields,
+                verifiedByIdentities,
+            ),
+        ),
+    )?.let { ResolveVerifiedClaimsResponse.ADAPTER.decode(it) }
 
 /**
  * For each configured server, whether the authenticated caller is a

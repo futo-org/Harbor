@@ -3,12 +3,12 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, ListTargetedVerificationClaimsRequest,
-    ListTargetedVerificationClaimsResponse, ListVerificationClaimsRequest,
-    ListVerificationClaimsResponse, ListVerificationTargetsRequest,
+    ContentDigest, ContentDigestType, EventBundle, EventHint,
+    ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse,
+    ListVerificationClaimsRequest, ListVerificationClaimsResponse, ListVerificationTargetsRequest,
     ListVerificationTargetsResponse, ListVerificationVerifiesRequest,
-    ListVerificationVerifiesResponse, VerificationClaimBundle,
-    verifications_service_client::VerificationsServiceClient,
+    ListVerificationVerifiesResponse, ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse,
+    VerificationClaimBundle, verifications_service_client::VerificationsServiceClient,
 };
 use prost::Message;
 
@@ -38,6 +38,18 @@ pub struct ListVerificationVerifiesArgs {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListTargetedVerificationClaimsArgs {
     pub target_identity: String,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ResolveVerifiedClaimsArgs {
+    /// Optional schema content-digest (sha256) bytes; scopes the search to
+    /// that schema. None = any schema.
+    pub schema_digest: Option<Vec<u8>>,
+    /// Field key/value pairs (STRING) a claim must contain.
+    pub fields: HashMap<String, String>,
+    /// Trust-root identities; only claims verified by one of these are
+    /// returned.
+    pub verified_by_identities: Vec<String>,
 }
 
 impl EventBundleResponse for ListVerificationTargetsResponse {
@@ -74,6 +86,15 @@ impl ClaimBundleResponse for ListVerificationClaimsResponse {
 }
 
 impl ClaimBundleResponse for ListTargetedVerificationClaimsResponse {
+    fn claim_bundles_mut(&mut self) -> &mut Vec<VerificationClaimBundle> {
+        &mut self.claim_bundles
+    }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
+}
+
+impl ClaimBundleResponse for ResolveVerifiedClaimsResponse {
     fn claim_bundles_mut(&mut self) -> &mut Vec<VerificationClaimBundle> {
         &mut self.claim_bundles
     }
@@ -337,6 +358,57 @@ pub fn list_targeted_verification_claims(
         query_key,
         query_fn,
         merge_claim_bundle_responses::<ListTargetedVerificationClaimsResponse>,
+        opts,
+    ))
+}
+
+/// Reverse lookup: claims matching a schema + field values that are verified
+/// by a trusted identity, each with its targets and verifies. Emits
+/// serialized `ResolveVerifiedClaimsResponse` bytes.
+pub fn resolve_verified_claims(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: ResolveVerifiedClaimsArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let request = ResolveVerifiedClaimsRequest {
+        schema_digest: args.schema_digest.map(|value| ContentDigest {
+            r#type: ContentDigestType::Sha256 as i32,
+            value,
+        }),
+        fields: args.fields,
+        verified_by_identities: args.verified_by_identities,
+    };
+
+    let client = query_client.client().clone();
+    let query_fn = move |server_url: String| {
+        let request = request.clone();
+        let client = client.clone();
+        async move {
+            let response = VerificationsServiceClient::new(channel(&server_url).await?)
+                .resolve_verified_claims(request)
+                .await
+                .map_err(|e| format!("resolve_verified_claims [{server_url}]: {e}"))?
+                .into_inner();
+            let bytes = response.encode_to_vec();
+            let hint_bundles: Vec<_> = response
+                .event_hints
+                .into_iter()
+                .filter_map(|h| h.event_bundle)
+                .collect();
+            {
+                let mut c = client.lock().unwrap();
+                c.copy_bundles(hint_bundles);
+                c.copy_bundles(all_bundles(&response.claim_bundles));
+            }
+            Ok(bytes)
+        }
+    };
+
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        merge_claim_bundle_responses::<ResolveVerifiedClaimsResponse>,
         opts,
     ))
 }

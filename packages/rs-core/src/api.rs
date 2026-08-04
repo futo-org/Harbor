@@ -84,6 +84,7 @@ pub enum Query {
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
     ListVerificationVerifies(crate::query::verifications::ListVerificationVerifiesArgs),
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
+    ResolveVerifiedClaims(crate::query::verifications::ResolveVerifiedClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
     IsModerator(crate::query::moderation::IsModeratorArgs),
@@ -395,6 +396,14 @@ impl PolycentricCore {
             }
             Query::ListTargetedVerificationClaims(args) => {
                 crate::query::verifications::list_targeted_verification_claims(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::ResolveVerifiedClaims(args) => {
+                crate::query::verifications::resolve_verified_claims(
                     &self.query_client,
                     query_key,
                     args,
