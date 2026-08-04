@@ -48,7 +48,7 @@
   needs:
     - job: server-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 server-deploy-image-staging:
@@ -106,6 +106,18 @@ server-deploy-manifest-production:
 # Tag the image with environment label #
 ########################################
 
+moderation-deploy-image-staging:
+  extends:
+    - .moderation-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/moderation-service
+  needs:
+    - job: moderation-image
+      artifacts: false
+    - job: charts-build
+      artifacts: true
+
 moderation-deploy-image-production:
   extends:
     - .moderation-deploy-workflow
@@ -116,7 +128,7 @@ moderation-deploy-image-production:
   needs:
     - job: moderation-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 ###############################
@@ -154,6 +166,18 @@ moderation-deploy-manifest-production:
 # Tag the image with environment label #
 ########################################
 
+push-notifications-deploy-image-staging:
+  extends:
+    - .push-notifications-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/push-notifications-service
+  needs:
+    - job: push-notifications-image
+      artifacts: false
+    - job: charts-build
+      artifacts: true
+
 push-notifications-deploy-image-production:
   extends:
     - .push-notifications-deploy-workflow
@@ -164,7 +188,7 @@ push-notifications-deploy-image-production:
   needs:
     - job: push-notifications-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 ###############################
@@ -220,7 +244,7 @@ scraper-deploy-image-production:
   needs:
     - job: scraper-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 scraper-deploy-image-staging:
@@ -232,7 +256,7 @@ scraper-deploy-image-staging:
   needs:
     - job: scraper-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 ###############################
@@ -294,7 +318,7 @@ verifier-bot-deploy-image-staging:
   needs:
     - job: verifier-bot-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 verifier-bot-deploy-image-production:
@@ -307,7 +331,7 @@ verifier-bot-deploy-image-production:
   needs:
     - job: verifier-bot-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 ###############################

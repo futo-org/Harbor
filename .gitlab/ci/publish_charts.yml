@@ -52,7 +52,7 @@ charts-lint:
         helm template "$(basename "$chart")" "$chart" > /dev/null
       done
 
-charts-publish:
+charts-build:
   extends: .charts-workflow
   stage: build
   before_script:

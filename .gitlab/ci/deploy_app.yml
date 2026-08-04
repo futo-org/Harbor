@@ -27,7 +27,7 @@
   needs:
     - job: app-web-image
       artifacts: false
-    - job: charts-publish
+    - job: charts-build
       artifacts: true
 
 app-deploy-image-staging:
