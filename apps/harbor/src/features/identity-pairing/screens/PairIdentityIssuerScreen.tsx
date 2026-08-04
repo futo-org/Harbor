@@ -1,10 +1,7 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
-import {
-  useCurrentIdentity,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
@@ -13,6 +10,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { encodePairingCode } from '../pairingCode';
 
 const PAIRING_BLOCK_WIDTH = 200;
 
@@ -97,7 +95,6 @@ export default function PairIdentityIssuerScreen() {
     denyClaimer,
     approveClaimer,
   } = usePairIdentityIssuer(identityKey);
-  const client = usePolycentric();
   const [justCopied, setJustCopied] = useState(false);
   const [approvingClaimers, setApprovingClaimers] = useState<Set<string>>(
     new Set(),
@@ -108,9 +105,13 @@ export default function PairIdentityIssuerScreen() {
     string | null
   >(null);
 
-  const origin = client.servers[0] ?? '';
-
-  const previousPendingCountRef = useRef(0);
+  const pairingCode = currentPairingSession
+    ? encodePairingCode({
+        origin: currentPairingSession.server,
+        code: currentPairingSession.code,
+        identity: currentPairingSession.identityKey,
+      })
+    : undefined;
 
   useEffect(() => {
     return () => {
@@ -136,7 +137,6 @@ export default function PairIdentityIssuerScreen() {
   ]);
 
   useEffect(() => {
-    const previous = previousPendingCountRef.current;
     const next = pendingClaimers.length;
     const nextClaimer = pendingClaimers[0] ?? null;
 
@@ -147,8 +147,6 @@ export default function PairIdentityIssuerScreen() {
     if (next > 0 && !showPendingApprovals && nextClaimer) {
       setShowPendingApprovals(true);
     }
-
-    previousPendingCountRef.current = next;
   }, [
     pendingClaimers,
     pendingClaimers.length,
@@ -393,9 +391,9 @@ export default function PairIdentityIssuerScreen() {
                       },
                     ]}
                   >
-                    {currentPairingSession ? (
+                    {pairingCode ? (
                       <QRCode
-                        value={`${origin}\n${currentPairingSession.code}`}
+                        value={pairingCode}
                         size={PAIRING_BLOCK_WIDTH}
                         color={theme.palette.neutral_950}
                         backgroundColor="transparent"
@@ -412,17 +410,15 @@ export default function PairIdentityIssuerScreen() {
 
                   <Pressable
                     onPress={() => {
-                      if (!currentPairingSession) {
+                      if (!pairingCode) {
                         return;
                       }
 
-                      void Clipboard.setStringAsync(
-                        `${origin}\n${currentPairingSession.code}`,
-                      );
+                      void Clipboard.setStringAsync(pairingCode);
                       setJustCopied(true);
                       setTimeout(() => setJustCopied(false), 2000);
                     }}
-                    disabled={pairingSessionLoading || !currentPairingSession}
+                    disabled={pairingSessionLoading || !pairingCode}
                     style={({ hovered }) => [
                       Atoms.flex_row,
                       Atoms.items_center,

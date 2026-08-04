@@ -8,36 +8,25 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-
-const parseInput = (text: string) => {
-  const lines = text.trim().split('\n');
-  if (lines.length === 2) {
-    return { server: lines[0], code: lines[1] };
-  }
-  return { server: null, code: text.trim() };
-};
+import { decodePairingCode, type PairingSessionInfo } from '../pairingCode';
 
 export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
-  const { pairingSessionCode: paramPairingSessionCode } = useLocalSearchParams<{
-    pairingSessionCode?: string;
-  }>();
   const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
-  const [pairingSessionCode, setPairingSessionCode] = useState<
-    string | undefined
-  >(paramPairingSessionCode);
-  const [pairingSessionServer, setPairingSessionServer] = useState<
-    string | undefined
+
+  // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
+  // to mean that the pairing code was invalid and couldn't be parsed and
+  // `undefined` to mean that we just don't have one.
+  const [sessionInfo, setSessionInfo] = useState<
+    PairingSessionInfo | null | undefined
   >(undefined);
 
-  const { error, approved, claimInProgress } = usePairIdentityClaimer({
-    pairingSessionCode,
-    pairingSessionServer,
-  });
+  const { error, approved, claimInProgress } =
+    usePairIdentityClaimer(sessionInfo);
 
   const pubKeyStr = client.currentKeyPair
     ? publicKeyToString(client.currentKeyPair.publicKey)
@@ -55,24 +44,23 @@ export default function PairIdentityClaimerScreen() {
   }, [approved, refreshCurrentIdentity]);
 
   const renderBody = () => {
-    if (!pairingSessionCode) {
+    if (sessionInfo === undefined) {
       return (
         <>
           <View style={Atoms.gap_xs}>
             <Text variant="subtitle">Pair Identity</Text>
           </View>
           <PairIdentityCamera
-            onCodeScanned={(code, server) => {
-              setPairingSessionCode(code);
-              setPairingSessionServer(server ?? undefined);
+            onCodeScanned={(encoded) => {
+              const decoded = decodePairingCode(encoded);
+              setSessionInfo(decoded ?? null);
             }}
-            parseInput={parseInput}
           />
         </>
       );
     }
 
-    if (pairingSessionCode && error && !claimInProgress) {
+    if (sessionInfo !== undefined && error && !claimInProgress) {
       return (
         <>
           <Text variant="title">Error</Text>
@@ -84,8 +72,7 @@ export default function PairIdentityClaimerScreen() {
             variant="secondary"
             fullWidth
             onPress={() => {
-              setPairingSessionCode(undefined);
-              setPairingSessionServer(undefined);
+              setSessionInfo(undefined);
             }}
           />
         </>
@@ -174,8 +161,7 @@ export default function PairIdentityClaimerScreen() {
             Atoms.py_lg,
             Atoms.px_lg,
             { backgroundColor: theme.atoms.bg.backgroundColor },
-            ...(!pairingSessionCode ||
-            (pairingSessionCode && error && !claimInProgress)
+            ...(!sessionInfo || (sessionInfo && error && !claimInProgress)
               ? [Atoms.flex_col, Atoms.gap_lg]
               : []),
           ]}

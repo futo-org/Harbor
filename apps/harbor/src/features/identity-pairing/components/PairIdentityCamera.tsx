@@ -12,14 +12,10 @@ import {
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 
 export interface PairIdentityCameraProps {
-  onCodeScanned: (code: string, server: string | null) => void;
-  parseInput: (text: string) => { server: string | null; code: string };
+  onCodeScanned: (pairingCode: string) => void;
 }
 
-export function PairIdentityCamera({
-  onCodeScanned,
-  parseInput,
-}: PairIdentityCameraProps) {
+export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -34,8 +30,7 @@ export function PairIdentityCamera({
       const qrCode = objects.find(isScannedCode);
       if (qrCode?.value) {
         scannedRef.current = true;
-        const { code, server } = parseInput(qrCode.value);
-        onCodeScanned(code, server);
+        onCodeScanned(qrCode.value);
       }
     },
   });
@@ -47,9 +42,9 @@ export function PairIdentityCamera({
   }, [hasPermission, requestPermission, cameraEnabled]);
 
   const handleContinue = () => {
-    if (!input.trim()) return;
-    const { code, server } = parseInput(input);
-    onCodeScanned(code, server);
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    onCodeScanned(trimmed);
   };
 
   const canUseCamera = hasPermission && cameraEnabled && device !== undefined;
