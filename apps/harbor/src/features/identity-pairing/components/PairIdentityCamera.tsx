@@ -4,18 +4,23 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
   Camera,
-  isScannedCode,
   useCameraDevice,
   useCameraPermission,
-  useObjectOutput,
 } from 'react-native-vision-camera';
+import {
+  type TargetBarcodeFormat,
+  useBarcodeScannerOutput,
+} from 'react-native-vision-camera-barcode-scanner';
+import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 
-export interface PairIdentityCameraProps {
-  onCodeScanned: (pairingCode: string) => void;
-}
+// Stable reference for the barcode formats array to prevent
+// the scanner from being destroyed and recreated extra times.
+const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
 
-export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
+export const PairIdentityCamera: PairIdentityCameraComponent = ({
+  onCodeScanned,
+}) => {
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -23,16 +28,18 @@ export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
   const { theme } = useTheme();
   const scannedRef = useRef(false);
 
-  const objectOutput = useObjectOutput({
-    types: ['qr'],
-    onObjectsScanned: (objects) => {
+  const barcodeOutput = useBarcodeScannerOutput({
+    barcodeFormats: BARCODE_FORMATS,
+    onBarcodeScanned: (barcodes) => {
       if (scannedRef.current) return;
-      const qrCode = objects.find(isScannedCode);
-      if (qrCode?.value) {
-        scannedRef.current = true;
-        onCodeScanned(qrCode.value);
-      }
+
+      const value = barcodes.find((barcode) => barcode.rawValue)?.rawValue;
+      if (!value) return;
+
+      scannedRef.current = true;
+      onCodeScanned(value);
     },
+    onError: () => setCameraEnabled(false),
   });
 
   useEffect(() => {
@@ -69,7 +76,7 @@ export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
             <Camera
               device={device}
               isActive={true}
-              outputs={[objectOutput]}
+              outputs={[barcodeOutput]}
               style={{ flex: 1 }}
             />
           </View>
@@ -103,4 +110,4 @@ export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
       )}
     </>
   );
-}
+};

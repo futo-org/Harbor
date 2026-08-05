@@ -2,11 +2,8 @@ import { LinkButton, Text } from '@/src/common/components';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
-
-export interface PairIdentityCameraProps {
-  onCodeScanned: (pairingCode: string) => void;
-}
 
 function supportsGetUserMedia() {
   return (
@@ -15,7 +12,9 @@ function supportsGetUserMedia() {
   );
 }
 
-export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
+export const PairIdentityCamera: PairIdentityCameraComponent = ({
+  onCodeScanned,
+}) => {
   const [input, setInput] = useState('');
   const [useCamera, setUseCamera] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -161,4 +160,4 @@ export function PairIdentityCamera({ onCodeScanned }: PairIdentityCameraProps) {
       )}
     </>
   );
-}
+};
