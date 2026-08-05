@@ -5,7 +5,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $w.name }}
+  name: {{ include "harbor-server.fullname" $root }}-worker-{{ $w.name }}
   labels:
     {{- include "harbor-server.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $w.name }}
