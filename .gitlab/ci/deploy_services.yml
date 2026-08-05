@@ -9,16 +9,6 @@
     - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT_TAG
     - crane tag $CI_REGISTRY_IMAGE/charts/${CHART_NAME}:$CHART_VERSION $ENVIRONMENT_TAG
 
-.service-deploy-manifest:
-  stage: deploy
-  trigger:
-    project: devops/manifest
-    branch: master
-    strategy: depend
-  variables:
-    MANIFEST_SETUP_COMMAND: quick
-    MANIFEST_STAGGER_TIME: "10"
-
 ########################################################################
 # server
 ########################################################################
@@ -61,28 +51,6 @@ server-deploy-image-production:
   when: manual
   environment:
     name: production/server
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-# server-deploy-manifest-staging:
-#   extends:
-#     - .server-deploy-workflow
-#     - .service-deploy-manifest
-#   variables:
-#     MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:staging
-#   needs:
-#     - server-deploy-image-staging
-
-server-deploy-manifest-production:
-  extends:
-    - .server-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/server.yml:polycentriceast,inventory/polycentric-west/server.yml:polycentricwest
-  needs:
-    - server-deploy-image-production
 
 ########################################################################
 # moderation
@@ -131,19 +99,6 @@ moderation-deploy-image-production:
     - job: charts-build
       artifacts: true
 
-###############################
-# Rolling restart on Manifest #
-###############################
-
-moderation-deploy-manifest-production:
-  extends:
-    - .moderation-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-moderation/moderation-east.yml:polycentriceast,inventory/polycentric-moderation/moderation-west.yml:polycentriceast
-  needs:
-    - moderation-deploy-image-production
-
 ########################################################################
 # notifications
 ########################################################################
@@ -191,25 +146,11 @@ push-notifications-deploy-image-production:
     - job: charts-build
       artifacts: true
 
-###############################
-# Rolling restart on Manifest #
-###############################
-
-push-notifications-deploy-manifest-production:
-  extends:
-    - .push-notifications-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-push-notifications/push-notifications.yml:polycentriceast
-  needs:
-    - push-notifications-deploy-image-production
-
 ########################################################################
 # scraper
 #
-# Runtime needs (NET_ADMIN, --init, internal-only networking) must be set in
-# the production manifest (inventory/.../scraper.yml in devops/manifest), not
-# here — compose.yml only covers local dev.
+# Runtime needs (NET_ADMIN, zombie reaping, internal-only networking) are
+# set in deploy/charts/harbor-scraper — compose.yml only covers local dev.
 ########################################################################
 
 .scraper-deploy-workflow:
@@ -258,28 +199,6 @@ scraper-deploy-image-staging:
       artifacts: false
     - job: charts-build
       artifacts: true
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-scraper-deploy-manifest-production:
-  extends:
-    - .scraper-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast,inventory/polycentric-east/scraper.yml:polycentricwest
-  needs:
-    - scraper-deploy-image-production
-
-scraper-deploy-manifest-staging:
-  extends:
-    - .scraper-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/scraper.yml:staging
-  needs:
-    - scraper-deploy-image-staging
 
 ########################################################################
 # verifier-bot
@@ -333,25 +252,3 @@ verifier-bot-deploy-image-production:
       artifacts: false
     - job: charts-build
       artifacts: true
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-verifier-bot-deploy-manifest-staging:
-  extends:
-    - .verifier-bot-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:staging
-  needs:
-    - verifier-bot-deploy-image-staging
-
-verifier-bot-deploy-manifest-production:
-  extends:
-    - .verifier-bot-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:polycentriceast
-  needs:
-    - verifier-bot-deploy-image-production
