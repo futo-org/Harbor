@@ -57,6 +57,24 @@ fn digest_fp(digest: &[u8]) -> String {
     digest.iter().take(8).map(|b| format!("{b:02x}")).collect()
 }
 
+/// Messages handled, by outcome (committed / retried / skipped).
+static WORKER_MESSAGES: std::sync::LazyLock<opentelemetry::metrics::Counter<u64>> =
+    std::sync::LazyLock::new(|| {
+        opentelemetry::global::meter("moderation")
+            .u64_counter("worker_messages")
+            .build()
+    });
+
+fn count_message(outcome: &'static str) {
+    WORKER_MESSAGES.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("group", "moderation"),
+            opentelemetry::KeyValue::new("outcome", outcome),
+        ],
+    );
+}
+
 /// Pull the content and its digest out of a bundle. Returns `None` when
 /// there is nothing to moderate (no serialized content) or the bundle
 /// cannot be interpreted.
@@ -274,6 +292,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     common_dotenv::load(".env");
 
     common_telemetry::init();
+    common_telemetry::init_metrics("moderation");
 
     // Shared connection, then run migrations on every load.
     let db = db::connect().await?;
@@ -330,6 +349,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match process(&ctx, &message).await {
             Outcome::Commit => {
                 attempts.remove(&coord);
+                count_message("committed");
                 if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
                     tracing::warn!(error = %e, "failed to commit offset");
                 }
@@ -342,6 +362,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 if failures > MAX_RETRIES {
+                    count_message("skipped");
                     // Retries exhausted — give up and commit past this message
                     // so the partition can make progress.
                     tracing::error!(
@@ -355,6 +376,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         tracing::warn!(error = %e, "failed to commit offset after skip");
                     }
                 } else {
+                    count_message("retried");
                     // Seek back so the next poll re-delivers this message, then
                     // back off to avoid a hot loop.
                     if let Err(e) = consumer.seek(
@@ -450,6 +472,10 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                         return Outcome::Retry;
                     }
                     tracing::error!(key = ?key, digest = digest_fp(&digest_bytes), "CSAM match");
+                    opentelemetry::global::meter("moderation")
+                        .u64_counter("moderation_csam_matches")
+                        .build()
+                        .add(1, &[]);
                     if purge_images(ctx, &content).await.is_err() {
                         return Outcome::Retry;
                     }

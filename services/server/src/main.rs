@@ -73,6 +73,7 @@ async fn main() {
 
 /// Run the API server: gRPC + HTTP merged onto a single port.
 async fn run_server() {
+    common_telemetry::init_metrics("server");
     let db = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await
@@ -106,6 +107,7 @@ async fn run_server() {
 /// only the ones named in `only`.
 async fn run_workers(only: Vec<String>) {
     workers::validate_worker_names(&only);
+    common_telemetry::init_metrics("server-workers");
     let db = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await

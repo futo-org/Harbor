@@ -10,6 +10,14 @@ import metascraperDescription from 'metascraper-description';
 import metascraperImage from 'metascraper-image';
 import metascraperTitle from 'metascraper-title';
 import metascraperUrl from 'metascraper-url';
+import { Counter, collectDefaultMetrics, register } from 'prom-client';
+
+collectDefaultMetrics();
+const httpRequests = new Counter({
+  name: 'http_requests_total',
+  help: 'Requests handled, by path and status.',
+  labelNames: ['path', 'status'],
+});
 
 // A real desktop Chrome UA. Headless Chromium's default `HeadlessChrome` UA
 // gets some sites (e.g. YouTube) to redirect to an "unsupported browser" gate
@@ -206,8 +214,31 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     'http://localhost',
   );
 
+  // Known paths only, so label cardinality stays bounded.
+  const KNOWN_PATHS = ['/health', '/scrape', '/image', '/metrics'];
+  res.on('finish', () => {
+    httpRequests.inc({
+      path: KNOWN_PATHS.includes(pathname) ? pathname : 'other',
+      status: res.statusCode,
+    });
+  });
+
   if (req.method === 'GET' && pathname === '/health') {
     sendJson(res, 200, { status: 'ok' });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/metrics') {
+    void register.metrics().then(
+      (body) => {
+        res.writeHead(200, { 'content-type': register.contentType });
+        res.end(body);
+      },
+      () => {
+        res.writeHead(500);
+        res.end();
+      },
+    );
     return;
   }
 

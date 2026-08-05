@@ -1,7 +1,10 @@
-//! Shared structured-logging setup for the Rust services.
+//! Shared structured-logging and metrics setup for the Rust services.
 
 use std::io::IsTerminal;
 
+use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
+use prometheus::Encoder;
 use tracing_subscriber::EnvFilter;
 
 /// Initialize logging: `RUST_LOG` filters (default `info`), JSON to stdout
@@ -20,5 +23,64 @@ pub fn init() {
         builder.json().flatten_event(true).init();
     } else {
         builder.init();
+    }
+}
+
+/// Install a Prometheus-backed OpenTelemetry meter provider and serve
+/// GET /metrics on 0.0.0.0:$METRICS_PORT (default 9464). Must be called
+/// from within a tokio runtime.
+pub fn init_metrics(service_name: &str) {
+    let registry = prometheus::Registry::new();
+    let exporter = opentelemetry_prometheus::exporter()
+        .with_registry(registry.clone())
+        .build()
+        .expect("failed to build Prometheus exporter");
+    let provider = SdkMeterProvider::builder()
+        .with_reader(exporter)
+        .with_resource(
+            Resource::builder()
+                .with_service_name(service_name.to_string())
+                .build(),
+        )
+        .build();
+    opentelemetry::global::set_meter_provider(provider);
+
+    let port: u16 = std::env::var("METRICS_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(9464);
+    tokio::spawn(serve_metrics(registry, port));
+}
+
+async fn serve_metrics(registry: prometheus::Registry, port: u16) {
+    let app = axum::Router::new().route(
+        "/metrics",
+        axum::routing::get(move || {
+            let registry = registry.clone();
+            async move {
+                let mut buf = Vec::new();
+                if prometheus::TextEncoder::new()
+                    .encode(&registry.gather(), &mut buf)
+                    .is_err()
+                {
+                    buf.clear();
+                }
+                (
+                    [(
+                        axum::http::header::CONTENT_TYPE,
+                        "text/plain; version=0.0.4",
+                    )],
+                    buf,
+                )
+            }
+        }),
+    );
+    match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
+        Ok(listener) => {
+            if let Err(e) = axum::serve(listener, app).await {
+                tracing::error!(error = %e, "metrics server failed");
+            }
+        }
+        Err(e) => tracing::error!(error = %e, port, "failed to bind metrics port"),
     }
 }

@@ -42,6 +42,10 @@ spec:
             {{- toYaml $root.Values.securityContext | nindent 12 }}
           command: ['/app/server', 'workers']
           args: [{{ $w.name | quote }}]
+          ports:
+            - name: metrics
+              containerPort: 9464
+              protocol: TCP
           {{- with $root.Values.env }}
           env:
             {{- toYaml . | nindent 12 }}

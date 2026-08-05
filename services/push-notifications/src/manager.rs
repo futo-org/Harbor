@@ -263,6 +263,15 @@ impl NotificationManager {
             ticket_errors = errors,
             "push sent"
         );
+        let meter = opentelemetry::global::meter("push-notifications");
+        meter
+            .u64_counter("push_notifications_sent")
+            .build()
+            .add(expo_tokens.len() as u64, &[]);
+        meter
+            .u64_counter("push_ticket_errors")
+            .build()
+            .add(errors as u64, &[]);
 
         self.clean_unregistered_push_tokens(ctx, &response, expo_tokens)
             .await?;

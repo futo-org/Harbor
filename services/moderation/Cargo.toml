@@ -18,6 +18,7 @@ moderation-entity = { path = "./entity" }
 
 # 3rd Party
 log.workspace = true
+opentelemetry.workspace = true
 tracing.workspace = true
 prost.workspace = true
 time.workspace = true

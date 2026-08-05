@@ -19,6 +19,26 @@ use crate::service::stats::worker::StatsWorker;
 /// A fatal error that ends a worker (and, with it, the `workers` process).
 pub type WorkerError = Box<dyn std::error::Error + Send + Sync>;
 
+/// Messages handled per consumer group, by outcome
+/// (committed / retried / skipped).
+static WORKER_MESSAGES: std::sync::LazyLock<
+    opentelemetry::metrics::Counter<u64>,
+> = std::sync::LazyLock::new(|| {
+    opentelemetry::global::meter("server")
+        .u64_counter("worker_messages")
+        .build()
+});
+
+fn count_message(group_id: &str, outcome: &'static str) {
+    WORKER_MESSAGES.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("group", group_id.to_string()),
+            opentelemetry::KeyValue::new("outcome", outcome),
+        ],
+    );
+}
+
 /// Exit with an error if any name is not a registered worker. Called before
 /// any connection is made, so typos fail fast.
 pub fn validate_worker_names(only: &[String]) {
@@ -132,6 +152,7 @@ pub async fn run_consumer(
         match handler.handle(&message).await {
             Outcome::Commit => {
                 attempts.remove(&coord);
+                count_message(group_id, "committed");
                 if let Err(e) =
                     consumer.commit_message(&message, CommitMode::Async)
                 {
@@ -140,6 +161,7 @@ pub async fn run_consumer(
             }
             Outcome::Retry => match record_failure(&mut attempts, coord) {
                 RetryAction::Skip => {
+                    count_message(group_id, "skipped");
                     tracing::error!(
                         group_id,
                         partition = coord.0,
@@ -158,6 +180,7 @@ pub async fn run_consumer(
                     }
                 }
                 RetryAction::Backoff => {
+                    count_message(group_id, "retried");
                     // Seek back so the next poll re-delivers this message,
                     // then back off to avoid a hot loop.
                     if let Err(e) = consumer.seek(

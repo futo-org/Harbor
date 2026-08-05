@@ -37,6 +37,9 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
+            - name: metrics
+              containerPort: 9464
+              protocol: TCP
           {{- with .Values.env }}
           env:
             {{- toYaml . | nindent 12 }}

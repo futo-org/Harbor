@@ -12,7 +12,11 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-podAnnotations: {}
+# Scraped by VictoriaMetrics; /metrics is served on the app port.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8855"
+  prometheus.io/path: /metrics
 podLabels: {}
 
 podSecurityContext: {}

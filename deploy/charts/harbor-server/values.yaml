@@ -16,7 +16,11 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-podAnnotations: {}
+# Scraped by VictoriaMetrics.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9464"
+  prometheus.io/path: /metrics
 podLabels: {}
 
 podSecurityContext: {}
