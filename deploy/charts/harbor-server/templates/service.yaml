@@ -11,6 +11,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      # Native gRPC needs HTTP/2 end-to-end; this tells the gateway (Envoy)
+      # to speak h2c to the pod, which auto-detects h1/h2.
+      appProtocol: kubernetes.io/h2c
   selector:
     {{- include "harbor-server.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: server
