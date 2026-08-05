@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harbor-verifier-bot
+description: Harbor verifier bot — platform claim verification with OAuth callbacks
+type: application
+version: 0.1.0
+appVersion: "0.0.1"

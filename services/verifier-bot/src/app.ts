@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { ObjectId } from 'bson';
 import cors from 'cors';
 import express from 'express';
+import { collectDefaultMetrics, register } from 'prom-client';
 import { StatusCodes } from 'http-status-codes';
 import { platforms } from './platforms/platforms.js';
 import {
@@ -183,6 +184,14 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
 
   const app = express();
   app.use(express.json());
+
+  collectDefaultMetrics();
+  app.get('/metrics', (_req, res) => {
+    register.metrics().then(
+      (body) => res.type(register.contentType).send(body),
+      () => res.sendStatus(500),
+    );
+  });
 
   app.use(
     cors({

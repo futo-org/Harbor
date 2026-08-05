@@ -35,6 +35,7 @@ pub struct GetIdentityFeedArgs {
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -43,6 +44,7 @@ pub struct GetFollowingFeedArgs {
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -51,6 +53,7 @@ pub struct GetExploreFeedArgs {
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -337,11 +340,13 @@ pub fn get_identity_feed(
         limit,
         backward_token,
         forward_token,
+        omit_labels,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
+        let omit_labels = omit_labels.clone();
         let client = client.clone();
 
         let (backward_token, backward_offset) =
@@ -357,7 +362,7 @@ pub fn get_identity_feed(
                         backward_token,
                         forward_token,
                     }),
-                    omit_labels: vec![],
+                    omit_labels,
                 })
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
@@ -440,11 +445,13 @@ pub fn get_following_feed(
         limit,
         backward_token,
         forward_token,
+        omit_labels,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
+        let omit_labels = omit_labels.clone();
         let client = client.clone();
 
         let (backward_token, backward_offset) =
@@ -460,7 +467,7 @@ pub fn get_following_feed(
                         backward_token,
                         forward_token,
                     }),
-                    omit_labels: vec![],
+                    omit_labels,
                 })
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
@@ -490,11 +497,13 @@ pub fn get_explore_feed(
         limit,
         backward_token,
         forward_token,
+        omit_labels,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
+        let omit_labels = omit_labels.clone();
         let client = client.clone();
 
         let (backward_token, backward_offset) =
@@ -510,7 +519,7 @@ pub fn get_explore_feed(
                         backward_token,
                         forward_token,
                     }),
-                    omit_labels: vec![],
+                    omit_labels,
                 })
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?

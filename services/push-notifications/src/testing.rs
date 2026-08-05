@@ -7,9 +7,10 @@ use crate::polycentric::PolycentricClient;
 use polycentric_common::models::{
     collections,
     protos_v2::{
-        Content, Event, EventBundle, EventKey, Identity, KeyType, ListEventsRequest,
-        ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post, PostReply, ProfileUpdate,
-        PublicKey, PutEventsRequest, PutEventsResponse, SerializedContent, SignedEvent,
+        Content, Event, EventBundle, EventKey, GetReactionsRequest, GetReactionsResponse, Identity,
+        KeyType, ListEventsRequest, ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post,
+        PostReply, ProfileUpdate, PublicKey, PutEventsRequest, PutEventsResponse,
+        SerializedContent, SignedEvent,
         content::ContentBody,
         event_sync_service_server::{EventSyncService, EventSyncServiceServer},
     },
@@ -91,6 +92,13 @@ impl EventSyncService for MockEventSync {
         &self,
         _request: Request<ListHeadsRequest>,
     ) -> Result<Response<ListHeadsResponse>, Status> {
+        Err(Status::unimplemented("not needed for these tests"))
+    }
+
+    async fn get_reactions(
+        &self,
+        _request: Request<GetReactionsRequest>,
+    ) -> Result<Response<GetReactionsResponse>, Status> {
         Err(Status::unimplemented("not needed for these tests"))
     }
 }

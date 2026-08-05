@@ -174,7 +174,9 @@ describe('OAuth flow', () => {
     );
 
     const api = new VerifierApi([A, B]);
-    await expect(api.getOAuthUrl('x')).resolves.toEqual({
+    await expect(
+      api.getOAuthUrl('x', 'https://app/oauth/callback'),
+    ).resolves.toEqual({
       server: B,
       url: 'https://x.com/oauth',
     });

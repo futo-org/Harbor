@@ -28,6 +28,7 @@ mod m20260723_000002_add_ban_banned_by;
 mod m20260727_000001_add_content_identity_field_columns;
 mod m20260728_000001_add_content_post_attributed_url_table;
 mod m20260804_000001_add_verification_claim_fields_index;
+mod m20260804_000001_update_content_profile_update_columns;
 
 pub struct Migrator;
 
@@ -65,6 +66,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260721_000001_add_ban_table::Migration),
             Box::new(m20260723_000001_add_ban_pagination_index::Migration),
             Box::new(m20260723_000002_add_ban_banned_by::Migration),
+            Box::new(m20260804_000001_update_content_profile_update_columns::Migration),
             Box::new(
                 m20260728_000001_add_content_post_attributed_url_table::Migration,
             ),

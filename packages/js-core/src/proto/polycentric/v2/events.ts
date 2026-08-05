@@ -11,6 +11,8 @@ import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { PageInfo } from "./common";
+import { PageParams } from "./common";
 import { Blob } from "./content";
 import { PublicKey } from "./keypair";
 import { SerializedContent } from "./content";
@@ -360,6 +362,44 @@ export interface ListHeadsResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventKey heads = 1
      */
     heads: EventKey[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetReactionsRequest
+ */
+export interface GetReactionsRequest {
+    /**
+     * Event key of the event to get reactions for
+     *
+     * @generated from protobuf field: polycentric.v2.EventKey target = 1
+     */
+    target?: EventKey;
+    /**
+     * Return only reactions with this emoji set
+     *
+     * @generated from protobuf field: optional string emoji_filter = 2
+     */
+    emojiFilter?: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 3
+     */
+    pageParams?: PageParams;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetReactionsResponse
+ */
+export interface GetReactionsResponse {
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle event_bundles = 1
+     */
+    eventBundles: EventBundle[];
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 3
+     */
+    pageInfo?: PageInfo;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class VectorClock$Type extends MessageType<VectorClock> {
@@ -1319,11 +1359,134 @@ class ListHeadsResponse$Type extends MessageType<ListHeadsResponse> {
  * @generated MessageType for protobuf message polycentric.v2.ListHeadsResponse
  */
 export const ListHeadsResponse = new ListHeadsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetReactionsRequest$Type extends MessageType<GetReactionsRequest> {
+    constructor() {
+        super("polycentric.v2.GetReactionsRequest", [
+            { no: 1, name: "target", kind: "message", T: () => EventKey },
+            { no: 2, name: "emoji_filter", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "page_params", kind: "message", T: () => PageParams }
+        ]);
+    }
+    create(value?: PartialMessage<GetReactionsRequest>): GetReactionsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetReactionsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetReactionsRequest): GetReactionsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventKey target */ 1:
+                    message.target = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.target);
+                    break;
+                case /* optional string emoji_filter */ 2:
+                    message.emojiFilter = reader.string();
+                    break;
+                case /* optional polycentric.v2.PageParams page_params */ 3:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetReactionsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey target = 1; */
+        if (message.target)
+            EventKey.internalBinaryWrite(message.target, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* optional string emoji_filter = 2; */
+        if (message.emojiFilter !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.emojiFilter);
+        /* optional polycentric.v2.PageParams page_params = 3; */
+        if (message.pageParams)
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetReactionsRequest
+ */
+export const GetReactionsRequest = new GetReactionsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetReactionsResponse$Type extends MessageType<GetReactionsResponse> {
+    constructor() {
+        super("polycentric.v2.GetReactionsResponse", [
+            { no: 1, name: "event_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint },
+            { no: 3, name: "page_info", kind: "message", T: () => PageInfo }
+        ]);
+    }
+    create(value?: PartialMessage<GetReactionsResponse>): GetReactionsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventBundles = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<GetReactionsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetReactionsResponse): GetReactionsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.EventBundle event_bundles */ 1:
+                    message.eventBundles.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* optional polycentric.v2.PageInfo page_info */ 3:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetReactionsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.EventBundle event_bundles = 1; */
+        for (let i = 0; i < message.eventBundles.length; i++)
+            EventBundle.internalBinaryWrite(message.eventBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PageInfo page_info = 3; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetReactionsResponse
+ */
+export const GetReactionsResponse = new GetReactionsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.EventSyncService
  */
 export const EventSyncService = new ServiceType("polycentric.v2.EventSyncService", [
     { name: "ListEvents", options: {}, I: ListEventsRequest, O: ListEventsResponse },
     { name: "PutEvents", options: {}, I: PutEventsRequest, O: PutEventsResponse },
-    { name: "ListHeads", options: {}, I: ListHeadsRequest, O: ListHeadsResponse }
+    { name: "ListHeads", options: {}, I: ListHeadsRequest, O: ListHeadsResponse },
+    { name: "GetReactions", options: {}, I: GetReactionsRequest, O: GetReactionsResponse }
 ]);

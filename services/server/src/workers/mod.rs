@@ -1,4 +1,5 @@
-//! Workers are run by `server workers`.
+//! Workers are run by `server workers [name…]` — all of them, or only the
+//! named ones.
 //!
 //! Every worker declared its own Kafka consumer group.
 
@@ -17,6 +18,42 @@ use crate::service::stats::worker::StatsWorker;
 
 /// A fatal error that ends a worker (and, with it, the `workers` process).
 pub type WorkerError = Box<dyn std::error::Error + Send + Sync>;
+
+/// Messages handled per consumer group, by outcome
+/// (committed / retried / skipped).
+static WORKER_MESSAGES: std::sync::LazyLock<
+    opentelemetry::metrics::Counter<u64>,
+> = std::sync::LazyLock::new(|| {
+    opentelemetry::global::meter("server")
+        .u64_counter("worker_messages")
+        .build()
+});
+
+fn count_message(group_id: &str, outcome: &'static str) {
+    WORKER_MESSAGES.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("group", group_id.to_string()),
+            opentelemetry::KeyValue::new("outcome", outcome),
+        ],
+    );
+}
+
+/// Exit with an error if any name is not a registered worker. Called before
+/// any connection is made, so typos fail fast.
+pub fn validate_worker_names(only: &[String]) {
+    let known = ["all", NotificationWorker::NAME, StatsWorker::NAME];
+    for name in only {
+        if !known.contains(&name.as_str()) {
+            // Startup CLI misuse — plain stderr, logging may not matter yet.
+            eprintln!(
+                "unknown worker: {name} (known workers: {})",
+                known.join(", ")
+            );
+            std::process::exit(2);
+        }
+    }
+}
 
 /// Backoff before a `Retry` message is re-delivered.
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
@@ -43,15 +80,20 @@ pub trait MessageHandler: Send + Sync {
     async fn handle(&self, message: &BorrowedMessage<'_>) -> Outcome;
 }
 
-/// Spawn every registered worker and run until one of them stops. Workers
-/// loop forever, so any return is unexpected and fatal: we log it and let the
-/// process exit so the supervisor restarts it (matching the API server).
-pub async fn run_all_workers(ctx: Arc<ServiceContext>) {
+/// Spawn the registered workers (all, or only those named in `only`) and run
+/// until one of them stops. Workers loop forever, so any return is unexpected
+/// and fatal: we log it and let the process exit so the supervisor restarts
+/// it (matching the API server).
+pub async fn run_all_workers(ctx: Arc<ServiceContext>, only: Vec<String>) {
+    let should_run = |name: &str| {
+        only.is_empty() || only.iter().any(|n| n == "all" || n == name)
+    };
+
     let mut set: JoinSet<(&'static str, Result<(), WorkerError>)> =
         JoinSet::new();
 
     // Define the workers
-    {
+    if should_run(NotificationWorker::NAME) {
         let ctx = ctx.clone();
         set.spawn(async move {
             (
@@ -60,24 +102,24 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>) {
             )
         });
     }
-    {
+    if should_run(StatsWorker::NAME) {
         let ctx = ctx.clone();
         set.spawn(async move {
             (StatsWorker::NAME, StatsWorker::new(ctx).run().await)
         });
     }
 
-    println!("[workers] started {} worker(s)", set.len());
+    tracing::info!(count = set.len(), "workers started");
 
     match set.join_next().await {
         Some(Ok((name, Ok(())))) => {
-            eprintln!("[workers] worker '{name}' exited unexpectedly");
+            tracing::error!(worker = name, "worker exited unexpectedly");
         }
         Some(Ok((name, Err(e)))) => {
-            eprintln!("[workers] worker '{name}' failed: {e}");
+            tracing::error!(worker = name, error = %e, "worker failed");
         }
-        Some(Err(e)) => eprintln!("[workers] a worker task panicked: {e}"),
-        None => eprintln!("[workers] no workers registered"),
+        Some(Err(e)) => tracing::error!(error = %e, "a worker task panicked"),
+        None => tracing::error!("no workers registered"),
     }
 
     set.shutdown().await;
@@ -100,7 +142,7 @@ pub async fn run_consumer(
         let message = match consumer.recv().await {
             Ok(message) => message,
             Err(e) => {
-                eprintln!("[{group_id}] kafka error: {e}");
+                tracing::warn!(group_id, error = %e, "kafka error");
                 continue;
             }
         };
@@ -110,27 +152,35 @@ pub async fn run_consumer(
         match handler.handle(&message).await {
             Outcome::Commit => {
                 attempts.remove(&coord);
+                count_message(group_id, "committed");
                 if let Err(e) =
                     consumer.commit_message(&message, CommitMode::Async)
                 {
-                    eprintln!("[{group_id}] failed to commit offset: {e}");
+                    tracing::warn!(group_id, error = %e, "failed to commit offset");
                 }
             }
             Outcome::Retry => match record_failure(&mut attempts, coord) {
                 RetryAction::Skip => {
-                    eprintln!(
-                        "[{group_id}] message at partition {} offset {} exceeded {MAX_RETRIES} retries; skipping",
-                        coord.0, coord.1
+                    count_message(group_id, "skipped");
+                    tracing::error!(
+                        group_id,
+                        partition = coord.0,
+                        offset = coord.1,
+                        max_retries = MAX_RETRIES,
+                        "message exceeded retries; skipping"
                     );
                     if let Err(e) =
                         consumer.commit_message(&message, CommitMode::Async)
                     {
-                        eprintln!(
-                            "[{group_id}] failed to commit offset after skip: {e}"
+                        tracing::warn!(
+                            group_id,
+                            error = %e,
+                            "failed to commit offset after skip"
                         );
                     }
                 }
                 RetryAction::Backoff => {
+                    count_message(group_id, "retried");
                     // Seek back so the next poll re-delivers this message,
                     // then back off to avoid a hot loop.
                     if let Err(e) = consumer.seek(
@@ -139,7 +189,7 @@ pub async fn run_consumer(
                         Offset::Offset(message.offset()),
                         Duration::from_secs(5),
                     ) {
-                        eprintln!("[{group_id}] failed to seek for retry: {e}");
+                        tracing::warn!(group_id, error = %e, "failed to seek for retry");
                     }
                     tokio::time::sleep(RETRY_BACKOFF).await;
                 }

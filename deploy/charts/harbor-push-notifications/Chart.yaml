@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harbor-push-notifications
+description: Harbor push-notifications service — gRPC push token registry and Expo dispatcher
+type: application
+version: 0.1.0
+appVersion: "0.0.1"

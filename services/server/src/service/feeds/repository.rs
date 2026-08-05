@@ -3,7 +3,7 @@ use crate::service::{events::TargetEventKey, feeds::util::PageCursor};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_post_attributed_url_model as ContentPostAttributedUrlModel,
-    event_model as EventModel,
+    content_reaction_model as ContentReactionModel, event_model as EventModel,
 };
 use polycentric_common::models::collections;
 use sea_orm::{

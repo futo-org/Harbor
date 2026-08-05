@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "harbor-server.fullname" . }}
+  labels:
+    {{- include "harbor-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      # Native gRPC needs HTTP/2 end-to-end; this tells the gateway (Envoy)
+      # to speak h2c to the pod, which auto-detects h1/h2.
+      appProtocol: kubernetes.io/h2c
+  selector:
+    {{- include "harbor-server.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server

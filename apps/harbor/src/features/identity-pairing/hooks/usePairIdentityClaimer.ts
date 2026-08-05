@@ -3,130 +3,182 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { useEffect, useState } from 'react';
+import type { PairingSessionInfo } from '../pairingCode';
 
-interface UsePairIdentityClaimerOptions {
-  pairingSessionCode?: string;
-  pairingSessionServer?: string;
-}
+export type PairIdentityClaimerHookResult = {
+  error: string | null;
+  approved: boolean;
+  claimInProgress: boolean;
+};
+
+/** `useEffect()` return type */
+type StageResult = (() => void) | undefined;
+
+type ErrorState = { message: string };
+type JoiningState = { sessionInfo: PairingSessionInfo };
+type PollingState = JoiningState;
+type ClaimingState = PollingState;
+
+type ClaimerState =
+  | { stage: 'unstarted' }
+  | ({ stage: 'error' } & ErrorState)
+  | ({ stage: 'joining' } & JoiningState)
+  | ({ stage: 'polling' } & PollingState)
+  | ({ stage: 'claiming' } & ClaimingState)
+  | { stage: 'done' };
 
 export function usePairIdentityClaimer(
-  options?: UsePairIdentityClaimerOptions,
-) {
+  sessionInfo: PairingSessionInfo | null | undefined,
+): PairIdentityClaimerHookResult {
   const client = usePolycentric();
-  const pairingSessionCode = options?.pairingSessionCode;
-  const pairingSessionServer = options?.pairingSessionServer;
-  const [identityKey, setIdentityKey] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [authorized, setAuthorized] = useState(false);
-  const [approved, setApproved] = useState(false);
-  const [claimInProgress, setClaimInProgress] = useState(false);
+  const [state, setState] = useState<ClaimerState>({ stage: 'unstarted' });
 
-  // Join the pairing session on the server and learn the issuer identity.
   useEffect(() => {
-    if (!pairingSessionCode || identityKey) return;
+    const error = (message: string): void => {
+      setState({ stage: 'error', message });
+    };
 
-    const claimAndWait = async () => {
-      setClaimInProgress(true);
-      try {
-        if (!pairingSessionServer) {
-          throw new Error('Pairing session server is required.');
-        }
-
-        const status = await client.pairingSessionManager.joinPairingSession(
-          pairingSessionCode,
-          pairingSessionServer,
-        );
-        const pairingSession = status.pairingSession;
-        if (!pairingSession) {
-          throw new Error('Pairing session not found or expired.');
-        }
-        setIdentityKey(pairingSession.issuerIdentity);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to join pairing session';
-        setError(errorMessage);
-      } finally {
-        setClaimInProgress(false);
+    // ---  Define handlers for each stage ---
+    const whenUnstarted = (): StageResult => {
+      if (sessionInfo) {
+        setState({ stage: 'joining', sessionInfo });
+      } else if (sessionInfo === null) {
+        error('Invalid pairing code.');
       }
+
+      return undefined;
     };
 
-    claimAndWait();
-  }, [pairingSessionCode, pairingSessionServer, identityKey, client]);
-
-  // Poll the issuer's identity until the current key is authorized.
-  // Stops once `authorized` flips to true.
-  useEffect(() => {
-    if (!identityKey || !pairingSessionServer || authorized) return;
-
-    let cancelled = false;
-
-    const pollAuthorization = async () => {
-      try {
-        const state = await client.identityManager.fetchIdentityState(
-          identityKey,
-          pairingSessionServer,
-        );
-        if (cancelled) return;
-        const currentKey = client.currentKeyPair?.publicKey;
-        if (!currentKey) return;
-
-        const keys = new Set<string>();
-        state.rotationKeys.forEach((k) => {
-          keys.add(publicKeyToString(k));
-        });
-        state.signingKeys.forEach((k) => {
-          keys.add(publicKeyToString(k));
-        });
-
-        if (keys.has(publicKeyToString(currentKey))) {
-          setAuthorized(true);
-        }
-      } catch {
-        // polling failed, will retry on next interval
+    const whenError = (): StageResult => {
+      if (sessionInfo === undefined) {
+        setState({ stage: 'unstarted' });
       }
+
+      return undefined;
     };
 
-    void pollAuthorization();
-    const interval = setInterval(() => {
-      void pollAuthorization();
-    }, 2000);
+    const whenJoining = ({ sessionInfo }: JoiningState): StageResult => {
+      let cancelled = false;
 
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [identityKey, pairingSessionServer, client, authorized]);
+      const claimAndWait = async () => {
+        try {
+          const status = await client.pairingSessionManager.joinPairingSession(
+            sessionInfo.code,
+            sessionInfo.origin,
+          );
 
-  // Claim exactly once when authorization is observed.
-  useEffect(() => {
-    if (!authorized || !identityKey || !pairingSessionServer) return;
+          if (cancelled) return;
+          if (status.pairingSession.issuerIdentity !== sessionInfo.identity) {
+            return error(
+              "Pairing session identity does not match issuer's identity.",
+            );
+          }
 
-    let cancelled = false;
+          setState({ stage: 'polling', sessionInfo });
+        } catch (err) {
+          if (cancelled) return;
 
-    void (async () => {
-      try {
-        if (!client.servers.includes(pairingSessionServer)) {
-          client.servers.push(pairingSessionServer);
-        }
-        await client.identityManager.claim(identityKey);
-        if (!cancelled) setApproved(true);
-      } catch (err) {
-        if (!cancelled) {
           const message =
-            err instanceof Error ? err.message : 'Failed to claim identity';
-          setError(message);
+            err instanceof Error
+              ? err.message
+              : 'Failed to join pairing session.';
+
+          setState({ stage: 'error', message });
         }
-      }
-    })();
+      };
 
-    return () => {
-      cancelled = true;
+      claimAndWait();
+      return () => {
+        cancelled = true;
+      };
     };
-  }, [authorized, identityKey, pairingSessionServer, client]);
 
+    const whenPolling = ({ sessionInfo }: PollingState): StageResult => {
+      let cancelled = false;
+
+      const pollAuthorization = async () => {
+        try {
+          const state = await client.identityManager.fetchIdentityState(
+            sessionInfo.identity,
+            sessionInfo.origin,
+          );
+          if (cancelled) return;
+          const currentKey = client.currentKeyPair?.publicKey;
+          if (!currentKey) return;
+
+          const keys = new Set<string>();
+          state.rotationKeys.forEach((k) => {
+            keys.add(publicKeyToString(k));
+          });
+          state.signingKeys.forEach((k) => {
+            keys.add(publicKeyToString(k));
+          });
+
+          if (keys.has(publicKeyToString(currentKey))) {
+            setState({ stage: 'claiming', sessionInfo });
+          }
+        } catch {
+          // polling failed, will retry on next interval
+        }
+      };
+
+      void pollAuthorization();
+      const interval = setInterval(() => {
+        void pollAuthorization();
+      }, 2000);
+
+      return () => {
+        cancelled = true;
+        clearInterval(interval);
+      };
+    };
+
+    const whenClaiming = ({ sessionInfo }: ClaimingState): StageResult => {
+      const server = sessionInfo.origin;
+      let cancelled = false;
+
+      void (async () => {
+        try {
+          if (!client.servers.includes(server)) {
+            client.servers.push(server);
+          }
+          await client.identityManager.claim(sessionInfo.identity);
+          if (!cancelled) setState({ stage: 'done' });
+        } catch (err) {
+          if (!cancelled) {
+            const message =
+              err instanceof Error ? err.message : 'Failed to claim identity';
+            setState({ stage: 'error', message });
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    };
+
+    // Run the correct handler
+    switch (state.stage) {
+      case 'unstarted':
+        return whenUnstarted();
+      case 'error':
+        return whenError();
+      case 'joining':
+        return whenJoining(state);
+      case 'polling':
+        return whenPolling(state);
+      case 'claiming':
+        return whenClaiming(state);
+      case 'done':
+        return;
+    }
+  }, [sessionInfo, state, client]);
+
+  // Derive return value
   return {
-    error,
-    approved,
-    claimInProgress,
+    error: state.stage === 'error' ? state.message : null,
+    approved: state.stage === 'done',
+    claimInProgress: state.stage === 'joining',
   };
 }

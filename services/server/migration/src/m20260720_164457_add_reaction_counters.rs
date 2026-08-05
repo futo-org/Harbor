@@ -144,7 +144,7 @@ const DD: &str = "dd"; // deletion content body
 const DC: &str = "dc"; // deletion content row
 const DE: &str = "de"; // deletion event
 
-// A competing reaction (to compare against when filtering superceded reactions)
+// A competing reaction (to compare against when filtering superseded reactions)
 const CR2: &str = "cr2"; // competing reaction content body
 const CRC2: &str = "crc2"; // competing reaction content row
 const CRE2: &str = "cre2"; // competing reaction event
@@ -152,7 +152,7 @@ const CRE2: &str = "cre2"; // competing reaction event
 /// Select statement for reaction events that should be counted.
 /// These events have reactions that are:
 /// - not deleted
-/// - not superceded by a later reaction from the same identity
+/// - not superseded by a later reaction from the same identity
 fn reaction_events_select() -> SelectStatement {
     use content_model::Column as C;
     use content_reaction_model::Column as Cr;

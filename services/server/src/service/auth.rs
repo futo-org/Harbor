@@ -37,21 +37,30 @@ pub async fn auth_middleware(
         .and_then(|value| value.strip_prefix("Bearer "))
         .map(str::to_owned);
 
+    let mut authenticated = None;
     if let Some(token) = token {
         match verify_auth_token(&state.ctx, &token, &state.allow_hosts).await {
             Ok(identity) => {
-                request
-                    .extensions_mut()
-                    .insert(AuthenticatedIdentity(identity));
+                let identity = AuthenticatedIdentity(identity);
+                authenticated = Some(identity.clone());
+                request.extensions_mut().insert(identity);
             }
             Err(status) if status.code() == tonic::Code::FailedPrecondition => {
-                eprintln!("auth token unverifiable ({})", status.message());
+                tracing::warn!(
+                    reason = status.message(),
+                    "auth token unverifiable"
+                );
             }
             Err(status) => return grpc_error_response(status, &request),
         }
     }
 
-    next.run(request).await
+    let mut response = next.run(request).await;
+    // Expose the identity to the outer access-log middleware.
+    if let Some(identity) = authenticated {
+        response.extensions_mut().insert(identity);
+    }
+    response
 }
 
 /// Trailers-only gRPC error: HTTP 200 with grpc-status/grpc-message

@@ -12,13 +12,10 @@ pub struct Model {
     // Display name
     pub name: Option<String>,
 
-    // Avatar image digest (no FK — resolved via query)
-    pub avatar_digest_type: Option<i16>,
-    pub avatar_digest_bytes: Option<Vec<u8>>,
-
-    // Banner image digest (no FK — resolved via query)
-    pub banner_digest_type: Option<i16>,
-    pub banner_digest_bytes: Option<Vec<u8>>,
+    pub avatar: Option<Json>,
+    pub banner: Option<Json>,
+    pub description: Option<String>,
+    pub alias: Option<String>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

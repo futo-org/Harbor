@@ -46,9 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
     common_dotenv::load(".env");
 
-    // Initialize the log backend. Defaults to `info` so output appears
-    // without RUST_LOG set; override with e.g. RUST_LOG=debug.
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    common_telemetry::init();
+    common_telemetry::init_metrics("push-notifications");
 
     // Shared connection, then run migrations on every load.
     let db = db::connect().await?;
@@ -105,6 +104,24 @@ async fn serve_grpc(ctx: Arc<Context>, addr: SocketAddr) -> Result<(), tonic::tr
         .await
 }
 
+/// Messages handled, by outcome (committed / retried / skipped).
+static WORKER_MESSAGES: std::sync::LazyLock<opentelemetry::metrics::Counter<u64>> =
+    std::sync::LazyLock::new(|| {
+        opentelemetry::global::meter("push-notifications")
+            .u64_counter("worker_messages")
+            .build()
+    });
+
+fn count_message(outcome: &'static str) {
+    WORKER_MESSAGES.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("group", "push-notifications"),
+            opentelemetry::KeyValue::new("outcome", outcome),
+        ],
+    );
+}
+
 /// Consume the `notifications` Kafka topic and drive push processing.
 async fn run_consumer(ctx: Arc<Context>) {
     // Listen to the materialized notifications produced by the server.
@@ -127,6 +144,7 @@ async fn run_consumer(ctx: Arc<Context>) {
         match process(&ctx, &message).await {
             Outcome::Commit => {
                 attempts.remove(&coord);
+                count_message("committed");
                 if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
                     warn!("failed to commit offset: {}", e);
                 }
@@ -139,6 +157,7 @@ async fn run_consumer(ctx: Arc<Context>) {
                 };
 
                 if failures > MAX_RETRIES {
+                    count_message("skipped");
                     // Retries exhausted — give up and commit past this message
                     // so the partition can make progress.
                     warn!(
@@ -150,6 +169,7 @@ async fn run_consumer(ctx: Arc<Context>) {
                         warn!("failed to commit offset after skip: {}", e);
                     }
                 } else {
+                    count_message("retried");
                     // Seek back so the next poll re-delivers this message, then
                     // back off to avoid a hot loop.
                     if let Err(e) = consumer.seek(

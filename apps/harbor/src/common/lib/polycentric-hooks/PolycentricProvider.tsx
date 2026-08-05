@@ -1,4 +1,5 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
+import { publicEnv } from '@/src/common/util/env';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import {
@@ -45,11 +46,17 @@ const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 /**
  * Comma-separated list of gRPC-web server URLs the client seeds
- * `client.servers` with. Read from `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`;
- * falls back to `http://<host>:3000` for local dev.
+ * `client.servers` with. Read from `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`
+ * (the runtime value from server.js wins over the build-time one); falls
+ * back to `http://<host>:3000` for local dev.
  */
 export const DEFAULT_SEED_SERVERS: string[] = (() => {
-  const raw = (process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS ?? '').trim();
+  const raw = (
+    publicEnv(
+      'EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS',
+      process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS,
+    ) ?? ''
+  ).trim();
   const parsed = raw
     .split(',')
     .map((s) => s.trim())
@@ -69,7 +76,10 @@ export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
  */
 export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
   const raw = (
-    process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS ?? ''
+    publicEnv(
+      'EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS',
+      process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS,
+    ) ?? ''
   ).trim();
   const parsed = raw
     .split(',')
@@ -86,7 +96,10 @@ export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
  */
 export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
   const raw = (
-    process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS ?? ''
+    publicEnv(
+      'EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS',
+      process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS,
+    ) ?? ''
   ).trim();
   const parsed = raw
     .split(',')

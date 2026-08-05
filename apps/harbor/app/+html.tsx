@@ -13,6 +13,13 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <title>{APP_NAME}</title>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        {/* Placeholder replaced with runtime env by server.js at startup. */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input
+          dangerouslySetInnerHTML={{
+            __html: 'globalThis.__POLYCENTRIC_ENV__ = "__RUNTIME_ENV__";',
+          }}
+        />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>

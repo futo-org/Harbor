@@ -44,7 +44,7 @@ impl NotificationWorker {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        println!("[{}] consuming `events`", Self::NAME);
+        tracing::info!(worker = Self::NAME, topic = "events", "consuming");
         run_consumer(Self::NAME, &["events"], self).await
     }
 
@@ -153,7 +153,7 @@ impl MessageHandler for NotificationWorker {
             Ok(bundle) => bundle,
             Err(e) => {
                 // Undecodable payloads will never succeed — commit past.
-                eprintln!("[{}] failed to decode EventBundle: {e}", Self::NAME);
+                tracing::warn!(worker = Self::NAME, error = %e, "failed to decode EventBundle");
                 return Outcome::Commit;
             }
         };
@@ -201,19 +201,22 @@ impl MessageHandler for NotificationWorker {
                 Ok(true) => {}
                 Ok(false) => return Outcome::Commit,
                 Err(e) => {
-                    eprintln!(
-                        "[{}] failed to check for a verification request: {e}",
-                        Self::NAME
+                    tracing::warn!(
+                        worker = Self::NAME,
+                        error = %e,
+                        "failed to check for a verification request"
                     );
                     return Outcome::Retry;
                 }
             }
         }
 
-        println!(
-            "[{}] processing {kind:?} notification: from={} to={recipients:?}",
-            Self::NAME,
-            trigger_key.identity,
+        tracing::info!(
+            worker = Self::NAME,
+            kind = ?kind,
+            from = trigger_key.identity,
+            recipients = ?recipients,
+            "processing notification"
         );
 
         let trigger = KeyColumns::from(trigger_key);
@@ -250,9 +253,10 @@ impl MessageHandler for NotificationWorker {
             };
 
             if let Err(e) = row.insert(&self.ctx.db).await {
-                eprintln!(
-                    "[{}] failed to insert notification: {e}",
-                    Self::NAME
+                tracing::warn!(
+                    worker = Self::NAME,
+                    error = %e,
+                    "failed to insert notification"
                 );
                 return Outcome::Retry;
             }
@@ -265,9 +269,10 @@ impl MessageHandler for NotificationWorker {
             Some(key) => match self.hydrate_target(key).await {
                 Ok(bundle) => bundle,
                 Err(e) => {
-                    eprintln!(
-                        "[{}] failed to hydrate target event: {e}",
-                        Self::NAME
+                    tracing::warn!(
+                        worker = Self::NAME,
+                        error = %e,
+                        "failed to hydrate target event"
                     );
                     return Outcome::Retry;
                 }
@@ -282,17 +287,20 @@ impl MessageHandler for NotificationWorker {
                 .emit(to_identity, kind, bundle.clone(), target_event.clone())
                 .await
             {
-                eprintln!(
-                    "[{}] failed to produce notification: {e}",
-                    Self::NAME
+                tracing::warn!(
+                    worker = Self::NAME,
+                    error = %e,
+                    "failed to produce notification"
                 );
                 return Outcome::Retry;
             }
         }
 
-        println!(
-            "[{}] created {kind:?} notification for {recipients:?}",
-            Self::NAME
+        tracing::info!(
+            worker = Self::NAME,
+            kind = ?kind,
+            recipients = ?recipients,
+            "created notification"
         );
         Outcome::Commit
     }

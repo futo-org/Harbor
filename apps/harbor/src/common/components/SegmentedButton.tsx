@@ -118,9 +118,9 @@ function Segment({
         activeBorder,
       ]}
     >
-      {icon && <Icon name={icon} size={isWeb ? 14 : 12} color={foreground} />}
+      {icon && <Icon name={icon} size={12} color={foreground} />}
       <Text
-        variant={isWeb ? 'small' : 'secondary'}
+        variant="small"
         fontWeight="semibold"
         color={foreground}
         selectable={false}

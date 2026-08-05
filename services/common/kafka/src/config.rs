@@ -26,6 +26,17 @@ pub(crate) fn set_defaults(config: &mut ClientConfig) {
         config.set("sasl.password", value);
     }
 
+    // TLS client auth, as inline PEM so certs can come from the environment.
+    if let Ok(value) = env::var("POLYCENTRIC_KAFKA_SSL_CA") {
+        config.set("ssl.ca.pem", value);
+    }
+    if let Ok(value) = env::var("POLYCENTRIC_KAFKA_SSL_CERTIFICATE") {
+        config.set("ssl.certificate.pem", value);
+    }
+    if let Ok(value) = env::var("POLYCENTRIC_KAFKA_SSL_KEY") {
+        config.set("ssl.key.pem", value);
+    }
+
     config.set(
         "broker.address.family",
         env::var("POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY").unwrap_or_else(|_| "any".to_string()),

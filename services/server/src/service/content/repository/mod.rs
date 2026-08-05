@@ -68,7 +68,7 @@ struct ChildContext<'a> {
 
 /// Log a DB error and map it to an opaque internal status.
 fn map_db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("save_content_child db error: {e}");
+    tracing::error!(error = %e, "save_content_child db error");
     Status::internal("internal server error")
 }
 

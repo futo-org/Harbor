@@ -1,3 +1,5 @@
+import { publicEnv } from '@/src/common/util/env';
+
 export const APP_NAME = 'Harbor';
 
 export const WEB_MAX_CONTENT_WIDTH = 600;
@@ -15,5 +17,8 @@ export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
  * slashes are stripped so callers can append paths directly.
  */
 export const POLYCENTRIC_APP_URL = (
-  process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL ?? 'https://harbor.social'
+  publicEnv(
+    'EXPO_PUBLIC_POLYCENTRIC_APP_URL',
+    process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
+  ) ?? 'https://harbor.social'
 ).replace(/\/+$/, '');

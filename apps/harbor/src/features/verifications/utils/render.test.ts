@@ -1,5 +1,3 @@
-// render.ts pulls in the platform registry, whose logos need vector icons.
-jest.mock('@expo/vector-icons', () => ({ FontAwesome6: () => null }));
 jest.mock('@/src/common/theme', () => ({}));
 
 import type { ClaimField } from '../hooks/useClaimById';

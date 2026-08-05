@@ -7,16 +7,7 @@
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
     - crane tag $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA $ENVIRONMENT_TAG
-
-.service-deploy-manifest:
-  stage: deploy
-  trigger:
-    project: devops/manifest
-    branch: master
-    strategy: depend
-  variables:
-    MANIFEST_SETUP_COMMAND: quick
-    MANIFEST_STAGGER_TIME: "10"
+    - crane tag $CI_REGISTRY_IMAGE/charts/${CHART_NAME}:$CHART_VERSION $ENVIRONMENT_TAG
 
 ########################################################################
 # server
@@ -28,14 +19,17 @@
       changes:
         - services/server/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: server
+    CHART_NAME: harbor-server
 
-########################################
-# Tag the image with environment label #
-########################################
+##################################################
+# Tag the image and chart with environment label #
+##################################################
 
 .server-deploy-image:
   extends:
@@ -44,6 +38,8 @@
   needs:
     - job: server-image
       artifacts: false
+    - job: charts-build
+      artifacts: true
 
 server-deploy-image-staging:
   extends: .server-deploy-image
@@ -56,28 +52,6 @@ server-deploy-image-production:
   environment:
     name: production/server
 
-###############################
-# Rolling restart on Manifest #
-###############################
-
-# server-deploy-manifest-staging:
-#   extends:
-#     - .server-deploy-workflow
-#     - .service-deploy-manifest
-#   variables:
-#     MANIFEST_QUICK_TARGETS: inventory/polycentric-2026/server.yml:staging
-#   needs:
-#     - server-deploy-image-staging
-
-server-deploy-manifest-production:
-  extends:
-    - .server-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/server.yml:polycentriceast,inventory/polycentric-west/server.yml:polycentricwest
-  needs:
-    - server-deploy-image-production
-
 ########################################################################
 # moderation
 ########################################################################
@@ -88,14 +62,29 @@ server-deploy-manifest-production:
       changes:
         - services/moderation/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: moderation-service
+    CHART_NAME: harbor-moderation
 
 ########################################
 # Tag the image with environment label #
 ########################################
+
+moderation-deploy-image-staging:
+  extends:
+    - .moderation-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/moderation-service
+  needs:
+    - job: moderation-image
+      artifacts: false
+    - job: charts-build
+      artifacts: true
 
 moderation-deploy-image-production:
   extends:
@@ -107,19 +96,8 @@ moderation-deploy-image-production:
   needs:
     - job: moderation-image
       artifacts: false
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-moderation-deploy-manifest-production:
-  extends:
-    - .moderation-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-moderation/moderation-east.yml:polycentriceast,inventory/polycentric-moderation/moderation-west.yml:polycentriceast
-  needs:
-    - moderation-deploy-image-production
+    - job: charts-build
+      artifacts: true
 
 ########################################################################
 # notifications
@@ -131,14 +109,29 @@ moderation-deploy-manifest-production:
       changes:
         - services/push-notifications/**/*
         - services/common/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: push-notifications-service
+    CHART_NAME: harbor-push-notifications
 
 ########################################
 # Tag the image with environment label #
 ########################################
+
+push-notifications-deploy-image-staging:
+  extends:
+    - .push-notifications-deploy-workflow
+    - .service-deploy-image
+  environment:
+    name: staging/push-notifications-service
+  needs:
+    - job: push-notifications-image
+      artifacts: false
+    - job: charts-build
+      artifacts: true
 
 push-notifications-deploy-image-production:
   extends:
@@ -150,26 +143,14 @@ push-notifications-deploy-image-production:
   needs:
     - job: push-notifications-image
       artifacts: false
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-push-notifications-deploy-manifest-production:
-  extends:
-    - .push-notifications-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-push-notifications/push-notifications.yml:polycentriceast
-  needs:
-    - push-notifications-deploy-image-production
+    - job: charts-build
+      artifacts: true
 
 ########################################################################
 # scraper
 #
-# Runtime needs (NET_ADMIN, --init, internal-only networking) must be set in
-# the production manifest (inventory/.../scraper.yml in devops/manifest), not
-# here — compose.yml only covers local dev.
+# Runtime needs (NET_ADMIN, zombie reaping, internal-only networking) are
+# set in deploy/charts/harbor-scraper — compose.yml only covers local dev.
 ########################################################################
 
 .scraper-deploy-workflow:
@@ -182,10 +163,13 @@ push-notifications-deploy-manifest-production:
         - tools/**/*
         - patches/**/*
         - services/scraper/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: scraper
+    CHART_NAME: harbor-scraper
 
 ########################################
 # Tag the image with environment label #
@@ -201,6 +185,8 @@ scraper-deploy-image-production:
   needs:
     - job: scraper-image
       artifacts: false
+    - job: charts-build
+      artifacts: true
 
 scraper-deploy-image-staging:
   extends:
@@ -211,28 +197,8 @@ scraper-deploy-image-staging:
   needs:
     - job: scraper-image
       artifacts: false
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-scraper-deploy-manifest-production:
-  extends:
-    - .scraper-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-east/scraper.yml:polycentriceast,inventory/polycentric-east/scraper.yml:polycentricwest
-  needs:
-    - scraper-deploy-image-production
-
-scraper-deploy-manifest-staging:
-  extends:
-    - .scraper-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-scraper/scraper.yml:staging
-  needs:
-    - scraper-deploy-image-staging
+    - job: charts-build
+      artifacts: true
 
 ########################################################################
 # verifier-bot
@@ -250,10 +216,13 @@ scraper-deploy-manifest-staging:
         - packages/js-*/**/*
         - packages/rs-core-uniffi-web/**/*
         - services/verifier-bot/**/*
+        - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
         - .gitlab/ci/deploy_services.yml
+        - .gitlab/ci/publish_charts.yml
   variables:
     SERVICE_NAME: verifier-bot
+    CHART_NAME: harbor-verifier-bot
 
 ########################################
 # Tag the image with environment label #
@@ -268,6 +237,8 @@ verifier-bot-deploy-image-staging:
   needs:
     - job: verifier-bot-image
       artifacts: false
+    - job: charts-build
+      artifacts: true
 
 verifier-bot-deploy-image-production:
   extends:
@@ -279,25 +250,5 @@ verifier-bot-deploy-image-production:
   needs:
     - job: verifier-bot-image
       artifacts: false
-
-###############################
-# Rolling restart on Manifest #
-###############################
-
-verifier-bot-deploy-manifest-staging:
-  extends:
-    - .verifier-bot-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:staging
-  needs:
-    - verifier-bot-deploy-image-staging
-
-verifier-bot-deploy-manifest-production:
-  extends:
-    - .verifier-bot-deploy-workflow
-    - .service-deploy-manifest
-  variables:
-    MANIFEST_QUICK_TARGETS: inventory/polycentric-verifier-bot/verifier-bot.yml:polycentriceast
-  needs:
-    - verifier-bot-deploy-image-production
+    - job: charts-build
+      artifacts: true
