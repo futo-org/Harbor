@@ -580,9 +580,23 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         }
     };
 
-    match ctx.polycentric.publish_labels(target, labels, head).await {
+    match ctx
+        .polycentric
+        .publish_labels(target.clone(), labels.clone(), head)
+        .await
+    {
         Ok(created) => match repository::persist_created(&ctx.db, &created).await {
-            Ok(()) => Outcome::Commit,
+            Ok(()) => {
+                tracing::info!(key = ?target, labels = ?labels, "labels published");
+                let meter = opentelemetry::global::meter("moderation");
+                for label in &labels {
+                    meter
+                        .u64_counter("moderation_labels_published")
+                        .build()
+                        .add(1, &[opentelemetry::KeyValue::new("label", label.clone())]);
+                }
+                Outcome::Commit
+            }
             Err(e) => {
                 tracing::warn!(error = %e, "persist_created error");
                 Outcome::Retry
