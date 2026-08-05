@@ -32,7 +32,7 @@ impl StatsWorker {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        println!("[{}] consuming `events`", Self::NAME);
+        tracing::info!(worker = Self::NAME, topic = "events", "consuming");
         run_consumer(Self::NAME, &["events"], self).await
     }
 
@@ -158,7 +158,7 @@ impl MessageHandler for StatsWorker {
         match self.process(payload).await {
             Ok(()) => Outcome::Commit,
             Err(e) => {
-                eprintln!("[{}] failed to process event: {e}", Self::NAME);
+                tracing::warn!(worker = Self::NAME, error = %e, "failed to process event");
                 Outcome::Retry
             }
         }

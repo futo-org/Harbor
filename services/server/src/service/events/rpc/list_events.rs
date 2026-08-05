@@ -171,6 +171,6 @@ async fn view(
 }
 
 fn map_db_err(e: DbErr) -> Status {
-    eprintln!("list_events db error: {e}");
+    tracing::error!(error = %e, "list_events db error");
     Status::internal("internal server error")
 }

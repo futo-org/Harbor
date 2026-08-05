@@ -16,10 +16,12 @@ push-notifications-migration = { path = "./migration" }
 polycentric-common.workspace = true
 polycentric-core = { path = "../../packages/rs-core" }
 
+common-telemetry = { path = "../common/telemetry" }
+
 # 3rd Party
 ed25519-dalek.workspace = true
-env_logger = "0.11"
 log.workspace = true
+tracing.workspace = true
 prost.workspace = true
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock"] }
 sha2.workspace = true

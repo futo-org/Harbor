@@ -11,13 +11,14 @@ polycentric-core = { path = "../../packages/rs-core" }
 polycentric-common.workspace = true
 common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
+common-telemetry = { path = "../common/telemetry" }
 common-object-store = { path = "../common/object-store" }
 moderation-migration = { path = "./migration" }
 moderation-entity = { path = "./entity" }
 
 # 3rd Party
 log.workspace = true
-env_logger = "0.11"
+tracing.workspace = true
 prost.workspace = true
 time.workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["json", "query", "rustls"] }

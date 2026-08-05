@@ -129,6 +129,6 @@ pub async fn attach_proofs(
 }
 
 fn db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("proofs db error: {e}");
+    tracing::error!(error = %e, "proofs db error");
     Status::internal("internal server error")
 }

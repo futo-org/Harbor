@@ -25,6 +25,7 @@ pub fn validate_worker_names(only: &[String]) {
     let known = ["all", NotificationWorker::NAME, StatsWorker::NAME];
     for name in only {
         if !known.contains(&name.as_str()) {
+            // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(
                 "unknown worker: {name} (known workers: {})",
                 known.join(", ")
@@ -88,17 +89,17 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>, only: Vec<String>) {
         });
     }
 
-    println!("[workers] started {} worker(s)", set.len());
+    tracing::info!(count = set.len(), "workers started");
 
     match set.join_next().await {
         Some(Ok((name, Ok(())))) => {
-            eprintln!("[workers] worker '{name}' exited unexpectedly");
+            tracing::error!(worker = name, "worker exited unexpectedly");
         }
         Some(Ok((name, Err(e)))) => {
-            eprintln!("[workers] worker '{name}' failed: {e}");
+            tracing::error!(worker = name, error = %e, "worker failed");
         }
-        Some(Err(e)) => eprintln!("[workers] a worker task panicked: {e}"),
-        None => eprintln!("[workers] no workers registered"),
+        Some(Err(e)) => tracing::error!(error = %e, "a worker task panicked"),
+        None => tracing::error!("no workers registered"),
     }
 
     set.shutdown().await;
@@ -121,7 +122,7 @@ pub async fn run_consumer(
         let message = match consumer.recv().await {
             Ok(message) => message,
             Err(e) => {
-                eprintln!("[{group_id}] kafka error: {e}");
+                tracing::warn!(group_id, error = %e, "kafka error");
                 continue;
             }
         };
@@ -134,20 +135,25 @@ pub async fn run_consumer(
                 if let Err(e) =
                     consumer.commit_message(&message, CommitMode::Async)
                 {
-                    eprintln!("[{group_id}] failed to commit offset: {e}");
+                    tracing::warn!(group_id, error = %e, "failed to commit offset");
                 }
             }
             Outcome::Retry => match record_failure(&mut attempts, coord) {
                 RetryAction::Skip => {
-                    eprintln!(
-                        "[{group_id}] message at partition {} offset {} exceeded {MAX_RETRIES} retries; skipping",
-                        coord.0, coord.1
+                    tracing::error!(
+                        group_id,
+                        partition = coord.0,
+                        offset = coord.1,
+                        max_retries = MAX_RETRIES,
+                        "message exceeded retries; skipping"
                     );
                     if let Err(e) =
                         consumer.commit_message(&message, CommitMode::Async)
                     {
-                        eprintln!(
-                            "[{group_id}] failed to commit offset after skip: {e}"
+                        tracing::warn!(
+                            group_id,
+                            error = %e,
+                            "failed to commit offset after skip"
                         );
                     }
                 }
@@ -160,7 +166,7 @@ pub async fn run_consumer(
                         Offset::Offset(message.offset()),
                         Duration::from_secs(5),
                     ) {
-                        eprintln!("[{group_id}] failed to seek for retry: {e}");
+                        tracing::warn!(group_id, error = %e, "failed to seek for retry");
                     }
                     tokio::time::sleep(RETRY_BACKOFF).await;
                 }

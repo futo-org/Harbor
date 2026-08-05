@@ -17,7 +17,7 @@ pub async fn handle(
     let rows = EventsRepository::Query::list_heads(&ctx.db, &req.identity)
         .await
         .map_err(|e| {
-            eprintln!("list_heads db error: {e}");
+            tracing::error!(error = %e, "list_heads db error");
             Status::internal("internal server error")
         })?;
 

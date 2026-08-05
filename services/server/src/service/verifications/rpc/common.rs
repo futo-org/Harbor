@@ -6,7 +6,7 @@
 use tonic::Status;
 
 pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("verifications db error: {e}");
+    tracing::error!(error = %e, "verifications db error");
     Status::internal("internal server error")
 }
 

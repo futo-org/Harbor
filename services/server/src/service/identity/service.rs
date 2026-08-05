@@ -184,7 +184,7 @@ pub fn rows_to_hints(rows: Vec<EventWithContentRow>) -> Vec<EventHint> {
 }
 
 fn map_db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("identity hints db error: {e}");
+    tracing::error!(error = %e, "identity hints db error");
     Status::internal("internal server error")
 }
 
@@ -199,7 +199,7 @@ pub async fn cached_identity_content(
     let loaded = IdentityRepo::latest_valid_identity_content(&ctx.db, identity)
         .await
         .map_err(|e| {
-            eprintln!("identity content db error: {e}");
+            tracing::error!(error = %e, "identity content db error");
             Status::internal("internal server error")
         })?
         .ok_or_else(|| {
@@ -263,7 +263,7 @@ pub async fn authorize_event_signer(
         .canonical(&ctx.db, target_identity, collection)
         .await
         .map_err(|e| {
-            eprintln!("authorize_event_signer canonical error: {e}");
+            tracing::error!(error = %e, "authorize_event_signer canonical error");
             Status::internal("internal server error")
         })?;
 

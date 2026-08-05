@@ -25,8 +25,10 @@ async fn connect_db_with_retry() -> DatabaseConnection {
         match build_db_client().await {
             Ok(db) => return db,
             Err(e) => {
-                eprintln!(
-                    "Failed to connect to database: {e}, retrying in {delay:?}"
+                tracing::warn!(
+                    error = %e,
+                    ?delay,
+                    "failed to connect to database, retrying"
                 );
                 tokio::time::sleep(delay).await;
                 delay = (delay * 2).min(std::time::Duration::from_secs(30));
@@ -49,6 +51,7 @@ fn server_config() -> ServerConfig {
 #[tokio::main]
 async fn main() {
     common_dotenv::load(".env");
+    common_telemetry::init();
 
     // `server`                  -> run the API (gRPC + HTTP) server (default)
     // `server workers [name…]`  -> run the named workers (`all` or no
@@ -59,6 +62,7 @@ async fn main() {
             run_workers(std::env::args().skip(2).collect()).await
         }
         Some(other) => {
+            // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(
                 "unknown subcommand: {other}\nusage: server [serve|workers [name…]]"
             );
@@ -87,11 +91,14 @@ async fn run_server() {
     .expect("failed to build gRPC router");
     let http_router = build_routes(db, filestore);
 
-    let app = http_router.merge(grpc_router);
+    let app = http_router
+        .merge(grpc_router)
+        .layer(axum::middleware::from_fn(
+            crate::service::access_log::access_log_middleware,
+        ));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Server listening on http://0.0.0.0:3000");
-    println!("API docs available at http://0.0.0.0:3000/docs");
+    tracing::info!(addr = "0.0.0.0:3000", "server listening");
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -105,6 +112,5 @@ async fn run_workers(only: Vec<String>) {
         .expect("failed to build Kafka producer");
     let ctx = ServiceContext::new(db, kafka_producer);
 
-    println!("Starting workers...");
     workers::run_all_workers(ctx, only).await;
 }

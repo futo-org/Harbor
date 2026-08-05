@@ -60,7 +60,7 @@ async fn get_blob(
     )
     .await
     .map_err(|e| {
-        eprintln!("get_blob db error: {e}");
+        tracing::error!(error = %e, "get_blob db error");
         StatusCode::INTERNAL_SERVER_ERROR
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
@@ -69,7 +69,7 @@ async fn get_blob(
         if e.kind() == std::io::ErrorKind::NotFound {
             StatusCode::NOT_FOUND
         } else {
-            eprintln!("get_blob filestore error: {e}");
+            tracing::error!(error = %e, "get_blob filestore error");
             StatusCode::INTERNAL_SERVER_ERROR
         }
     })?;

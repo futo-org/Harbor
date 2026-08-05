@@ -1,5 +1,3 @@
-use log::{info, warn};
-
 mod context;
 mod db;
 mod labels;
@@ -54,6 +52,11 @@ struct ContentToModerate {
     content: Content,
 }
 
+/// First 8 bytes of a content digest as hex, for log context.
+fn digest_fp(digest: &[u8]) -> String {
+    digest.iter().take(8).map(|b| format!("{b:02x}")).collect()
+}
+
 /// Pull the content and its digest out of a bundle. Returns `None` when
 /// there is nothing to moderate (no serialized content) or the bundle
 /// cannot be interpreted.
@@ -67,7 +70,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     let signed_event = match bundle.signed_event {
         Some(s) => s,
         None => {
-            warn!("bundle missing signed_event");
+            tracing::warn!("bundle missing signed_event");
             return None;
         }
     };
@@ -75,7 +78,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     let event = match Event::decode(signed_event.event_bytes.as_slice()) {
         Ok(e) => e,
         Err(e) => {
-            warn!("failed to decode Event: {:?}", e);
+            tracing::warn!(error = ?e, "failed to decode Event");
             return None;
         }
     };
@@ -83,7 +86,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     let digest = match event.content_digest {
         Some(d) => d,
         None => {
-            warn!("event missing content_digest");
+            tracing::warn!("event missing content_digest");
             return None;
         }
     };
@@ -91,7 +94,7 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
     let content = match Content::decode(serialized_content.content_bytes.as_slice()) {
         Ok(c) => c,
         Err(e) => {
-            warn!("failed to decode Content: {:?}", e);
+            tracing::warn!(error = ?e, "failed to decode Content");
             return None;
         }
     };
@@ -179,7 +182,7 @@ async fn fetch_images(ctx: &Context, content: &Content) -> Vec<(Vec<u8>, String)
     for (digest, mime) in image_blobs(content) {
         match store.read_blob(digest).await {
             Ok(bytes) => images.push((bytes, mime.to_string())),
-            Err(e) => warn!("failed to fetch image blob: {}", e),
+            Err(e) => tracing::warn!(error = %e, "failed to fetch image blob"),
         }
     }
     images
@@ -191,7 +194,7 @@ async fn purge_images(ctx: &Context, content: &Content) -> Result<(), ()> {
     let mut ok = true;
     for (digest, _mime) in image_blobs(content) {
         if let Err(e) = store.delete_blob(digest).await {
-            warn!("failed to purge CSAM image blob: {}", e);
+            tracing::error!(error = %e, "failed to purge CSAM image blob");
             ok = false;
         }
     }
@@ -212,7 +215,7 @@ async fn moderate(
 
     let analyze = |request| async {
         client.analyze(request).await.map_err(|e| {
-            warn!("azure analyze error: {}", e);
+            tracing::warn!(error = %e, "azure analyze error");
         })
     };
 
@@ -256,7 +259,7 @@ async fn photodna_filter(ctx: &Context, images: &[(Vec<u8>, String)]) -> Result<
             Ok(true) => return Ok(true),
             Ok(false) => {}
             Err(e) => {
-                warn!("photodna match error: {}", e);
+                tracing::warn!(error = %e, "photodna match error");
                 return Err(());
             }
         }
@@ -270,9 +273,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
     common_dotenv::load(".env");
 
-    // Initialize the log backend. Defaults to `info` so output appears
-    // without RUST_LOG set; override with e.g. RUST_LOG=debug.
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    common_telemetry::init();
 
     // Shared connection, then run migrations on every load.
     let db = db::connect().await?;
@@ -287,8 +288,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let photodna = match PhotoDnaClient::from_env() {
         Ok(client) => Some(client),
         Err(e) => {
-            warn!(
-                "PhotoDNA not configured ({e}) for content moderation, continuing with Azure only"
+            tracing::warn!(
+                error = %e,
+                "PhotoDNA not configured, continuing with Azure only"
             );
             None
         }
@@ -318,7 +320,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let message = match consumer.recv().await {
             Ok(message) => message,
             Err(e) => {
-                warn!("Kafka error: {}", e);
+                tracing::warn!(error = %e, "kafka error");
                 continue;
             }
         };
@@ -329,7 +331,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Outcome::Commit => {
                 attempts.remove(&coord);
                 if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                    warn!("failed to commit offset: {}", e);
+                    tracing::warn!(error = %e, "failed to commit offset");
                 }
             }
             Outcome::Retry => {
@@ -342,13 +344,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if failures > MAX_RETRIES {
                     // Retries exhausted — give up and commit past this message
                     // so the partition can make progress.
-                    warn!(
-                        "message at partition {} offset {} failed {} times; skipping",
-                        coord.0, coord.1, failures
+                    tracing::error!(
+                        partition = coord.0,
+                        offset = coord.1,
+                        failures,
+                        "message failed repeatedly; skipping"
                     );
                     attempts.remove(&coord);
                     if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                        warn!("failed to commit offset after skip: {}", e);
+                        tracing::warn!(error = %e, "failed to commit offset after skip");
                     }
                 } else {
                     // Seek back so the next poll re-delivers this message, then
@@ -359,7 +363,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Offset::Offset(message.offset()),
                         Duration::from_secs(5),
                     ) {
-                        warn!("failed to seek for retry: {}", e);
+                        tracing::warn!(error = %e, "failed to seek for retry");
                     }
                     tokio::time::sleep(RETRY_BACKOFF).await;
                 }
@@ -377,7 +381,7 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         .and_then(|bytes| match EventKey::decode(bytes) {
             Ok(k) => Some(k),
             Err(e) => {
-                warn!("failed to decode EventKey: {:?}", e);
+                tracing::warn!(error = ?e, "failed to decode EventKey");
                 None
             }
         });
@@ -386,7 +390,7 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         Some(bytes) => match EventBundle::decode(bytes) {
             Ok(b) => b,
             Err(e) => {
-                warn!("failed to decode EventBundle: {:?}", e);
+                tracing::warn!(error = ?e, "failed to decode EventBundle");
                 return Outcome::Commit;
             }
         },
@@ -404,90 +408,91 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
 
     // Obtain the Azure result: reuse a prior one if this content was already
     // processed, otherwise run Azure now and persist the outcome.
-    let azure_response =
-        match repository::get_content(&ctx.db, digest_type, digest_bytes.clone()).await {
-            // Already processed by Azure — skip the Azure step and reuse the
-            // stored result (we still confirm the labels event below).
-            Ok(Some(row)) => match row.azure_response {
-                Some(response) => response,
-                None => {
-                    // Content flagged as CSAM skips Azure responses. Re-run purging/reporting
-                    // just in case.
-                    if row.is_csam == Some(true) {
-                        if purge_images(ctx, &content).await.is_err() {
-                            return Outcome::Retry;
-                        }
-                        report_csam(ctx, &key).await;
+    let azure_response = match repository::get_content(&ctx.db, digest_type, digest_bytes.clone())
+        .await
+    {
+        // Already processed by Azure — skip the Azure step and reuse the
+        // stored result (we still confirm the labels event below).
+        Ok(Some(row)) => match row.azure_response {
+            Some(response) => response,
+            None => {
+                // Content flagged as CSAM skips Azure responses. Re-run purging/reporting
+                // just in case.
+                if row.is_csam == Some(true) {
+                    if purge_images(ctx, &content).await.is_err() {
+                        return Outcome::Retry;
                     }
-                    return Outcome::Commit;
+                    report_csam(ctx, &key).await;
                 }
-            },
-            Ok(None) => {
-                // Reserve the row in the PENDING state before processing.
-                if let Err(e) =
-                    repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await
-                {
-                    warn!("create_pending error: {}", e);
-                    return Outcome::Retry;
-                }
-
-                let images = fetch_images(ctx, &content).await;
-
-                match photodna_filter(ctx, &images).await {
-                    // CSAM: record it, then purge the image blobs and report it.
-                    // Do not run Azure or labels.
-                    Ok(true) => {
-                        // If we get an error, retry (CSAM should not be ignored).
-                        if let Err(e) =
-                            repository::mark_csam(&ctx.db, digest_type, digest_bytes.clone()).await
-                        {
-                            warn!("mark_csam error: {}", e);
-                            return Outcome::Retry;
-                        }
-                        warn!("CSAM match for key {:?}", key);
-                        if purge_images(ctx, &content).await.is_err() {
-                            return Outcome::Retry;
-                        }
-                        report_csam(ctx, &key).await;
-                        return Outcome::Commit;
-                    }
-                    Ok(false) => {}
-                    // Retry on error, so that we don't skip the CSAM check.
-                    Err(()) => return Outcome::Retry,
-                }
-
-                match moderate(ctx, &content, &images).await {
-                    Ok(response) => {
-                        if let Err(e) = repository::store_azure_result(
-                            &ctx.db,
-                            digest_type,
-                            digest_bytes.clone(),
-                            response.clone(),
-                        )
-                        .await
-                        {
-                            warn!("store_azure_result error: {}", e);
-                            return Outcome::Retry;
-                        }
-                        response
-                    }
-                    Err(()) => {
-                        if let Err(e) =
-                            repository::mark_failed(&ctx.db, digest_type, digest_bytes).await
-                        {
-                            warn!("mark_failed error: {}", e);
-                            return Outcome::Retry;
-                        }
-                        // Azure failed — nothing to label.
-                        return Outcome::Commit;
-                    }
-                }
+                return Outcome::Commit;
             }
-            Err(e) => {
-                warn!("get_content error: {}", e);
+        },
+        Ok(None) => {
+            // Reserve the row in the PENDING state before processing.
+            if let Err(e) =
+                repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await
+            {
+                tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "create_pending error");
                 return Outcome::Retry;
             }
-        };
+
+            let images = fetch_images(ctx, &content).await;
+
+            match photodna_filter(ctx, &images).await {
+                // CSAM: record it, then purge the image blobs and report it.
+                // Do not run Azure or labels.
+                Ok(true) => {
+                    // If we get an error, retry (CSAM should not be ignored).
+                    if let Err(e) =
+                        repository::mark_csam(&ctx.db, digest_type, digest_bytes.clone()).await
+                    {
+                        tracing::error!(error = %e, digest = digest_fp(&digest_bytes), "mark_csam error");
+                        return Outcome::Retry;
+                    }
+                    tracing::error!(key = ?key, digest = digest_fp(&digest_bytes), "CSAM match");
+                    if purge_images(ctx, &content).await.is_err() {
+                        return Outcome::Retry;
+                    }
+                    report_csam(ctx, &key).await;
+                    return Outcome::Commit;
+                }
+                Ok(false) => {}
+                // Retry on error, so that we don't skip the CSAM check.
+                Err(()) => return Outcome::Retry,
+            }
+
+            match moderate(ctx, &content, &images).await {
+                Ok(response) => {
+                    if let Err(e) = repository::store_azure_result(
+                        &ctx.db,
+                        digest_type,
+                        digest_bytes.clone(),
+                        response.clone(),
+                    )
+                    .await
+                    {
+                        tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "store_azure_result error");
+                        return Outcome::Retry;
+                    }
+                    response
+                }
+                Err(()) => {
+                    if let Err(e) =
+                        repository::mark_failed(&ctx.db, digest_type, digest_bytes.clone()).await
+                    {
+                        tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "mark_failed error");
+                        return Outcome::Retry;
+                    }
+                    // Azure failed — nothing to label.
+                    return Outcome::Commit;
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "get_content error");
+            return Outcome::Retry;
+        }
+    };
 
     // Confirm a labels event exists for this content. Derive the labels from
     // the Azure result; if any apply, look up whether we have already created
@@ -499,28 +504,30 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
                 let digest = polycentric::labels_content(&target, &labels).1;
                 match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await
                 {
-                    Ok(true) => info!("labels event already created, skipping"),
+                    Ok(true) => {
+                        tracing::debug!(key = ?key, "labels event already created, skipping")
+                    }
                     Ok(false) => {
                         if let Outcome::Retry = publish_labels(ctx, target, labels).await {
                             return Outcome::Retry;
                         }
                     }
                     Err(e) => {
-                        warn!("created_content_exists error: {}", e);
+                        tracing::warn!(error = %e, "created_content_exists error");
                         return Outcome::Retry;
                     }
                 }
             }
-            None => warn!("cannot publish labels: message had no decodable event key"),
+            None => tracing::warn!("cannot publish labels: message had no decodable event key"),
         }
     }
 
-    info!(
-        "processed key: {:?}, topic: {}, partition: {}, offset: {}",
-        key,
-        message.topic(),
-        message.partition(),
-        message.offset(),
+    tracing::info!(
+        key = ?key,
+        topic = message.topic(),
+        partition = message.partition(),
+        offset = message.offset(),
+        "processed"
     );
 
     Outcome::Commit
@@ -542,7 +549,7 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
     {
         Ok(head) => head,
         Err(e) => {
-            warn!("chain_head error: {}", e);
+            tracing::warn!(error = %e, "chain_head error");
             return Outcome::Retry;
         }
     };
@@ -551,16 +558,16 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         Ok(created) => match repository::persist_created(&ctx.db, &created).await {
             Ok(()) => Outcome::Commit,
             Err(e) => {
-                warn!("persist_created error: {}", e);
+                tracing::warn!(error = %e, "persist_created error");
                 Outcome::Retry
             }
         },
         Err(PublishError::NotReady(e)) => {
-            warn!("labels publish not ready, will retry: {}", e);
+            tracing::warn!(error = %e, "labels publish not ready, will retry");
             Outcome::Retry
         }
         Err(PublishError::Transient(e)) => {
-            warn!("labels publish failed: {}", e);
+            tracing::warn!(error = %e, "labels publish failed");
             Outcome::Retry
         }
     }
@@ -570,7 +577,7 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
 /// and propagates the violation, but images should be purged before this runs.
 async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
     let Some(target) = key.clone() else {
-        warn!("cannot report CSAM: message had no decodable event key");
+        tracing::error!("cannot report CSAM: message had no decodable event key");
         return;
     };
 
@@ -580,12 +587,12 @@ async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
         polycentric::report_content(&target, ReportCategory::ChildSafety, additional_info);
     match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await {
         Ok(true) => {
-            info!("CSAM report already created, skipping");
+            tracing::info!(key = ?key, "CSAM report already created, skipping");
             return;
         }
         Ok(false) => {}
         Err(e) => {
-            warn!("created_content_exists error, skipping report: {}", e);
+            tracing::error!(error = %e, key = ?key, "created_content_exists error, skipping report");
             return;
         }
     }
@@ -602,7 +609,7 @@ async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
     {
         Ok(head) => head,
         Err(e) => {
-            warn!("chain_head error, skipping report: {}", e);
+            tracing::error!(error = %e, key = ?key, "chain_head error, skipping report");
             return;
         }
     };
@@ -619,15 +626,15 @@ async fn report_csam(ctx: &Context, key: &Option<EventKey>) {
     {
         Ok(created) => {
             if let Err(e) = repository::persist_created(&ctx.db, &created).await {
-                warn!("persist_created error: {}", e);
+                tracing::warn!(error = %e, key = ?key, "persist_created error");
             }
             // TODO: report confirmed CSAM to authorities (PhotoDNA? NCMEC?)
         }
         Err(PublishError::NotReady(e)) => {
-            warn!("report publish not ready, skipping: {}", e);
+            tracing::error!(error = %e, key = ?key, "report publish not ready, skipping");
         }
         Err(PublishError::Transient(e)) => {
-            warn!("report publish failed, skipping: {}", e);
+            tracing::error!(error = %e, key = ?key, "report publish failed, skipping");
         }
     }
 }

@@ -46,9 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
     common_dotenv::load(".env");
 
-    // Initialize the log backend. Defaults to `info` so output appears
-    // without RUST_LOG set; override with e.g. RUST_LOG=debug.
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    common_telemetry::init();
 
     // Shared connection, then run migrations on every load.
     let db = db::connect().await?;

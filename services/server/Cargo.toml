@@ -8,6 +8,7 @@ edition = "2024"
 common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
 common-object-store = { path = "../common/object-store" }
+common-telemetry = { path = "../common/telemetry" }
 entity = { path = "./entity" }
 migration = { path = "./migration" }
 
@@ -32,6 +33,7 @@ tonic = { workspace = true, features = ["router", "transport"] }
 tonic-prost.workspace = true
 tonic-reflection = "0.14"
 tonic-web = "0.14"
+tracing.workspace = true
 tower = { version = "0.5", default-features = false }
 tower-http = { version = "0.7", features = ["cors"] }
 tower-layer = "0.3"
