@@ -67,7 +67,7 @@ pub async fn handle(
             // A failure occurred while checking what blobs the server already has.
             // Assume the server is not in a condition to accept new blobs and silently
             // return no missing blobs to the client.
-            eprintln!("put_events blob processing: {e}");
+            tracing::warn!(error = %e, "put_events blob processing");
             vec![]
         });
 
@@ -95,7 +95,7 @@ async fn process_event(
 
     let event =
         Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            eprintln!("sync_events decode error: {e}");
+            tracing::debug!(error = %e, "sync_events decode error");
             Status::invalid_argument("invalid event_bytes")
         })?;
 
@@ -122,7 +122,7 @@ async fn process_event(
     let banned = IdentityRepository::is_banned(&ctx.db, &key.identity)
         .await
         .map_err(|e| {
-            eprintln!("put_events ban check db error: {e}");
+            tracing::error!(error = %e, "put_events ban check db error");
             Status::internal("internal server error")
         })?;
     if banned {
@@ -163,12 +163,13 @@ async fn process_event(
         )
         .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
-        let content =
-            Content::decode(serialized_content.content_bytes.as_slice())
-                .map_err(|e| {
-                    eprintln!("sync_events content decode error: {e}");
-                    Status::invalid_argument("invalid content_bytes")
-                })?;
+        let content = Content::decode(
+            serialized_content.content_bytes.as_slice(),
+        )
+        .map_err(|e| {
+            tracing::debug!(error = %e, "sync_events content decode error");
+            Status::invalid_argument("invalid content_bytes")
+        })?;
 
         content
             .blobs()
@@ -176,7 +177,7 @@ async fn process_event(
             .for_each(|blob| blobs.push(blob.clone()));
 
         let txn = ctx.db.begin().await.map_err(|e| {
-            eprintln!("sync_events txn begin error: {e}");
+            tracing::error!(error = %e, "sync_events txn begin error");
             Status::internal("internal server error")
         })?;
 
@@ -192,7 +193,7 @@ async fn process_event(
         )
         .await
         .map_err(|e| {
-            eprintln!("sync_events content db error: {e}");
+            tracing::error!(error = %e, "sync_events content db error");
             Status::internal("internal server error")
         })?;
 
@@ -207,7 +208,7 @@ async fn process_event(
         }
 
         txn.commit().await.map_err(|e| {
-            eprintln!("sync_events txn commit error: {e}");
+            tracing::error!(error = %e, "sync_events txn commit error");
             Status::internal("internal server error")
         })?;
     }
@@ -261,7 +262,7 @@ async fn process_event(
                     )
                     .await
                 {
-                    eprintln!("put_events kafka publish error: {e}");
+                    tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
         }
@@ -269,7 +270,7 @@ async fn process_event(
             // Duplicate event — already stored, treat as success.
         }
         Err(e) => {
-            eprintln!("sync_events db error: {e:?}");
+            tracing::error!(error = ?e, "sync_events db error");
             return Err(Status::internal("internal server error"));
         }
     }
@@ -304,7 +305,7 @@ async fn remove_present_blobs(
         ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
             .await
             .map_err(|e| {
-                eprintln!("put_events blob db error: {e}");
+                tracing::error!(error = %e, "put_events blob db error");
                 Status::internal("internal server error")
             })?;
 

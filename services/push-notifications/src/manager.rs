@@ -99,8 +99,13 @@ impl NotificationManager {
     ) -> Result<(), NotificationError> {
         self.verify_token(&service, &token).await?;
 
-        token_repository::Mutation::register(db, public_key, service, token).await?;
+        token_repository::Mutation::register(db, public_key, service.clone(), token).await?;
 
+        tracing::info!(
+            key = crate::render::key_fingerprint(&public_key.key),
+            service,
+            "push token registered"
+        );
         Ok(())
     }
 
@@ -114,6 +119,11 @@ impl NotificationManager {
     ) -> Result<(), NotificationError> {
         token_repository::Mutation::unregister(db, public_key, service, token).await?;
 
+        tracing::info!(
+            key = crate::render::key_fingerprint(&public_key.key),
+            service,
+            "push token unregistered"
+        );
         Ok(())
     }
 
@@ -226,6 +236,7 @@ impl NotificationManager {
         }
 
         if expo_tokens.is_empty() {
+            tracing::debug!(identity, "no registered push tokens");
             return Ok(ExpoPushResponse { data: vec![] });
         }
 
@@ -244,6 +255,14 @@ impl NotificationManager {
             .expo_client
             .post_requests(vec![expo_push_request])
             .await?;
+
+        let errors = response.data.iter().filter(|t| t.status == "error").count();
+        tracing::info!(
+            identity,
+            tokens = expo_tokens.len(),
+            ticket_errors = errors,
+            "push sent"
+        );
 
         self.clean_unregistered_push_tokens(ctx, &response, expo_tokens)
             .await?;
@@ -283,6 +302,10 @@ impl NotificationManager {
                     &key_and_token.1,
                 )
                 .await?;
+                tracing::info!(
+                    key = crate::render::key_fingerprint(&key_and_token.0.key),
+                    "removed dead push token (DeviceNotRegistered)"
+                );
             } else {
                 warn!(
                     "expo push ticket error (token kept): {}",

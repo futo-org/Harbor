@@ -15,7 +15,7 @@ pub fn page_limit(page_params: &Option<PageParams>) -> u64 {
 }
 
 pub fn map_db_err(e: DbErr) -> Status {
-    eprintln!("feeds_service db error: {e}");
+    tracing::error!(error = %e, "feeds_service db error");
     Status::internal("internal server error")
 }
 
@@ -31,7 +31,7 @@ pub fn map_db_err(e: DbErr) -> Status {
 pub trait PageCursor: Serialize + for<'de> Deserialize<'de> {
     fn encode(&self) -> Result<String, Status> {
         let bytes = serde_json::to_vec(self).map_err(|e| {
-            eprintln!("encode pagination token: {e}");
+            tracing::error!(error = %e, "encode pagination token");
             Status::internal("internal server error")
         })?;
 
@@ -41,12 +41,12 @@ pub trait PageCursor: Serialize + for<'de> Deserialize<'de> {
 
     fn decode(token: &str) -> Result<Self, Status> {
         let bytes = BASE64_STANDARD.decode(token).map_err(|e| {
-            eprintln!("decode pagination token: {e}");
+            tracing::debug!(error = %e, "decode pagination token");
             Status::invalid_argument("pagination token")
         })?;
 
         serde_json::from_slice(bytes.as_slice()).map_err(|e| {
-            eprintln!("decode pagination token: {e}");
+            tracing::debug!(error = %e, "decode pagination token");
             Status::invalid_argument("pagination token")
         })
     }

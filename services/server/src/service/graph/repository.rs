@@ -226,7 +226,7 @@ fn decode_followed_identity(
 }
 
 fn map_db_err(e: sea_orm::DbErr) -> Status {
-    eprintln!("graph repository db error: {e}");
+    tracing::error!(error = %e, "graph repository db error");
     Status::internal("internal server error")
 }
 

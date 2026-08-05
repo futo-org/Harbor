@@ -72,7 +72,7 @@ pub fn render(kind: NotificationKind, key: &EventKey, content: &Content) -> Opti
 
 /// First 8 bytes of a signing key (`EventKey.signed_by`) as lowercase hex,
 /// matching the client's `getKeyFingerprint`.
-fn key_fingerprint(signing_key: &[u8]) -> String {
+pub(crate) fn key_fingerprint(signing_key: &[u8]) -> String {
     signing_key
         .iter()
         .take(8)

@@ -21,7 +21,7 @@ pub async fn handle(
     let (blob, digest, body) = parse_upload_blob_request(req)?;
 
     let txn = db.begin().await.map_err(|e| {
-        eprintln!("upload_blob txn begin error: {e}");
+        tracing::error!(error = %e, "upload_blob txn begin error");
         Status::internal("internal server error")
     })?;
     ContentRepository::Mutation::save_blob(
@@ -31,16 +31,16 @@ pub async fn handle(
     )
     .await
     .map_err(|e| {
-        eprintln!("upload_blob save_blob error: {e}");
+        tracing::error!(error = %e, "upload_blob save_blob error");
         Status::internal("internal server error")
     })?;
     txn.commit().await.map_err(|e| {
-        eprintln!("upload_blob txn commit error: {e}");
+        tracing::error!(error = %e, "upload_blob txn commit error");
         Status::internal("internal server error")
     })?;
 
     filestore.write_blob(&digest, body).await.map_err(|e| {
-        eprintln!("upload_blob filestore error: {e}");
+        tracing::error!(error = %e, "upload_blob filestore error");
         Status::internal("internal server error")
     })?;
 

@@ -40,7 +40,7 @@ pub async fn validated_tombstones(
     let raw = list_tombstones_for_event_keys(&ctx.db, keys)
         .await
         .map_err(|e| {
-            eprintln!("tombstone db error: {e}");
+            tracing::error!(error = %e, "tombstone db error");
             Status::internal("internal server error")
         })?;
     validate_tombstones(ctx, raw).await
