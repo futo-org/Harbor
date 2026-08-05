@@ -54,10 +54,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let out_dir_path = PathBuf::from(&out_dir);
-    tonic_prost_build::configure()
+    let mut conf = tonic_prost_build::configure()
         .build_transport(false)
-        .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"))
-        .compile_protos(&v2_protos, &["../../protos"])?;
+        .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"));
+    for ty in ["ImageSet", "Image", "Blob", "ContentDigest"] {
+        conf = conf.type_attribute(
+            ty,
+            "#[derive(serde::Serialize)] #[serde(rename_all = \"snake_case\")]",
+        );
+    }
+    conf.compile_protos(&v2_protos, &["../../protos"])?;
 
     // ── rerun-if-changed ─────────────────────────────────────────
     println!("cargo:rerun-if-changed={}", proto_file_path.display());
