@@ -21,6 +21,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     Set<string>
   >(new Set());
 
+  // Keep authorized claimers state up-to-date
   useEffect(() => {
     if (!identityKey) return;
     client.identityManager
@@ -41,6 +42,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
   const code = currentPairingSession?.code ?? null;
   const server = currentPairingSession?.server ?? null;
 
+  // Keep pairing session state up-to-date
   useEffect(() => {
     if (!code || !server) return;
 
@@ -124,6 +126,13 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
           identityKey,
           targetServer,
         );
+
+      if (pairingSession.identityKey !== identityKey) {
+        throw new Error(
+          "Server's pairing session does not match current identity.",
+        );
+      }
+
       setCurrentPairingSession(pairingSession);
       setHiddenClaimers(new Set());
     } catch (err) {
