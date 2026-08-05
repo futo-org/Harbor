@@ -21,6 +21,10 @@ message Identity {
   // Absent means the identity has not configured a server list yet and
   // clients fall back to their defaults; present-but-empty is intentional.
   ServerList servers = 4;
+
+  // Backup key for restoring an account with no active sessions.
+  // Its only use is for endorsing identity events.
+  optional PublicKey backup_key = 5;
 }
 
 message ServerList {

@@ -65,6 +65,7 @@ impl EventSyncService for MockEventSync {
                             signing_keys: self.identity_keys.clone(),
                             revocation_bounds: vec![],
                             servers: None,
+                            backup_key: None,
                         })),
                     })]
                 }
@@ -153,6 +154,7 @@ pub fn authored_bundle(author: &str, content: Content) -> EventBundle {
             // is exercised and assertable by the happy-path tests.
             signature: (0u8..64).collect(),
             event_bytes: event.encode_to_vec(),
+            endorsement: None,
         }),
         serialized_content: Some(SerializedContent {
             content_bytes: content.encode_to_vec(),

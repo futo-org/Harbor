@@ -38,6 +38,7 @@ export type {
   KeyPair,
   PrivateKey,
   IdentityState,
+  PublishArgs,
 } from './polycentric-client';
 
 export * from './errors';

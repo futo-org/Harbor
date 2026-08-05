@@ -188,6 +188,7 @@ fn sign(signing_key: &SigningKey, event: Event) -> SignedEvent {
     SignedEvent {
         signature,
         event_bytes,
+        endorsement: None,
     }
 }
 
@@ -235,6 +236,7 @@ impl TestClient {
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
+            backup_key: None,
         };
         let mut client = TestClient {
             key,
@@ -710,6 +712,7 @@ pub fn test_moderator_identity() -> String {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        backup_key: None,
     };
     initial.derive_hex_key()
 }

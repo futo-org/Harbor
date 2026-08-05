@@ -121,6 +121,7 @@ pub async fn list_tombstones_for_event_keys(
             signed_event: Some(SignedEvent {
                 event_bytes: row.delete_event.event_bytes,
                 signature: row.delete_event.signature,
+                endorsement: row.delete_event.endorsement,
             }),
             serialized_content: Some(SerializedContent {
                 content_bytes: row.delete_content.serialized_bytes,
@@ -160,6 +161,7 @@ struct TombstoneContentPartial {
 struct TombstoneEventPartial {
     event_bytes: Vec<u8>,
     signature: Vec<u8>,
+    endorsement: Option<Vec<u8>>,
 }
 
 /// `content_delete → content` on `content_delete.content_id`. The
@@ -303,6 +305,7 @@ mod tests {
             signed_event: Some(SignedEvent {
                 signature: vec![],
                 event_bytes: prost::Message::encode_to_vec(&event),
+                endorsement: None,
             }),
             serialized_content: None,
             event_proofs: vec![],
@@ -345,6 +348,7 @@ mod tests {
                 signature: vec![],
                 // 0xff is a reserved wire type — never decodes as Event.
                 event_bytes: vec![0xffu8],
+                endorsement: None,
             }),
             serialized_content: None,
             event_proofs: vec![],

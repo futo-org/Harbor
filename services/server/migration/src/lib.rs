@@ -32,6 +32,7 @@ mod m20260806_000001_content_post_search_data;
 mod m20260807_000001_migrate_missing_content_profile_update_data;
 mod m20260807_000002_align_report_categories_with_labels;
 mod m20260810_000001_search_query_function;
+mod m20260811_193913_add_backup_endorsement;
 mod m20260812_000001_follow_table;
 mod m20260812_000002_fill_follow_table;
 mod m20260812_000003_reaction_table;
@@ -62,39 +63,24 @@ impl MigratorTrait for Migrator {
             Box::new(m20260707_164130_add_indices_for_sorting::Migration),
             Box::new(m20260707_191447_add_reply_counts_table::Migration),
             Box::new(m20260714_000001_add_url_info_cache_table::Migration),
-            Box::new(
-                m20260717_000001_add_url_info_cache_raw_response::Migration,
-            ),
-            Box::new(
-                m20260727_000001_add_content_identity_field_columns::Migration,
-            ),
-            Box::new(m20260720_164457_add_reaction_counters::Migration),
             Box::new(m20260715_000001_add_moderator_table::Migration),
+            Box::new(m20260717_000001_add_url_info_cache_raw_response::Migration),
+            Box::new(m20260720_164457_add_reaction_counters::Migration),
             Box::new(m20260721_000001_add_ban_table::Migration),
             Box::new(m20260723_000001_add_ban_pagination_index::Migration),
             Box::new(m20260723_000002_add_ban_banned_by::Migration),
+            Box::new(m20260727_000001_add_content_identity_field_columns::Migration),
             Box::new(m20260804_000001_update_content_profile_update_columns::Migration),
             Box::new(m20260804_000003_content_profile_update_search_data::Migration),
             Box::new(m20260806_000001_content_post_search_data::Migration),
             Box::new(m20260807_000001_migrate_missing_content_profile_update_data::Migration),
-            Box::new(
-                m20260807_000002_align_report_categories_with_labels::Migration,
-            ),
-            Box::new(
-                m20260810_000001_search_query_function::Migration,
-            ),
-            Box::new(
-                m20260812_000001_follow_table::Migration,
-            ),
-            Box::new(
-                m20260812_000002_fill_follow_table::Migration,
-            ),
-            Box::new(
-                m20260812_000003_reaction_table::Migration,
-            ),
-            Box::new(
-                m20260812_000004_backfill_reaction_tally_table::Migration,
-            ),
+            Box::new(m20260807_000002_align_report_categories_with_labels::Migration),
+            Box::new(m20260810_000001_search_query_function::Migration),
+            Box::new(m20260811_193913_add_backup_endorsement::Migration),
+            Box::new(m20260812_000001_follow_table::Migration),
+            Box::new(m20260812_000002_fill_follow_table::Migration),
+            Box::new(m20260812_000003_reaction_table::Migration),
+            Box::new(m20260812_000004_backfill_reaction_tally_table::Migration),
         ]
     }
 }

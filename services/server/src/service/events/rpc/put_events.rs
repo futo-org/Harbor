@@ -221,6 +221,7 @@ async fn process_event(
             .as_ref()
             .map(|d| d.value.clone())),
         signature: Set(signed_event.signature),
+        endorsement: Set(signed_event.endorsement),
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
         event_bytes: Set(signed_event.event_bytes),

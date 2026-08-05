@@ -346,6 +346,7 @@ mod tests {
             signing_keys: signing,
             revocation_bounds: Vec::new(),
             servers: None,
+            backup_key: None,
         }
     }
 

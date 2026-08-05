@@ -98,6 +98,12 @@ export interface SignedEvent {
      * @generated from protobuf field: bytes event_bytes = 2
      */
     eventBytes: Uint8Array;
+    /**
+     * Signature of `event_bytes` from the backup key in the preceding identity document.
+     *
+     * @generated from protobuf field: optional bytes endorsement = 3
+     */
+    endorsement?: Uint8Array;
 }
 /**
  * Bundle of the SignedEvent and SerializedContent messages
@@ -553,7 +559,8 @@ class SignedEvent$Type extends MessageType<SignedEvent> {
     constructor() {
         super("polycentric.v2.SignedEvent", [
             { no: 1, name: "signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 2, name: "event_bytes", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+            { no: 2, name: "event_bytes", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
+            { no: 3, name: "endorsement", kind: "scalar", opt: true, T: 12 /*ScalarType.BYTES*/ }
         ]);
     }
     create(value?: PartialMessage<SignedEvent>): SignedEvent {
@@ -575,6 +582,9 @@ class SignedEvent$Type extends MessageType<SignedEvent> {
                 case /* bytes event_bytes */ 2:
                     message.eventBytes = reader.bytes();
                     break;
+                case /* optional bytes endorsement */ 3:
+                    message.endorsement = reader.bytes();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -593,6 +603,9 @@ class SignedEvent$Type extends MessageType<SignedEvent> {
         /* bytes event_bytes = 2; */
         if (message.eventBytes.length)
             writer.tag(2, WireType.LengthDelimited).bytes(message.eventBytes);
+        /* optional bytes endorsement = 3; */
+        if (message.endorsement !== undefined)
+            writer.tag(3, WireType.LengthDelimited).bytes(message.endorsement);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

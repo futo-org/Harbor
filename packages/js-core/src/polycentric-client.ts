@@ -38,7 +38,10 @@ import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 
 type CoreType = PolycentricCoreLike;
 
-export type { IdentityState } from './client-internal/identity-manager';
+export type {
+  IdentityState,
+  PublishArgs,
+} from './client-internal/identity-manager';
 
 /** Private key — same shape as PublicKey, holds the secret key bytes. */
 export interface PrivateKey {

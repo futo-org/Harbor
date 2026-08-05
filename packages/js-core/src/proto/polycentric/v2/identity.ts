@@ -44,6 +44,13 @@ export interface Identity {
      * @generated from protobuf field: polycentric.v2.ServerList servers = 4
      */
     servers?: ServerList;
+    /**
+     * Backup key for restoring an account with no active sessions.
+     * Its only use is for endorsing identity events.
+     *
+     * @generated from protobuf field: optional polycentric.v2.PublicKey backup_key = 5
+     */
+    backupKey?: PublicKey;
 }
 /**
  * @generated from protobuf message polycentric.v2.ServerList
@@ -109,7 +116,8 @@ class Identity$Type extends MessageType<Identity> {
             { no: 1, name: "rotation_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
             { no: 2, name: "signing_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
             { no: 3, name: "revocation_bounds", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => RevocationBound },
-            { no: 4, name: "servers", kind: "message", T: () => ServerList }
+            { no: 4, name: "servers", kind: "message", T: () => ServerList },
+            { no: 5, name: "backup_key", kind: "message", T: () => PublicKey }
         ]);
     }
     create(value?: PartialMessage<Identity>): Identity {
@@ -138,6 +146,9 @@ class Identity$Type extends MessageType<Identity> {
                 case /* polycentric.v2.ServerList servers */ 4:
                     message.servers = ServerList.internalBinaryRead(reader, reader.uint32(), options, message.servers);
                     break;
+                case /* optional polycentric.v2.PublicKey backup_key */ 5:
+                    message.backupKey = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.backupKey);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -162,6 +173,9 @@ class Identity$Type extends MessageType<Identity> {
         /* polycentric.v2.ServerList servers = 4; */
         if (message.servers)
             ServerList.internalBinaryWrite(message.servers, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PublicKey backup_key = 5; */
+        if (message.backupKey)
+            PublicKey.internalBinaryWrite(message.backupKey, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

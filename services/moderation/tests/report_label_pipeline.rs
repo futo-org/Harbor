@@ -272,6 +272,7 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        backup_key: None,
     };
     let identity = content.derive_hex_key();
     let bundle = signed_bundle(
@@ -370,6 +371,7 @@ fn signed_bundle(
         signed_event: Some(SignedEvent {
             signature: key.sign(&event_bytes).to_bytes().to_vec(),
             event_bytes,
+            endorsement: None,
         }),
         serialized_content: Some(SerializedContent { content_bytes }),
         event_proofs: vec![],

@@ -161,6 +161,7 @@ pub async fn created_bundles<C: ConnectionTrait>(
                 signed_event: Some(SignedEvent {
                     signature: e.signature.clone(),
                     event_bytes: e.event_bytes.clone(),
+                    endorsement: None,
                 }),
                 serialized_content,
                 event_proofs: vec![],

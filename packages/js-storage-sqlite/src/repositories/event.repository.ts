@@ -5,12 +5,18 @@ import type { SqliteDb } from '../database.js';
 interface EventRow {
   signature: Uint8Array;
   event_bytes: Uint8Array;
+  endorsement: Uint8Array | null;
 }
+
+// Select these columns to get `EventRow` output.
+const EVENT_ROW_COLUMNS = sql`signature, event_bytes, endorsement`;
 
 const toSignedEvent = (row: EventRow): Proto.SignedEvent =>
   Proto.SignedEvent.create({
     signature: row.signature,
     eventBytes: row.event_bytes,
+    // Coalesce any null value to `undefined`.
+    endorsement: row.endorsement ?? undefined,
   });
 
 export class EventRepository implements IEventRepository {
@@ -27,18 +33,19 @@ export class EventRepository implements IEventRepository {
       const publicKeyBytes = Proto.PublicKey.toBinary(ev.key.signedBy);
 
       await this.db.run(sql`
-        INSERT INTO events (identity, public_key_bytes, collection, sequence, signature, event_bytes)
-        VALUES (${ev.key.identity}, ${publicKeyBytes}, ${ev.key.collection}, ${Number(ev.key.sequence)}, ${s.signature}, ${s.eventBytes})
+        INSERT INTO events (identity, public_key_bytes, collection, sequence, signature, event_bytes, endorsement)
+        VALUES (${ev.key.identity}, ${publicKeyBytes}, ${ev.key.collection}, ${Number(ev.key.sequence)}, ${s.signature}, ${s.eventBytes}, ${s.endorsement ?? null})
         ON CONFLICT(identity, public_key_bytes, collection, sequence) DO UPDATE SET
           signature = excluded.signature,
-          event_bytes = excluded.event_bytes
+          event_bytes = excluded.event_bytes,
+          endorsement = excluded.endorsement
       `);
     }
   }
 
   async getAll(): Promise<Proto.SignedEvent[]> {
     const rows = await this.db.all<EventRow>(sql`
-      SELECT signature, event_bytes FROM events
+      SELECT ${EVENT_ROW_COLUMNS} FROM events
     `);
     return rows.map(toSignedEvent);
   }
@@ -48,7 +55,7 @@ export class EventRepository implements IEventRepository {
     offset = 0,
   ): Promise<{ events: Proto.SignedEvent[]; offset: number }> {
     const rows = await this.db.all<EventRow>(sql`
-      SELECT signature, event_bytes FROM events
+      SELECT ${EVENT_ROW_COLUMNS} FROM events
       LIMIT ${batchSize} OFFSET ${offset}
     `);
     const events = rows.map(toSignedEvent);
@@ -60,7 +67,7 @@ export class EventRepository implements IEventRepository {
     const publicKeyBytes = Proto.PublicKey.toBinary(key.signedBy);
 
     const rows = await this.db.all<EventRow>(sql`
-      SELECT signature, event_bytes FROM events
+      SELECT ${EVENT_ROW_COLUMNS} FROM events
       WHERE identity = ${key.identity}
         AND public_key_bytes = ${publicKeyBytes}
         AND collection = ${key.collection}
@@ -91,8 +98,8 @@ export class EventRepository implements IEventRepository {
 
     const query = options?.headsOnly
       ? sql`
-          SELECT signature, event_bytes FROM (
-            SELECT signature, event_bytes,
+          SELECT ${EVENT_ROW_COLUMNS} FROM (
+            SELECT ${EVENT_ROW_COLUMNS},
               ROW_NUMBER() OVER (
                 PARTITION BY public_key_bytes, collection
                 ORDER BY sequence DESC
@@ -102,7 +109,7 @@ export class EventRepository implements IEventRepository {
           ) WHERE rn = 1
         `
       : sql`
-          SELECT signature, event_bytes FROM events
+          SELECT ${EVENT_ROW_COLUMNS} FROM events
           WHERE ${where}
         `;
 

@@ -24,6 +24,23 @@ export interface IdentityState {
    * defaults); an empty array is an intentionally empty list.
    */
   servers: string[] | null;
+  /**
+   * Optional backup key for restoring access when there are no active sessions.
+   */
+  backupKey: Proto.PublicKey | null;
+}
+
+/**
+ * Arguments for publishing an Identity document.
+ * Omit the identity key to have it derived as the genesis event.
+ */
+export interface PublishArgs {
+  identityKey?: string;
+  rotationKeys: Proto.PublicKey[];
+  signingKeys: Proto.PublicKey[];
+  servers?: string[] | null;
+  revocationBounds?: Proto.RevocationBound[];
+  backupKey?: Proto.PublicKey | null;
 }
 
 /**
@@ -58,6 +75,7 @@ export class IdentityManager {
       signingKeys: identity.signingKeys,
       revocationBounds: identity.revocationBounds,
       servers: identity.servers ? identity.servers.urls : null,
+      backupKey: identity.backupKey ?? null,
     };
   }
 
@@ -65,15 +83,20 @@ export class IdentityManager {
    * Publishes a new Identity document with the given rotation and signing keys.
    *
    * The identity key is the hex-encoded sha256 of the initial Identity content.
-   * For a new identity, pass null for identityKey and it will be computed.
+   * For a new identity, omit the identity key to let it be derived.
    */
   async publish(
-    identityKey: string | null,
-    rotationKeys: Proto.PublicKey[],
-    signingKeys: Proto.PublicKey[],
-    servers: string[] | null = null,
-    revocationBounds: Proto.RevocationBound[] = [],
+    args: PublishArgs,
   ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
+    const {
+      identityKey,
+      rotationKeys,
+      signingKeys,
+      servers = null,
+      revocationBounds = [],
+      backupKey = null,
+    } = args;
+
     if (!this.client.currentKeyPair) {
       throw new Error('No active key pair');
     }
@@ -83,12 +106,13 @@ export class IdentityManager {
       signingKeys,
       revocationBounds,
       servers: servers ? { urls: servers } : undefined,
+      backupKey: backupKey ?? undefined,
     });
     const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    const isBootstrap = identityKey === null;
+    const isBootstrap = !identityKey;
     if (isBootstrap) {
       if (
         rotationKeys.length !== 1 ||
@@ -103,10 +127,10 @@ export class IdentityManager {
           'Initial identity must have exactly one rotation key (the current key), no signing keys and no revocation bounds',
         );
       }
-      const identityBytes = Proto.Identity.toBinary(identity);
-      identityKey = bytesToHex(sha256(identityBytes), 32);
     }
-    const resolvedIdentityKey: string = identityKey!;
+    const resolvedIdentityKey: string = isBootstrap
+      ? bytesToHex(sha256(Proto.Identity.toBinary(identity)), 32)
+      : identityKey;
 
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
@@ -218,13 +242,7 @@ export class IdentityManager {
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.
-    await this.publish(
-      identityKey,
-      state.rotationKeys,
-      state.signingKeys,
-      state.servers,
-      state.revocationBounds,
-    );
+    await this.publish({ ...state });
 
     return state;
   }
@@ -262,13 +280,7 @@ export class IdentityManager {
     if (!state) throw new Error('No active identity');
 
     const signingKeys = [...state.signingKeys, publicKey];
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      state.rotationKeys,
-      signingKeys,
-      state.servers,
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({ ...state, signingKeys });
     return signedEvent;
   }
 
@@ -284,13 +296,7 @@ export class IdentityManager {
     const signingKeys = state.signingKeys.filter(
       (k) => !bytesEqual(k.key, publicKey.key),
     );
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      state.rotationKeys,
-      signingKeys,
-      state.servers,
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({ ...state, signingKeys });
     return signedEvent;
   }
 
@@ -309,13 +315,7 @@ export class IdentityManager {
     }
 
     const rotationKeys = [...state.rotationKeys, publicKey];
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      rotationKeys,
-      state.signingKeys,
-      state.servers,
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({ ...state, rotationKeys });
     return signedEvent;
   }
 
@@ -331,13 +331,7 @@ export class IdentityManager {
     const rotationKeys = state.rotationKeys.filter(
       (k) => !IdentityManager.keysEqual(k, publicKey),
     );
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      rotationKeys,
-      state.signingKeys,
-      state.servers,
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({ ...state, rotationKeys });
     return signedEvent;
   }
 
@@ -358,13 +352,10 @@ export class IdentityManager {
 
     await this.client.core.getServerInfo(url);
 
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      state.rotationKeys,
-      state.signingKeys,
-      [...servers, url],
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({
+      ...state,
+      servers: [...servers, url],
+    });
     return signedEvent;
   }
 
@@ -382,13 +373,7 @@ export class IdentityManager {
       throw new Error('Server not found');
     }
 
-    const { signedEvent } = await this.publish(
-      state.identityKey,
-      state.rotationKeys,
-      state.signingKeys,
-      servers,
-      state.revocationBounds,
-    );
+    const { signedEvent } = await this.publish({ ...state, servers });
     return signedEvent;
   }
 }

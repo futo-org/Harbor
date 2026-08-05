@@ -88,5 +88,6 @@ pub fn sign(params: EventParams) -> SignedEvent {
     SignedEvent {
         signature,
         event_bytes,
+        endorsement: None,
     }
 }

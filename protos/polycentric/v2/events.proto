@@ -46,6 +46,8 @@ message SignedEvent {
   bytes signature = 1;
   // Serialized representation of the Event message that is signed against
   bytes event_bytes = 2;
+  // Signature of `event_bytes` from the backup key in the preceding identity document.
+  optional bytes endorsement = 3;
 }
 
 // Bundle of the SignedEvent and SerializedContent messages
