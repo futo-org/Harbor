@@ -43,7 +43,7 @@ export function IdentitySettingsSheet({
               fontWeight="bold"
               numberOfLines={nameExpanded ? undefined : 2}
               ellipsizeMode="tail"
-              style={{ textAlign: 'center' }}
+              style={[Atoms.text_center, Atoms.max_w_full]}
               onPress={() => setNameExpanded((v) => !v)}
             >
               {displayName || 'Anonymous'}
