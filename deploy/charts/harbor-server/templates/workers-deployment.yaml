@@ -1,0 +1,68 @@
+{{- $root := . }}
+{{- range $w := .Values.workers }}
+{{- if ternary $w.enabled true (hasKey $w "enabled") }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $w.name }}
+  labels:
+    {{- include "harbor-server.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $w.name }}
+spec:
+  replicas: {{ ternary $w.replicas 1 (hasKey $w "replicas") }}
+  selector:
+    matchLabels:
+      {{- include "harbor-server.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $w.name }}
+  template:
+    metadata:
+      {{- with $root.Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "harbor-server.selectorLabels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $w.name }}
+        {{- with $root.Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $root.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag | default $root.Chart.AppVersion }}"
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml $root.Values.securityContext | nindent 12 }}
+          command: ['/app/server', 'workers']
+          args: [{{ $w.name | quote }}]
+          {{- with $root.Values.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml (ternary $w.resources (dict) (hasKey $w "resources")) | nindent 12 }}
+      {{- with $root.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

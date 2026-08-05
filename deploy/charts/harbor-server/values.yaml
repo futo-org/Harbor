@@ -40,6 +40,14 @@ containerPort: 3000
 migrations:
   enabled: true
 
+# Background workers: one Deployment per entry, named after the worker it
+# runs (`server workers <name>`); `all` runs every worker in one process.
+workers:
+  - name: all
+    enabled: false
+    replicas: 1
+    resources: {}
+
 service:
   type: ClusterIP
   port: 80

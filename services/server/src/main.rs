@@ -50,14 +50,17 @@ fn server_config() -> ServerConfig {
 async fn main() {
     common_dotenv::load(".env");
 
-    // `server`          -> run the API (gRPC + HTTP) server (default)
-    // `server workers`  -> run all background workers
+    // `server`                  -> run the API (gRPC + HTTP) server (default)
+    // `server workers [name…]`  -> run the named workers (`all` or no
+    //                              names = every worker)
     match std::env::args().nth(1).as_deref() {
         None | Some("serve") => run_server().await,
-        Some("workers") => run_workers().await,
+        Some("workers") => {
+            run_workers(std::env::args().skip(2).collect()).await
+        }
         Some(other) => {
             eprintln!(
-                "unknown subcommand: {other}\nusage: server [serve|workers]"
+                "unknown subcommand: {other}\nusage: server [serve|workers [name…]]"
             );
             std::process::exit(2);
         }
@@ -92,8 +95,10 @@ async fn run_server() {
     axum::serve(listener, app).await.unwrap();
 }
 
-/// Run every background worker concurrently in one process.
-async fn run_workers() {
+/// Run background workers concurrently in one process — all of them, or
+/// only the ones named in `only`.
+async fn run_workers(only: Vec<String>) {
+    workers::validate_worker_names(&only);
     let db = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await
@@ -101,5 +106,5 @@ async fn run_workers() {
     let ctx = ServiceContext::new(db, kafka_producer);
 
     println!("Starting workers...");
-    workers::run_all_workers(ctx).await;
+    workers::run_all_workers(ctx, only).await;
 }

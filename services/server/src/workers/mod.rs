@@ -1,4 +1,5 @@
-//! Workers are run by `server workers`.
+//! Workers are run by `server workers [name…]` — all of them, or only the
+//! named ones.
 //!
 //! Every worker declared its own Kafka consumer group.
 
@@ -17,6 +18,21 @@ use crate::service::stats::worker::StatsWorker;
 
 /// A fatal error that ends a worker (and, with it, the `workers` process).
 pub type WorkerError = Box<dyn std::error::Error + Send + Sync>;
+
+/// Exit with an error if any name is not a registered worker. Called before
+/// any connection is made, so typos fail fast.
+pub fn validate_worker_names(only: &[String]) {
+    let known = ["all", NotificationWorker::NAME, StatsWorker::NAME];
+    for name in only {
+        if !known.contains(&name.as_str()) {
+            eprintln!(
+                "unknown worker: {name} (known workers: {})",
+                known.join(", ")
+            );
+            std::process::exit(2);
+        }
+    }
+}
 
 /// Backoff before a `Retry` message is re-delivered.
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
@@ -43,15 +59,20 @@ pub trait MessageHandler: Send + Sync {
     async fn handle(&self, message: &BorrowedMessage<'_>) -> Outcome;
 }
 
-/// Spawn every registered worker and run until one of them stops. Workers
-/// loop forever, so any return is unexpected and fatal: we log it and let the
-/// process exit so the supervisor restarts it (matching the API server).
-pub async fn run_all_workers(ctx: Arc<ServiceContext>) {
+/// Spawn the registered workers (all, or only those named in `only`) and run
+/// until one of them stops. Workers loop forever, so any return is unexpected
+/// and fatal: we log it and let the process exit so the supervisor restarts
+/// it (matching the API server).
+pub async fn run_all_workers(ctx: Arc<ServiceContext>, only: Vec<String>) {
+    let should_run = |name: &str| {
+        only.is_empty() || only.iter().any(|n| n == "all" || n == name)
+    };
+
     let mut set: JoinSet<(&'static str, Result<(), WorkerError>)> =
         JoinSet::new();
 
     // Define the workers
-    {
+    if should_run(NotificationWorker::NAME) {
         let ctx = ctx.clone();
         set.spawn(async move {
             (
@@ -60,7 +81,7 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>) {
             )
         });
     }
-    {
+    if should_run(StatsWorker::NAME) {
         let ctx = ctx.clone();
         set.spawn(async move {
             (StatsWorker::NAME, StatsWorker::new(ctx).run().await)
