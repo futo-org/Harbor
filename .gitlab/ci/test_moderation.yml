@@ -7,7 +7,9 @@
 ########################################################################
 
 .moderation-integration-workflow:
-  image: $RUST_DIND_IMAGE
+  image:
+    name: $RUST_DIND_IMAGE
+    pull_policy: if-not-present
   stage: test
   # Enforce serial execution of integration tests that share the same Docker
   # Compose project (postgres, rustfs, kafka, server) — the two integration
