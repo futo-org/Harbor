@@ -1,56 +1,55 @@
 name: Checks
 
 # Leaf check jobs (format, lint, unit tests) that nothing else depends on.
-# Build/deploy/release live in ci.yml.
+# Called from ci.yml after the CI images exist; change flags come from the
+# caller's changes job.
 
 on:
-  pull_request:
-  push:
-    branches: [develop]
-
-permissions:
-  contents: read
-  packages: read
-
-concurrency:
-  group: checks-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      registry:
+        type: string
+        required: true
+      rs_core:
+        type: string
+        default: 'false'
+      js_sdk:
+        type: string
+        default: 'false'
+      server:
+        type: string
+        default: 'false'
+      moderation:
+        type: string
+        default: 'false'
+      push_notifications:
+        type: string
+        default: 'false'
+      scraper:
+        type: string
+        default: 'false'
+      verifier_bot:
+        type: string
+        default: 'false'
+      app:
+        type: string
+        default: 'false'
+      charts:
+        type: string
+        default: 'false'
 
 env:
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      registry: ${{ steps.meta.outputs.registry }}
-      rs_core: ${{ steps.filter.outputs.rs_core }}
-      js_sdk: ${{ steps.filter.outputs.js_sdk }}
-      server: ${{ steps.filter.outputs.server }}
-      moderation: ${{ steps.filter.outputs.moderation }}
-      push_notifications: ${{ steps.filter.outputs.push_notifications }}
-      scraper: ${{ steps.filter.outputs.scraper }}
-      verifier_bot: ${{ steps.filter.outputs.verifier_bot }}
-      app: ${{ steps.filter.outputs.app }}
-      charts: ${{ steps.filter.outputs.charts }}
-    steps:
-      - id: meta
-        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: .github/filters.yml
-
   rust-checks:
     name: ${{ matrix.name }}
-    needs: changes
-    if: needs.changes.outputs.rs_core == 'true'
+    if: inputs.rs_core == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -80,12 +79,11 @@ jobs:
           retention-days: 7
 
   server-format-check:
-    needs: changes
-    if: needs.changes.outputs.server == 'true'
+    if: inputs.server == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -99,12 +97,11 @@ jobs:
       - run: cargo fmt --check --package server
 
   server-clippy:
-    needs: changes
-    if: needs.changes.outputs.server == 'true'
+    if: inputs.server == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -118,12 +115,11 @@ jobs:
       - run: cargo clippy --package server -- -D warnings
 
   moderation-format-check:
-    needs: changes
-    if: needs.changes.outputs.moderation == 'true'
+    if: inputs.moderation == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -137,12 +133,11 @@ jobs:
       - run: cargo fmt --check --package moderation-service
 
   moderation-clippy:
-    needs: changes
-    if: needs.changes.outputs.moderation == 'true'
+    if: inputs.moderation == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -156,12 +151,11 @@ jobs:
       - run: cargo clippy --package moderation-service -- -D warnings
 
   push-notifications-format-check:
-    needs: changes
-    if: needs.changes.outputs.push_notifications == 'true'
+    if: inputs.push_notifications == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -175,12 +169,11 @@ jobs:
       - run: cargo fmt --check --package push-notifications-service
 
   push-notifications-clippy:
-    needs: changes
-    if: needs.changes.outputs.push_notifications == 'true'
+    if: inputs.push_notifications == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -194,11 +187,10 @@ jobs:
       - run: cargo clippy --package push-notifications-service -- -D warnings
 
   push-notifications-test:
-    needs: changes
-    if: needs.changes.outputs.push_notifications == 'true'
+    if: inputs.push_notifications == 'true'
     runs-on: ubuntu-latest
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ inputs.registry }}:rust
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -218,8 +210,7 @@ jobs:
           retention-days: 7
 
   js-sdks-biome-check:
-    needs: changes
-    if: needs.changes.outputs.js_sdk == 'true'
+    if: inputs.js_sdk == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -228,8 +219,7 @@ jobs:
       - run: pnpm exec biome check packages/js-core --diagnostic-level=error
 
   js-core-tests:
-    needs: changes
-    if: needs.changes.outputs.js_sdk == 'true'
+    if: inputs.js_sdk == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -248,8 +238,7 @@ jobs:
   # heavier image job. PUPPETEER_SKIP_DOWNLOAD stops `pnpm install` from
   # fetching Chromium (the runtime image provides a system one).
   scraper-typecheck:
-    needs: changes
-    if: needs.changes.outputs.scraper == 'true'
+    if: inputs.scraper == 'true'
     runs-on: ubuntu-latest
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -260,8 +249,7 @@ jobs:
 
   # Biome lint for the bot. Lints source only, so it needs no build artifacts.
   verifier-bot-biome-check:
-    needs: changes
-    if: needs.changes.outputs.verifier_bot == 'true'
+    if: inputs.verifier_bot == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -272,8 +260,7 @@ jobs:
       - run: pnpm exec biome check services/verifier-bot --diagnostic-level=error
 
   app-biome-check:
-    needs: changes
-    if: needs.changes.outputs.app == 'true'
+    if: inputs.app == 'true'
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -282,8 +269,7 @@ jobs:
       - run: pnpm exec biome check apps/harbor --diagnostic-level=error
 
   app-tests:
-    needs: changes
-    if: needs.changes.outputs.app == 'true'
+    if: inputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -297,8 +283,7 @@ jobs:
           retention-days: 7
 
   charts-lint:
-    needs: changes
-    if: needs.changes.outputs.charts == 'true'
+    if: inputs.charts == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

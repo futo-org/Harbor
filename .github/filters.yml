@@ -5,6 +5,9 @@ ci_infra: &ci_infra
   - '.github/actions/**'
   - '.github/filters.yml'
 
+ci_images:
+  - '.gitlab/images/**'
+  - '.github/workflows/setup-images.yml'
 rs_core:
   - *ci_infra
   - 'Cargo.toml'

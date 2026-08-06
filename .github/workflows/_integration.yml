@@ -1,52 +1,37 @@
 name: Integration tests
 
 # End-to-end tests against the full docker compose stack (PostgreSQL,
-# RustFS, Kafka). Runs in the rust-dind image against the runner's Docker
-# daemon (GitHub mounts the Docker socket into job containers), so the
-# compose stack and the network-connect logic in the scripts work as on
-# GitLab. Each job gets its own runner VM, so the GitLab
-# docker-compose-integration resource group is unnecessary here.
+# RustFS, Kafka). Called from ci.yml after the CI images and service image
+# builds. Runs in the rust-dind image against the runner's Docker daemon
+# (GitHub mounts the Docker socket into job containers), so the compose
+# stack and the network-connect logic in the scripts work as on GitLab.
+# Each job gets its own runner VM, so the GitLab docker-compose-integration
+# resource group is unnecessary here.
 
 on:
-  pull_request:
-  push:
-    branches: [develop]
-
-permissions:
-  contents: read
-  packages: read
-
-concurrency:
-  group: integration-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  workflow_call:
+    inputs:
+      registry:
+        type: string
+        required: true
+      server_integration:
+        type: string
+        default: 'false'
+      moderation_integration:
+        type: string
+        default: 'false'
 
 env:
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      registry: ${{ steps.meta.outputs.registry }}
-      server_integration: ${{ steps.filter.outputs.server_integration }}
-      moderation_integration: ${{ steps.filter.outputs.moderation_integration }}
-    steps:
-      - id: meta
-        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: .github/filters.yml
-
   server-integration:
-    needs: changes
-    if: needs.changes.outputs.server_integration == 'true'
+    if: inputs.server_integration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust-dind
+      image: ${{ inputs.registry }}:rust-dind
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -66,12 +51,11 @@ jobs:
           retention-days: 7
 
   moderation-integration-csam:
-    needs: changes
-    if: needs.changes.outputs.moderation_integration == 'true'
+    if: inputs.moderation_integration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust-dind
+      image: ${{ inputs.registry }}:rust-dind
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

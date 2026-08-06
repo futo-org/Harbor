@@ -1,9 +1,11 @@
 name: CI
 
-# Build → deploy → release chain of the GitLab pipeline (leaf checks live in
-# checks.yml, integration tests in integration.yml, trivy in scan.yml). The
-# changes job resolves the GitLab rules into one flag per job group; release
-# tags (vX.Y.Z) bypass the paths filter and build/publish everything.
+# The GitLab pipeline as one dependency graph: CI toolchain images first,
+# then checks (_checks.yml), SDK/image builds, integration tests
+# (_integration.yml) after the service images, deploys, and the release
+# (trivy is independent and lives in scan.yml). The changes job resolves the
+# GitLab rules into one flag per job group; release tags (vX.Y.Z) bypass the
+# paths filter and build/publish everything.
 
 on:
   workflow_dispatch:
@@ -31,6 +33,17 @@ jobs:
     outputs:
       registry: ${{ steps.meta.outputs.registry }}
       ref_slug: ${{ steps.meta.outputs.ref_slug }}
+      ci_images: ${{ steps.filter.outputs.ci_images }}
+      rs_core: ${{ steps.filter.outputs.rs_core }}
+      js_sdk: ${{ steps.filter.outputs.js_sdk }}
+      server: ${{ steps.filter.outputs.server }}
+      moderation: ${{ steps.filter.outputs.moderation }}
+      push_notifications: ${{ steps.filter.outputs.push_notifications }}
+      scraper: ${{ steps.filter.outputs.scraper }}
+      verifier_bot: ${{ steps.filter.outputs.verifier_bot }}
+      app: ${{ steps.filter.outputs.app }}
+      server_integration: ${{ steps.filter.outputs.server_integration }}
+      moderation_integration: ${{ steps.filter.outputs.moderation_integration }}
       charts: ${{ steps.filter.outputs.charts }}
       build_sdks: ${{ steps.flags.outputs.build_sdks }}
       build_rn: ${{ steps.flags.outputs.build_rn }}
@@ -106,11 +119,40 @@ jobs:
           out deploy_app "$(dep "$APP")"
 
   ######################################################################
+  # setup — CI toolchain images (no-op when already built and unchanged)
+  ######################################################################
+
+  setup-images:
+    needs: changes
+    uses: ./.github/workflows/setup-images.yml
+    with:
+      images_changed: ${{ needs.changes.outputs.ci_images }}
+
+  ######################################################################
+  # check — leaf checks (format, lint, unit tests)
+  ######################################################################
+
+  checks:
+    needs: [changes, setup-images]
+    uses: ./.github/workflows/_checks.yml
+    with:
+      registry: ${{ needs.changes.outputs.registry }}
+      rs_core: ${{ needs.changes.outputs.rs_core }}
+      js_sdk: ${{ needs.changes.outputs.js_sdk }}
+      server: ${{ needs.changes.outputs.server }}
+      moderation: ${{ needs.changes.outputs.moderation }}
+      push_notifications: ${{ needs.changes.outputs.push_notifications }}
+      scraper: ${{ needs.changes.outputs.scraper }}
+      verifier_bot: ${{ needs.changes.outputs.verifier_bot }}
+      app: ${{ needs.changes.outputs.app }}
+      charts: ${{ needs.changes.outputs.charts }}
+
+  ######################################################################
   # build — SDKs
   ######################################################################
 
   rs-core-uniffi-web-build:
-    needs: changes
+    needs: [changes, setup-images]
     if: needs.changes.outputs.build_sdks == 'true'
     runs-on: ubuntu-latest
     container:
@@ -158,7 +200,7 @@ jobs:
           retention-days: 7
 
   rn-android-build:
-    needs: changes
+    needs: [changes, setup-images]
     if: needs.changes.outputs.build_rn == 'true'
     runs-on: ubuntu-latest
     container:
@@ -379,6 +421,26 @@ jobs:
         SKIP_WORKSPACE_BUILD=1
 
   ######################################################################
+  # test — integration (runs after the service image builds)
+  ######################################################################
+
+  # server-image / moderation-image may legitimately be skipped (e.g. a
+  # compose.yml-only change), so tolerate 'skipped' instead of the default
+  # needs semantics; the jobs inside gate themselves on the change flags.
+  integration:
+    needs: [changes, setup-images, server-image, moderation-image]
+    if: >-
+      !cancelled() && needs.changes.result == 'success' &&
+      needs.setup-images.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.server-image.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.moderation-image.result)
+    uses: ./.github/workflows/_integration.yml
+    with:
+      registry: ${{ needs.changes.outputs.registry }}
+      server_integration: ${{ needs.changes.outputs.server_integration }}
+      moderation_integration: ${{ needs.changes.outputs.moderation_integration }}
+
+  ######################################################################
   # build — EAS (Expo) mobile builds
   #
   # GitLab ran these as manual jobs on merge requests; on GitHub use
@@ -572,7 +634,7 @@ jobs:
         run: .github/scripts/npm_publish.sh
 
   release-publish-rs-core:
-    needs: changes
+    needs: [changes, setup-images]
     if: needs.changes.outputs.release == 'true'
     runs-on: ubuntu-latest
     container:

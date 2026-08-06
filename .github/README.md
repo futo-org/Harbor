@@ -11,31 +11,32 @@ tags (the per-component GitLab tags like `server-*`/`js-sdk-*` are gone).
 
 ## Workflows
 
-- `ci.yml` — the build → deploy → release chain: SDK builds, service/app
-  images, EAS builds, chart publishing, staging/production deploys, and the
-  GitHub Release on `v*` tags. Job selection comes from the shared paths
-  filter (`.github/filters.yml`); a `v` tag builds and publishes everything.
-- `checks.yml` — leaf checks (rustfmt/clippy/unit tests, biome, typechecks,
-  chart lint) nothing else depends on.
-- `integration.yml` — server and moderation compose-stack integration tests.
-- `scan.yml` — trivy, uploading SARIF to code scanning.
+- `ci.yml` — the whole pipeline as one dependency graph: CI toolchain images
+  → checks + SDK builds → service/app images → integration tests + EAS
+  builds → chart publishing → staging/production deploys → the GitHub
+  Release on `v*` tags. Job selection comes from the shared paths filter
+  (`.github/filters.yml`); a `v` tag builds and publishes everything.
 - `setup-images.yml` — builds the `rust` / `rust-dind` CI toolchain images
-  from `.gitlab/images/` to `ghcr.io/<owner>/<repo>:rust[-dind]`.
+  from `.gitlab/images/` to `ghcr.io/<owner>/<repo>:rust[-dind]`. Called by
+  `ci.yml` as its first stage (a no-op when the images exist and are
+  unchanged); `workflow_dispatch` forces a rebuild.
+- `scan.yml` — trivy, uploading SARIF to code scanning.
 - `docs.yml` — docs build, production deploy, and per-PR Cloudflare Pages
   review apps (`pr-<n>` instead of `mr-<n>`), torn down when the PR closes.
-- `_service-image.yml`, `_deploy.yml`, `_eas-build.yml` — reusable pieces
-  called from `ci.yml`.
+- `_checks.yml`, `_integration.yml`, `_service-image.yml`, `_deploy.yml`,
+  `_eas-build.yml` — reusable pieces called from `ci.yml`.
 
 ## Bootstrap
 
-1. Run **CI images** (`setup-images.yml`) once via *Run workflow* — the main
-   CI jobs run in the images it pushes.
-2. Create the deploy environments (`staging-<name>` and `production-<name>`,
+1. Create the deploy environments (`staging-<name>` and `production-<name>`,
    matching the `_deploy.yml` calls in `ci.yml`) and add required reviewers
    on the `production-*` ones — that approval gate replaces GitLab's
    `when: manual` production deploys.
-3. Point helm-controller/flux at `oci://ghcr.io/<owner>/<repo>/charts` (it
+2. Point helm-controller/flux at `oci://ghcr.io/<owner>/<repo>/charts` (it
    previously pulled from the GitLab registry).
+
+The CI toolchain images build themselves on the first run (and whenever
+`.gitlab/images/**` changes); no manual bootstrap is needed.
 
 ## Secrets
 
