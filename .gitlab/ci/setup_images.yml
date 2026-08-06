@@ -1,10 +1,10 @@
 variables:
   IMAGES_PATH: '${CI_REGISTRY}/${CI_PROJECT_PATH}/ci'
-  # Jobs pull the default-branch image; pipelines that change an image push
-  # their own branch tag, which becomes this tag once merged.
-  RUST_IMAGE: '${IMAGES_PATH}/rust:${CI_DEFAULT_BRANCH}'
-  RUST_DIND_IMAGE: '${IMAGES_PATH}/rust-dind:${CI_DEFAULT_BRANCH}'
-  RUST_ANDROID_IMAGE: '${IMAGES_PATH}/rust-android:${CI_DEFAULT_BRANCH}'
+  # CI_IMAGES_TAG (set by the workflow rules in .gitlab-ci.yml) is the ref
+  # slug on branch/MR pipelines and the default branch on tag pipelines.
+  RUST_IMAGE: '${IMAGES_PATH}/rust:${CI_IMAGES_TAG}'
+  RUST_DIND_IMAGE: '${IMAGES_PATH}/rust-dind:${CI_IMAGES_TAG}'
+  RUST_ANDROID_IMAGE: '${IMAGES_PATH}/rust-android:${CI_IMAGES_TAG}'
 
 .setup-images-workflow:
   stage: setup
@@ -16,15 +16,56 @@ variables:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - .gitlab/images/**/*
-        - .gitlab/ci/setup_images.yml
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      changes:
-        - .gitlab/images/**/*
-        - .gitlab/ci/setup_images.yml
+
+# Tracks the branch image tags as a review environment so GitLab triggers
+# the cleanup job when the merge request is merged or closed.
+setup-images-env:
+  stage: setup
+  image: alpine:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - echo "images/$CI_COMMIT_REF_SLUG"
+  environment:
+    name: images/$CI_COMMIT_REF_SLUG
+    on_stop: setup-images-cleanup
+    auto_stop_in: 1 week
+
+setup-images-cleanup:
+  stage: setup
+  image: alpine:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+  allow_failure: true
+  variables:
+    GIT_STRATEGY: none
+  environment:
+    name: images/$CI_COMMIT_REF_SLUG
+    action: stop
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - |
+      if [ "$CI_COMMIT_REF_SLUG" = "$CI_DEFAULT_BRANCH" ]; then
+        echo "Refusing to delete the default branch tags"
+        exit 0
+      fi
+      curl -fsS --header "PRIVATE-TOKEN: $CI_API_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories?per_page=100" \
+      | jq -r --arg prefix "$CI_PROJECT_PATH/ci/" \
+          '.[] | select(.path | startswith($prefix)) | .id' \
+      | while read -r repo_id; do
+          echo "Deleting tag $CI_COMMIT_REF_SLUG from repository $repo_id"
+          curl -fsS -o /dev/null -X DELETE --header "PRIVATE-TOKEN: $CI_API_TOKEN" \
+            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories/$repo_id/tags/$CI_COMMIT_REF_SLUG" \
+            || echo "    (tag absent or delete failed)"
+        done
 
 setup-image-rust:
   extends: .setup-images-workflow
