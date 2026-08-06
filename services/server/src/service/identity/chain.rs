@@ -11,6 +11,8 @@
 //! events (e.g. the highest-sequence one) would let a forged,
 //! unauthorized IDENTITY event impersonate the identity.
 
+use std::collections::HashMap;
+
 use crate::service::feeds::repository::EventWithContentRow;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, Identity, PublicKey};
@@ -29,14 +31,13 @@ struct DecodedIdentityRow {
 ///
 /// Genesis is the event whose Identity content hashes to `identity`;
 /// each successor must be at the next sequence and signed by a rotation
-/// key of the current head. An event that is not reachable this way —
-/// including a forged high-sequence event signed by an unauthorized key
-/// — is ignored.
+/// key of the current head or a re-publish of the previous identity
+/// content by a signing key.
 pub fn validated_chain_head<'a>(
     identity: &str,
     rows: impl IntoIterator<Item = &'a EventWithContentRow>,
 ) -> Option<Identity> {
-    let mut decoded: Vec<DecodedIdentityRow> = rows
+    let decoded: Vec<DecodedIdentityRow> = rows
         .into_iter()
         .filter_map(|(event, content)| {
             let content_row = content.as_ref()?;
@@ -58,22 +59,44 @@ pub fn validated_chain_head<'a>(
             })
         })
         .collect();
-    decoded.sort_by_key(|r| r.sequence);
+
+    let rows_by_seq = {
+        let mut map: HashMap<u64, Vec<DecodedIdentityRow>> = HashMap::new();
+
+        for row in decoded {
+            map.entry(row.sequence).or_default().push(row);
+        }
+
+        map
+    };
 
     // Genesis: the earliest event whose Identity content's sha256 matches
     // the identity string.
-    let genesis = decoded
-        .iter()
-        .find(|r| identity_matches_content(identity, &r.content))?;
+    let genesis = rows_by_seq
+        .values()
+        .flatten()
+        .filter(|r| identity_matches_content(identity, &r.content))
+        .min_by_key(|r| r.sequence)?;
 
     let mut head = genesis.content.clone();
     let mut head_seq = genesis.sequence;
     loop {
         let next_seq = head_seq + 1;
-        let next = decoded
+        let Some(candidates) = rows_by_seq.get(&next_seq) else {
+            break;
+        };
+
+        let next = candidates
             .iter()
             .filter(|r| {
-                r.sequence == next_seq && authorizes_rotation(&head, &r.signer)
+                if head.authorizes_rotation(&r.signer) {
+                    // A rotation key can always create a new identity document
+                    true
+                } else {
+                    // Permit even a non-rotation key to add to the chain if it
+                    // doesn't change anything
+                    r.content == head && head.authorizes_signer(&r.signer)
+                }
             })
             .min_by(|a, b| a.signer.key.cmp(&b.signer.key));
         match next {
@@ -95,11 +118,4 @@ fn identity_matches_content(identity: &str, content: &Identity) -> bool {
     let hex: String =
         h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
     hex == identity
-}
-
-fn authorizes_rotation(content: &Identity, signer: &PublicKey) -> bool {
-    content
-        .rotation_keys
-        .iter()
-        .any(|k| k.key_type == signer.key_type && k.key == signer.key)
 }
