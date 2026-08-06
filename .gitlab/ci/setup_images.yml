@@ -1,6 +1,10 @@
 variables:
-  RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust'
-  RUST_DIND_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust-dind'
+  IMAGES_PATH: '${CI_REGISTRY}/${CI_PROJECT_PATH}/ci'
+  # Jobs pull the default-branch image; pipelines that change an image push
+  # their own branch tag, which becomes this tag once merged.
+  RUST_IMAGE: '${IMAGES_PATH}/rust:${CI_DEFAULT_BRANCH}'
+  RUST_DIND_IMAGE: '${IMAGES_PATH}/rust-dind:${CI_DEFAULT_BRANCH}'
+  RUST_ANDROID_IMAGE: '${IMAGES_PATH}/rust-android:${CI_DEFAULT_BRANCH}'
 
 .setup-images-workflow:
   stage: setup
@@ -30,9 +34,10 @@ setup-image-rust:
         --frontend dockerfile.v0 \
         --local context=.gitlab/images/rust \
         --local dockerfile=.gitlab/images/rust \
-        --import-cache type=registry,ref=$RUST_IMAGE \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust:$CI_DEFAULT_BRANCH \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
         --export-cache type=inline \
-        --output type=image,name=$RUST_IMAGE,push=true
+        --output type=image,name=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG,push=true
 
 setup-image-rust-dind:
   extends: .setup-images-workflow
@@ -41,9 +46,25 @@ setup-image-rust-dind:
     - |
       buildctl-daemonless.sh build \
         --frontend dockerfile.v0 \
-        --opt build-arg:RUST_IMAGE=$RUST_IMAGE \
+        --opt build-arg:RUST_IMAGE=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
         --local context=.gitlab/images/rust-dind \
         --local dockerfile=.gitlab/images/rust-dind \
-        --import-cache type=registry,ref=$RUST_DIND_IMAGE \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust-dind:$CI_DEFAULT_BRANCH \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust-dind:$CI_COMMIT_REF_SLUG \
         --export-cache type=inline \
-        --output type=image,name=$RUST_DIND_IMAGE,push=true
+        --output type=image,name=$IMAGES_PATH/rust-dind:$CI_COMMIT_REF_SLUG,push=true
+
+setup-image-rust-android:
+  extends: .setup-images-workflow
+  needs: ['setup-image-rust']
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --opt build-arg:RUST_IMAGE=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
+        --local context=.gitlab/images/rust-android \
+        --local dockerfile=.gitlab/images/rust-android \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust-android:$CI_DEFAULT_BRANCH \
+        --import-cache type=registry,ref=$IMAGES_PATH/rust-android:$CI_COMMIT_REF_SLUG \
+        --export-cache type=inline \
+        --output type=image,name=$IMAGES_PATH/rust-android:$CI_COMMIT_REF_SLUG,push=true

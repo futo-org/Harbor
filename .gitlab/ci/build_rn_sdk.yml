@@ -17,7 +17,7 @@
 
 rn-android-build:
   extends: .rn-sdk-workflow
-  image: $RUST_IMAGE
+  image: $RUST_ANDROID_IMAGE
   stage: build
   rules:
     - !reference [.rn-sdk-workflow, rules]
