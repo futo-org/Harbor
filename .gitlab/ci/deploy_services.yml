@@ -1,5 +1,7 @@
 .service-deploy-image:
   stage: deploy
+  # Never auto-cancel a deploy mid-run on a new commit.
+  interruptible: false
   image:
     name: gcr.io/go-containerregistry/crane:debug
     entrypoint: [""]
