@@ -8,9 +8,12 @@ on:
 permissions:
   contents: read
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   trivy:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     permissions:
       contents: read

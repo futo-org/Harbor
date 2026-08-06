@@ -31,9 +31,12 @@ on:
         type: string
         default: ''
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - if: inputs.download-sdks

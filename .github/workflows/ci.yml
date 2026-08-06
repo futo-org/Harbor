@@ -24,12 +24,14 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
+  # &ci-runner anchors the runner label for every job's runs-on below.
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     outputs:
       registry: ${{ steps.meta.outputs.registry }}
       ref_slug: ${{ steps.meta.outputs.ref_slug }}
@@ -154,7 +156,7 @@ jobs:
   rs-core-uniffi-web-build:
     needs: [changes, setup-images]
     if: needs.changes.outputs.build_sdks == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     container:
       image: ${{ needs.changes.outputs.registry }}:rust
       credentials:
@@ -181,7 +183,7 @@ jobs:
   js-sdks-build:
     needs: [changes, rs-core-uniffi-web-build]
     if: needs.changes.outputs.build_sdks == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -202,7 +204,7 @@ jobs:
   rn-android-build:
     needs: [changes, setup-images]
     if: needs.changes.outputs.build_rn == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     container:
       image: ${{ needs.changes.outputs.registry }}:rust
       credentials:
@@ -271,7 +273,7 @@ jobs:
   rn-sdk-build:
     needs: [changes, js-sdks-build, rn-android-build, rn-ios-build]
     if: needs.changes.outputs.build_rn == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -313,7 +315,7 @@ jobs:
   verifier-bot-tests:
     needs: [changes, js-sdks-build, rs-core-uniffi-web-build]
     if: needs.changes.outputs.verifier_bot_tests == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: node:24-slim
@@ -480,7 +482,7 @@ jobs:
   charts-build:
     needs: changes
     if: needs.changes.outputs.charts == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     outputs:
       chart_version: ${{ steps.publish.outputs.chart_version }}
     steps:
@@ -593,7 +595,7 @@ jobs:
   release-tag-images:
     needs: [changes, app-web-image, server-image]
     if: needs.changes.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - name: Install crane
         run: |
@@ -607,7 +609,7 @@ jobs:
   release-publish-npm:
     needs: [changes, rs-core-uniffi-web-build, js-sdks-build, rn-sdk-build]
     if: needs.changes.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -636,7 +638,7 @@ jobs:
   release-publish-rs-core:
     needs: [changes, setup-images]
     if: needs.changes.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     container:
       image: ${{ needs.changes.outputs.registry }}:rust
       credentials:
@@ -675,7 +677,7 @@ jobs:
       - release-publish-npm
       - release-tag-images
     if: needs.changes.outputs.release == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     permissions:
       contents: write
     steps:

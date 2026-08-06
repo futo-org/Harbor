@@ -39,6 +39,7 @@ on:
         default: 'false'
 
 env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
 
@@ -46,7 +47,7 @@ jobs:
   rust-checks:
     name: ${{ matrix.name }}
     if: inputs.rs_core == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -80,7 +81,7 @@ jobs:
 
   server-format-check:
     if: inputs.server == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -98,7 +99,7 @@ jobs:
 
   server-clippy:
     if: inputs.server == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -116,7 +117,7 @@ jobs:
 
   moderation-format-check:
     if: inputs.moderation == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -134,7 +135,7 @@ jobs:
 
   moderation-clippy:
     if: inputs.moderation == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -152,7 +153,7 @@ jobs:
 
   push-notifications-format-check:
     if: inputs.push_notifications == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -170,7 +171,7 @@ jobs:
 
   push-notifications-clippy:
     if: inputs.push_notifications == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     container:
       image: ${{ inputs.registry }}:rust
@@ -188,7 +189,7 @@ jobs:
 
   push-notifications-test:
     if: inputs.push_notifications == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     container:
       image: ${{ inputs.registry }}:rust
       credentials:
@@ -211,7 +212,7 @@ jobs:
 
   js-sdks-biome-check:
     if: inputs.js_sdk == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -220,7 +221,7 @@ jobs:
 
   js-core-tests:
     if: inputs.js_sdk == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -239,7 +240,7 @@ jobs:
   # fetching Chromium (the runtime image provides a system one).
   scraper-typecheck:
     if: inputs.scraper == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
     steps:
@@ -250,7 +251,7 @@ jobs:
   # Biome lint for the bot. Lints source only, so it needs no build artifacts.
   verifier-bot-biome-check:
     if: inputs.verifier_bot == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -261,7 +262,7 @@ jobs:
 
   app-biome-check:
     if: inputs.app == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -270,7 +271,7 @@ jobs:
 
   app-tests:
     if: inputs.app == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -284,7 +285,7 @@ jobs:
 
   charts-lint:
     if: inputs.charts == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - run: |

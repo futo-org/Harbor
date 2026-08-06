@@ -21,10 +21,13 @@ on:
 permissions:
   contents: read
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   typecheck:
     if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +41,7 @@ jobs:
 
   build:
     if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,7 +59,7 @@ jobs:
   deploy:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -74,7 +77,7 @@ jobs:
   review:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     environment:
       name: docs-review-pr-${{ github.event.number }}
       url: https://pr-${{ github.event.number }}.polycentric-docs-cs8.pages.dev
@@ -93,7 +96,7 @@ jobs:
   # (replaces the GitLab review-app stop job / auto_stop_in).
   review-cleanup:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - uses: actions/checkout@v4
       - run: node .gitlab/ci/scripts/cf-pages-delete-branch.mjs

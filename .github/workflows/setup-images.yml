@@ -18,9 +18,12 @@ permissions:
   contents: read
   packages: write
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   rust:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - id: meta
         run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
@@ -54,7 +57,7 @@ jobs:
 
   rust-dind:
     needs: rust
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     steps:
       - id: meta
         run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"

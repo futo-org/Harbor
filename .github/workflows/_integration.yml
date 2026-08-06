@@ -22,13 +22,14 @@ on:
         default: 'false'
 
 env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
 
 jobs:
   server-integration:
     if: inputs.server_integration == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     timeout-minutes: 30
     container:
       image: ${{ inputs.registry }}:rust-dind
@@ -52,7 +53,7 @@ jobs:
 
   moderation-integration-csam:
     if: inputs.moderation_integration == 'true'
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     timeout-minutes: 30
     container:
       image: ${{ inputs.registry }}:rust-dind

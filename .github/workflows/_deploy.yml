@@ -27,9 +27,12 @@ on:
         type: string
         required: true
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   staging:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     environment: staging-${{ inputs.name }}
     steps:
       - name: Install crane
@@ -42,7 +45,7 @@ jobs:
           crane tag ${{ inputs.registry }}/charts/${{ inputs.chart }}:${{ inputs.chart-version }} staging
 
   production:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     environment: production-${{ inputs.name }}
     steps:
       - name: Install crane

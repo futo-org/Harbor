@@ -49,6 +49,10 @@ The CI toolchain images build themselves on the first run (and whenever
 Repository **variables**: `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`,
 `EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS` (app web image build args).
 
+All Linux jobs run on `harbor-ubuntu-default`, declared once per workflow file
+as the `&ci-runner` YAML anchor in the top-level `env` block (the rn-ios
+build uses `macos-latest`).
+
 Everything else authenticates with the ambient `GITHUB_TOKEN`.
 
 ## Behavioural differences from GitLab

@@ -15,9 +15,12 @@ on:
         type: boolean
         default: false
 
+env:
+  CI_RUNNER: &ci-runner harbor-ubuntu-default
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: *ci-runner
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
