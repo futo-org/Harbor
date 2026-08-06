@@ -33,8 +33,8 @@ impl TryGetableMany for SearchUsersEvent {
 
     fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
         Ok(SearchUsersEvent {
-            event: FromQueryResult::from_query_result(&res, "event_")?,
-            content: FromQueryResult::from_query_result(&res, "content_")?,
+            event: FromQueryResult::from_query_result(res, "event_")?,
+            content: FromQueryResult::from_query_result(res, "content_")?,
             search_rank: res.try_get_by("search_rank")?,
             profile_name: res.try_get_by("profile_name")?,
         })
