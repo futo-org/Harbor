@@ -1,0 +1,70 @@
+name: Service image
+
+# Reusable buildx image build (replaces the GitLab buildctl-daemonless jobs).
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Image name under the registry (e.g. server, moderation-service, app)
+        type: string
+        required: true
+      dockerfile:
+        description: Path to the Dockerfile
+        type: string
+        required: true
+      registry:
+        type: string
+        required: true
+      ref-slug:
+        type: string
+        required: true
+      download-sdks:
+        description: Place the js SDK + uniffi-web dist artifacts in the build context
+        type: boolean
+        default: false
+      download-rn:
+        description: Place the built react-native package artifact in the build context
+        type: boolean
+        default: false
+      build-args:
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - if: inputs.download-sdks
+        uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - if: inputs.download-sdks
+        uses: actions/download-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages
+      - if: inputs.download-rn
+        uses: actions/download-artifact@v4
+        with:
+          name: rn-sdk
+          path: packages/react-native
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfile }}
+          push: true
+          build-args: ${{ inputs.build-args }}
+          tags: ${{ inputs.registry }}/${{ inputs.image }}:${{ github.sha }}
+          cache-from: |
+            type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:cache-develop
+            type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:cache-${{ inputs.ref-slug }}
+          cache-to: type=registry,ref=${{ inputs.registry }}/${{ inputs.image }}:cache-${{ inputs.ref-slug }},mode=max

@@ -1,0 +1,38 @@
+name: Dependency scan
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      TRIVY_NO_PROGRESS: 'true'
+      TRIVY_CACHE_DIR: .trivycache/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .trivycache
+          key: trivy-${{ github.ref_name }}
+          restore-keys: trivy-
+      - name: Install trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.72.0
+      # SARIF upload to code scanning replaces the GitLab code quality report.
+      - run: trivy filesystem --scanners misconfig,vuln --exit-code 0 --severity CRITICAL --format sarif -o trivy.sarif .
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+      # Console output
+      - run: trivy filesystem --scanners misconfig,vuln --exit-code 1 --severity CRITICAL .

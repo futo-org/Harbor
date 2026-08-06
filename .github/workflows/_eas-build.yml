@@ -1,0 +1,62 @@
+name: EAS build
+
+# Reusable Expo (EAS) build on top of the CI-built SDK artifacts. Only the
+# APK variant waits for completion (we download it); the others are
+# fire-and-forget with --auto-submit.
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        type: string
+        required: true
+      apk:
+        description: Build the preview APK, wait for it, and upload it as an artifact
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          install: 'false'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages
+      - uses: actions/download-artifact@v4
+        with:
+          name: rn-sdk
+          path: packages/react-native
+      - run: pnpm install
+      # Tag builds use the tag version; others use the latest release + a patch.
+      - name: Resolve app version
+        env:
+          CI_COMMIT_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/expo/resolve-version.js
+      - if: ${{ !inputs.apk }}
+        run: cd apps/harbor && npx eas-cli build --platform ${{ inputs.platform }} --non-interactive --no-wait --auto-submit
+      - if: inputs.apk
+        run: |
+          cd apps/harbor
+          npx eas-cli build --platform ${{ inputs.platform }} --profile preview --non-interactive --wait --json > eas-build.json
+          # eas only builds remotely; download the resulting APK so it is a CI artifact.
+          node ../../tools/expo/download-apk.js eas-build.json polycentric.apk
+      - if: inputs.apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: polycentric-apk
+          path: |
+            apps/harbor/polycentric.apk
+            apps/harbor/eas-build.json
+          retention-days: 7

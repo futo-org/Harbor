@@ -1,0 +1,636 @@
+name: CI
+
+# Build → deploy → release chain of the GitLab pipeline (leaf checks live in
+# checks.yml, integration tests in integration.yml, trivy in scan.yml). The
+# changes job resolves the GitLab rules into one flag per job group; release
+# tags (vX.Y.Z) bypass the paths filter and build/publish everything.
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [develop]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      registry: ${{ steps.meta.outputs.registry }}
+      ref_slug: ${{ steps.meta.outputs.ref_slug }}
+      charts: ${{ steps.filter.outputs.charts }}
+      build_sdks: ${{ steps.flags.outputs.build_sdks }}
+      build_rn: ${{ steps.flags.outputs.build_rn }}
+      verifier_bot_tests: ${{ steps.flags.outputs.verifier_bot_tests }}
+      eas: ${{ steps.flags.outputs.eas }}
+      release: ${{ steps.flags.outputs.release }}
+      image_server: ${{ steps.flags.outputs.image_server }}
+      image_moderation: ${{ steps.flags.outputs.image_moderation }}
+      image_push_notifications: ${{ steps.flags.outputs.image_push_notifications }}
+      image_scraper: ${{ steps.flags.outputs.image_scraper }}
+      image_verifier_bot: ${{ steps.flags.outputs.image_verifier_bot }}
+      image_app: ${{ steps.flags.outputs.image_app }}
+      deploy_server: ${{ steps.flags.outputs.deploy_server }}
+      deploy_moderation: ${{ steps.flags.outputs.deploy_moderation }}
+      deploy_push_notifications: ${{ steps.flags.outputs.deploy_push_notifications }}
+      deploy_scraper: ${{ steps.flags.outputs.deploy_scraper }}
+      deploy_verifier_bot: ${{ steps.flags.outputs.deploy_verifier_bot }}
+      deploy_app: ${{ steps.flags.outputs.deploy_app }}
+    steps:
+      - id: meta
+        run: |
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          SLUG=$(echo "$REF" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/^-*//; s/-*$//' | cut -c1-63)
+          echo "ref_slug=${SLUG}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: github.ref_type != 'tag'
+      - uses: dorny/paths-filter@v3
+        if: github.ref_type != 'tag'
+        id: filter
+        with:
+          filters: .github/filters.yml
+      # Resolve the GitLab rule unions into one flag per job group. Filter
+      # outputs are empty on tag pushes (the filter step is skipped).
+      - id: flags
+        env:
+          RS_CORE: ${{ steps.filter.outputs.rs_core }}
+          JS_SDK: ${{ steps.filter.outputs.js_sdk }}
+          RN_SDK: ${{ steps.filter.outputs.rn_sdk }}
+          SERVER: ${{ steps.filter.outputs.server }}
+          MODERATION: ${{ steps.filter.outputs.moderation }}
+          PUSH_NOTIFICATIONS: ${{ steps.filter.outputs.push_notifications }}
+          SCRAPER: ${{ steps.filter.outputs.scraper }}
+          VERIFIER_BOT: ${{ steps.filter.outputs.verifier_bot }}
+          APP: ${{ steps.filter.outputs.app }}
+          APP_EAS: ${{ steps.filter.outputs.app_eas }}
+        run: |
+          any() { for v in "$@"; do [ "$v" = true ] && { echo true; return; }; done; echo false; }
+          out() { echo "$1=$2" >> "$GITHUB_OUTPUT"; }
+
+          RELEASE=$(case "$GITHUB_REF" in refs/tags/v[0-9]*.[0-9]*.[0-9]*) echo true ;; *) echo false ;; esac)
+          DISPATCH=$([ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && echo true || echo false)
+          DEFAULT_PUSH=$([ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/develop ] && echo true || echo false)
+          EAS_PUSH=$([ "$DEFAULT_PUSH" = true ] && [ "$APP_EAS" = true ] && echo true || echo false)
+          dep() { [ "$DEFAULT_PUSH" = true ] && [ "$1" = true ] && echo true || echo false; }
+
+          out release "$RELEASE"
+          out build_sdks "$(any "$RS_CORE" "$JS_SDK" "$RN_SDK" "$APP" "$VERIFIER_BOT" "$DISPATCH" "$RELEASE")"
+          out build_rn "$(any "$RN_SDK" "$RS_CORE" "$APP" "$DISPATCH" "$RELEASE")"
+          out verifier_bot_tests "$VERIFIER_BOT"
+          out eas "$(any "$DISPATCH" "$EAS_PUSH" "$RELEASE")"
+          out image_server "$(any "$SERVER" "$RELEASE")"
+          out image_moderation "$(any "$MODERATION" "$RELEASE")"
+          out image_push_notifications "$(any "$PUSH_NOTIFICATIONS" "$RELEASE")"
+          out image_scraper "$(any "$SCRAPER" "$RELEASE")"
+          out image_verifier_bot "$(any "$VERIFIER_BOT" "$RELEASE")"
+          out image_app "$(any "$APP" "$RELEASE")"
+          out deploy_server "$(dep "$SERVER")"
+          out deploy_moderation "$(dep "$MODERATION")"
+          out deploy_push_notifications "$(dep "$PUSH_NOTIFICATIONS")"
+          out deploy_scraper "$(dep "$SCRAPER")"
+          out deploy_verifier_bot "$(dep "$VERIFIER_BOT")"
+          out deploy_app "$(dep "$APP")"
+
+  ######################################################################
+  # build — SDKs
+  ######################################################################
+
+  rs-core-uniffi-web-build:
+    needs: changes
+    if: needs.changes.outputs.build_sdks == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: rs-core-uniffi-web-build
+      - run: |
+          cd packages/rs-core-uniffi-web
+          rustup target add wasm32-unknown-unknown
+          pnpm i
+          pnpm build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+          retention-days: 7
+
+  js-sdks-build:
+    needs: [changes, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.build_sdks == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          install: 'false'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - run: pnpm install
+      - run: pnpm --filter='./packages/js-*' run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages/js-*/dist
+          retention-days: 7
+
+  rn-android-build:
+    needs: changes
+    if: needs.changes.outputs.build_rn == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: rn-android-build
+      - run: |
+          cd packages/react-native
+          rustup target add \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            i686-linux-android \
+            x86_64-linux-android
+          pnpm i
+          pnpm ubrn:android --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rn-android-jnilibs
+          path: packages/react-native/android/src/main/jniLibs
+          retention-days: 7
+
+  # Replaces the GitLab macscript/tart/cirrus indirection with a direct
+  # build on a GitHub-hosted macOS runner (same steps as .cirrus.yml).
+  rn-ios-build:
+    needs: changes
+    if: needs.changes.outputs.build_rn == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-rn-ios-build-${{ hashFiles('Cargo.lock', 'pnpm-lock.yaml') }}
+          restore-keys: cargo-rn-ios-build-
+      - run: brew install just protobuf cmake ninja
+      - run: npm install -g pnpm@10
+      - run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+            source "$HOME/.cargo/env"
+          fi
+          rustup target add \
+            aarch64-apple-ios \
+            aarch64-apple-ios-sim \
+            x86_64-apple-ios
+          cd packages/react-native
+          pnpm i
+          pnpm ubrn:ios
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rn-ios
+          path: |
+            packages/react-native/ios
+            packages/react-native/PolycentricReactNativeFramework.xcframework
+          retention-days: 7
+
+  rn-sdk-build:
+    needs: [changes, js-sdks-build, rn-android-build, rn-ios-build]
+    if: needs.changes.outputs.build_rn == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          install: 'false'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages
+      - uses: actions/download-artifact@v4
+        with:
+          name: rn-android-jnilibs
+          path: packages/react-native/android/src/main/jniLibs
+      - uses: actions/download-artifact@v4
+        with:
+          name: rn-ios
+          path: packages/react-native
+      - run: pnpm install
+      - run: cd packages/react-native && pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rn-sdk
+          path: |
+            packages/react-native
+            !packages/react-native/node_modules
+          retention-days: 7
+
+  ######################################################################
+  # test — verifier-bot (needs the built SDKs)
+  ######################################################################
+
+  # Credentials come from the VERIFIER_BOT_ENV_VARS secret (base64-encoded
+  # .env), decoded into the .test.env the suite loads. Runs in node:24-slim
+  # to keep the Debian chromium environment of the GitLab job.
+  verifier-bot-tests:
+    needs: [changes, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.verifier_bot_tests == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: node:24-slim
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+      POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y --no-install-recommends chromium python3 make g++ && rm -rf /var/lib/apt/lists/*
+      - run: npm install -g pnpm@10
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages
+      - run: pnpm install
+      - run: |
+          if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then
+            echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env
+          fi
+        env:
+          VERIFIER_BOT_ENV_VARS: ${{ secrets.VERIFIER_BOT_ENV_VARS }}
+      - run: pnpm --filter @polycentric/verifier-bot test:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-verifier-bot-tests
+          path: services/verifier-bot/junit.xml
+          retention-days: 7
+
+  ######################################################################
+  # build — container images
+  ######################################################################
+
+  server-image:
+    needs: changes
+    if: needs.changes.outputs.image_server == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: server
+      dockerfile: services/server/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+
+  moderation-image:
+    needs: changes
+    if: needs.changes.outputs.image_moderation == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: moderation-service
+      dockerfile: services/moderation/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+
+  push-notifications-image:
+    needs: changes
+    if: needs.changes.outputs.image_push_notifications == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: push-notifications-service
+      dockerfile: services/push-notifications/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+
+  scraper-image:
+    needs: changes
+    if: needs.changes.outputs.image_scraper == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: scraper
+      dockerfile: services/scraper/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+
+  # The bot consumes the CI-built js SDKs and rs-core-uniffi-web dist (pulled
+  # in as artifacts); the image build typechecks the bot (see Dockerfile).
+  verifier-bot-image:
+    needs: [changes, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.image_verifier_bot == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: verifier-bot
+      dockerfile: services/verifier-bot/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+      download-sdks: true
+
+  app-web-image:
+    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.image_app == 'true'
+    uses: ./.github/workflows/_service-image.yml
+    with:
+      image: app
+      dockerfile: apps/harbor/Dockerfile
+      registry: ${{ needs.changes.outputs.registry }}
+      ref-slug: ${{ needs.changes.outputs.ref_slug }}
+      download-sdks: true
+      download-rn: true
+      build-args: |
+        EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
+        EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
+        SKIP_WORKSPACE_BUILD=1
+
+  ######################################################################
+  # build — EAS (Expo) mobile builds
+  #
+  # GitLab ran these as manual jobs on merge requests; on GitHub use
+  # workflow_dispatch on the branch instead. Automatic on the default
+  # branch and on v*/app-* tags.
+  ######################################################################
+
+  eas-android-apk:
+    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.eas == 'true'
+    uses: ./.github/workflows/_eas-build.yml
+    secrets: inherit
+    with:
+      platform: android
+      apk: true
+
+  eas-android-aab:
+    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.eas == 'true'
+    uses: ./.github/workflows/_eas-build.yml
+    secrets: inherit
+    with:
+      platform: android
+
+  eas-ios:
+    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build]
+    if: needs.changes.outputs.eas == 'true'
+    uses: ./.github/workflows/_eas-build.yml
+    secrets: inherit
+    with:
+      platform: ios
+
+  ######################################################################
+  # build — Helm charts
+  ######################################################################
+
+  charts-build:
+    needs: changes
+    if: needs.changes.outputs.charts == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      chart_version: ${{ steps.publish.outputs.chart_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install crane
+        run: |
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin crane
+      - name: Package and push charts
+        id: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY: ${{ needs.changes.outputs.registry }}
+          REF_SLUG: ${{ needs.changes.outputs.ref_slug }}
+        run: |
+          echo "$GH_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          crane auth login ghcr.io -u "$GITHUB_ACTOR" -p "$GH_TOKEN"
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" -q .tag_name 2>/dev/null) || latest=""
+          [ -n "$latest" ] || latest="0.0.0"
+          core=${latest#v}; core=${core%%-*}
+          oldIFS=$IFS; IFS=.; set -- $core; IFS=$oldIFS
+          # The short SHA makes the version unique per commit — helm-controller
+          # runs with DisableChartDigestTracking, so only a version change (not a
+          # re-push of the same version) triggers an upgrade.
+          version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${REF_SLUG}.${GITHUB_SHA::8}"
+          echo "Publishing charts as version ${version}"
+          for chart in deploy/charts/*/; do
+            name=$(basename "$chart")
+            # appVersion pins image tags to the image built from this commit.
+            helm package "$chart" --version "$version" --app-version "$GITHUB_SHA" --destination packaged
+            helm push "packaged/${name}-${version}.tgz" "oci://${REGISTRY}/charts"
+            crane tag "${REGISTRY}/charts/${name}:${version}" "$REF_SLUG"
+          done
+          echo "chart_version=${version}" >> "$GITHUB_OUTPUT"
+
+  ######################################################################
+  # deploy — staging (automatic) + production (environment approval)
+  ######################################################################
+
+  deploy-server:
+    needs: [changes, server-image, charts-build]
+    if: needs.changes.outputs.deploy_server == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: server
+      image: server
+      chart: harbor-server
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  deploy-moderation:
+    needs: [changes, moderation-image, charts-build]
+    if: needs.changes.outputs.deploy_moderation == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: moderation-service
+      image: moderation-service
+      chart: harbor-moderation
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  deploy-push-notifications:
+    needs: [changes, push-notifications-image, charts-build]
+    if: needs.changes.outputs.deploy_push_notifications == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: push-notifications-service
+      image: push-notifications-service
+      chart: harbor-push-notifications
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  deploy-scraper:
+    needs: [changes, scraper-image, charts-build]
+    if: needs.changes.outputs.deploy_scraper == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: scraper
+      image: scraper
+      chart: harbor-scraper
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  deploy-verifier-bot:
+    needs: [changes, verifier-bot-image, charts-build]
+    if: needs.changes.outputs.deploy_verifier_bot == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: verifier-bot
+      image: verifier-bot
+      chart: harbor-verifier-bot
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  deploy-app:
+    needs: [changes, app-web-image, charts-build]
+    if: needs.changes.outputs.deploy_app == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      name: app
+      image: app
+      chart: harbor-web
+      registry: ${{ needs.changes.outputs.registry }}
+      chart-version: ${{ needs.charts-build.outputs.chart_version }}
+
+  ######################################################################
+  # release — v* tags
+  ######################################################################
+
+  release-tag-images:
+    needs: [changes, app-web-image, server-image]
+    if: needs.changes.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin crane
+      - run: |
+          crane auth login ghcr.io -u "$GITHUB_ACTOR" -p "${{ secrets.GITHUB_TOKEN }}"
+          crane tag ${{ needs.changes.outputs.registry }}/app:${{ github.sha }} "$GITHUB_REF_NAME"
+          crane tag ${{ needs.changes.outputs.registry }}/server:${{ github.sha }} "$GITHUB_REF_NAME"
+
+  release-publish-npm:
+    needs: [changes, rs-core-uniffi-web-build, js-sdks-build, rn-sdk-build]
+    if: needs.changes.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          install: 'false'
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-uniffi-web-dist
+          path: packages/rs-core-uniffi-web/dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: js-sdks-dist
+          path: packages
+      - uses: actions/download-artifact@v4
+        with:
+          name: rn-sdk
+          path: packages/react-native
+      - run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+      - run: pnpm install --frozen-lockfile
+      - env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: .github/scripts/npm_publish.sh
+
+  release-publish-rs-core:
+    needs: changes
+    if: needs.changes.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Bump the crate versions and give the path dependency a version so
+          # the crates package cleanly.
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
+          sed -i "s#path = \"../rs-common\" }#path = \"../rs-common\", version = \"${VERSION}\" }#" packages/rs-core/Cargo.toml
+          mkdir -p target/package
+          cargo package -p polycentric-common --no-verify --allow-dirty || true
+          cargo package -p polycentric-core --no-verify --allow-dirty || true
+          # Fall back to a source tarball if cargo could not package the crate.
+          if ! ls target/package/*.crate >/dev/null 2>&1; then
+            echo "cargo package produced no .crate; falling back to a source tarball" >&2
+            tar czf "target/package/polycentric-core-${VERSION}.crate" packages/rs-core packages/rs-common
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rs-core-crates
+          path: target/package/*.crate
+          retention-days: 7
+
+  # GitHub Release with auto-generated notes (replaces the GitLab changelog
+  # API + release-cli); the APK and crates are attached as release assets
+  # (replacing GitLab generic packages).
+  release:
+    needs:
+      - changes
+      - eas-android-apk
+      - release-publish-rs-core
+      - release-publish-npm
+      - release-tag-images
+    if: needs.changes.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: polycentric-apk
+          path: apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: rs-core-crates
+          path: crates
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            "apk/polycentric.apk#Android APK ($GITHUB_REF_NAME)" \
+            crates/*.crate

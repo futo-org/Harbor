@@ -1,0 +1,55 @@
+name: Deploy
+
+# Reusable environment deploy: tags the commit's image and chart with the
+# environment label that helm-controller watches. Staging runs automatically;
+# production waits for required reviewers on the production-* environment
+# (replacing GitLab `when: manual`).
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: Environment suffix (e.g. server, moderation-service, app)
+        type: string
+        required: true
+      image:
+        description: Image name under the registry
+        type: string
+        required: true
+      chart:
+        description: Chart name under <registry>/charts
+        type: string
+        required: true
+      registry:
+        type: string
+        required: true
+      chart-version:
+        type: string
+        required: true
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: staging-${{ inputs.name }}
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin crane
+      - run: |
+          crane auth login ghcr.io -u "$GITHUB_ACTOR" -p "${{ secrets.GITHUB_TOKEN }}"
+          crane tag ${{ inputs.registry }}/${{ inputs.image }}:${{ github.sha }} staging
+          crane tag ${{ inputs.registry }}/charts/${{ inputs.chart }}:${{ inputs.chart-version }} staging
+
+  production:
+    runs-on: ubuntu-latest
+    environment: production-${{ inputs.name }}
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar xz -C /usr/local/bin crane
+      - run: |
+          crane auth login ghcr.io -u "$GITHUB_ACTOR" -p "${{ secrets.GITHUB_TOKEN }}"
+          crane tag ${{ inputs.registry }}/${{ inputs.image }}:${{ github.sha }} production
+          crane tag ${{ inputs.registry }}/charts/${{ inputs.chart }}:${{ inputs.chart-version }} production

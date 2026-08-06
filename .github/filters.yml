@@ -1,0 +1,97 @@
+# Shared change filters for dorny/paths-filter, used by the changes job of
+# ci.yml, checks.yml and integration.yml (nested lists are flattened).
+ci_infra: &ci_infra
+  - '.github/workflows/**'
+  - '.github/actions/**'
+  - '.github/filters.yml'
+
+rs_core:
+  - *ci_infra
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'packages/rs-*/**'
+js_sdk:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'packages/js-*/**'
+rn_sdk:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'packages/react-native/**'
+server:
+  - *ci_infra
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'services/server/**'
+  - 'services/common/**'
+  - 'deploy/charts/**'
+moderation:
+  - *ci_infra
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'services/moderation/**'
+  - 'services/common/**'
+  - 'deploy/charts/**'
+push_notifications:
+  - *ci_infra
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'services/push-notifications/**'
+  - 'services/common/**'
+  - 'deploy/charts/**'
+scraper:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'pnpm-workspace.yaml'
+  - 'package.json'
+  - 'tools/**'
+  - 'patches/**'
+  - 'services/scraper/**'
+  - 'deploy/charts/**'
+verifier_bot:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'pnpm-workspace.yaml'
+  - 'package.json'
+  - 'tools/**'
+  - 'patches/**'
+  - 'packages/js-*/**'
+  - 'packages/rs-core-uniffi-web/**'
+  - 'services/verifier-bot/**'
+  - 'deploy/charts/**'
+app:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'apps/**'
+  - 'deploy/charts/**'
+app_eas:
+  - *ci_infra
+  - 'pnpm-lock.yaml'
+  - 'apps/**'
+charts:
+  - *ci_infra
+  - 'deploy/charts/**'
+  - 'pnpm-lock.yaml'
+  - 'pnpm-workspace.yaml'
+  - 'package.json'
+  - 'tools/**'
+  - 'patches/**'
+  - 'packages/**'
+  - 'apps/**'
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'services/**'
+server_integration:
+  - *ci_infra
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'services/server/**'
+  - 'services/common/**'
+  - 'compose.yml'
+  - '.gitlab/ci/scripts/integration-server.sh'
+moderation_integration:
+  - *ci_infra
+  - 'services/moderation/**'
+  - 'services/server/**'
+  - 'compose.yml'
+  - '.gitlab/ci/scripts/integration-moderation.sh'

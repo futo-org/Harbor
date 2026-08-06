@@ -13,7 +13,9 @@
 // receive the CI runner's environment variables. app.config.ts reads the
 // version from package.json, which travels with the project upload.
 //
-// Reads CI_COMMIT_TAG, CI_API_V4_URL, CI_PROJECT_ID and CI_JOB_TOKEN.
+// Reads CI_COMMIT_TAG, CI_API_V4_URL, CI_PROJECT_ID and CI_JOB_TOKEN
+// (GitLab), or CI_COMMIT_TAG, GITHUB_REPOSITORY and GITHUB_TOKEN (GitHub
+// Actions, where the workflow sets CI_COMMIT_TAG from the pushed tag).
 
 const fs = require('fs');
 const path = require('path');
@@ -53,14 +55,25 @@ if (tagMatch) {
   (async () => {
     let latest = '0.0.0';
     try {
-      const res = await fetch(
-        `${api}/projects/${projectId}/releases?per_page=1`,
-        { headers: { 'JOB-TOKEN': token } },
-      );
-      if (res.ok) {
-        const releases = await res.json();
-        if (Array.isArray(releases) && releases[0]) {
-          latest = releases[0].tag_name || releases[0].name || latest;
+      if (process.env.GITHUB_REPOSITORY) {
+        const res = await fetch(
+          `${process.env.GITHUB_API_URL || 'https://api.github.com'}/repos/${process.env.GITHUB_REPOSITORY}/releases/latest`,
+          { headers: { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } },
+        );
+        if (res.ok) {
+          const release = await res.json();
+          latest = release.tag_name || release.name || latest;
+        }
+      } else {
+        const res = await fetch(
+          `${api}/projects/${projectId}/releases?per_page=1`,
+          { headers: { 'JOB-TOKEN': token } },
+        );
+        if (res.ok) {
+          const releases = await res.json();
+          if (Array.isArray(releases) && releases[0]) {
+            latest = releases[0].tag_name || releases[0].name || latest;
+          }
         }
       }
     } catch {

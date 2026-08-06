@@ -1,0 +1,309 @@
+name: Checks
+
+# Leaf check jobs (format, lint, unit tests) that nothing else depends on.
+# Build/deploy/release live in ci.yml.
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      registry: ${{ steps.meta.outputs.registry }}
+      rs_core: ${{ steps.filter.outputs.rs_core }}
+      js_sdk: ${{ steps.filter.outputs.js_sdk }}
+      server: ${{ steps.filter.outputs.server }}
+      moderation: ${{ steps.filter.outputs.moderation }}
+      push_notifications: ${{ steps.filter.outputs.push_notifications }}
+      scraper: ${{ steps.filter.outputs.scraper }}
+      verifier_bot: ${{ steps.filter.outputs.verifier_bot }}
+      app: ${{ steps.filter.outputs.app }}
+      charts: ${{ steps.filter.outputs.charts }}
+    steps:
+      - id: meta
+        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/filters.yml
+
+  rust-checks:
+    name: ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.rs_core == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: rs-core-format-check, dir: packages/rs-core, cmd: just format-check }
+          - { name: rs-core-clippy, dir: packages/rs-core, cmd: just clippy }
+          - { name: rs-core-tests, dir: packages/rs-core, cmd: cargo nextest run -P ci }
+          - { name: rs-common-format-check, dir: packages/rs-common, cmd: cargo fmt --check }
+          - { name: rs-common-clippy, dir: packages/rs-common, cmd: cargo clippy }
+          - { name: rs-common-tests, dir: packages/rs-common, cmd: cargo nextest run -P ci }
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: ${{ matrix.name }}
+      - run: cd ${{ matrix.dir }} && ${{ matrix.cmd }}
+      - uses: actions/upload-artifact@v4
+        if: always() && contains(matrix.name, 'tests')
+        with:
+          name: junit-${{ matrix.name }}
+          path: target/nextest/ci/junit.xml
+          retention-days: 7
+
+  server-format-check:
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: server-format-check
+      - run: cargo fmt --check --package server
+
+  server-clippy:
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: server-clippy
+      - run: cargo clippy --package server -- -D warnings
+
+  moderation-format-check:
+    needs: changes
+    if: needs.changes.outputs.moderation == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: moderation-format-check
+      - run: cargo fmt --check --package moderation-service
+
+  moderation-clippy:
+    needs: changes
+    if: needs.changes.outputs.moderation == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: moderation-clippy
+      - run: cargo clippy --package moderation-service -- -D warnings
+
+  push-notifications-format-check:
+    needs: changes
+    if: needs.changes.outputs.push_notifications == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: push-notifications-format-check
+      - run: cargo fmt --check --package push-notifications-service
+
+  push-notifications-clippy:
+    needs: changes
+    if: needs.changes.outputs.push_notifications == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: push-notifications-clippy
+      - run: cargo clippy --package push-notifications-service -- -D warnings
+
+  push-notifications-test:
+    needs: changes
+    if: needs.changes.outputs.push_notifications == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.changes.outputs.registry }}:rust
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      RUSTC_WRAPPER: sccache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-env
+        with:
+          cache-key: push-notifications-test
+      - run: cargo nextest run -P ci --package push-notifications-service
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-push-notifications-test
+          path: target/nextest/ci/junit.xml
+          retention-days: 7
+
+  js-sdks-biome-check:
+    needs: changes
+    if: needs.changes.outputs.js_sdk == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm exec biome check packages/js-core --diagnostic-level=error
+
+  js-core-tests:
+    needs: changes
+    if: needs.changes.outputs.js_sdk == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter js-core test:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-js-core-tests
+          path: packages/js-core/junit.xml
+          retention-days: 7
+
+  # Fast-feedback typecheck. The scraper's `build` script is `tsc -p .`; the
+  # image build also compiles, so this just surfaces type errors before the
+  # heavier image job. PUPPETEER_SKIP_DOWNLOAD stops `pnpm install` from
+  # fetching Chromium (the runtime image provides a system one).
+  scraper-typecheck:
+    needs: changes
+    if: needs.changes.outputs.scraper == 'true'
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter @polycentric/scraper build
+
+  # Biome lint for the bot. Lints source only, so it needs no build artifacts.
+  verifier-bot-biome-check:
+    needs: changes
+    if: needs.changes.outputs.verifier_bot == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          install-args: --ignore-scripts
+      - run: pnpm exec biome check services/verifier-bot --diagnostic-level=error
+
+  app-biome-check:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm exec biome check apps/harbor --diagnostic-level=error
+
+  app-tests:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm --filter polycentric-app test:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-app-tests
+          path: apps/harbor/junit.xml
+          retention-days: 7
+
+  charts-lint:
+    needs: changes
+    if: needs.changes.outputs.charts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          for chart in deploy/charts/*/; do
+            helm lint "$chart"
+            helm template "$(basename "$chart")" "$chart" > /dev/null
+          done

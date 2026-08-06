@@ -1,0 +1,104 @@
+name: Docs
+
+# Build and deploy the Docusaurus documentation site in ./docs to Cloudflare
+# Pages. PRs get a preview deployment per PR number, torn down when the PR
+# closes; the production deploy runs on the default branch. The GitLab `docs`
+# redeploy tag is replaced by workflow_dispatch.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  push:
+    branches: [develop]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install -g pnpm@10
+      # Only resolve/install the docs package and its dependencies.
+      - run: pnpm install --filter=polycentric-docs...
+      - run: pnpm --filter=polycentric-docs run typecheck
+
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install -g pnpm@10
+      - run: pnpm install --filter=polycentric-docs...
+      - run: pnpm --filter=polycentric-docs run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-build
+          path: docs/build
+          retention-days: 7
+
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-build
+          path: docs/build
+      - run: npm install -g wrangler
+      - run: wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch=production
+
+  # Deploy a review app for every PR that touches the docs. Each PR deploys
+  # to the branch "pr-<number>" of the Cloudflare Pages project, giving the
+  # URL "pr-<number>.polycentric-docs-cs8.pages.dev".
+  review:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: docs-review-pr-${{ github.event.number }}
+      url: https://pr-${{ github.event.number }}.polycentric-docs-cs8.pages.dev
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-build
+          path: docs/build
+      - run: npm install -g wrangler
+      - run: wrangler pages deploy ./docs/build --project-name=polycentric-docs --branch="pr-${{ github.event.number }}"
+
+  # Tear down the preview deployments when the PR is merged or closed
+  # (replaces the GitLab review-app stop job / auto_stop_in).
+  review-cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node .gitlab/ci/scripts/cf-pages-delete-branch.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PAGES_PROJECT: polycentric-docs
+          CF_PAGES_BRANCH: pr-${{ github.event.number }}
