@@ -4,13 +4,11 @@ use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbE
 /// Connect to Postgres with the moderation schema as the search path,
 /// creating the schema if it does not yet exist.
 pub async fn connect() -> Result<DatabaseConnection, DbErr> {
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string());
-    let schema = std::env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA")
-        .unwrap_or_else(|_| "moderation".to_string());
+    let config = crate::config::get();
+    let schema = &config.database_schema;
 
-    let mut opt = ConnectOptions::new(with_utc_timezone(&database_url));
-    opt.set_schema_search_path(&schema);
+    let mut opt = ConnectOptions::new(with_utc_timezone(&config.database_url));
+    opt.set_schema_search_path(schema);
     let connection = Database::connect(opt).await?;
 
     connection

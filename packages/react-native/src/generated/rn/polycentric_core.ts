@@ -358,7 +358,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
                 identity: FfiConverterOptionalString.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from),
+                forwardToken: FfiConverterOptionalString.read(from), 
                 omitLabels: FfiConverterSequenceString.read(from)
             };
         }
@@ -413,7 +413,7 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
                 followerIdentity: FfiConverterString.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from),
+                forwardToken: FfiConverterOptionalString.read(from), 
                 omitLabels: FfiConverterSequenceString.read(from)
             };
         }
@@ -468,7 +468,7 @@ const FfiConverterTypeGetIdentityFeedArgs = (() => {
                 identity: FfiConverterString.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from),
+                forwardToken: FfiConverterOptionalString.read(from), 
                 omitLabels: FfiConverterSequenceString.read(from)
             };
         }
@@ -4860,6 +4860,9 @@ const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
@@ -4874,9 +4877,6 @@ const FfiConverterSequenceTypeEventKey = new FfiConverterArray(FfiConverterTypeE
 
 // FfiConverter for Array<EventKey> | undefined
 const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(FfiConverterSequenceTypeEventKey);
-
-// FfiConverter for Array<string>
-const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(FfiConverterTypeFetchMode);

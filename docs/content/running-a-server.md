@@ -72,6 +72,16 @@ for details.
 The server is configured entirely through environment variables. On startup it also
 loads a `.env` file from the working directory if one is present.
 
+### Server
+
+| Variable                          | Default                    | Description                                                                              |
+| --------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
+| `POLYCENTRIC_SERVER_NAME`         | `http://localhost:3000`    | Canonical URL of this server. Stamped as the source on the events it produces.           |
+| `POLYCENTRIC_ALLOW_HOSTS`         | `POLYCENTRIC_SERVER_NAME`  | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
+| `CDN_URL`                         | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
+| `POLYCENTRIC_SCRAPER_URL`         | `http://localhost:8855`    | Base URL of the internal scraper service (link-preview metadata and image proxy).        |
+| `POLYCENTRIC_MODERATION_IDENTITY` | _(unset)_                  | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
+
 ### Database
 
 | Variable       | Default                                          | Description                  |
@@ -95,13 +105,34 @@ When the access and secret keys are unset, the AWS SDK's default credential chai
 used (shared config files, environment, container/EC2 instance metadata). This lets
 you run against AWS S3 without putting credentials in the environment directly.
 
-### Other
+### Kafka
 
-| Variable            | Default                 | Description                                                                            |
-| ------------------- | ----------------------- | -------------------------------------------------------------------------------------- |
-| `CDN_URL`           | `http://localhost:3000` | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
-| `EXPO_ACCESS_TOKEN` | _(unset)_               | Optional. Access token for sending push notifications via Expo.                        |
-| `RUST_LOG`          | _(unset)_               | Log filter, e.g. `info` or `debug`.                                                    |
+The server produces events to Kafka, and its background workers consume them.
+
+| Variable                                   | Default          | Description                                     |
+| ------------------------------------------ | ---------------- | ------------------------------------------------ |
+| `POLYCENTRIC_KAFKA_BROKERS`                | `localhost:9092` | Bootstrap servers.                               |
+| `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL`      | `PLAINTEXT`      | Kafka `security.protocol`.                       |
+| `POLYCENTRIC_KAFKA_SASL_MECHANISM`         | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
+| `POLYCENTRIC_KAFKA_SASL_USERNAME`          | _(unset)_        | SASL username.                                   |
+| `POLYCENTRIC_KAFKA_SASL_PASSWORD`          | _(unset)_        | SASL password.                                   |
+| `POLYCENTRIC_KAFKA_SSL_CA`                 | _(unset)_        | CA certificate, inline PEM.                      |
+| `POLYCENTRIC_KAFKA_SSL_CERTIFICATE`        | _(unset)_        | Client certificate, inline PEM.                  |
+| `POLYCENTRIC_KAFKA_SSL_KEY`                | _(unset)_        | Client key, inline PEM.                          |
+| `POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
+| `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
+
+### Logging and metrics
+
+| Variable       | Default   | Description                                                          |
+| -------------- | --------- | --------------------------------------------------------------------- |
+| `RUST_LOG`     | `info`    | Log filter, e.g. `info` or `debug`.                                  |
+| `LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
+| `METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
+
+The companion services (moderation, push notifications, scraper) are configured the
+same way; their variables are listed in each service's README under
+[`services/`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/services).
 
 `POLYCENTRIC_SERVER_PORT` is read by `compose.yml` to choose the published host port;
 the server process itself always binds `3000` inside the container.

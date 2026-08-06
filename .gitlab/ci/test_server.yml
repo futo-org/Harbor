@@ -7,7 +7,9 @@
 ########################################################################
 
 .server-integration-workflow:
-  image: $RUST_DIND_IMAGE
+  image:
+    name: $RUST_DIND_IMAGE
+    pull_policy: if-not-present
   stage: test
   # Serial execution: the Docker stack of one runner must not interfere
   # with another across integration test jobs (they share the same Compose

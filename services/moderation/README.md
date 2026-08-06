@@ -4,6 +4,31 @@ This servers listens for content pushed to FUTO managed polycentric servers and 
 
 Likewise, you can also run this service yourself if you wish.
 
+## Environment Variables
+
+All service variables are read and validated once at startup by
+`src/config.rs`. A `.env` file in the working directory is loaded first.
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
+| `POLYCENTRIC_MODERATION_DATABASE_SCHEMA` | `moderation` | Postgres schema owning this service's tables. |
+| `POLYCENTRIC_MODERATION_SIGNING_KEY` | _(required)_ | Hex-encoded 32-byte ed25519 seed labels events are signed with. |
+| `POLYCENTRIC_MODERATION_IDENTITY` | _(required)_ | Hex identity string this service publishes under. |
+| `POLYCENTRIC_MODERATION_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to bootstrap from and publish to. |
+| `POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT` | _(required)_ | Azure AI Content Safety resource endpoint. |
+| `POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY` | _(required)_ | Azure AI Content Safety API key. |
+| `POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION` | `2024-09-01` | api-version for the text/image endpoints. |
+| `POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION` | `2024-09-15-preview` | api-version for the multimodal (`imageWithText`) endpoint. |
+| `POLYCENTRIC_PHOTODNA_KEY` | _(unset)_ | PhotoDNA subscription key. Unset disables CSAM scanning and the service moderates with Azure alone. |
+| `POLYCENTRIC_PHOTODNA_ENDPOINT` | `https://api.microsoftmoderator.com/photodna/v1.0` | PhotoDNA endpoint. |
+
+The shared `services/common` crates additionally read the `POLYCENTRIC_KAFKA_*`
+(broker/SASL/SSL), `CONTENT_BLOB_OS_*` (blob store; needs delete permission to
+purge blobs on a confirmed CSAM match), and `RUST_LOG`/`LOG_FORMAT`/`METRICS_PORT`
+(telemetry) variables — see the table in
+[`services/server/README.md`](../server/README.md#environment-variables).
+
 ## Tests
 
 Both tests below are `#[ignore]`d by `cargo test` because they require Docker

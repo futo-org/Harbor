@@ -3,10 +3,8 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::time::Duration;
 
 pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://postgres:testing@localhost:5432".to_string()
-    });
-    let mut opt = ConnectOptions::new(with_utc_timezone(&database_url));
+    let database_url = &crate::config::get().database_url;
+    let mut opt = ConnectOptions::new(with_utc_timezone(database_url));
     opt.max_connections(100)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))

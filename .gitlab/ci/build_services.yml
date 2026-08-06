@@ -1,5 +1,7 @@
 .service-rust-base:
-  image: ${RUST_IMAGE}
+  image:
+    name: ${RUST_IMAGE}
+    pull_policy: if-not-present
   stage: check
   variables:
     SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache

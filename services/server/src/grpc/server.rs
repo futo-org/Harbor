@@ -91,7 +91,7 @@ pub fn build_grpc_router(
     let auth = axum::middleware::from_fn_with_state(
         service::auth::AuthState {
             ctx,
-            allow_hosts: crate::config::ALLOW_HOSTS.clone(),
+            allow_hosts: crate::config::get().allow_hosts.clone(),
         },
         service::auth::auth_middleware,
     );

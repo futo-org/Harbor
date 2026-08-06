@@ -25,8 +25,6 @@ use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
 
-use crate::config::SERVER_NAME;
-
 /// Kafka topic the materialized `Notification` messages are produced to.
 const NOTIFICATIONS_TOPIC: &str = "notifications";
 
@@ -130,7 +128,7 @@ impl NotificationWorker {
             .payload(&payload)
             .headers(OwnedHeaders::new().insert(Header {
                 key: "SOURCE_SERVER",
-                value: Some(SERVER_NAME.as_str()),
+                value: Some(crate::config::get().server_name.as_str()),
             }));
 
         self.ctx
