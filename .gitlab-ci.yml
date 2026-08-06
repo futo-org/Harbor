@@ -15,7 +15,7 @@ include:
   - local: '.gitlab/ci/test_server.yml'
   - local: '.gitlab/ci/test_moderation.yml'
   - local: '.gitlab/ci/release.yml'
-# Branch/MR pipelines build and consume their own ref-slug CI image tags;
+# Branch/MR pipelines build and consume immutable per-commit CI image tags;
 # tag pipelines do not run the setup jobs, so they consume the tags last
 # pushed by the default branch.
 workflow:
@@ -25,7 +25,7 @@ workflow:
         CI_IMAGES_TAG: $CI_DEFAULT_BRANCH
     - when: always
       variables:
-        CI_IMAGES_TAG: $CI_COMMIT_REF_SLUG
+        CI_IMAGES_TAG: $CI_COMMIT_SHA
 stages:
   - setup
   - check

@@ -1,41 +1,51 @@
 variables:
   IMAGES_PATH: '${CI_REGISTRY}/${CI_PROJECT_PATH}/ci'
-  # CI_IMAGES_TAG (set by the workflow rules in .gitlab-ci.yml) is the ref
-  # slug on branch/MR pipelines and the default branch on tag pipelines.
+  # CI_IMAGES_TAG (set by the workflow rules in .gitlab-ci.yml) is the
+  # commit SHA on branch/MR pipelines and the default branch on tag
+  # pipelines. The ref-slug tag is pushed alongside the SHA tag only as
+  # the build cache source for the branch's next commit.
   RUST_IMAGE: '${IMAGES_PATH}/rust:${CI_IMAGES_TAG}'
   RUST_DIND_IMAGE: '${IMAGES_PATH}/rust-dind:${CI_IMAGES_TAG}'
   RUST_ANDROID_IMAGE: '${IMAGES_PATH}/rust-android:${CI_IMAGES_TAG}'
 
-.setup-images-workflow:
+# Ensures the per-commit CI images exist in the registry and in the runner
+# host's docker cache: pulls them when this commit's tags already exist,
+# builds and pushes them otherwise. Consuming jobs use pull_policy
+# if-not-present, so this is the only job that hits the registry for them.
+setup-images:
   stage: setup
   image:
-    name: moby/buildkit:rootless
-    entrypoint: ['']
-  before_script:
-    - mkdir -p ~/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+    name: gitlab.futo.org:5050/devops/manifest-repo/library/docker:latest
+    pull_policy: always
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-# Tracks the branch image tags as a review environment so GitLab triggers
-# the cleanup job when the merge request is merged or closed.
-setup-images-env:
-  stage: setup
-  image: alpine:latest
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  variables:
-    GIT_STRATEGY: none
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - echo "images/$CI_COMMIT_REF_SLUG"
-  environment:
-    name: images/$CI_COMMIT_REF_SLUG
-    on_stop: setup-images-cleanup
-    auto_stop_in: 1 week
+    - |
+      build_or_pull() {
+        name=$1; shift
+        if docker pull "$IMAGES_PATH/$name:$CI_COMMIT_SHA"; then
+          return
+        fi
+        docker build "$@" \
+          --build-arg BUILDKIT_INLINE_CACHE=1 \
+          --cache-from "$IMAGES_PATH/$name:$CI_DEFAULT_BRANCH" \
+          --cache-from "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG" \
+          --tag "$IMAGES_PATH/$name:$CI_COMMIT_SHA" \
+          --tag "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG" \
+          ".gitlab/images/$name"
+        docker push "$IMAGES_PATH/$name:$CI_COMMIT_SHA"
+        docker push "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG"
+      }
+      build_or_pull rust
+      build_or_pull rust-dind --build-arg RUST_IMAGE=$RUST_IMAGE
+      build_or_pull rust-android --build-arg RUST_IMAGE=$RUST_IMAGE
 
+# Deletes the branch image tags.
 setup-images-cleanup:
   stage: setup
   image: alpine:latest
@@ -45,9 +55,6 @@ setup-images-cleanup:
   allow_failure: true
   variables:
     GIT_STRATEGY: none
-  environment:
-    name: images/$CI_COMMIT_REF_SLUG
-    action: stop
   before_script:
     - apk add --no-cache curl jq
   script:
@@ -66,46 +73,3 @@ setup-images-cleanup:
             "$CI_API_V4_URL/projects/$CI_PROJECT_ID/registry/repositories/$repo_id/tags/$CI_COMMIT_REF_SLUG" \
             || echo "    (tag absent or delete failed)"
         done
-
-setup-image-rust:
-  extends: .setup-images-workflow
-  script:
-    - |
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --local context=.gitlab/images/rust \
-        --local dockerfile=.gitlab/images/rust \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust:$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
-        --export-cache type=inline \
-        --output type=image,name=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG,push=true
-
-setup-image-rust-dind:
-  extends: .setup-images-workflow
-  needs: ['setup-image-rust']
-  script:
-    - |
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --opt build-arg:RUST_IMAGE=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
-        --local context=.gitlab/images/rust-dind \
-        --local dockerfile=.gitlab/images/rust-dind \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust-dind:$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust-dind:$CI_COMMIT_REF_SLUG \
-        --export-cache type=inline \
-        --output type=image,name=$IMAGES_PATH/rust-dind:$CI_COMMIT_REF_SLUG,push=true
-
-setup-image-rust-android:
-  extends: .setup-images-workflow
-  needs: ['setup-image-rust']
-  script:
-    - |
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --opt build-arg:RUST_IMAGE=$IMAGES_PATH/rust:$CI_COMMIT_REF_SLUG \
-        --local context=.gitlab/images/rust-android \
-        --local dockerfile=.gitlab/images/rust-android \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust-android:$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$IMAGES_PATH/rust-android:$CI_COMMIT_REF_SLUG \
-        --export-cache type=inline \
-        --output type=image,name=$IMAGES_PATH/rust-android:$CI_COMMIT_REF_SLUG,push=true
