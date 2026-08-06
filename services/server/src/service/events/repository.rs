@@ -134,8 +134,8 @@ pub struct HeadInfoRow {
 pub struct Mutation;
 
 impl Mutation {
-    pub async fn add_event(
-        db: &DbConn,
+    pub async fn add_event<C: ConnectionTrait>(
+        db: &C,
         active_model: EventModel::ActiveModel,
     ) -> Result<EventModel::Model, DbErr> {
         active_model.insert(db).await

@@ -116,8 +116,15 @@ async fn process_event(
     )
     .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
+    // Start a transaction to ensure all processing of a single event is handled
+    // atomically.
+    let txn = ctx.db.begin().await.map_err(|e| {
+        tracing::error!(error = %e, "sync_events txn begin error");
+        Status::internal("internal server error")
+    })?;
+
     // Banned identities' events are refused outright.
-    let banned = IdentityRepository::is_banned(&ctx.db, &key.identity)
+    let banned = IdentityRepository::is_banned(&txn, &key.identity)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "put_events ban check db error");
@@ -137,7 +144,8 @@ async fn process_event(
     // signature.
     if key.collection != collections::IDENTITY {
         authorize_event_signer(
-            ctx,
+            &txn,
+            &ctx.proof_cache,
             &key.identity,
             &PublicKey {
                 key_type: signed_by.key_type,
@@ -174,11 +182,6 @@ async fn process_event(
             .into_iter()
             .for_each(|blob| blobs.push(blob.clone()));
 
-        let txn = ctx.db.begin().await.map_err(|e| {
-            tracing::error!(error = %e, "sync_events txn begin error");
-            Status::internal("internal server error")
-        })?;
-
         let content_row = ContentRepository::Mutation::add_content(
             &txn,
             ContentModel::ActiveModel {
@@ -204,11 +207,6 @@ async fn process_event(
             )
             .await?;
         }
-
-        txn.commit().await.map_err(|e| {
-            tracing::error!(error = %e, "sync_events txn commit error");
-            Status::internal("internal server error")
-        })?;
     }
 
     let event_identity = key.identity.clone();
@@ -236,7 +234,7 @@ async fn process_event(
         synced_at: Set(OffsetDateTime::now_utc()),
     };
 
-    match EventsRepository::Mutation::add_event(&ctx.db, active_model).await {
+    match EventsRepository::Mutation::add_event(&txn, active_model).await {
         Ok(_) => {
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
@@ -265,9 +263,19 @@ async fn process_event(
                     tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
+
+            txn.commit().await.map_err(|e| {
+                tracing::error!(error = %e, "sync_events txn commit error");
+                Status::internal("internal server error")
+            })?;
         }
         Err(ref e) if is_unique_violation(e) => {
-            // Duplicate event — already stored, treat as success.
+            // Duplicate event — already stored, treat as success, but revert
+            // the content changes.
+            txn.rollback().await.map_err(|e| {
+                tracing::error!(error = %e, "sync_events txn abort error");
+                Status::internal("internal server error")
+            })?;
         }
         Err(e) => {
             tracing::error!(error = ?e, "sync_events db error");

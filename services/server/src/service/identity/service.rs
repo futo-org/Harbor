@@ -8,11 +8,13 @@ use crate::service::feeds::repository::{
 };
 use crate::service::identity::chain;
 use crate::service::identity::repository::Query as IdentityRepo;
+use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, EventBundle, EventHint, PublicKey, SerializedContent, SignedEvent,
 };
 use prost::Message;
+use sea_orm::ConnectionTrait;
 use std::collections::HashMap;
 use tonic::Status;
 
@@ -189,14 +191,15 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 }
 
 /// The latest valid identity document for `identity`, via the proof cache.
-pub async fn cached_identity_content(
-    ctx: &ServiceContext,
+pub async fn cached_identity_content<C: ConnectionTrait>(
+    db: &C,
+    proof_cache: &ProofCache,
     identity: &str,
 ) -> Result<polycentric_common::models::protos_v2::Identity, Status> {
-    if let Some(content) = ctx.proof_cache.identity_content(identity).await {
+    if let Some(content) = proof_cache.identity_content(identity).await {
         return Ok(content);
     }
-    let loaded = IdentityRepo::latest_valid_identity_content(&ctx.db, identity)
+    let loaded = IdentityRepo::latest_valid_identity_content(db, identity)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "identity content db error");
@@ -207,7 +210,7 @@ pub async fn cached_identity_content(
                 "no identity content for target — sync identity events first",
             )
         })?;
-    ctx.proof_cache
+    proof_cache
         .warm_identity_content(identity, loaded.clone())
         .await;
     Ok(loaded)
@@ -217,15 +220,16 @@ pub async fn cached_identity_content(
 /// `(target_identity, collection)`.
 ///
 /// TODO: share this rule set with `rs-core::client::validate_event`.
-pub async fn authorize_event_signer(
-    ctx: &ServiceContext,
+pub async fn authorize_event_signer<C: ConnectionTrait>(
+    db: &C,
+    proof_cache: &ProofCache,
     target_identity: &str,
     signer: &PublicKey,
     collection: i32,
     signature: &[u8],
 ) -> Result<(), Status> {
     let identity_content =
-        cached_identity_content(ctx, target_identity).await?;
+        cached_identity_content(db, proof_cache, target_identity).await?;
 
     if identity_content.authorizes_signer(signer) {
         return Ok(());
@@ -258,9 +262,9 @@ pub async fn authorize_event_signer(
             )
         })?;
 
-    let canonical = ctx
-        .proof_cache
-        .canonical(&ctx.db, target_identity, collection)
+    let canonical =
+        proof_cache
+        .canonical(db, target_identity, collection)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "authorize_event_signer canonical error");
