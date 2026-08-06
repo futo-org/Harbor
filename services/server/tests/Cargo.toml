@@ -22,6 +22,7 @@ sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 tokio = { workspace = true, features = ["full"] }
 tonic = "*"
 tonic-prost = "*"
+rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
 
 [build-dependencies]
 tonic-prost-build = "*"
