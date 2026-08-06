@@ -1,5 +1,6 @@
-//! Map an Azure Content Safety response into the polycentric labels
+//! Map an Azure Content Safety response into label events
 
+use polycentric_common::models::protos_v2::ReportCategory;
 use serde_json::Value;
 
 /// Top of Azure's default (FourSeverityLevels) severity scale.
@@ -59,6 +60,22 @@ pub fn labels_from_azure(response: &Value) -> Vec<String> {
         })
         .map(|rule| rule.label.to_string())
         .collect()
+}
+
+/// Some report categories correspond to label events, as defined
+/// in this function.
+pub fn label_from_report_category(category: i32) -> Option<&'static str> {
+    match ReportCategory::try_from(category).ok()? {
+        ReportCategory::Hate => Some("hate"),
+        ReportCategory::SelfHarm => Some("self-harm"),
+        ReportCategory::SexuallyExplicit => Some("sexually-explicit"),
+        ReportCategory::Violence => Some("violence"),
+        ReportCategory::Unspecified
+        | ReportCategory::Spam
+        | ReportCategory::ChildSafety
+        | ReportCategory::Copyright
+        | ReportCategory::ServerPolicy => None,
+    }
 }
 
 /// Highest severity reported for `category` across the text result and all
@@ -167,5 +184,57 @@ mod tests {
         assert!(labels_from_azure(&json!({})).is_empty());
         assert!(labels_from_azure(&json!({ "text": null, "images": [] })).is_empty());
         assert!(labels_from_azure(&json!({ "text": { "categoriesAnalysis": [] } })).is_empty());
+    }
+
+    #[test]
+    fn report_categories_with_a_label_counterpart_map_to_it() {
+        for (category, label) in [
+            (ReportCategory::Hate, "hate"),
+            (ReportCategory::SelfHarm, "self-harm"),
+            (ReportCategory::SexuallyExplicit, "sexually-explicit"),
+            (ReportCategory::Violence, "violence"),
+        ] {
+            assert_eq!(
+                label_from_report_category(category as i32),
+                Some(label),
+                "{category:?} should map to {label}"
+            );
+        }
+    }
+
+    #[test]
+    fn report_categories_without_a_label_counterpart_map_to_nothing() {
+        for category in [
+            ReportCategory::Unspecified,
+            ReportCategory::Spam,
+            ReportCategory::ChildSafety,
+            ReportCategory::Copyright,
+            ReportCategory::ServerPolicy,
+        ] {
+            assert_eq!(
+                label_from_report_category(category as i32),
+                None,
+                "{category:?} should not map to a label"
+            );
+        }
+    }
+
+    #[test]
+    fn retired_report_categories_map_to_nothing() {
+        for retired in [2, 4, 5] {
+            assert_eq!(label_from_report_category(retired), None);
+        }
+    }
+
+    #[test]
+    fn unrecognized_report_categories_map_to_nothing() {
+        assert_eq!(label_from_report_category(9999), None);
+        assert_eq!(label_from_report_category(-1), None);
+    }
+
+    #[test]
+    fn sexually_suggestive_is_not_reportable() {
+        let reportable: Vec<&str> = (0..64).filter_map(label_from_report_category).collect();
+        assert!(!reportable.contains(&"sexually-suggestive"));
     }
 }

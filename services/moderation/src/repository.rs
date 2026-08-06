@@ -1,7 +1,7 @@
 use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
-use moderation_entity::{created_content_model, created_event_model};
+use moderation_entity::{created_content_model, created_event_model, moderator_model};
 use polycentric_common::merkle;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ColumnTrait, ConnectionTrait,
@@ -130,6 +130,13 @@ pub async fn created_content_exists<C: ConnectionTrait>(
             .await?
             .is_some(),
     )
+}
+
+pub async fn is_moderator<C: ConnectionTrait>(db: &C, identity: &str) -> Result<bool, DbErr> {
+    Ok(moderator_model::Entity::find_by_id(identity.to_owned())
+        .one(db)
+        .await?
+        .is_some())
 }
 
 /// Return the content reference, if any, from the database
