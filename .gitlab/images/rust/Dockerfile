@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libsasl2-dev \
     cmake \
+    make \
     g++ \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
