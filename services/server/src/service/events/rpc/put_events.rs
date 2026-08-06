@@ -30,8 +30,6 @@ use std::{collections::HashSet, time::Duration};
 use time::OffsetDateTime;
 use tonic::Status;
 
-use crate::config::SERVER_NAME;
-
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
 pub async fn handle(
@@ -256,7 +254,9 @@ async fn process_event(
                             .payload(&event_bundle_bytes)
                             .headers(OwnedHeaders::new().insert(Header {
                                 key: "SOURCE_SERVER",
-                                value: Some(SERVER_NAME.as_str()),
+                                value: Some(
+                                    crate::config::get().server_name.as_str(),
+                                ),
                             })),
                         Duration::from_secs(0),
                     )

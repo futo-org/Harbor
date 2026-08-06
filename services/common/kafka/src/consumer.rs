@@ -5,7 +5,7 @@ use rdkafka::consumer::stream_consumer::StreamConsumer;
 
 pub use rdkafka::consumer::{CommitMode, Consumer};
 
-use crate::config::set_defaults;
+use crate::config::{auto_offset_reset, set_defaults};
 
 pub struct CustomContext;
 
@@ -14,21 +14,13 @@ impl ClientContext for CustomContext {}
 impl ConsumerContext for CustomContext {}
 
 /// Build a subscribed `StreamConsumer` with auto-commit disabled.
-///
-/// Override the Kafka `auto.offset.reset` property using the
-/// `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET` environment variable
-/// (used in moderation integration test).
 pub async fn build_consumer(group_id: &str, topics: &[&str]) -> StreamConsumer<CustomContext> {
     let mut config = ClientConfig::new();
     set_defaults(&mut config);
     config
         .set("group.id", group_id)
         .set("enable.auto.commit", "false")
-        .set(
-            "auto.offset.reset",
-            std::env::var("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET")
-                .unwrap_or_else(|_| "latest".to_string()),
-        );
+        .set("auto.offset.reset", auto_offset_reset());
 
     let consumer: StreamConsumer<CustomContext> = config
         .create_with_context(CustomContext)

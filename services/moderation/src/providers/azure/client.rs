@@ -8,25 +8,11 @@
 //! Each call returns that bucket's raw JSON response unchanged; callers
 //! interpret the category scores. This module is transport only.
 
-use std::env;
-
 use base64::Engine as _;
 use serde_json::Value;
 
-/// API version for the GA text/image endpoints.
-const DEFAULT_API_VERSION: &str = "2024-09-01";
-/// The multimodal (`imageWithText`) endpoint is preview-only.
-const DEFAULT_MULTIMODAL_API_VERSION: &str = "2024-09-15-preview";
-
-const ENV_ENDPOINT: &str = "POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT";
-const ENV_KEY: &str = "POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY";
-const ENV_API_VERSION: &str = "POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION";
-const ENV_MULTIMODAL_API_VERSION: &str = "POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION";
-
 #[derive(Debug)]
 pub enum AzureError {
-    /// Required configuration (endpoint/key) was missing.
-    Config(String),
     /// The HTTP request itself failed (connection, timeout, decode, ...).
     Http(reqwest::Error),
     /// Azure responded with a non-success status; carries the raw body.
@@ -36,9 +22,6 @@ pub enum AzureError {
 impl std::fmt::Display for AzureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AzureError::Config(msg) => {
-                write!(f, "azure content safety not configured: {msg}")
-            }
             AzureError::Http(e) => write!(f, "azure request failed: {e}"),
             AzureError::Api { status, body } => {
                 write!(f, "azure returned status {status}: {body}")
@@ -115,27 +98,6 @@ impl AzureClient {
             api_version: api_version.into(),
             multimodal_api_version: multimodal_api_version.into(),
         }
-    }
-
-    /// Build a client from the environment. Requires
-    /// `AZURE_CONTENT_SAFETY_ENDPOINT` and `AZURE_CONTENT_SAFETY_KEY`; the
-    /// api-version variables are optional.
-    pub fn from_env() -> Result<Self, AzureError> {
-        let endpoint = env::var(ENV_ENDPOINT)
-            .map_err(|_| AzureError::Config(format!("{ENV_ENDPOINT} is not set")))?;
-        let api_key =
-            env::var(ENV_KEY).map_err(|_| AzureError::Config(format!("{ENV_KEY} is not set")))?;
-        let api_version =
-            env::var(ENV_API_VERSION).unwrap_or_else(|_| DEFAULT_API_VERSION.to_string());
-        let multimodal_api_version = env::var(ENV_MULTIMODAL_API_VERSION)
-            .unwrap_or_else(|_| DEFAULT_MULTIMODAL_API_VERSION.to_string());
-
-        Ok(AzureClient::new(
-            endpoint,
-            api_key,
-            api_version,
-            multimodal_api_version,
-        ))
     }
 
     /// Submit a single bucket and return Azure's raw JSON response.

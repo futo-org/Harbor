@@ -42,3 +42,9 @@ pub(crate) fn set_defaults(config: &mut ClientConfig) {
         env::var("POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY").unwrap_or_else(|_| "any".to_string()),
     );
 }
+
+/// Consumer `auto.offset.reset`, overridable via
+/// `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET` (used in moderation integration test).
+pub(crate) fn auto_offset_reset() -> String {
+    env::var("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET").unwrap_or_else(|_| "latest".to_string())
+}

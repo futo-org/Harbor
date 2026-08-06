@@ -5,20 +5,14 @@
 
 use serde_json::Value;
 use std::{
-    env,
     error::Error,
     fmt::{self, Display, Formatter},
 };
 
-const ENV_KEY: &str = "POLYCENTRIC_PHOTODNA_KEY";
-const ENV_ENDPOINT: &str = "POLYCENTRIC_PHOTODNA_ENDPOINT";
-const DEFAULT_ENDPOINT: &str = "https://api.microsoftmoderator.com/photodna/v1.0";
 const PHOTODNA_STATUS_OK: u64 = 3000;
 
 #[derive(Debug)]
 pub enum PhotoDnaError {
-    /// Required configuration (subscription key) was missing.
-    Config(String),
     /// The HTTP request itself failed (connection, timeout, decode, ...).
     Http(reqwest::Error),
     /// PhotoDNA responded with a non-success status; carries the raw body.
@@ -30,9 +24,6 @@ pub enum PhotoDnaError {
 impl Display for PhotoDnaError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            PhotoDnaError::Config(msg) => {
-                write!(f, "photodna not configured: {msg}")
-            }
             PhotoDnaError::Http(e) => write!(f, "photodna request failed: {e}"),
             PhotoDnaError::Api { status, body } => {
                 write!(f, "photodna returned status {status}: {body}")
@@ -82,16 +73,6 @@ impl PhotoDnaClient {
             subscription_key: subscription_key.into(),
             enhance,
         }
-    }
-
-    /// Build a client from the environment, or return an error if the required
-    /// `POLYCENTRIC_PHOTODNA_KEY` is not set. `POLYCENTRIC_PHOTODNA_ENDPOINT` is optional and
-    /// falls back to [`DEFAULT_ENDPOINT`].
-    pub fn from_env() -> Result<Self, PhotoDnaError> {
-        let subscription_key = env::var(ENV_KEY)
-            .map_err(|_| PhotoDnaError::Config(format!("{ENV_KEY} is not set")))?;
-        let endpoint = env::var(ENV_ENDPOINT).unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
-        Ok(PhotoDnaClient::new(endpoint, subscription_key, true))
     }
 
     /// Submit a single image to the `Match` endpoint and return whether
@@ -195,9 +176,10 @@ impl PhotoDnaClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use std::{env, path::Path};
     use tokio::time::{Duration, sleep};
 
+    const KEY_ENV: &str = "POLYCENTRIC_PHOTODNA_KEY";
     const TEST_IMAGES_ENV: &str = "POLYCENTRIC_PHOTODNA_TEST_IMAGES";
     const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp"];
 
@@ -237,8 +219,8 @@ mod tests {
     #[tokio::test]
     #[ignore = "Requires POLYCENTRIC_PHOTODNA_KEY + POLYCENTRIC_PHOTODNA_TEST_IMAGES (directory)"]
     async fn photodna_real_api_reports_match() {
-        let (Ok(image_dir_str), Ok(_)) = (env::var(TEST_IMAGES_ENV), env::var(ENV_KEY)) else {
-            eprintln!("skipping: set {ENV_KEY} + {TEST_IMAGES_ENV} to run");
+        let (Ok(image_dir_str), Ok(key)) = (env::var(TEST_IMAGES_ENV), env::var(KEY_ENV)) else {
+            eprintln!("skipping: set {KEY_ENV} + {TEST_IMAGES_ENV} to run");
             return;
         };
 
@@ -254,7 +236,7 @@ mod tests {
             "no image files found in {image_dir_str}"
         );
 
-        let client = PhotoDnaClient::from_env().expect("PhotoDnaClient::from_env");
+        let client = PhotoDnaClient::new(crate::config::DEFAULT_PHOTODNA_ENDPOINT, key, true);
 
         let mut attempted = 0usize;
         for path in &images {

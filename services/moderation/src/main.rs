@@ -1,3 +1,4 @@
+mod config;
 mod context;
 mod db;
 mod labels;
@@ -290,6 +291,7 @@ async fn photodna_filter(ctx: &Context, images: &[(Vec<u8>, String)]) -> Result<
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
     common_dotenv::load(".env");
+    let config = config::init()?;
 
     common_telemetry::init();
     common_telemetry::init_metrics("moderation");
@@ -299,24 +301,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     db::run_migrations(&db).await?;
 
     // Both the Azure client and blob store are required.
-    let azure = AzureClient::from_env()?;
+    let azure = AzureClient::new(
+        &config.azure_endpoint,
+        &config.azure_key,
+        &config.azure_api_version,
+        &config.azure_multimodal_api_version,
+    );
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
     // PhotoDNA is optional: if it is not configured, warn and moderate
     // with Azure alone
-    let photodna = match PhotoDnaClient::from_env() {
-        Ok(client) => Some(client),
-        Err(e) => {
-            tracing::warn!(
-                error = %e,
-                "PhotoDNA not configured, continuing with Azure only"
-            );
+    let photodna = match &config.photodna_key {
+        Some(key) => Some(PhotoDnaClient::new(&config.photodna_endpoint, key, true)),
+        None => {
+            tracing::warn!("PhotoDNA not configured, continuing with Azure only");
             None
         }
     };
 
     // Our own Polycentric identity, used to sign + publish labels events.
-    let polycentric = PolycentricClient::from_env()?;
+    let polycentric = PolycentricClient::new(config)?;
     // Pull our identity state from the remote servers before consuming, so
     // the first labels event we author continues our chain correctly.
     polycentric.bootstrap().await;

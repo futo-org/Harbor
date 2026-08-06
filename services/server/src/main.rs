@@ -43,14 +43,14 @@ async fn connect_db_with_retry() -> DatabaseConnection {
 fn server_config() -> ServerConfig {
     ServerConfig {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        cdn_url: std::env::var("CDN_URL")
-            .unwrap_or_else(|_| "http://localhost:3000".to_string()),
+        cdn_url: config::get().cdn_url.clone(),
     }
 }
 
 #[tokio::main]
 async fn main() {
     common_dotenv::load(".env");
+    config::init();
     common_telemetry::init();
 
     // `server`                  -> run the API (gRPC + HTTP) server (default)

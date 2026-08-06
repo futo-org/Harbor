@@ -76,43 +76,21 @@ pub struct PolycentricClient {
 }
 
 impl PolycentricClient {
-    /// Build from the environment:
-    /// - `POLYCENTRIC_MODERATION_SIGNING_KEY` — hex 32-byte ed25519 seed.
-    /// - `POLYCENTRIC_MODERATION_IDENTITY` — hex identity string.
-    /// - `POLYCENTRIC_MODERATION_SERVERS` — comma-separated gRPC URLs.
-    pub fn from_env() -> Result<Self, String> {
-        let seed_hex = std::env::var("POLYCENTRIC_MODERATION_SIGNING_KEY")
-            .map_err(|_| "POLYCENTRIC_MODERATION_SIGNING_KEY is not set".to_string())?;
-        let seed = decode_hex_32(seed_hex.trim())?;
+    /// Build from the signing key seed, identity, and server URLs in
+    /// [`crate::config::Config`]. Fails if the seed is not valid hex.
+    pub fn new(config: &crate::config::Config) -> Result<Self, String> {
+        let seed = decode_hex_32(&config.signing_key)?;
         let signing_key = SigningKey::from_bytes(&seed);
         let public_key = PublicKey {
             key_type: KeyType::Ed25519 as i32,
             key: signing_key.verifying_key().to_bytes().to_vec(),
         };
 
-        let identity = std::env::var("POLYCENTRIC_MODERATION_IDENTITY")
-            .map_err(|_| "POLYCENTRIC_MODERATION_IDENTITY is not set".to_string())?
-            .trim()
-            .to_string();
-        if identity.is_empty() {
-            return Err("POLYCENTRIC_MODERATION_IDENTITY is empty".to_string());
-        }
-
-        let servers: Vec<String> = std::env::var("POLYCENTRIC_MODERATION_SERVERS")
-            .map_err(|_| "POLYCENTRIC_MODERATION_SERVERS is not set".to_string())?
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-        if servers.is_empty() {
-            return Err("POLYCENTRIC_MODERATION_SERVERS is empty".to_string());
-        }
-
         Ok(Self {
             signing_key,
             public_key,
-            identity,
-            servers,
+            identity: config.identity.clone(),
+            servers: config.servers.clone(),
             identity_sequence: AtomicU64::new(0),
             core: Mutex::new(CoreClient::new()),
         })

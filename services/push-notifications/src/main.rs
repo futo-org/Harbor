@@ -1,3 +1,4 @@
+mod config;
 mod context;
 mod db;
 mod expo_client;
@@ -45,6 +46,7 @@ enum Outcome {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env before anything reads the environment.
     common_dotenv::load(".env");
+    let config = config::init()?;
 
     common_telemetry::init();
     common_telemetry::init_metrics("push-notifications");
@@ -53,38 +55,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::connect().await?;
     db::run_migrations(&db).await?;
 
-    // Treat a blank EXPO_ACCESS_TOKEN as unset — sending an empty bearer
-    // token makes Expo reject the request with 401, whereas sending no auth
-    // header is accepted for projects without enhanced push security.
-    let expo_access_token = std::env::var("EXPO_ACCESS_TOKEN")
-        .ok()
-        .filter(|t| !t.is_empty());
-    let notification_manager = NotificationManager::new(expo_access_token);
+    let notification_manager = NotificationManager::new(config.expo_access_token.clone());
 
-    let polycentric = PolycentricClient::from_env()?;
-
-    // The server events must originate from for this service to fire
-    // notifications.
-    let main_server = std::env::var("POLYCENTRIC_MAIN_SERVER")
-        .map_err(|_| "POLYCENTRIC_MAIN_SERVER is not set".to_string())?;
+    let polycentric = PolycentricClient::new(config.query_servers.clone());
 
     let ctx = Arc::new(Context {
         db,
         notification_manager,
         polycentric,
-        main_server,
+        main_server: config.main_server.clone(),
     });
-
-    // Address the gRPC `NotificationService` (push-token register/unregister)
-    // listens on.
-    let grpc_addr: SocketAddr = std::env::var("POLYCENTRIC_NOTIFICATIONS_GRPC_ADDR")
-        .unwrap_or_else(|_| "0.0.0.0:3001".to_string())
-        .parse()?;
 
     // Serve gRPC and consume Kafka concurrently. If either future returns,
     // the process exits (and is restarted by the supervisor).
     tokio::select! {
-        result = serve_grpc(ctx.clone(), grpc_addr) => {
+        result = serve_grpc(ctx.clone(), config.grpc_addr) => {
             if let Err(e) = result {
                 warn!("gRPC server exited: {}", e);
             }

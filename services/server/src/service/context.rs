@@ -4,10 +4,7 @@
 use crate::service::proofs::cache::ProofCache;
 use common_kafka::FutureProducer;
 use sea_orm::DatabaseConnection;
-use std::{env::var, sync::Arc};
-
-/// Environment variable of hex identity string of the trusted moderation service.
-const TRUSTED_MODERATOR_ENV: &str = "POLYCENTRIC_MODERATION_IDENTITY";
+use std::sync::Arc;
 
 pub struct ServiceContext {
     pub db: DatabaseConnection,
@@ -25,10 +22,7 @@ impl ServiceContext {
             db,
             proof_cache: ProofCache::new(),
             kafka_producer,
-            trusted_moderator: var(TRUSTED_MODERATOR_ENV)
-                .ok()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty()),
+            trusted_moderator: crate::config::get().trusted_moderator.clone(),
         })
     }
 }
