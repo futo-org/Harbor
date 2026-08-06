@@ -11,7 +11,7 @@ cd "$(dirname "$0")/../../.."
 
 # A fixed project name keeps the network name (<project>_default) independent
 # of the checkout directory, for both the connect below and teardown.
-export COMPOSE_PROJECT_NAME=polycentric
+export COMPOSE_PROJECT_NAME=harbor
 NETWORK="${COMPOSE_PROJECT_NAME}_default"
 
 # Host:port the readiness probe waits on (and, locally, the test connects to).
@@ -78,7 +78,7 @@ docker compose up -d --no-deps --build --wait server
 # compose network via `docker network connect`).
 if [[ "${CI:-}" == "true" ]]; then
   SERVER_HOST=server
-  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' polycentric-server-1 2>/dev/null)
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
   fi
@@ -102,11 +102,15 @@ done
 echo "==> Applying server database migrations…"
 docker compose exec -T server /app/migration up
 
-echo "==> Running the moderation CSAM pipeline test…"
-if [[ "${CI:-}" == "true" ]]; then
-  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
-  cargo nextest run -P ci -p moderation-service --test csam_pipeline \
-    --run-ignored ignored-only --no-capture
-else
-  cargo test -p moderation-service --test csam_pipeline -- --ignored --nocapture
-fi
+# Run one at a time: each spawns its own moderation service, which would
+# otherwise contend for the same Kafka consumer group and database rows.
+for suite in csam_pipeline report_label_pipeline; do
+  echo "==> Running the moderation $suite test…"
+  if [[ "${CI:-}" == "true" ]]; then
+    # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
+    cargo nextest run -P ci -p moderation-service --test "$suite" \
+      --run-ignored ignored-only --no-capture
+  else
+    cargo test -p moderation-service --test "$suite" -- --ignored --nocapture
+  fi
+done
