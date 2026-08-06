@@ -55,6 +55,41 @@ jobs:
           cache-from: type=registry,ref=${{ steps.meta.outputs.registry }}:rust
           cache-to: type=inline
 
+  rust-android:
+    needs: rust
+    runs-on: *ci-runner
+    steps:
+      - id: meta
+        run: echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: check
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' || inputs.images_changed == 'true' }}
+        run: |
+          if [ "$FORCE" != "true" ] && docker manifest inspect "${{ steps.meta.outputs.registry }}:rust-android" >/dev/null 2>&1; then
+            echo "image exists and is unchanged; skipping build"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.build == 'true'
+      - uses: docker/setup-buildx-action@v3
+        if: steps.check.outputs.build == 'true'
+      - uses: docker/build-push-action@v6
+        if: steps.check.outputs.build == 'true'
+        with:
+          context: .gitlab/images/rust-android
+          push: true
+          build-args: RUST_IMAGE=${{ steps.meta.outputs.registry }}:rust
+          tags: ${{ steps.meta.outputs.registry }}:rust-android
+          cache-from: type=registry,ref=${{ steps.meta.outputs.registry }}:rust-android
+          cache-to: type=inline
+
   rust-dind:
     needs: rust
     runs-on: *ci-runner

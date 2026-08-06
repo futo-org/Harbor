@@ -1,5 +1,6 @@
 variables:
   RUST_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust'
+  RUST_ANDROID_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust-android'
   RUST_DIND_IMAGE: '${CI_REGISTRY}/${CI_PROJECT_PATH}:rust-dind'
 
 .setup-images-workflow:
@@ -33,6 +34,20 @@ setup-image-rust:
         --import-cache type=registry,ref=$RUST_IMAGE \
         --export-cache type=inline \
         --output type=image,name=$RUST_IMAGE,push=true
+
+setup-image-rust-android:
+  extends: .setup-images-workflow
+  needs: ['setup-image-rust']
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --opt build-arg:RUST_IMAGE=$RUST_IMAGE \
+        --local context=.gitlab/images/rust-android \
+        --local dockerfile=.gitlab/images/rust-android \
+        --import-cache type=registry,ref=$RUST_ANDROID_IMAGE \
+        --export-cache type=inline \
+        --output type=image,name=$RUST_ANDROID_IMAGE,push=true
 
 setup-image-rust-dind:
   extends: .setup-images-workflow

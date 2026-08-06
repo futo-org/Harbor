@@ -206,7 +206,7 @@ jobs:
     if: needs.changes.outputs.build_rn == 'true'
     runs-on: *ci-runner
     container:
-      image: ${{ needs.changes.outputs.registry }}:rust
+      image: ${{ needs.changes.outputs.registry }}:rust-android
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
