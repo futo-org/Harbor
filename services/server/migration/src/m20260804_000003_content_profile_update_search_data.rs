@@ -17,8 +17,8 @@ impl MigrationTrait for Migration {
                 .add_column(ColumnDef::new(COLUMN).custom("tsvector").not_null()
                     .generated(
                         Expr::cust("
-                            setweight(to_tsvector('simple', COALESCE(name, '')), 'A') ||
                             setweight(to_tsvector('simple', COALESCE(alias, '')), 'A') ||
+                            setweight(to_tsvector('simple', COALESCE(name, '')), 'B') ||
                             setweight(to_tsvector('english', COALESCE(description, '')), 'C')
                         "),
                         true /* stored */)
