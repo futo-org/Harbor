@@ -1,0 +1,10 @@
+appId: org.futo.polycentric.dev
+---
+- runFlow: ../launch.yaml
+- tapOn: 'Create new identity'
+- tapOn: 'Enter display name'
+- inputText: 'Maestro'
+- hideKeyboard
+- tapOn: 'Continue'
+- tapOn: 'Finish'
+- assertVisible: 'No posts yet'
