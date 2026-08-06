@@ -25,18 +25,28 @@ stages:
   - release
 variables:
   GIT_DEPTH: 1
-  CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+  # /harbor-cache is a host directory the runners bind-mount into every job
+  # container (see runner config.toml), so these caches persist warm on the
+  # runner host with no per-job archive/upload/download. Cargo, sccache and
+  # the pnpm store are all safe for concurrent access (file locks /
+  # content-addressable). On a runner without the mount the paths are just
+  # container-local: everything still works, only cold.
+  CARGO_HOME: /harbor-cache/cargo
   CARGO_TARGET_DIR: ${CI_PROJECT_DIR}/target
-  SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
+  SCCACHE_DIR: /harbor-cache/sccache
+  # The one shared sccache dir holds dev+release+wasm+android objects; the
+  # 10G default would thrash.
+  SCCACHE_CACHE_SIZE: 30G
+  # pnpm reads settings from npm_config_* environment variables.
+  npm_config_store_dir: /harbor-cache/pnpm-store
   # CI builds are throwaway: incremental compilation only adds overhead and
   # bloats target dirs, and debuginfo is most of a dev target's size and a
   # large share of its compile time (test backtraces lose file/line info).
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
-  # Parallel archiver + cheapest compression: cache/artifact save time is
-  # dominated by CPU-bound compression of multi-GB target dirs, not upload.
+  # Parallel archiver + cheapest compression: artifact save time is
+  # dominated by CPU-bound compression, not upload.
   FF_USE_FASTZIP: 'true'
-  CACHE_COMPRESSION_LEVEL: 'fastest'
   ARTIFACT_COMPRESSION_LEVEL: 'fast'
 default:
   tags:

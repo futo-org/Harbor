@@ -16,8 +16,9 @@
         - packages/js-*/**/*
         - .gitlab/ci/build_js_sdks.yml
 
-# No pnpm store cache: extracting the multi-GB store (~100k small files)
-# takes longer than pnpm re-downloading the same packages.
+# No GitLab pnpm store cache (extracting ~100k small files takes longer than
+# re-downloading); the store persists via the runner-mounted /harbor-cache
+# instead (npm_config_store_dir in .gitlab-ci.yml).
 .js-sdks-base:
   extends: .js-sdk-workflow
   before_script:

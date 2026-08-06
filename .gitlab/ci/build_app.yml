@@ -64,12 +64,17 @@ app-tests:
 
 app-web-image:
   extends: .app-build-base
+  # Serializes with the buildkitd lock on the shared local root — see
+  # .service-image in build_services.yml.
+  resource_group: app-web-image
   rules:
     - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
   image:
     name: moby/buildkit:rootless
     entrypoint: [""]
+  variables:
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox --root /harbor-cache/buildkit/app
   before_script:
     - mkdir -p ~/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
@@ -83,9 +88,6 @@ app-web-image:
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA,push=true
 
 .app-build-expo:

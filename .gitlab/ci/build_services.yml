@@ -1,24 +1,10 @@
+# Compile caching comes from the runner-mounted /harbor-cache (CARGO_HOME +
+# SCCACHE_DIR, set globally in .gitlab-ci.yml) — no GitLab cache: blocks.
 .service-rust-base:
   image: ${RUST_IMAGE}
   stage: check
-  variables:
-    SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
   before_script:
     - command -v sccache >/dev/null && export RUSTC_WRAPPER=sccache || true
-  # Self-populating per job: the first run downloads and compiles
-  # everything and uploads the result; every run after starts with warm
-  # crate sources and sccache hits for unchanged crates.
-  cache:
-    key:
-      files:
-        - Cargo.lock
-      prefix: cargo-${CI_JOB_NAME}
-    paths:
-      - .cargo/registry/index
-      - .cargo/registry/cache
-      - .cargo/git/db
-      - .sccache
-    policy: pull-push
 
 .service-format-check:
   extends: .service-rust-base
@@ -45,6 +31,15 @@
   image:
     name: moby/buildkit:rootless
     entrypoint: [""]
+  variables:
+    # Persistent local layer cache on the runner-mounted /harbor-cache,
+    # replacing registry import/export of multi-GB cache layers. Per
+    # service because buildkitd takes an exclusive lock on its root dir —
+    # each image job also carries a matching resource_group so two
+    # pipelines never run the same service's image build concurrently.
+    # --oci-worker-no-process-sandbox is the rootless image's default flag
+    # and must be kept when overriding.
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox --root /harbor-cache/buildkit/${SERVICE_NAME}
   before_script:
     - mkdir -p ~/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
@@ -55,9 +50,6 @@
         --frontend dockerfile.v0 \
         --local context=. \
         --local dockerfile=./services/${SERVICE_DIR} \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA,push=true
 
 ########################################################################
@@ -112,6 +104,7 @@ server-image:
   extends:
     - .server-workflow
     - .service-image
+  resource_group: server-image
   rules:
     - !reference [.server-workflow, rules]
     - !reference [.release-workflow, rules]
@@ -166,6 +159,7 @@ moderation-image:
   extends:
     - .moderation-workflow
     - .service-image
+  resource_group: moderation-image
   rules:
     - !reference [.moderation-workflow, rules]
     - !reference [.release-workflow, rules]
@@ -223,6 +217,7 @@ push-notifications-image:
   extends:
     - .push-notifications-workflow
     - .service-image
+  resource_group: push-notifications-image
   rules:
     - !reference [.push-notifications-workflow, rules]
     - !reference [.release-workflow, rules]
@@ -287,6 +282,7 @@ scraper-image:
   extends:
     - .scraper-workflow
     - .service-image
+  resource_group: scraper-image
   rules:
     - !reference [.scraper-workflow, rules]
     - !reference [.release-workflow, rules]
@@ -385,6 +381,7 @@ verifier-bot-image:
   extends:
     - .verifier-bot-workflow
     - .service-image
+  resource_group: verifier-bot-image
   needs:
     - job: js-sdks-build
       artifacts: true
