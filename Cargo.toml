@@ -49,5 +49,5 @@ prometheus = "0.14"
 # Pinned: 0.3.48 adds a `From` impl on an associated-type projection that
 # fails coherence (E0119) in sea-query and aws-smithy-types. Unpin once those
 # crates ship releases that compile against it.
-time = "=0.3.53"
+time = "=0.3.55"
 base64 = "0.22.1"
