@@ -67,12 +67,12 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: ${{ matrix.name }}
       - run: cd ${{ matrix.dir }} && ${{ matrix.cmd }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && contains(matrix.name, 'tests')
         with:
           name: junit-${{ matrix.name }}
@@ -91,7 +91,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: server-format-check
@@ -109,7 +109,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: server-clippy
@@ -127,7 +127,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: moderation-format-check
@@ -145,7 +145,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: moderation-clippy
@@ -163,7 +163,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: push-notifications-format-check
@@ -181,7 +181,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: push-notifications-clippy
@@ -198,12 +198,12 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: push-notifications-test
       - run: cargo nextest run -P ci --package push-notifications-service
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-push-notifications-test
@@ -215,7 +215,7 @@ jobs:
     runs-on: *ci-runner
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec biome check packages/js-core --diagnostic-level=error
 
@@ -224,10 +224,10 @@ jobs:
     runs-on: *ci-runner
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm --filter js-core test:ci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-js-core-tests
@@ -244,7 +244,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm --filter @polycentric/scraper build
 
@@ -254,7 +254,7 @@ jobs:
     runs-on: *ci-runner
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           install-args: --ignore-scripts
@@ -265,7 +265,7 @@ jobs:
     runs-on: *ci-runner
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm exec biome check apps/harbor --diagnostic-level=error
 
@@ -273,10 +273,10 @@ jobs:
     if: inputs.app == 'true'
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
       - run: pnpm --filter polycentric-app test:ci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-app-tests
@@ -287,7 +287,7 @@ jobs:
     if: inputs.charts == 'true'
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           for chart in deploy/charts/*/; do
             helm lint "$chart"

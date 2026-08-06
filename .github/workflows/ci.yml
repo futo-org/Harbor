@@ -44,6 +44,7 @@ jobs:
       scraper: ${{ steps.filter.outputs.scraper }}
       verifier_bot: ${{ steps.filter.outputs.verifier_bot }}
       app: ${{ steps.filter.outputs.app }}
+      app_eas: ${{ steps.filter.outputs.app_eas }}
       server_integration: ${{ steps.filter.outputs.server_integration }}
       moderation_integration: ${{ steps.filter.outputs.moderation_integration }}
       charts: ${{ steps.filter.outputs.charts }}
@@ -71,9 +72,9 @@ jobs:
           REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           SLUG=$(echo "$REF" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/^-*//; s/-*$//' | cut -c1-63)
           echo "ref_slug=${SLUG}" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.ref_type != 'tag'
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         if: github.ref_type != 'tag'
         id: filter
         with:
@@ -165,7 +166,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: rs-core-uniffi-web-build
@@ -174,7 +175,7 @@ jobs:
           rustup target add wasm32-unknown-unknown
           pnpm i
           pnpm build --release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
@@ -185,17 +186,17 @@ jobs:
     if: needs.changes.outputs.build_sdks == 'true'
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           install: 'false'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
       - run: pnpm install
       - run: pnpm --filter='./packages/js-*' run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: js-sdks-dist
           path: packages/js-*/dist
@@ -213,7 +214,7 @@ jobs:
     env:
       RUSTC_WRAPPER: sccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/rust-env
         with:
           cache-key: rn-android-build
@@ -226,7 +227,7 @@ jobs:
             x86_64-linux-android
           pnpm i
           pnpm ubrn:android --release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rn-android-jnilibs
           path: packages/react-native/android/src/main/jniLibs
@@ -239,8 +240,8 @@ jobs:
     if: needs.changes.outputs.build_rn == 'true'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -262,7 +263,7 @@ jobs:
           cd packages/react-native
           pnpm i
           pnpm ubrn:ios
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rn-ios
           path: |
@@ -275,29 +276,29 @@ jobs:
     if: needs.changes.outputs.build_rn == 'true'
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           install: 'false'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: js-sdks-dist
           path: packages
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rn-android-jnilibs
           path: packages/react-native/android/src/main/jniLibs
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rn-ios
           path: packages/react-native
       - run: pnpm install
       - run: cd packages/react-native && pnpm build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rn-sdk
           path: |
@@ -323,14 +324,14 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: '1'
       POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: apt-get update && apt-get install -y --no-install-recommends chromium python3 make g++ && rm -rf /var/lib/apt/lists/*
       - run: npm install -g pnpm@10
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: js-sdks-dist
           path: packages
@@ -342,7 +343,7 @@ jobs:
         env:
           VERIFIER_BOT_ENV_VARS: ${{ secrets.VERIFIER_BOT_ENV_VARS }}
       - run: pnpm --filter @polycentric/verifier-bot test:ci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: junit-verifier-bot-tests
@@ -445,14 +446,32 @@ jobs:
   ######################################################################
   # build — EAS (Expo) mobile builds
   #
-  # GitLab ran these as manual jobs on merge requests; on GitHub use
-  # workflow_dispatch on the branch instead. Automatic on the default
-  # branch and on v*/app-* tags.
+  # Automatic on the default branch, releases, and workflow_dispatch. On
+  # pull requests the APK build is manual, as on GitLab: it waits on the
+  # eas-preview environment, and approving it via "Review deployments" is
+  # the trigger.
   ######################################################################
 
+  eas-apk-approval:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.app_eas == 'true'
+    runs-on: *ci-runner
+    environment: eas-preview
+    steps:
+      - run: echo "EAS preview APK build approved"
+
+  # The approval gate only exists on pull requests, so tolerate it being
+  # skipped everywhere else; the build results are then checked explicitly.
   eas-android-apk:
-    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build]
-    if: needs.changes.outputs.eas == 'true'
+    needs: [changes, rn-sdk-build, js-sdks-build, rs-core-uniffi-web-build, eas-apk-approval]
+    if: >-
+      !cancelled() &&
+      needs.changes.result == 'success' &&
+      needs.rn-sdk-build.result == 'success' &&
+      needs.js-sdks-build.result == 'success' &&
+      needs.rs-core-uniffi-web-build.result == 'success' &&
+      ((github.event_name == 'pull_request' && needs.eas-apk-approval.result == 'success') ||
+       (github.event_name != 'pull_request' && needs.changes.outputs.eas == 'true'))
     uses: ./.github/workflows/_eas-build.yml
     secrets: inherit
     with:
@@ -486,7 +505,7 @@ jobs:
     outputs:
       chart_version: ${{ steps.publish.outputs.chart_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install crane
         run: |
           curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz" \
@@ -611,19 +630,19 @@ jobs:
     if: needs.changes.outputs.release == 'true'
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-pnpm
         with:
           install: 'false'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: js-sdks-dist
           path: packages
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rn-sdk
           path: packages/react-native
@@ -645,7 +664,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           VERSION="${GITHUB_REF_NAME#v}"
           # Bump the crate versions and give the path dependency a version so
@@ -660,7 +679,7 @@ jobs:
             echo "cargo package produced no .crate; falling back to a source tarball" >&2
             tar czf "target/package/polycentric-core-${VERSION}.crate" packages/rs-core packages/rs-common
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: rs-core-crates
           path: target/package/*.crate
@@ -681,11 +700,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: polycentric-apk
           path: apk
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: rs-core-crates
           path: crates

@@ -19,7 +19,7 @@ runs:
     # Self-populating per job: the first run downloads and compiles
     # everything and uploads the result; every run after starts with warm
     # crate sources and sccache hits for unchanged crates.
-    - uses: actions/cache@v4
+    - uses: actions/cache@v6
       with:
         path: |
           .cargo/registry/index

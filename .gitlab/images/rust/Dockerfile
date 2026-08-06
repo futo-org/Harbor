@@ -1,9 +1,12 @@
 FROM rust:slim-bookworm
 
+# zstd: actions/cache compresses with it when present (gzip fallback is much
+# slower for the multi-GB cargo/sccache caches).
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     unzip \
+    zstd \
     pkg-config \
     libssl-dev \
     libsasl2-dev \

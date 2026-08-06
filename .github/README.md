@@ -31,7 +31,8 @@ tags (the per-component GitLab tags like `server-*`/`js-sdk-*` are gone).
 1. Create the deploy environments (`staging-<name>` and `production-<name>`,
    matching the `_deploy.yml` calls in `ci.yml`) and add required reviewers
    on the `production-*` ones — that approval gate replaces GitLab's
-   `when: manual` production deploys.
+   `when: manual` production deploys. Also create `eas-preview` with
+   required reviewers: it gates the manual per-PR EAS APK build.
 2. Point helm-controller/flux at `oci://ghcr.io/<owner>/<repo>/charts` (it
    previously pulled from the GitLab registry).
 
@@ -57,8 +58,11 @@ Everything else authenticates with the ambient `GITHUB_TOKEN`.
 
 ## Behavioural differences from GitLab
 
-- Manual EAS builds on merge requests are now `workflow_dispatch` runs of
-  **CI** on the branch (GitHub has no per-job manual trigger in PRs).
+- The manual EAS APK build on merge requests is approval-gated: on PRs that
+  touch the app, the run waits on the `eas-preview` environment and
+  approving it via *Review deployments* triggers the build (leave it
+  waiting to skip; unapproved gates expire — and fail the run — after 30
+  days). The aab/ios EAS builds run via `workflow_dispatch` on the branch.
 - The `docs` redeploy tag is `workflow_dispatch` on **Docs**.
 - Trivy results upload as SARIF to code scanning instead of a GitLab code
   quality report; JUnit reports upload as plain artifacts.

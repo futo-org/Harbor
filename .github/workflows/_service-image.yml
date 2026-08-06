@@ -38,29 +38,29 @@ jobs:
   build:
     runs-on: *ci-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: inputs.download-sdks
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: rs-core-uniffi-web-dist
           path: packages/rs-core-uniffi-web/dist
       - if: inputs.download-sdks
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: js-sdks-dist
           path: packages
       - if: inputs.download-rn
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: rn-sdk
           path: packages/react-native
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ inputs.dockerfile }}
