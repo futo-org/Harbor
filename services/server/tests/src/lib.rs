@@ -415,7 +415,7 @@ pub async fn create_profile(
     name: String,
     description: Option<String>,
     alias: Option<String>,
-) -> SigningKey {
+) -> (SigningKey, Identity) {
     let mut client = connect_event_sync().await;
 
     let rotation_key = generate_signing_key();
@@ -435,7 +435,7 @@ pub async fn create_profile(
         1,
         1,
         vec![1],
-        initial,
+        initial.clone(),
         DEFAULT_CREATED_AT,
     );
     let empty_profile = make_profile_update_bundle(
@@ -476,5 +476,5 @@ pub async fn create_profile(
         .await
         .expect("put_events failed");
 
-    rotation_key
+    (rotation_key, initial)
 }

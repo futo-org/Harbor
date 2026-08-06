@@ -11,7 +11,7 @@ message SearchUsersRequest {
 }
 
 enum SortUsersBy {
-  // Default sorting by search rank.
+  // Default sorting by relevancy.
   SORT_USERS_BY_DEFAULT = 0;
   // Alphabetic order of profile name.
   SORT_USERS_BY_ALPHA = 1;
@@ -29,14 +29,15 @@ message SearchPostsRequest {
 }
 
 enum SortPostsBy {
-  // Default sorting.
+  // Default sorting by relevancy.
   SORT_POSTS_BY_DEFAULT = 0;
+  /* TODO: determine what metric to use for the top post.
   // Top post first.
-  SORT_POSTS_BY_POST_TOP = 1;
+  SORT_POSTS_BY_TOP = 1;
+  */
   /// Latests post first.
-  SORT_POSTS_BY_POST_LATEST = 2;
+  SORT_POSTS_BY_LATEST = 2;
 }
-
 
 // TODO: add additional data for why events are returned.
 

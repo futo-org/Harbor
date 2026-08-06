@@ -9,6 +9,7 @@ use integration_tests::{
     public_key_of, random_string, search_service, *,
 };
 use prost::Message as ProstMessage;
+use proto::SearchPostsRequest;
 use proto::content::ContentBody;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -1659,6 +1660,95 @@ async fn expect_searched_users(
             panic!("unexpected content body: {event:?}");
         };
         assert_eq!(update, expected, "event: {event:?}");
+        total += 1;
+    }
+    assert_eq!(total, expected_len);
+}
+
+#[tokio::test]
+async fn search_posts_no_match() {
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: random_string(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        Vec::new(),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn search_posts_match_text() {
+    let mut client = connect_event_sync().await;
+
+    let profile_name = random_string();
+    let post_text = random_string();
+    let (rotation_key, identity) =
+        create_profile(profile_name.clone(), None, None).await;
+    let identity = derive_identity_string(&identity);
+
+    let post = make_post_bundle(
+        &identity,
+        &rotation_key,
+        1,
+        1,
+        vec![1],
+        vec![],
+        &post_text,
+        DEFAULT_CREATED_AT,
+    );
+
+    client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![post],
+        })
+        .await
+        .expect("put_events failed");
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: post_text.clone(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+        }],
+    )
+    .await;
+}
+
+async fn expect_searched_posts(
+    request: SearchPostsRequest,
+    expected: Vec<Post>,
+) {
+    let mut search = search_service().await;
+    let response = search.search_posts(request).await.unwrap();
+
+    let expected_len = expected.len();
+    let mut total = 0;
+    for (event, expected) in
+        response.get_ref().event_bundles.iter().zip(expected)
+    {
+        let Some(serialized_content) = event.serialized_content.as_ref() else {
+            panic!("missing content in event: {event:?}");
+        };
+        let Ok(content) = Content::decode(&*serialized_content.content_bytes)
+        else {
+            panic!("failed to decode event: {event:?}");
+        };
+        dbg!(&content.content_body);
+        let Some(ContentBody::Post(post)) = content.content_body else {
+            panic!("unexpected content body: {event:?}");
+        };
+        assert_eq!(post, expected, "event: {event:?}");
         total += 1;
     }
     assert_eq!(total, expected_len);
