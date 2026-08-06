@@ -1,9 +1,9 @@
 name: rust-env
 description: >-
   Cargo/sccache paths under the workspace plus the self-populating cargo
-  cache. In container jobs ${{ github.workspace }} is the host path, not the
-  container mount, so the paths are resolved from $GITHUB_WORKSPACE at
-  runtime.
+  cache. In container jobs the github.workspace expression is the host path,
+  not the container mount, so the paths are resolved from $GITHUB_WORKSPACE
+  at runtime.
 inputs:
   cache-key:
     description: Per-job cache key prefix (mirrors the GitLab cargo-${CI_JOB_NAME} key)
