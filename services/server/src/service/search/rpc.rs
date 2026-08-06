@@ -1,6 +1,7 @@
 //! gRPC `SearchService` impl. Each method delegates to a handler under
 //! `search/rpc/`.
 
+pub mod common;
 pub mod search_posts;
 pub mod search_users;
 
@@ -14,6 +15,8 @@ use crate::service::proto::{
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
+
+pub use common::*;
 
 pub struct SearchServiceImpl {
     ctx: Arc<ServiceContext>,
