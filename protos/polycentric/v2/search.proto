@@ -11,12 +11,13 @@ message SearchUsersRequest {
 }
 
 enum SortUsersBy {
-  // Default sorting.
+  // Default sorting by search rank.
   SORT_USERS_BY_DEFAULT = 0;
-  // Alphabetic order.
+  // Alphabetic order of profile name.
   SORT_USERS_BY_ALPHA = 1;
-  // Followers count.
+  /* TODO: determine how to determine popularity.
   SORT_USERS_BY_POPULAR = 2;
+  */
 }
 
 message SearchPostsRequest {
