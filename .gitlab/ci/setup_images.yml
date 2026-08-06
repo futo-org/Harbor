@@ -1,17 +1,15 @@
 variables:
   IMAGES_PATH: '${CI_REGISTRY}/${CI_PROJECT_PATH}/ci'
-  # CI_IMAGES_TAG (set by the workflow rules in .gitlab-ci.yml) is the
-  # commit SHA on branch/MR pipelines and the default branch on tag
-  # pipelines. The ref-slug tag is pushed alongside the SHA tag only as
-  # the build cache source for the branch's next commit.
+  # CI_IMAGES_TAG (set by the workflow rules in .gitlab-ci.yml) is the ref
+  # slug on branch/MR pipelines and the default branch on tag pipelines.
   RUST_IMAGE: '${IMAGES_PATH}/rust:${CI_IMAGES_TAG}'
   RUST_DIND_IMAGE: '${IMAGES_PATH}/rust-dind:${CI_IMAGES_TAG}'
   RUST_ANDROID_IMAGE: '${IMAGES_PATH}/rust-android:${CI_IMAGES_TAG}'
 
-# Ensures the per-commit CI images exist in the registry and in the runner
-# host's docker cache: pulls them when this commit's tags already exist,
-# builds and pushes them otherwise. Consuming jobs use pull_policy
-# if-not-present, so this is the only job that hits the registry for them.
+# Builds the branch CI image tags on the runner host's docker daemon (a
+# cache hit when the image inputs are unchanged) and pushes them. The
+# build refreshes the host's local tags, so consuming jobs use pull_policy
+# if-not-present and never hit the registry themselves.
 setup-images:
   stage: setup
   image:
@@ -26,24 +24,19 @@ setup-images:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - |
-      build_or_pull() {
+      build_image() {
         name=$1; shift
-        if docker pull "$IMAGES_PATH/$name:$CI_COMMIT_SHA"; then
-          return
-        fi
         docker build "$@" \
           --build-arg BUILDKIT_INLINE_CACHE=1 \
           --cache-from "$IMAGES_PATH/$name:$CI_DEFAULT_BRANCH" \
-          --cache-from "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG" \
-          --tag "$IMAGES_PATH/$name:$CI_COMMIT_SHA" \
-          --tag "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG" \
+          --cache-from "$IMAGES_PATH/$name:$CI_IMAGES_TAG" \
+          --tag "$IMAGES_PATH/$name:$CI_IMAGES_TAG" \
           ".gitlab/images/$name"
-        docker push "$IMAGES_PATH/$name:$CI_COMMIT_SHA"
-        docker push "$IMAGES_PATH/$name:$CI_COMMIT_REF_SLUG"
+        docker push "$IMAGES_PATH/$name:$CI_IMAGES_TAG"
       }
-      build_or_pull rust
-      build_or_pull rust-dind --build-arg RUST_IMAGE=$RUST_IMAGE
-      build_or_pull rust-android --build-arg RUST_IMAGE=$RUST_IMAGE
+      build_image rust
+      build_image rust-dind --build-arg RUST_IMAGE=$RUST_IMAGE
+      build_image rust-android --build-arg RUST_IMAGE=$RUST_IMAGE
 
 # Deletes the branch image tags.
 setup-images-cleanup:
