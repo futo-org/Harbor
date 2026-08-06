@@ -102,15 +102,17 @@ done
 echo "==> Applying server database migrations…"
 docker compose exec -T server /app/migration up
 
-# Run one at a time: each spawns its own moderation service, which would
+# Both suites run in a single invocation so they share one JUnit report, and
+# strictly one at a time: each spawns its own moderation service, which would
 # otherwise contend for the same Kafka consumer group and database rows.
-for suite in csam_pipeline report_label_pipeline; do
-  echo "==> Running the moderation $suite test…"
-  if [[ "${CI:-}" == "true" ]]; then
-    # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
-    cargo nextest run -P ci -p moderation-service --test "$suite" \
-      --run-ignored ignored-only --no-capture
-  else
-    cargo test -p moderation-service --test "$suite" -- --ignored --nocapture
-  fi
-done
+echo "==> Running the moderation integration tests…"
+if [[ "${CI:-}" == "true" ]]; then
+  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
+  cargo nextest run -P ci -p moderation-service \
+    --test csam_pipeline --test report_label_pipeline \
+    --run-ignored ignored-only --no-capture --test-threads 1
+else
+  cargo test -p moderation-service \
+    --test csam_pipeline --test report_label_pipeline \
+    -- --ignored --nocapture
+fi
