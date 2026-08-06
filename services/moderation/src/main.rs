@@ -228,7 +228,9 @@ async fn moderate(
     content: &Content,
     images: &[(Vec<u8>, String)],
 ) -> Result<serde_json::Value, ()> {
-    let client = &ctx.azure;
+    let Some(client) = &ctx.azure else {
+        return Ok(no_findings());
+    };
 
     let text = content_text(content);
 
@@ -261,6 +263,12 @@ async fn moderate(
         "text": text_result,
         "images": image_results,
     }))
+}
+
+/// An Azure-shaped response carrying no findings, used when automatic content scoring
+/// is disabled.
+fn no_findings() -> serde_json::Value {
+    serde_json::json!({ "text": null, "images": [] })
 }
 
 /// Run every image through PhotoDNA and report whether any is a CSAM match.
@@ -300,13 +308,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::connect().await?;
     db::run_migrations(&db).await?;
 
-    // Both the Azure client and blob store are required.
-    let azure = AzureClient::new(
-        &config.azure_endpoint,
-        &config.azure_key,
-        &config.azure_api_version,
-        &config.azure_multimodal_api_version,
-    );
+    let azure = match &config.azure {
+        Some(azure) => Some(AzureClient::new(
+            &azure.endpoint,
+            &azure.key,
+            &azure.api_version,
+            &azure.multimodal_api_version,
+        )),
+        None => {
+            tracing::warn!(
+                "Azure Content Safety not configured; labels now published only from moderator reports"
+            );
+            None
+        }
+    };
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
     // PhotoDNA is optional: if it is not configured, warn and moderate
@@ -314,7 +329,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let photodna = match &config.photodna_key {
         Some(key) => Some(PhotoDnaClient::new(&config.photodna_endpoint, key, true)),
         None => {
-            tracing::warn!("PhotoDNA not configured, continuing with Azure only");
+            tracing::warn!("PhotoDNA not configured, CSAM scanning disabled");
             None
         }
     };
