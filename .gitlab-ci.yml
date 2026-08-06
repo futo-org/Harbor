@@ -24,6 +24,7 @@ stages:
   - deploy
   - release
 variables:
+  GIT_DEPTH: 1
   CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
   CARGO_TARGET_DIR: ${CI_PROJECT_DIR}/target
   SCCACHE_DIR: ${CI_PROJECT_DIR}/.sccache
