@@ -57,6 +57,7 @@ The shared `services/common` crates read their own variables:
 | Variable | Default | Description |
 |---|---|---|
 | `POLYCENTRIC_KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers. |
+| `POLYCENTRIC_KAFKA_CLUSTER_ID` | _(unset)_ | Prefix applied to topics and consumer group ids (`{id}.{name}`), so clusters can share a broker. |
 | `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Kafka `security.protocol`. |
 | `POLYCENTRIC_KAFKA_SASL_MECHANISM` | _(unset)_ | Kafka SASL mechanism, e.g. `SCRAM-SHA-256`. |
 | `POLYCENTRIC_KAFKA_SASL_USERNAME` | _(unset)_ | Kafka SASL username. |

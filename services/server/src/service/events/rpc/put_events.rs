@@ -244,10 +244,11 @@ async fn process_event(
             }
 
             let producer = ctx.kafka_producer.clone();
+            let topic = common_kafka::prefixed("events");
             tokio::spawn(async move {
                 if let Err((e, _)) = producer
                     .send(
-                        FutureRecord::to("events")
+                        FutureRecord::to(&topic)
                             .key(&event_key_bytes)
                             .payload(&event_bundle_bytes)
                             .headers(OwnedHeaders::new().insert(Header {
