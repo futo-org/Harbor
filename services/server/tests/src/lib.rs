@@ -50,7 +50,15 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 
 pub fn random_string() -> String {
-    SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30)
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    // When searching Postgres uses a technique called stemming where it removes
+    // the end of certain English words, e.g. "party" and "party" both become
+    // "part" so that when you search for "party" it matches both. However, when
+    // using random values this sometimes causes the searching tests to fail
+    // when not using this technique (e.g. for aliases and names).
+    // So add some characters that should not be stemmed.
+    s.push_str("BBB");
+    s
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
