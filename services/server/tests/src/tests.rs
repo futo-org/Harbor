@@ -1542,6 +1542,19 @@ async fn thread_omit_labels_not_matching_keeps_post() {
 }
 
 #[tokio::test]
+async fn search_users_no_match() {
+    expect_searched_users(
+        SearchUsersRequest {
+            query: random_string(),
+            sort_by: None,
+            page_params: None,
+        },
+        Vec::new(),
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn search_users_match_profile_name() {
     let mut client = TestClient::new().await;
 
