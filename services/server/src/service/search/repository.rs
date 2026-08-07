@@ -255,7 +255,7 @@ impl Query {
                     QueryOrder::query(&mut query)
                         .order_by_expr(
                             Expr::cust(sort_posts_by_column(sort_by)),
-                            Order::Asc,
+                            Order::Desc,
                         )
                         .order_by_expr(Expr::cust("events.id"), Order::Asc);
                 }
@@ -322,24 +322,10 @@ impl Query {
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
-        let mut rows: Vec<SearchPostsEvent> =
-            query.into_tuple().all(db).await.map_err(|err| {
-                log::warn!("failed to search for users: {err}");
-                Status::internal("internal server error")
-            })?;
-
-        // Keep the highest sequence row per identity.
-        let mut seen = HashSet::new();
-        rows.extract_if(.., |row| {
-            if seen.contains(&row.event.identity) {
-                true // Remove
-            } else {
-                seen.insert(row.event.identity.clone());
-                false
-            }
+        query.into_tuple().all(db).await.map_err(|err| {
+            log::warn!("failed to search for users: {err}");
+            Status::internal("internal server error")
         })
-        .for_each(drop);
-        Ok(rows)
     }
 }
 

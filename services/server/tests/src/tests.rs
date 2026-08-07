@@ -1776,6 +1776,82 @@ async fn search_posts_match_text() {
     .await;
 }
 
+#[tokio::test]
+async fn search_posts_order_by_rank() {
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let post_text1 = format!("{query} first.");
+    let post_text2 = format!("{query} second. {query}");
+    client.post_text(&post_text1, DEFAULT_CREATED_AT);
+    client.post_text(&post_text2, DEFAULT_CREATED_AT + 1);
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: Some(SortPostsBy::Default as _),
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![
+            Post {
+                text: post_text2,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+            },
+            Post {
+                text: post_text1,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+            },
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn search_posts_order_by_latest() {
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let post_text1 = format!("{query} first.");
+    let post_text2 = format!("{query} second.");
+    client.post_text(&post_text1, DEFAULT_CREATED_AT);
+    client.post_text(&post_text2, DEFAULT_CREATED_AT + 1);
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: Some(SortPostsBy::Latest as _),
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![
+            Post {
+                text: post_text2,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+            },
+            Post {
+                text: post_text1,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+            },
+        ],
+    )
+    .await;
+}
+
 async fn expect_searched_posts(
     request: SearchPostsRequest,
     expected: Vec<Post>,
