@@ -30,46 +30,15 @@ async fn list_events_empty_works() {
 
 #[tokio::test]
 async fn put_then_list_round_trip() {
-    let mut client = connect_event_sync().await;
-    let rotation_key = generate_signing_key();
+    let mut client = TestClient::new().await;
 
-    let initial = Identity {
-        rotation_keys: vec![public_key_of(&rotation_key)],
-        signing_keys: vec![],
-        revocation_bounds: vec![],
-        servers: None,
-    };
-    let identity = derive_identity_string(&initial);
+    let post_signature = client.post_text("hello", DEFAULT_CREATED_AT + HOUR);
 
-    let genesis = make_identity_bundle(
-        &identity,
-        &rotation_key,
-        1,
-        1,
-        vec![1],
-        initial,
-        DEFAULT_CREATED_AT,
-    );
-    let post = make_post_bundle(
-        &identity,
-        &rotation_key,
-        1,
-        1,
-        vec![1],
-        vec![],
-        "hello",
-        DEFAULT_CREATED_AT + HOUR,
-    );
-    let post_signature = bundle_signature(&post);
+    client.submit_events().await;
 
-    client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis, post],
-        })
-        .await
-        .expect("put_events failed");
-
+    let identity = client.identity().to_owned();
     let response = client
+        .event_sync_client()
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
