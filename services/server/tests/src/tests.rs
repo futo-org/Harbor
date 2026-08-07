@@ -1704,18 +1704,17 @@ async fn expect_searched_users(
     let mut search = search_service().await;
     eprintln!("query: {:#?}", request.query);
     let response = search.search_users(request).await.unwrap();
+    let results = response.into_inner().results;
 
     eprintln!("expected: {expected:#?}");
-    eprintln!(
-        "response: {:#?}",
-        fmt_search_results(&*response.get_ref().results)
-    );
+    eprintln!("results: {:#?}", fmt_search_results(&results));
 
-    let expected_len = expected.len();
-    let mut total = 0;
-    for (result, expected) in
-        response.into_inner().results.into_iter().zip(expected)
-    {
+    assert_eq!(
+        results.len(),
+        expected.len(),
+        "unexpected amount of results"
+    );
+    for (result, expected) in results.into_iter().zip(expected) {
         let event = result.event_bundle.unwrap();
         let Some(serialized_content) = event.serialized_content.as_ref() else {
             panic!("missing content in event: {event:?}");
@@ -1731,9 +1730,7 @@ async fn expect_searched_users(
         assert_eq!(update, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
-        total += 1;
     }
-    assert_eq!(total, expected_len);
 }
 
 #[tokio::test]
@@ -1859,18 +1856,17 @@ async fn expect_searched_posts(
     let mut search = search_service().await;
     eprintln!("query: {:#?}", request.query);
     let response = search.search_posts(request).await.unwrap();
+    let results = response.into_inner().results;
 
     eprintln!("expected: {expected:#?}");
-    eprintln!(
-        "response: {:#?}",
-        fmt_search_results(&*response.get_ref().results)
-    );
+    eprintln!("results: {:#?}", fmt_search_results(&results));
 
-    let expected_len = expected.len();
-    let mut total = 0;
-    for (result, expected) in
-        response.into_inner().results.into_iter().zip(expected)
-    {
+    assert_eq!(
+        results.len(),
+        expected.len(),
+        "unexpected amount of results"
+    );
+    for (result, expected) in results.into_iter().zip(expected) {
         let event = result.event_bundle.unwrap();
         let Some(serialized_content) = event.serialized_content.as_ref() else {
             panic!("missing content in event: {event:?}");
@@ -1885,7 +1881,5 @@ async fn expect_searched_posts(
         assert_eq!(post, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
-        total += 1;
     }
-    assert_eq!(total, expected_len);
 }
