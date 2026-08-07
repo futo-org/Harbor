@@ -5,19 +5,22 @@ use crate::service::events::tombstone;
 use crate::service::feeds::repository::EventWithContentRow;
 use crate::service::feeds::rpc::common::to_target_event_keys;
 use crate::service::feeds::rpc::common::{
-    Referenced, has_matching_label, referenced_target,
+    Referenced, has_matching_label, referenced_target2,
 };
 use crate::service::feeds::util::PageCursor;
 use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
+    row_to_bundle,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
-    self, Content, EventBundle, EventHint, EventKey, PageParams,
+    self, Content, EventBundle, EventHint, EventKey, PageParams, SearchResult,
 };
-use crate::service::stats::service::EventStats;
-use crate::service::stats::service::assemble_bundles;
+use crate::service::stats::service::{
+    EventStats, assemble_bundles, include_stats,
+};
+use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2::content::ContentBody;
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -79,8 +82,11 @@ pub fn page_limit(page_params: &Option<PageParams>) -> u64 {
         .clamp(1, 200) as u64
 }
 
+/// Event, content and search rank.
+pub type SearchRow = (event_model::Model, content_model::Model, f32);
+
 pub struct Fetched<SortedBy> {
-    pub rows: Vec<EventWithContentRow>,
+    pub rows: Vec<SearchRow>,
     pub page_info: PageInfo<SortedBy>,
 }
 
@@ -167,17 +173,14 @@ where
     }
 }
 
-pub fn collect_referenced_keys(rows: &[EventWithContentRow]) -> Vec<EventKey> {
+pub fn collect_referenced_keys(rows: &[SearchRow]) -> Vec<EventKey> {
     let mut keys = Vec::with_capacity(rows.len());
     let mut push_key = |maybe_key: Option<EventKey>| {
         if let Some(key) = maybe_key {
             keys.push(key);
         }
     };
-    for (_event, content) in rows {
-        let Some(content) = content else {
-            continue;
-        };
+    for (_, content, _) in rows {
         let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
         else {
             continue;
@@ -220,7 +223,7 @@ pub fn collect_referenced_keys(rows: &[EventWithContentRow]) -> Vec<EventKey> {
 }
 
 pub struct SearchResponseFilter<SortedBy> {
-    pub live_rows: Vec<EventWithContentRow>,
+    pub live_rows: Vec<SearchRow>,
     pub tombstone_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventWithContentRow>,
     pub page_info: PageInfo<SortedBy>,
@@ -233,10 +236,10 @@ pub async fn hydrate<SortedBy>(
     let rows = &fetched.rows;
 
     let keys: Vec<TargetEventKey> =
-        rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
+        rows.iter().map(|(e, _, _)| TargetEventKey::of(e)).collect();
     let identities = collect_identities(
         rows.iter()
-            .map(|(event, content)| (event, content.as_ref())),
+            .map(|(event, content, _)| (event, Some(content))),
     );
     let ref_keys = collect_referenced_keys(rows);
     let mut target_event_keys = to_target_event_keys(&ref_keys);
@@ -288,8 +291,7 @@ pub async fn filter<SortedBy>(
                 && has_matching_label(&hydration.label_events, key, &omit_set))
     };
 
-    let mut live_rows: Vec<EventWithContentRow> =
-        Vec::with_capacity(rows.len());
+    let mut live_rows: Vec<SearchRow> = Vec::with_capacity(rows.len());
     let mut tombstone_bundles: Vec<EventBundle> = Vec::new();
 
     // Filter live rows
@@ -309,7 +311,7 @@ pub async fn filter<SortedBy>(
             continue;
         }
 
-        match referenced_target(&row) {
+        match referenced_target2(&row.1) {
             // If repost of deleted/omitted target, drop
             Some(Referenced::Repost(target)) if is_omitted(&target) => {
                 continue;
@@ -368,12 +370,17 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    let mut event_bundles = assemble_bundles(live_rows, &stats);
+    let mut results = assemble_results(live_rows, &stats);
+    // SAFETY: we've just assembled the result above where the event_bundle is
+    // always Some, hence it's safe to unwrap.
+    let results_iter = results
+        .iter_mut()
+        .map(|result| result.event_bundle.as_mut().unwrap());
 
     let mut label_bundles = rows_to_bundles(label_events);
 
     tokio::try_join!(
-        attach_proofs(ctx, &mut event_bundles),
+        attach_proofs(ctx, results_iter),
         attach_proofs(ctx, &mut tombstone_bundles),
         attach_proofs(ctx, &mut label_bundles),
     )?;
@@ -397,14 +404,32 @@ pub async fn view<SortedBy>(
     event_hints.extend(bundles_to_hints(label_bundles));
 
     Ok(SearchResponseView {
-        event_bundles,
+        results,
         event_hints,
         page_info,
     })
 }
 
+/// Create event bundles with metadata.
+pub fn assemble_results(
+    rows: Vec<SearchRow>,
+    stats: &EventStats,
+) -> Vec<SearchResult> {
+    rows.into_iter()
+        .map(|(event, content, rank)| {
+            let key = TargetEventKey::of(&event);
+            let mut event = row_to_bundle((event, Some(content)));
+            include_stats(&mut event.meta, &key, stats);
+            SearchResult {
+                event_bundle: Some(event),
+                rank,
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
 pub struct SearchResponseView<SortedBy> {
-    pub event_bundles: Vec<EventBundle>,
+    pub results: Vec<SearchResult>,
     pub event_hints: Vec<EventHint>,
     pub page_info: PageInfo<SortedBy>,
 }

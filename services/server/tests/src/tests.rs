@@ -1645,9 +1645,10 @@ async fn expect_searched_users(
 
     let expected_len = expected.len();
     let mut total = 0;
-    for (event, expected) in
-        response.get_ref().event_bundles.iter().zip(expected)
+    for (result, expected) in
+        response.into_inner().results.into_iter().zip(expected)
     {
+        let event = result.event_bundle.unwrap();
         let Some(serialized_content) = event.serialized_content.as_ref() else {
             panic!("missing content in event: {event:?}");
         };
@@ -1660,6 +1661,8 @@ async fn expect_searched_users(
             panic!("unexpected content body: {event:?}");
         };
         assert_eq!(update, expected, "event: {event:?}");
+        // Hard to assert the actual rank, so just check we have it.
+        assert!(result.rank >= 0.0);
         total += 1;
     }
     assert_eq!(total, expected_len);
@@ -1734,9 +1737,10 @@ async fn expect_searched_posts(
 
     let expected_len = expected.len();
     let mut total = 0;
-    for (event, expected) in
-        response.get_ref().event_bundles.iter().zip(expected)
+    for (result, expected) in
+        response.into_inner().results.into_iter().zip(expected)
     {
+        let event = result.event_bundle.unwrap();
         let Some(serialized_content) = event.serialized_content.as_ref() else {
             panic!("missing content in event: {event:?}");
         };
@@ -1749,6 +1753,8 @@ async fn expect_searched_posts(
             panic!("unexpected content body: {event:?}");
         };
         assert_eq!(post, expected, "event: {event:?}");
+        // Hard to assert the actual rank, so just check we have it.
+        assert!(result.rank >= 0.0);
         total += 1;
     }
     assert_eq!(total, expected_len);

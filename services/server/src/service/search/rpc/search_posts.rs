@@ -36,7 +36,7 @@ pub async fn handle(
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
             .await?;
     Ok(SearchPostsResponse {
-        event_bundles: result.event_bundles,
+        results: result.results,
         event_hints: result.event_hints,
         page_info: Some(result.page_info.proto()?),
     })
@@ -63,7 +63,7 @@ async fn fetch(
     });
     let rows = rows
         .into_iter()
-        .map(|event| (event.event, Some(event.content)))
+        .map(|row| (row.event, row.content, row.search_rank))
         .collect();
     Ok(Fetched { rows, page_info })
 }
