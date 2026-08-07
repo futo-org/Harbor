@@ -167,12 +167,12 @@ impl NotificationManager {
             return Ok(());
         };
 
-        let collapse_id: String = signed
-            .signature
-            .iter()
-            .take(28) // APNs has a strict 64 byte limit for the collapseId field
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let collapse_id: String = {
+            let sig = &signed.signature;
+            // APNs has a strict 64 byte limit for the collapseId field
+            let bytes = &sig[0..sig.len().min(28)];
+            hex::encode(bytes)
+        };
 
         // Author's profile (display name + avatar), fetched over gRPC.
         let author = &key.identity;
@@ -354,9 +354,8 @@ async fn avatar_rich_content(
     let cdn_url = ctx.polycentric.cdn_url().await?;
     // Public blob URL, mirroring the server's `/blob/{type}_{hex(value)}`
     // route (and the client's `blobUrl`).
-    let hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
     Some(ExpoRichContent {
-        image: format!("{cdn_url}/blob/{}_{}", digest.r#type, hex),
+        image: format!("{cdn_url}/blob/{}", digest.to_id()),
     })
 }
 

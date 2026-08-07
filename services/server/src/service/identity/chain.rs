@@ -17,7 +17,6 @@ use crate::service::feeds::repository::EventWithContentRow;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, Identity, PublicKey};
 use prost::Message;
-use sha2::{Digest, Sha256};
 
 struct DecodedIdentityRow {
     sequence: u64,
@@ -113,9 +112,5 @@ pub fn validated_chain_head<'a>(
 /// True when `identity` is the hex sha256 of the encoded `Identity`
 /// content (the canonical genesis-identifier convention).
 fn identity_matches_content(identity: &str, content: &Identity) -> bool {
-    let mut h = Sha256::new();
-    h.update(content.encode_to_vec());
-    let hex: String =
-        h.finalize().iter().map(|b| format!("{:02x}", b)).collect();
-    hex == identity
+    content.derive_hex_key() == identity
 }

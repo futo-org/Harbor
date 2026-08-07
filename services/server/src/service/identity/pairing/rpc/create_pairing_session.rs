@@ -8,7 +8,6 @@ use crate::service::proto as Proto;
 use crate::service::proto::{
     CreatePairingSessionRequest, CreatePairingSessionResponse,
 };
-use crate::util;
 use chrono::Utc;
 use prost::Message;
 use sea_orm::DatabaseConnection;
@@ -42,7 +41,7 @@ pub async fn handle(
         );
 
     let issuer_identity = initial_session.issuer_identity.clone();
-    let pairing_session_signature = util::hex::encode(&msg.signature);
+    let pairing_session_signature = hex::encode(&msg.signature);
 
     let is_rotation_key = id_repo::Query::is_rotation_key(
         db,

@@ -1,8 +1,20 @@
 use std::collections::HashSet;
 
+use prost::Message;
+use sha2::{Digest, Sha256};
+
 use crate::models::protos_v2::{Identity, PublicKey};
 
 impl Identity {
+    /// Derive an identity key hex string from this identity content.
+    /// Keep in mind that identity documents in a chain all belong to the identity
+    /// key from the genesis document.
+    pub fn derive_hex_key(&self) -> String {
+        let bytes = self.encode_to_vec();
+        let digest = Sha256::digest(bytes);
+        hex::encode(digest.as_slice())
+    }
+
     /// Canonical deduplicated key ordering: rotation_keys and signing_keys,
     /// first occurrence wins. Vector clock positions in any event that
     /// references this identity doc align to this ordering.

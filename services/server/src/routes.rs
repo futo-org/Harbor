@@ -13,7 +13,6 @@ use crate::grpc::reflection_ui::reflection_ui;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::proto::ContentDigest;
-use crate::util;
 use crate::util::{http_client, scraper};
 
 #[derive(Clone)]
@@ -51,7 +50,8 @@ async fn get_blob(
     State(state): State<AppState>,
     Path(digest_id): Path<String>,
 ) -> Result<Response, StatusCode> {
-    let digest = parse_digest_id(&digest_id).ok_or(StatusCode::BAD_REQUEST)?;
+    let digest =
+        ContentDigest::from_id(&digest_id).ok_or(StatusCode::BAD_REQUEST)?;
 
     let row = ContentRepository::Query::find_blob_by_digest(
         &state.db,
@@ -121,11 +121,4 @@ async fn image_proxy(
         body,
     )
         .into_response())
-}
-
-fn parse_digest_id(id: &str) -> Option<ContentDigest> {
-    let (type_str, hex_str) = id.split_once('_')?;
-    let r#type = type_str.parse::<i32>().ok()?;
-    let value = util::hex::decode(hex_str).ok()?;
-    Some(ContentDigest { r#type, value })
 }

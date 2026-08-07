@@ -1,20 +1,17 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
-use crate::{
-    service::{
-        content::content_repository as ContentRepository,
-        content::repository::Mutation as ContentChildRepository,
-        context::ServiceContext,
-        events::repository as EventsRepository,
-        identity::repository::Query as IdentityRepository,
-        identity::service::authorize_event_signer,
-        proto::{
-            Content, Event, EventBundle, PublicKey, PutEventError,
-            PutEventsRequest, PutEventsResponse,
-        },
+use crate::service::{
+    content::content_repository as ContentRepository,
+    content::repository::Mutation as ContentChildRepository,
+    context::ServiceContext,
+    events::repository as EventsRepository,
+    identity::repository::Query as IdentityRepository,
+    identity::service::authorize_event_signer,
+    proto::{
+        Content, Event, EventBundle, PublicKey, PutEventError,
+        PutEventsRequest, PutEventsResponse,
     },
-    util,
 };
 use ::entity::{content_model as ContentModel, event_model as EventModel};
 use common_kafka::FutureRecord;
@@ -162,12 +159,9 @@ async fn process_event(
     let content = if let (Some(serialized_content), Some(digest)) =
         (&event_bundle.serialized_content, &content_digest)
     {
-        util::digest::verify_content_digest(
-            digest.r#type,
-            &digest.value,
-            &serialized_content.content_bytes,
-        )
-        .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        digest
+            .verify_against(&serialized_content.content_bytes)
+            .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
         let content = Content::decode(
             serialized_content.content_bytes.as_slice(),

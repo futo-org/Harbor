@@ -73,8 +73,11 @@ async fn csam_match_purges_blob_and_publishes_report() {
     let (photodna_url, photodna_hits) = start_mock_photodna().await;
 
     let ready = Arc::new(AtomicBool::new(false));
-    let mut child =
-        spawn_moderation_service(&photodna_url, &hex(&mod_key.to_bytes()), &mod_identity);
+    let mut child = spawn_moderation_service(
+        &photodna_url,
+        &hex::encode(mod_key.to_bytes()),
+        &mod_identity,
+    );
     tee_stderr(&mut child, ready.clone());
 
     // Wait for sync, then let Kafka assign partitions: the consumer reads
@@ -356,7 +359,7 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = hex(&sha256(&content.encode_to_vec()));
+    let identity = content.derive_hex_key();
     let bundle = signed_bundle(
         &identity,
         key,
@@ -472,8 +475,4 @@ fn sha256_digest(bytes: &[u8]) -> ContentDigest {
 
 fn sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

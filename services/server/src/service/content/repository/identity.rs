@@ -1,6 +1,5 @@
 use super::{ChildContext, map_db_err};
 use crate::service::proto::{Identity, PublicKey, RevocationBound};
-use crate::util;
 use ::entity::content_identity_model as ContentIdentityModel;
 use prost::Message;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
@@ -10,7 +9,7 @@ use tonic::Status;
 fn key_to_json(key: &PublicKey) -> serde_json::Value {
     json!({
         "key_type": key.key_type,
-        "key": util::hex::encode(&key.key),
+        "key": hex::encode(&key.key),
     })
 }
 
@@ -30,8 +29,8 @@ fn revocation_bounds_to_json(bounds: &[RevocationBound]) -> serde_json::Value {
                         .iter()
                         .map(|t| json!({
                             "collection": t.collection,
-                            "signature": util::hex::encode(&t.signature),
-                            "root": util::hex::encode(&t.root),
+                            "signature": hex::encode(&t.signature),
+                            "root": hex::encode(&t.root),
                             "leaf_count": t.leaf_count,
                         }))
                         .collect::<Vec<_>>(),

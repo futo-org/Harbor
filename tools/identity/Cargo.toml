@@ -22,5 +22,5 @@ sha2.workspace = true
 getrandom.workspace = true
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
-hex = "0.4"
+hex.workspace = true
 tokio = { workspace = true, features = ["rt", "net", "time"] }

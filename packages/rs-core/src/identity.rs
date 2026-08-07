@@ -5,8 +5,6 @@ use polycentric_common::{
         protos_v2::{ContentDigest, EventProofTarget, Identity, PublicKey, VectorClock},
     },
 };
-use prost::Message;
-use sha2::{Digest, Sha256};
 
 use crate::store::event_store::EventStore;
 use crate::vector_clock;
@@ -179,15 +177,5 @@ impl<'a> ValidatedChain<'a> {
 /// True when `identity` is the hex sha256 of the encoded `Identity`
 /// message bytes (not the outer `Content` wrapper).
 fn identity_matches_content(identity: &str, content: &Identity) -> bool {
-    sha256_hex(&content.encode_to_vec()) == identity
-}
-
-fn sha256_hex(bytes: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    hasher
-        .finalize()
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect()
+    content.derive_hex_key() == identity
 }

@@ -3,9 +3,8 @@ use polycentric_common::{
     models::{
         Serializable, collections,
         protos_v2::{
-            self, Content, ContentDigest, ContentDigestType, Event, EventBundle, EventMetadata,
-            EventProof, Identity, PublicKey, SerializedContent, SignedEvent, VectorClock,
-            content::ContentBody,
+            self, Content, ContentDigest, Event, EventBundle, EventMetadata, EventProof, Identity,
+            PublicKey, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
         },
     },
 };
@@ -20,18 +19,7 @@ use std::collections::HashSet;
 use std::sync::Mutex;
 
 fn hex_short(bytes: &[u8]) -> String {
-    bytes.iter().take(4).map(|b| format!("{:02x}", b)).collect()
-}
-
-/// True when `content_bytes` actually hash to `digest`. Only SHA-256 digests
-/// are supported; any other type fails verification (can't verify ⇒ reject).
-fn content_matches_digest(digest: &ContentDigest, content_bytes: &[u8]) -> bool {
-    use sha2::{Digest, Sha256};
-
-    if digest.r#type != ContentDigestType::Sha256 as i32 {
-        return false;
-    }
-    Sha256::digest(content_bytes).as_slice() == digest.value.as_slice()
+    hex::encode(&bytes[..bytes.len().min(4)])
 }
 
 #[derive(Default)]
@@ -71,8 +59,8 @@ impl PolycentricClient {
         digest: &ContentDigest,
         content_bytes: Vec<u8>,
     ) -> Result<(), CoreError> {
-        if !content_matches_digest(digest, &content_bytes) {
-            let digest_hex: String = digest.value.iter().map(|b| format!("{b:02x}")).collect();
+        if digest.verify_against(&content_bytes).is_err() {
+            let digest_hex: String = hex::encode(digest.value.as_slice());
             return Err(CoreError::InvalidEvent(format!(
                 "content does not match digest {digest_hex}"
             )));
@@ -568,11 +556,10 @@ mod tests {
     }
 
     fn sha256_digest(bytes: &[u8]) -> ContentDigest {
-        let mut hasher = Sha256::new();
-        hasher.update(bytes);
+        let digest = Sha256::digest(bytes).to_vec();
         ContentDigest {
             r#type: ContentDigestType::Sha256 as i32,
-            value: hasher.finalize().to_vec(),
+            value: digest,
         }
     }
 
@@ -592,20 +579,6 @@ mod tests {
         let bytes = content.encode_to_vec();
         let digest = sha256_digest(&bytes);
         (bytes, digest)
-    }
-
-    /// Identity string = lowercase hex of SHA256 over the encoded
-    /// `Identity` message (NOT the outer `Content` wrapper). Matches the
-    /// production convention enforced by `IdentityDirectory::genesis`.
-    fn identity_string_of(identity: &Identity) -> String {
-        let bytes = identity.encode_to_vec();
-        let mut hasher = Sha256::new();
-        hasher.update(&bytes);
-        hasher
-            .finalize()
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect()
     }
 
     fn sign_event(
@@ -688,7 +661,7 @@ mod tests {
         };
         let id_string = identity
             .map(|s| s.to_string())
-            .unwrap_or_else(|| identity_string_of(&provisional_identity));
+            .unwrap_or_else(|| provisional_identity.derive_hex_key());
 
         // identity_sequence: 1 for genesis (self-reference); N-1 for rotations.
         let identity_sequence = if sequence == 1 { 1 } else { sequence - 1 };
@@ -849,12 +822,13 @@ mod tests {
 
         let (identity_bytes, identity_digest) =
             identity_content(vec![a.public.clone()], vec![], Vec::new());
-        let identity_str = identity_string_of(&Identity {
+        let identity_str = Identity {
             rotation_keys: vec![a.public.clone()],
             signing_keys: vec![],
             revocation_bounds: Vec::new(),
             servers: None,
-        });
+        }
+        .derive_hex_key();
         let genesis = sign_event(
             &a,
             &identity_str,

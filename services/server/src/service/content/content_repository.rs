@@ -2,7 +2,7 @@ use crate::service::proto::Blob;
 use ::entity::{
     content_blob_model as ContentBlobModel, content_model as ContentModel,
 };
-use polycentric_common::models::protos_v2::ContentDigest;
+use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::Expr;
@@ -97,20 +97,22 @@ impl Mutation {
         blob: &Blob,
         synced_at: OffsetDateTime,
     ) -> Result<(), DbErr> {
+        // Digest for the actual blob data
         let digest = match &blob.digest {
             Some(d) => d,
             None => return Ok(()),
         };
 
+        // Digest for the blob object metadata
         let blob_bytes = blob.encode_to_vec();
-        let content_digest_bytes = Sha256::digest(&blob_bytes).to_vec();
+        let blob_bytes_digest = Sha256::digest(&blob_bytes).to_vec();
 
         let content_row = Self::add_content(
             db,
             ContentModel::ActiveModel {
                 id: NotSet,
-                digest_type: Set(digest.r#type),
-                digest_bytes: Set(content_digest_bytes),
+                digest_type: Set(ContentDigestType::Sha256 as i32),
+                digest_bytes: Set(blob_bytes_digest),
                 serialized_bytes: Set(blob_bytes),
                 synced_at: Set(synced_at),
             },
