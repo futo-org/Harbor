@@ -5,11 +5,11 @@ use integration_tests::{
     generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
     make_revocation_bound, make_verification_claim_bundle, node_hash,
     proto::{event_sync_service_client::EventSyncServiceClient, *},
-    public_key_of, random_string, search_service, *,
+    public_key_of, random_string, repeated_string, search_service, *,
 };
 use prost::Message as ProstMessage;
-use proto::SearchPostsRequest;
 use proto::content::ContentBody;
+use proto::{SearchPostsRequest, SortUsersBy};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
@@ -1615,6 +1615,71 @@ async fn search_users_match_alias() {
             page_params: None,
         },
         vec![profile_update],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn search_users_order_by_rank() {
+    let query = random_string();
+
+    let mut expected = Vec::new();
+    for n in 1..=3 {
+        let mut client = TestClient::new().await;
+        let description = repeated_string(n, &query, " ");
+        let profile_update = ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: Some(description),
+            alias: None,
+        };
+        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.submit_events().await;
+        expected.push(profile_update);
+    }
+    // Reverse the results as the more hits we get, the higher the rank should
+    // be.
+    //expected.reverse();
+
+    expect_searched_users(
+        SearchUsersRequest {
+            query,
+            sort_by: None,
+            page_params: None,
+        },
+        expected,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn search_users_order_by_alpha() {
+    let query = random_string();
+
+    let mut expected = Vec::new();
+    for (n, name) in ["A", "B", "C"].into_iter().enumerate() {
+        let mut client = TestClient::new().await;
+        let description = repeated_string(n + 1, &query, " ");
+        let profile_update = ProfileUpdate {
+            name: Some(name.to_owned()),
+            avatar: None,
+            banner: None,
+            description: Some(description),
+            alias: None,
+        };
+        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.submit_events().await;
+        expected.push(profile_update);
+    }
+
+    expect_searched_users(
+        SearchUsersRequest {
+            query,
+            sort_by: Some(SortUsersBy::Alpha as _),
+            page_params: None,
+        },
+        expected,
     )
     .await;
 }

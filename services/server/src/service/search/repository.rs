@@ -11,7 +11,7 @@ use sea_orm::{
     QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
     TryGetError, TryGetableMany,
 };
-use std::collections::HashMap;
+use std::collections::HashSet;
 use tonic::Status;
 
 // This type only exists to work around trying to get additional columns (e.g.
@@ -188,24 +188,24 @@ impl Query {
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
-        let rows: Vec<SearchUsersEvent> =
+        let mut rows: Vec<SearchUsersEvent> =
             query.into_tuple().all(db).await.map_err(|err| {
                 log::warn!("failed to search for users: {err}");
                 Status::internal("internal server error")
             })?;
 
         // Keep the highest sequence row per identity.
-        let mut seen: HashMap<String, SearchUsersEvent> = HashMap::new();
-        for row in rows {
-            if let Some(current) = seen.get_mut(&row.event.identity) {
-                if row.event.sequence > current.event.sequence {
-                    *current = row;
-                }
+        let mut seen = HashSet::new();
+        rows.extract_if(.., |row| {
+            if seen.contains(&row.event.identity) {
+                true // Remove
             } else {
-                seen.insert(row.event.identity.clone(), row);
+                seen.insert(row.event.identity.clone());
+                false
             }
-        }
-        Ok(seen.into_values().collect())
+        })
+        .for_each(drop);
+        Ok(rows)
     }
 
     pub(super) async fn search_posts<C: ConnectionTrait>(
@@ -322,24 +322,24 @@ impl Query {
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
-        let rows: Vec<SearchPostsEvent> =
+        let mut rows: Vec<SearchPostsEvent> =
             query.into_tuple().all(db).await.map_err(|err| {
                 log::warn!("failed to search for users: {err}");
                 Status::internal("internal server error")
             })?;
 
         // Keep the highest sequence row per identity.
-        let mut seen: HashMap<String, SearchPostsEvent> = HashMap::new();
-        for row in rows {
-            if let Some(current) = seen.get_mut(&row.event.identity) {
-                if row.event.sequence > current.event.sequence {
-                    *current = row;
-                }
+        let mut seen = HashSet::new();
+        rows.extract_if(.., |row| {
+            if seen.contains(&row.event.identity) {
+                true // Remove
             } else {
-                seen.insert(row.event.identity.clone(), row);
+                seen.insert(row.event.identity.clone());
+                false
             }
-        }
-        Ok(seen.into_values().collect())
+        })
+        .for_each(drop);
+        Ok(rows)
     }
 }
 
