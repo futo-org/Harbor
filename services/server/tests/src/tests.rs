@@ -1,10 +1,9 @@
 use ed25519_dalek::SigningKey;
 use integration_tests::{
     COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
-    bundle_signature, connect_event_sync, create_profile,
-    derive_identity_string, generate_signing_key, leaf_hash,
-    make_identity_bundle, make_post_bundle, make_revocation_bound,
-    make_verification_claim_bundle, node_hash,
+    bundle_signature, connect_event_sync, derive_identity_string,
+    generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
+    make_revocation_bound, make_verification_claim_bundle, node_hash,
     proto::{event_sync_service_client::EventSyncServiceClient, *},
     public_key_of, random_string, search_service, *,
 };
@@ -1544,31 +1543,44 @@ async fn thread_omit_labels_not_matching_keeps_post() {
 
 #[tokio::test]
 async fn search_users_match_profile_name() {
+    let mut client = TestClient::new().await;
+
     let profile_name = random_string();
-    create_profile(profile_name.clone(), None, None).await;
+    let profile_update = ProfileUpdate {
+        name: Some(profile_name.clone()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
 
     expect_searched_users(
         SearchUsersRequest {
-            query: profile_name.clone(),
+            query: profile_name,
             sort_by: None,
             page_params: None,
         },
-        vec![ProfileUpdate {
-            name: Some(profile_name),
-            avatar: None,
-            banner: None,
-            description: None,
-            alias: None,
-        }],
+        vec![profile_update],
     )
     .await;
 }
 
 #[tokio::test]
 async fn search_users_match_description() {
-    let profile_name = random_string();
+    let mut client = TestClient::new().await;
+
     let description = random_string();
-    create_profile(profile_name.clone(), Some(description.clone()), None).await;
+    let profile_update = ProfileUpdate {
+        name: Some(random_string()),
+        avatar: None,
+        banner: None,
+        description: Some(description.clone()),
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
 
     expect_searched_users(
         SearchUsersRequest {
@@ -1576,36 +1588,33 @@ async fn search_users_match_description() {
             sort_by: None,
             page_params: None,
         },
-        vec![ProfileUpdate {
-            name: Some(profile_name),
-            avatar: None,
-            banner: None,
-            description: Some(description),
-            alias: None,
-        }],
+        vec![profile_update],
     )
     .await;
 }
 
 #[tokio::test]
 async fn search_users_match_alias() {
-    let profile_name = random_string();
+    let mut client = TestClient::new().await;
+
     let alias = random_string();
-    create_profile(profile_name.clone(), None, Some(alias.clone())).await;
+    let profile_update = ProfileUpdate {
+        name: Some(random_string()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: Some(alias.clone()),
+    };
+    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
 
     expect_searched_users(
         SearchUsersRequest {
-            query: alias.clone(),
+            query: alias,
             sort_by: None,
             page_params: None,
         },
-        vec![ProfileUpdate {
-            name: Some(profile_name),
-            avatar: None,
-            banner: None,
-            description: None,
-            alias: Some(alias),
-        }],
+        vec![profile_update],
     )
     .await;
 }
@@ -1655,31 +1664,11 @@ async fn search_posts_no_match() {
 
 #[tokio::test]
 async fn search_posts_match_text() {
-    let mut client = connect_event_sync().await;
+    let mut client = TestClient::new().await;
 
-    let profile_name = random_string();
     let post_text = random_string();
-    let (rotation_key, identity) =
-        create_profile(profile_name.clone(), None, None).await;
-    let identity = derive_identity_string(&identity);
-
-    let post = make_post_bundle(
-        &identity,
-        &rotation_key,
-        1,
-        1,
-        vec![1],
-        vec![],
-        &post_text,
-        DEFAULT_CREATED_AT,
-    );
-
-    client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![post],
-        })
-        .await
-        .expect("put_events failed");
+    client.post_text(&post_text, DEFAULT_CREATED_AT);
+    client.submit_events().await;
 
     expect_searched_posts(
         SearchPostsRequest {
