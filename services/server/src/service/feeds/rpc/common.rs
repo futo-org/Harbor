@@ -23,6 +23,7 @@ use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
 use crate::service::stats::service::{assemble_bundles, gather_stats_for};
+use entity::content_model;
 use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
@@ -326,11 +327,19 @@ pub enum Referenced {
 }
 
 /// Extract the referenced target key from a feed row, if any.
-pub fn referenced_target(row: &EventWithContentRow) -> Option<Referenced> {
-    let (_event, content) = row;
-    let Some(content) = content else {
-        return None;
-    };
+pub fn referenced_target(
+    (_, content): &EventWithContentRow,
+) -> Option<Referenced> {
+    if let Some(content) = content.as_ref() {
+        referenced_target2(content)
+    } else {
+        None
+    }
+}
+
+pub fn referenced_target2(
+    content: &content_model::Model,
+) -> Option<Referenced> {
     let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
     else {
         return None;

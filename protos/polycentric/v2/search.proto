@@ -43,7 +43,7 @@ enum SortPostsBy {
 
 message SearchUsersResponse {
   // Relevant search results.
-  repeated EventBundle event_bundles = 1;
+  repeated SearchResult results = 1;
   optional PageInfo page_info = 2;
   // Relevant events for the events in the search results.
   repeated EventHint event_hints = 3;
@@ -51,10 +51,16 @@ message SearchUsersResponse {
 
 message SearchPostsResponse {
   // Relevant search results.
-  repeated EventBundle event_bundles = 1;
+  repeated SearchResult results = 1;
   optional PageInfo page_info = 2;
   // Relevant events for the events in the search results.
   repeated EventHint event_hints = 3;
+}
+
+message SearchResult {
+  EventBundle event_bundle = 1;
+  // Search rank, higher means more relevant.
+  float rank = 2;
 }
 
 service SearchService {
