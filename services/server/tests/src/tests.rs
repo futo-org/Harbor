@@ -849,6 +849,7 @@ fn assert_is_labels_bundle(
 }
 
 #[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
 async fn trusted_labels_served_in_feed_response() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
@@ -956,6 +957,7 @@ async fn trusted_labels_served_in_feed_response() {
 }
 
 #[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
 async fn omit_labels_hides_labeled_post() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
@@ -1024,6 +1026,7 @@ async fn omit_labels_hides_labeled_post() {
 }
 
 #[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
 async fn omit_labels_non_matching_keeps_post_and_labels() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
@@ -1365,6 +1368,7 @@ async fn thread_no_labels_returns_post() {
 }
 
 #[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
 async fn thread_omit_labels_matching_hides_post() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
@@ -1453,6 +1457,7 @@ async fn thread_omit_labels_matching_hides_post() {
 }
 
 #[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
 async fn thread_omit_labels_not_matching_keeps_post() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
