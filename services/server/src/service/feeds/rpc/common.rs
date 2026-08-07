@@ -17,7 +17,6 @@ use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
 };
-
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
@@ -304,7 +303,7 @@ fn collect_referenced_keys(
 /// Convert proto `EventKey`s into [`TargetEventKey`]s (the shared
 /// comparable EventKey shape), deduplicated into a set for the
 /// membership tests that split the combined referenced-post result.
-fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
+pub fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
     keys.iter()
         .filter_map(|key| {
             let signed_by = key.signed_by.as_ref()?;
@@ -321,13 +320,13 @@ fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
 
 /// Whether a row's content references another event as a quote or repost.
 #[derive(Debug)]
-enum Referenced {
+pub enum Referenced {
     Quote(TargetEventKey),
     Repost(TargetEventKey),
 }
 
 /// Extract the referenced target key from a feed row, if any.
-fn referenced_target(row: &EventWithContentRow) -> Option<Referenced> {
+pub fn referenced_target(row: &EventWithContentRow) -> Option<Referenced> {
     let (_event, content) = row;
     let Some(content) = content else {
         return None;

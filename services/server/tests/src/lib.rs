@@ -3,13 +3,15 @@ pub mod proto;
 use ed25519_dalek::{Signer, SigningKey};
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
+use proto::search_service_client::SearchServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
     EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    PublicKey, RevocationBound, SerializedContent,
-    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
-    VerificationSchema, content,
+    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound,
+    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
+    VerificationClaim, VerificationSchema, content,
 };
+use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
@@ -25,6 +27,7 @@ pub const HOUR: u64 = 3_600_000;
 
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
+pub const COLLECTION_PROFILE_UPDATE: i32 = 3;
 pub const COLLECTION_VERIFICATIONS: i32 = 8;
 pub const COLLECTION_LABELS: i32 = 7;
 
@@ -38,6 +41,10 @@ pub fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
+pub fn random_string() -> String {
+    SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30)
+}
+
 pub async fn connect_event_sync()
 -> EventSyncServiceClient<tonic::transport::Channel> {
     EventSyncServiceClient::connect(grpc_addr())
@@ -47,6 +54,13 @@ pub async fn connect_event_sync()
 
 pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
     FeedsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
+{
+    SearchServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -142,6 +156,37 @@ pub fn make_identity_bundle(
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
         COLLECTION_IDENTITY,
+        identity,
+        signing_key,
+        sequence,
+        identity_sequence,
+        VectorClock {
+            sequence: vector_clock,
+        },
+        vec![],
+        vec![],
+        digest,
+        created_at,
+    );
+    bundle(sign(signing_key, event), content_bytes)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn make_profile_update_bundle(
+    identity: &str,
+    signing_key: &SigningKey,
+    sequence: u64,
+    identity_sequence: u64,
+    vector_clock: Vec<u64>,
+    update: ProfileUpdate,
+    created_at: u64,
+) -> EventBundle {
+    let content = Content {
+        content_body: Some(content::ContentBody::ProfileUpdate(update)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = make_event(
+        COLLECTION_PROFILE_UPDATE,
         identity,
         signing_key,
         sequence,
@@ -363,4 +408,73 @@ pub fn make_labels_bundle(
         created_at,
     );
     bundle(sign(signing_key, event), content_bytes)
+}
+
+/// Create a profile by sending two profile updates.
+pub async fn create_profile(
+    name: String,
+    description: Option<String>,
+    alias: Option<String>,
+) -> (SigningKey, Identity) {
+    let mut client = connect_event_sync().await;
+
+    let rotation_key = generate_signing_key();
+    let profile_name = String::from("Bob");
+
+    let initial = Identity {
+        rotation_keys: vec![public_key_of(&rotation_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    };
+    let identity = derive_identity_string(&initial);
+
+    let genesis = make_identity_bundle(
+        &identity,
+        &rotation_key,
+        1,
+        1,
+        vec![1],
+        initial.clone(),
+        DEFAULT_CREATED_AT,
+    );
+    let empty_profile = make_profile_update_bundle(
+        &identity,
+        &rotation_key,
+        1,
+        2,
+        vec![1],
+        ProfileUpdate {
+            name: Some(profile_name.clone()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    let full_profile = make_profile_update_bundle(
+        &identity,
+        &rotation_key,
+        2,
+        3,
+        vec![1],
+        ProfileUpdate {
+            name: Some(name),
+            avatar: None,
+            banner: None,
+            description,
+            alias,
+        },
+        DEFAULT_CREATED_AT,
+    );
+
+    client
+        .put_events(PutEventsRequest {
+            event_bundles: vec![genesis, empty_profile, full_profile],
+        })
+        .await
+        .expect("put_events failed");
+
+    (rotation_key, initial)
 }

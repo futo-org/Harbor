@@ -1,0 +1,65 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+import "polycentric/v2/events.proto";
+
+message SearchUsersRequest {
+  string query = 1;
+  optional SortUsersBy sort_by = 2;
+  optional PageParams page_params = 3;
+}
+
+enum SortUsersBy {
+  // Default sorting by relevancy.
+  SORT_USERS_BY_DEFAULT = 0;
+  // Alphabetic order of profile name.
+  SORT_USERS_BY_ALPHA = 1;
+  /* TODO: determine how to determine popularity.
+  SORT_USERS_BY_POPULAR = 2;
+  */
+}
+
+message SearchPostsRequest {
+  string query = 1;
+  optional SortPostsBy sort_by = 2;
+  optional PageParams page_params = 3;
+  // Label values for which the requester does not want to see content.
+  repeated string omit_labels = 4;
+}
+
+enum SortPostsBy {
+  // Default sorting by relevancy.
+  SORT_POSTS_BY_DEFAULT = 0;
+  /* TODO: determine what metric to use for the top post.
+  // Top post first.
+  SORT_POSTS_BY_TOP = 1;
+  */
+  /// Latests post first.
+  SORT_POSTS_BY_LATEST = 2;
+}
+
+// TODO: add additional data for why events are returned.
+
+message SearchUsersResponse {
+  // Relevant search results.
+  repeated EventBundle event_bundles = 1;
+  optional PageInfo page_info = 2;
+  // Relevant events for the events in the search results.
+  repeated EventHint event_hints = 3;
+}
+
+message SearchPostsResponse {
+  // Relevant search results.
+  repeated EventBundle event_bundles = 1;
+  optional PageInfo page_info = 2;
+  // Relevant events for the events in the search results.
+  repeated EventHint event_hints = 3;
+}
+
+service SearchService {
+  // Search users.
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  // Search posts.
+  rpc SearchPosts(SearchPostsRequest) returns (SearchPostsResponse);
+}

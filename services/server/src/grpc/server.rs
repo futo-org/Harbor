@@ -49,6 +49,8 @@ pub fn build_grpc_router(
         service::identity::rpc::build_identity_service(ctx.clone());
     let server_info_service =
         service::server::rpc::build_server_service(server_config);
+    let search_service =
+        service::search::rpc::build_search_service(ctx.clone());
     let verifications_service =
         service::verifications::rpc::build_verifications_service(ctx.clone());
     let graph_service = service::graph::rpc::build_graph_service(ctx.clone());
@@ -67,6 +69,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(pairing_service))
         .add_service(grpc_web.layer(identity_service))
         .add_service(grpc_web.layer(server_info_service))
+        .add_service(grpc_web.layer(search_service))
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))
         .add_service(grpc_web.layer(profile_service));

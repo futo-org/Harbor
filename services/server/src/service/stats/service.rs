@@ -21,6 +21,16 @@ pub struct EventStats {
     pub reaction_tallies: HashMap<TargetEventKey, Vec<ReactionTally>>,
 }
 
+impl EventStats {
+    pub fn none() -> EventStats {
+        EventStats {
+            reply_counts: HashMap::new(),
+            reaction_summaries: HashMap::new(),
+            reaction_tallies: HashMap::new(),
+        }
+    }
+}
+
 /// Gather reply counts, reaction summaries, and emoji tallies for `display_keys`.
 pub async fn gather_stats_for(
     db: &DbConn,
