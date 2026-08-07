@@ -15,7 +15,7 @@ use crate::service::proto::{
 };
 use prost::Message;
 use sea_orm::ConnectionTrait;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tonic::Status;
 
 /// Collect every identity referenced by the rows: each event's author
@@ -103,6 +103,26 @@ pub async fn list_identity_events(
             .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
+}
+
+/// List all the identity events required to validate the signatures
+/// of events provided in `rows`, excluding any in `already_hinted`.
+pub async fn list_signer_identity_events(
+    ctx: &ServiceContext,
+    rows: &[EventWithContentRow],
+    already_hinted: &[String],
+) -> Result<Vec<EventWithContentRow>, Status> {
+    let mut hinted_identities: HashSet<&str> =
+        already_hinted.iter().map(String::as_str).collect();
+
+    let signers: Vec<String> = rows
+        .iter()
+        .map(|(event, _)| event.identity.as_str())
+        .filter(|identity| hinted_identities.insert(identity))
+        .map(str::to_owned)
+        .collect();
+
+    list_identity_events(ctx, signers).await
 }
 
 /// Fetch the latest profile event (display name, avatar, banner)

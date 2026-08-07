@@ -956,6 +956,82 @@ async fn trusted_labels_served_in_feed_response() {
 }
 
 #[tokio::test]
+async fn labeler_identity_served_with_feed_response() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let author_key = generate_signing_key();
+    let author_identity = derive_identity_string(&Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    });
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "post labeled by a stranger",
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        get_post_event_key(&author_identity, &author_key),
+        vec!["violence".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    let resp = feed
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author_identity.clone(),
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+
+    let keys: Vec<EventKey> = resp
+        .event_hints
+        .iter()
+        .filter_map(|hint| {
+            let signed = hint.event_bundle.as_ref()?.signed_event.as_ref()?;
+            Event::decode(signed.event_bytes.as_slice()).ok()?.key
+        })
+        .collect();
+
+    let labeler_identity_served = keys.iter().any(|key| {
+        key.collection == COLLECTION_IDENTITY && key.identity == mod_identity
+    });
+
+    assert!(
+        labeler_identity_served,
+        "labeler identity chain should be hinted so the client can \
+         validate the Labels event",
+    );
+}
+
+#[tokio::test]
 #[ignore] // Currently failing, to be fixed in #201.
 async fn omit_labels_hides_labeled_post() {
     let mut event = connect_event_sync().await;

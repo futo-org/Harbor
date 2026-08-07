@@ -15,7 +15,7 @@ use crate::service::feeds::util::{
 };
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, rows_to_bundles,
+    list_profile_events, list_signer_identity_events, rows_to_bundles,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
@@ -208,7 +208,7 @@ pub async fn hydrate(
 
     let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
     let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities);
+    let profile_events_fut = list_profile_events(ctx, identities.clone());
     let referenced_fut = async {
         let all_keys: Vec<EventKey> =
             quote_keys.iter().chain(&repost_keys).cloned().collect();
@@ -234,7 +234,7 @@ pub async fn hydrate(
 
     let (
         deletes_by_target,
-        identity_events,
+        mut identity_events,
         profile_events,
         referenced,
         label_events,
@@ -247,6 +247,10 @@ pub async fn hydrate(
         labels_fut,
         stats_fut,
     )?;
+
+    identity_events.extend(
+        list_signer_identity_events(ctx, &label_events, &identities).await?,
+    );
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
