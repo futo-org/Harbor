@@ -6,7 +6,7 @@
 //! cache never queries the DB for identity content on its own.
 
 use polycentric_common::models::protos_v2::Identity;
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::{ConnectionTrait, DbErr};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -37,9 +37,9 @@ impl ProofCache {
     }
 
     /// Canonical signatures for `(identity, collection)`. Cached after the first hit.
-    pub async fn canonical(
+    pub async fn canonical<C: ConnectionTrait>(
         &self,
-        db: &DatabaseConnection,
+        db: &C,
         identity: &str,
         collection: i32,
     ) -> Result<Vec<Vec<u8>>, DbErr> {

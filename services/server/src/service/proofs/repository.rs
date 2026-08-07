@@ -7,8 +7,8 @@ use sea_orm::*;
 /// Canonically-ordered signatures in `(identity, collection)`. Delegates
 /// to [`polycentric_common::merkle::canonical_signatures`] so client and
 /// server agree on the ordering.
-pub async fn canonical_signatures(
-    db: &DbConn,
+pub async fn canonical_signatures<C: ConnectionTrait>(
+    db: &C,
     identity: &str,
     collection: i32,
 ) -> Result<Vec<Vec<u8>>, DbErr> {
