@@ -116,84 +116,75 @@ impl Query {
             ));
 
         match cursor_filter {
-            CursorFilter::Forward(cur) => {
-                match cur {
-                    Cursor::Start => {
-                        // TODO: use order by column here.
-                        QueryOrder::query(&mut query)
-                            .order_by_expr(
-                                Expr::cust("search_rank"),
-                                Order::Asc,
-                            )
-                            .order_by_expr(Expr::cust("events.id"), Order::Asc);
-                    }
-                    Cursor::Mid(marker) => {
-                        if !marker.sorted_by.matches(sort_by) {
-                            return Err(Status::internal(
-                                "wrong combination of sort_by and pagination parameters",
-                            ));
-                        }
-                        query = match marker {
-                            Marker {
-                                sorted_by: SortedUsersBy::Rank(rank),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(search_rank, events.id) >= ($2, $3)",
-                                [Value::from(rank), Value::from(id)],
-                            )),
-                            Marker {
-                                sorted_by: SortedUsersBy::Name(name),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(name, events.id) >= ($2, $3)",
-                                [Value::from(name), Value::from(id)],
-                            )),
-                        };
-                    }
-                    Cursor::End => return Ok(Vec::new()),
+            CursorFilter::Forward(cur) => match cur {
+                Cursor::Start => {
+                    QueryOrder::query(&mut query)
+                        .order_by_expr(
+                            Expr::cust(sort_users_by_column(sort_by)),
+                            Order::Asc,
+                        )
+                        .order_by_expr(Expr::cust("events.id"), Order::Asc);
                 }
-            }
-            CursorFilter::Backward(cur) => {
-                match cur {
-                    Cursor::Start => return Ok(Vec::new()),
-                    Cursor::Mid(marker) => {
-                        if !marker.sorted_by.matches(sort_by) {
-                            return Err(Status::internal(
-                                "wrong combination of sort_by and pagination parameters",
-                            ));
-                        }
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
+                    query = match marker {
+                        Marker {
+                            sorted_by: SortedUsersBy::Rank(rank),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(search_rank, events.id) >= ($2, $3)",
+                            [Value::from(rank), Value::from(id)],
+                        )),
+                        Marker {
+                            sorted_by: SortedUsersBy::Name(name),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(name, events.id) >= ($2, $3)",
+                            [Value::from(name), Value::from(id)],
+                        )),
+                    };
+                }
+                Cursor::End => return Ok(Vec::new()),
+            },
+            CursorFilter::Backward(cur) => match cur {
+                Cursor::Start => return Ok(Vec::new()),
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
 
-                        query = match marker {
-                            Marker {
-                                sorted_by: SortedUsersBy::Rank(rank),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(search_rank, events.id) <= ($2, $3)",
-                                [Value::from(rank), Value::from(id)],
-                            )),
-                            Marker {
-                                sorted_by: SortedUsersBy::Name(name),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(name, events.id) <= ($2, $3)",
-                                [Value::from(name), Value::from(id)],
-                            )),
-                        };
-                    }
-                    Cursor::End => {
-                        // TODO: use order by column here.
-                        QueryOrder::query(&mut query)
-                            .order_by_expr(
-                                Expr::cust("search_rank"),
-                                Order::Desc,
-                            )
-                            .order_by_expr(
-                                Expr::cust("events.id"),
-                                Order::Desc,
-                            );
-                    }
+                    query = match marker {
+                        Marker {
+                            sorted_by: SortedUsersBy::Rank(rank),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(search_rank, events.id) <= ($2, $3)",
+                            [Value::from(rank), Value::from(id)],
+                        )),
+                        Marker {
+                            sorted_by: SortedUsersBy::Name(name),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(name, events.id) <= ($2, $3)",
+                            [Value::from(name), Value::from(id)],
+                        )),
+                    };
                 }
-            }
+                Cursor::End => {
+                    QueryOrder::query(&mut query)
+                        .order_by_expr(
+                            Expr::cust(sort_users_by_column(sort_by)),
+                            Order::Desc,
+                        )
+                        .order_by_expr(Expr::cust("events.id"), Order::Desc);
+                }
+            },
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
@@ -259,84 +250,75 @@ impl Query {
             ));
 
         match cursor_filter {
-            CursorFilter::Forward(cur) => {
-                match cur {
-                    Cursor::Start => {
-                        // TODO: use order by column here.
-                        QueryOrder::query(&mut query)
-                            .order_by_expr(
-                                Expr::cust("search_rank"),
-                                Order::Asc,
-                            )
-                            .order_by_expr(Expr::cust("events.id"), Order::Asc);
-                    }
-                    Cursor::Mid(marker) => {
-                        if !marker.sorted_by.matches(sort_by) {
-                            return Err(Status::internal(
-                                "wrong combination of sort_by and pagination parameters",
-                            ));
-                        }
-                        query = match marker {
-                            Marker {
-                                sorted_by: SortedPostsBy::Rank(rank),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(search_rank, events.id) >= ($2, $3)",
-                                [Value::from(rank), Value::from(id)],
-                            )),
-                            Marker {
-                                sorted_by: SortedPostsBy::Latest(synced_at),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(content_synced_at, events.id) >= ($2, $3)",
-                                [Value::from(*synced_at), Value::from(id)],
-                            )),
-                        };
-                    }
-                    Cursor::End => return Ok(Vec::new()),
+            CursorFilter::Forward(cur) => match cur {
+                Cursor::Start => {
+                    QueryOrder::query(&mut query)
+                        .order_by_expr(
+                            Expr::cust(sort_posts_by_column(sort_by)),
+                            Order::Asc,
+                        )
+                        .order_by_expr(Expr::cust("events.id"), Order::Asc);
                 }
-            }
-            CursorFilter::Backward(cur) => {
-                match cur {
-                    Cursor::Start => return Ok(Vec::new()),
-                    Cursor::Mid(marker) => {
-                        if !marker.sorted_by.matches(sort_by) {
-                            return Err(Status::internal(
-                                "wrong combination of sort_by and pagination parameters",
-                            ));
-                        }
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
+                    query = match marker {
+                        Marker {
+                            sorted_by: SortedPostsBy::Rank(rank),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(search_rank, events.id) >= ($2, $3)",
+                            [Value::from(rank), Value::from(id)],
+                        )),
+                        Marker {
+                            sorted_by: SortedPostsBy::Latest(synced_at),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(content_synced_at, events.id) >= ($2, $3)",
+                            [Value::from(*synced_at), Value::from(id)],
+                        )),
+                    };
+                }
+                Cursor::End => return Ok(Vec::new()),
+            },
+            CursorFilter::Backward(cur) => match cur {
+                Cursor::Start => return Ok(Vec::new()),
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
 
-                        query = match marker {
-                            Marker {
-                                sorted_by: SortedPostsBy::Rank(rank),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(search_rank, events.id) <= ($2, $3)",
-                                [Value::from(rank), Value::from(id)],
-                            )),
-                            Marker {
-                                sorted_by: SortedPostsBy::Latest(synced_at),
-                                id,
-                            } => query.filter(Expr::cust_with_values(
-                                "(content_synced_at, events.id) <= ($2, $3)",
-                                [Value::from(*synced_at), Value::from(id)],
-                            )),
-                        };
-                    }
-                    Cursor::End => {
-                        // TODO: use order by column here.
-                        QueryOrder::query(&mut query)
-                            .order_by_expr(
-                                Expr::cust("search_rank"),
-                                Order::Desc,
-                            )
-                            .order_by_expr(
-                                Expr::cust("events.id"),
-                                Order::Desc,
-                            );
-                    }
+                    query = match marker {
+                        Marker {
+                            sorted_by: SortedPostsBy::Rank(rank),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(search_rank, events.id) <= ($2, $3)",
+                            [Value::from(rank), Value::from(id)],
+                        )),
+                        Marker {
+                            sorted_by: SortedPostsBy::Latest(synced_at),
+                            id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(content_synced_at, events.id) <= ($2, $3)",
+                            [Value::from(*synced_at), Value::from(id)],
+                        )),
+                    };
                 }
-            }
+                Cursor::End => {
+                    QueryOrder::query(&mut query)
+                        .order_by_expr(
+                            Expr::cust(sort_posts_by_column(sort_by)),
+                            Order::Desc,
+                        )
+                        .order_by_expr(Expr::cust("events.id"), Order::Desc);
+                }
+            },
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
@@ -372,4 +354,18 @@ fn add_model_columns<Q: QuerySelect>(
         query = query.tbl_col_as((table, column), alias);
     }
     query
+}
+
+fn sort_users_by_column(sort_by: SortUsersBy) -> &'static str {
+    match sort_by {
+        SortUsersBy::Default => "search_rank",
+        SortUsersBy::Alpha => "name",
+    }
+}
+
+fn sort_posts_by_column(sort_by: SortPostsBy) -> &'static str {
+    match sort_by {
+        SortPostsBy::Default => "search_rank",
+        SortPostsBy::Latest => "content_synced_at",
+    }
 }
