@@ -1702,7 +1702,14 @@ async fn expect_searched_users(
     expected: Vec<ProfileUpdate>,
 ) {
     let mut search = search_service().await;
+    eprintln!("query: {:#?}", request.query);
     let response = search.search_users(request).await.unwrap();
+
+    eprintln!("expected: {expected:#?}");
+    eprintln!(
+        "response: {:#?}",
+        fmt_search_results(&*response.get_ref().results)
+    );
 
     let expected_len = expected.len();
     let mut total = 0;
@@ -1721,7 +1728,7 @@ async fn expect_searched_users(
         else {
             panic!("unexpected content body: {event:?}");
         };
-        assert_eq!(update, expected, "event: {event:?}");
+        assert_eq!(update, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
         total += 1;
@@ -1774,7 +1781,14 @@ async fn expect_searched_posts(
     expected: Vec<Post>,
 ) {
     let mut search = search_service().await;
+    eprintln!("query: {:#?}", request.query);
     let response = search.search_posts(request).await.unwrap();
+
+    eprintln!("expected: {expected:#?}");
+    eprintln!(
+        "response: {:#?}",
+        fmt_search_results(&*response.get_ref().results)
+    );
 
     let expected_len = expected.len();
     let mut total = 0;
@@ -1789,11 +1803,10 @@ async fn expect_searched_posts(
         else {
             panic!("failed to decode event: {event:?}");
         };
-        dbg!(&content.content_body);
         let Some(ContentBody::Post(post)) = content.content_body else {
             panic!("unexpected content body: {event:?}");
         };
-        assert_eq!(post, expected, "event: {event:?}");
+        assert_eq!(post, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
         total += 1;
