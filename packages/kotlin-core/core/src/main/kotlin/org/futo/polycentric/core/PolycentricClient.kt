@@ -649,11 +649,13 @@ class PolycentricClient(
     }
 
     /**
-     * Adopt a server list published on the identity document (the source
-     * of truth) and propagate it to the core. Used by IdentityManager
-     * right after publishing so a newly added server receives the push.
+     * Adopt a server list (e.g. one published on the identity document, the
+     * source of truth) and propagate it to the core. Used by IdentityManager
+     * right after publishing so a newly added server receives the push, and by
+     * clients that need to point at a negotiated server before claiming an
+     * identity during device pairing (js-core exposes `servers` as settable).
      */
-    internal fun adoptServers(list: List<String>) {
+    fun adoptServers(list: List<String>) {
         servers = list.toList()
         core.setServers(servers)
     }
