@@ -112,6 +112,7 @@ The server produces events to Kafka, and its background workers consume them.
 | Variable                                   | Default          | Description                                     |
 | ------------------------------------------ | ---------------- | ------------------------------------------------ |
 | `POLYCENTRIC_KAFKA_BROKERS`                | `localhost:9092` | Bootstrap servers.                               |
+| `POLYCENTRIC_KAFKA_CLUSTER_ID`             | _(unset)_        | Prefix for topics and group ids (`{id}.{name}`). |
 | `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL`      | `PLAINTEXT`      | Kafka `security.protocol`.                       |
 | `POLYCENTRIC_KAFKA_SASL_MECHANISM`         | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
 | `POLYCENTRIC_KAFKA_SASL_USERNAME`          | _(unset)_        | SASL username.                                   |
