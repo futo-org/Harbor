@@ -3172,7 +3172,10 @@ name = "migration"
 version = "0.1.0"
 dependencies = [
  "entity",
+ "polycentric-common",
+ "prost",
  "sea-orm-migration",
+ "serde_json",
  "tokio",
 ]
 
