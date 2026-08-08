@@ -1,6 +1,7 @@
 pub mod proto;
 
 use ed25519_dalek::{Signer, SigningKey};
+use proto::content::ContentBody;
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
 use proto::search_service_client::SearchServiceClient;
@@ -14,6 +15,7 @@ use proto::{
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::mem::take;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
@@ -28,8 +30,12 @@ pub const HOUR: u64 = 3_600_000;
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
 pub const COLLECTION_PROFILE_UPDATE: i32 = 3;
-pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_INTERACTIONS: i32 = 4;
+pub const COLLECTION_SOCIAL_GRAPH: i32 = 5;
+pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
+pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
@@ -98,6 +104,175 @@ fn sign(signing_key: &SigningKey, event: Event) -> SignedEvent {
     SignedEvent {
         signature,
         event_bytes,
+    }
+}
+
+#[derive(Debug)]
+pub struct TestClient {
+    key: SigningKey,
+    identity: String,
+    event_sync_client: EventSyncServiceClient<tonic::transport::Channel>,
+    pending: Vec<EventBundle>,
+    identity_sequence: Sequence,
+    collection_sequences: [Sequence; COLLECTION_MAX as usize + 1], // 1-indexed.
+}
+
+#[derive(Debug)]
+struct Sequence(u64);
+
+impl Sequence {
+    const fn new() -> Sequence {
+        Sequence(1)
+    }
+
+    fn next(&mut self) -> u64 {
+        let val = self.0;
+        self.0 += 1;
+        val
+    }
+}
+
+impl TestClient {
+    pub async fn new() -> TestClient {
+        let event_sync_client = connect_event_sync().await;
+
+        let key = generate_signing_key();
+        let identity = Identity {
+            rotation_keys: vec![public_key_of(&key)],
+            signing_keys: vec![],
+            revocation_bounds: vec![],
+            servers: None,
+        };
+
+        let mut client = TestClient {
+            key,
+            identity: derive_identity_string(&identity),
+            event_sync_client,
+            pending: Vec::new(),
+            identity_sequence: Sequence::new(),
+            collection_sequences: [const { Sequence::new() }; _],
+        };
+
+        client.set_identity(identity, DEFAULT_CREATED_AT);
+
+        client
+    }
+
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+
+    pub fn event_sync_client(
+        &mut self,
+    ) -> &mut EventSyncServiceClient<tonic::transport::Channel> {
+        &mut self.event_sync_client
+    }
+
+    // All these methods push an event bundle to the list of pending events to
+    // sync. `submit_events` submits all the events to the server.
+
+    pub fn set_identity(
+        &mut self,
+        identity: Identity,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Identity(identity), created_at)
+    }
+
+    pub fn profile_update(
+        &mut self,
+        update: ProfileUpdate,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::ProfileUpdate(update), created_at)
+    }
+
+    pub fn post(&mut self, post: Post, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Post(post), created_at)
+    }
+
+    pub fn post_text(&mut self, text: &str, created_at: u64) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
+    fn push_event_bundle(
+        &mut self,
+        body: ContentBody,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let collection = match &body {
+            ContentBody::Post(_) | ContentBody::Delete(_) => COLLECTION_FEED,
+            ContentBody::Follow(_) | ContentBody::Block(_) => {
+                COLLECTION_SOCIAL_GRAPH
+            }
+            ContentBody::Reaction(_) => COLLECTION_INTERACTIONS,
+            ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
+            ContentBody::Identity(_) => COLLECTION_IDENTITY,
+            ContentBody::Repost(_) => COLLECTION_FEED,
+            ContentBody::Report(_) => COLLECTION_REPORTS,
+            ContentBody::Labels(_) => COLLECTION_LABELS,
+            ContentBody::VerificationClaim(_)
+            | ContentBody::VerificationVerify(_)
+            | ContentBody::VerificationTarget(_) => COLLECTION_VERIFICATIONS,
+        };
+        let content = Content {
+            content_body: Some(body),
+        };
+        let (content_bytes, digest) = content_with_digest(content);
+        let event = self.make_event(
+            collection,
+            Vec::new(),
+            Vec::new(),
+            digest,
+            created_at,
+        );
+        let event_bundle = bundle(sign(&self.key, event), content_bytes);
+        let signature = bundle_signature(&event_bundle);
+        self.pending.push(event_bundle);
+        signature
+    }
+
+    fn make_event(
+        &mut self,
+        collection: i32,
+        previous_signature: Vec<u8>,
+        previous_root: Vec<u8>,
+        digest: ContentDigest,
+        created_at: u64,
+    ) -> Event {
+        make_event(
+            collection,
+            &self.identity,
+            &self.key,
+            self.collection_sequences[collection as usize].next(),
+            self.identity_sequence.next(),
+            // TODO: this seems always acceptable?
+            VectorClock { sequence: vec![1] },
+            previous_signature,
+            previous_root,
+            digest,
+            created_at,
+        )
+    }
+
+    /// Submit all pending events.
+    pub async fn submit_events(&mut self) {
+        let event_bundles = take(&mut self.pending);
+        if event_bundles.is_empty() {
+            return;
+        }
+
+        self.event_sync_client
+            .put_events(PutEventsRequest { event_bundles })
+            .await
+            .expect("put_events failed");
     }
 }
 
@@ -408,73 +583,4 @@ pub fn make_labels_bundle(
         created_at,
     );
     bundle(sign(signing_key, event), content_bytes)
-}
-
-/// Create a profile by sending two profile updates.
-pub async fn create_profile(
-    name: String,
-    description: Option<String>,
-    alias: Option<String>,
-) -> (SigningKey, Identity) {
-    let mut client = connect_event_sync().await;
-
-    let rotation_key = generate_signing_key();
-    let profile_name = String::from("Bob");
-
-    let initial = Identity {
-        rotation_keys: vec![public_key_of(&rotation_key)],
-        signing_keys: vec![],
-        revocation_bounds: vec![],
-        servers: None,
-    };
-    let identity = derive_identity_string(&initial);
-
-    let genesis = make_identity_bundle(
-        &identity,
-        &rotation_key,
-        1,
-        1,
-        vec![1],
-        initial.clone(),
-        DEFAULT_CREATED_AT,
-    );
-    let empty_profile = make_profile_update_bundle(
-        &identity,
-        &rotation_key,
-        1,
-        2,
-        vec![1],
-        ProfileUpdate {
-            name: Some(profile_name.clone()),
-            avatar: None,
-            banner: None,
-            description: None,
-            alias: None,
-        },
-        DEFAULT_CREATED_AT,
-    );
-    let full_profile = make_profile_update_bundle(
-        &identity,
-        &rotation_key,
-        2,
-        3,
-        vec![1],
-        ProfileUpdate {
-            name: Some(name),
-            avatar: None,
-            banner: None,
-            description,
-            alias,
-        },
-        DEFAULT_CREATED_AT,
-    );
-
-    client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![genesis, empty_profile, full_profile],
-        })
-        .await
-        .expect("put_events failed");
-
-    (rotation_key, initial)
 }
