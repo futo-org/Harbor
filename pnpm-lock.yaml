@@ -642,7 +642,7 @@ importers:
     dependencies:
       browserless:
         specifier: ^13.1.6
-        version: 13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+        version: 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       html-get:
         specifier: ^2.24.6
         version: 2.26.4(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -1677,18 +1677,18 @@ packages:
     resolution: {integrity: sha512-OxBwHkTf4g//sAimaVnRM5KbgLZbbniVCIVeDGeGVg8l6i6vq4Ux9FbXlE5a/VC1gj3ruPtCgtQ14dA3YW/gCA==}
     engines: {node: '>= 24'}
 
-  '@browserless/goto@13.6.10':
-    resolution: {integrity: sha512-jHPHEDWkZOVrU9qL7rvQUvCl99FW8aErcdpeL6wO3A3o30PJhINJVGIAdjcxFwQYKgLOWsPgflYtCuDt0IJLIw==}
+  '@browserless/goto@13.6.12':
+    resolution: {integrity: sha512-fBxUgK+ZH25pXgchlH3tte8DUP2dSXW/3lEQ9PtrlCVQiZ4TEy8H4FAJJFhruzof2jL2y+rwEzgCOvImN3E4Bw==}
     engines: {node: '>= 24'}
     peerDependencies:
       puppeteer: '25'
 
-  '@browserless/pdf@13.6.11':
-    resolution: {integrity: sha512-Kc7pqPlJuKaTw+BuxlccRcI/S3cw5pY4+ED99vvfZ0ZinEKxv0d5FhCrIOc7Dc6TrRicU66Q46LKqSjLJ4CD8A==}
+  '@browserless/pdf@13.6.12':
+    resolution: {integrity: sha512-YCoxfAwhEXVlIkzfXwLmuLdx4p0646K4YCW3aa8/D2MInb4LdxY9iZV/Ke5YLTV6PFsR+uS3PAJfMwsKA8WBrQ==}
     engines: {node: '>= 24'}
 
-  '@browserless/screenshot@13.6.11':
-    resolution: {integrity: sha512-4rS3JnHaH5nYDDUfRgm0vX5VqkLgkE5YK2XXsbUfzcuvqd9DhLf6HLEsaBSQcGqOk49WhQTBuDZrvkNXo21SUw==}
+  '@browserless/screenshot@13.6.12':
+    resolution: {integrity: sha512-kQ+cP1gncXFPH6l5H9cuvD4M+soL+hJtKkGi8uRsLeLgg1dz1vkiHjntErzrD8aDNEyQyz3s1aTca1alenC5hw==}
     engines: {node: '>= 24'}
 
   '@bufbuild/buf-darwin-arm64@1.72.0':
@@ -2339,8 +2339,8 @@ packages:
     resolution: {integrity: sha512-xx0W3eav2uW1NRIpuHJWNwLTC15xPNjU4Uxi9NSnd3swYC96BE3vFiT93SD8s24kmAAWNwgZwfZ2fghGZ01Lcw==}
     engines: {node: '>=20.0'}
 
-  '@duckduckgo/autoconsent@16.16.0':
-    resolution: {integrity: sha512-hsgLqpzd8iRc8lbQrGLTosDzCE8dAal3mgL3Xdw1h0hXx6vw9BMIZoUIX421Upcr1qu4D6bAlQgQ5PTRzQysKQ==}
+  '@duckduckgo/autoconsent@16.19.0':
+    resolution: {integrity: sha512-lKScoBgF+YwNvTqu87g6lZS7LWlw62jNvjpyG0XFYxWJ8YBkm1Lmou3zAg02SVyBydN8wx5Hmo+6DusNn4euKQ==}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -2889,19 +2889,19 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@ghostery/adblocker-content@2.18.1':
-    resolution: {integrity: sha512-7OwXvqssrSqceXDMccq1SG2LEp0P899TWv0J52kA4PCjCgdsffdj7wMO98LbiVWEKJ9e00X4V2ZptC4VGYsX/w==}
+  '@ghostery/adblocker-content@2.18.2':
+    resolution: {integrity: sha512-TOe/b4KOBFEc9OjLG+wvgamGcSTIPSDBAL5YSa8lzjBsoSl8IDnfOjeJDldlLacsC/JEUMLkZIDDNknEolJVqg==}
 
-  '@ghostery/adblocker-extended-selectors@2.18.1':
-    resolution: {integrity: sha512-FruZMMUhdi0KG8GTTS9hs4njeQu1FyrzVtm9p3JKY6GpCNspy3kioP48JU3ASNzSDYZb5Xu8xbwPoSHJ4RQBeg==}
+  '@ghostery/adblocker-extended-selectors@2.18.2':
+    resolution: {integrity: sha512-doKNShBk3+czQL08UkrysHkCPeG/kNPlXvz3DH7SXxD9Y78ovWkEAhjeR+upoan3fomJJuK3dD+IrlofnjckYw==}
 
-  '@ghostery/adblocker-puppeteer@2.18.1':
-    resolution: {integrity: sha512-K6Ftc1zwbWBl/v/MUsrfsC51RDBr5VFWDSrJGc3Jj0F1s27jxmYl0jdA+y1lLhkGa8pRekX3WNoj4CHFmoCX9A==}
+  '@ghostery/adblocker-puppeteer@2.18.2':
+    resolution: {integrity: sha512-40rz+YOsBXstIZBa/ElZTmyhYCUGPdI9q9tdaOzPz7YkaZA9u9omC9UXkLhFtEQTNgagRBs2nPJkF4Xm2HyS+A==}
     peerDependencies:
       puppeteer: '>5'
 
-  '@ghostery/adblocker@2.18.1':
-    resolution: {integrity: sha512-pWMJqpXpuqIlcF3ZZQ2E7ixnC7xhtYn/bpOn3N69vFrAm4wrZCIbKzz1+xSxKWCmJvDT4fg7rN2R6jQwFXm5BA==}
+  '@ghostery/adblocker@2.18.2':
+    resolution: {integrity: sha512-x6zEkf1dHSN0t4ExLmuN6nIgH0oAi6laoKe5yGsiIB4jkEvutea1PJgxgRUIjWfNbDRmkf4GjUtuqQFZgvQG1w==}
 
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
@@ -5562,8 +5562,8 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
-  browserless@13.6.11:
-    resolution: {integrity: sha512-/vZ3XwkyDaiYXMxRFKK7QORioJ3EdXREKEQ7kXrE0OwaH+ltjzuGveuHuxSeEEG45Da0TEbnvM+DPAORA1k8FQ==}
+  browserless@13.6.12:
+    resolution: {integrity: sha512-8guG4XWjS4rDkPM4mYMHQTvuMVs0zKgNKt7+A5I8JfbEixVz/xre25t6aLciwAXvUs/DkQj+YzR94E9l7jJjjg==}
     engines: {node: '>= 24'}
 
   browserslist@4.28.4:
@@ -8994,8 +8994,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@3.3.17:
-    resolution: {integrity: sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==}
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -10997,8 +10997,8 @@ packages:
   styleq@0.1.3:
     resolution: {integrity: sha512-3ZUifmCDCQanjeej1f6kyl/BeP/Vae5EYkQ9iJfUm/QwZvlgnZzyflqAsAWYURdtea8Vkvswu2GrC57h3qffcA==}
 
-  superlock@1.3.4:
-    resolution: {integrity: sha512-8mcwOQRICR8xcu5y2QgPZW7i7JLQqDlQElly8z6dfyZNJst//INK3+mYCG0mziZdn5tdfUp9RgM0KANi9PKtLA==}
+  superlock@1.3.5:
+    resolution: {integrity: sha512-XpWNthvezZnWp0u7/UL8rBbBOnq2Qx39fw+0RNMC/+eotOd81glzsmIWVH0ejarhTeDQihxOKSbjm2XXFo5a8w==}
     engines: {node: '>= 14'}
 
   supports-color@5.5.0:
@@ -13135,11 +13135,11 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@browserless/goto@13.6.10(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/goto@13.6.12(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
       '@browserless/devices': 13.0.0
-      '@duckduckgo/autoconsent': 16.16.0
-      '@ghostery/adblocker-puppeteer': 2.18.1(puppeteer@25.3.0)
+      '@duckduckgo/autoconsent': 16.19.0
+      '@ghostery/adblocker-puppeteer': 2.18.2(puppeteer@25.3.0)
       debug-logfmt: 1.4.15(debug@4.4.3)
       got: 11.8.6
       is-url-http: 2.3.13
@@ -13152,10 +13152,10 @@ snapshots:
       - debug
       - supports-color
 
-  '@browserless/pdf@13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/pdf@13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
-      '@browserless/goto': 13.6.10(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/screenshot': 13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.12(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/screenshot': 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       '@kikobeats/time-span': 1.0.13
       debug-logfmt: 1.4.15(debug@4.4.3)
       p-reflect: 2.1.0
@@ -13166,10 +13166,10 @@ snapshots:
       - puppeteer
       - supports-color
 
-  '@browserless/screenshot@13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
+  '@browserless/screenshot@13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)':
     dependencies:
       '@browserless/errors': 13.6.10(debug@4.4.3)
-      '@browserless/goto': 13.6.10(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.12(debug@4.4.3)(puppeteer@25.3.0)
       '@kikobeats/content-type': 1.0.4
       '@kikobeats/time-span': 1.0.13
       automad-prism-themes: 0.3.7
@@ -14558,7 +14558,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@duckduckgo/autoconsent@16.16.0':
+  '@duckduckgo/autoconsent@16.19.0':
     dependencies:
       tldts-experimental: 7.4.10
 
@@ -15430,23 +15430,23 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@ghostery/adblocker-content@2.18.1':
+  '@ghostery/adblocker-content@2.18.2':
     dependencies:
-      '@ghostery/adblocker-extended-selectors': 2.18.1
+      '@ghostery/adblocker-extended-selectors': 2.18.2
 
-  '@ghostery/adblocker-extended-selectors@2.18.1': {}
+  '@ghostery/adblocker-extended-selectors@2.18.2': {}
 
-  '@ghostery/adblocker-puppeteer@2.18.1(puppeteer@25.3.0)':
+  '@ghostery/adblocker-puppeteer@2.18.2(puppeteer@25.3.0)':
     dependencies:
-      '@ghostery/adblocker': 2.18.1
-      '@ghostery/adblocker-content': 2.18.1
+      '@ghostery/adblocker': 2.18.2
+      '@ghostery/adblocker-content': 2.18.2
       puppeteer: 25.3.0
       tldts-experimental: 7.4.10
 
-  '@ghostery/adblocker@2.18.1':
+  '@ghostery/adblocker@2.18.2':
     dependencies:
-      '@ghostery/adblocker-content': 2.18.1
-      '@ghostery/adblocker-extended-selectors': 2.18.1
+      '@ghostery/adblocker-content': 2.18.2
+      '@ghostery/adblocker-extended-selectors': 2.18.2
       '@ghostery/url-parser': 1.3.1
       '@remusao/guess-url-type': 2.1.0
       '@remusao/small': 2.1.0
@@ -17152,7 +17152,7 @@ snapshots:
       '@react-navigation/routers': 7.6.4
       escape-string-regexp: 4.0.0
       fast-deep-equal: 3.1.3
-      nanoid: 3.3.17
+      nanoid: 3.3.18
       query-string: 7.1.3
       react: 19.2.3
       react-is: 19.2.8
@@ -17162,7 +17162,7 @@ snapshots:
 
   '@react-navigation/routers@7.6.4':
     dependencies:
-      nanoid: 3.3.17
+      nanoid: 3.3.18
     optional: true
 
   '@remusao/guess-url-type@2.1.0': {}
@@ -18746,19 +18746,19 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  browserless@13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0):
+  browserless@13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0):
     dependencies:
       '@browserless/errors': 13.6.10(debug@4.4.3)
-      '@browserless/goto': 13.6.10(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/pdf': 13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
-      '@browserless/screenshot': 13.6.11(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/goto': 13.6.12(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/pdf': 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
+      '@browserless/screenshot': 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       debug-logfmt: 1.4.15(debug@4.4.3)
       kill-process-group: 1.0.16
       p-reflect: 2.1.0
       p-retry: 4.6.2
       p-timeout: 4.1.0
       require-one-of: 1.0.25
-      superlock: 1.3.4
+      superlock: 1.3.5
     transitivePeerDependencies:
       - '@types/node'
       - debug
@@ -23206,7 +23206,7 @@ snapshots:
 
   nanoid@3.3.16: {}
 
-  nanoid@3.3.17: {}
+  nanoid@3.3.18: {}
 
   napi-build-utils@2.0.0: {}
 
@@ -24072,7 +24072,7 @@ snapshots:
 
   postcss@8.5.26:
     dependencies:
-      nanoid: 3.3.17
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -25671,7 +25671,7 @@ snapshots:
 
   styleq@0.1.3: {}
 
-  superlock@1.3.4: {}
+  superlock@1.3.5: {}
 
   supports-color@5.5.0:
     dependencies:
