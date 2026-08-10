@@ -18,6 +18,15 @@ jest.mock('@/src/common/components', () => {
   };
 });
 
+jest.mock('@/src/common/components/primitives/Text', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    Text: ({ children }: { children?: unknown }) =>
+      react.createElement(Text, null, children),
+  };
+});
+
 jest.mock('@/src/common/components/layout', () => {
   const react = require('react');
   const Screen = ({ children }: { children?: unknown }) =>
