@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.wire)
 }
 
+// Maven coordinate consumers depend on. Grayjay's composite build substitutes
+// `org.futo.polycentric:core` with this project; a real deployment would
+// publish the AAR under the same coordinate.
+group = "org.futo.polycentric"
+version = "0.0.0"
+
 // ── Paths ──────────────────────────────────────────────────────────────
 // Repo root is two levels up from packages/kotlin-core.
 val repoRoot = rootProject.projectDir.parentFile.parentFile
