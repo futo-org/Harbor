@@ -177,6 +177,8 @@ pub fn make_post_bundle(
             images: vec![],
             quote: None,
             links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);

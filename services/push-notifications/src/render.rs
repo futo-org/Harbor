@@ -145,6 +145,8 @@ mod tests {
                 images: vec![],
                 links: vec![],
                 quote: None,
+                labels: vec![],
+                attributed_to: vec![],
             })),
         }
     }
@@ -183,6 +185,7 @@ mod tests {
                 event_key: Some(key("me")),
                 emoji: Some("👍".to_string()),
                 positive: true,
+                attributed_to: None,
             })),
         };
         let rendered =
@@ -201,6 +204,7 @@ mod tests {
                 event_key: Some(key("me")),
                 emoji: None,
                 positive: true,
+                attributed_to: None,
             })),
         };
         let rendered =

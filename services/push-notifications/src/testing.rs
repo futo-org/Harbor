@@ -181,6 +181,8 @@ pub fn reply_post_bundle(author: &str) -> EventBundle {
                 images: vec![],
                 links: vec![],
                 quote: None,
+                labels: vec![],
+                attributed_to: vec![],
             })),
         },
     )
