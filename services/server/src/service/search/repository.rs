@@ -95,8 +95,6 @@ impl Query {
             entity::content_model::Column::iter(),
         );
         query = query
-            // TODO: could make this optional if the default sorting is not
-            // used.
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
                 Expr::cust(
@@ -115,16 +113,14 @@ impl Query {
                 [search_query],
             ));
 
+        let (column, order) = sort_users_by_column(sort_by);
+        QueryOrder::query(&mut query)
+            .order_by_expr(Expr::cust(column), order)
+            .order_by_expr(Expr::cust("events.id"), Order::Asc);
+
         match cursor_filter {
             CursorFilter::Forward(cur) => match cur {
-                Cursor::Start => {
-                    QueryOrder::query(&mut query)
-                        .order_by_expr(
-                            Expr::cust(sort_users_by_column(sort_by)),
-                            Order::Asc,
-                        )
-                        .order_by_expr(Expr::cust("events.id"), Order::Asc);
-                }
+                Cursor::Start => { /* No filtering. */ }
                 Cursor::Mid(marker) => {
                     if !marker.sorted_by.matches(sort_by) {
                         return Err(Status::internal(
@@ -136,14 +132,14 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(search_rank, events.id) >= ($2, $3)",
+                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
                             sorted_by: SortedUsersBy::Name(name),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(name, events.id) >= ($2, $3)",
+                            "(name, events.id) > ($1, $2)",
                             [Value::from(name), Value::from(id)],
                         )),
                     };
@@ -164,26 +160,19 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(search_rank, events.id) <= ($2, $3)",
+                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
                             sorted_by: SortedUsersBy::Name(name),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(name, events.id) <= ($2, $3)",
+                            "(name, events.id) < ($1, $2)",
                             [Value::from(name), Value::from(id)],
                         )),
                     };
                 }
-                Cursor::End => {
-                    QueryOrder::query(&mut query)
-                        .order_by_expr(
-                            Expr::cust(sort_users_by_column(sort_by)),
-                            Order::Desc,
-                        )
-                        .order_by_expr(Expr::cust("events.id"), Order::Desc);
-                }
+                Cursor::End => { /* No filtering. */ }
             },
         }
         query = query.limit(limit + 1); // + 1 for pagination.
@@ -230,8 +219,6 @@ impl Query {
             entity::content_model::Column::iter(),
         );
         query = query
-            // TODO: could make this optional if the default sorting is not
-            // used.
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
                 Expr::cust(
@@ -249,16 +236,14 @@ impl Query {
                 [search_query],
             ));
 
+        let (column, order) = sort_posts_by_column(sort_by);
+        QueryOrder::query(&mut query)
+            .order_by_expr(Expr::cust(column), order)
+            .order_by_expr(Expr::cust("events.id"), Order::Asc);
+
         match cursor_filter {
             CursorFilter::Forward(cur) => match cur {
-                Cursor::Start => {
-                    QueryOrder::query(&mut query)
-                        .order_by_expr(
-                            Expr::cust(sort_posts_by_column(sort_by)),
-                            Order::Desc,
-                        )
-                        .order_by_expr(Expr::cust("events.id"), Order::Asc);
-                }
+                Cursor::Start => { /* No filtering. */ }
                 Cursor::Mid(marker) => {
                     if !marker.sorted_by.matches(sort_by) {
                         return Err(Status::internal(
@@ -270,14 +255,14 @@ impl Query {
                             sorted_by: SortedPostsBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(search_rank, events.id) >= ($2, $3)",
+                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
                             sorted_by: SortedPostsBy::Latest(synced_at),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(content_synced_at, events.id) >= ($2, $3)",
+                            "(content.synced_at, events.id) < ($1, $2)",
                             [Value::from(*synced_at), Value::from(id)],
                         )),
                     };
@@ -298,26 +283,19 @@ impl Query {
                             sorted_by: SortedPostsBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(search_rank, events.id) <= ($2, $3)",
+                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
                             sorted_by: SortedPostsBy::Latest(synced_at),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(content_synced_at, events.id) <= ($2, $3)",
+                            "(content.synced_at, events.id) > ($1, $2)",
                             [Value::from(*synced_at), Value::from(id)],
                         )),
                     };
                 }
-                Cursor::End => {
-                    QueryOrder::query(&mut query)
-                        .order_by_expr(
-                            Expr::cust(sort_posts_by_column(sort_by)),
-                            Order::Desc,
-                        )
-                        .order_by_expr(Expr::cust("events.id"), Order::Desc);
-                }
+                Cursor::End => { /* No filtering. */ }
             },
         }
         query = query.limit(limit + 1); // + 1 for pagination.
@@ -342,16 +320,16 @@ fn add_model_columns<Q: QuerySelect>(
     query
 }
 
-fn sort_users_by_column(sort_by: SortUsersBy) -> &'static str {
+fn sort_users_by_column(sort_by: SortUsersBy) -> (&'static str, Order) {
     match sort_by {
-        SortUsersBy::Default => "search_rank",
-        SortUsersBy::Alpha => "name",
+        SortUsersBy::Default => ("search_rank", Order::Desc),
+        SortUsersBy::Alpha => ("name", Order::Asc),
     }
 }
 
-fn sort_posts_by_column(sort_by: SortPostsBy) -> &'static str {
+fn sort_posts_by_column(sort_by: SortPostsBy) -> (&'static str, Order) {
     match sort_by {
-        SortPostsBy::Default => "search_rank",
-        SortPostsBy::Latest => "content_synced_at",
+        SortPostsBy::Default => ("search_rank", Order::Desc),
+        SortPostsBy::Latest => ("content_synced_at", Order::Desc),
     }
 }
