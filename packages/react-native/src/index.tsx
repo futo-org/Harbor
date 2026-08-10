@@ -11,6 +11,8 @@ export {
   PolycentricCore,
   Query,
   QueryStatus,
+  SearchPostsSort,
+  SearchUsersSort,
   UpdateMode,
   setLogger,
 } from './generated/rn/polycentric_core';

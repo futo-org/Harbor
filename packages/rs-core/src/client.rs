@@ -840,6 +840,100 @@ mod tests {
     }
 
     #[test]
+    fn copied_bundles_are_locally_readable_with_avatar() {
+        use polycentric_common::models::protos_v2::{
+            Blob, Content, Image, ImageSet, ProfileUpdate, SerializedContent,
+        };
+
+        let a = keypair(1);
+
+        let (identity_bytes, identity_digest) =
+            identity_content(vec![a.public.clone()], vec![], Vec::new());
+        let identity_str = identity_string_of(&Identity {
+            rotation_keys: vec![a.public.clone()],
+            signing_keys: vec![],
+            revocation_bounds: Vec::new(),
+            servers: None,
+        });
+        let genesis = sign_event(
+            &a,
+            &identity_str,
+            collections::IDENTITY,
+            1,
+            1,
+            vec![1],
+            identity_digest,
+        );
+
+        let profile_content = Content {
+            content_body: Some(Body::ProfileUpdate(ProfileUpdate {
+                name: Some("Test".into()),
+                avatar: Some(ImageSet {
+                    images: vec![Image {
+                        blob: Some(Blob {
+                            digest: Some(sha256_digest(b"avatar")),
+                            mime_type: "image/png".into(),
+                            size: 6,
+                        }),
+                        width: 80,
+                        height: 80,
+                    }],
+                }),
+                banner: None,
+                description: None,
+                alias: None,
+            })),
+        };
+        let profile_bytes = profile_content.encode_to_vec();
+        let profile_signed = sign_event(
+            &a,
+            &identity_str,
+            collections::PROFILE,
+            1,
+            1,
+            vec![1],
+            sha256_digest(&profile_bytes),
+        );
+
+        let identity_bundle = EventBundle {
+            signed_event: Some(genesis),
+            serialized_content: Some(SerializedContent {
+                content_bytes: identity_bytes,
+            }),
+            event_proofs: Vec::new(),
+            meta: None,
+        };
+        let profile_bundle = EventBundle {
+            signed_event: Some(profile_signed),
+            serialized_content: Some(SerializedContent {
+                content_bytes: profile_bytes,
+            }),
+            event_proofs: Vec::new(),
+            meta: None,
+        };
+
+        let mut client = PolycentricClient::new();
+        client.copy_bundles(vec![profile_bundle, identity_bundle]);
+
+        let bundles = client
+            .list_valid_events(&identity_str, collections::PROFILE)
+            .expect("list_valid_events");
+        assert_eq!(bundles.len(), 1);
+
+        let content_bytes = &bundles[0]
+            .serialized_content
+            .as_ref()
+            .expect("profile content should be stored")
+            .content_bytes;
+        let decoded = Content::decode(content_bytes.as_slice()).expect("content decodes");
+        let Some(Body::ProfileUpdate(update)) = decoded.content_body else {
+            panic!("expected a profile update");
+        };
+        assert_eq!(update.name.as_deref(), Some("Test"));
+        assert!(update.avatar.is_some(), "avatar should survive the copy");
+    }
+
+    #[test]
     fn validates_event_signed_by_key_in_content() {
         let mut client = PolycentricClient::new();
         let a = keypair(1);

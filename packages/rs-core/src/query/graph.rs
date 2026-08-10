@@ -13,7 +13,7 @@ use prost::Message;
 
 use crate::client::PolycentricClient;
 use crate::query::event::merge::{EventDedupKey, event_dedup_key};
-use crate::query::feed::{FakeCursorToken, merge_page_info};
+use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_info};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
@@ -31,33 +31,6 @@ pub struct ListFollowersArgs {
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
-}
-
-/// Replace the server's cursor tokens with fake aggregate ones so the
-/// response can be merged with other servers' responses.
-fn prepare_page_info(
-    response: &mut ListFollowsResponse,
-    server_url: &str,
-    backward_offset: i32,
-    forward_offset: i32,
-) -> Result<(), String> {
-    if let Some(i) = response.page_info.as_mut() {
-        i.start_cursor = FakeCursorToken::encode_new(
-            server_url,
-            &i.start_cursor,
-            backward_offset - 1,
-            i.has_previous_page,
-        )?;
-
-        i.end_cursor = FakeCursorToken::encode_new(
-            server_url,
-            &i.end_cursor,
-            forward_offset + 1,
-            i.has_next_page,
-        )?;
-    }
-
-    Ok(())
 }
 
 /// Concatenate per-server pages, dedupe by `EventKey`, drop invalid
@@ -146,7 +119,12 @@ pub fn list_following(
                 .map_err(|e| format!("list_following [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             let hint_bundles: Vec<_> = response
@@ -204,7 +182,12 @@ pub fn list_followers(
                 .map_err(|e| format!("list_followers [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             let hint_bundles: Vec<_> = response
@@ -244,7 +227,7 @@ mod tests {
                 has_next_page,
             }),
         };
-        prepare_page_info(&mut response, server, 0, 0).unwrap();
+        prepare_page_info(&mut response.page_info, server, 0, 0).unwrap();
         response.encode_to_vec()
     }
 

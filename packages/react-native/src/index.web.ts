@@ -9,6 +9,8 @@ export {
   PolycentricCore,
   Query,
   QueryStatus,
+  SearchPostsSort,
+  SearchUsersSort,
   UpdateMode,
 } from '@polycentric/rs-core-uniffi-web';
 export type {

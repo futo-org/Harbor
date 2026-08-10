@@ -2,6 +2,7 @@
 
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::{cmp, mem};
 
 use polycentric_common::models::protos_v2::{
@@ -9,6 +10,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::client::PolycentricClient;
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 
 /// Tuple that uniquely identifies an `EventBundle` by its underlying
@@ -33,6 +35,17 @@ pub fn event_dedup_key(bundle: &EventBundle) -> Option<EventDedupKey> {
         signed_by.key,
         key.sequence,
     ))
+}
+
+/// Pull bundles out of each `EventHint` and copy them into the local
+/// client stores. Hints are useful side-information the server
+/// provides (e.g. the profile of a post's author).
+pub fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
+    let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
+
+    if !bundles.is_empty() {
+        client.lock().unwrap().copy_bundles(bundles);
+    }
 }
 
 /// Responses carrying a flat `event_bundles` list.
