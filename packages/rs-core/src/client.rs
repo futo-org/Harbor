@@ -270,26 +270,23 @@ impl PolycentricClient {
         identity_sequence: u64,
         current_signer: &PublicKey,
         current_sequence: u64,
-        mut identity_content: Option<Identity>,
+        identity_content: Option<Identity>,
     ) -> Result<VectorClock, CoreError> {
         let directory = self.identity_directory(identity)?;
         let chain = directory.validate(&self.event_store)?;
-        if identity_content.is_none() {
-            identity_content = Some(
-                chain
-                    .content_at_sequence(identity_sequence)
-                    .ok_or_else(|| {
-                        CoreError::InvalidEvent(format!(
-                            "No validated identity event at sequence {}",
-                            identity_sequence
-                        ))
-                    })?
-                    .clone(),
-            );
-        }
-        let identity_content = identity_content.ok_or_else(|| {
-            CoreError::InvalidEvent("identity content unexpectedly missing".to_string())
-        })?;
+
+        let identity_content = match identity_content {
+            Some(doc) => doc,
+            None => chain
+                .content_at_sequence(identity_sequence)
+                .ok_or_else(|| {
+                    CoreError::InvalidEvent(format!(
+                        "No validated identity event at sequence {}",
+                        identity_sequence
+                    ))
+                })?
+                .clone(),
+        };
 
         // One entry per dedup key: self → current_sequence, others →
         // max validated sequence observed in this collection.
