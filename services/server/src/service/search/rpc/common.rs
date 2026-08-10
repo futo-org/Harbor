@@ -200,10 +200,10 @@ pub fn collect_referenced_keys(
         };
         match decoded.content_body {
             Some(ContentBody::Post(post)) => {
-                if let Some(key) = post.quote.as_ref() {
-                    if let Some(key) = to_target_event_key(key) {
-                        quote_set.insert(key);
-                    }
+                if let Some(key) = post.quote.as_ref()
+                    && let Some(key) = to_target_event_key(key)
+                {
+                    quote_set.insert(key);
                 }
                 push_key(post.quote);
             }
@@ -214,10 +214,10 @@ pub fn collect_referenced_keys(
                 push_key(reaction.event_key);
             }
             Some(ContentBody::Repost(repost)) => {
-                if let Some(key) = repost.post.as_ref() {
-                    if let Some(key) = to_target_event_key(key) {
-                        repost_set.insert(key);
-                    }
+                if let Some(key) = repost.post.as_ref()
+                    && let Some(key) = to_target_event_key(key)
+                {
+                    repost_set.insert(key);
                 }
                 push_key(repost.post);
             }
