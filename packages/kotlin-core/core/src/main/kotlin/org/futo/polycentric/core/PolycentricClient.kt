@@ -439,15 +439,16 @@ class PolycentricClient(
 
         if (events.getByEventKey(key) != null) return false
 
-        // js-core validates these inside EventStore.save; with no store
-        // layer here, the same rejection guards the one save site that
-        // takes untrusted (server-supplied) events.
-        if (signed.signature.size == 0) {
-            throw DatabaseException("SignedEvent must have a valid signature")
-        }
-        if (signed.event_bytes.size == 0) {
-            throw DatabaseException("SignedEvent must have valid event data")
-        }
+        // Verify the signature before persisting an untrusted (server-supplied)
+        // event. On the next startup `copyEvents` replays every stored event
+        // through the core, which verifies signatures and fails the whole
+        // batch on a bad one — so persisting even one unverified event would
+        // brick every subsequent launch (ClientState.ERROR) until the DB is
+        // wiped. `runCatching` turns a bad event into skip-and-log, leaving the
+        // rest of the bundle to save. This subsumes js-core's empty-signature /
+        // empty-event-bytes guards: an empty or invalid signature, or empty
+        // event bytes, fails verification here.
+        core.verifySignedEvent(SignedEvent.ADAPTER.encode(signed))
 
         events.save(signed)
         true
