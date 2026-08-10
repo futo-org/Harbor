@@ -1,12 +1,14 @@
-import { Button } from '@/src/common/components/primitives';
+import { Screen } from '@/src/common/components/layout';
+import Topbar from '@/src/common/components/layout/Topbar';
+import { Button, Text } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import type { types } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
 import { useComposer } from './hooks/useComposer';
@@ -44,45 +46,99 @@ export function ComposeSheet({
   // Focus the field only after the sheet has presented (iOS fix)
   const [autoFocus, setAutoFocus] = useState(false);
 
+  const postAction = composer.submitting ? (
+    <ActivityIndicator
+      size="small"
+      color={theme.palette.primary_500}
+      accessibilityLabel="Posting"
+    />
+  ) : (
+    <Button
+      title={'Post'}
+      onPress={composer.handlePost}
+      variant="primary"
+      disabled={!composer.canPost}
+      size="sm"
+    />
+  );
+
+  const fields = (
+    <ComposerFields
+      isReply={composer.isReply}
+      replyTo={composer.replyTo}
+      quote={composer.quote}
+      error={composer.error}
+      currentIdentityKey={composer.currentIdentityKey}
+      placeholder={composer.placeholder}
+      text={composer.text}
+      setText={composer.setText}
+      attachments={composer.attachments}
+      submitting={composer.submitting}
+      onRemoveAttachment={composer.handleRemoveAttachment}
+      linkPreview={composer.linkPreview}
+      linkPreviewLoading={composer.linkPreviewLoading}
+      onRemoveLinkPreview={composer.handleRemoveLinkPreview}
+      autoFocus={isWeb ? autoFocus : true}
+    />
+  );
+
+  const footer = (
+    <ComposeSheetFooterBar
+      variant={isWeb ? 'web' : 'native'}
+      charCount={composer.text.length}
+      submitting={composer.submitting}
+      canPost={composer.canPost}
+      onPost={composer.handlePost}
+      onAttachImage={() => void composer.handleAttachImage()}
+      onCaptureImage={
+        isWeb ? undefined : () => void composer.handleCaptureImage()
+      }
+      attachDisabled={composer.attachDisabled}
+    />
+  );
+
+  if (!isWeb) {
+    return (
+      <Screen keyboardAvoiding>
+        <Screen.PrimaryColumn>
+          <Topbar
+            title={composer.title}
+            left={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+                onPress={composer.handleClose}
+                hitSlop={Spacing.lg}
+                style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+              >
+                <Text color="neutral_500">Cancel</Text>
+              </Pressable>
+            }
+            right={postAction}
+          />
+          <ScrollView
+            style={Atoms.flex_1}
+            contentContainerStyle={Atoms.p_lg}
+            keyboardShouldPersistTaps="handled"
+          >
+            {fields}
+          </ScrollView>
+          {footer}
+        </Screen.PrimaryColumn>
+      </Screen>
+    );
+  }
+
   return (
     <Sheet
       detents={[1]}
       onPresented={() => setAutoFocus(true)}
-      footer={
-        <ComposeSheetFooterBar
-          variant={isWeb ? 'web' : 'native'}
-          charCount={composer.text.length}
-          submitting={composer.submitting}
-          canPost={composer.canPost}
-          onPost={composer.handlePost}
-          onAttachImage={() => void composer.handleAttachImage()}
-          onCaptureImage={
-            isWeb ? undefined : () => void composer.handleCaptureImage()
-          }
-          attachDisabled={composer.attachDisabled}
-        />
-      }
+      footer={footer}
       header={
         <Sheet.Header
           title={composer.title}
           onClose={composer.handleClose}
-          right={
-            composer.submitting ? (
-              <ActivityIndicator
-                size="small"
-                color={theme.palette.primary_500}
-                accessibilityLabel="Posting"
-              />
-            ) : (
-              <Button
-                title={'Post'}
-                onPress={composer.handlePost}
-                variant="primary"
-                disabled={!composer.canPost}
-                size="sm"
-              />
-            )
-          }
+          right={postAction}
         />
       }
     >
@@ -96,23 +152,7 @@ export function ComposeSheet({
           },
         ]}
       >
-        <ComposerFields
-          isReply={composer.isReply}
-          replyTo={composer.replyTo}
-          quote={composer.quote}
-          error={composer.error}
-          currentIdentityKey={composer.currentIdentityKey}
-          placeholder={composer.placeholder}
-          text={composer.text}
-          setText={composer.setText}
-          attachments={composer.attachments}
-          submitting={composer.submitting}
-          onRemoveAttachment={composer.handleRemoveAttachment}
-          linkPreview={composer.linkPreview}
-          linkPreviewLoading={composer.linkPreviewLoading}
-          onRemoveLinkPreview={composer.handleRemoveLinkPreview}
-          autoFocus={autoFocus}
-        />
+        {fields}
       </Sheet.Content>
     </Sheet>
   );
