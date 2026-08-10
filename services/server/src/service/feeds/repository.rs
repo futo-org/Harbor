@@ -193,10 +193,6 @@ impl Query {
         keys: &[TargetEventKey],
         trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let Some(moderator) = trusted_moderator else {
-            return Ok(Vec::new());
-        };
-
         if keys.is_empty() {
             return Ok(Vec::new());
         }
@@ -267,12 +263,14 @@ impl Query {
                         ContentModel::Column::DigestBytes,
                     )),
                 ),
-            )
-            .and_where(
+            );
+        if let Some(moderator) = trusted_moderator {
+            query.and_where(
                 Expr::col((EventModel::Entity, EventModel::Column::Identity))
                     .eq(moderator.to_owned()),
-            )
-            .and_where(event_key_filter.into());
+            );
+        }
+        query.and_where(event_key_filter.into());
 
         // Build the query
         let (sql, values) = query.build(PostgresQueryBuilder);
