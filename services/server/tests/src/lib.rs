@@ -230,9 +230,7 @@ impl TestClient {
     /// Create a client for the trusted moderator.
     pub async fn trusted_moderator() -> TestClient {
         let key = test_moderator_key();
-        let mut client = TestClient::new_with_identity(key).await;
-        //client.pending.clear(); // Don't send identity event.
-        client
+        TestClient::new_with_identity(key).await
     }
 
     async fn new_with_identity(key: SigningKey) -> TestClient {
