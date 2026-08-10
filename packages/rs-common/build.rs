@@ -57,7 +57,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir_path = PathBuf::from(&out_dir);
     let mut conf = tonic_prost_build::configure()
         .build_transport(false)
-        .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"));
+        .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"))
+        .skip_debug(["EventKey", "SerializedContent"]); // Manually implemented.
     for ty in ["ImageSet", "Image", "Blob", "ContentDigest"] {
         conf = conf.type_attribute(
             ty,
