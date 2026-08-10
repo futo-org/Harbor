@@ -2,7 +2,10 @@ use crate::error::{Error, Result};
 use crate::models::protos_v2::PublicKey;
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use prost::Message;
+use std::fmt;
 
 impl PublicKey {
     /// Gets the raw key bytes
@@ -74,5 +77,15 @@ impl Serializable for PublicKey {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         PublicKey::decode(bytes)
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
+    }
+}
+
+impl fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let PublicKey { key_type, key } = self;
+        f.debug_struct("PublicKey")
+            .field("key_type", key_type)
+            .field("key", &URL_SAFE_NO_PAD.encode(key))
+            .finish()
     }
 }
