@@ -376,6 +376,19 @@ impl TestClient {
     }
 }
 
+impl Drop for TestClient {
+    fn drop(&mut self) {
+        const MSG: &str = "Unsubmitted events in TestClient, call submit_events to submit them";
+        if !self.pending.is_empty() {
+            if !std::thread::panicking() {
+                panic!("{}", MSG);
+            } else {
+                eprintln!("{}", MSG);
+            }
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn make_event(
     collection: i32,
