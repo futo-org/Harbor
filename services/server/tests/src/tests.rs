@@ -1849,6 +1849,36 @@ async fn search_posts_order_by_latest() {
     .await;
 }
 
+#[tokio::test]
+async fn search_posts_omit_labels() {
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let label = random_string();
+
+    client.post_text(&query, DEFAULT_CREATED_AT);
+    let post_event_key = client.get_last_event_key();
+    client.label(
+        Labels {
+            event_key: Some(post_event_key),
+            label_values: vec![label.clone()],
+        },
+        DEFAULT_CREATED_AT,
+    );
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: None,
+            page_params: None,
+            omit_labels: vec![label],
+        },
+        vec![], // The post should be hidden.
+    )
+    .await;
+}
+
 async fn expect_searched_posts(
     request: SearchPostsRequest,
     expected: Vec<Post>,

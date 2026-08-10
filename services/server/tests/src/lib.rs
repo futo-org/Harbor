@@ -291,6 +291,17 @@ impl TestClient {
         self.post(post, created_at)
     }
 
+    pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Labels(labels), created_at)
+    }
+
+    pub fn get_last_event_key(&self) -> EventKey {
+        let event = self.pending.last().expect("no pending events");
+        let signed_event = event.signed_event.as_ref().unwrap();
+        let event = Event::decode(&*signed_event.event_bytes).unwrap();
+        event.key.unwrap()
+    }
+
     fn push_event_bundle(
         &mut self,
         body: ContentBody,
