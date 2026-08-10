@@ -33,6 +33,10 @@ export const Routes = {
       compose: '/feed/compose',
     },
     search: '/search',
+    explore: {
+      index: '/explore',
+      search: '/explore/search',
+    },
     claims: '/claims',
     identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,

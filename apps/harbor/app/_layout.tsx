@@ -87,6 +87,19 @@ function RootStack() {
         </Stack.Protected>
 
         <Stack.Screen
+          name="explore"
+          options={
+            isWeb
+              ? { animation: 'none' }
+              : {
+                  animation: 'fade',
+                  gestureEnabled: false,
+                  fullScreenGestureEnabled: false,
+                }
+          }
+        />
+
+        <Stack.Screen
           name="image-viewer"
           options={{
             presentation: 'transparentModal',

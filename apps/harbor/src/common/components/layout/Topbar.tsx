@@ -1,7 +1,7 @@
 import Icon from '@/src/common/components/Icon';
 import { Image } from 'expo-image';
-import { Link, router, useSegments } from 'expo-router';
-import { memo, type ReactNode } from 'react';
+import { Link, router, useIsFocused, useSegments } from 'expo-router';
+import { memo, useRef, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
@@ -30,8 +30,11 @@ function Topbar({ title, left, center, right }: TopbarProps) {
   const { theme } = useTheme();
 
   const segments = useSegments();
+  const isFocused = useIsFocused();
   const isTabRoot = segments[0] === '(tabs)' && segments.length === 2;
-  const canGoBack = !isTabRoot;
+  const isTabRootRef = useRef(isTabRoot);
+  if (isFocused) isTabRootRef.current = isTabRoot;
+  const canGoBack = !isTabRootRef.current;
 
   const identityKey = currentIdentity?.identityKey ?? null;
 
