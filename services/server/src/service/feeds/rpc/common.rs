@@ -189,10 +189,20 @@ pub async fn hydrate(
 
     let keys: Vec<TargetEventKey> =
         rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let identities = collect_identities(
+    let mut identities = collect_identities(
         rows.iter()
             .map(|(event, content)| (event, content.as_ref())),
     );
+
+    // Add moderation service identity to every request, such that clients can verify label events.
+    // This ships the identity events more times than the client needs, and even when labels aren't
+    // present in the feed page--can be optimized later.
+    if let Some(moderator) = &ctx.trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.push(moderator.clone())
+    }
+
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
     let quote_set = to_target_event_keys(&quote_keys);
     let repost_set = to_target_event_keys(&repost_keys);
@@ -208,7 +218,7 @@ pub async fn hydrate(
 
     let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
     let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities);
+    let profile_events_fut = list_profile_events(ctx, identities.clone());
     let referenced_fut = async {
         let all_keys: Vec<EventKey> =
             quote_keys.iter().chain(&repost_keys).cloned().collect();
