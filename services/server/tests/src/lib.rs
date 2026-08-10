@@ -1,6 +1,7 @@
 pub mod proto;
 
 use ed25519_dalek::{Signer, SigningKey};
+use prost::Message;
 use proto::content::ContentBody;
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
@@ -8,13 +9,14 @@ use proto::search_service_client::SearchServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
     EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound,
+    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound, SearchResult,
     SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
     VerificationClaim, VerificationSchema, content,
 };
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::fmt;
 use std::mem::take;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
@@ -48,7 +50,94 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 
 pub fn random_string() -> String {
-    SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30)
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    // When searching Postgres uses a technique called stemming where it removes
+    // the end of certain English words, e.g. "party" and "party" both become
+    // "part" so that when you search for "party" it matches both. However, when
+    // using random values this sometimes causes the searching tests to fail
+    // when not using this technique (e.g. for aliases and names).
+    // So add some characters that should not be stemmed.
+    s.push_str("BBB");
+    s
+}
+
+pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
+    let mut result = String::new();
+    for _ in 0..n {
+        result.push_str(s);
+        result.push_str(separator);
+    }
+    if !result.is_empty() {
+        result.truncate(result.len() - separator.len()); // Remove last separator.
+    }
+    result
+}
+
+pub fn fmt_search_results(results: &[SearchResult]) -> impl fmt::Debug {
+    struct Debug<'a>(&'a [SearchResult]);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_list()
+                .entries(self.0.iter().map(fmt_search_result))
+                .finish()
+        }
+    }
+    Debug(results)
+}
+
+pub fn fmt_search_result(result: &SearchResult) -> impl fmt::Debug {
+    struct Debug<'a>(&'a SearchResult);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let SearchResult { event_bundle, rank } = self.0;
+            let event_bundle: &dyn fmt::Debug = match event_bundle {
+                Some(event_bundle) => &fmt_event(event_bundle),
+                _ => &"None",
+            };
+            f.debug_struct("SearchResult")
+                .field("event_bundle", event_bundle)
+                .field("rank", &rank)
+                .finish()
+        }
+    }
+    Debug(result)
+}
+
+pub fn fmt_event(event: &EventBundle) -> impl fmt::Debug {
+    struct Debug<'a>(&'a EventBundle);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let EventBundle {
+                signed_event,
+                serialized_content,
+                event_proofs,
+                meta,
+            } = self.0;
+            let tmp_c;
+            let content: &dyn fmt::Debug = match serialized_content {
+                Some(c)
+                    if let Ok(content) = Content::decode(&*c.content_bytes) =>
+                {
+                    tmp_c = content;
+                    &tmp_c
+                }
+                _ => &"invalid content",
+            };
+
+            // TODO: add more deserialised content as needed.
+            f.debug_struct("EventBundle")
+                .field("signed_event", &signed_event.is_some())
+                .field("content", &content)
+                .field("event_proofs", &event_proofs)
+                .field("meta", &meta)
+                .finish()
+        }
+    }
+
+    Debug(event)
 }
 
 pub async fn connect_event_sync()
@@ -134,16 +223,24 @@ impl Sequence {
 
 impl TestClient {
     pub async fn new() -> TestClient {
-        let event_sync_client = connect_event_sync().await;
-
         let key = generate_signing_key();
+        TestClient::new_with_identity(key).await
+    }
+
+    /// Create a client for the trusted moderator.
+    pub async fn trusted_moderator() -> TestClient {
+        let key = test_moderator_key();
+        TestClient::new_with_identity(key).await
+    }
+
+    async fn new_with_identity(key: SigningKey) -> TestClient {
+        let event_sync_client = connect_event_sync().await;
         let identity = Identity {
             rotation_keys: vec![public_key_of(&key)],
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
         };
-
         let mut client = TestClient {
             key,
             identity: derive_identity_string(&identity),
@@ -152,9 +249,7 @@ impl TestClient {
             identity_sequence: Sequence::new(),
             collection_sequences: [const { Sequence::new() }; _],
         };
-
         client.set_identity(identity, DEFAULT_CREATED_AT);
-
         client
     }
 
@@ -200,6 +295,17 @@ impl TestClient {
             links: Vec::new(),
         };
         self.post(post, created_at)
+    }
+
+    pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Labels(labels), created_at)
+    }
+
+    pub fn get_last_event_key(&self) -> EventKey {
+        let event = self.pending.last().expect("no pending events");
+        let signed_event = event.signed_event.as_ref().unwrap();
+        let event = Event::decode(&*signed_event.event_bytes).unwrap();
+        event.key.unwrap()
     }
 
     fn push_event_bundle(
@@ -273,6 +379,19 @@ impl TestClient {
             .put_events(PutEventsRequest { event_bundles })
             .await
             .expect("put_events failed");
+    }
+}
+
+impl Drop for TestClient {
+    fn drop(&mut self) {
+        const MSG: &str = "Unsubmitted events in TestClient, call submit_events to submit them";
+        if !self.pending.is_empty() {
+            if !std::thread::panicking() {
+                panic!("{}", MSG);
+            } else {
+                eprintln!("{}", MSG);
+            }
+        }
     }
 }
 
