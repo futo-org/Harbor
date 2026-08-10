@@ -1,5 +1,6 @@
 package org.futo.polycentric.core
 
+import java.util.logging.Logger
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -13,15 +14,25 @@ import org.futo.polycentric.ffi.QueryStatus
 
 class CoreQueryException(message: String) : Exception(message)
 
+private val log = Logger.getLogger("PolycentricCore.query")
+
 /**
  * Bridge the core's `QueryObservable` (fan-out over every configured
  * server) into a cold Kotlin [Flow].
  *
- * Each emission is the merged result so far plus the fan-out status.
- * NOTE: the underlying observable NEVER calls `complete()` — it stays
- * subscribed for cache invalidations. Collectors that want a one-shot
- * answer must stop at the first `Success` emission ([awaitQuery]), which
- * is exactly the contract js-core's `listEvents` relies on.
+ * Each emission carries the merged result so far plus the fan-out
+ * `status`, which is authoritative:
+ *  - `Loading` while any server is still outstanding;
+ *  - `Success` once at least one server has returned data;
+ *  - `Error` once every server has reported and none returned data.
+ *
+ * The observable also invokes `error(msg)` once per *individual* server
+ * that fails, and `complete()` after the last server reports (see rs-core
+ * `QueryState::fetch`). A per-server `error` is NOT terminal — other
+ * servers may still succeed — so it is logged and dropped rather than
+ * closing the flow; closing here would abort the whole query on the first
+ * server that happens to fail. Collectors observe outcomes solely through
+ * the `status` field.
  */
 fun PolycentricCore.queryFlow(
     query: Query,
@@ -35,7 +46,7 @@ fun PolycentricCore.queryFlow(
         }
 
         override fun error(message: String) {
-            close(CoreQueryException(message))
+            log.warning("Query server error (non-fatal): $message")
         }
 
         override fun complete() {
@@ -46,10 +57,16 @@ fun PolycentricCore.queryFlow(
 }
 
 /**
- * One-shot query: resolve on the Loading→Success transition once every
- * server slot has reported, returning the final merged payload bytes
- * (a serialized response proto — the caller decodes with the matching
- * Wire ADAPTER). Mirrors js-core `PolycentricClient.listEvents`.
+ * One-shot query: resolve on the first `Success` emission (at least one
+ * server returned data), returning the final merged payload bytes (a
+ * serialized response proto — the caller decodes with the matching Wire
+ * ADAPTER). A single failing server does not abort the query.
+ *
+ * Diverges from js-core `PolycentricClient.listEvents`, which rejects on
+ * the first per-server error: here an `Error` status (every server
+ * reported, none returned data — e.g. the device is offline) throws
+ * [CoreQueryException] instead, and per-server errors are ignored while
+ * healthy servers are still outstanding (divergences.md).
  */
 suspend fun PolycentricCore.awaitQuery(
     query: Query,
@@ -59,7 +76,12 @@ suspend fun PolycentricCore.awaitQuery(
     var latest: ByteArray? = null
     queryFlow(query, queryKey, opts).first { result ->
         result.data?.let { latest = it }
-        result.status == QueryStatus.SUCCESS
+        when (result.status) {
+            QueryStatus.SUCCESS -> true
+            QueryStatus.ERROR ->
+                throw CoreQueryException("Query failed on all servers")
+            QueryStatus.LOADING -> false
+        }
     }
     return latest
 }
