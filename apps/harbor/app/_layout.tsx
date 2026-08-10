@@ -66,11 +66,15 @@ function RootStack() {
         <Stack.Protected guard={accountGuard}>
           <Stack.Screen
             name="feed"
-            options={{
-              presentation: 'transparentModal',
-              animation: isWeb ? 'fade' : 'default',
-              contentStyle: { backgroundColor: 'transparent' },
-            }}
+            options={
+              isWeb
+                ? {
+                    presentation: 'transparentModal',
+                    animation: 'fade',
+                    contentStyle: { backgroundColor: 'transparent' },
+                  }
+                : { animation: 'slide_from_bottom' }
+            }
           />
           <Stack.Screen name="settings" />
           <Stack.Screen name="moderation" />
