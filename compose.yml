@@ -157,6 +157,40 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
 
+  # Opt-in. Needs an identity published to the server first. See
+  # services/moderation/create-local-identity.sh.
+  #
+  # Run with `docker compose --profile moderation up -d --build moderation`
+  moderation:
+    profiles:
+      - moderation
+    build:
+      context: .
+      dockerfile: services/moderation/Dockerfile
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgres://postgres:testing@postgres:5432
+      - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
+      - POLYCENTRIC_MODERATION_IDENTITY=${POLYCENTRIC_MODERATION_IDENTITY:-}
+      - POLYCENTRIC_MODERATION_SIGNING_KEY=${POLYCENTRIC_MODERATION_SIGNING_KEY:-}
+      - POLYCENTRIC_MODERATION_SERVERS=http://server:3000
+      # Azure and PhotoDNA are unset, so labels come only from moderator
+      # reports. Set the Azure endpoint and key together to enable scoring.
+      - CONTENT_BLOB_OS_BUCKET=polycentric-blobs
+      - CONTENT_BLOB_OS_ENDPOINT=http://rustfs:9000
+      - CONTENT_BLOB_OS_FORCE_PATH_STYLE=true
+      - CONTENT_BLOB_OS_ACCESS_KEY=rustfsadmin
+      - CONTENT_BLOB_OS_SECRET_KEY=rustfsadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+      server:
+        condition: service_started
+
   kafka-ui:
     image: docker.redpanda.com/redpandadata/console:latest
     environment:

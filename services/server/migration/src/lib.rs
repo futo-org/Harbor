@@ -30,6 +30,7 @@ mod m20260804_000001_update_content_profile_update_columns;
 mod m20260804_000003_content_profile_update_search_data;
 mod m20260806_000001_content_post_search_data;
 mod m20260807_000001_migrate_missing_content_profile_update_data;
+mod m20260807_000002_align_report_categories_with_labels;
 
 pub struct Migrator;
 
@@ -71,6 +72,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20260804_000003_content_profile_update_search_data::Migration),
             Box::new(m20260806_000001_content_post_search_data::Migration),
             Box::new(m20260807_000001_migrate_missing_content_profile_update_data::Migration),
+            Box::new(
+                m20260807_000002_align_report_categories_with_labels::Migration,
+            ),
         ]
     }
 }

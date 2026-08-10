@@ -9,9 +9,9 @@ use crate::{
 /// Shared service dependencies threaded through message processing.
 pub struct Context {
     pub db: DatabaseConnection,
-    /// Azure moderation client.
-    pub azure: AzureClient,
-    /// PhotoDNA CSAM client. If `None`, content is moderated only by Azure.
+    /// Azure moderation client. If `None`, ignored.
+    pub azure: Option<AzureClient>,
+    /// PhotoDNA CSAM client. If `None`, ignored.
     pub photodna: Option<PhotoDnaClient>,
     /// Blob store for fetching image content.
     pub blobs: ObjectStore,

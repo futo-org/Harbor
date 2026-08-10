@@ -16,7 +16,7 @@ use polycentric::{PolycentricClient, PublishError};
 use polycentric_common::models::{
     collections,
     protos_v2::{
-        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, ReportCategory,
+        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, Report, ReportCategory,
         content::ContentBody,
     },
 };
@@ -45,9 +45,9 @@ enum Outcome {
     Retry,
 }
 
-/// The moderatable content extracted from an `EventBundle`, keyed by its
-/// content digest.
-struct ContentToModerate {
+/// The content carried by an `EventBundle`, keyed by its content digest.
+struct BundleContent {
+    author_identity: String,
     digest_type: i32,
     digest_bytes: Vec<u8>,
     content: Content,
@@ -76,10 +76,9 @@ fn count_message(outcome: &'static str) {
     );
 }
 
-/// Pull the content and its digest out of a bundle. Returns `None` when
-/// there is nothing to moderate (no serialized content) or the bundle
-/// cannot be interpreted.
-fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
+/// Pull the content, digest, and author out of a bundle. Returns
+/// `None` when the bundle carries no content or cannot be interpreted.
+fn content_from_bundle(bundle: EventBundle) -> Option<BundleContent> {
     // No serialized content means there is nothing to moderate (e.g. a
     // delete or reaction event).
     let serialized_content = bundle.serialized_content?;
@@ -110,6 +109,14 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
         }
     };
 
+    let author_identity = match event.key {
+        Some(key) => key.identity,
+        None => {
+            tracing::warn!("event missing key");
+            return None;
+        }
+    };
+
     let content = match Content::decode(serialized_content.content_bytes.as_slice()) {
         Ok(c) => c,
         Err(e) => {
@@ -118,19 +125,18 @@ fn content_from_bundle(bundle: EventBundle) -> Option<ContentToModerate> {
         }
     };
 
-    // Nothing to moderate unless the content yields text or an image
-    // (skips no-op posts, reactions, follows, etc.).
-    let has_text = content_text(&content).is_some();
-    let has_image = !image_blobs(&content).is_empty();
-    if !has_text && !has_image {
-        return None;
-    }
-
-    Some(ContentToModerate {
+    Some(BundleContent {
+        author_identity,
         digest_type: digest.r#type,
         digest_bytes: digest.value,
         content,
     })
+}
+
+/// Whether the content can be fed to automated content scoring. This skips empty
+/// posts, reactions, follows, and the like.
+fn has_scorable_media(content: &Content) -> bool {
+    content_text(content).is_some() || !image_blobs(content).is_empty()
 }
 
 /// User-supplied text carried by the content, if any.
@@ -228,7 +234,9 @@ async fn moderate(
     content: &Content,
     images: &[(Vec<u8>, String)],
 ) -> Result<serde_json::Value, ()> {
-    let client = &ctx.azure;
+    let Some(client) = &ctx.azure else {
+        return Ok(no_findings());
+    };
 
     let text = content_text(content);
 
@@ -261,6 +269,12 @@ async fn moderate(
         "text": text_result,
         "images": image_results,
     }))
+}
+
+/// An Azure-shaped response carrying no findings, used when automatic content scoring
+/// is disabled.
+fn no_findings() -> serde_json::Value {
+    serde_json::json!({ "text": null, "images": [] })
 }
 
 /// Run every image through PhotoDNA and report whether any is a CSAM match.
@@ -300,13 +314,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = db::connect().await?;
     db::run_migrations(&db).await?;
 
-    // Both the Azure client and blob store are required.
-    let azure = AzureClient::new(
-        &config.azure_endpoint,
-        &config.azure_key,
-        &config.azure_api_version,
-        &config.azure_multimodal_api_version,
-    );
+    let azure = match &config.azure {
+        Some(azure) => Some(AzureClient::new(
+            &azure.endpoint,
+            &azure.key,
+            &azure.api_version,
+            &azure.multimodal_api_version,
+        )),
+        None => {
+            tracing::warn!(
+                "Azure Content Safety not configured; labels now published only from moderator reports"
+            );
+            None
+        }
+    };
     let blobs = ObjectStore::new(ObjectStoreConfig::from_env()?).await;
 
     // PhotoDNA is optional: if it is not configured, warn and moderate
@@ -314,7 +335,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let photodna = match &config.photodna_key {
         Some(key) => Some(PhotoDnaClient::new(&config.photodna_endpoint, key, true)),
         None => {
-            tracing::warn!("PhotoDNA not configured, continuing with Azure only");
+            tracing::warn!("PhotoDNA not configured, CSAM scanning disabled");
             None
         }
     };
@@ -423,7 +444,8 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         None => return Outcome::Commit,
     };
 
-    let ContentToModerate {
+    let BundleContent {
+        author_identity,
         digest_type,
         digest_bytes,
         content,
@@ -431,6 +453,14 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         Some(c) => c,
         None => return Outcome::Commit,
     };
+
+    if let Some(ContentBody::Report(report)) = &content.content_body {
+        return process_moderator_report(ctx, &author_identity, report).await;
+    }
+
+    if !has_scorable_media(&content) {
+        return Outcome::Commit;
+    }
 
     // Obtain the Azure result: reuse a prior one if this content was already
     // processed, otherwise run Azure now and persist the outcome.
@@ -612,6 +642,53 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         }
         Err(PublishError::Transient(e)) => {
             tracing::warn!(error = %e, "labels publish failed");
+            Outcome::Retry
+        }
+    }
+}
+
+/// If processing a report from a moderator that corresponds to a label,
+/// publish that label.
+async fn process_moderator_report(
+    ctx: &Context,
+    author_identity: &str,
+    report: &Report,
+) -> Outcome {
+    match repository::is_moderator(&ctx.db, author_identity).await {
+        Ok(true) => {}
+        Ok(false) => {
+            tracing::debug!(author = author_identity, "report author is not a moderator");
+            return Outcome::Commit;
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, author = author_identity, "is_moderator error");
+            return Outcome::Retry;
+        }
+    }
+
+    let Some(label) = labels::label_from_report_category(report.category) else {
+        tracing::debug!(
+            category = report.category,
+            "report category has no label counterpart"
+        );
+        return Outcome::Commit;
+    };
+
+    let Some(target) = report.event_key.clone() else {
+        tracing::warn!("moderator report missing event_key");
+        return Outcome::Commit;
+    };
+
+    let labels = vec![label.to_string()];
+    let digest = polycentric::labels_content(&target, &labels).1;
+    match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await {
+        Ok(true) => {
+            tracing::debug!(key = ?target, "labels event already created, skipping");
+            Outcome::Commit
+        }
+        Ok(false) => publish_labels(ctx, target, labels).await,
+        Err(e) => {
+            tracing::warn!(error = %e, "created_content_exists error");
             Outcome::Retry
         }
     }

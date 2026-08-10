@@ -1,12 +1,15 @@
 use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
-use moderation_entity::{created_content_model, created_event_model};
+use moderation_entity::{created_content_model, created_event_model, moderator_model};
 use polycentric_common::merkle;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ColumnTrait, ConnectionTrait,
-    DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait, sea_query::OnConflict,
-    sea_query::value::prelude::serde_json,
+    ActiveModelTrait,
+    ActiveValue::NotSet,
+    ActiveValue::Set,
+    ColumnTrait, ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, SelectExt,
+    TransactionTrait,
+    sea_query::{OnConflict, value::prelude::serde_json},
 };
 use time::OffsetDateTime;
 
@@ -124,12 +127,15 @@ pub async fn created_content_exists<C: ConnectionTrait>(
     digest_type: i32,
     digest_bytes: Vec<u8>,
 ) -> Result<bool, DbErr> {
-    Ok(
-        created_content_model::Entity::find_by_id((digest_type, digest_bytes))
-            .one(db)
-            .await?
-            .is_some(),
-    )
+    created_content_model::Entity::find_by_id((digest_type, digest_bytes))
+        .exists(db)
+        .await
+}
+
+pub async fn is_moderator<C: ConnectionTrait>(db: &C, identity: &str) -> Result<bool, DbErr> {
+    moderator_model::Entity::find_by_id(identity.to_owned())
+        .exists(db)
+        .await
 }
 
 /// Return the content reference, if any, from the database

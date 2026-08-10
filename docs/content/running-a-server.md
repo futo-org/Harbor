@@ -231,6 +231,52 @@ The moderation service inspects:
 The `Labels` event always target a post or profile event, and indirectly
 target any media or blob linked to that event.
 
+#### Labels from moderator reports
+
+Labels are also published in response to
+[`Report`](/protocol/data-model#report) events, but only when the report was
+signed by an identity the moderation service recognises as a moderator. Those
+identities live in the `moderator` table in the moderation service's own
+Postgres schema (`moderation` by default), so each service decides who it
+listens to. This list is separate from a server's moderator list. The two
+moderator lists may overlap, but neither is derived from the other.
+
+Currently there is no admin UI to add moderators, so you must add them
+directly to the database using SQL:
+
+```sql
+INSERT INTO moderation.moderator (identity, created_at, updated_at)
+VALUES ('<hex identity>', now(), now())
+ON CONFLICT (identity) DO NOTHING;
+```
+
+Note that removing a moderator (deleting the row) will not remove the label
+events that have been signed for that moderator's reports.
+
+Conveniently, if the moderation service shares a database with a server, you
+can seed the list from that server's moderators:
+
+```sql
+INSERT INTO moderation.moderator (identity, created_at, updated_at)
+SELECT identity, now(), now() FROM public.moderator
+ON CONFLICT (identity) DO NOTHING;
+```
+
+Report categories must correspond to a label value to produce a label event.
+This correspondence is as follows:
+
+| Report category | Label |
+|---|---|
+| `REPORT_CATEGORY_HATE` | `hate` |
+| `REPORT_CATEGORY_SELF_HARM` | `self-harm` |
+| `REPORT_CATEGORY_SEXUALLY_EXPLICIT` | `sexually-explicit` |
+| `REPORT_CATEGORY_VIOLENCE` | `violence` |
+
+All other reports will not produce a label. The `sexually-suggestive` label
+is also deliberately not reportable, as the confusion between suggestive/explicit
+would be a burden on moderator time. Only automated scoring makes the distinction
+between explicit/suggestive.
+
 #### Changing the trusted service
 Any identity can sign label events for any content, even if the server only
 trusts one identity. The server stores all such label events. Thus, setting a

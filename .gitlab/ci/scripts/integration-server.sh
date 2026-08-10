@@ -23,7 +23,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$REPO_ROOT"
-export COMPOSE_PROJECT_NAME=polycentric
+export COMPOSE_PROJECT_NAME=harbor
 
 # ---------------------------------------------------------------------------
 # Test moderator identity (deterministic — derived from the same seed as
@@ -155,7 +155,7 @@ if [ "$CI_MODE" = true ]; then
   # container is connected to a compose network via `docker network connect`
   # in a Docker-in-Docker environment).
   SERVER_HOST=server
-  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' polycentric-server-1 2>/dev/null)
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
     export POLYCENTRIC_TEST_SERVER="http://${SERVER_IP}:3000"
