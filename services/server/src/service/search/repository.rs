@@ -97,9 +97,7 @@ impl Query {
         query = query
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust(
-                    "ts_rank(search_data, websearch_to_tsquery('simple', $1))",
-                ),
+                Expr::cust("ts_rank(search_data, search_query($1))"),
                 "search_rank",
             )
             .expr_as(Expr::cust("content_profile_update.name"), "profile_name")
@@ -109,7 +107,7 @@ impl Query {
                 content_model::Relation::ContentProfileUpdateModel.def(),
             )
             .filter(Expr::cust_with_values(
-                "search_data @@ websearch_to_tsquery('simple', $1)",
+                "search_data @@ search_query($1)",
                 [search_query],
             ));
 
@@ -132,7 +130,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) < ($1, $2)",
+                            "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
@@ -160,7 +158,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) > ($1, $2)",
+                            "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
@@ -221,9 +219,7 @@ impl Query {
         query = query
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust(
-                    "ts_rank(search_data, websearch_to_tsquery('simple', $1))",
-                ),
+                Expr::cust("ts_rank(search_data, search_query($1))"),
                 "search_rank",
             )
             .join(JoinType::InnerJoin, content_join())
@@ -232,7 +228,7 @@ impl Query {
                 content_model::Relation::ContentPostModel.def(),
             )
             .filter(Expr::cust_with_values(
-                "search_data @@ websearch_to_tsquery('simple', $1)",
+                "search_data @@ search_query($1)",
                 [search_query],
             ));
 
@@ -255,7 +251,7 @@ impl Query {
                             sorted_by: SortedPostsBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) < ($1, $2)",
+                            "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
@@ -283,7 +279,7 @@ impl Query {
                             sorted_by: SortedPostsBy::Rank(rank),
                             id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, websearch_to_tsquery('simple', $$1)), events.id) > ($1, $2)",
+                            "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(id)],
                         )),
                         Marker {
