@@ -184,10 +184,10 @@ impl Query {
             .await
     }
 
-    /// Fetch label events that target any of `keys`. Only labels from
-    /// the trusted moderator are returned, using a join through
-    /// `content_label` → `content` → `events` to check the label
-    /// author's identity. Returns empty when no moderator is configured.
+    /// Fetch label events that target any of `keys`. If `trusted_moderator` is
+    /// set only labels from the trusted moderator are returned, using a join
+    /// through `content_label` → `content` → `events` to check the label
+    /// author's identity.
     pub async fn list_labels_for_event_keys(
         db: &DbConn,
         keys: &[TargetEventKey],
