@@ -28,6 +28,9 @@ import { PostImages } from './PostImages';
 import PostMenu from './PostMenu';
 import { PostText } from './PostText';
 import { PostToolbar } from './toolbar/PostToolbar';
+import { PostLabels } from './PostLabels';
+import { PostWarnOverlay } from './PostWarnOverlay';
+import { usePostModeration } from './hooks/usePostModeration';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -93,13 +96,9 @@ export const Post = memo(function Post({
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    router.push(
-      Routes.tabs.post(
-        post.identity,
-        getKeyFingerprint(post.signedBy)!,
-        post.sequence,
-      ),
-    );
+    const keyFingerprint = getKeyFingerprint(post.signedBy);
+    if (!keyFingerprint) return;
+    router.push(Routes.tabs.post(post.identity, keyFingerprint, post.sequence));
   }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
@@ -112,6 +111,10 @@ export const Post = memo(function Post({
   }, []);
 
   const time = timeAgo(Number(post.createdAt));
+
+  const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
+  const [warnDismissed, setWarnDismissed] = useState(false);
+  const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
   return (
     <Pressable
@@ -212,46 +215,57 @@ export const Post = memo(function Post({
             <PostMenu post={post} />
           </View>
 
-          {!hideReplyingTo && post.reply?.parentId ? (
-            <ReplyingToSubheader parentId={post.reply.parentId} />
-          ) : null}
+          <View style={{ position: 'relative' }}>
+            {!hideReplyingTo && post.reply?.parentId ? (
+              <ReplyingToSubheader parentId={post.reply.parentId} />
+            ) : null}
 
-          {displayContent ? (
-            <PostText
-              content={displayContent}
-              suffix={isTruncatedPreview ? '...' : ''}
-            />
-          ) : null}
-          {/* Render only the first link preview. A post may carry multiple
+            {displayContent ? (
+              <PostText
+                content={displayContent}
+                suffix={isTruncatedPreview ? '...' : ''}
+              />
+            ) : null}
+            {/* Render only the first link preview. A post may carry multiple
               `links` (e.g. from another client), but we cap the UI at one. */}
-          {post.links?.[0] ? (
-            <LinkPreviewCard
-              link={post.links[0]}
-              compact={compactLinkPreview}
-            />
-          ) : null}
-          {post.images?.length > 0 && <PostImages images={post.images} />}
-          {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
-          {showContentExpandToggle && (
-            <Pressable
-              onPress={toggleContentExpanded}
-              onHoverIn={onExpandHoverIn}
-              onHoverOut={onExpandHoverOut}
-              style={[Atoms.self_start]}
-            >
-              <Text
-                variant="small"
-                color="primary_500"
-                style={
-                  expandHovered
-                    ? { textDecorationLine: 'underline' }
-                    : undefined
-                }
+            {post.links?.[0] ? (
+              <LinkPreviewCard
+                link={post.links[0]}
+                compact={compactLinkPreview}
+              />
+            ) : null}
+            {post.images?.length > 0 && <PostImages images={post.images} />}
+            {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
+            {post.labels && post.labels.length > 0 ? (
+              <PostLabels labels={post.labels} />
+            ) : null}
+            {showContentExpandToggle && (
+              <Pressable
+                onPress={toggleContentExpanded}
+                onHoverIn={onExpandHoverIn}
+                onHoverOut={onExpandHoverOut}
+                style={[Atoms.self_start]}
               >
-                {contentExpanded ? 'Show less' : 'Show more'}
-              </Text>
-            </Pressable>
-          )}
+                <Text
+                  variant="small"
+                  color="primary_500"
+                  style={
+                    expandHovered
+                      ? { textDecorationLine: 'underline' }
+                      : undefined
+                  }
+                >
+                  {contentExpanded ? 'Show less' : 'Show more'}
+                </Text>
+              </Pressable>
+            )}
+            {hasWarnContent && !warnDismissed ? (
+              <PostWarnOverlay
+                labels={warnLabels}
+                onDismiss={handleWarnDismiss}
+              />
+            ) : null}
+          </View>
           <PostToolbar post={post} style={[Atoms.mt_sm]} />
         </View>
       </View>

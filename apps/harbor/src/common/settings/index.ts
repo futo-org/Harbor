@@ -4,13 +4,17 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type ModerationLevel = 'hide' | 'warn' | 'show';
 
-export interface ModerationPreferences {
-  hate: ModerationLevel;
-  selfHarm: ModerationLevel;
-  sexuallySuggestive: ModerationLevel;
-  sexuallyExplicit: ModerationLevel;
-  violence: ModerationLevel;
-}
+export const MODERATION_LABELS = [
+  'hate',
+  'self-harm',
+  'sexually-suggestive',
+  'sexually-explicit',
+  'violence',
+] as const;
+
+export type ModerationLabel = (typeof MODERATION_LABELS)[number];
+
+export type ModerationPreferences = Record<ModerationLabel, ModerationLevel>;
 
 export interface SettingsState {
   theme: 'light' | 'dark';
@@ -33,9 +37,9 @@ export const useSettings = create<SettingsStore>()(
       linkPreviewsEnabled: true,
       moderation: {
         hate: 'warn',
-        selfHarm: 'warn',
-        sexuallySuggestive: 'warn',
-        sexuallyExplicit: 'warn',
+        'self-harm': 'warn',
+        'sexually-suggestive': 'warn',
+        'sexually-explicit': 'warn',
         violence: 'warn',
       },
 
