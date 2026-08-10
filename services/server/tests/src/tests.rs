@@ -2041,21 +2041,23 @@ async fn search_posts_order_by_latest() {
 
 #[tokio::test]
 async fn search_posts_omit_labels() {
-    let mut client = TestClient::new().await;
-
     let query = random_string();
     let label = random_string();
 
+    let mut client = TestClient::new().await;
     client.post_text(&query, DEFAULT_CREATED_AT);
     let post_event_key = client.get_last_event_key();
-    client.label(
+    client.submit_events().await;
+
+    let mut trusted_moderator = TestClient::trusted_moderator().await;
+    trusted_moderator.label(
         Labels {
             event_key: Some(post_event_key),
             label_values: vec![label.clone()],
         },
-        DEFAULT_CREATED_AT,
+        DEFAULT_CREATED_AT + 1,
     );
-    client.submit_events().await;
+    trusted_moderator.submit_events().await;
 
     expect_searched_posts(
         SearchPostsRequest {

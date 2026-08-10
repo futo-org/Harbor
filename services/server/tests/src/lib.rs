@@ -223,16 +223,26 @@ impl Sequence {
 
 impl TestClient {
     pub async fn new() -> TestClient {
-        let event_sync_client = connect_event_sync().await;
-
         let key = generate_signing_key();
+        TestClient::new_with_identity(key).await
+    }
+
+    /// Create a client for the trusted moderator.
+    pub async fn trusted_moderator() -> TestClient {
+        let key = test_moderator_key();
+        let mut client = TestClient::new_with_identity(key).await;
+        //client.pending.clear(); // Don't send identity event.
+        client
+    }
+
+    async fn new_with_identity(key: SigningKey) -> TestClient {
+        let event_sync_client = connect_event_sync().await;
         let identity = Identity {
             rotation_keys: vec![public_key_of(&key)],
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
         };
-
         let mut client = TestClient {
             key,
             identity: derive_identity_string(&identity),
@@ -241,9 +251,7 @@ impl TestClient {
             identity_sequence: Sequence::new(),
             collection_sequences: [const { Sequence::new() }; _],
         };
-
         client.set_identity(identity, DEFAULT_CREATED_AT);
-
         client
     }
 
