@@ -1,4 +1,4 @@
-import { Button } from '@/src/common/components';
+import { Button } from '@/src/common/components/primitives/Button';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import useFollows from './hooks/useFollows';
 

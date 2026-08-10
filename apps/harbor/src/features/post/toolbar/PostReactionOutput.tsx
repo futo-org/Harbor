@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives/Text';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';

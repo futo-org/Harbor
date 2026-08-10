@@ -9,9 +9,7 @@ import {
   type IdentityState,
 } from '@polycentric/react-native';
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -22,24 +20,22 @@ import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
 import { useNotificationNavigation } from '../notifications/useNotificationNavigation';
 import {
+  PolycentricContext,
+  usePolycentricContext,
+  type PolycentricContextValue,
+} from './context';
+import {
   createPolycentricStore,
   useStore,
   type PolycentricStoreApi,
 } from './store';
 import useReactions from '@/src/features/reaction/useReactions';
 
-export interface PolycentricContextValue {
-  client: PolycentricClient;
-  store: PolycentricStoreApi;
-  isLoading: boolean;
-  isReady: boolean;
-  error: Error | null;
-  currentIdentity: IdentityState | null;
-  switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
-  refreshCurrentIdentity: () => Promise<void>;
-}
-
-const PolycentricContext = createContext<PolycentricContextValue | null>(null);
+export {
+  usePolycentric,
+  usePolycentricContext,
+  type PolycentricContextValue,
+} from './context';
 
 // Defaults for local development
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
@@ -322,21 +318,6 @@ export function PolycentricProvider({
       {children}
     </PolycentricContext.Provider>
   );
-}
-
-export function usePolycentricContext(): PolycentricContextValue {
-  const ctx = useContext(PolycentricContext);
-  if (!ctx)
-    throw new Error(
-      'usePolycentricContext must be used within PolycentricProvider',
-    );
-  return ctx;
-}
-
-export function usePolycentric(): PolycentricClient {
-  const { client, isReady } = usePolycentricContext();
-  if (!isReady) throw new Error('PolycentricClient is not ready');
-  return client;
 }
 
 export function useIdentities() {

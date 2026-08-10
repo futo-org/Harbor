@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives/Text';
 import { Sheet } from '@/src/common/components/sheet';
 import { Tabs } from '@/src/common/components/Tabs';
 import { Routes } from '@/src/common/constants';

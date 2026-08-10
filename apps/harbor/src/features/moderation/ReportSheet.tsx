@@ -1,4 +1,6 @@
-import { Button, Text, TextArea } from '@/src/common/components';
+import { Button } from '@/src/common/components/primitives/Button';
+import { Text } from '@/src/common/components/primitives/Text';
+import { TextArea } from '@/src/common/components/TextArea';
 import { Sheet } from '@/src/common/components/sheet';
 import useReportOptions, { type ReportOptions } from './hooks/useReportOptions';
 import { ActivityIndicator, View } from 'react-native';
