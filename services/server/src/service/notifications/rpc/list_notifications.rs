@@ -5,8 +5,7 @@ use crate::{
         events::TargetEventKey,
         feeds::{repository::Query as FeedsRepository, util::map_db_err},
         identity::service::{
-            list_identity_events, list_profile_events,
-            list_signer_identity_events, rows_to_bundles,
+            list_identity_events, list_profile_events, rows_to_bundles,
         },
         notifications::repository::Query as NotificationRepository,
         proofs::service::attach_proofs,
@@ -153,19 +152,24 @@ async fn hydrate(
         .map_err(map_db_err)
     };
 
-    // Author identity, profile, and moderation label events all ship as hints.
+    // Add moderation service identity to every request, such that clients can verify label events.
+    // This ships the identity events more times than the client needs, and even when labels aren't
+    // present in the feed page--can be optimized later.
+    if let Some(moderator) = &ctx.trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.insert(moderator.clone());
+    }
+
     let identities: Vec<String> = identities.into_iter().collect();
 
-    let (mut identity_events, profile_events, label_rows, stats) = tokio::try_join!(
+    // Author identity, profile, and moderation label events all ship as hints.
+    let (identity_events, profile_events, label_rows, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
-        list_profile_events(ctx, identities.clone()),
+        list_profile_events(ctx, identities),
         label_fut,
         stats_fut
     )?;
-
-    identity_events.extend(
-        list_signer_identity_events(ctx, &label_rows, &identities).await?,
-    );
 
     let mut label_bundles = rows_to_bundles(label_rows);
     attach_proofs(ctx, &mut label_bundles).await?;

@@ -15,7 +15,7 @@ use crate::service::feeds::util::{
 };
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, list_signer_identity_events, rows_to_bundles,
+    list_profile_events, rows_to_bundles,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
@@ -189,10 +189,20 @@ pub async fn hydrate(
 
     let keys: Vec<TargetEventKey> =
         rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let identities = collect_identities(
+    let mut identities = collect_identities(
         rows.iter()
             .map(|(event, content)| (event, content.as_ref())),
     );
+
+    // Add moderation service identity to every request, such that clients can verify label events.
+    // This ships the identity events more times than the client needs, and even when labels aren't
+    // present in the feed page--can be optimized later.
+    if let Some(moderator) = &ctx.trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.push(moderator.clone())
+    }
+
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
     let quote_set = to_target_event_keys(&quote_keys);
     let repost_set = to_target_event_keys(&repost_keys);
@@ -234,7 +244,7 @@ pub async fn hydrate(
 
     let (
         deletes_by_target,
-        mut identity_events,
+        identity_events,
         profile_events,
         referenced,
         label_events,
@@ -247,10 +257,6 @@ pub async fn hydrate(
         labels_fut,
         stats_fut,
     )?;
-
-    identity_events.extend(
-        list_signer_identity_events(ctx, &label_events, &identities).await?,
-    );
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
