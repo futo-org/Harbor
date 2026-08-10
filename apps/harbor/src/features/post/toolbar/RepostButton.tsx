@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { openCompose } from '@/src/common/constants';

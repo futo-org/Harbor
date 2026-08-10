@@ -1,4 +1,3 @@
-import { decodeV2PostBundle } from '@/src/common/lib/polycentric-hooks';
 import {
   decodeFeedItems,
   decodePostBundle,
@@ -158,7 +157,7 @@ function decodeThreadResponse(
 
   const decoded: PostData[] = [];
   for (const bundle of response.thread) {
-    const d = decodeV2PostBundle(bundle);
+    const d = decodePostBundle(bundle);
     if (d) decoded.push(d);
   }
 

@@ -7,7 +7,7 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
-import { usePolycentric } from '../../lib/polycentric-hooks';
+import { usePolycentric } from '../../lib/polycentric-hooks/context';
 
 /**
  * Either a `Query` value or a function that can produce a `Query` from a previous

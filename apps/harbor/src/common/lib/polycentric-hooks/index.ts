@@ -1,11 +1,10 @@
 // Provider and base hooks
 export {
   PolycentricProvider,
-  usePolycentric,
-  usePolycentricContext,
   DEFAULT_SERVER,
   DEFAULT_SEED_SERVERS,
 } from './PolycentricProvider';
+export { usePolycentric, usePolycentricContext } from './context';
 
 // Data query hooks
 export { useUsername } from './PolycentricProvider';
