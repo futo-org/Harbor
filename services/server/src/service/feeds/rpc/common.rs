@@ -305,18 +305,18 @@ fn collect_referenced_keys(
 /// comparable EventKey shape), deduplicated into a set for the
 /// membership tests that split the combined referenced-post result.
 pub fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
-    keys.iter()
-        .filter_map(|key| {
-            let signed_by = key.signed_by.as_ref()?;
-            Some(TargetEventKey {
-                collection: key.collection as i16,
-                identity: key.identity.clone(),
-                public_key_type: signed_by.key_type as i16,
-                public_key: signed_by.key.clone(),
-                sequence: key.sequence as i64,
-            })
-        })
-        .collect()
+    keys.iter().filter_map(to_target_event_key).collect()
+}
+
+pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
+    let signed_by = key.signed_by.as_ref()?;
+    Some(TargetEventKey {
+        collection: key.collection as i16,
+        identity: key.identity.clone(),
+        public_key_type: signed_by.key_type as i16,
+        public_key: signed_by.key.clone(),
+        sequence: key.sequence as i64,
+    })
 }
 
 /// Whether a row's content references another event as a quote or repost.
