@@ -184,15 +184,19 @@ impl Query {
             .await
     }
 
-    /// Fetch label events that target any of `keys`. If `trusted_moderator` is
-    /// set only labels from the trusted moderator are returned, using a join
-    /// through `content_label` → `content` → `events` to check the label
-    /// author's identity.
+    /// Fetch label events that target any of `keys`. Only labels from
+    /// the trusted moderator are returned, using a join through
+    /// `content_label` → `content` → `events` to check the label
+    /// author's identity. Returns empty when no moderator is configured.
     pub async fn list_labels_for_event_keys(
         db: &DbConn,
         keys: &[TargetEventKey],
         trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let Some(moderator) = trusted_moderator else {
+            return Ok(Vec::new());
+        };
+
         if keys.is_empty() {
             return Ok(Vec::new());
         }
@@ -263,14 +267,12 @@ impl Query {
                         ContentModel::Column::DigestBytes,
                     )),
                 ),
-            );
-        if let Some(moderator) = trusted_moderator {
-            query.and_where(
+            )
+            .and_where(
                 Expr::col((EventModel::Entity, EventModel::Column::Identity))
                     .eq(moderator.to_owned()),
-            );
-        }
-        query.and_where(event_key_filter.into());
+            )
+            .and_where(event_key_filter.into());
 
         // Build the query
         let (sql, values) = query.build(PostgresQueryBuilder);
