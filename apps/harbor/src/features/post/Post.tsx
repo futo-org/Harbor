@@ -5,27 +5,19 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
-import {
-  getKeyFingerprint,
-  hexToBytes,
-} from '@/src/common/lib/polycentric-hooks/helpers';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { LinkPreviewCard } from './content/LinkPreviewCard';
-import { PostContentQuote } from './content/PostContentQuote';
+import { PostContent } from './content/PostContent';
 import { PostHeader } from './PostHeader';
-import { PostImages } from './PostImages';
 import PostMenu from './PostMenu';
-import { PostText } from './PostText';
 import { PostToolbar } from './toolbar/PostToolbar';
-
-const PREVIEW_LIMIT = 240;
-const MAX_DISPLAY_LIMIT = 2000;
+import { PostWarnOverlay } from './PostWarnOverlay';
+import { usePostModeration } from './hooks/usePostModeration';
 
 interface PostProps {
   post: PostData;
@@ -58,43 +50,11 @@ export const Post = memo(function Post({
   const authorProfile = useProfile(authorIdentity);
   const authorName = authorProfile.name ?? '';
 
-  const rawContent = post.content ?? '';
-  const [contentExpanded, setContentExpanded] = useState(false);
-
-  const { displayContent, isTruncatedPreview, showContentExpandToggle } =
-    useMemo(() => {
-      const capped =
-        rawContent.length > MAX_DISPLAY_LIMIT
-          ? rawContent.slice(0, MAX_DISPLAY_LIMIT)
-          : rawContent;
-      const content = contentExpanded
-        ? capped
-        : capped.length > PREVIEW_LIMIT
-          ? capped.slice(0, PREVIEW_LIMIT)
-          : capped;
-      const showToggle = rawContent.length > PREVIEW_LIMIT;
-      return {
-        displayContent: content,
-        isTruncatedPreview: !contentExpanded && showToggle,
-        showContentExpandToggle: showToggle,
-      };
-    }, [rawContent, contentExpanded]);
-
-  const {
-    hovered: expandHovered,
-    onHoverIn: onExpandHoverIn,
-    onHoverOut: onExpandHoverOut,
-  } = useWebHover();
-
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    router.push(
-      Routes.tabs.post(
-        post.identity,
-        getKeyFingerprint(post.signedBy)!,
-        post.sequence,
-      ),
-    );
+    const keyFingerprint = getKeyFingerprint(post.signedBy);
+    if (!keyFingerprint) return;
+    router.push(Routes.tabs.post(post.identity, keyFingerprint, post.sequence));
   }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
@@ -102,11 +62,11 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  const toggleContentExpanded = useCallback(() => {
-    setContentExpanded((v) => !v);
-  }, []);
-
   const time = timeAgo(Number(post.createdAt));
+
+  const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
+  const [warnDismissed, setWarnDismissed] = useState(false);
+  const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
   return (
     <Pressable
@@ -198,45 +158,19 @@ export const Post = memo(function Post({
             <PostMenu post={post} />
           </View>
 
-          {!hideReplyingTo && post.reply?.parentId ? (
-            <ReplyingToSubheader parentId={post.reply.parentId} />
-          ) : null}
-
-          {displayContent ? (
-            <PostText
-              content={displayContent}
-              suffix={isTruncatedPreview ? '...' : ''}
+          {hasWarnContent && !warnDismissed ? (
+            <PostWarnOverlay
+              labels={warnLabels}
+              authorIdentity={authorIdentity}
+              onDismiss={handleWarnDismiss}
             />
-          ) : null}
-          {/* Render only the first link preview. A post may carry multiple
-              `links` (e.g. from another client), but we cap the UI at one. */}
-          {post.links?.[0] ? (
-            <LinkPreviewCard
-              link={post.links[0]}
-              compact={compactLinkPreview}
+          ) : (
+            <PostContent
+              post={post}
+              hideReplyingTo={hideReplyingTo}
+              compactLinkPreview={compactLinkPreview}
+              authorIdentity={authorIdentity}
             />
-          ) : null}
-          {post.images?.length > 0 && <PostImages images={post.images} />}
-          {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
-          {showContentExpandToggle && (
-            <Pressable
-              onPress={toggleContentExpanded}
-              onHoverIn={onExpandHoverIn}
-              onHoverOut={onExpandHoverOut}
-              style={[Atoms.self_start]}
-            >
-              <Text
-                variant="small"
-                color="primary_500"
-                style={
-                  expandHovered
-                    ? { textDecorationLine: 'underline' }
-                    : undefined
-                }
-              >
-                {contentExpanded ? 'Show less' : 'Show more'}
-              </Text>
-            </Pressable>
           )}
           <PostToolbar post={post} />
         </View>
@@ -244,45 +178,6 @@ export const Post = memo(function Post({
     </Pressable>
   );
 });
-
-function ReplyingToSubheader({ parentId }: { parentId: string }) {
-  const parentIdentity = useMemo(() => {
-    try {
-      return v2.EventKey.fromBinary(hexToBytes(parentId)).identity;
-    } catch {
-      return null;
-    }
-  }, [parentId]);
-
-  const parentProfile = useProfile(parentIdentity);
-  const parentName = parentProfile.name ?? '';
-
-  const handlePress = useCallback(() => {
-    if (!parentIdentity) return;
-    router.push(Routes.tabs.profile(parentIdentity));
-  }, [parentIdentity]);
-
-  if (!parentIdentity) return null;
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={[Atoms.flex_row, Atoms.align_center, Atoms.self_start]}
-    >
-      <Text variant="secondary" color="neutral_500" fontWeight="regular">
-        Replying to{' '}
-      </Text>
-      <Text
-        variant="secondary"
-        color="primary_500"
-        numberOfLines={1}
-        style={Atoms.flex_shrink_1}
-      >
-        {parentName || '…'}
-      </Text>
-    </Pressable>
-  );
-}
 
 function PostAuthorName({
   name,

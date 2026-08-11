@@ -27,9 +27,9 @@ function resetModeration() {
     useSettings.setState({
       moderation: {
         hate: 'warn',
-        selfHarm: 'warn',
-        sexuallySuggestive: 'warn',
-        sexuallyExplicit: 'warn',
+        'self-harm': 'warn',
+        'sexually-suggestive': 'warn',
+        'sexually-explicit': 'warn',
         violence: 'warn',
       },
     });
@@ -50,7 +50,7 @@ describe('useOmitLabels', () => {
 
   it('returns the label string for a single hidden category', async () => {
     await act(async () =>
-      useSettings.getState().setModeration({ sexuallySuggestive: 'hide' }),
+      useSettings.getState().setModeration({ 'sexually-suggestive': 'hide' }),
     );
     const { result } = renderOmitLabelsHook();
     expect(result.current).toEqual(['sexually-suggestive']);
@@ -61,7 +61,7 @@ describe('useOmitLabels', () => {
       useSettings.getState().setModeration({
         hate: 'hide',
         violence: 'hide',
-        selfHarm: 'hide',
+        'self-harm': 'hide',
       }),
     );
     const { result } = renderOmitLabelsHook();
@@ -73,26 +73,25 @@ describe('useOmitLabels', () => {
 
   it('drops a category when its level is changed away from hide', async () => {
     await act(async () =>
-      useSettings.getState().setModeration({ sexuallyExplicit: 'hide' }),
+      useSettings.getState().setModeration({ 'sexually-explicit': 'hide' }),
     );
     const { result: r1 } = renderOmitLabelsHook();
     expect(r1.current).toEqual(['sexually-explicit']);
 
     await act(async () =>
-      useSettings.getState().setModeration({ sexuallyExplicit: 'warn' }),
+      useSettings.getState().setModeration({ 'sexually-explicit': 'warn' }),
     );
     const { result: r2 } = renderOmitLabelsHook();
     expect(r2.current).toEqual([]);
   });
 
-  it('maps every ModerationPreferences key to the correct label string', async () => {
-    // Hide everything — exercise every entry in LABEL_MAP.
+  it('returns every moderation label when all are hidden', async () => {
     await act(async () =>
       useSettings.getState().setModeration({
         hate: 'hide',
-        selfHarm: 'hide',
-        sexuallySuggestive: 'hide',
-        sexuallyExplicit: 'hide',
+        'self-harm': 'hide',
+        'sexually-suggestive': 'hide',
+        'sexually-explicit': 'hide',
         violence: 'hide',
       }),
     );
@@ -114,7 +113,7 @@ describe('useOmitLabels', () => {
     expect(result.current).toEqual([]);
 
     await act(async () =>
-      useSettings.getState().setModeration({ sexuallySuggestive: 'hide' }),
+      useSettings.getState().setModeration({ 'sexually-suggestive': 'hide' }),
     );
     expect(result.current).toEqual(['sexually-suggestive']);
   });
@@ -142,6 +141,12 @@ type CapturedQuery = { omitLabels: string[] };
 type QueryFactory = (status: unknown, data: unknown) => CapturedQuery;
 
 let capturedFactory: QueryFactory | null = null;
+
+// Narrows away the `null` the capture variable starts out as.
+function callCapturedFactory(status: unknown, data: unknown): CapturedQuery {
+  if (!capturedFactory) throw new Error('useQuery factory was never captured');
+  return capturedFactory(status, data);
+}
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
@@ -217,7 +222,7 @@ describe('useExploreFeed — omitLabels wiring', () => {
   it('passes omitLabels = [] when no categories are hidden', () => {
     renderFeedHook();
     expect(capturedFactory).not.toBeNull();
-    const result = capturedFactory!(undefined, undefined);
+    const result = callCapturedFactory(undefined, undefined);
     expect(result).toHaveProperty('omitLabels');
     expect(result.omitLabels).toEqual([]);
   });
@@ -226,13 +231,13 @@ describe('useExploreFeed — omitLabels wiring', () => {
     await act(async () =>
       useSettings.getState().setModeration({
         hate: 'hide',
-        sexuallySuggestive: 'hide',
+        'sexually-suggestive': 'hide',
       }),
     );
 
     renderFeedHook();
     expect(capturedFactory).not.toBeNull();
-    const result = capturedFactory!(undefined, undefined);
+    const result = callCapturedFactory(undefined, undefined);
     expect(result.omitLabels).toEqual(
       expect.arrayContaining(['hate', 'sexually-suggestive']),
     );
@@ -241,7 +246,7 @@ describe('useExploreFeed — omitLabels wiring', () => {
 
   it('reactively re-queries when settings change after mount', async () => {
     renderFeedHook();
-    const initialResult = capturedFactory!(undefined, undefined);
+    const initialResult = callCapturedFactory(undefined, undefined);
     expect(initialResult.omitLabels).toEqual([]);
 
     // Simulate the hook re-running its query factory with updated omitLabels.
@@ -249,7 +254,7 @@ describe('useExploreFeed — omitLabels wiring', () => {
       useSettings.getState().setModeration({ violence: 'hide' }),
     );
     expect(capturedFactory).not.toBeNull();
-    const factoryResult = capturedFactory!('loading', null);
+    const factoryResult = callCapturedFactory('loading', null);
     expect(factoryResult).toHaveProperty('omitLabels', ['violence']);
   });
 });

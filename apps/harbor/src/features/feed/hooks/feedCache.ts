@@ -1,7 +1,9 @@
 import {
   decodeFeedItems,
+  decodeLabelsBundle,
   decodePostBundle,
   type PostData,
+  type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   type QueryKey,
@@ -155,10 +157,27 @@ function decodeThreadResponse(
 ): [PostData[], v2.PageInfo | undefined] {
   const response = v2.GetPostThreadResponse.fromBinary(new Uint8Array(data));
 
+  const labelMap = new Map<string, PostLabel[]>();
+  for (const hint of response.eventHints) {
+    if (!hint.eventBundle) continue;
+    const labels = decodeLabelsBundle(hint.eventBundle);
+    if (labels) {
+      const existing = labelMap.get(labels.targetPostId);
+      labelMap.set(
+        labels.targetPostId,
+        existing ? [...existing, ...labels.labels] : labels.labels,
+      );
+    }
+  }
+
   const decoded: PostData[] = [];
   for (const bundle of response.thread) {
     const d = decodePostBundle(bundle);
-    if (d) decoded.push(d);
+    if (d) {
+      const labels = labelMap.get(d.id);
+      if (labels) d.labels = labels;
+      decoded.push(d);
+    }
   }
 
   return [decoded, undefined];

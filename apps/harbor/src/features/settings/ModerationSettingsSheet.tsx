@@ -2,48 +2,15 @@ import { Text } from '@/src/common/components';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { Sheet } from '@/src/common/components/sheet';
 import {
+  MODERATION_LABEL_ENTRIES,
+  type ModerationLabelEntry,
   type ModerationLevel,
-  type ModerationPreferences,
   useSettings,
 } from '@/src/common/settings';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
-
-type LabelKey = keyof ModerationPreferences;
-
-const LABEL_ENTRIES: {
-  key: LabelKey;
-  name: string;
-  description: string;
-}[] = [
-  {
-    key: 'hate',
-    name: 'Hate',
-    description: 'Hate speech or incitement against groups',
-  },
-  {
-    key: 'selfHarm',
-    name: 'Self-Harm',
-    description: 'Self-harm, eating disorders, suicide',
-  },
-  {
-    key: 'sexuallySuggestive',
-    name: 'Sexually Suggestive',
-    description: 'Innuendo or implied sexual acts',
-  },
-  {
-    key: 'sexuallyExplicit',
-    name: 'Sexually Explicit',
-    description: 'Pornography or explicit sexual acts',
-  },
-  {
-    key: 'violence',
-    name: 'Violence',
-    description: 'Violent acts, gore, injury, or terrorism',
-  },
-];
 
 const LEVELS: { level: ModerationLevel; label: string }[] = [
   { level: 'hide', label: 'Hide' },
@@ -52,18 +19,17 @@ const LEVELS: { level: ModerationLevel; label: string }[] = [
 ];
 
 function ModerationLabelRow({
-  labelKey,
+  entry,
   isLast,
 }: {
-  labelKey: LabelKey;
+  entry: ModerationLabelEntry;
   isLast?: boolean;
 }) {
   const { theme } = useTheme();
   const moderation = useSettings((s) => s.moderation);
   const setModeration = useSettings((s) => s.setModeration);
 
-  const entry = LABEL_ENTRIES.find((e) => e.key === labelKey)!;
-  const currentLevel = moderation[labelKey];
+  const currentLevel = moderation[entry.key];
 
   return (
     <View
@@ -100,7 +66,7 @@ function ModerationLabelRow({
         segments={LEVELS.map(({ level, label }) => ({
           label,
           active: currentLevel === level,
-          onPress: () => setModeration({ [labelKey]: level }),
+          onPress: () => setModeration({ [entry.key]: level }),
         }))}
         style={Atoms.ml_sm}
       />
@@ -109,7 +75,6 @@ function ModerationLabelRow({
 }
 
 export default function ModerationSettingsSheet() {
-  const labelKeys = LABEL_ENTRIES.map((e) => e.key);
   return (
     <Sheet detents={[0.5, 1]} dismissible>
       <Sheet.Header
@@ -117,11 +82,11 @@ export default function ModerationSettingsSheet() {
         onClose={() => router.canGoBack() && router.back()}
       />
       <Sheet.Content style={[Atoms.p_0]}>
-        {labelKeys.map((key) => (
+        {MODERATION_LABEL_ENTRIES.map((entry, index) => (
           <ModerationLabelRow
-            key={key}
-            labelKey={key}
-            isLast={key === labelKeys[labelKeys.length - 1]}
+            key={entry.key}
+            entry={entry}
+            isLast={index === MODERATION_LABEL_ENTRIES.length - 1}
           />
         ))}
       </Sheet.Content>

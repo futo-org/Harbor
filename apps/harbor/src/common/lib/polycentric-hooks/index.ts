@@ -27,6 +27,7 @@ export {
 export {
   decodeBundle,
   decodePostBundle as decodeV2PostBundle,
+  decodeLabelsBundle,
   decodeFeedItems,
   extractFeedToken,
   shouldExtend,
