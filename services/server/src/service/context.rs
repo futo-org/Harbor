@@ -1,6 +1,7 @@
 //! Shared service context — DB connection plus long-lived caches that
 //! handlers borrow rather than reconstruct per-request.
 
+use crate::service::graph::block_cache::BlockCache;
 use crate::service::proofs::cache::ProofCache;
 use common_kafka::FutureProducer;
 use sea_orm::DatabaseConnection;
@@ -9,6 +10,7 @@ use std::sync::Arc;
 pub struct ServiceContext {
     pub db: DatabaseConnection,
     pub proof_cache: Arc<ProofCache>,
+    pub block_cache: Arc<BlockCache>,
     pub kafka_producer: FutureProducer,
     pub trusted_moderator: Option<String>, // `None` means no content labels
 }
@@ -21,6 +23,7 @@ impl ServiceContext {
         Arc::new(Self {
             db,
             proof_cache: ProofCache::new(),
+            block_cache: BlockCache::new(),
             kafka_producer,
             trusted_moderator: crate::config::get().trusted_moderator.clone(),
         })

@@ -242,6 +242,9 @@ async fn process_event(
             if event_collection == collections::IDENTITY {
                 ctx.proof_cache.invalidate_identity(&event_identity).await;
             }
+            if event_collection == collections::SOCIAL_GRAPH {
+                ctx.block_cache.invalidate_identity(&event_identity).await;
+            }
 
             let producer = ctx.kafka_producer.clone();
             let topic = common_kafka::prefixed("events");

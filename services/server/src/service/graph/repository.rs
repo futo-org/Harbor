@@ -1,3 +1,4 @@
+use ::entity::content_block_model as ContentBlockModel;
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
@@ -36,42 +37,90 @@ impl Query {
         ctx: &ServiceContext,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
-        let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
-            .select_also(ContentModel::Entity)
-            .join(JoinType::InnerJoin, content_join())
-            .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
-            .filter(EventModel::Column::Identity.eq(caller))
+        list_graph_targets(ctx, caller, decode_followed_identity).await
+    }
+
+    /// Identities `caller` has blocked. Same inefficiency as
+    /// [`Query::list_followed_identities`].
+    pub async fn list_blocked_identities(
+        ctx: &ServiceContext,
+        caller: &str,
+    ) -> Result<Vec<String>, Status> {
+        list_graph_targets(ctx, caller, decode_blocked_identity).await
+    }
+
+    /// Whether `blocker` currently blocks `blocked` (tombstone-aware).
+    pub async fn blocks_identity(
+        ctx: &ServiceContext,
+        blocker: &str,
+        blocked: &str,
+    ) -> Result<bool, Status> {
+        let rows: Vec<EventWithContentRow> = block_events_query()
+            .filter(EventModel::Column::Identity.eq(blocker))
+            .filter(ContentBlockModel::Column::IdentityId.eq(blocked))
             .all(&ctx.db)
             .await
             .map_err(map_db_err)?;
+
+        if rows.is_empty() {
+            return Ok(false);
+        }
 
         let keys: Vec<TargetEventKey> = rows
             .iter()
             .map(|(event, _)| TargetEventKey::of(event))
             .collect();
-        let raw_tombstones =
-            tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
-                .await
-                .map_err(map_db_err)?;
         let valid_tombstones =
-            tombstone::validate_tombstones(ctx, raw_tombstones).await?;
+            tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut result: Vec<String> = Vec::new();
-        for (event, content) in rows {
-            let key = TargetEventKey::of(&event);
-            if valid_tombstones.contains_key(&key) {
-                continue;
-            }
-            let Some(content) = content else { continue };
-            if let Some(identity) = decode_followed_identity(&content)
-                && seen.insert(identity.clone())
-            {
-                result.push(identity);
-            }
-        }
-        Ok(result)
+        Ok(rows.iter().any(|(event, _)| {
+            !valid_tombstones.contains_key(&TargetEventKey::of(event))
+        }))
     }
+}
+
+/// Obtains the targets of graph events authored by `caller`. The `extract`
+/// function filters for specific types of graph events.
+async fn list_graph_targets(
+    ctx: &ServiceContext,
+    caller: &str,
+    extract: fn(&ContentModel::Model) -> Option<String>,
+) -> Result<Vec<String>, Status> {
+    let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
+        .select_also(ContentModel::Entity)
+        .join(JoinType::InnerJoin, content_join())
+        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Identity.eq(caller))
+        .all(&ctx.db)
+        .await
+        .map_err(map_db_err)?;
+
+    let keys: Vec<TargetEventKey> = rows
+        .iter()
+        .map(|(event, _)| TargetEventKey::of(event))
+        .collect();
+    let raw_tombstones =
+        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
+            .await
+            .map_err(map_db_err)?;
+    let valid_tombstones =
+        tombstone::validate_tombstones(ctx, raw_tombstones).await?;
+
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut result: Vec<String> = Vec::new();
+    for (event, content) in rows {
+        let key = TargetEventKey::of(&event);
+        if valid_tombstones.contains_key(&key) {
+            continue;
+        }
+        let Some(content) = content else { continue };
+        if let Some(identity) = extract(&content)
+            && seen.insert(identity.clone())
+        {
+            result.push(identity);
+        }
+    }
+    Ok(result)
 }
 
 impl Query {
@@ -165,6 +214,24 @@ fn follow_join() -> RelationDef {
         .into()
 }
 
+/// Graph events joined to their Block content. The inner joins keep
+/// Delete (unblock) events out of the result.
+fn block_events_query() -> SelectTwo<EventModel::Entity, ContentModel::Entity> {
+    EventModel::Entity::find()
+        .select_also(ContentModel::Entity)
+        .join(JoinType::InnerJoin, content_join())
+        .join(JoinType::InnerJoin, block_join())
+        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+}
+
+/// Relation joining a content row to its Block row.
+fn block_join() -> RelationDef {
+    ContentModel::Entity::belongs_to(ContentBlockModel::Entity)
+        .from(ContentModel::Column::Id)
+        .to(ContentBlockModel::Column::ContentId)
+        .into()
+}
+
 /// Apply the (created_at, id) keyset cursor and fetch, newest first.
 /// Mirrors the feeds repository's pagination.
 async fn page_follow_events(
@@ -225,6 +292,20 @@ fn decode_followed_identity(
     }
 }
 
+/// Identity of the target of a Block event, decoded from the parent
+/// content row.
+fn decode_blocked_identity(
+    content: &::entity::content_model::Model,
+) -> Option<String> {
+    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
+    match decoded.content_body? {
+        ContentBody::Block(block) => {
+            Some(block.identity).filter(|s| !s.is_empty())
+        }
+        _ => None,
+    }
+}
+
 fn map_db_err(e: sea_orm::DbErr) -> Status {
     tracing::error!(error = %e, "graph repository db error");
     Status::internal("internal server error")
@@ -233,7 +314,7 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::proto::Follow;
+    use crate::service::proto::{Block, Follow};
     use sea_orm::prelude::TimeDateTimeWithTimeZone;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockRow};
     use std::sync::Arc;
@@ -283,6 +364,21 @@ mod tests {
         }
     }
 
+    fn block_row(id: i64, target: &str) -> ContentModel::Model {
+        let content = Content {
+            content_body: Some(ContentBody::Block(Block {
+                identity: target.to_string(),
+            })),
+        };
+        ContentModel::Model {
+            id,
+            digest_type: 1,
+            digest_bytes: vec![id as u8],
+            serialized_bytes: content.encode_to_vec(),
+            synced_at: now(),
+        }
+    }
+
     fn no_tombstones() -> Vec<MockRow> {
         Vec::new()
     }
@@ -317,6 +413,76 @@ mod tests {
 
         let count = Query::count_following(&ctx, "alice").await.unwrap();
         assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn list_blocked_identities_dedupes_blocked_identities() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![
+                (event_row(1, "alice", 1), block_row(1, "bob")),
+                (event_row(2, "alice", 2), block_row(2, "bob")),
+                (event_row(3, "alice", 3), block_row(3, "carol")),
+            ]])
+            .append_query_results([no_tombstones()])
+            .into_connection();
+        let ctx = ctx(db).await;
+
+        let blocked =
+            Query::list_blocked_identities(&ctx, "alice").await.unwrap();
+        assert_eq!(blocked, ["bob", "carol"]);
+    }
+
+    #[tokio::test]
+    async fn graph_lists_ignore_the_other_content_kind() {
+        let rows = vec![
+            (event_row(1, "alice", 1), follow_row(1, "bob")),
+            (event_row(2, "alice", 2), block_row(2, "carol")),
+        ];
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([rows.clone()])
+            .append_query_results([no_tombstones()])
+            .append_query_results([rows])
+            .append_query_results([no_tombstones()])
+            .into_connection();
+        let ctx = ctx(db).await;
+
+        assert_eq!(
+            Query::list_followed_identities(&ctx, "alice")
+                .await
+                .unwrap(),
+            ["bob"]
+        );
+        assert_eq!(
+            Query::list_blocked_identities(&ctx, "alice").await.unwrap(),
+            ["carol"]
+        );
+    }
+
+    #[tokio::test]
+    async fn blocks_identity_true_for_untombstoned_block() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![(
+                event_row(1, "alice", 1),
+                block_row(1, "bob"),
+            )]])
+            .append_query_results([no_tombstones()])
+            .into_connection();
+        let ctx = ctx(db).await;
+
+        assert!(Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn blocks_identity_false_without_rows() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([Vec::<(
+                EventModel::Model,
+                ContentModel::Model,
+            )>::new()])
+            .into_connection();
+        let ctx = ctx(db).await;
+
+        assert!(!Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
     }
 
     #[tokio::test]
