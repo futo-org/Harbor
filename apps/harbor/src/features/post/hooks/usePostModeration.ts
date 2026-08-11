@@ -1,8 +1,9 @@
+import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { type ModerationLabel, useSettings } from '@/src/common/settings';
 
-export function usePostModeration(labels: string[] | undefined): {
+export function usePostModeration(labels: PostLabel[] | undefined): {
   hasWarnContent: boolean;
-  warnLabels: string[];
+  warnLabels: PostLabel[];
 } {
   const moderation = useSettings((s) => s.moderation);
 
@@ -10,9 +11,12 @@ export function usePostModeration(labels: string[] | undefined): {
     return { hasWarnContent: false, warnLabels: [] };
   }
 
-  const warnLabels = labels.filter(
-    (label) => moderation[label as ModerationLabel] === 'warn',
-  );
+  // `hide` filters posts out of feeds server-side; any that still reach
+  // the client (threads, direct views) get the same warn treatment.
+  const warnLabels = labels.filter((label) => {
+    const level = moderation[label.value as ModerationLabel];
+    return level === 'warn' || level === 'hide';
+  });
 
   return {
     hasWarnContent: warnLabels.length > 0,

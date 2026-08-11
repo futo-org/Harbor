@@ -1,63 +1,72 @@
-import { Text } from '@/src/common/components/primitives';
-import { Atoms, useTheme, withHexOpacity, ZIndex } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { Button, Text } from '@/src/common/components/primitives';
+import Icon from '@/src/common/components/Icon';
+import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
+import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
+import { moderationLabelName } from '@/src/common/settings';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { View } from 'react-native';
 
+/**
+ * Rendered in place of a post's content when a label the user has set to
+ * "warn" applies: names the labels, says who applied them, and offers a
+ * button to reveal the post.
+ */
 export function PostWarnOverlay({
   labels,
+  authorIdentity,
   onDismiss,
 }: {
-  labels: string[];
+  labels: PostLabel[];
+  authorIdentity: string | null;
   onDismiss: () => void;
 }) {
   const { theme } = useTheme();
 
-  const labelNames = labels.join(', ');
+  const labelNames = labels.map((l) => moderationLabelName(l.value)).join(', ');
+
+  const labeledBy = labels.find((l) => l.labeledBy)?.labeledBy ?? null;
+  const byAuthor = labeledBy !== null && labeledBy === authorIdentity;
+  const labelerProfile = useProfile(byAuthor ? null : labeledBy);
+  const attribution = !labeledBy
+    ? null
+    : byAuthor
+      ? 'Applied by the author'
+      : `Applied by ${labelerProfile.name ?? shortenIdentityId(labeledBy)}`;
 
   return (
     <View
       style={[
-        Atoms.absolute,
-        Atoms.inset_0,
-        Atoms.justify_center,
-        Atoms.items_center,
-        Atoms.overflow_hidden,
-        Atoms.rounded_sm,
+        Atoms.gap_lg,
+        Atoms.mt_xs,
+        Atoms.px_md,
+        Atoms.pl_lg,
+        Atoms.py_sm,
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.rounded_md,
         {
-          backgroundColor: withHexOpacity(theme.palette.neutral_900, '99'),
-          ...(isWeb
-            ? { backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }
-            : {}),
-          zIndex: ZIndex.raised,
+          backgroundColor: withHexOpacity(theme.palette.neutral_500, '14'),
         },
       ]}
     >
-      <View style={[Atoms.px_sm, { maxWidth: 320 }]}>
-        {/* The text should take no more than one line, such that small post content will not cause
-            overflow of content in the warning overlay */}
-        <Text
-          variant="secondary"
-          fontSize="sm"
-          lineHeight="sm"
-          color="neutral_25"
-          style={Atoms.text_center}
-        >
-          This post was labelled: {labelNames}.{' '}
-          <Text
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="Show post"
-            variant="secondary"
-            fontWeight="semibold"
-            fontSize="sm"
-            lineHeight="sm"
-            color="primary_300"
-            style={Atoms.text_underline}
-          >
-            Show
-          </Text>
+      <Icon name="infoOutline" color="neutral_500" />
+      <View style={[Atoms.flex_1]}>
+        <Text variant="secondary" fontWeight="bold" color="neutral_700">
+          {labelNames}
         </Text>
+        {attribution ? (
+          <Text variant="small" color="neutral_500" fontWeight="regular">
+            {attribution}
+          </Text>
+        ) : null}
       </View>
+      <Button
+        onPress={onDismiss}
+        variant="tertiary"
+        style={[{ borderWidth: 0 }]}
+        title="Show"
+      />
     </View>
   );
 }

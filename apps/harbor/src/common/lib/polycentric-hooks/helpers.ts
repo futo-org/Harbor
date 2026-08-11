@@ -72,7 +72,16 @@ export type PostData = {
   // --- End of metadata ---
 
   signedEvent: v2.SignedEvent;
-  labels?: string[];
+
+  /** Labels applied to this post, decoded from event hints. */
+  labels?: PostLabel[];
+};
+
+/** A single moderation label on a post: the label value (e.g. "self-harm")
+ * and the identity that applied it (a moderator, or the author). */
+export type PostLabel = {
+  value: string;
+  labeledBy: string;
 };
 
 // A key fingerprint is the first 16 characters of the hex bytes of the key contents
@@ -201,15 +210,21 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
  */
 export function decodeLabelsBundle(
   bundle: v2.EventBundle,
-): { targetPostId: string; labelValues: string[] } | null {
+): { targetPostId: string; labels: PostLabel[] } | null {
   const decoded = decodeBundle(bundle, 'labels');
   if (!decoded) return null;
   try {
+    // The labeled event's key lives on the content; the event's own key
+    // belongs to the labeler's collection-7 chain.
     const target = decoded.content.eventKey;
     if (!target) return null;
+    const labeledBy = decoded.event.key?.identity ?? '';
     return {
       targetPostId: eventKeyId(target),
-      labelValues: decoded.content.labelValues,
+      labels: decoded.content.labelValues.map((value: string) => ({
+        value,
+        labeledBy,
+      })),
     };
   } catch {
     return null;
@@ -248,7 +263,7 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  */
 export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   const hintPosts = new Map<string, PostData>();
-  const labelMap = new Map<string, string[]>();
+  const labelMap = new Map<string, PostLabel[]>();
   for (const hint of response.eventHints) {
     if (!hint.eventBundle) continue;
     const post = decodePostBundle(hint.eventBundle);
@@ -259,7 +274,7 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
       const existing = labelMap.get(labels.targetPostId);
       labelMap.set(
         labels.targetPostId,
-        existing ? [...existing, ...labels.labelValues] : labels.labelValues,
+        existing ? [...existing, ...labels.labels] : labels.labels,
       );
     }
   }

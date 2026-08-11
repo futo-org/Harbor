@@ -2,7 +2,8 @@ import { Text } from '@/src/common/components';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { Sheet } from '@/src/common/components/sheet';
 import {
-  type ModerationLabel,
+  MODERATION_LABEL_ENTRIES,
+  type ModerationLabelEntry,
   type ModerationLevel,
   useSettings,
 } from '@/src/common/settings';
@@ -10,42 +11,6 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
-
-type LabelKey = ModerationLabel;
-
-type LabelEntry = {
-  key: LabelKey;
-  name: string;
-  description: string;
-};
-
-const LABEL_ENTRIES: LabelEntry[] = [
-  {
-    key: 'hate',
-    name: 'Hate',
-    description: 'Hate speech or incitement against groups',
-  },
-  {
-    key: 'self-harm',
-    name: 'Self-Harm',
-    description: 'Self-harm, eating disorders, suicide',
-  },
-  {
-    key: 'sexually-suggestive',
-    name: 'Sexually Suggestive',
-    description: 'Innuendo or implied sexual acts',
-  },
-  {
-    key: 'sexually-explicit',
-    name: 'Sexually Explicit',
-    description: 'Pornography or explicit sexual acts',
-  },
-  {
-    key: 'violence',
-    name: 'Violence',
-    description: 'Violent acts, gore, injury, or terrorism',
-  },
-];
 
 const LEVELS: { level: ModerationLevel; label: string }[] = [
   { level: 'hide', label: 'Hide' },
@@ -57,7 +22,7 @@ function ModerationLabelRow({
   entry,
   isLast,
 }: {
-  entry: LabelEntry;
+  entry: ModerationLabelEntry;
   isLast?: boolean;
 }) {
   const { theme } = useTheme();
@@ -117,11 +82,11 @@ export default function ModerationSettingsSheet() {
         onClose={() => router.canGoBack() && router.back()}
       />
       <Sheet.Content style={[Atoms.p_0]}>
-        {LABEL_ENTRIES.map((entry, index) => (
+        {MODERATION_LABEL_ENTRIES.map((entry, index) => (
           <ModerationLabelRow
             key={entry.key}
             entry={entry}
-            isLast={index === LABEL_ENTRIES.length - 1}
+            isLast={index === MODERATION_LABEL_ENTRIES.length - 1}
           />
         ))}
       </Sheet.Content>

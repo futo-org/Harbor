@@ -16,6 +16,44 @@ export type ModerationLabel = (typeof MODERATION_LABELS)[number];
 
 export type ModerationPreferences = Record<ModerationLabel, ModerationLevel>;
 
+export type ModerationLabelEntry = {
+  key: ModerationLabel;
+  name: string;
+  description: string;
+};
+
+export const MODERATION_LABEL_ENTRIES: ModerationLabelEntry[] = [
+  {
+    key: 'hate',
+    name: 'Hate',
+    description: 'Hate speech or incitement against groups',
+  },
+  {
+    key: 'self-harm',
+    name: 'Self-Harm',
+    description: 'Self-harm, eating disorders, suicide',
+  },
+  {
+    key: 'sexually-suggestive',
+    name: 'Sexually Suggestive',
+    description: 'Innuendo or implied sexual acts',
+  },
+  {
+    key: 'sexually-explicit',
+    name: 'Sexually Explicit',
+    description: 'Pornography or explicit sexual acts',
+  },
+  {
+    key: 'violence',
+    name: 'Violence',
+    description: 'Violent acts, gore, injury, or terrorism',
+  },
+];
+
+export function moderationLabelName(label: string): string {
+  return MODERATION_LABEL_ENTRIES.find((e) => e.key === label)?.name ?? label;
+}
+
 export interface SettingsState {
   theme: 'light' | 'dark';
   linkPreviewsEnabled: boolean;
