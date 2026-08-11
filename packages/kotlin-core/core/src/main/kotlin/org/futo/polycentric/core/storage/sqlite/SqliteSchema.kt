@@ -19,7 +19,7 @@ package org.futo.polycentric.core.storage.sqlite
  * exactly as js keeps them out of the SQLite store.
  */
 internal object SqliteSchema {
-    const val VERSION = 1
+    const val VERSION = 2
 
     val tables = listOf(
         """CREATE TABLE IF NOT EXISTS schema_version (
@@ -27,8 +27,19 @@ internal object SqliteSchema {
             upgraded_on TEXT NOT NULL
         )""",
 
+        // The identity each device key HOLDS (durable; only removed when the
+        // key/identity is deleted). Distinct from the active session below —
+        // logging out clears the session but keeps this binding, so the
+        // identity stays listable and can be signed back into.
         """CREATE TABLE IF NOT EXISTS active_identity_for_key (
             public_key BLOB PRIMARY KEY,
+            identity_key TEXT
+        )""",
+
+        // Singleton (id = 0) pointing at the currently signed-in identity, or
+        // no/NULL row when logged out. Persists logout across restarts.
+        """CREATE TABLE IF NOT EXISTS active_session (
+            id INTEGER PRIMARY KEY CHECK (id = 0),
             identity_key TEXT
         )""",
 

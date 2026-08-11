@@ -76,6 +76,34 @@ class SqliteStorageDriver(
             }
         }
 
+    override suspend fun saveActiveSession(identityKey: String?) =
+        withContext(Dispatchers.IO) {
+            db.insertWithOnConflict(
+                "active_session",
+                null,
+                ContentValues().apply {
+                    put("id", 0)
+                    put("identity_key", identityKey)
+                },
+                SQLiteDatabase.CONFLICT_REPLACE,
+            )
+            Unit
+        }
+
+    override suspend fun loadActiveSession(): String? =
+        withContext(Dispatchers.IO) {
+            db.rawQuery(
+                "SELECT identity_key FROM active_session WHERE id = 0 LIMIT 1",
+                null,
+            ).use { cursor ->
+                if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                    cursor.getString(0)
+                } else {
+                    null
+                }
+            }
+        }
+
     fun close() = helper.close()
 }
 

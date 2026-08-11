@@ -148,9 +148,20 @@ class PolycentricClient(
 
             // Restore the first stored keypair, or create an ephemeral one —
             // the SDK always has a keypair after initialize (js-core parity).
-            val restored = keys.getAll().firstOrNull()
+            val session = storageDriver.loadActiveSession()
+            val allKeys = keys.getAll()
+            // The keypair holding the signed-in identity; fall back to any
+            // stored key so the client always has a keypair (js-core parity)
+            // when logged out.
+            val sessionKey = session?.let { s ->
+                allKeys.firstOrNull { storageDriver.loadActiveIdentityKey(it.publicKey) == s }
+            }
+            val restored = sessionKey ?: allKeys.firstOrNull()
             if (restored != null) {
-                setCurrentKeyPair(restored)
+                currentKeyPair = restored
+                // Signed in only when the session resolved to a keypair we hold.
+                activeIdentityKey = if (restored === sessionKey) session else null
+                eventService.emitKeyPairChanged(restored)
             } else {
                 eventService.emitProgress(InitializationStep.CREATING_EPHEMERAL_IDENTITY)
                 keyPairManager.createKeyPair(setAsCurrent = true)
@@ -533,6 +544,9 @@ class PolycentricClient(
     suspend fun setCurrentKeyPair(keyPair: StoredKeyPair) {
         currentKeyPair = keyPair
         activeIdentityKey = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
+        // Switching to a keypair signs in as its bound identity; persist that
+        // session so it (and a subsequent logout) survives a restart.
+        storageDriver.saveActiveSession(activeIdentityKey)
         refreshServers()
         eventService.emitKeyPairChanged(keyPair)
     }
@@ -548,8 +562,15 @@ class PolycentricClient(
         activeIdentityKey = identityKey
         // Tokens minted for the previous identity must not be reused.
         core.clearAuthTokens()
-        currentKeyPair?.let {
-            storageDriver.saveActiveIdentityKey(it.publicKey, identityKey)
+        // Persist the session (null = logged out) so it survives a restart.
+        storageDriver.saveActiveSession(identityKey)
+        // Record the key->identity binding on sign-in. Logout (null) leaves the
+        // binding in place so the identity stays listable and can be signed back
+        // into; removing it is deleteActiveIdentity's job.
+        if (identityKey != null) {
+            currentKeyPair?.let {
+                storageDriver.saveActiveIdentityKey(it.publicKey, identityKey)
+            }
         }
     }
 

@@ -40,6 +40,22 @@ class PolycentricDbHelper(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // No migrations yet — v1 is the initial schema.
+        if (oldVersion < 2) {
+            // Split "active session" out from the per-key identity binding so
+            // logout can persist without forgetting the identity.
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS active_session (
+                    id INTEGER PRIMARY KEY CHECK (id = 0),
+                    identity_key TEXT
+                )""",
+            )
+            // Preserve existing sign-in: seed the session from the current
+            // binding so an upgrading user isn't silently logged out.
+            db.execSQL(
+                "INSERT OR IGNORE INTO active_session (id, identity_key) " +
+                    "SELECT 0, identity_key FROM active_identity_for_key " +
+                    "WHERE identity_key IS NOT NULL LIMIT 1",
+            )
+        }
     }
 }

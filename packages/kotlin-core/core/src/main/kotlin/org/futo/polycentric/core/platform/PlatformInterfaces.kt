@@ -77,9 +77,21 @@ interface IStorageDriver {
     fun createKeysRepository(): IKeysRepository
     fun createEventAckRepository(): IEventAckRepository
 
-    /** Which identity key a device keypair last acted as (js-core parity). */
+    /**
+     * The identity a device keypair holds — the durable binding used to list
+     * and switch identities. Passing `null` removes the binding (identity
+     * deleted from the device); logout does NOT go through here.
+     */
     suspend fun saveActiveIdentityKey(publicKey: ByteArray, identityKey: String?)
     suspend fun loadActiveIdentityKey(publicKey: ByteArray): String?
+
+    /**
+     * The currently signed-in identity, or `null` when logged out. Persisted
+     * separately from the binding so logout survives a restart without
+     * forgetting the identity.
+     */
+    suspend fun saveActiveSession(identityKey: String?)
+    suspend fun loadActiveSession(): String?
 }
 
 /**
