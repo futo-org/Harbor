@@ -68,7 +68,7 @@ export function PostContentQuote({ quoteId }: { quoteId: string }) {
       style={[
         Atoms.p_md,
         Atoms.rounded_md,
-        Atoms.mt_md,
+        Atoms.mt_sm,
         {
           borderWidth: 1,
           borderColor: withHexOpacity(theme.palette.neutral_500, '30'),

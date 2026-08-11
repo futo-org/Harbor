@@ -82,7 +82,6 @@ function RepostHeader({ identity }: { identity: string }) {
           color="neutral_500"
           fontWeight="bold"
           numberOfLines={1}
-          compact
           style={[Atoms.flex_shrink_1, hovered && Atoms.text_underline]}
         >
           {name || '…'}
@@ -91,7 +90,6 @@ function RepostHeader({ identity }: { identity: string }) {
           variant="small"
           color="neutral_500"
           fontWeight="bold"
-          compact
           style={hovered && Atoms.text_underline}
         >
           {' reposted'}

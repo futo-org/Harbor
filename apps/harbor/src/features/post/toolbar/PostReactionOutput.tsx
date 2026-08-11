@@ -44,20 +44,14 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         Atoms.rounded_full,
         Atoms.overflow_hidden,
         Atoms.cursor_pointer,
-        Atoms.px_sm,
-        Atoms.py_xs,
-        {
-          backgroundColor: withHexOpacity(
-            theme.palette.neutral_500,
-            hovered || pressed ? '28' : '14',
-          ),
-        },
+        hovered && { opacity: 0.8 },
+        pressed && { opacity: 0.6 },
       ]}
     >
       {/** Render our own emoji on top with full opacity, if present: */}
       {myEmoji ? (
         <View style={{ zIndex: 2 }}>
-          <Text style={{ fontSize: 14 }}>{myEmoji}</Text>
+          <Text style={{ fontSize: 18 }}>{myEmoji}</Text>
         </View>
       ) : null}
       {others.length > 0 ? (
@@ -67,7 +61,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
           style={[
             Atoms.flex_row,
             Atoms.align_center,
-            { zIndex: 1, opacity: 0.65 },
+            { zIndex: 1 },
             /** Tuck under our reaction if we have one: */
             myEmoji && { marginLeft: -6 },
           ]}
@@ -80,7 +74,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
                 i > 0 && { marginLeft: -6 },
               ]}
             >
-              <Text style={{ fontSize: 14 }}>{emoji}</Text>
+              <Text style={{ fontSize: 18 }}>{emoji}</Text>
             </View>
           ))}
         </View>
