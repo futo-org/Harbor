@@ -14,6 +14,7 @@ type PostActionButtonProps = {
   active?: boolean;
   highlighted?: boolean;
   color?: PaletteColorToken;
+  size?: number | undefined;
 } & Omit<PressableProps, 'style' | 'children'>;
 
 export default function PostActionButton({
@@ -22,6 +23,7 @@ export default function PostActionButton({
   active = false,
   highlighted = false,
   color = 'neutral_500',
+  size = 18,
   ...props
 }: PostActionButtonProps) {
   const { theme } = useTheme();
@@ -36,37 +38,39 @@ export default function PostActionButton({
         {({ pressed, hovered }) => {
           const isHighlighted = hovered || pressed || highlighted;
           return (
-            <>
-              <View
-                style={[
-                  Atoms.p_xs,
-                  Atoms.rounded_full,
-                  // overflow:hidden forces a rounded clip on native
-                  Atoms.overflow_hidden,
-                  {
-                    backgroundColor: isHighlighted
-                      ? withHexOpacity(theme.palette[color], '14')
-                      : active
-                        ? withHexOpacity(theme.palette[color], '28')
-                        : 'transparent',
-                  },
-                ]}
-              >
-                <Icon
-                  name={icon}
-                  size={16}
-                  color={active || highlighted ? color : 'neutral_500'}
-                />
-              </View>
-              {count !== undefined ? (
+            <View
+              style={[
+                Atoms.flex_row,
+                Atoms.align_center,
+                Atoms.justify_center,
+                Atoms.gap_sm,
+                Atoms.px_md,
+                Atoms.py_sm,
+                Atoms.rounded_full,
+                // overflow:hidden forces a rounded clip on native
+                Atoms.overflow_hidden,
+                {
+                  backgroundColor: isHighlighted
+                    ? withHexOpacity(theme.palette[color], '14')
+                    : 'transparent',
+                },
+              ]}
+            >
+              <Icon
+                name={icon}
+                size={size}
+                color={active || highlighted ? color : 'neutral_500'}
+              />
+              {count ? (
                 <Text
                   variant="small"
+                  fontSize="sm"
                   color={active || highlighted ? color : 'neutral_500'}
                 >
-                  {count ? String(count) : ' '}
+                  {String(count)}
                 </Text>
               ) : null}
-            </>
+            </View>
           );
         }}
       </Pressable>

@@ -16,9 +16,6 @@ interface TextProps extends RNTextProps {
   fontWeight?: FontWeightToken;
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
-  /** Drop the leading: line height equals the font size. For single-line
-   * rows (e.g. post headers) where the text box should hug the glyphs. */
-  compact?: boolean;
   italic?: boolean;
 }
 
@@ -28,7 +25,6 @@ export function Text({
   fontWeight,
   fontSize,
   lineHeight,
-  compact = false,
   italic,
   style,
   ...props
@@ -51,9 +47,7 @@ export function Text({
     ? typeof lineHeight === 'number'
       ? lineHeight
       : typography.lineHeight[lineHeight]
-    : compact
-      ? resolvedFontSize
-      : typography.lineHeight[config.size];
+    : typography.lineHeight[config.size];
 
   const resolvedFontWeight = fontWeight
     ? typography.fontWeight[fontWeight]

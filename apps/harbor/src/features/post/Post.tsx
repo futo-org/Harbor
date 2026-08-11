@@ -10,12 +10,7 @@ import {
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Atoms,
-  typography,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -167,17 +162,9 @@ export const Post = memo(function Post({
         </View>
 
         {/* Main post content */}
-        <View style={[Atoms.flex_1, Atoms.pb_sm, Atoms.gap_2xs]}>
-          {/* Author name and other topbar items. Fixed to the text's compact
-              line so the taller menu button centers without inflating it. */}
-          <View
-            style={[
-              Atoms.flex_row,
-              Atoms.align_center,
-              Atoms.gap_sm,
-              { height: typography.fontSize.md },
-            ]}
-          >
+        <View style={[Atoms.flex_1, Atoms.pb_xs, Atoms.gap_2xs]}>
+          {/* Author name and other topbar items */}
+          <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
             <View
               style={[
                 Atoms.flex_1,
@@ -191,7 +178,7 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <IdentityTag identity={authorIdentity} compact />
+                <IdentityTag identity={authorIdentity} />
               ) : null}
 
               {time ? (
@@ -200,11 +187,10 @@ export const Post = memo(function Post({
                     variant="secondary"
                     color="neutral_500"
                     fontWeight="bold"
-                    compact
                   >
                     ·
                   </Text>
-                  <Text variant="secondary" color="neutral_500" compact>
+                  <Text variant="secondary" color="neutral_500">
                     {time}
                   </Text>
                 </>
@@ -266,7 +252,7 @@ export const Post = memo(function Post({
               />
             ) : null}
           </View>
-          <PostToolbar post={post} style={[Atoms.mt_sm]} />
+          <PostToolbar post={post} />
         </View>
       </View>
     </Pressable>
@@ -332,7 +318,6 @@ function PostAuthorName({
         variant="secondary"
         fontWeight="bold"
         numberOfLines={1}
-        compact
         style={[hovered && { textDecorationLine: 'underline' }]}
       >
         {name}

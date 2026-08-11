@@ -5,6 +5,7 @@ import {
   MaterialIcons,
 } from '@expo/vector-icons';
 import type { ComponentProps, ComponentType, ReactNode } from 'react';
+import { HarborSvg, type HarborSvgName } from './HarborSvg';
 
 function defineIcon<G extends string>(
   IconSet: ComponentType<any> & { glyphMap: Record<G, number | string> },
@@ -14,6 +15,14 @@ function defineIcon<G extends string>(
     iconSet: IconSet,
     name,
     render: (p: object) => <IconSet name={name} {...p} />,
+  };
+}
+
+function defineHarborIcon(name: HarborSvgName) {
+  return {
+    iconSet: HarborSvg,
+    name,
+    render: (p: object) => <HarborSvg name={name} {...p} />,
   };
 }
 
@@ -60,16 +69,16 @@ export const IconsMap = {
   personAddOutline: defineIcon(Ionicons, 'person-add-outline'),
   personOutline: defineIcon(Ionicons, 'person-outline'),
   personRemove: defineIcon(Ionicons, 'person-remove'),
-  quote: defineIcon(Ionicons, 'create'),
-  reaction: defineIcon(Ionicons, 'heart'),
-  reactionOutline: defineIcon(Ionicons, 'heart-outline'),
+  quote: defineHarborIcon('quote'),
+  reaction: defineHarborIcon('reaction'),
+  reactionOutline: defineHarborIcon('reactionOutline'),
   remove: defineIcon(Ionicons, 'remove-circle-outline'),
-  reply: defineIcon(Ionicons, 'chatbubble-outline'),
-  repost: defineIcon(Ionicons, 'repeat'),
+  reply: defineHarborIcon('reply'),
+  repost: defineHarborIcon('repost'),
   search: defineIcon(Ionicons, 'search'),
   searchOutline: defineIcon(Ionicons, 'search-outline'),
   settings: defineIcon(Ionicons, 'settings-outline'),
-  share: defineIcon(Ionicons, 'share-social-outline'),
+  share: defineHarborIcon('share'),
   shieldAccount: defineIcon(MaterialCommunityIcons, 'shield-account-outline'),
   themeDark: defineIcon(Ionicons, 'moon'),
   themeLight: defineIcon(Ionicons, 'sunny'),

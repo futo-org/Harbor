@@ -2,7 +2,10 @@ use crate::error::{CoreError, Error, Result};
 use crate::models::protos_v2::{Event, SignedEvent};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use prost::Message;
+use std::fmt;
 
 impl SignedEvent {
     pub fn verify_signature(&self) -> std::result::Result<(), CoreError> {
@@ -70,5 +73,26 @@ impl Serializable for SignedEvent {
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))?;
 
         Ok(result)
+    }
+}
+
+impl fmt::Debug for SignedEvent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let SignedEvent {
+            signature,
+            event_bytes,
+        } = self;
+        let tmp;
+        let event: &dyn fmt::Debug = if let Ok(event) = Event::decode(&**event_bytes) {
+            tmp = event;
+            &tmp
+        } else {
+            &format_args!("invalid event: {event_bytes:?}")
+        };
+
+        f.debug_struct("SignedEvent")
+            .field("signature", &URL_SAFE_NO_PAD.encode(signature))
+            .field("event", event)
+            .finish()
     }
 }

@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';
 import { previewOtherReactions } from '@/src/features/reaction/util';
 import { useMemo, useState } from 'react';
@@ -10,13 +10,14 @@ import useReactions from '../../reaction/useReactions';
 /** Max number of stacked emojis shown in the expanded output. */
 const MAX_STACKED = 3;
 
+/** iOS clips emoji glyphs when the line height hugs the font size. */
+const EMOJI_STYLE = { fontSize: 15, lineHeight: 20 } as const;
+
 type PostReactionOutputProps = {
   post: PostData;
 };
 
 export default function PostReactionOutput({ post }: PostReactionOutputProps) {
-  const { theme } = useTheme();
-
   const myReaction = useReactions((s) => s.reactions.get(post.id));
   const myEmoji =
     myReaction?.positive && myReaction.emoji ? myReaction.emoji : undefined;
@@ -42,22 +43,16 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.rounded_full,
-        Atoms.overflow_hidden,
         Atoms.cursor_pointer,
-        Atoms.px_sm,
-        Atoms.py_xs,
-        {
-          backgroundColor: withHexOpacity(
-            theme.palette.neutral_500,
-            hovered || pressed ? '28' : '14',
-          ),
-        },
+        hovered && { opacity: 0.8 },
+        pressed && { opacity: 0.6 },
       ]}
+      hitSlop={16}
     >
       {/** Render our own emoji on top with full opacity, if present: */}
       {myEmoji ? (
         <View style={{ zIndex: 2 }}>
-          <Text style={{ fontSize: 14 }}>{myEmoji}</Text>
+          <Text style={EMOJI_STYLE}>{myEmoji}</Text>
         </View>
       ) : null}
       {others.length > 0 ? (
@@ -67,7 +62,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
           style={[
             Atoms.flex_row,
             Atoms.align_center,
-            { zIndex: 1, opacity: 0.65 },
+            { zIndex: 1 },
             /** Tuck under our reaction if we have one: */
             myEmoji && { marginLeft: -6 },
           ]}
@@ -80,7 +75,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
                 i > 0 && { marginLeft: -6 },
               ]}
             >
-              <Text style={{ fontSize: 14 }}>{emoji}</Text>
+              <Text style={EMOJI_STYLE}>{emoji}</Text>
             </View>
           ))}
         </View>
