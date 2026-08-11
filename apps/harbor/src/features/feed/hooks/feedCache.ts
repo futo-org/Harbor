@@ -9,6 +9,7 @@ import {
   type QueryKey,
   useQueryStore,
 } from '@/src/common/query/hooks/useQuery';
+import useBlocks from '@/src/features/block/hooks/useBlocks';
 import {
   CounterOverlay,
   type Reaction,
@@ -47,6 +48,18 @@ function postId(post: PostData): string {
 const EMPTY_FEED: PostData[] = Object.freeze([] as PostData[]) as PostData[];
 
 /**
+ * Redundant client filter for cases when the server is missing a block event
+ * that the client knows.
+ */
+function isFromBlockedIdentity(post: PostData): boolean {
+  const { isBlocked } = useBlocks.getState();
+  return (
+    isBlocked(post.identity) ||
+    (post.repostedBy !== undefined && isBlocked(post.repostedBy))
+  );
+}
+
+/**
  * Snapshot of a feed's posts and overlays.
  * Fields that store cached data should be `undefined` if we have not yet
  * processed the latest query data or overlays.
@@ -60,6 +73,12 @@ type FeedEntry = {
 
   /** Cached output array. */
   output: PostData[] | undefined;
+
+  /**
+   * `useBlocks` version the output was filtered against. An entry whose
+   * version is behind the store's must be refreshed.
+   */
+  blocksVersion: number;
 
   /** Maps post ids to `PostEntry` objects. */
   posts: Map<string, PostEntry>;
@@ -341,7 +360,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       [frontInjectedItems, feedResponseItems],
       replyInjections,
       seenPosts,
-    );
+    ).filter((post) => !isFromBlockedIdentity(post));
 
     // Ensure stable output when empty
     if (output.length === 0) {
@@ -360,6 +379,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       replyInjections,
       output,
       posts,
+      blocksVersion: useBlocks.getState().version,
     };
   };
 
@@ -441,15 +461,24 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
     getFeedEntry: (queryKey, queryData, decode) => {
       if (!queryData) return undefined;
 
+      const blocksVersion = useBlocks.getState().version;
+      const matchesBlocks = (entry: FeedEntry) =>
+        entry.blocksVersion === blocksVersion;
+
       // Check store
       const stored = get().feedData.get(queryKey);
-      if (stored && stored.queryData === queryData && stored.output) {
+      if (
+        stored &&
+        stored.queryData === queryData &&
+        stored.output &&
+        matchesBlocks(stored)
+      ) {
         return stored;
       }
 
       // Check cache map
       const cached = derivedFeedCache.get(queryData);
-      if (cached) {
+      if (cached && matchesBlocks(cached)) {
         return cached;
       }
 
@@ -501,6 +530,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
           replyInjections: existing.replyInjections,
           posts,
           queryData,
+          blocksVersion: existing.blocksVersion,
         };
 
         feedData.set(queryKey, next);
@@ -534,13 +564,14 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
         const newReplies: string[] = [postId(post), ...existingReplies];
         replyInjections.set(parentId, newReplies);
 
-        const entry = {
+        const entry: FeedEntry = {
           output: undefined,
           pageInfo: existing.pageInfo,
           frontInjections: existing.frontInjections,
           replyInjections,
           posts,
           queryData,
+          blocksVersion: existing.blocksVersion,
         };
 
         feedData.set(queryKey, entry);
@@ -577,6 +608,14 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
 });
 
 /**
+ * Subscribe to the blocked set so that a block or unblock re-renders the
+ * caller and refreshes `getFeedEntry`.
+ */
+export function useBlocksVersion(): number {
+  return useBlocks((s) => s.version);
+}
+
+/**
  * Return any cached list of posts for the given args if present or derive a new
  * list.
  * Valid for any query that returns a `GetFeedResponse`.
@@ -588,6 +627,7 @@ export function useFeedWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
+  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeFeedResponse)?.output ?? EMPTY_FEED,
@@ -596,7 +636,7 @@ export function useFeedWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output]);
+  }, [key, queryData, output, blocksVersion]);
 
   return output;
 }
@@ -613,6 +653,7 @@ export function useThreadWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
+  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeThreadResponse)?.output ??
@@ -622,7 +663,7 @@ export function useThreadWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output]);
+  }, [key, queryData, output, blocksVersion]);
 
   return output;
 }

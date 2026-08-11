@@ -17,7 +17,7 @@ import {
   v2,
 } from '@polycentric/react-native';
 import { useEffect } from 'react';
-import { useFeedDataStore } from '../../feed/hooks/feedCache';
+import { useBlocksVersion, useFeedDataStore } from '../../feed/hooks/feedCache';
 import { EMPTY_POSTS, type FeedHookResult } from '../../feed/hooks/types';
 
 export type PostSearchSort = 'top' | 'latest';
@@ -67,6 +67,7 @@ function useSearchPostsWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
+  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeSearchPostsResponse)?.output ??
@@ -76,7 +77,7 @@ function useSearchPostsWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output]);
+  }, [key, queryData, output, blocksVersion]);
 
   return output;
 }
