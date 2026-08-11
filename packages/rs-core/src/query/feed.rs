@@ -70,200 +70,6 @@ pub struct GetAttributionFeedArgs {
     pub forward_token: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FakeCursorToken {
-    /// Maps server url -> real cursor information
-    pub map: BTreeMap<String, CursorInfo>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CursorInfo {
-    /// The opaque cursor token provided by the server.
-    token: String,
-    /// How many queries forward (positive) or backward (negative) we are from the original
-    /// un-cursored query.
-    offset: i32,
-    /// has_next_page or has_previous_page, depending on `offset`'s value.
-    more_data: bool,
-}
-
-/// Our responses to js-core need to contain data aggregated from multiple servers,
-/// but "look like" a single server response.
-/// Easy enough for lists of events, but the opaque tokens need to be faked as
-/// an aggregate opaque token.
-impl FakeCursorToken {
-    pub fn encode(&self) -> Result<String, CoreError> {
-        let bytes = serde_json::to_vec(self).map_err(|e| {
-            CoreError::SerializationError(format!("Faking cursor token failed: {e}"))
-        })?;
-
-        let encoded = BASE64_STANDARD.encode(bytes);
-        Ok(encoded)
-    }
-
-    pub fn decode(token: &str) -> Result<Self, CoreError> {
-        let bytes = BASE64_STANDARD
-            .decode(token)
-            .map_err(|e| CoreError::DeserializationError(format!("Invalid fake cursor: {e}")))?;
-
-        serde_json::from_slice(bytes.as_slice())
-            .map_err(|e| CoreError::DeserializationError(format!("Invalid fake cursor: {e}")))
-    }
-
-    pub fn extend(&mut self, other: FakeCursorToken) {
-        self.map.extend(other.map);
-    }
-
-    /// Create a fake cursor from a real one and some metadata.
-    pub fn new(server: String, info: CursorInfo) -> Self {
-        let mut fake = Self::default();
-        fake.map.insert(server, info);
-        fake
-    }
-
-    /// Create an encoded fake cursor from a real one and some metadata.
-    pub fn encode_new(
-        server: &str,
-        token: &str,
-        offset: i32,
-        more_data: bool,
-    ) -> Result<String, String> {
-        FakeCursorToken::new(
-            server.to_string(),
-            CursorInfo {
-                token: token.to_string(),
-                offset,
-                more_data,
-            },
-        )
-        .encode()
-        .map_err(|e| e.to_string())
-    }
-
-    /// Get the data needed for performing a remote query.
-    /// Returns the token to send and the cursor's offset.
-    pub fn extract(fake_token: &Option<String>, server: &str) -> (Option<String>, i32) {
-        fake_token
-            .as_ref()
-            .and_then(|t| Self::decode(t).ok())
-            .and_then(|mut fake| fake.map.remove(server))
-            .map(|info| (Some(info.token), info.offset))
-            .unwrap_or((None, 0))
-    }
-}
-
-/// Empty map
-impl Default for FakeCursorToken {
-    fn default() -> Self {
-        Self {
-            map: BTreeMap::new(),
-        }
-    }
-}
-
-/// Replace server's cursor tokens with fake ones, so that they
-/// can be merged with other server responses.
-fn prepare_page_info(
-    response: &mut GetFeedResponse,
-    server_url: &str,
-    backward_offset: i32,
-    forward_offset: i32,
-) -> Result<(), String> {
-    if let Some(i) = response.page_info.as_mut() {
-        i.start_cursor = FakeCursorToken::encode_new(
-            server_url,
-            &i.start_cursor,
-            backward_offset - 1,
-            i.has_previous_page,
-        )?;
-
-        i.end_cursor = FakeCursorToken::encode_new(
-            server_url,
-            &i.end_cursor,
-            forward_offset + 1,
-            i.has_next_page,
-        )?;
-    }
-
-    Ok(())
-}
-
-/// Expects two encoded fake cursors as input.
-/// Returns (encoded fake cursor, more_data).
-/// Defaults to the first cursor and false if an error occurs.
-fn merge_cursors(t1: String, t2: String) -> (String, bool) {
-    let mut merged = FakeCursorToken::default();
-
-    let Ok(c1) = FakeCursorToken::decode(&t1) else {
-        log_warn(|| String::from("Unable to decode fake cursor!"));
-        return (t1, false);
-    };
-
-    let Ok(mut c2) = FakeCursorToken::decode(&t2) else {
-        log_warn(|| String::from("Unable to decode fake cursor!"));
-        return (t1, false);
-    };
-
-    // Add any server cursors in c1, taking the latest when c2 also has a
-    // cursor from this server.
-    c1.map.into_iter().for_each(|(server, info)| {
-        if let Some(other) = c2.map.remove(&server) {
-            // If the offsets are opposite in sign, then a forward cursor is
-            // being compared against a backward cursor.
-            debug_assert!(
-                (info.offset >= 0 && other.offset >= 0) || (info.offset <= 0 && other.offset <= 0)
-            );
-
-            let new_info = if info.offset.abs() >= other.offset.abs() {
-                info
-            } else {
-                other
-            };
-
-            merged.map.insert(server, new_info);
-        } else {
-            merged.map.insert(server, info);
-        }
-    });
-
-    // Add in any cursors in stil in c2
-    merged.map.extend(c2.map);
-
-    let more_data = merged.map.values().any(|info| info.more_data);
-
-    (merged.encode().unwrap_or(t1), more_data)
-}
-
-pub fn merge_page_info(i1: Option<PageInfo>, i2: Option<PageInfo>) -> Option<PageInfo> {
-    match (i1, i2) {
-        (None, None) => None,
-        (Some(i), None) => Some(i),
-        (None, Some(i)) => Some(i),
-        (Some(i1), Some(i2)) => {
-            let (start_cursor, has_previous_page) = merge_cursors(i1.start_cursor, i2.start_cursor);
-            let (end_cursor, has_next_page) = merge_cursors(i1.end_cursor, i2.end_cursor);
-
-            Some(PageInfo {
-                start_cursor,
-                end_cursor,
-                has_previous_page,
-                has_next_page,
-            })
-        }
-    }
-}
-
-/// Pull bundles out of each `EventHint` and copy them into the local
-/// client stores. Hints are useful side-information the server
-/// provides (e.g. the profile of a post's author).
-fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>) {
-    let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
-
-    if !bundles.is_empty() {
-        client.lock().unwrap().copy_bundles(bundles);
-    }
-}
-
 /// Merge function for every feed-RPC observable
 fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
     do_feed_merge(values, client, true)
@@ -365,7 +171,12 @@ pub fn get_identity_feed(
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
@@ -418,7 +229,12 @@ pub fn get_attribution_feed(
                 .map_err(|e| format!("get_attribution_feed [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
