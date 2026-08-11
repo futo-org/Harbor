@@ -76,8 +76,13 @@ async fn filter(
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration, &_params.common.omit_labels)
-        .await
+    feeds_pipeline::filter(
+        fetched,
+        hydration,
+        &_params.common.omit_labels,
+        &_params.common.blocked,
+    )
+    .await
 }
 
 async fn view(

@@ -101,7 +101,13 @@ async fn filter(
     fetched: Fetched<SortedPostsBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedPostsBy>, Status> {
-    rpc::filter(fetched, hydration, &params.omit_labels).await
+    rpc::filter(
+        fetched,
+        hydration,
+        &params.omit_labels,
+        &params.common.blocked,
+    )
+    .await
 }
 
 async fn view(

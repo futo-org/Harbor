@@ -91,12 +91,12 @@ async fn hydrate(
 
 async fn filter(
     _: &ServiceContext,
-    _: &Params,
+    params: &Params,
     fetched: Fetched<SortedUsersBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
     let omit_labels = &[];
-    rpc::filter(fetched, hydration, omit_labels).await
+    rpc::filter(fetched, hydration, omit_labels, &params.common.blocked).await
 }
 
 async fn view(

@@ -439,20 +439,22 @@ pub async fn hydrate<SortedBy>(
     })
 }
 
-/// Remove rows that are tombstoned, omit-labeled, or whose indirect
-/// targets (quote/repost) are tombstoned or omit-labeled. Hint rows
-/// (referenced posts) are filtered alongside live rows.
+/// Remove rows that are blocked, tombstoned or omit-labeled, directly or
+/// through their quote/repost target. Hint rows (referenced posts) are
+/// filtered alongside live rows.
 pub async fn filter<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
+    blocked: &HashSet<String>,
 ) -> Result<SearchResponseFilter<SortedBy>, Status> {
     let Fetched { rows, page_info } = fetched;
     let omit_set: HashSet<&str> =
         omit_labels.iter().map(|s| s.as_str()).collect();
 
     let is_omitted = |key: &TargetEventKey| -> bool {
-        hydration.deletes_by_target.contains_key(key)
+        blocked.contains(&key.identity)
+            || hydration.deletes_by_target.contains_key(key)
             || (!omit_set.is_empty()
                 && has_matching_label(&hydration.label_events, key, &omit_set))
     };
@@ -463,6 +465,10 @@ pub async fn filter<SortedBy>(
     // Filter live rows
     for row in rows {
         let key = TargetEventKey::of(&row.0);
+
+        if blocked.contains(&row.0.identity) {
+            continue;
+        }
 
         // If tombstoned, drop but add a hint
         if let Some(bundles) = hydration.deletes_by_target.get(&key) {
@@ -659,4 +665,142 @@ impl<SortedBy> PageCursor for Cursor<SortedBy> where
 pub struct Marker<SortedBy> {
     pub sorted_by: SortedBy,
     pub id: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::{Post, PublicKey, Repost};
+    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+
+    fn now() -> TimeDateTimeWithTimeZone {
+        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    }
+
+    fn search_row(id: i64, identity: &str, content: &Content) -> SearchRow {
+        (
+            event_model::Model {
+                id,
+                collection: 2,
+                identity: identity.to_string(),
+                public_key_type: 1,
+                public_key: vec![0xaa],
+                sequence: id,
+                content_digest_type: Some(1),
+                content_digest_bytes: Some(vec![id as u8]),
+                signature: vec![id as u8],
+                previous_signature: vec![],
+                previous_root: vec![],
+                event_bytes: vec![id as u8],
+                created_at: now(),
+                synced_at: now(),
+            },
+            content_model::Model {
+                id,
+                digest_type: 1,
+                digest_bytes: vec![id as u8],
+                serialized_bytes: content.encode_to_vec(),
+                synced_at: now(),
+            },
+            1.0,
+        )
+    }
+
+    fn post_content() -> Content {
+        Content {
+            content_body: Some(ContentBody::Post(Post::default())),
+        }
+    }
+
+    fn repost_content(target_identity: &str, sequence: u64) -> Content {
+        Content {
+            content_body: Some(ContentBody::Repost(Repost {
+                post: Some(EventKey {
+                    collection: 2,
+                    identity: target_identity.to_string(),
+                    signed_by: Some(PublicKey {
+                        key_type: 1,
+                        key: vec![0xaa],
+                    }),
+                    sequence,
+                }),
+            })),
+        }
+    }
+
+    fn fetched(rows: Vec<SearchRow>) -> Fetched<()> {
+        Fetched {
+            rows,
+            page_info: PageInfo {
+                backward_cursor: Cursor::End,
+                forward_cursor: Cursor::End,
+                has_previous_page: false,
+                has_next_page: false,
+            },
+        }
+    }
+
+    fn blocked_set(identities: &[&str]) -> HashSet<String> {
+        identities.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_author_dropped() {
+        let rows = vec![
+            search_row(1, "bob", &post_content()),
+            search_row(2, "alice", &post_content()),
+        ];
+        let hydration = HydrationState::default();
+        let result =
+            filter(fetched(rows), &hydration, &[], &blocked_set(&["bob"]))
+                .await
+                .unwrap();
+        let identities: Vec<&str> = result
+            .live_rows
+            .iter()
+            .map(|(event, _, _)| event.identity.as_str())
+            .collect();
+        assert_eq!(identities, ["alice"]);
+    }
+
+    #[tokio::test]
+    async fn filter_repost_of_blocked_author_dropped() {
+        let rows = vec![search_row(1, "alice", &repost_content("bob", 1))];
+        let hydration = HydrationState::default();
+        let result =
+            filter(fetched(rows), &hydration, &[], &blocked_set(&["bob"]))
+                .await
+                .unwrap();
+        assert!(result.live_rows.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_hint_by_blocked_author_excluded() {
+        let hint = (
+            search_row(10, "bob", &post_content()).0,
+            Some(search_row(10, "bob", &post_content()).1),
+        );
+        let hydration = HydrationState {
+            repost_events: vec![hint],
+            ..Default::default()
+        };
+        let result =
+            filter(fetched(vec![]), &hydration, &[], &blocked_set(&["bob"]))
+                .await
+                .unwrap();
+        assert!(result.event_hints.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_without_blocks_keeps_every_row() {
+        let rows = vec![
+            search_row(1, "bob", &post_content()),
+            search_row(2, "alice", &post_content()),
+        ];
+        let hydration = HydrationState::default();
+        let result = filter(fetched(rows), &hydration, &[], &HashSet::new())
+            .await
+            .unwrap();
+        assert_eq!(result.live_rows.len(), 2);
+    }
 }
