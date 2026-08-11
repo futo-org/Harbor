@@ -9,6 +9,7 @@ type ProfileFeedTab = {
   key: string;
   feed: FeedHookResult;
   bottomPadding?: number;
+  emptyMessage?: string;
 };
 
 type ListHeader = FlashListProps<unknown>['ListHeaderComponent'];
@@ -30,7 +31,7 @@ export function ProfileFeedSwitcher({
   const active = tabs.find((t) => t.key === activeKey) ?? tabs[0];
   if (!active) return null;
 
-  const { feed, bottomPadding } = active;
+  const { feed, bottomPadding, emptyMessage } = active;
 
   if (feed.error) {
     return (
@@ -51,6 +52,7 @@ export function ProfileFeedSwitcher({
     <FeedList
       key={active.key}
       feed={feed}
+      emptyMessage={emptyMessage}
       HeaderComponent={HeaderComponent}
       contentContainerStyle={
         bottomPadding ? { paddingBottom: bottomPadding } : undefined

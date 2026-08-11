@@ -1,0 +1,149 @@
+import {
+  COLLECTION,
+  v2,
+  type PolycentricClient,
+} from '@polycentric/react-native';
+import {
+  decodeBundle,
+  type DecodedBundle,
+} from '@/src/common/lib/polycentric-hooks/helpers';
+import { invalidateAllQueries } from '@/src/common/query/hooks/useQuery';
+import { create } from 'zustand';
+
+type BlocksState = {
+  blocks: Map<string, boolean>;
+
+  /**
+   * Bumped every time the blocked set changes, so that derived state can
+   * check if it is stale.
+   */
+  version: number;
+
+  isBlocked: (identity: string) => boolean;
+  addBlock: (client: PolycentricClient, identity: string) => Promise<void>;
+  removeBlock: (client: PolycentricClient, identity: string) => Promise<void>;
+  refresh: (client: PolycentricClient) => Promise<void>;
+};
+
+function hasSameIdentities(
+  a: Map<string, boolean>,
+  b: Map<string, boolean>,
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const identity of a.keys()) {
+    if (!b.has(identity)) return false;
+  }
+  return true;
+}
+
+/**
+ * Blocked identities of the active user, kept in local state. Note that
+ * this state is kept for redundancy: both clients and servers will block
+ * content from users that have been blocked, to the best of their knowledge.
+ */
+const useBlocks = create<BlocksState>((set, get) => {
+  const setBlocks = (blocks: Map<string, boolean>) =>
+    set((state) => ({ blocks, version: state.version + 1 }));
+
+  return {
+    blocks: new Map(),
+    version: 0,
+
+    isBlocked(identity) {
+      return !!get().blocks.get(identity);
+    },
+
+    async addBlock(client, identity) {
+      const blocks = get().blocks;
+
+      const content = v2.Content.create({
+        contentBody: {
+          oneofKind: 'block',
+          block: { identity },
+        },
+      });
+
+      await client.contentManager.save(content);
+      const event = await client.buildEvent(content, COLLECTION.GRAPH);
+      const signedEvent = await client.signEvent(event);
+
+      setBlocks(new Map(blocks).set(identity, true));
+
+      try {
+        await client.commitEvent(signedEvent, content);
+      } catch (err) {
+        console.error(err);
+        setBlocks(blocks);
+        return;
+      }
+
+      // A failed push does not reject; the next sync pushes the event again.
+      await client.sync().catch((err) => console.error(err));
+      invalidateAllQueries(client);
+    },
+
+    async removeBlock(client, identity) {
+      const self = client.activeIdentityKey;
+      if (!self) return;
+
+      const blocks = get().blocks;
+
+      const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
+
+      const targets = bundles
+        .map((bundle) => decodeBundle(bundle, 'block'))
+        .filter(
+          (entry): entry is DecodedBundle<'block'> =>
+            entry !== null && entry.content.identity === identity,
+        );
+
+      const next = new Map(blocks);
+      next.delete(identity);
+      setBlocks(next);
+
+      try {
+        for (const { event } of targets) {
+          if (!event.key) continue;
+          const deleteContent = v2.Content.create({
+            contentBody: {
+              oneofKind: 'delete',
+              delete: { eventKey: event.key },
+            },
+          });
+          await client.contentManager.save(deleteContent);
+          const deleteEvent = await client.buildEvent(
+            deleteContent,
+            COLLECTION.GRAPH,
+          );
+          const signedDelete = await client.signEvent(deleteEvent);
+          await client.commitEvent(signedDelete, deleteContent);
+        }
+      } catch (err) {
+        console.error(err);
+        setBlocks(blocks);
+        return;
+      }
+
+      if (targets.length > 0) {
+        await client.sync().catch((err) => console.error(err));
+        invalidateAllQueries(client);
+      }
+    },
+
+    async refresh(client) {
+      const identity = client.activeIdentityKey;
+      if (!identity) return;
+
+      const bundles = client.listValidEvents(identity, COLLECTION.GRAPH);
+
+      const blocks = new Map<string, boolean>();
+      for (const bundle of bundles) {
+        const entry = decodeBundle(bundle, 'block');
+        if (entry) blocks.set(entry.content.identity, true);
+      }
+
+      if (!hasSameIdentities(blocks, get().blocks)) setBlocks(blocks);
+    },
+  };
+});
+export default useBlocks;

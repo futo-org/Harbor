@@ -1,5 +1,6 @@
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import { publicEnv } from '@/src/common/util/env';
+import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import {
@@ -222,6 +223,7 @@ export function PolycentricProvider({
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
           useReactions.getState().refresh(c);
+          useBlocks.getState().refresh(c);
           void c
             .sync()
             .then(() =>
@@ -229,6 +231,7 @@ export function PolycentricProvider({
                 useFollows.getState().refresh(c),
                 useReposts.getState().refresh(c),
                 useReactions.getState().refresh(c),
+                useBlocks.getState().refresh(c),
               ]),
             )
             .catch((syncError) => {
@@ -246,6 +249,7 @@ export function PolycentricProvider({
           useFollows.getState().refresh(c);
           useReposts.getState().refresh(c);
           useReactions.getState().refresh(c);
+          useBlocks.getState().refresh(c);
         });
 
         // Identity onboarding (create / claim) publishes an Identity event.
