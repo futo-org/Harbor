@@ -1,0 +1,5 @@
+appId: org.futo.polycentric.dev
+---
+- runFlow: ../launch.yaml
+- assertVisible: 'Create new identity'
+- assertVisible: 'Pair existing identity'

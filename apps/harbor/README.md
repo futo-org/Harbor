@@ -29,3 +29,24 @@ after node installation and setup
 corepack enable
 corepack prepare yarn@latest --activate
 ```
+
+## E2E tests (Maestro)
+
+UI end-to-end flows live in `.maestro/` and run with
+[Maestro](https://maestro.mobile.dev) against the dev app
+(`org.futo.polycentric.dev`) on a connected emulator or device.
+
+```bash
+# One-time: install the Maestro CLI.
+curl -fsSL "https://get.maestro.mobile.dev" | bash
+
+# Build and install the dev app, then run all flows.
+pnpm android
+pnpm test:e2e
+
+# Run a single flow.
+maestro test .maestro/onboarding-create-identity.yaml
+```
+
+Flows launch with `clearState: true`, so they are repeatable and each run
+starts from the onboarding welcome screen.
