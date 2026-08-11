@@ -247,14 +247,29 @@ fn preprocess_candidate(identity: &str, candidate: IdentityCandidate) -> Option<
 
 impl IdentityChain {
     /// Get the identity event in the chain for a given sequence number.
-    pub fn at_sequence(&self, seq: u64) -> Option<&IdentityEvent> {
+    pub fn event_at_sequence(&self, seq: u64) -> Option<&IdentityEvent> {
         let idx = usize::try_from(seq.checked_sub(1)?).ok()?;
         self.identity_events.get(idx)
     }
 
+    /// Get the identity document in the chain for a given sequence number.
+    pub fn state_at_sequence(&self, seq: u64) -> Option<&Identity> {
+        self.event_at_sequence(seq).map(|event| &event.document)
+    }
+
+    /// Get the latest identity event in the chain.
+    pub fn latest_event(&self) -> Option<&IdentityEvent> {
+        self.identity_events.last()
+    }
+
     /// Get the latest valid identity document in the chain.
-    pub fn latest(&self) -> Option<&Identity> {
-        self.identity_events.last().map(|event| &event.document)
+    pub fn latest_state(&self) -> Option<&Identity> {
+        self.latest_event().map(|event| &event.document)
+    }
+
+    /// Iterate over the chain's identity events.
+    pub fn iter(&self) -> impl Iterator<Item = &IdentityEvent> {
+        self.identity_events.iter()
     }
 
     /// Find the revocation target for a given signer and collection or return
@@ -268,7 +283,8 @@ impl IdentityChain {
         // The old rs-core code did but the server code did not.
         // We may want to just have identity documents carry all known valid bounds
         // so that the head is always the latest identity information for an identity.
-        self.latest()?.revocation_target_for(signer, collection)
+        self.latest_state()?
+            .revocation_target_for(signer, collection)
     }
 }
 

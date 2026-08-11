@@ -4285,6 +4285,11 @@ export interface PolycentricCoreLike {
  */
     registerPushNotifications(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
 /**
+ * Returns the latest known valid identity document for `identity`, if any.
+ * Derived purely from the local in-memory event and content stores.
+ */
+    resolveIdentity(identity: string): ArrayBuffer | undefined;
+/**
  * Register the provider consulted for the auth token attached to every
  * outgoing gRPC request.
  */
@@ -4913,6 +4918,28 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Returns the latest known valid identity document for `identity`, if any.
+ * Derived purely from the local in-memory event and content stores.
+ */
+    resolveIdentity(identity: string): ArrayBuffer | undefined {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterOptionalBytes.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+    
+/**
  * Register the provider consulted for the auth token attached to every
  * outgoing gRPC request.
  */
@@ -5343,6 +5370,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity() !== 43194) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 38042) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider");

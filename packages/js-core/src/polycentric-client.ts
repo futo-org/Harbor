@@ -936,9 +936,9 @@ export class PolycentricClient {
    */
   public async refreshServers(): Promise<void> {
     if (this.activeIdentityKey) {
-      const { servers } = await this.identityManager.getCurrent();
-      if (servers) {
-        this.servers = [...servers];
+      const state = await this.identityManager.resolveIdentity();
+      if (state?.servers) {
+        this.servers = [...state.servers];
       }
     }
     this.core.setServers(this.servers);

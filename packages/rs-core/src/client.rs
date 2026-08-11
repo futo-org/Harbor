@@ -2,6 +2,7 @@ use polycentric_common::{
     error::CoreError,
     models::{
         Serializable, collections,
+        identity::IdentityChain,
         protos_v2::{
             self, Content, ContentDigest, Event, EventBundle, EventMetadata, EventProof, Identity,
             PublicKey, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
@@ -9,7 +10,7 @@ use polycentric_common::{
     },
 };
 
-use crate::identity::{DecodedIdentityEvent, IdentityDirectory};
+use crate::identity::resolve_identity_chain;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
     keys::EventKey, meta_store::MetaStore,
@@ -272,13 +273,12 @@ impl PolycentricClient {
         current_sequence: u64,
         identity_content: Option<Identity>,
     ) -> Result<VectorClock, CoreError> {
-        let directory = self.identity_directory(identity)?;
-        let chain = directory.validate(&self.event_store)?;
+        let chain = self.identity_chain(identity)?;
 
         let identity_content = match identity_content {
             Some(doc) => doc,
             None => chain
-                .content_at_sequence(identity_sequence)
+                .state_at_sequence(identity_sequence)
                 .ok_or_else(|| {
                     CoreError::InvalidEvent(format!(
                         "No validated identity event at sequence {}",
@@ -379,37 +379,9 @@ impl PolycentricClient {
             .collect())
     }
 
-    /// Decoded identity events for `identity`. Malformed entries are skipped.
-    pub fn identity_directory(&self, identity: &str) -> Result<IdentityDirectory, CoreError> {
-        let mut events = Vec::new();
-        for (k, signed) in self
-            .event_store
-            .by_identity_and_collection(identity, collections::IDENTITY)
-        {
-            let Ok(inner) = Event::decode(signed.event_bytes.as_slice()) else {
-                continue;
-            };
-            let Some(digest) = inner.content_digest else {
-                continue;
-            };
-            let Some(decoded_content) = self.content_store.get_decoded(&digest) else {
-                continue;
-            };
-            let Ok(content) = decoded_content.as_identity().cloned() else {
-                continue;
-            };
-            events.push(DecodedIdentityEvent {
-                sequence: k.sequence,
-                signer: PublicKey {
-                    key_type: k.signed_by_key_type,
-                    key: k.signed_by_key.clone(),
-                },
-                digest,
-                content,
-                vc: inner.vector_clock,
-            });
-        }
-        Ok(IdentityDirectory::new(identity.to_string(), events))
+    /// Resolve the identity chain for `identity` using the local event and content stores.
+    pub fn identity_chain(&self, identity: &str) -> Result<IdentityChain, CoreError> {
+        resolve_identity_chain(identity, &self.event_store, &self.content_store)
     }
 
     /// Validate an event against its identity chain, identity content,
@@ -429,9 +401,13 @@ impl PolycentricClient {
             CoreError::DeserializationError("Event key has no signed_by".to_owned())
         })?;
 
-        let directory = self.identity_directory(&key.identity)?;
-        let chain = directory.validate(&self.event_store)?;
-        let head = chain.head();
+        let chain = self.identity_chain(&key.identity)?;
+        let head = chain.latest_event().ok_or_else(|| {
+            CoreError::InvalidEvent(format!(
+                "Validated identity chain for {} is empty",
+                key.identity
+            ))
+        })?;
 
         // Identity events: in-chain means validated, else forgery.
         if key.collection == collections::IDENTITY {
@@ -458,7 +434,7 @@ impl PolycentricClient {
             .ok_or_else(|| CoreError::InvalidEvent("Event missing vector_clock".into()))?;
 
         let signer_identity_content =
-            chain.content_at_sequence(event.identity_sequence).ok_or_else(|| {
+            chain.state_at_sequence(event.identity_sequence).ok_or_else(|| {
                 CoreError::InvalidEvent(format!(
                     "Event references identity_sequence {} for identity {} but that is outside the validated chain (head at sequence {})",
                     event.identity_sequence, key.identity, head.sequence
@@ -476,9 +452,9 @@ impl PolycentricClient {
 
         // Revoked signer: must be the head named by the target, or have an
         // EventProof against it.
-        if !head.content.authorizes_signer(&signer) {
+        if !head.document.authorizes_signer(&signer) {
             let target = chain
-                .revocation_target(&signer, key.collection)
+                .revocation_target_for(&signer, key.collection)
                 .ok_or_else(|| {
                     CoreError::InvalidEvent(format!(
                         "Signer {} was revoked from identity {} but no target was recorded for collection {} (post-revocation forgery)",
@@ -666,32 +642,46 @@ mod tests {
         // For rotations: compute revocation_bounds — keys present in the
         // prior content but absent from the new content, with their max observed
         // sequence per collection at this point in time.
+        //
+        // Bounds are treated as cumulative here: the head document must carry
+        // every active bound, because `revocation_target_for` only consults the
+        // head. So carry the prior document's bounds forward, dropping any whose
+        // key the new content re-authorizes, and append the newly-removed keys.
         let revocation_bounds: Vec<RevocationBound> = if sequence == 1 {
             Vec::new()
         } else {
-            let prior_directory = client
-                .identity_directory(&id_string)
-                .expect("identity_directory");
-            let prior_chain = prior_directory
-                .validate(&client.event_store)
-                .expect("prior chain validates");
+            let prior_chain = client
+                .identity_chain(&id_string)
+                .expect("prior chain resolves");
             let prior = prior_chain
-                .at_sequence(sequence - 1)
+                .event_at_sequence(sequence - 1)
                 .expect("prior identity event must exist for a rotation");
             let new_keys: Vec<&PublicKey> = rotation.iter().chain(signing.iter()).collect();
+            let is_reauthorized = |pk: &PublicKey| {
+                new_keys
+                    .iter()
+                    .any(|nk| nk.key_type == pk.key_type && nk.key == pk.key)
+            };
             let removed: Vec<&PublicKey> = prior
-                .content
+                .document
                 .deduplicated_keys()
                 .into_iter()
-                .filter(|pk| {
-                    !new_keys
-                        .iter()
-                        .any(|nk| nk.key_type == pk.key_type && nk.key == pk.key)
-                })
+                .filter(|pk| !is_reauthorized(pk))
                 .collect();
-            removed
+            let carried: Vec<RevocationBound> = prior
+                .document
+                .revocation_bounds
+                .iter()
+                .filter(|rb| {
+                    rb.revoked_key
+                        .as_ref()
+                        .is_none_or(|pk| !is_reauthorized(pk))
+                })
+                .cloned()
+                .collect();
+            carried
                 .into_iter()
-                .map(|pk| {
+                .chain(removed.into_iter().map(|pk| {
                     // Per collection: build a target naming the revoked key's
                     // head event (max-sequence) with its root + sequence.
                     let mut heads: HashMap<i32, (u64, &SignedEvent)> = HashMap::new();
@@ -731,7 +721,7 @@ mod tests {
                         revoked_key: Some(pk.clone()),
                         targets,
                     }
-                })
+                }))
                 .collect()
         };
 
@@ -755,20 +745,11 @@ mod tests {
         let mut vc = vec![0u64; dedup.len()];
         vc[self_pos] = sequence;
         if sequence > 1 {
-            let directory = client
-                .identity_directory(&id_string)
-                .expect("identity_directory");
             for (pos, key) in dedup.iter().enumerate() {
                 if pos == self_pos {
                     continue;
                 }
-                let max = directory
-                    .iter()
-                    .filter(|e| e.signer.key_type == key.key_type && e.signer.key == key.key)
-                    .map(|e| e.sequence)
-                    .max()
-                    .unwrap_or(0);
-                vc[pos] = max;
+                vc[pos] = client.get_identity_sequence(&id_string, key).unwrap_or(0);
             }
         }
 
@@ -1038,9 +1019,11 @@ mod tests {
             vec![b.public.clone()],
         );
 
-        let directory = client.identity_directory(&identity).expect("directory");
-        let chain = directory.validate(&client.event_store).expect("validates");
-        assert_eq!(chain.head().sequence, 3);
+        let chain = client.identity_chain(&identity).expect("chain resolves");
+        assert_eq!(
+            chain.latest_event().expect("chain is non-empty").sequence,
+            3
+        );
 
         let post = sign_event(&b, &identity, 2, 1, 3, vec![0, 1], dummy_post_digest());
         client

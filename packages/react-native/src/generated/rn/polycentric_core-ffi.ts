@@ -118,6 +118,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(uniffiSelf: bigint, identity: Uint8Array, server: Uint8Array, partial: number): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_events(uniffiSelf: bigint, serverUrl: Uint8Array, eventBundlesBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(uniffiSelf: bigint, provider: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(uniffiSelf: bigint, servers: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
@@ -163,6 +164,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
+    ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
