@@ -271,57 +271,6 @@ class IdentityManager(private val client: PolycentricClient) {
         return state.rotationKeys.any { keysEqual(it, publicKey) }
     }
 
-    /**
-     * Check whether a public key was authorized (as rotation or signing
-     * key) for a given identity at a specific time. Returns true if the
-     * identity is not found locally (caller may not have pulled it yet).
-     *
-     * Does NOT check whether a more recent state exists or whether
-     * signatures/vector clocks are valid — same caveats as js-core.
-     */
-    suspend fun isKeyAuthorized(
-        identityKey: String,
-        signerKey: ByteArray,
-        atTime: Long? = null,
-    ): Boolean {
-        class Version(
-            val createdAt: Long,
-            val rotationKeys: List<PublicKey>,
-            val signingKeys: List<PublicKey>,
-        )
-
-        val versions = mutableListOf<Version>()
-        for (signedEvent in client.events.getAll()) {
-            val event = Event.ADAPTER.decode(signedEvent.event_bytes)
-            val key = event.key ?: continue
-            if (key.collection != Collections.IDENTITY) continue
-            if (key.identity != identityKey) continue
-            val digest = event.content_digest ?: continue
-
-            val contentBytes = client.contents.get(digest) ?: continue
-            val identity = Content.ADAPTER.decode(contentBytes).identity ?: continue
-
-            versions.add(Version(event.created_at, identity.rotation_keys, identity.signing_keys))
-        }
-
-        if (versions.isEmpty()) return true // identity not found locally
-
-        versions.sortBy { it.createdAt }
-
-        // Find the identity version active at the given time (or latest).
-        var active = versions.last()
-        if (atTime != null) {
-            active = versions.first()
-            for (v in versions) {
-                if (v.createdAt <= atTime) active = v else break
-            }
-        }
-
-        val signer = signerKey.toByteString()
-        return active.rotationKeys.any { it.key == signer } ||
-            active.signingKeys.any { it.key == signer }
-    }
-
     /** Adds a signing key to the current identity and publishes the update. */
     suspend fun addSigningKey(publicKey: PublicKey): SignedEvent {
         val state = getCurrent()
@@ -330,18 +279,6 @@ class IdentityManager(private val client: PolycentricClient) {
             identityKey,
             state.rotationKeys,
             state.signingKeys + publicKey,
-            state.servers,
-        ).signedEvent
-    }
-
-    /** Removes a signing key from the current identity and publishes the update. */
-    suspend fun removeSigningKey(publicKey: PublicKey): SignedEvent {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
-        return publish(
-            identityKey,
-            state.rotationKeys,
-            state.signingKeys.filter { it.key != publicKey.key },
             state.servers,
         ).signedEvent
     }
@@ -356,23 +293,6 @@ class IdentityManager(private val client: PolycentricClient) {
         return publish(
             identityKey,
             state.rotationKeys + publicKey,
-            state.signingKeys,
-            state.servers,
-        ).signedEvent
-    }
-
-    /**
-     * Removes a rotation key from the current identity and publishes the
-     * update. NOTE: like js-core, this does not (yet) build a
-     * RevocationBound — events previously signed by the removed key stop
-     * validating at the chain head until revocation proofs are added.
-     */
-    suspend fun removeRotationKey(publicKey: PublicKey): SignedEvent {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
-        return publish(
-            identityKey,
-            state.rotationKeys.filter { !keysEqual(it, publicKey) },
             state.signingKeys,
             state.servers,
         ).signedEvent

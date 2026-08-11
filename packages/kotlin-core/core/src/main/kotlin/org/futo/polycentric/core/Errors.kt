@@ -21,8 +21,6 @@ class IdentityNotFoundException(identityKey: String) :
 class UnauthorizedKeyException :
     PolycentricException("Current key is not authorized for this identity")
 
-class KeyPairNotFoundException : PolycentricException("Key pair not found")
-
 // ── js-core WrapperError family ────────────────────────────────────────
 // (WasmError has no analogue here; UniFFI's generated CoreException
 // covers Rust-side failures.)

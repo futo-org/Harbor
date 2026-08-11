@@ -33,12 +33,4 @@ class KeyPairManager(private val client: PolycentricClient) {
     suspend fun removeKeyPair(publicKey: PublicKey) {
         client.keys.delete(publicKey.key.toByteArray())
     }
-
-    /** Switches the active key pair to the one matching the given public key. */
-    suspend fun switchKeyPair(publicKey: PublicKey): StoredKeyPair {
-        val keyPair = client.keys.getByPublicKey(publicKey.key.toByteArray())
-            ?: throw KeyPairNotFoundException()
-        client.setCurrentKeyPair(keyPair)
-        return keyPair
-    }
 }
