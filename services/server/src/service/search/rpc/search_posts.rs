@@ -59,7 +59,7 @@ async fn fetch(
             SortPostsBy::Default => SortedPostsBy::Rank(row.search_rank),
             SortPostsBy::Latest => SortedPostsBy::Latest(row.content.synced_at),
         },
-        id: row.event.id,
+        event_id: row.event.id,
     });
     let rows = rows
         .into_iter()
