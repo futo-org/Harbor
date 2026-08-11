@@ -394,6 +394,9 @@ const atomStyles = {
   pt_0: {
     paddingTop: Spacing['0'],
   },
+  pt_2xs: {
+    paddingTop: Spacing['2xs'],
+  },
   pt_xs: {
     paddingTop: Spacing.xs,
   },
