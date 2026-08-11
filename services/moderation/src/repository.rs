@@ -1,13 +1,18 @@
 use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
-use moderation_entity::{created_content_model, created_event_model};
+use moderation_entity::{created_content_model, created_event_model, moderator_model};
 use polycentric_common::merkle;
+use polycentric_common::models::protos_v2::{EventBundle, SerializedContent, SignedEvent};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::NotSet, ActiveValue::Set, ColumnTrait, ConnectionTrait,
-    DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait, sea_query::OnConflict,
-    sea_query::value::prelude::serde_json,
+    ActiveModelTrait,
+    ActiveValue::NotSet,
+    ActiveValue::Set,
+    ColumnTrait, ConnectionTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, SelectExt,
+    TransactionTrait,
+    sea_query::{OnConflict, value::prelude::serde_json},
 };
+use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use crate::polycentric::{ChainHead, CreatedEvent};
@@ -118,18 +123,68 @@ pub async fn chain_head<C: ConnectionTrait>(
     })
 }
 
+/// Every event this service has authored for `identity`, rebuilt into
+/// bundles (with their content) so they can be loaded into the core client
+/// and diffed against what each server holds.
+pub async fn created_bundles<C: ConnectionTrait>(
+    db: &C,
+    identity: &str,
+) -> Result<Vec<EventBundle>, DbErr> {
+    let events = created_event_model::Entity::find()
+        .filter(created_event_model::Column::Identity.eq(identity))
+        .all(db)
+        .await?;
+
+    let contents = created_content_model::Entity::find().all(db).await?;
+    let content_by_digest: HashMap<(i32, &[u8]), &[u8]> = contents
+        .iter()
+        .map(|c| {
+            (
+                (c.digest_type, c.digest_bytes.as_slice()),
+                c.serialized_bytes.as_slice(),
+            )
+        })
+        .collect();
+
+    Ok(events
+        .iter()
+        .map(|e| {
+            let serialized_content = e
+                .content_digest_type
+                .zip(e.content_digest_bytes.as_ref())
+                .and_then(|(t, b)| content_by_digest.get(&(t, b.as_slice())))
+                .map(|bytes| SerializedContent {
+                    content_bytes: bytes.to_vec(),
+                });
+
+            EventBundle {
+                signed_event: Some(SignedEvent {
+                    signature: e.signature.clone(),
+                    event_bytes: e.event_bytes.clone(),
+                }),
+                serialized_content,
+                event_proofs: vec![],
+                meta: None,
+            }
+        })
+        .collect())
+}
+
 /// Returns if already stored content with this digest
 pub async fn created_content_exists<C: ConnectionTrait>(
     db: &C,
     digest_type: i32,
     digest_bytes: Vec<u8>,
 ) -> Result<bool, DbErr> {
-    Ok(
-        created_content_model::Entity::find_by_id((digest_type, digest_bytes))
-            .one(db)
-            .await?
-            .is_some(),
-    )
+    created_content_model::Entity::find_by_id((digest_type, digest_bytes))
+        .exists(db)
+        .await
+}
+
+pub async fn is_moderator<C: ConnectionTrait>(db: &C, identity: &str) -> Result<bool, DbErr> {
+    moderator_model::Entity::find_by_id(identity.to_owned())
+        .exists(db)
+        .await
 }
 
 /// Return the content reference, if any, from the database

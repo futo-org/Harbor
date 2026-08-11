@@ -17,13 +17,13 @@ use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
 };
-
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
     Content, EventBundle, EventHint, EventKey, PageParams,
 };
 use crate::service::stats::service::{assemble_bundles, gather_stats_for};
+use entity::content_model;
 use prost::Message;
 use std::collections::HashSet;
 use tonic::Status;
@@ -189,10 +189,20 @@ pub async fn hydrate(
 
     let keys: Vec<TargetEventKey> =
         rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let identities = collect_identities(
+    let mut identities = collect_identities(
         rows.iter()
             .map(|(event, content)| (event, content.as_ref())),
     );
+
+    // Add moderation service identity to every request, such that clients can verify label events.
+    // This ships the identity events more times than the client needs, and even when labels aren't
+    // present in the feed page--can be optimized later.
+    if let Some(moderator) = &ctx.trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.push(moderator.clone())
+    }
+
     let (quote_keys, repost_keys) = collect_referenced_keys(rows);
     let quote_set = to_target_event_keys(&quote_keys);
     let repost_set = to_target_event_keys(&repost_keys);
@@ -208,7 +218,7 @@ pub async fn hydrate(
 
     let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
     let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities);
+    let profile_events_fut = list_profile_events(ctx, identities.clone());
     let referenced_fut = async {
         let all_keys: Vec<EventKey> =
             quote_keys.iter().chain(&repost_keys).cloned().collect();
@@ -304,34 +314,42 @@ fn collect_referenced_keys(
 /// Convert proto `EventKey`s into [`TargetEventKey`]s (the shared
 /// comparable EventKey shape), deduplicated into a set for the
 /// membership tests that split the combined referenced-post result.
-fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
-    keys.iter()
-        .filter_map(|key| {
-            let signed_by = key.signed_by.as_ref()?;
-            Some(TargetEventKey {
-                collection: key.collection as i16,
-                identity: key.identity.clone(),
-                public_key_type: signed_by.key_type as i16,
-                public_key: signed_by.key.clone(),
-                sequence: key.sequence as i64,
-            })
-        })
-        .collect()
+pub fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
+    keys.iter().filter_map(to_target_event_key).collect()
+}
+
+pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
+    let signed_by = key.signed_by.as_ref()?;
+    Some(TargetEventKey {
+        collection: key.collection as i16,
+        identity: key.identity.clone(),
+        public_key_type: signed_by.key_type as i16,
+        public_key: signed_by.key.clone(),
+        sequence: key.sequence as i64,
+    })
 }
 
 /// Whether a row's content references another event as a quote or repost.
 #[derive(Debug)]
-enum Referenced {
+pub enum Referenced {
     Quote(TargetEventKey),
     Repost(TargetEventKey),
 }
 
 /// Extract the referenced target key from a feed row, if any.
-fn referenced_target(row: &EventWithContentRow) -> Option<Referenced> {
-    let (_event, content) = row;
-    let Some(content) = content else {
-        return None;
-    };
+pub fn referenced_target(
+    (_, content): &EventWithContentRow,
+) -> Option<Referenced> {
+    if let Some(content) = content.as_ref() {
+        referenced_target2(content)
+    } else {
+        None
+    }
+}
+
+pub fn referenced_target2(
+    content: &content_model::Model,
+) -> Option<Referenced> {
     let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
     else {
         return None;

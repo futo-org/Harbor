@@ -43,8 +43,37 @@ pub(crate) fn set_defaults(config: &mut ClientConfig) {
     );
 }
 
+/// Prefix `name` with `POLYCENTRIC_KAFKA_CLUSTER_ID` (as `{id}.{name}`) so
+/// multiple clusters can share one broker. No prefix when unset or empty.
+pub fn prefixed(name: &str) -> String {
+    match env::var("POLYCENTRIC_KAFKA_CLUSTER_ID") {
+        Ok(id) if !id.is_empty() => format!("{id}.{name}"),
+        _ => name.to_string(),
+    }
+}
+
 /// Consumer `auto.offset.reset`, overridable via
 /// `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET` (used in moderation integration test).
 pub(crate) fn auto_offset_reset() -> String {
     env::var("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET").unwrap_or_else(|_| "latest".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One test covering all cases: `set_var` mutates process-global state,
+    /// so the cluster id variable must not be toggled from parallel tests.
+    #[test]
+    fn prefixed_applies_cluster_id() {
+        // SAFETY: the only test in this crate touching the environment.
+        unsafe { env::set_var("POLYCENTRIC_KAFKA_CLUSTER_ID", "staging") };
+        assert_eq!(prefixed("events"), "staging.events");
+
+        unsafe { env::set_var("POLYCENTRIC_KAFKA_CLUSTER_ID", "") };
+        assert_eq!(prefixed("events"), "events");
+
+        unsafe { env::remove_var("POLYCENTRIC_KAFKA_CLUSTER_ID") };
+        assert_eq!(prefixed("events"), "events");
+    }
 }

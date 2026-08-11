@@ -10,6 +10,20 @@ const DEFAULT_AZURE_MULTIMODAL_API_VERSION: &str = "2024-09-15-preview";
 pub(crate) const DEFAULT_PHOTODNA_ENDPOINT: &str =
     "https://api.microsoftmoderator.com/photodna/v1.0";
 
+/// Azure AI Content Safety credentials and API versions.
+pub struct AzureConfig {
+    /// Resource endpoint (`POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT`).
+    pub endpoint: String,
+    /// API key (`POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY`).
+    pub key: String,
+    /// api-version for the text/image endpoints
+    /// (`POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION`).
+    pub api_version: String,
+    /// api-version for the multimodal endpoint
+    /// (`POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION`).
+    pub multimodal_api_version: String,
+}
+
 pub struct Config {
     /// Postgres connection URL (`DATABASE_URL`).
     pub database_url: String,
@@ -25,17 +39,9 @@ pub struct Config {
     /// gRPC server URLs to bootstrap from and publish to
     /// (`POLYCENTRIC_MODERATION_SERVERS`, comma delimited).
     pub servers: Vec<String>,
-    /// Azure Content Safety resource endpoint
-    /// (`POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT`).
-    pub azure_endpoint: String,
-    /// Azure Content Safety API key (`POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY`).
-    pub azure_key: String,
-    /// api-version for the text/image endpoints
-    /// (`POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION`).
-    pub azure_api_version: String,
-    /// api-version for the multimodal endpoint
-    /// (`POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION`).
-    pub azure_multimodal_api_version: String,
+    /// Azure Content Safety configuration. `None` disables automated
+    /// content scoring.
+    pub azure: Option<AzureConfig>,
     /// PhotoDNA subscription key (`POLYCENTRIC_PHOTODNA_KEY`). `None`
     /// disables PhotoDNA and the service moderates with Azure alone.
     pub photodna_key: Option<String>,
@@ -65,15 +71,8 @@ pub fn init() -> Result<&'static Config, String> {
             .to_string(),
         identity,
         servers: required_list("POLYCENTRIC_MODERATION_SERVERS")?,
-        azure_endpoint: required("POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT")?,
-        azure_key: required("POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY")?,
-        azure_api_version: std::env::var("POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION")
-            .unwrap_or_else(|_| DEFAULT_AZURE_API_VERSION.to_string()),
-        azure_multimodal_api_version: std::env::var(
-            "POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION",
-        )
-        .unwrap_or_else(|_| DEFAULT_AZURE_MULTIMODAL_API_VERSION.to_string()),
-        photodna_key: std::env::var("POLYCENTRIC_PHOTODNA_KEY").ok(),
+        azure: azure_config()?,
+        photodna_key: optional("POLYCENTRIC_PHOTODNA_KEY"),
         photodna_endpoint: std::env::var("POLYCENTRIC_PHOTODNA_ENDPOINT")
             .unwrap_or_else(|_| DEFAULT_PHOTODNA_ENDPOINT.to_string()),
     };
@@ -85,8 +84,37 @@ pub fn get() -> &'static Config {
     CONFIG.get().expect("config::init not called")
 }
 
+fn azure_config() -> Result<Option<AzureConfig>, String> {
+    match (
+        optional("POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT"),
+        optional("POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY"),
+    ) {
+        (Some(endpoint), Some(key)) => Ok(Some(AzureConfig {
+            endpoint,
+            key,
+            api_version: std::env::var("POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION")
+                .unwrap_or_else(|_| DEFAULT_AZURE_API_VERSION.to_string()),
+            multimodal_api_version: std::env::var(
+                "POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION",
+            )
+            .unwrap_or_else(|_| DEFAULT_AZURE_MULTIMODAL_API_VERSION.to_string()),
+        })),
+        (None, None) => Ok(None),
+        _ => Err("POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT and \
+                  POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY must be set together"
+            .to_string()),
+    }
+}
+
 fn required(name: &str) -> Result<String, String> {
     std::env::var(name).map_err(|_| format!("{name} is not set"))
+}
+
+fn optional(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 /// A required comma-delimited list; must contain at least one entry.

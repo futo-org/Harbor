@@ -152,9 +152,18 @@ async fn hydrate(
         .map_err(map_db_err)
     };
 
-    // Author identity, profile, and moderation label events all ship as hints.
+    // Add moderation service identity to every request, such that clients can verify label events.
+    // This ships the identity events more times than the client needs, and even when labels aren't
+    // present in the feed page--can be optimized later.
+    if let Some(moderator) = &ctx.trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.insert(moderator.clone());
+    }
+
     let identities: Vec<String> = identities.into_iter().collect();
 
+    // Author identity, profile, and moderation label events all ship as hints.
     let (identity_events, profile_events, label_rows, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),

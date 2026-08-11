@@ -474,21 +474,9 @@ export enum ReportCategory {
      */
     SPAM = 1,
     /**
-     * @generated from protobuf enum value: REPORT_CATEGORY_ABUSE = 2;
-     */
-    ABUSE = 2,
-    /**
      * @generated from protobuf enum value: REPORT_CATEGORY_CHILD_SAFETY = 3;
      */
     CHILD_SAFETY = 3,
-    /**
-     * @generated from protobuf enum value: REPORT_CATEGORY_TERRORISM = 4;
-     */
-    TERRORISM = 4,
-    /**
-     * @generated from protobuf enum value: REPORT_CATEGORY_ILLEGAL = 5;
-     */
-    ILLEGAL = 5,
     /**
      * @generated from protobuf enum value: REPORT_CATEGORY_COPYRIGHT = 6;
      */
@@ -496,7 +484,23 @@ export enum ReportCategory {
     /**
      * @generated from protobuf enum value: REPORT_CATEGORY_SERVER_POLICY = 7;
      */
-    SERVER_POLICY = 7
+    SERVER_POLICY = 7,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_VIOLENCE = 8;
+     */
+    VIOLENCE = 8,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_SELF_HARM = 9;
+     */
+    SELF_HARM = 9,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_SEXUALLY_EXPLICIT = 10;
+     */
+    SEXUALLY_EXPLICIT = 10,
+    /**
+     * @generated from protobuf enum value: REPORT_CATEGORY_HATE = 11;
+     */
+    HATE = 11
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Content$Type extends MessageType<Content> {

@@ -32,7 +32,7 @@ pub fn decode(hex: &str) -> Result<Vec<u8>, DecodeError> {
         return Err(DecodeError::OddLength);
     }
     let mut out = Vec::with_capacity(hex.len() / 2);
-    for chunk in hex.as_bytes().chunks_exact(2) {
+    for chunk in hex.as_bytes().as_chunks::<2>().0 {
         let s = std::str::from_utf8(chunk)
             .map_err(|_| DecodeError::InvalidDigit)?;
         out.push(

@@ -29,6 +29,11 @@ mod m20260727_000001_add_content_identity_field_columns;
 mod m20260728_000001_add_content_post_attributed_url_table;
 mod m20260804_000001_add_verification_claim_fields_index;
 mod m20260804_000001_update_content_profile_update_columns;
+mod m20260804_000003_content_profile_update_search_data;
+mod m20260806_000001_content_post_search_data;
+mod m20260807_000001_migrate_missing_content_profile_update_data;
+mod m20260807_000002_align_report_categories_with_labels;
+mod m20260810_000001_search_query_function;
 
 pub struct Migrator;
 
@@ -67,6 +72,15 @@ impl MigratorTrait for Migrator {
             Box::new(m20260723_000001_add_ban_pagination_index::Migration),
             Box::new(m20260723_000002_add_ban_banned_by::Migration),
             Box::new(m20260804_000001_update_content_profile_update_columns::Migration),
+            Box::new(m20260804_000003_content_profile_update_search_data::Migration),
+            Box::new(m20260806_000001_content_post_search_data::Migration),
+            Box::new(m20260807_000001_migrate_missing_content_profile_update_data::Migration),
+            Box::new(
+                m20260807_000002_align_report_categories_with_labels::Migration,
+            ),
+            Box::new(
+                m20260810_000001_search_query_function::Migration,
+            ),
             Box::new(
                 m20260728_000001_add_content_post_attributed_url_table::Migration,
             ),

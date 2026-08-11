@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives/Text';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import {
   shortenIdentityId,

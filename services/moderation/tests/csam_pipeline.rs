@@ -77,7 +77,7 @@ async fn csam_match_purges_blob_and_publishes_report() {
         spawn_moderation_service(&photodna_url, &hex(&mod_key.to_bytes()), &mod_identity);
     tee_stderr(&mut child, ready.clone());
 
-    // Wait for bootstrap, then let Kafka assign partitions: the consumer reads
+    // Wait for sync, then let Kafka assign partitions: the consumer reads
     // from `latest`, so the post must be produced after assignment.
     let deadline = Instant::now() + Duration::from_secs(45);
     while !ready.load(Ordering::SeqCst) && Instant::now() < deadline {
@@ -188,13 +188,13 @@ fn spawn_moderation_service(
 }
 
 /// Echo the child's stderr to the test output and flip `ready` once it has
-/// bootstrapped (after which its Kafka consumer is created).
+/// synced with the servers (after which its Kafka consumer is created).
 fn tee_stderr(child: &mut tokio::process::Child, ready: Arc<AtomicBool>) {
     let stderr = child.stderr.take().expect("piped stderr");
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            if line.contains("bootstrap") {
+            if line.contains("sync:") {
                 ready.store(true, Ordering::SeqCst);
             }
             eprintln!("[moderation] {line}");

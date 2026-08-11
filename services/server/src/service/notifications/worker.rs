@@ -123,7 +123,8 @@ impl NotificationWorker {
         }
         .encode_to_vec();
 
-        let record = FutureRecord::to(NOTIFICATIONS_TOPIC)
+        let topic = common_kafka::prefixed(NOTIFICATIONS_TOPIC);
+        let record = FutureRecord::to(&topic)
             .key(to_identity.as_bytes())
             .payload(&payload)
             .headers(OwnedHeaders::new().insert(Header {

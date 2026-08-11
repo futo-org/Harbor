@@ -1,17 +1,23 @@
 pub mod proto;
 
 use ed25519_dalek::{Signer, SigningKey};
+use prost::Message;
+use proto::content::ContentBody;
 use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
+use proto::search_service_client::SearchServiceClient;
 use proto::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
     EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    PublicKey, RevocationBound, SerializedContent,
-    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
-    VerificationSchema, content,
+    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound, SearchResult,
+    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
+    VerificationClaim, VerificationSchema, content,
 };
+use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::fmt;
+use std::mem::take;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
@@ -25,8 +31,13 @@ pub const HOUR: u64 = 3_600_000;
 
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
-pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_PROFILE_UPDATE: i32 = 3;
+pub const COLLECTION_INTERACTIONS: i32 = 4;
+pub const COLLECTION_SOCIAL_GRAPH: i32 = 5;
+pub const COLLECTION_REPORTS: i32 = 6;
 pub const COLLECTION_LABELS: i32 = 7;
+pub const COLLECTION_VERIFICATIONS: i32 = 8;
+pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
@@ -38,6 +49,97 @@ pub fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
+pub fn random_string() -> String {
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    // When searching Postgres uses a technique called stemming where it removes
+    // the end of certain English words, e.g. "party" and "party" both become
+    // "part" so that when you search for "party" it matches both. However, when
+    // using random values this sometimes causes the searching tests to fail
+    // when not using this technique (e.g. for aliases and names).
+    // So add some characters that should not be stemmed.
+    s.push_str("BBB");
+    s
+}
+
+pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
+    let mut result = String::new();
+    for _ in 0..n {
+        result.push_str(s);
+        result.push_str(separator);
+    }
+    if !result.is_empty() {
+        result.truncate(result.len() - separator.len()); // Remove last separator.
+    }
+    result
+}
+
+pub fn fmt_search_results(results: &[SearchResult]) -> impl fmt::Debug {
+    struct Debug<'a>(&'a [SearchResult]);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_list()
+                .entries(self.0.iter().map(fmt_search_result))
+                .finish()
+        }
+    }
+    Debug(results)
+}
+
+pub fn fmt_search_result(result: &SearchResult) -> impl fmt::Debug {
+    struct Debug<'a>(&'a SearchResult);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let SearchResult { event_bundle, rank } = self.0;
+            let event_bundle: &dyn fmt::Debug = match event_bundle {
+                Some(event_bundle) => &fmt_event(event_bundle),
+                _ => &"None",
+            };
+            f.debug_struct("SearchResult")
+                .field("event_bundle", event_bundle)
+                .field("rank", &rank)
+                .finish()
+        }
+    }
+    Debug(result)
+}
+
+pub fn fmt_event(event: &EventBundle) -> impl fmt::Debug {
+    struct Debug<'a>(&'a EventBundle);
+
+    impl<'a> fmt::Debug for Debug<'a> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let EventBundle {
+                signed_event,
+                serialized_content,
+                event_proofs,
+                meta,
+            } = self.0;
+            let tmp_c;
+            let content: &dyn fmt::Debug = match serialized_content {
+                Some(c)
+                    if let Ok(content) = Content::decode(&*c.content_bytes) =>
+                {
+                    tmp_c = content;
+                    &tmp_c
+                }
+                _ => &"invalid content",
+            };
+
+            // TODO: add more deserialised content as needed.
+            f.debug_struct("EventBundle")
+                .field("signed_event", &signed_event.is_some())
+                .field("content", &content)
+                .field("event_proofs", &event_proofs)
+                .field("meta", &meta)
+                .finish()
+        }
+    }
+
+    Debug(event)
+}
+
 pub async fn connect_event_sync()
 -> EventSyncServiceClient<tonic::transport::Channel> {
     EventSyncServiceClient::connect(grpc_addr())
@@ -47,6 +149,13 @@ pub async fn connect_event_sync()
 
 pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
     FeedsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
+{
+    SearchServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -84,6 +193,205 @@ fn sign(signing_key: &SigningKey, event: Event) -> SignedEvent {
     SignedEvent {
         signature,
         event_bytes,
+    }
+}
+
+#[derive(Debug)]
+pub struct TestClient {
+    key: SigningKey,
+    identity: String,
+    event_sync_client: EventSyncServiceClient<tonic::transport::Channel>,
+    pending: Vec<EventBundle>,
+    identity_sequence: Sequence,
+    collection_sequences: [Sequence; COLLECTION_MAX as usize + 1], // 1-indexed.
+}
+
+#[derive(Debug)]
+struct Sequence(u64);
+
+impl Sequence {
+    const fn new() -> Sequence {
+        Sequence(1)
+    }
+
+    fn next(&mut self) -> u64 {
+        let val = self.0;
+        self.0 += 1;
+        val
+    }
+}
+
+impl TestClient {
+    pub async fn new() -> TestClient {
+        let key = generate_signing_key();
+        TestClient::new_with_identity(key).await
+    }
+
+    /// Create a client for the trusted moderator.
+    pub async fn trusted_moderator() -> TestClient {
+        let key = test_moderator_key();
+        TestClient::new_with_identity(key).await
+    }
+
+    async fn new_with_identity(key: SigningKey) -> TestClient {
+        let event_sync_client = connect_event_sync().await;
+        let identity = Identity {
+            rotation_keys: vec![public_key_of(&key)],
+            signing_keys: vec![],
+            revocation_bounds: vec![],
+            servers: None,
+        };
+        let mut client = TestClient {
+            key,
+            identity: derive_identity_string(&identity),
+            event_sync_client,
+            pending: Vec::new(),
+            identity_sequence: Sequence::new(),
+            collection_sequences: [const { Sequence::new() }; _],
+        };
+        client.set_identity(identity, DEFAULT_CREATED_AT);
+        client
+    }
+
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+
+    pub fn event_sync_client(
+        &mut self,
+    ) -> &mut EventSyncServiceClient<tonic::transport::Channel> {
+        &mut self.event_sync_client
+    }
+
+    // All these methods push an event bundle to the list of pending events to
+    // sync. `submit_events` submits all the events to the server.
+
+    pub fn set_identity(
+        &mut self,
+        identity: Identity,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Identity(identity), created_at)
+    }
+
+    pub fn profile_update(
+        &mut self,
+        update: ProfileUpdate,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::ProfileUpdate(update), created_at)
+    }
+
+    pub fn post(&mut self, post: Post, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Post(post), created_at)
+    }
+
+    pub fn post_text(&mut self, text: &str, created_at: u64) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
+    pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Labels(labels), created_at)
+    }
+
+    pub fn get_last_event_key(&self) -> EventKey {
+        let event = self.pending.last().expect("no pending events");
+        let signed_event = event.signed_event.as_ref().unwrap();
+        let event = Event::decode(&*signed_event.event_bytes).unwrap();
+        event.key.unwrap()
+    }
+
+    fn push_event_bundle(
+        &mut self,
+        body: ContentBody,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let collection = match &body {
+            ContentBody::Post(_) | ContentBody::Delete(_) => COLLECTION_FEED,
+            ContentBody::Follow(_) | ContentBody::Block(_) => {
+                COLLECTION_SOCIAL_GRAPH
+            }
+            ContentBody::Reaction(_) => COLLECTION_INTERACTIONS,
+            ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
+            ContentBody::Identity(_) => COLLECTION_IDENTITY,
+            ContentBody::Repost(_) => COLLECTION_FEED,
+            ContentBody::Report(_) => COLLECTION_REPORTS,
+            ContentBody::Labels(_) => COLLECTION_LABELS,
+            ContentBody::VerificationClaim(_)
+            | ContentBody::VerificationVerify(_)
+            | ContentBody::VerificationTarget(_) => COLLECTION_VERIFICATIONS,
+        };
+        let content = Content {
+            content_body: Some(body),
+        };
+        let (content_bytes, digest) = content_with_digest(content);
+        let event = self.make_event(
+            collection,
+            Vec::new(),
+            Vec::new(),
+            digest,
+            created_at,
+        );
+        let event_bundle = bundle(sign(&self.key, event), content_bytes);
+        let signature = bundle_signature(&event_bundle);
+        self.pending.push(event_bundle);
+        signature
+    }
+
+    fn make_event(
+        &mut self,
+        collection: i32,
+        previous_signature: Vec<u8>,
+        previous_root: Vec<u8>,
+        digest: ContentDigest,
+        created_at: u64,
+    ) -> Event {
+        make_event(
+            collection,
+            &self.identity,
+            &self.key,
+            self.collection_sequences[collection as usize].next(),
+            self.identity_sequence.next(),
+            // TODO: this seems always acceptable?
+            VectorClock { sequence: vec![1] },
+            previous_signature,
+            previous_root,
+            digest,
+            created_at,
+        )
+    }
+
+    /// Submit all pending events.
+    pub async fn submit_events(&mut self) {
+        let event_bundles = take(&mut self.pending);
+        if event_bundles.is_empty() {
+            return;
+        }
+
+        self.event_sync_client
+            .put_events(PutEventsRequest { event_bundles })
+            .await
+            .expect("put_events failed");
+    }
+}
+
+impl Drop for TestClient {
+    fn drop(&mut self) {
+        const MSG: &str = "Unsubmitted events in TestClient, call submit_events to submit them";
+        if !self.pending.is_empty() {
+            if !std::thread::panicking() {
+                panic!("{}", MSG);
+            } else {
+                eprintln!("{}", MSG);
+            }
+        }
     }
 }
 
@@ -142,6 +450,37 @@ pub fn make_identity_bundle(
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
         COLLECTION_IDENTITY,
+        identity,
+        signing_key,
+        sequence,
+        identity_sequence,
+        VectorClock {
+            sequence: vector_clock,
+        },
+        vec![],
+        vec![],
+        digest,
+        created_at,
+    );
+    bundle(sign(signing_key, event), content_bytes)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn make_profile_update_bundle(
+    identity: &str,
+    signing_key: &SigningKey,
+    sequence: u64,
+    identity_sequence: u64,
+    vector_clock: Vec<u64>,
+    update: ProfileUpdate,
+    created_at: u64,
+) -> EventBundle {
+    let content = Content {
+        content_body: Some(content::ContentBody::ProfileUpdate(update)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = make_event(
+        COLLECTION_PROFILE_UPDATE,
         identity,
         signing_key,
         sequence,

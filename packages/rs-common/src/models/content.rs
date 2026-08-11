@@ -1,7 +1,9 @@
 use crate::error::CoreError;
 use crate::models::protos_v2::Blob;
 use crate::models::protos_v2::content::ContentBody::{Post, ProfileUpdate};
-use crate::models::protos_v2::{Content, Identity, content::ContentBody};
+use crate::models::protos_v2::{Content, Identity, SerializedContent, content::ContentBody};
+use prost::Message;
+use std::fmt;
 
 impl Content {
     pub fn as_identity(&self) -> Result<&Identity, CoreError> {
@@ -44,5 +46,22 @@ impl Content {
         }
 
         blobs
+    }
+}
+
+impl fmt::Debug for SerializedContent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let SerializedContent { content_bytes } = self;
+        let tmp;
+        let content: &dyn fmt::Debug = if let Ok(content) = Content::decode(&**content_bytes) {
+            tmp = content;
+            &tmp
+        } else {
+            &format_args!("invalid content: {content_bytes:?}")
+        };
+
+        f.debug_struct("SerializedContent")
+            .field("content", content)
+            .finish()
     }
 }

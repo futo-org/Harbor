@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
+import { SidebarSearch } from '@/src/features/search/SidebarSearch';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
@@ -320,7 +321,9 @@ export const RightSidebar = memo(function RightSidebar() {
             Atoms.pb_lg,
           ]}
         >
-          <View style={[Atoms.flex_1]}></View>
+          <View style={[Atoms.flex_1, Atoms.w_full, Atoms.pt_lg]}>
+            <SidebarSearch />
+          </View>
           <AppFooter />
         </View>
       </View>

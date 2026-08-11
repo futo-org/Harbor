@@ -1459,58 +1459,172 @@ const FfiConverterTypeQueryResultFfi = (() => {
     return new FFIConverter();
 })();
 
-export type ResolveVerifiedClaimsArgs = {
-    /**
-     * Optional schema content-digest (sha256) bytes; scopes the search to
-     * that schema. None = any schema.
-     */
-    schemaDigest?: ArrayBuffer,
-    /**
-     * Field key/value pairs (STRING) a claim must contain.
-     */
-    fields: Map<string, string>,
-    /**
-     * Trust-root identities; only claims verified by one of these are
-     * returned.
-     */
-    verifiedByIdentities: Array<string>
+export enum SearchPostsSort {
+    Default,
+    Latest
+}
+
+const FfiConverterTypeSearchPostsSort = (() => {
+    const ordinalConverter = FfiConverterInt32;
+    type TypeName = SearchPostsSort;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            switch (ordinalConverter.read(from)) {
+                case 1: return SearchPostsSort.Default;
+                case 2: return SearchPostsSort.Latest;
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            switch (value) {
+                case SearchPostsSort.Default: return ordinalConverter.write(1, into);
+                case SearchPostsSort.Latest: return ordinalConverter.write(2, into);
+            }
+        }
+        allocationSize(value: TypeName): number {
+            return ordinalConverter.allocationSize(0);
+        }
+    }
+    return new FFIConverter();
+})();
+
+export type SearchPostsArgs = {
+    query: string,
+    sortBy?: SearchPostsSort,
+    limit?: number,
+    backwardToken?: string,
+    forwardToken?: string,
+    omitLabels: Array<string>
 }
 
 /**
- * Generated factory for {@link ResolveVerifiedClaimsArgs} record objects.
+ * Generated factory for {@link SearchPostsArgs} record objects.
  */
-export const ResolveVerifiedClaimsArgs = (() => {
+export const SearchPostsArgs = (() => {
     const defaults = () => ({
     });
     const create = (() => {
-        return uniffiCreateRecord<ResolveVerifiedClaimsArgs, ReturnType<typeof defaults>>(defaults);
+        return uniffiCreateRecord<SearchPostsArgs, ReturnType<typeof defaults>>(defaults);
     })();
     return Object.freeze({
         create,
         new: create,
-        defaults: () => Object.freeze(defaults()) as Partial<ResolveVerifiedClaimsArgs>,
+        defaults: () => Object.freeze(defaults()) as Partial<SearchPostsArgs>,
     });
 })();
 
-const FfiConverterTypeResolveVerifiedClaimsArgs = (() => {
-    type TypeName = ResolveVerifiedClaimsArgs;
+const FfiConverterTypeSearchPostsArgs = (() => {
+    type TypeName = SearchPostsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
         read(from: RustBuffer): TypeName {
             return {
-                schemaDigest: FfiConverterOptionalBytes.read(from), 
-                fields: FfiConverterMapStringString.read(from), 
-                verifiedByIdentities: FfiConverterSequenceString.read(from)
+                query: FfiConverterString.read(from), 
+                sortBy: FfiConverterOptionalTypeSearchPostsSort.read(from), 
+                limit: FfiConverterOptionalInt32.read(from), 
+                backwardToken: FfiConverterOptionalString.read(from), 
+                forwardToken: FfiConverterOptionalString.read(from), 
+                omitLabels: FfiConverterSequenceString.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalBytes.write(value.schemaDigest, into);
-            FfiConverterMapStringString.write(value.fields, into);
-            FfiConverterSequenceString.write(value.verifiedByIdentities, into);
+            FfiConverterString.write(value.query, into);
+            FfiConverterOptionalTypeSearchPostsSort.write(value.sortBy, into);
+            FfiConverterOptionalInt32.write(value.limit, into);
+            FfiConverterOptionalString.write(value.backwardToken, into);
+            FfiConverterOptionalString.write(value.forwardToken, into);
+            FfiConverterSequenceString.write(value.omitLabels, into);
         }
         allocationSize(value: TypeName): number {
-            return FfiConverterOptionalBytes.allocationSize(value.schemaDigest) +
-             FfiConverterMapStringString.allocationSize(value.fields) +
-             FfiConverterSequenceString.allocationSize(value.verifiedByIdentities);
+            return FfiConverterString.allocationSize(value.query) +
+             FfiConverterOptionalTypeSearchPostsSort.allocationSize(value.sortBy) +
+             FfiConverterOptionalInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.backwardToken) +
+             FfiConverterOptionalString.allocationSize(value.forwardToken) +
+             FfiConverterSequenceString.allocationSize(value.omitLabels);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export enum SearchUsersSort {
+    Default,
+    Alpha
+}
+
+const FfiConverterTypeSearchUsersSort = (() => {
+    const ordinalConverter = FfiConverterInt32;
+    type TypeName = SearchUsersSort;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            switch (ordinalConverter.read(from)) {
+                case 1: return SearchUsersSort.Default;
+                case 2: return SearchUsersSort.Alpha;
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            switch (value) {
+                case SearchUsersSort.Default: return ordinalConverter.write(1, into);
+                case SearchUsersSort.Alpha: return ordinalConverter.write(2, into);
+            }
+        }
+        allocationSize(value: TypeName): number {
+            return ordinalConverter.allocationSize(0);
+        }
+    }
+    return new FFIConverter();
+})();
+
+export type SearchUsersArgs = {
+    query: string,
+    sortBy?: SearchUsersSort,
+    limit?: number,
+    backwardToken?: string,
+    forwardToken?: string
+}
+
+/**
+ * Generated factory for {@link SearchUsersArgs} record objects.
+ */
+export const SearchUsersArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<SearchUsersArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<SearchUsersArgs>,
+    });
+})();
+
+const FfiConverterTypeSearchUsersArgs = (() => {
+    type TypeName = SearchUsersArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                query: FfiConverterString.read(from), 
+                sortBy: FfiConverterOptionalTypeSearchUsersSort.read(from), 
+                limit: FfiConverterOptionalInt32.read(from), 
+                backwardToken: FfiConverterOptionalString.read(from), 
+                forwardToken: FfiConverterOptionalString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterString.write(value.query, into);
+            FfiConverterOptionalTypeSearchUsersSort.write(value.sortBy, into);
+            FfiConverterOptionalInt32.write(value.limit, into);
+            FfiConverterOptionalString.write(value.backwardToken, into);
+            FfiConverterOptionalString.write(value.forwardToken, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.query) +
+             FfiConverterOptionalTypeSearchUsersSort.allocationSize(value.sortBy) +
+             FfiConverterOptionalInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.backwardToken) +
+             FfiConverterOptionalString.allocationSize(value.forwardToken);
             
         }
     };
@@ -1865,6 +1979,8 @@ export enum Query_Tags {
     ResolveVerifiedClaims = "ResolveVerifiedClaims",
     ListFollowing = "ListFollowing",
     ListFollowers = "ListFollowers",
+    SearchPosts = "SearchPosts",
+    SearchUsers = "SearchUsers",
     IsModerator = "IsModerator",
     IsBanned = "IsBanned",
     ListBans = "ListBans",
@@ -2406,6 +2522,72 @@ Readonly<
 
     }
 
+    type SearchPosts__interface = {
+        tag: Query_Tags.SearchPosts;
+        inner: 
+Readonly<
+[SearchPostsArgs
+]>
+    };
+    class SearchPosts_ extends UniffiEnum implements SearchPosts__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.SearchPosts;
+        readonly inner: 
+Readonly<
+[SearchPostsArgs
+]>;
+        constructor(v0: SearchPostsArgs) {
+            super("Query", "SearchPosts");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SearchPostsArgs): SearchPosts_ {
+            return new SearchPosts_(v0);
+        }
+
+        static instanceOf(obj: any): obj is SearchPosts_ {
+            return obj.tag === Query_Tags.SearchPosts;
+        }
+
+    }
+
+    type SearchUsers__interface = {
+        tag: Query_Tags.SearchUsers;
+        inner: 
+Readonly<
+[SearchUsersArgs
+]>
+    };
+    class SearchUsers_ extends UniffiEnum implements SearchUsers__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.SearchUsers;
+        readonly inner: 
+Readonly<
+[SearchUsersArgs
+]>;
+        constructor(v0: SearchUsersArgs) {
+            super("Query", "SearchUsers");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SearchUsersArgs): SearchUsers_ {
+            return new SearchUsers_(v0);
+        }
+
+        static instanceOf(obj: any): obj is SearchUsers_ {
+            return obj.tag === Query_Tags.SearchUsers;
+        }
+
+    }
+
     type IsModerator__interface = {
         tag: Query_Tags.IsModerator;
         inner: 
@@ -2560,6 +2742,8 @@ Readonly<
   ResolveVerifiedClaims: ResolveVerifiedClaims_, 
   ListFollowing: ListFollowing_, 
   ListFollowers: ListFollowers_, 
+  SearchPosts: SearchPosts_, 
+  SearchUsers: SearchUsers_, 
   IsModerator: IsModerator_, 
   IsBanned: IsBanned_, 
   ListBans: ListBans_, 
@@ -2574,7 +2758,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -2590,16 +2774,16 @@ const FfiConverterTypeQuery = (() => {
                 case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.read(from));
                 case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
                 case 6: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.read(from));
-                case 7: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.read(from));
-                case 8: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
-                case 9: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
-                case 10: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
-                case 11: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
-                case 12: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
-                case 13: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
-                case 14: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.read(from));
-                case 15: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
-                case 16: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
+                case 7: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
+                case 8: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
+                case 9: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
+                case 10: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
+                case 11: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
+                case 12: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
+                case 13: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
+                case 14: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
+                case 15: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
+                case 16: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
                 case 17: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
                 case 18: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
                 case 19: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
@@ -2703,6 +2887,18 @@ const FfiConverterTypeQuery = (() => {
                     ordinalConverter.write(16, into);
                     const inner = value.inner;
                     FfiConverterTypeListFollowersArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.SearchPosts: {
+                    ordinalConverter.write(15, into);
+                    const inner = value.inner;
+                    FfiConverterTypeSearchPostsArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.SearchUsers: {
+                    ordinalConverter.write(16, into);
+                    const inner = value.inner;
+                    FfiConverterTypeSearchUsersArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsModerator: {
@@ -2830,6 +3026,18 @@ const FfiConverterTypeQuery = (() => {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(16);
                     size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.SearchPosts: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(15);
+                    size += FfiConverterTypeSearchPostsArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.SearchUsers: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(16);
+                    size += FfiConverterTypeSearchUsersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsModerator: {
@@ -5100,8 +5308,11 @@ const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverter
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
 
-// FfiConverter for Map<string, string>
-const FfiConverterMapStringString = new FfiConverterMap(FfiConverterString, FfiConverterString);
+// FfiConverter for SearchPostsSort | undefined
+const FfiConverterOptionalTypeSearchPostsSort = new FfiConverterOptional(FfiConverterTypeSearchPostsSort);
+
+// FfiConverter for SearchUsersSort | undefined
+const FfiConverterOptionalTypeSearchUsersSort = new FfiConverterOptional(FfiConverterTypeSearchUsersSort);
 
 // FfiConverter for AuthToken | undefined
 const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterTypeAuthToken);
@@ -5317,7 +5528,10 @@ export default Object.freeze({
     FfiConverterTypeQueryOpts,
     FfiConverterTypeQueryResultFfi,
     FfiConverterTypeQueryStatus,
-    FfiConverterTypeResolveVerifiedClaimsArgs,
+    FfiConverterTypeSearchPostsArgs,
+    FfiConverterTypeSearchPostsSort,
+    FfiConverterTypeSearchUsersArgs,
+    FfiConverterTypeSearchUsersSort,
     FfiConverterTypeSignBytesCallback,
     FfiConverterTypeSubscription,
     FfiConverterTypeUpdateMode,

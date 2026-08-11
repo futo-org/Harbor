@@ -8,6 +8,16 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "e2e": {
+      "extends": "development",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true,
+        "image": "latest"
+      }
+    },
     "preview": {
       "distribution": "internal"
     },

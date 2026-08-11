@@ -1,30 +1,27 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use base64::prelude::*;
-use polycentric_common::error::CoreError;
 use polycentric_common::models::protos_v2::{
     AttributedTo, Event, EventBundle, EventHint, GetAttributionFeedRequest, GetExploreFeedRequest,
     GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
-    GetPostThreadResponse, PageInfo, PageParams, feeds_service_client::FeedsServiceClient,
+    GetPostThreadResponse, PageParams, feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     client::PolycentricClient,
-    logging::log_warn,
     query::{
         QueryClient, QueryKey, QueryObservable, QueryOpts, channel,
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, merge_bundle_responses, merge_event_bundles, merge_event_hints,
+                EventBundleResponse, copy_hints, merge_bundle_responses, merge_event_bundles,
+                merge_event_hints,
             },
         },
+        pagination::{FakeCursorToken, merge_page_info, prepare_page_info},
         validation::{retain_validated_bundles, retain_validated_hints},
     },
 };
@@ -473,7 +470,12 @@ pub fn get_following_feed(
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
@@ -525,7 +527,12 @@ pub fn get_explore_feed(
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?
                 .into_inner();
 
-            prepare_page_info(&mut response, &server_url, backward_offset, forward_offset)?;
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
@@ -733,79 +740,5 @@ mod tests {
         // Parseable + both unparseables retained (no dedup key to compare).
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 3);
-    }
-}
-
-#[cfg(test)]
-mod cursor_tests {
-    use super::*;
-
-    #[test]
-    fn fake_cursor_roundtrip_extracts_per_server() {
-        let token = FakeCursorToken::encode_new("server-a", "real-token", 1, true).unwrap();
-
-        let (extracted, offset) = FakeCursorToken::extract(&Some(token.clone()), "server-a");
-        assert_eq!(extracted.as_deref(), Some("real-token"));
-        assert_eq!(offset, 1);
-
-        // A server not present in the aggregate starts from scratch.
-        let (extracted, offset) = FakeCursorToken::extract(&Some(token), "server-b");
-        assert_eq!(extracted, None);
-        assert_eq!(offset, 0);
-    }
-
-    #[test]
-    fn extract_without_a_token_is_empty() {
-        let (extracted, offset) = FakeCursorToken::extract(&None, "server-a");
-        assert_eq!(extracted, None);
-        assert_eq!(offset, 0);
-    }
-
-    fn faked_page_info(server: &str, has_next_page: bool) -> PageInfo {
-        PageInfo {
-            start_cursor: FakeCursorToken::encode_new(server, "start", -1, false).unwrap(),
-            end_cursor: FakeCursorToken::encode_new(server, "end", 1, has_next_page).unwrap(),
-            has_previous_page: false,
-            has_next_page,
-        }
-    }
-
-    #[test]
-    fn merged_page_info_combines_servers() {
-        let merged = merge_page_info(
-            Some(faked_page_info("server-a", true)),
-            Some(faked_page_info("server-b", false)),
-        )
-        .unwrap();
-
-        // Any server with more data leaves the merged page open.
-        assert!(merged.has_next_page);
-
-        // Both servers' real cursors survive inside the aggregate.
-        let (token_a, _) = FakeCursorToken::extract(&Some(merged.end_cursor.clone()), "server-a");
-        let (token_b, _) = FakeCursorToken::extract(&Some(merged.end_cursor), "server-b");
-        assert_eq!(token_a.as_deref(), Some("end"));
-        assert_eq!(token_b.as_deref(), Some("end"));
-    }
-
-    #[test]
-    fn merged_page_info_keeps_the_farthest_cursor_per_server() {
-        let near = PageInfo {
-            start_cursor: FakeCursorToken::encode_new("s", "start-1", -1, false).unwrap(),
-            end_cursor: FakeCursorToken::encode_new("s", "end-1", 1, true).unwrap(),
-            has_previous_page: false,
-            has_next_page: true,
-        };
-        let far = PageInfo {
-            start_cursor: FakeCursorToken::encode_new("s", "start-2", -2, false).unwrap(),
-            end_cursor: FakeCursorToken::encode_new("s", "end-2", 2, false).unwrap(),
-            has_previous_page: false,
-            has_next_page: false,
-        };
-
-        let merged = merge_page_info(Some(near), Some(far)).unwrap();
-        let (token, offset) = FakeCursorToken::extract(&Some(merged.end_cursor), "s");
-        assert_eq!(token.as_deref(), Some("end-2"));
-        assert_eq!(offset, 2);
     }
 }

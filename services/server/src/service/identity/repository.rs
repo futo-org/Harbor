@@ -60,8 +60,8 @@ impl Query {
     /// Fetch an identity's IDENTITY-collection events and return its
     /// validated chain head, or `None` when no valid genesis exists. The
     /// chain walk itself is the pure `chain::validated_chain_head`.
-    pub async fn latest_valid_identity_content(
-        db: &DbConn,
+    pub async fn latest_valid_identity_content<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Option<Identity>, DbErr> {
         let rows = Self::list_identity_events_for_identities(
@@ -96,7 +96,10 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `ban` table.
-    pub async fn is_banned(db: &DbConn, identity: &str) -> Result<bool, DbErr> {
+    pub async fn is_banned<C: ConnectionTrait>(
+        db: &C,
+        identity: &str,
+    ) -> Result<bool, DbErr> {
         Ok(BanModel::Entity::find_by_id(identity)
             .one(db)
             .await?
@@ -149,8 +152,8 @@ impl Query {
     /// Every IDENTITY-collection event (full chain) for each of
     /// `identities`. Sent as hints on feed/thread/list responses so
     /// clients can validate post authors without re-fetching the chain.
-    pub async fn list_identity_events_for_identities(
-        db: &DbConn,
+    pub async fn list_identity_events_for_identities<C: ConnectionTrait>(
+        db: &C,
         identities: Vec<String>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {

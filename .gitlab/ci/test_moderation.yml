@@ -1,10 +1,8 @@
-########################################################################
-# moderation — integration tests
+# Moderation integration tests
 #
-# End-to-end CSAM pipeline test verifying that the moderation service
-# purges and reports PhotoDNA CSAM matches. Uses a mock PhotoDNA
-# endpoint which always returns a match.
-########################################################################
+# Runs the integration tests `csam_pipeline` and `report_label_pipeline`
+# for the moderation service, which require a live stack. See their
+# definitions at `services/moderation/tests/`.
 
 .moderation-integration-workflow:
   image:
@@ -37,7 +35,7 @@
   variables:
     RUNNER_SCRIPT_TIMEOUT: 30m
 
-moderation-integration-csam:
+moderation-integration:
   extends: .moderation-integration-workflow
   script:
     - .gitlab/ci/scripts/integration-moderation.sh

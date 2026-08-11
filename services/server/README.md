@@ -57,6 +57,7 @@ The shared `services/common` crates read their own variables:
 | Variable | Default | Description |
 |---|---|---|
 | `POLYCENTRIC_KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers. |
+| `POLYCENTRIC_KAFKA_CLUSTER_ID` | _(unset)_ | Prefix applied to topics and consumer group ids (`{id}.{name}`), so clusters can share a broker. |
 | `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Kafka `security.protocol`. |
 | `POLYCENTRIC_KAFKA_SASL_MECHANISM` | _(unset)_ | Kafka SASL mechanism, e.g. `SCRAM-SHA-256`. |
 | `POLYCENTRIC_KAFKA_SASL_USERNAME` | _(unset)_ | Kafka SASL username. |
@@ -80,7 +81,11 @@ The shared `services/common` crates read their own variables:
 
 The integration tests run against a live server, so the server must be running first.
 
-NOTE: not currently maintained.
+Ensure that your environment uses the expected trusted moderator:
+
+```
+POLYCENTRIC_MODERATION_IDENTITY=020225a394cac01413ff43527f1644b1772d78d2cea873de1e8ae2f9c3c9f47b
+```
 
 ```sh
 # In one terminal, start the server

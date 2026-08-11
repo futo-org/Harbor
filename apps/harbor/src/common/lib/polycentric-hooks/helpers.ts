@@ -72,6 +72,16 @@ export type PostData = {
   // --- End of metadata ---
 
   signedEvent: v2.SignedEvent;
+
+  /** Labels applied to this post, decoded from event hints. */
+  labels?: PostLabel[];
+};
+
+/** A single moderation label on a post: the label value (e.g. "self-harm")
+ * and the identity that applied it (a moderator, or the author). */
+export type PostLabel = {
+  value: string;
+  labeledBy: string;
 };
 
 // A key fingerprint is the first 16 characters of the hex bytes of the key contents
@@ -194,6 +204,33 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
   }
 }
 
+/**
+ * Decode a label bundle from an event hint into its target post id and
+ * label values. Returns null if the bundle isn't a Labels event.
+ */
+export function decodeLabelsBundle(
+  bundle: v2.EventBundle,
+): { targetPostId: string; labels: PostLabel[] } | null {
+  const decoded = decodeBundle(bundle, 'labels');
+  if (!decoded) return null;
+  try {
+    // The labeled event's key lives on the content; the event's own key
+    // belongs to the labeler's collection-7 chain.
+    const target = decoded.content.eventKey;
+    if (!target) return null;
+    const labeledBy = decoded.event.key?.identity ?? '';
+    return {
+      targetPostId: eventKeyId(target),
+      labels: decoded.content.labelValues.map((value: string) => ({
+        value,
+        labeledBy,
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** A repost event decoded into who reposted, the target post's id, and
  *  the repost event's own id. `null` if the bundle isn't a repost. */
 function decodeRepostBundle(bundle: v2.EventBundle): {
@@ -226,16 +263,28 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  */
 export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   const hintPosts = new Map<string, PostData>();
+  const labelMap = new Map<string, PostLabel[]>();
   for (const hint of response.eventHints) {
     if (!hint.eventBundle) continue;
     const post = decodePostBundle(hint.eventBundle);
     if (post) hintPosts.set(post.id, post);
+
+    const labels = decodeLabelsBundle(hint.eventBundle);
+    if (labels) {
+      const existing = labelMap.get(labels.targetPostId);
+      labelMap.set(
+        labels.targetPostId,
+        existing ? [...existing, ...labels.labels] : labels.labels,
+      );
+    }
   }
 
   const items: PostData[] = [];
   for (const bundle of response.eventBundles) {
     const post = decodePostBundle(bundle);
     if (post) {
+      const labels = labelMap.get(post.id);
+      if (labels) post.labels = labels;
       items.push(post);
       continue;
     }
@@ -243,8 +292,10 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
     if (repost) {
       const target = hintPosts.get(repost.targetId);
       if (target) {
+        const repostLabels = labelMap.get(repost.targetId);
         items.push({
           ...target,
+          labels: repostLabels ?? target.labels,
           repostedBy: repost.repostedBy,
           repostId: repost.repostId,
         });
@@ -296,7 +347,9 @@ export function pickImageVariant(
   if (!imageSet || imageSet.images.length === 0) return null;
   const sorted = [...imageSet.images].sort((a, b) => a.width - b.width);
   return (
-    sorted.find((img) => img.width >= targetSize) ?? sorted[sorted.length - 1]!
+    sorted.find((img) => img.width >= targetSize) ??
+    sorted[sorted.length - 1] ??
+    null
   );
 }
 
@@ -348,7 +401,7 @@ export function hexToBytes(hex: string): Uint8Array {
 
 export function truncateName(name: string, maxLen = 16): string {
   if (name.length <= maxLen) return name;
-  return name.slice(0, maxLen).trimEnd() + '\u2026';
+  return `${name.slice(0, maxLen).trimEnd()}\u2026`;
 }
 
 export function pubkeyStr(key: v2.PublicKey): string {

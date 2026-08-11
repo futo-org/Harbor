@@ -1,13 +1,4 @@
-import { useSettings } from './index';
-import type { ModerationPreferences } from './index';
-
-const LABEL_MAP: Record<keyof ModerationPreferences, string> = {
-  hate: 'hate',
-  selfHarm: 'self-harm',
-  sexuallySuggestive: 'sexually-suggestive',
-  sexuallyExplicit: 'sexually-explicit',
-  violence: 'violence',
-};
+import { MODERATION_LABELS, useSettings } from './index';
 
 /**
  * Returns the list of label values the user has chosen to hide in their
@@ -15,7 +6,5 @@ const LABEL_MAP: Record<keyof ModerationPreferences, string> = {
  */
 export function useOmitLabels(): string[] {
   const moderation = useSettings((s) => s.moderation);
-  return (Object.keys(LABEL_MAP) as (keyof ModerationPreferences)[])
-    .filter((key) => moderation[key] === 'hide')
-    .map((key) => LABEL_MAP[key]);
+  return MODERATION_LABELS.filter((label) => moderation[label] === 'hide');
 }
