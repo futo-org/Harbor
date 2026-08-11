@@ -1,8 +1,10 @@
 package org.futo.polycentric.core
 
 import java.util.logging.Logger
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import org.futo.polycentric.ffi.PolycentricCore
@@ -54,7 +56,10 @@ fun PolycentricCore.queryFlow(
         }
     })
     awaitClose { subscription.unsubscribe() }
-}
+    // Unbounded so the non-suspending `trySend` in `next` can never drop an
+    // emission (a dropped `Success` would hang `awaitQuery` forever). Fuses
+    // with the callbackFlow channel; emission count is bounded by the fan-out.
+}.buffer(Channel.UNLIMITED)
 
 /**
  * One-shot query: resolve on the first `Success` emission (at least one
