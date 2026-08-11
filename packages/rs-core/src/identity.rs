@@ -37,6 +37,7 @@ fn to_identity_candidate<'a>(
         event_bytes: &signed.event_bytes,
         content_bytes,
         signature: &signed.signature,
+        endorsement: signed.endorsement.as_deref(),
     };
 
     Some(candidate)
