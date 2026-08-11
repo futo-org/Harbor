@@ -444,8 +444,7 @@ pub async fn filter(
     filter_rows(fetched, hydration, omit_labels, blocked, false).await
 }
 
-/// [`filter`], additionally dropping replies beneath a row dropped for
-/// blocking. Thread-only: it relies on rows arriving parent-before-child.
+/// Drop blocked posts in a thread, along with all replies to those blocked posts.
 pub async fn filter_thread(
     fetched: Fetched,
     hydration: &HydrationState,
