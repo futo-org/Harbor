@@ -25,10 +25,14 @@ pub struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: GetExploreFeedRequest,
+    caller: Option<&str>,
 ) -> Result<GetFeedResponse, Status> {
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
+
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
+        blocked,
     )?;
 
     let params = Params { common };

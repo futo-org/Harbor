@@ -9,6 +9,7 @@ use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::CursorFilter;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
+use crate::service::graph::block_cache;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     collect_identities, list_identity_and_profile_events, rows_to_bundles,
@@ -45,7 +46,11 @@ pub async fn handle(
     }
 
     let params = Params {
-        common: feeds_pipeline::Params::from_req_params(page_params, vec![])?,
+        common: feeds_pipeline::Params::from_req_params(
+            page_params,
+            vec![],
+            block_cache::no_blocks(),
+        )?,
         identity,
         direction,
     };

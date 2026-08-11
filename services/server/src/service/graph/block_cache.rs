@@ -1,10 +1,19 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::RwLock;
 use tonic::Status;
 
 use super::repository::Query;
 use crate::service::context::ServiceContext;
+
+/// Anonymous callers block nobody.
+static NO_BLOCKS: LazyLock<Arc<HashSet<String>>> =
+    LazyLock::new(|| Arc::new(HashSet::new()));
+
+/// An empty blocklist, for pipelines that don't apply blocking.
+pub fn no_blocks() -> Arc<HashSet<String>> {
+    Arc::clone(&NO_BLOCKS)
+}
 
 #[derive(Default)]
 pub struct BlockCache {
@@ -41,6 +50,19 @@ impl BlockCache {
             .insert(identity.to_string(), Arc::clone(&fetched));
 
         Ok(fetched)
+    }
+
+    /// [`BlockCache::blocked_set`] for the caller of a request. This is `None`
+    /// when the request arrived unauthenticated.
+    pub async fn blocked_set_for_caller(
+        &self,
+        ctx: &ServiceContext,
+        caller: Option<&str>,
+    ) -> Result<Arc<HashSet<String>>, Status> {
+        match caller {
+            Some(caller) => self.blocked_set(ctx, caller).await,
+            None => Ok(Arc::clone(&NO_BLOCKS)),
+        }
     }
 
     /// Drop the cached blocklist for `identity`.

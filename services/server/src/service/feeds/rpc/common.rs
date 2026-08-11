@@ -26,6 +26,7 @@ use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use entity::content_model;
 use prost::Message;
 use std::collections::HashSet;
+use std::sync::Arc;
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
@@ -33,6 +34,9 @@ pub struct Params {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter>,
     pub omit_labels: Vec<String>,
+    /// Identities the authenticated caller blocks. Empty when the request
+    /// is anonymous.
+    pub blocked: Arc<HashSet<String>>,
 }
 
 impl Params {
@@ -40,6 +44,7 @@ impl Params {
     pub fn from_req_params(
         params: &Option<PageParams>,
         omit_labels: Vec<String>,
+        blocked: Arc<HashSet<String>>,
     ) -> Result<Params, Status> {
         let limit = page_limit(params);
 
@@ -66,6 +71,7 @@ impl Params {
             limit,
             cursor_filter,
             omit_labels,
+            blocked,
         })
     }
 }

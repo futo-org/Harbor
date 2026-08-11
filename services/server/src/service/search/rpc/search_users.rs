@@ -22,9 +22,12 @@ struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: SearchUsersRequest,
+    caller: Option<&str>,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
-    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
+    let common =
+        rpc::Params::from_req_params(req.query, &req.page_params, blocked)?;
     let params = Params { common, sort_by };
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)

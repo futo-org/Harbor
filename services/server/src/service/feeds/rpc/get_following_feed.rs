@@ -27,23 +27,28 @@ pub struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: GetFollowingFeedRequest,
+    caller: Option<&str>,
 ) -> Result<GetFeedResponse, Status> {
     if req.follower_identity.is_empty() {
         return Err(Status::invalid_argument("follower_identity is required"));
     }
-    let caller = req.follower_identity;
+    let follower = req.follower_identity;
 
     let mut identities =
-        GraphRepository::Query::list_followed_identities(ctx, &caller).await?;
+        GraphRepository::Query::list_followed_identities(ctx, &follower)
+            .await?;
 
     // Include the caller's own posts in their following feed.
-    if !identities.iter().any(|a| a == &caller) {
-        identities.push(caller);
+    if !identities.iter().any(|a| a == &follower) {
+        identities.push(follower);
     }
+
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
+        blocked,
     )?;
     let params = Params { common, identities };
 

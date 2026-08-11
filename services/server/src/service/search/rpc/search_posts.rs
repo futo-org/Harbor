@@ -24,9 +24,12 @@ struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: SearchPostsRequest,
+    caller: Option<&str>,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
-    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
+    let common =
+        rpc::Params::from_req_params(req.query, &req.page_params, blocked)?;
     let params = Params {
         common,
         sort_by,

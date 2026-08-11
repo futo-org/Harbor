@@ -18,6 +18,7 @@ use crate::{
 };
 use ::entity::notification;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tonic::Status;
 
 const DEFAULT_LIMIT: u32 = 50;
@@ -27,6 +28,9 @@ struct Params {
     limit: u64,
     after_id: Option<i64>,
     omit_labels: Vec<String>,
+    /// Identities the authenticated caller blocks. Empty when the request
+    /// is anonymous.
+    blocked: Arc<HashSet<String>>,
 }
 
 pub struct Fetched {
@@ -44,6 +48,7 @@ struct Hydrated {
 pub async fn handle(
     ctx: &ServiceContext,
     req: ListNotificationsRequest,
+    caller: Option<&str>,
 ) -> Result<ListNotificationsResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
@@ -62,11 +67,14 @@ pub async fn handle(
 
     let limit = req.first.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
 
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
+
     let params = Params {
         identity: req.identity,
         limit,
         after_id,
         omit_labels: req.omit_labels,
+        blocked,
     };
 
     pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view).await

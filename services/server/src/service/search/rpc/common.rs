@@ -27,6 +27,7 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
 use tonic::Status;
 
 // TODO: dedup with the logic in `src/service/feeds/rpc/common.rs`, a lot of it
@@ -37,12 +38,16 @@ pub struct Params<SortedBy> {
     pub query: String,
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    /// Identities the authenticated caller blocks. Empty when the request
+    /// is anonymous.
+    pub blocked: Arc<HashSet<String>>,
 }
 
 impl<SortedBy> Params<SortedBy> {
     pub fn from_req_params(
         query: String,
         params: &Option<PageParams>,
+        blocked: Arc<HashSet<String>>,
     ) -> Result<Params<SortedBy>, Status>
     where
         Cursor<SortedBy>: PageCursor,
@@ -74,6 +79,7 @@ impl<SortedBy> Params<SortedBy> {
             query,
             limit,
             cursor_filter,
+            blocked,
         })
     }
 }

@@ -12,7 +12,8 @@ use crate::service::feeds::rpc::common::{
 };
 use crate::service::feeds::util::{PageInfo, map_db_err};
 use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tonic::Status;
 
 const PARENT_HEIGHT_LIMIT: i32 = 50;
@@ -29,11 +30,15 @@ pub struct Params {
     pub sequence: i64,
     pub descendants_limit: u64,
     pub omit_labels: Vec<String>,
+    /// Identities the authenticated caller blocks. Empty when the request
+    /// is anonymous.
+    pub blocked: Arc<HashSet<String>>,
 }
 
 pub async fn handle(
     ctx: &ServiceContext,
     req: GetPostThreadRequest,
+    caller: Option<&str>,
 ) -> Result<GetPostThreadResponse, Status> {
     let descendants_limit = if req.limit <= 0 {
         200
@@ -43,6 +48,8 @@ pub async fn handle(
 
     let event_key = TargetEventKey::from_request(req.event_key, "event_key")?;
 
+    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
+
     let params = Params {
         collection: event_key.collection,
         identity: event_key.identity,
@@ -51,6 +58,7 @@ pub async fn handle(
         sequence: event_key.sequence,
         descendants_limit,
         omit_labels: req.omit_labels,
+        blocked,
     };
 
     let result =
