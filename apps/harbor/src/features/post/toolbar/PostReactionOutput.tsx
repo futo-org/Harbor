@@ -47,6 +47,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         hovered && { opacity: 0.8 },
         pressed && { opacity: 0.6 },
       ]}
+      hitSlop={16}
     >
       {/** Render our own emoji on top with full opacity, if present: */}
       {myEmoji ? (
