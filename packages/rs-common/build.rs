@@ -58,7 +58,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut conf = tonic_prost_build::configure()
         .build_transport(false)
         .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"))
-        .skip_debug(["EventKey", "SerializedContent"]); // Manually implemented.
+        .skip_debug([
+            "EventKey",
+            "ContentDigest",
+            "SerializedContent",
+            "SignedEvent",
+            "PublicKey",
+        ]); // Manually implemented.
     for ty in ["ImageSet", "Image", "Blob", "ContentDigest"] {
         conf = conf.type_attribute(
             ty,
