@@ -6,7 +6,7 @@
 import nativeModule from "./polycentric_core-ffi";
 import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct, type UniffiForeignFutureResultRustBuffer, type UniffiForeignFutureCompleterustBuffer, type UniffiVTableCallbackInterfacePolycentricCoreAuthTokenProvider, type UniffiVTableCallbackInterfacePolycentricCoreLogger, type UniffiVTableCallbackInterfacePolycentricCoreObserver, type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver, type UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
 } from "./polycentric_core-ffi";
-import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterMap, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -273,6 +273,62 @@ const FfiConverterTypeEventKey = (() => {
              FfiConverterString.allocationSize(value.identity) +
              FfiConverterTypePublicKey.allocationSize(value.signedBy) +
              FfiConverterUInt64.allocationSize(value.sequence);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export type GetAttributionFeedArgs = {
+    /**
+     * Serialized `AttributedTo` proto to match posts against. Passed as
+     * bytes so the whole (future-extensible) message crosses the FFI
+     * intact; decoded server-side by URL for the link case.
+     */
+    attributedTo: ArrayBuffer,
+    limit?: number,
+    backwardToken?: string,
+    forwardToken?: string
+}
+
+/**
+ * Generated factory for {@link GetAttributionFeedArgs} record objects.
+ */
+export const GetAttributionFeedArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<GetAttributionFeedArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<GetAttributionFeedArgs>,
+    });
+})();
+
+const FfiConverterTypeGetAttributionFeedArgs = (() => {
+    type TypeName = GetAttributionFeedArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                attributedTo: FfiConverterArrayBuffer.read(from), 
+                limit: FfiConverterOptionalInt32.read(from), 
+                backwardToken: FfiConverterOptionalString.read(from), 
+                forwardToken: FfiConverterOptionalString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterArrayBuffer.write(value.attributedTo, into);
+            FfiConverterOptionalInt32.write(value.limit, into);
+            FfiConverterOptionalString.write(value.backwardToken, into);
+            FfiConverterOptionalString.write(value.forwardToken, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterArrayBuffer.allocationSize(value.attributedTo) +
+             FfiConverterOptionalInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.backwardToken) +
+             FfiConverterOptionalString.allocationSize(value.forwardToken);
             
         }
     };
@@ -1403,6 +1459,64 @@ const FfiConverterTypeQueryResultFfi = (() => {
     return new FFIConverter();
 })();
 
+export type ResolveVerifiedClaimsArgs = {
+    /**
+     * Optional schema content-digest (sha256) bytes; scopes the search to
+     * that schema. None = any schema.
+     */
+    schemaDigest?: ArrayBuffer,
+    /**
+     * Field key/value pairs (STRING) a claim must contain.
+     */
+    fields: Map<string, string>,
+    /**
+     * Trust-root identities; only claims verified by one of these are
+     * returned.
+     */
+    verifiedByIdentities: Array<string>
+}
+
+/**
+ * Generated factory for {@link ResolveVerifiedClaimsArgs} record objects.
+ */
+export const ResolveVerifiedClaimsArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<ResolveVerifiedClaimsArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<ResolveVerifiedClaimsArgs>,
+    });
+})();
+
+const FfiConverterTypeResolveVerifiedClaimsArgs = (() => {
+    type TypeName = ResolveVerifiedClaimsArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                schemaDigest: FfiConverterOptionalBytes.read(from), 
+                fields: FfiConverterMapStringString.read(from), 
+                verifiedByIdentities: FfiConverterSequenceString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterOptionalBytes.write(value.schemaDigest, into);
+            FfiConverterMapStringString.write(value.fields, into);
+            FfiConverterSequenceString.write(value.verifiedByIdentities, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterOptionalBytes.allocationSize(value.schemaDigest) +
+             FfiConverterMapStringString.allocationSize(value.fields) +
+             FfiConverterSequenceString.allocationSize(value.verifiedByIdentities);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
 
 // Flat error type: CoreError
 export enum CoreError_Tags {
@@ -1741,12 +1855,14 @@ export enum Query_Tags {
     GetIdentityFeed = "GetIdentityFeed",
     GetFollowingFeed = "GetFollowingFeed",
     GetExploreFeed = "GetExploreFeed",
+    GetAttributionFeed = "GetAttributionFeed",
     ListNotifications = "ListNotifications",
     ListEvents = "ListEvents",
     ListVerificationClaims = "ListVerificationClaims",
     ListVerificationTargets = "ListVerificationTargets",
     ListVerificationVerifies = "ListVerificationVerifies",
     ListTargetedVerificationClaims = "ListTargetedVerificationClaims",
+    ResolveVerifiedClaims = "ResolveVerifiedClaims",
     ListFollowing = "ListFollowing",
     ListFollowers = "ListFollowers",
     IsModerator = "IsModerator",
@@ -1960,6 +2076,39 @@ Readonly<
 
     }
 
+    type GetAttributionFeed__interface = {
+        tag: Query_Tags.GetAttributionFeed;
+        inner: 
+Readonly<
+[GetAttributionFeedArgs
+]>
+    };
+    class GetAttributionFeed_ extends UniffiEnum implements GetAttributionFeed__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.GetAttributionFeed;
+        readonly inner: 
+Readonly<
+[GetAttributionFeedArgs
+]>;
+        constructor(v0: GetAttributionFeedArgs) {
+            super("Query", "GetAttributionFeed");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: GetAttributionFeedArgs): GetAttributionFeed_ {
+            return new GetAttributionFeed_(v0);
+        }
+
+        static instanceOf(obj: any): obj is GetAttributionFeed_ {
+            return obj.tag === Query_Tags.GetAttributionFeed;
+        }
+
+    }
+
     type ListNotifications__interface = {
         tag: Query_Tags.ListNotifications;
         inner: 
@@ -2154,6 +2303,39 @@ Readonly<
 
         static instanceOf(obj: any): obj is ListTargetedVerificationClaims_ {
             return obj.tag === Query_Tags.ListTargetedVerificationClaims;
+        }
+
+    }
+
+    type ResolveVerifiedClaims__interface = {
+        tag: Query_Tags.ResolveVerifiedClaims;
+        inner: 
+Readonly<
+[ResolveVerifiedClaimsArgs
+]>
+    };
+    class ResolveVerifiedClaims_ extends UniffiEnum implements ResolveVerifiedClaims__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.ResolveVerifiedClaims;
+        readonly inner: 
+Readonly<
+[ResolveVerifiedClaimsArgs
+]>;
+        constructor(v0: ResolveVerifiedClaimsArgs) {
+            super("Query", "ResolveVerifiedClaims");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: ResolveVerifiedClaimsArgs): ResolveVerifiedClaims_ {
+            return new ResolveVerifiedClaims_(v0);
+        }
+
+        static instanceOf(obj: any): obj is ResolveVerifiedClaims_ {
+            return obj.tag === Query_Tags.ResolveVerifiedClaims;
         }
 
     }
@@ -2368,12 +2550,14 @@ Readonly<
   GetIdentityFeed: GetIdentityFeed_, 
   GetFollowingFeed: GetFollowingFeed_, 
   GetExploreFeed: GetExploreFeed_, 
+  GetAttributionFeed: GetAttributionFeed_, 
   ListNotifications: ListNotifications_, 
   ListEvents: ListEvents_, 
   ListVerificationClaims: ListVerificationClaims_, 
   ListVerificationTargets: ListVerificationTargets_, 
   ListVerificationVerifies: ListVerificationVerifies_, 
   ListTargetedVerificationClaims: ListTargetedVerificationClaims_, 
+  ResolveVerifiedClaims: ResolveVerifiedClaims_, 
   ListFollowing: ListFollowing_, 
   ListFollowers: ListFollowers_, 
   IsModerator: IsModerator_, 
@@ -2390,7 +2574,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -2406,18 +2590,20 @@ const FfiConverterTypeQuery = (() => {
                 case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.read(from));
                 case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
                 case 6: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.read(from));
-                case 7: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
-                case 8: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
-                case 9: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
-                case 10: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
-                case 11: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
-                case 12: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
-                case 13: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
-                case 14: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
-                case 15: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
-                case 16: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
-                case 17: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
-                case 18: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
+                case 7: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.read(from));
+                case 8: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
+                case 9: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
+                case 10: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
+                case 11: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
+                case 12: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
+                case 13: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
+                case 14: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.read(from));
+                case 15: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
+                case 16: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
+                case 17: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
+                case 18: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
+                case 19: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
+                case 20: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -2459,74 +2645,86 @@ const FfiConverterTypeQuery = (() => {
                     FfiConverterTypeGetExploreFeedArgs.write(inner[0], into);
                     return;
                 }
-                case Query_Tags.ListNotifications: {
+                case Query_Tags.GetAttributionFeed: {
                     ordinalConverter.write(7, into);
+                    const inner = value.inner;
+                    FfiConverterTypeGetAttributionFeedArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.ListNotifications: {
+                    ordinalConverter.write(8, into);
                     const inner = value.inner;
                     FfiConverterTypeListNotificationsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListEvents: {
-                    ordinalConverter.write(8, into);
+                    ordinalConverter.write(9, into);
                     const inner = value.inner;
                     FfiConverterTypeListEventsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationClaims: {
-                    ordinalConverter.write(9, into);
+                    ordinalConverter.write(10, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationClaimsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationTargets: {
-                    ordinalConverter.write(10, into);
+                    ordinalConverter.write(11, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationTargetsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationVerifies: {
-                    ordinalConverter.write(11, into);
+                    ordinalConverter.write(12, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationVerifiesArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
-                    ordinalConverter.write(12, into);
+                    ordinalConverter.write(13, into);
                     const inner = value.inner;
                     FfiConverterTypeListTargetedVerificationClaimsArgs.write(inner[0], into);
                     return;
                 }
+                case Query_Tags.ResolveVerifiedClaims: {
+                    ordinalConverter.write(14, into);
+                    const inner = value.inner;
+                    FfiConverterTypeResolveVerifiedClaimsArgs.write(inner[0], into);
+                    return;
+                }
                 case Query_Tags.ListFollowing: {
-                    ordinalConverter.write(13, into);
+                    ordinalConverter.write(15, into);
                     const inner = value.inner;
                     FfiConverterTypeListFollowingArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListFollowers: {
-                    ordinalConverter.write(14, into);
+                    ordinalConverter.write(16, into);
                     const inner = value.inner;
                     FfiConverterTypeListFollowersArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsModerator: {
-                    ordinalConverter.write(15, into);
+                    ordinalConverter.write(17, into);
                     const inner = value.inner;
                     FfiConverterTypeIsModeratorArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsBanned: {
-                    ordinalConverter.write(16, into);
+                    ordinalConverter.write(18, into);
                     const inner = value.inner;
                     FfiConverterTypeIsBannedArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListBans: {
-                    ordinalConverter.write(17, into);
+                    ordinalConverter.write(19, into);
                     const inner = value.inner;
                     FfiConverterTypeListBansArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.GetReactions: {
-                    ordinalConverter.write(18, into);
+                    ordinalConverter.write(20, into);
                     const inner = value.inner;
                     FfiConverterTypeGetReactionsArgs.write(inner[0], into);
                     return;
@@ -2574,75 +2772,87 @@ const FfiConverterTypeQuery = (() => {
                     size += FfiConverterTypeGetExploreFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
-                case Query_Tags.ListNotifications: {
+                case Query_Tags.GetAttributionFeed: {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(7);
+                    size += FfiConverterTypeGetAttributionFeedArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.ListNotifications: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(8);
                     size += FfiConverterTypeListNotificationsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListEvents: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(8);
+                    let size = ordinalConverter.allocationSize(9);
                     size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(9);
+                    let size = ordinalConverter.allocationSize(10);
                     size += FfiConverterTypeListVerificationClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationTargets: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(10);
+                    let size = ordinalConverter.allocationSize(11);
                     size += FfiConverterTypeListVerificationTargetsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationVerifies: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(11);
+                    let size = ordinalConverter.allocationSize(12);
                     size += FfiConverterTypeListVerificationVerifiesArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(12);
+                    let size = ordinalConverter.allocationSize(13);
                     size += FfiConverterTypeListTargetedVerificationClaimsArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.ResolveVerifiedClaims: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(14);
+                    size += FfiConverterTypeResolveVerifiedClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowing: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(13);
+                    let size = ordinalConverter.allocationSize(15);
                     size += FfiConverterTypeListFollowingArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(14);
+                    let size = ordinalConverter.allocationSize(16);
                     size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsModerator: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(15);
+                    let size = ordinalConverter.allocationSize(17);
                     size += FfiConverterTypeIsModeratorArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsBanned: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(16);
+                    let size = ordinalConverter.allocationSize(18);
                     size += FfiConverterTypeIsBannedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListBans: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(17);
+                    let size = ordinalConverter.allocationSize(19);
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetReactions: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(18);
+                    let size = ordinalConverter.allocationSize(20);
                     size += FfiConverterTypeGetReactionsArgs.allocationSize(inner[0]);
                     return size;
                 }
@@ -4854,11 +5064,11 @@ const uniffiTypePolycentricCoreObjectFactory: UniffiObjectFactory<PolycentricCor
 }})();
 const FfiConverterTypePolycentricCore = new FfiConverterObject(uniffiTypePolycentricCoreObjectFactory);
 
-// FfiConverter for string | undefined
-const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
-
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
+
+// FfiConverter for string | undefined
+const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
@@ -4889,6 +5099,9 @@ const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverter
 
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
+
+// FfiConverter for Map<string, string>
+const FfiConverterMapStringString = new FfiConverterMap(FfiConverterString, FfiConverterString);
 
 // FfiConverter for AuthToken | undefined
 const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterTypeAuthToken);
@@ -5073,6 +5286,7 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeEventKey,
     FfiConverterTypeFetchMode,
+    FfiConverterTypeGetAttributionFeedArgs,
     FfiConverterTypeGetEventArgs,
     FfiConverterTypeGetExploreFeedArgs,
     FfiConverterTypeGetFollowingFeedArgs,
@@ -5103,6 +5317,7 @@ export default Object.freeze({
     FfiConverterTypeQueryOpts,
     FfiConverterTypeQueryResultFfi,
     FfiConverterTypeQueryStatus,
+    FfiConverterTypeResolveVerifiedClaimsArgs,
     FfiConverterTypeSignBytesCallback,
     FfiConverterTypeSubscription,
     FfiConverterTypeUpdateMode,
