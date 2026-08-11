@@ -61,13 +61,13 @@ export default function PostActionButton({
                 size={size}
                 color={active || highlighted ? color : 'neutral_500'}
               />
-              {count !== undefined ? (
+              {count ? (
                 <Text
                   variant="small"
                   fontSize="sm"
                   color={active || highlighted ? color : 'neutral_500'}
                 >
-                  {count ? String(count) : ' '}
+                  {String(count)}
                 </Text>
               ) : null}
             </View>
