@@ -65,7 +65,7 @@ pub enum Cursor<SortedBy> {
 }
 
 impl<SortedBy> Cursor<SortedBy> {
-    fn encode(&self) -> Result<String, Status>
+    pub fn encode(&self) -> Result<String, Status>
     where
         SortedBy: Serialize,
     {
@@ -76,7 +76,7 @@ impl<SortedBy> Cursor<SortedBy> {
         Ok(BASE64_STANDARD.encode(bytes))
     }
 
-    fn decode(token: &str) -> Result<Cursor<SortedBy>, Status>
+    pub fn decode(token: &str) -> Result<Cursor<SortedBy>, Status>
     where
         SortedBy: for<'a> Deserialize<'a>,
     {
@@ -98,4 +98,13 @@ pub struct Marker<SortedBy> {
     pub sorted_by: SortedBy,
     /// Event id (`events.id`) to ensure the ordering is always unique.
     pub event_id: i64,
+}
+
+impl<SortedBy> Marker<SortedBy> {
+    pub fn values(&self) -> (SortedBy, i64)
+    where
+        SortedBy: Copy,
+    {
+        (self.sorted_by, self.event_id)
+    }
 }

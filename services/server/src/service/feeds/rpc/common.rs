@@ -8,11 +8,9 @@ use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
 use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, FeedMarker, Query as FeedsRepository,
+    CursorFilter, FeedCursor, FeedMarker, PageInfo, Query as FeedsRepository,
 };
-use crate::service::feeds::util::{
-    PageCursor, PageInfo, map_db_err, page_limit,
-};
+use crate::service::feeds::util::{map_db_err, page_limit};
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
@@ -72,20 +70,20 @@ impl Params {
 
 pub struct Fetched {
     pub rows: Vec<EventWithContentRow>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo,
 }
 
 pub struct GetFeedResponseFilter {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventWithContentRow>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo,
 }
 
 pub struct GetFeedResponseView {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    pub page_info: PageInfo<FeedCursor>,
+    pub page_info: PageInfo,
 }
 
 /// Remove any extra rows (for checking next page existence) and extract page info.
@@ -130,20 +128,20 @@ pub fn finalize_fetch(
     }
 
     let backward_marker = rows.first().map(|(event, _)| FeedMarker {
-        created_at: event.created_at,
-        id: event.id,
+        sorted_by: event.created_at,
+        event_id: event.id,
     });
 
     let forward_marker = rows.last().map(|(event, _)| FeedMarker {
-        created_at: event.created_at,
-        id: event.id,
+        sorted_by: event.created_at,
+        event_id: event.id,
     });
 
     let backward_cursor = match (backward_marker, &params.cursor_filter) {
         // We have non-zero rows: navigating backward will skip the first row we fetched.
         (Some(marker), _) => FeedCursor::Mid(marker),
         // There are zero rows preceding the previous cursor: we stay here.
-        (None, Some(CursorFilter::Backward(cur))) => cur.clone(),
+        (None, Some(CursorFilter::Backward(cur))) => *cur,
         // Truly empty feed: we are at the end and new items will be
         // placed preceding our cursor.
         // OR
@@ -159,7 +157,7 @@ pub fn finalize_fetch(
         // should return the first items in the feed.
         (None, Some(CursorFilter::Backward(_))) => FeedCursor::Start,
         // There are zero rows following the previous cursor: we stay here.
-        (None, Some(CursorFilter::Forward(cur))) => cur.clone(),
+        (None, Some(CursorFilter::Forward(cur))) => *cur,
         // Truly empty feed: we are at the end and a forward query will continue
         // to return no items.
         _ => FeedCursor::End,

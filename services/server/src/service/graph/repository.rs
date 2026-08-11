@@ -3,7 +3,6 @@ use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
 use prost::Message;
-use sea_orm::sea_query::IntoValueTuple;
 use sea_orm::*;
 use std::collections::HashSet;
 use tonic::Status;
@@ -12,7 +11,7 @@ use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, FeedMarker, content_join,
+    CursorFilter, FeedCursor, content_join,
 };
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
@@ -186,7 +185,7 @@ async fn page_follow_events(
             match cur {
                 FeedCursor::Start => {}
                 FeedCursor::Mid(marker) => {
-                    sea_cursor.after(marker_values(marker));
+                    sea_cursor.after(marker.values());
                 }
                 FeedCursor::End => return Ok(vec![]),
             }
@@ -196,7 +195,7 @@ async fn page_follow_events(
             match cur {
                 FeedCursor::Start => return Ok(vec![]),
                 FeedCursor::Mid(marker) => {
-                    sea_cursor.before(marker_values(marker));
+                    sea_cursor.before(marker.values());
                 }
                 FeedCursor::End => {}
             }
@@ -205,10 +204,6 @@ async fn page_follow_events(
     }
 
     sea_cursor.all(db).await
-}
-
-fn marker_values(marker: &FeedMarker) -> impl IntoValueTuple {
-    (marker.created_at, marker.id)
 }
 
 /// Identity of the target of a Follow event, decoded from the

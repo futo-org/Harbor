@@ -160,7 +160,7 @@ async fn view(
 ) -> Result<ListFollowsResponse, Status> {
     Ok(ListFollowsResponse {
         event_bundles: rows_to_bundles(filtered.live_rows),
-        page_info: Some(filtered.page_info.page_info.proto()?),
+        page_info: Some(filtered.page_info.page_info.to_proto()?),
         event_hints: hydration.identity_profile_hints(),
     })
 }

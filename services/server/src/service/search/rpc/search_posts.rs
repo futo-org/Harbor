@@ -38,7 +38,7 @@ pub async fn handle(
     Ok(SearchPostsResponse {
         results: result.results,
         event_hints: result.event_hints,
-        page_info: Some(result.page_info.proto()?),
+        page_info: Some(result.page_info.to_proto()?),
     })
 }
 
