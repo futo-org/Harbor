@@ -342,9 +342,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Our own Polycentric identity, used to sign + publish labels events.
     let polycentric = PolycentricClient::new(config)?;
-    // Pull our identity state from the remote servers before consuming, so
-    // the first labels event we author continues our chain correctly.
-    polycentric.bootstrap().await;
+    // Reconcile with the servers before consuming: pulls our identity state
+    // so the first labels event we author continues our chain correctly, and
+    // re-pushes anything a server missed while it (or we) was unavailable.
+    let created = repository::created_bundles(&db, polycentric.identity())
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "could not load authored events for sync");
+            Vec::new()
+        });
+    polycentric.sync(created).await;
 
     let ctx = Context {
         db,

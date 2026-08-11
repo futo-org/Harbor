@@ -13,6 +13,7 @@ use polycentric_common::models::protos_v2::{
 // rs-core's client manages the local event/content stores and chain math.
 use polycentric_core::client::PolycentricClient as CoreClient;
 use polycentric_core::query::channel;
+use polycentric_core::sync as core_sync;
 use prost::Message;
 use sha2::{Digest, Sha256};
 
@@ -66,7 +67,7 @@ pub struct PolycentricClient {
     identity: String,
     /// gRPC server URLs to bootstrap from and publish to.
     servers: Vec<String>,
-    /// Sequence of our identity chain's head, learned at bootstrap. Used as
+    /// Sequence of our identity chain's head, learned at sync. Used as
     /// the `identity_sequence` of events we author (it references the
     /// identity document that authorizes our signing key).
     identity_sequence: AtomicU64,
@@ -96,22 +97,65 @@ impl PolycentricClient {
         })
     }
 
-    /// Load  identity chain (collection 1) and any labels we've already
-    /// published (collection 7) from every server into the local client
-    pub async fn bootstrap(&self) {
+    /// Reconcile with every server, the way the JS clients do on startup:
+    /// seed the local client with everything we have authored (`created`,
+    /// read back from Postgres), pull each server's state, then push
+    /// whatever that server's heads say it is missing.
+    pub async fn sync(&self, created: Vec<EventBundle>) {
+        let count = created.len();
+        self.core.lock().unwrap().copy_bundles(created);
+        info!("sync: loaded {count} previously authored bundles");
+
         for server in &self.servers {
             match self.fetch_identity_state(server).await {
-                Ok(count) => info!("bootstrap: loaded {count} bundles from {server}"),
-                Err(e) => warn!("bootstrap: failed to load identity state from {server}: {e}"),
+                Ok(count) => info!("sync: pulled {count} bundles from {server}"),
+                Err(e) => warn!("sync: failed to pull identity state from {server}: {e}"),
             }
         }
         if self.identity_sequence.load(Ordering::Relaxed) == 0 {
             warn!(
-                "bootstrap: no identity events found for {} on any server; \
+                "sync: no identity events found for {} on any server; \
                  label publishing will be skipped until the identity is available",
                 self.identity
             );
         }
+
+        for server in &self.servers {
+            match self.push_missing(server).await {
+                Ok(0) => info!("sync: {server} is up to date"),
+                Ok(count) => info!("sync: pushed {count} missing events to {server}"),
+                Err(e) => warn!("sync: failed to push missing events to {server}: {e}"),
+            }
+        }
+    }
+
+    /// Push the events `server` is missing, based on the chain heads it
+    /// reports. Returns how many bundles were sent.
+    async fn push_missing(&self, server: &str) -> Result<usize, String> {
+        let heads = core_sync::request_heads(&self.identity, server)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let bundles = {
+            let core = self.core.lock().unwrap();
+            core_sync::bundle_unsent_events(&core, &self.identity, heads)
+                .map_err(|e| e.to_string())?
+        };
+
+        if bundles.is_empty() {
+            return Ok(0);
+        }
+
+        let count = bundles.len();
+        let response = core_sync::push_bundles(server, bundles)
+            .await
+            .map_err(|e| e.to_string())?;
+        if !response.errors.is_empty() {
+            let messages: Vec<&str> = response.errors.iter().map(|e| e.message.as_str()).collect();
+            return Err(format!("server rejected events: {messages:?}"));
+        }
+
+        Ok(count)
     }
 
     async fn fetch_identity_state(&self, server: &str) -> Result<usize, String> {

@@ -3,6 +3,7 @@ use moderation_entity::processed_content_model::{
 };
 use moderation_entity::{created_content_model, created_event_model, moderator_model};
 use polycentric_common::merkle;
+use polycentric_common::models::protos_v2::{EventBundle, SerializedContent, SignedEvent};
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::NotSet,
@@ -11,6 +12,7 @@ use sea_orm::{
     TransactionTrait,
     sea_query::{OnConflict, value::prelude::serde_json},
 };
+use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use crate::polycentric::{ChainHead, CreatedEvent};
@@ -119,6 +121,53 @@ pub async fn chain_head<C: ConnectionTrait>(
         previous_signature,
         previous_root,
     })
+}
+
+/// Every event this service has authored for `identity`, rebuilt into
+/// bundles (with their content) so they can be loaded into the core client
+/// and diffed against what each server holds.
+pub async fn created_bundles<C: ConnectionTrait>(
+    db: &C,
+    identity: &str,
+) -> Result<Vec<EventBundle>, DbErr> {
+    let events = created_event_model::Entity::find()
+        .filter(created_event_model::Column::Identity.eq(identity))
+        .all(db)
+        .await?;
+
+    let contents = created_content_model::Entity::find().all(db).await?;
+    let content_by_digest: HashMap<(i32, &[u8]), &[u8]> = contents
+        .iter()
+        .map(|c| {
+            (
+                (c.digest_type, c.digest_bytes.as_slice()),
+                c.serialized_bytes.as_slice(),
+            )
+        })
+        .collect();
+
+    Ok(events
+        .iter()
+        .map(|e| {
+            let serialized_content = e
+                .content_digest_type
+                .zip(e.content_digest_bytes.as_ref())
+                .and_then(|(t, b)| content_by_digest.get(&(t, b.as_slice())))
+                .map(|bytes| SerializedContent {
+                    content_bytes: bytes.to_vec(),
+                });
+
+            EventBundle {
+                signed_event: Some(SignedEvent {
+                    signature: e.signature.clone(),
+                    event_bytes: e.event_bytes.clone(),
+                }),
+                serialized_content,
+                event_proofs: vec![],
+                meta: None,
+            }
+        })
+        .collect())
 }
 
 /// Returns if already stored content with this digest
