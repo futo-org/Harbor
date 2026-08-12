@@ -1,14 +1,16 @@
-use crate::service::content::repository::split_event_key;
+use crate::service::content::repository::{EventKeyParts, split_event_key};
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow, Post,
+    Content, Delete, EventKey, Follow, Post, Reaction,
 };
 use sea_orm::sea_query::{
-    DeleteStatement, Expr, InsertStatement, IntoCondition, SelectStatement,
+    CommonTableExpression, DeleteStatement, Expr, InsertStatement,
+    IntoColumnRef, IntoCondition, SelectExpr, SelectStatement, UpdateStatement,
+    WithClause,
 };
 use sea_orm::*;
 
@@ -163,6 +165,9 @@ impl Mutation {
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
+            ContentBody::Reaction(reaction) => {
+                Mutation::reaction(db, &event, reaction).await
+            }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
@@ -201,27 +206,110 @@ impl Mutation {
         Ok(())
     }
 
+    async fn reaction<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        reaction: &Reaction,
+    ) -> Result<(), DbErr> {
+        let key = split_event_key(reaction.event_key.clone(), "reaction")
+            .map_err(|err| DbErr::Custom(err.message().into()))?;
+        let mut post_event_id = select_event_id(key);
+
+        let mut insert_reaction = InsertStatement::new();
+        insert_reaction
+            .into_table("reaction")
+            .columns(["event_id", "on_post", "emoji", "positive"])
+            .select_from({
+                post_event_id
+                    .clear_selects() // Need to rename.
+                    .expr(SelectExpr {
+                        expr: Expr::from(event.id),
+                        alias: Some("event_id".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::Column(
+                            EventModel::Column::Id.into_column_ref(),
+                        ),
+                        alias: Some("on_post".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(reaction.emoji.clone()),
+                        alias: Some("emoji".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(reaction.positive),
+                        alias: Some("positive".into()),
+                        window: None,
+                    });
+                post_event_id
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            .returning_all();
+
+        let mut query = UpdateStatement::new();
+        query
+            // This should be as easy as a subquery, but SeaQuery doesn't
+            // support it. So we have to use CTEs.
+            .with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_reaction").query(insert_reaction);
+                c.recursive(false).cte(cte);
+                c
+            })
+            .table("reaction_tally")
+            .values([
+                (
+                    "positive_count",
+                    Expr::Column(("reaction_tally", "positive_count").into())
+                        .add(
+                            Expr::case(
+                                Expr::Column("positive".into()),
+                                Expr::Constant(1.into()),
+                            )
+                            .finally(Expr::Constant(0.into())),
+                        )
+                        .into(),
+                ),
+                (
+                    "negative_count",
+                    Expr::Column(("reaction_tally", "negative_count").into())
+                        .add(
+                            Expr::case(
+                                Expr::Column("positive".into()),
+                                Expr::Constant(0.into()),
+                            )
+                            .finally(Expr::Constant(1.into())),
+                        )
+                        .into(),
+                ),
+            ])
+            .from("inserted_reaction")
+            .and_where(
+                Expr::Column(("reaction_tally", "event_id").into())
+                    .eq(Expr::Column(("inserted_reaction", "on_post").into())),
+            );
+
+        db.execute(&query).await?;
+        Ok(())
+    }
+
     async fn delete<C: ConnectionTrait>(
         db: &C,
         delete: &Delete,
     ) -> Result<(), DbErr> {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
-
-        let mut event_id = SelectStatement::new();
-        event_id
-            .column(EventModel::Column::Id)
-            .from(EventModel::Entity)
-            .and_where(EventModel::Column::Collection.eq(key.collection))
-            .and_where(EventModel::Column::Identity.eq(key.identity))
-            .and_where(
-                EventModel::Column::PublicKeyType.eq(key.public_key_type),
-            )
-            .and_where(EventModel::Column::PublicKey.eq(key.public_key))
-            .and_where(EventModel::Column::Sequence.eq(key.sequence));
+        let collection = key.collection;
+        let event_id = select_event_id(key);
 
         let mut query = DeleteStatement::new();
-        match key.collection {
+        match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
                 query.from_table("reaction_tally");
@@ -238,4 +326,18 @@ impl Mutation {
         db.execute(&query).await?;
         Ok(())
     }
+}
+
+/// Returns a select statement to get the event id from `key`.
+fn select_event_id(key: EventKeyParts) -> SelectStatement {
+    let mut query = SelectStatement::new();
+    query
+        .column(EventModel::Column::Id)
+        .from(EventModel::Entity)
+        .and_where(EventModel::Column::Collection.eq(key.collection))
+        .and_where(EventModel::Column::Identity.eq(key.identity))
+        .and_where(EventModel::Column::PublicKeyType.eq(key.public_key_type))
+        .and_where(EventModel::Column::PublicKey.eq(key.public_key))
+        .and_where(EventModel::Column::Sequence.eq(key.sequence));
+    query
 }
