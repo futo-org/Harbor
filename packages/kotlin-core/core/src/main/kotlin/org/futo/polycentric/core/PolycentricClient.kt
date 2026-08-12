@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -88,6 +89,25 @@ class PolycentricClient(
 
     val isReady: Boolean
         get() = eventService.state.value == ClientState.READY
+
+    /**
+     * Suspends until the client has finished [initialize] and reached
+     * [ClientState.READY] — the point at which `currentKeyPair`/`currentSystem`
+     * are guaranteed set. Returns immediately if already ready. Throws the
+     * initialization failure if the client ended in [ClientState.ERROR], rather
+     * than suspending forever. Lets callers gate on readiness the way js-core's
+     * `await create()` does, instead of touching a half-built client.
+     */
+    suspend fun awaitReady() {
+        eventService.state.first { state ->
+            when (state) {
+                ClientState.READY -> true
+                ClientState.ERROR ->
+                    throw (error ?: PolycentricException("Client initialization failed"))
+                else -> false
+            }
+        }
+    }
 
     /** The active device public key as a proto (js-core `currentSystem`). */
     val currentSystem: PublicKey
