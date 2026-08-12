@@ -57,6 +57,7 @@ pub struct GetExploreFeedArgs {
 pub struct GetPostThreadArgs {
     pub event_key: EventKey,
     pub limit: i32,
+    pub omit_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -68,6 +69,7 @@ pub struct GetAttributionFeedArgs {
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 /// Merge function for every feed-RPC observable
@@ -200,11 +202,13 @@ pub fn get_attribution_feed(
         limit,
         backward_token,
         forward_token,
+        omit_labels,
     } = args;
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
         let attributed_to = attributed_to.clone();
+        let omit_labels = omit_labels.clone();
         let client = client.clone();
 
         let (backward_token, backward_offset) =
@@ -223,7 +227,7 @@ pub fn get_attribution_feed(
                         backward_token,
                         forward_token,
                     }),
-                    omit_labels: vec![],
+                    omit_labels,
                 })
                 .await
                 .map_err(|e| format!("get_attribution_feed [{server_url}]: {e}"))?
@@ -371,11 +375,15 @@ pub fn get_post_thread(
     args: GetPostThreadArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let GetPostThreadArgs { event_key, limit } = args;
+    let GetPostThreadArgs {
+        event_key,
+        limit,
+        omit_labels,
+    } = args;
     let request = GetPostThreadRequest {
         event_key: Some(event_key.into()),
         limit,
-        omit_labels: vec![],
+        omit_labels,
     };
 
     let client = query_client.client().clone();

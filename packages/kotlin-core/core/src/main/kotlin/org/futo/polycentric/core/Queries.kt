@@ -40,8 +40,9 @@ suspend fun PolycentricClient.getEvent(
 suspend fun PolycentricClient.getPostThread(
     postKey: EventKey,
     limit: Int = 50,
+    omitLabels: List<String> = emptyList(),
 ): GetPostThreadResponse? =
-    core.awaitQuery(Query.GetPostThread(GetPostThreadArgs(postKey.toFfiOrThrow(), limit)))
+    core.awaitQuery(Query.GetPostThread(GetPostThreadArgs(postKey.toFfiOrThrow(), limit, omitLabels)))
         ?.let { GetPostThreadResponse.ADAPTER.decode(it) }
 
 suspend fun PolycentricClient.getIdentityFeed(
@@ -49,9 +50,10 @@ suspend fun PolycentricClient.getIdentityFeed(
     limit: Int? = null,
     backwardToken: String? = null,
     forwardToken: String? = null,
+    omitLabels: List<String> = emptyList(),
 ): GetFeedResponse? =
     core.awaitQuery(
-        Query.GetIdentityFeed(GetIdentityFeedArgs(identity, limit, backwardToken, forwardToken)),
+        Query.GetIdentityFeed(GetIdentityFeedArgs(identity, limit, backwardToken, forwardToken, omitLabels)),
     )?.let { GetFeedResponse.ADAPTER.decode(it) }
 
 /**
@@ -65,6 +67,7 @@ suspend fun PolycentricClient.getAttributionFeed(
     limit: Int? = null,
     backwardToken: String? = null,
     forwardToken: String? = null,
+    omitLabels: List<String> = emptyList(),
 ): GetFeedResponse? =
     core.awaitQuery(
         Query.GetAttributionFeed(
@@ -73,6 +76,7 @@ suspend fun PolycentricClient.getAttributionFeed(
                 limit,
                 backwardToken,
                 forwardToken,
+                omitLabels,
             ),
         ),
     )?.let { GetFeedResponse.ADAPTER.decode(it) }
