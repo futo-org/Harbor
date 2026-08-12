@@ -129,9 +129,6 @@ importers:
       '@types/react-native-web':
         specifier: ^0.19.2
         version: 0.19.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react@19.2.3)
-      better-sqlite3:
-        specifier: ^12.10.0
-        version: 12.10.1
       expo:
         specifier: ~57.0.4
         version: 57.0.4(4d7f482e0e86e2a8a699f9e63c2da573)
