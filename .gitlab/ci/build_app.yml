@@ -177,30 +177,6 @@ app-android-apk-production:
       when: manual
       allow_failure: true
 
-# Smoke test for the publish script: fabricates the build artifacts and
-# publishes to the throwaway `test` channel (apk/test/*), so bucket and
-# credential config can be checked without waiting on an EAS build.
-app-android-apk-publish-test:
-  stage: build
-  image: node:24-slim
-  needs: []
-  variables:
-    GIT_DEPTH: "1"
-    UPDATE_CHANNEL: test
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: manual
-      allow_failure: true
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: manual
-      allow_failure: true
-  before_script:
-    - apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
-  script:
-    - node -e "require('fs').writeFileSync('apps/harbor/eas-build.json', JSON.stringify([{ appVersion:'0.0.0', appBuildVersion:'1' }]))"
-    - head -c 1048576 /dev/urandom > apps/harbor/harbor.apk
-    - node .gitlab/ci/scripts/publish-android-update.mjs
-
 # Store builds auto-submit to their app's internal/TestFlight track:
 # staging from the default branch, production on release tags or a manual
 # run.
