@@ -96,7 +96,7 @@ app-web-image:
     - npm install -g pnpm@10
     - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
     - pnpm install
-    - apt-get update && apt-get install -y --no-install-recommends git
+    - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates
     # Tag builds use the tag version; others use the latest release + a patch.
     - export APP_VERSION=$(node "$CI_PROJECT_DIR/tools/expo/resolve-version.js")
     - echo "Building app version ${APP_VERSION}"
@@ -137,7 +137,6 @@ app-web-image:
     - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json harbor.apk
     # Publish the APK and latest.json to the update feed.
     - cd "$CI_PROJECT_DIR"
-    - npm install --no-save --no-package-lock @aws-sdk/client-s3
     - node .gitlab/ci/scripts/publish-android-update.mjs
   artifacts:
     paths:
