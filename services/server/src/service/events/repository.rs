@@ -5,10 +5,10 @@ use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow,
+    Content, Delete, EventKey, Follow, Post,
 };
 use sea_orm::sea_query::{
-    DeleteStatement, Expr, IntoCondition, SelectStatement,
+    DeleteStatement, Expr, InsertStatement, IntoCondition, SelectStatement,
 };
 use sea_orm::*;
 
@@ -156,12 +156,30 @@ impl Mutation {
             return Ok(());
         };
         match body {
+            ContentBody::Post(post) => Mutation::post(db, &event, post).await,
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
+    }
+
+    async fn post<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        _: &Post,
+    ) -> Result<(), DbErr> {
+        let mut query = InsertStatement::new();
+        query
+            .into_table("reaction_tally")
+            .columns(["event_id", "positive_count", "negative_count"])
+            .values([Expr::from(event.id), Expr::from(0), Expr::from(0)])
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+        db.execute(&query).await?;
+        Ok(())
     }
 
     async fn follow<C: ConnectionTrait>(
