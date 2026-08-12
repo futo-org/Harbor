@@ -70,7 +70,8 @@ async fn moderator_report_publishes_label_and_untrusted_report_does_not() {
         .expect("seed moderation identity (is the stack up?)");
 
     let ready = Arc::new(AtomicBool::new(false));
-    let mut child = spawn_moderation_service(&hex(&service_key.to_bytes()), &service_identity);
+    let mut child =
+        spawn_moderation_service(&hex::encode(service_key.to_bytes()), &service_identity);
     tee_stderr(&mut child, ready.clone());
 
     let deadline = Instant::now() + Duration::from_secs(45);
@@ -272,7 +273,7 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = hex(&sha256(&content.encode_to_vec()));
+    let identity = content.derive_hex_key();
     let bundle = signed_bundle(
         &identity,
         key,
@@ -391,7 +392,7 @@ fn unique_bytes(salt: u8) -> [u8; 32] {
     let mut seed = nanos.to_le_bytes().to_vec();
     seed.extend_from_slice(&std::process::id().to_le_bytes());
     seed.push(salt);
-    sha256(&seed).try_into().unwrap()
+    Sha256::digest(seed).into()
 }
 
 fn public_key_of(key: &SigningKey) -> PublicKey {
@@ -404,14 +405,6 @@ fn public_key_of(key: &SigningKey) -> PublicKey {
 fn sha256_digest(bytes: &[u8]) -> ContentDigest {
     ContentDigest {
         r#type: ContentDigestType::Sha256 as i32,
-        value: sha256(bytes),
+        value: Sha256::digest(bytes).to_vec(),
     }
-}
-
-fn sha256(data: &[u8]) -> Vec<u8> {
-    Sha256::digest(data).to_vec()
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }

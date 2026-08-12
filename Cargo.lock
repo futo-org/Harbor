@@ -2429,12 +2429,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hmac-sha256"
-version = "1.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec9d92d097f4749b64e8cc33d924d9f40a2d4eb91402b458014b781f5733d60f"
-
-[[package]]
 name = "http"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2824,6 +2818,7 @@ dependencies = [
  "ed25519-dalek",
  "entity",
  "getrandom 0.4.3",
+ "hex",
  "polycentric-common",
  "prost",
  "rand 0.10.1",
@@ -3264,6 +3259,7 @@ dependencies = [
  "common-object-store",
  "common-telemetry",
  "ed25519-dalek",
+ "hex",
  "log",
  "moderation-entity",
  "moderation-migration",
@@ -3739,7 +3735,7 @@ version = "0.0.0"
 dependencies = [
  "base64",
  "ed25519-dalek",
- "hmac-sha256",
+ "hex",
  "prost",
  "prost-build",
  "prost-types",
@@ -3762,7 +3758,7 @@ dependencies = [
  "ed25519-dalek",
  "futures",
  "futures-timer",
- "hmac-sha256",
+ "hex",
  "image",
  "js-sys",
  "polycentric-common",
@@ -4051,6 +4047,7 @@ dependencies = [
  "common-telemetry",
  "ed25519-dalek",
  "entity",
+ "hex",
  "log",
  "mockito",
  "opentelemetry",
@@ -5050,6 +5047,7 @@ dependencies = [
  "common-telemetry",
  "ed25519-dalek",
  "entity",
+ "hex",
  "http 1.4.2",
  "http-body-util",
  "log",

@@ -21,15 +21,6 @@ pub fn genesis(primary: PublicKey) -> Identity {
     build(vec![primary], vec![])
 }
 
-/// The identity string: lowercase hex SHA256 of the encoded `Identity` bytes.
-///
-/// Note this hashes the bare `Identity` message, *not* the [`Content`] wrapper
-/// (which is what [`content_bytes`] / [`content_digest`] operate on). This
-/// matches `polycentric-core`'s `IdentityDirectory::genesis`.
-pub fn identity_string(doc: &Identity) -> String {
-    hex::encode(Sha256::digest(doc.encode_to_vec()))
-}
-
 /// Wrap an identity document in a [`Content`] and serialize it. This is the
 /// payload an identity event's `content_digest` is computed over, and what a
 /// server would store as `SerializedContent`.

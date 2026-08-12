@@ -4291,8 +4291,13 @@ export interface PolycentricCoreLike {
  */
     registerPushNotifications(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
 /**
- * Set the identity whose local state the core reads for viewer-specific
- * rules — currently the blocked set applied when merging query results.
+ * Returns the latest known valid identity document for `identity`, if any.
+ * Derived purely from the local in-memory event and content stores.
+ */
+    resolveIdentity(identity: string): ArrayBuffer | undefined;
+/**
+ * Set the user's identity for user-specific state (i.e. the set of identities
+ * a user blocks).
  */
     setActiveIdentity(identity: string | undefined): void;
 /**
@@ -4957,8 +4962,30 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
- * Set the identity whose local state the core reads for viewer-specific
- * rules — currently the blocked set applied when merging query results.
+ * Returns the latest known valid identity document for `identity`, if any.
+ * Derived purely from the local in-memory event and content stores.
+ */
+    resolveIdentity(identity: string): ArrayBuffer | undefined {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterOptionalBytes.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+    
+/**
+ * Set the user's identity for user-specific state (i.e. the set of identities
+ * a user blocks).
  */
     setActiveIdentity(identity: string | undefined): void {uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_active_identity(
@@ -5408,7 +5435,10 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity() !== 41420) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity() !== 43194) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity() !== 55936) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 38042) {
