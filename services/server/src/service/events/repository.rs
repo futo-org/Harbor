@@ -12,6 +12,9 @@ use sea_orm::sea_query::{
 };
 use sea_orm::*;
 
+const COLLECTION_FEED: i16 = collections::FEED as i16;
+const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
+
 pub struct Query;
 
 impl Query {
@@ -205,10 +208,6 @@ impl Mutation {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
 
-        if key.collection != collections::SOCIAL_GRAPH as i16 {
-            return Ok(());
-        }
-
         let mut event_id = SelectStatement::new();
         event_id
             .column(EventModel::Column::Id)
@@ -222,10 +221,20 @@ impl Mutation {
             .and_where(EventModel::Column::Sequence.eq(key.sequence));
 
         let mut query = DeleteStatement::new();
-        query
-            .from_table(FollowModel::Entity)
-            .cond_where(FollowModel::Column::EventId.in_subquery(event_id));
+        match key.collection {
+            // Deletion of a post.
+            COLLECTION_FEED => {
+                query.from_table("reaction_tally");
+            }
+            // Deletion of a following.
+            COLLECTION_SOCIAL => {
+                query.from_table(FollowModel::Entity);
+            }
+            // Nothing to delete.
+            _ => return Ok(()),
+        }
 
+        query.cond_where(Expr::col("event_id").in_subquery(event_id));
         db.execute(&query).await?;
         Ok(())
     }
