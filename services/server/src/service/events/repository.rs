@@ -1,9 +1,15 @@
+use crate::service::content::repository::split_event_key;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
+use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
-use polycentric_common::models::protos_v2::{Content, EventKey, Follow};
-use sea_orm::sea_query::{Expr, IntoCondition};
+use polycentric_common::models::protos_v2::{
+    Content, Delete, EventKey, Follow,
+};
+use sea_orm::sea_query::{
+    DeleteStatement, Expr, IntoCondition, SelectStatement,
+};
 use sea_orm::*;
 
 pub struct Query;
@@ -153,6 +159,7 @@ impl Mutation {
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
+            ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
     }
@@ -170,6 +177,38 @@ impl Mutation {
         .insert(db)
         .await?;
 
+        Ok(())
+    }
+
+    async fn delete<C: ConnectionTrait>(
+        db: &C,
+        delete: &Delete,
+    ) -> Result<(), DbErr> {
+        let key = split_event_key(delete.event_key.clone(), "delete content")
+            .map_err(|err| DbErr::Custom(err.message().into()))?;
+
+        if key.collection != collections::SOCIAL_GRAPH as i16 {
+            return Ok(());
+        }
+
+        let mut event_id = SelectStatement::new();
+        event_id
+            .column(EventModel::Column::Id)
+            .from(EventModel::Entity)
+            .and_where(EventModel::Column::Collection.eq(key.collection))
+            .and_where(EventModel::Column::Identity.eq(key.identity))
+            .and_where(
+                EventModel::Column::PublicKeyType.eq(key.public_key_type),
+            )
+            .and_where(EventModel::Column::PublicKey.eq(key.public_key))
+            .and_where(EventModel::Column::Sequence.eq(key.sequence));
+
+        let mut query = DeleteStatement::new();
+        query
+            .from_table(FollowModel::Entity)
+            .cond_where(FollowModel::Column::EventId.in_subquery(event_id));
+
+        db.execute(&query).await?;
         Ok(())
     }
 }
