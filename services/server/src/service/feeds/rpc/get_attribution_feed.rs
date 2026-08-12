@@ -84,12 +84,11 @@ async fn hydrate(
 
 async fn filter(
     _ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration, &_params.common.omit_labels)
-        .await
+    feeds_pipeline::filter(fetched, hydration, &params.common.omit_labels).await
 }
 
 async fn view(
