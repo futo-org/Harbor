@@ -48,18 +48,6 @@ function postId(post: PostData): string {
 const EMPTY_FEED: PostData[] = Object.freeze([] as PostData[]) as PostData[];
 
 /**
- * Redundant client filter for cases when the server is missing a block event
- * that the client knows.
- */
-function isFromBlockedIdentity(post: PostData): boolean {
-  const { isBlocked } = useBlocks.getState();
-  return (
-    isBlocked(post.identity) ||
-    (post.repostedBy !== undefined && isBlocked(post.repostedBy))
-  );
-}
-
-/**
  * Snapshot of a feed's posts and overlays.
  * Fields that store cached data should be `undefined` if we have not yet
  * processed the latest query data or overlays.
@@ -75,8 +63,9 @@ type FeedEntry = {
   output: PostData[] | undefined;
 
   /**
-   * `useBlocks` version the output was filtered against. An entry whose
-   * version is behind the store's must be refreshed.
+   * `useBlocks` version this entry was derived at. A block or unblock
+   * invalidates every query, so an entry from an earlier version must be
+   * re-derived instead of served from cache.
    */
   blocksVersion: number;
 
@@ -360,7 +349,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       [frontInjectedItems, feedResponseItems],
       replyInjections,
       seenPosts,
-    ).filter((post) => !isFromBlockedIdentity(post));
+    );
 
     // Ensure stable output when empty
     if (output.length === 0) {
@@ -609,7 +598,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
 
 /**
  * Subscribe to the blocked set so that a block or unblock re-renders the
- * caller and refreshes `getFeedEntry`.
+ * caller once the invalidated queries come back.
  */
 export function useBlocksVersion(): number {
   return useBlocks((s) => s.version);

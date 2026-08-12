@@ -13,11 +13,15 @@ use prost::Message;
 use crate::{
     client::PolycentricClient,
     query::{
-        QueryClient, QueryKey, QueryObservable, QueryOpts, channel,
+        QueryClient, QueryKey, QueryObservable, QueryOpts,
+        blocks::{
+            retain_unblocked_bundles, retain_unblocked_hints, retain_unblocked_thread_bundles,
+        },
+        channel,
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, copy_hints, merge_bundle_responses, merge_event_bundles,
+                EventBundleResponse, copy_hints, merge_bundle_response, merge_event_bundles,
                 merge_event_hints,
             },
         },
@@ -88,10 +92,16 @@ fn do_feed_merge(
     merge_event_bundles(&mut response.event_bundles);
     merge_event_hints(&mut response.event_hints);
 
-    if validate {
+    {
         let c = client.lock().unwrap();
-        retain_validated_bundles(&c, &mut response.event_bundles);
-        retain_validated_hints(&c, &mut response.event_hints);
+        if validate {
+            retain_validated_bundles(&c, &mut response.event_bundles);
+            retain_validated_hints(&c, &mut response.event_hints);
+        }
+
+        let blocked = c.blocked_identities();
+        retain_unblocked_bundles(&blocked, &mut response.event_bundles);
+        retain_unblocked_hints(&blocked, &mut response.event_hints);
     }
 
     // Ensure the merged events are sorted in feed order
@@ -105,6 +115,18 @@ fn do_feed_merge(
 
         Reverse(created_at)
     });
+
+    response.encode_to_vec()
+}
+
+/// Merge function for the thread RPC. Blocked posts take their descending
+/// replies with them, as they do server-side.
+fn merge_thread_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    let mut response = merge_bundle_response::<GetPostThreadResponse>(values, client);
+
+    let blocked = client.lock().unwrap().blocked_identities();
+    retain_unblocked_thread_bundles(&blocked, &mut response.thread);
+    retain_unblocked_hints(&blocked, &mut response.event_hints);
 
     response.encode_to_vec()
 }
@@ -327,12 +349,7 @@ pub fn get_post_thread(
         }
     };
 
-    Arc::new(query_client.fetch(
-        query_key,
-        query_fn,
-        merge_bundle_responses::<GetPostThreadResponse>,
-        opts,
-    ))
+    Arc::new(query_client.fetch(query_key, query_fn, merge_thread_responses, opts))
 }
 
 #[cfg(test)]

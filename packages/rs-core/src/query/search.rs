@@ -1,7 +1,7 @@
 //! Search-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
@@ -13,6 +13,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::query::blocks::{is_blocked_bundle, retain_unblocked_hints};
 use crate::query::event::merge::{
     EventDedupKey, copy_hints, event_dedup_key, merge_bundle, merge_event_hints,
 };
@@ -131,6 +132,18 @@ fn retain_validated_results(client: &PolycentricClient, results: &mut Vec<Search
     });
 }
 
+/// Retain only results that are not hidden by a block.
+fn retain_unblocked_results(blocked: &HashSet<String>, results: &mut Vec<SearchResult>) {
+    if blocked.is_empty() {
+        return;
+    }
+
+    results.retain(|r| match r.event_bundle.as_ref() {
+        Some(bundle) => !is_blocked_bundle(blocked, bundle),
+        None => true,
+    });
+}
+
 fn result_created_at(result: &SearchResult) -> Option<u64> {
     result
         .event_bundle
@@ -232,6 +245,10 @@ fn do_search_merge<T: SearchResponse>(
         let c = client.lock().unwrap();
         retain_validated_results(&c, merged.results_mut());
         retain_validated_hints(&c, merged.hints_mut());
+
+        let blocked = c.blocked_identities();
+        retain_unblocked_results(&blocked, merged.results_mut());
+        retain_unblocked_hints(&blocked, merged.hints_mut());
     }
 
     sort(merged.results_mut());

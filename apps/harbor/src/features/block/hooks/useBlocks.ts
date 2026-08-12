@@ -37,9 +37,9 @@ function hasSameIdentities(
 }
 
 /**
- * Blocked identities of the active user, kept in local state. Note that
- * this state is kept for redundancy: both clients and servers will block
- * content from users that have been blocked, to the best of their knowledge.
+ * Blocked identities of the active user. Even though blocked content is removed
+ * from query results by `polycentric-core`, block state should be provided to
+ * react native components related to managing that block state.
  */
 const useBlocks = create<BlocksState>((set, get) => {
   const setBlocks = (blocks: Map<string, boolean>) =>
@@ -131,16 +131,11 @@ const useBlocks = create<BlocksState>((set, get) => {
     },
 
     async refresh(client) {
-      const identity = client.activeIdentityKey;
-      if (!identity) return;
+      if (!client.activeIdentityKey) return;
 
-      const bundles = client.listValidEvents(identity, COLLECTION.GRAPH);
-
-      const blocks = new Map<string, boolean>();
-      for (const bundle of bundles) {
-        const entry = decodeBundle(bundle, 'block');
-        if (entry) blocks.set(entry.content.identity, true);
-      }
+      const blocks = new Map<string, boolean>(
+        client.blockedIdentities().map((identity) => [identity, true]),
+      );
 
       if (!hasSameIdentities(blocks, get().blocks)) setBlocks(blocks);
     },
