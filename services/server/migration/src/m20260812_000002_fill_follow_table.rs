@@ -115,6 +115,11 @@ impl MigrationTrait for Migration {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        if followers.is_empty() {
+            // Done quickly.
+            return Ok(());
+        }
+
         // Sort by event id to help Postgres primary key index creation.
         followers.sort_by_key(|m| m.0);
 
