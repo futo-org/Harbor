@@ -645,7 +645,7 @@ importers:
         version: 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       html-get:
         specifier: ^2.24.6
-        version: 2.26.4(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 2.26.5(@noble/hashes@2.2.0)(debug@4.4.3)
       metascraper:
         specifier: ^5.50.6
         version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -874,8 +874,8 @@ packages:
     resolution: {integrity: sha512-KVw6qIiCTUQhByfTd78h2yD1/00waTmm9uy/R7Ck/ctUyAPj+AEDLkQIdJW0T8+qGgj3j5bpNKK7Q3G+LedJWg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
 
-  '@asamuzakjp/css-color@6.0.5':
-    resolution: {integrity: sha512-mbhpPMmnw/kwW19aRNmSUl1QzLbdGo1SCuE49BT98MNwqF6zaHb3o2owssFc/PEO/4t2UjqtCNwocuDtJornzA==}
+  '@asamuzakjp/css-color@6.0.7':
+    resolution: {integrity: sha512-vC/bk1Lz7Tn/EfU9/apOTBk80/8dyGyWMowPoV1tJ52muDGsDqt2HPT2klrFUiY60MQmQv9q8yIht15JnBgDGw==}
     engines: {node: ^22.13.0 || >=24.0.0}
 
   '@asamuzakjp/dom-selector@7.1.1':
@@ -7497,8 +7497,8 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
-  html-get@2.26.4:
-    resolution: {integrity: sha512-wVIW7a65rdYvDshXMaISF+yN2MWAeRplvmwPAwWdjX0ParjS5kxVkpWKnpDs2YqY66S6rClC2tfZDyTsqAgXaw==}
+  html-get@2.26.5:
+    resolution: {integrity: sha512-I12Pu4I+7D4PWFophUztWa0IBZwjF8LWoO0f3lbCqkn20kLjOzuoX4EEZSQk1efwBK/uECCLX8tH4YnIteK23w==}
     engines: {node: '>= 10'}
     hasBin: true
 
@@ -12159,7 +12159,7 @@ snapshots:
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
 
-  '@asamuzakjp/css-color@6.0.5':
+  '@asamuzakjp/css-color@6.0.7':
     dependencies:
       '@csstools/css-calc': 3.3.0(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-color-parser': 4.1.10(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
@@ -21095,7 +21095,7 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html-get@2.26.4(@noble/hashes@2.2.0)(debug@4.4.3):
+  html-get@2.26.5(@noble/hashes@2.2.0)(debug@4.4.3):
     dependencies:
       '@kikobeats/time-span': 1.0.13
       '@metascraper/helpers': 5.53.0(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -22089,7 +22089,7 @@ snapshots:
 
   jsdom@30.0.1(@noble/hashes@2.2.0):
     dependencies:
-      '@asamuzakjp/css-color': 6.0.5
+      '@asamuzakjp/css-color': 6.0.7
       '@asamuzakjp/dom-selector': 8.3.2
       '@bramus/specificity': 2.4.2
       '@csstools/css-syntax-patches-for-csstree': 1.1.7(css-tree@3.2.1)
