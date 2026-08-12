@@ -4,6 +4,8 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
+import { useFocusEffect } from 'expo-router';
+import { useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
@@ -11,7 +13,13 @@ import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
-  const { items, isLoading, refresh } = useListNotifications();
+  // Tabs mount eagerly; don't fetch until the tab is first focused.
+  const [enabled, setEnabled] = useState(false);
+  useFocusEffect(() => {
+    setEnabled(true);
+  });
+
+  const { items, isLoading, refresh } = useListNotifications(enabled);
   useFocusedRefresh(refresh);
 
   return (

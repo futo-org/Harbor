@@ -9,13 +9,16 @@ const parse = (bytes: Uint8Array) =>
  * verification requests, each claim carrying its verification status.
  * Backed by `VerificationsService.ListTargetedVerificationClaims`.
  */
-export function useRequestedVerifications(identity: string | undefined) {
+export function useRequestedVerifications(
+  identity: string | undefined,
+  enabled = true,
+) {
   return useClaimBundleList(
     ['targeted-verification-claims', identity ?? ''],
     new Query.ListTargetedVerificationClaims({
       targetIdentity: identity ?? '',
     }),
     parse,
-    !!identity,
+    enabled && !!identity,
   );
 }
