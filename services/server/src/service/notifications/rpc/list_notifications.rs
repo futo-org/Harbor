@@ -32,7 +32,7 @@ struct Params {
     after_id: Option<i64>,
     omit_labels: Vec<String>,
     /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous.
+    /// is anonymous. Constructed from block events the server keeps.
     blocked: Arc<HashSet<String>>,
 }
 

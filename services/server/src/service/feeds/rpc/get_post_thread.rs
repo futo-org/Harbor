@@ -33,7 +33,7 @@ pub struct Params {
     pub descendants_limit: u64,
     pub omit_labels: Vec<String>,
     /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous.
+    /// is anonymous. Constructed from block events the server keeps.
     pub blocked: Arc<HashSet<String>>,
 }
 

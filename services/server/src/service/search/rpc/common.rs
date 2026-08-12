@@ -40,7 +40,7 @@ pub struct Params<SortedBy> {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter<SortedBy>>,
     /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous.
+    /// is anonymous. Constructed from block events the server keeps.
     pub blocked: Arc<HashSet<String>>,
 }
 

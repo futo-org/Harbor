@@ -49,6 +49,8 @@ pub async fn handle(
         common: feeds_pipeline::Params::from_req_params(
             page_params,
             vec![],
+            // Follow listings carry no authenticated caller, so there is no
+            // caller whose block events a blocklist could be built from.
             BlockCache::empty_blocklist(),
         )?,
         identity,

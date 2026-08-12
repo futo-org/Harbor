@@ -9,6 +9,8 @@ use crate::service::context::ServiceContext;
 static NO_BLOCKS: LazyLock<Arc<HashSet<String>>> =
     LazyLock::new(|| Arc::new(HashSet::new()));
 
+/// Blocklists constructed from the block events the server keeps, cached
+/// per identity to improve performance.
 #[derive(Default)]
 pub struct BlockCache {
     /// blocking identity mapped to blocked identities
@@ -21,7 +23,8 @@ impl BlockCache {
     }
 
     /// For the identity provided, get a list of all identities that the identity
-    /// blocks.
+    /// blocks. Constructed from that identity's block events, minus those
+    /// tombstoned by a valid Delete.
     pub async fn blocked_set(
         &self,
         ctx: &ServiceContext,
@@ -64,7 +67,9 @@ impl BlockCache {
         Arc::clone(&NO_BLOCKS)
     }
 
-    /// Drop the cached blocklist for `identity`.
+    /// Drop the cached blocklist for `identity`. Called when that identity
+    /// puts a social graph event, such that the blocklist can be reconstructed
+    /// including the new event.
     pub async fn invalidate_identity(&self, identity: &str) {
         self.blocked.write().await.remove(identity);
     }
