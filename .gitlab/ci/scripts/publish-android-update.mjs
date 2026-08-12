@@ -7,7 +7,8 @@
 // Reads apps/harbor/{eas-build.json,harbor.apk} and release_notes.md
 // (production tags only) from earlier jobs' artifacts.
 //
-// Env: UPDATE_CHANNEL (staging|production), STATIC_S3_ENDPOINT,
+// Env: UPDATE_CHANNEL (staging|production, or test — a throwaway channel
+// used by the app-android-apk-publish-test smoke-test job), STATIC_S3_ENDPOINT,
 // STATIC_S3_BUCKET, STATIC_S3_ACCESS_KEY_ID, STATIC_S3_SECRET_ACCESS_KEY,
 // STATIC_PUBLIC_BASE_URL, [STATIC_S3_REGION].
 
@@ -25,8 +26,10 @@ function requireEnv(name) {
 }
 
 const channel = requireEnv('UPDATE_CHANNEL');
-if (channel !== 'staging' && channel !== 'production') {
-  console.error(`UPDATE_CHANNEL must be staging or production, got ${channel}`);
+if (!['staging', 'production', 'test'].includes(channel)) {
+  console.error(
+    `UPDATE_CHANNEL must be staging, production or test, got ${channel}`,
+  );
   process.exit(1);
 }
 const endpoint = requireEnv('STATIC_S3_ENDPOINT').replace(/\/$/, '');
@@ -34,6 +37,7 @@ const bucket = requireEnv('STATIC_S3_BUCKET');
 const accessKeyId = requireEnv('STATIC_S3_ACCESS_KEY_ID');
 const secretAccessKey = requireEnv('STATIC_S3_SECRET_ACCESS_KEY');
 const publicBaseUrl = requireEnv('STATIC_PUBLIC_BASE_URL').replace(/\/$/, '');
+// R2 expects 'auto'; AWS/MinIO/rustfs endpoints want a real region here.
 const region = process.env.STATIC_S3_REGION || 'auto';
 
 function s3put(key, file, contentType, cacheControl) {
@@ -41,7 +45,10 @@ function s3put(key, file, contentType, cacheControl) {
   execFileSync(
     'curl',
     [
-      '-fsS',
+      '-sS',
+      // Fail on HTTP errors but still print the response body — S3 puts
+      // the actual rejection reason in the XML body.
+      '--fail-with-body',
       '--aws-sigv4',
       `aws:amz:${region}:s3`,
       // Credentials come in via stdin (below) to keep them off argv.
@@ -88,9 +95,9 @@ const manifestKey = `apk/${channel}/latest.json`;
 
 const manifest = {
   package:
-    channel === 'staging'
-      ? 'org.futo.polycentric.staging'
-      : 'org.futo.polycentric',
+    channel === 'production'
+      ? 'org.futo.polycentric'
+      : `org.futo.polycentric.${channel}`,
   channel,
   versionName,
   versionCode,
