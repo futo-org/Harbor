@@ -10,7 +10,7 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';
 import { PostHeader } from './PostHeader';
@@ -62,7 +62,7 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  const time = timeAgo(Number(post.createdAt));
+  const time = useMemo(() => timeAgo(Number(post.createdAt)), [post.createdAt]);
 
   const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);

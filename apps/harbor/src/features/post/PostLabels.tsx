@@ -1,5 +1,6 @@
 import HoverCard from '@/src/common/components/HoverCard';
 import Icon from '@/src/common/components/Icon';
+import { memo } from 'react';
 import { Text } from '@/src/common/components/primitives';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -8,7 +9,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Pressable, View } from 'react-native';
 
-export function PostLabels({
+export const PostLabels = memo(function PostLabels({
   labels,
   authorIdentity,
 }: {
@@ -28,7 +29,7 @@ export function PostLabels({
       ))}
     </View>
   );
-}
+});
 
 /** A single label pill. Hovering (web) or tapping (native) reveals who
  *  applied the label. */

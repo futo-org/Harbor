@@ -15,6 +15,7 @@ import {
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -74,6 +75,8 @@ export type ListProps<T> = FlashListProps<T> & {
     | React.ExoticComponent<any>
     | null
     | undefined;
+  /** Known height of `HeaderComponent`, used until it reports its own. */
+  initialHeaderHeight?: number;
 };
 
 /** Imperative handle exposed by `List` (and `FeedList`). */
@@ -94,6 +97,7 @@ export const List = forwardRef(function List<T>(
 
 function NativeList<T>({
   HeaderComponent,
+  initialHeaderHeight = 0,
   contentContainerStyle,
   refreshControl,
   onScroll: _ignoredOnScroll,
@@ -110,9 +114,22 @@ function NativeList<T>({
     [],
   );
   const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
-    useHidingHeader();
+    useHidingHeader(initialHeaderHeight);
 
   const renderedHeader = renderNode(HeaderComponent);
+
+  // A new style object each render invalidates FlashList's layout cache.
+  const mergedContentContainerStyle = useMemo(
+    () => ({
+      ...Atoms.flex_grow_1,
+      paddingTop: headerHeight,
+      ...(typeof contentContainerStyle === 'object' &&
+      contentContainerStyle !== null
+        ? contentContainerStyle
+        : {}),
+    }),
+    [headerHeight, contentContainerStyle],
+  );
 
   // Show below the sticky header
   const adjustedRefreshControl = (
@@ -140,14 +157,7 @@ function NativeList<T>({
         refreshControl={adjustedRefreshControl}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{
-          ...Atoms.flex_grow_1,
-          paddingTop: headerHeight,
-          ...(typeof contentContainerStyle === 'object' &&
-          contentContainerStyle !== null
-            ? contentContainerStyle
-            : {}),
-        }}
+        contentContainerStyle={mergedContentContainerStyle}
       />
     </View>
   );

@@ -198,6 +198,10 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     subscriptions: new Map(),
 
     subscribe(key, args) {
+      // Resetting a populated entry to `Loading` re-renders every other
+      // consumer of the key, and scrolling remounts rows constantly.
+      const initState = get().queries.get(key)?.data ? {} : LOADING_ENTRY;
+
       const existing = get().subscriptions.get(key);
       if (existing) {
         existing.refCount += 1;
@@ -205,14 +209,14 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
 
         if (args.opts?.fetchMode === FetchMode.Default) {
           existing.dispose();
-          existing.dispose = fetch(key, args, LOADING_ENTRY);
+          existing.dispose = fetch(key, args, initState);
         }
 
         return;
       }
       get().subscriptions.set(key, {
         refCount: 1,
-        dispose: fetch(key, args, LOADING_ENTRY),
+        dispose: fetch(key, args, initState),
         args,
       });
     },

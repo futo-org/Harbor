@@ -4,7 +4,7 @@ import {
   type TextSegment,
 } from '@/src/common/util/parseTextLinks';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Linking } from 'react-native';
 
 /**
@@ -45,7 +45,7 @@ function renderSegment(segment: TextSegment, key: number) {
 }
 
 /** Renders post body text with tappable links and mentions. */
-export function PostText({
+export const PostText = memo(function PostText({
   content,
   suffix,
 }: {
@@ -60,4 +60,4 @@ export function PostText({
       {suffix}
     </Text>
   );
-}
+});

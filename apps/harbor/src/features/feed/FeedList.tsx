@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import {
   List,
@@ -27,12 +27,22 @@ const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} compactLinkPreview />
 );
 
+/** Row shapes differ enough in height that sharing a recycle pool forces a
+ *  re-measure on every reuse. */
+const defaultGetItemType = (item: PostData) => {
+  if (item.images?.length) return 'images';
+  if (item.quoteId) return 'quote';
+  if (item.links?.length) return 'link';
+  return 'text';
+};
+
 const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   {
     feed,
     emptyMessage = 'No posts yet',
     renderItem = defaultRenderItem,
     keyExtractor = defaultKeyExtractor,
+    getItemType = defaultGetItemType,
     ...rest
   },
   ref,
@@ -41,32 +51,43 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
 
   const insets = useSafeAreaInsets();
 
+  const emptyComponent = useMemo(
+    () =>
+      feed.isLoading ? (
+        <PostSkeletonList />
+      ) : (
+        <ListEmpty>{emptyMessage}</ListEmpty>
+      ),
+    [feed.isLoading, emptyMessage],
+  );
+
+  const showLoadingMore = feed.hasMore && feed.items.length > 0;
+  const footerComponent = useMemo(
+    () => (
+      <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
+        {showLoadingMore ? (
+          <View style={[Atoms.items_center, Atoms.p_lg]}>
+            <ActivityIndicator
+              size="small"
+              color={theme.palette.neutral_500}
+              accessibilityLabel="Loading more posts"
+            />
+          </View>
+        ) : null}
+      </View>
+    ),
+    [showLoadingMore, insets.bottom, theme.palette.neutral_500],
+  );
+
   return (
     <List<PostData>
       ref={ref}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
+      getItemType={getItemType}
       data={feed.items}
-      ListEmptyComponent={
-        feed.isLoading ? (
-          <PostSkeletonList />
-        ) : (
-          <ListEmpty>{emptyMessage}</ListEmpty>
-        )
-      }
-      ListFooterComponent={
-        <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
-          {feed.hasMore && feed.items.length > 0 ? (
-            <View style={[Atoms.items_center, Atoms.p_lg]}>
-              <ActivityIndicator
-                size="small"
-                color={theme.palette.neutral_500}
-                accessibilityLabel="Loading more posts"
-              />
-            </View>
-          ) : null}
-        </View>
-      }
+      ListEmptyComponent={emptyComponent}
+      ListFooterComponent={footerComponent}
       onEndReached={feed.hasMore ? feed.loadMore : undefined}
       onEndReachedThreshold={0.5}
       refreshControl={
