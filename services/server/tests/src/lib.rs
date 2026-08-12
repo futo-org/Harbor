@@ -39,13 +39,7 @@ pub const COLLECTION_VERIFICATIONS: i32 = 8;
 pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    hasher.finalize().to_vec()
-}
-
-pub fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    Sha256::digest(data).to_vec()
 }
 
 pub fn random_string() -> String {
@@ -178,11 +172,6 @@ pub fn public_key_of(key: &SigningKey) -> PublicKey {
     }
 }
 
-/// Identity string = hex(sha256(encoded initial Identity content)).
-pub fn derive_identity_string(initial: &Identity) -> String {
-    hex(&sha256(&prost::Message::encode_to_vec(initial)))
-}
-
 fn content_with_digest(content: Content) -> (Vec<u8>, ContentDigest) {
     let bytes = prost::Message::encode_to_vec(&content);
     let digest = ContentDigest {
@@ -248,7 +237,7 @@ impl TestClient {
         };
         let mut client = TestClient {
             key,
-            identity: derive_identity_string(&identity),
+            identity: identity.derive_hex_key(),
             event_sync_client,
             pending: Vec::new(),
             identity_sequence: Sequence::new(),
@@ -695,7 +684,7 @@ pub fn test_moderator_identity() -> String {
         revocation_bounds: vec![],
         servers: None,
     };
-    derive_identity_string(&initial)
+    initial.derive_hex_key()
 }
 
 /// Build a signed Labels-collection (collection 7) event bundle targeting

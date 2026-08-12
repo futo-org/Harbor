@@ -79,7 +79,7 @@ pub fn verify_jwt(token: &str) -> Result<VerifiedJwt, JwtError> {
     if header.alg != "EdDSA" {
         return Err(JwtError::UnsupportedAlgorithm);
     }
-    let signed_by = hex_decode(&header.kid).ok_or(JwtError::Malformed)?;
+    let signed_by = hex::decode(&header.kid).map_err(|_| JwtError::Malformed)?;
 
     let signature = URL_SAFE_NO_PAD
         .decode(signature_b64)
@@ -100,16 +100,6 @@ fn decode_segment<T: for<'a> Deserialize<'a>>(segment: &str) -> Result<T, JwtErr
         .decode(segment)
         .map_err(|_| JwtError::Malformed)?;
     serde_json::from_slice(&bytes).map_err(|_| JwtError::Malformed)
-}
-
-fn hex_decode(hex: &str) -> Option<Vec<u8>> {
-    if !hex.len().is_multiple_of(2) {
-        return None;
-    }
-    (0..hex.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
-        .collect()
 }
 
 #[cfg(test)]
@@ -141,12 +131,8 @@ mod tests {
     }
 
     fn kid() -> String {
-        signing_key()
-            .verifying_key()
-            .to_bytes()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect()
+        let bytes = signing_key().verifying_key().to_bytes();
+        hex::encode(bytes)
     }
 
     #[test]
@@ -178,12 +164,11 @@ mod tests {
 
     #[test]
     fn rejects_a_key_that_did_not_sign() {
-        let other_kid: String = SigningKey::from_bytes(&[8u8; 32])
-            .verifying_key()
-            .to_bytes()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let other_kid: String = hex::encode(
+            SigningKey::from_bytes(&[8u8; 32])
+                .verifying_key()
+                .to_bytes(),
+        );
         assert_eq!(
             verify_jwt(&mint("EdDSA", &other_kid, 2000)).err(),
             Some(JwtError::Signature)

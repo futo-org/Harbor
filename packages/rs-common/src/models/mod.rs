@@ -15,7 +15,7 @@ pub mod traits;
 
 pub mod collections;
 pub mod content;
-pub mod digest;
+pub mod content_digest;
 pub mod event;
 pub mod event_key;
 pub mod identity;

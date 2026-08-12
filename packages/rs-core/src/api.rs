@@ -168,6 +168,16 @@ impl PolycentricCore {
             .get_identity_sequence(&identity, &pk))
     }
 
+    /// Returns the latest known valid identity document for `identity`, if any.
+    /// Derived purely from the local in-memory event and content stores.
+    pub fn resolve_identity(&self, identity: String) -> Option<Vec<u8>> {
+        let client = self.client.lock().unwrap();
+        let chain = client.identity_chain(&identity).ok()?;
+        chain
+            .latest_state()
+            .map(|document| document.encode_to_vec())
+    }
+
     /// Merkle root over the canonically-ordered signatures in
     /// `(identity, collection)`. Empty when no events exist.
     pub fn previous_root(&self, identity: String, collection: i32) -> Vec<u8> {

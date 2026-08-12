@@ -29,11 +29,7 @@ fn sdk_err<E: Error>(e: E) -> io::Error {
 /// Storage key for a blob in the object store. Layout:
 /// `{digest_type}_{hex(digest_value)}`.
 pub fn blob_key(digest: &ContentDigest) -> String {
-    let mut hex = String::with_capacity(digest.value.len() * 2);
-    for b in &digest.value {
-        let _ = write!(hex, "{b:02x}");
-    }
-    format!("{}_{}", digest.r#type, hex)
+    digest.to_id()
 }
 
 /// S3-backed blob store config. When `access_key`/`secret_key` are

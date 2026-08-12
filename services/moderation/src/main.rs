@@ -55,7 +55,7 @@ struct BundleContent {
 
 /// First 8 bytes of a content digest as hex, for log context.
 fn digest_fp(digest: &[u8]) -> String {
-    digest.iter().take(8).map(|b| format!("{b:02x}")).collect()
+    hex::encode(&digest[0..digest.len().min(8)])
 }
 
 /// Messages handled, by outcome (committed / retried / skipped).

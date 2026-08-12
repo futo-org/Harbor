@@ -235,30 +235,11 @@ pub async fn authorize_event_signer<C: ConnectionTrait>(
         return Ok(());
     }
 
-    let bound = identity_content
-        .revocation_bounds
-        .iter()
-        .find(|rb| {
-            rb.revoked_key
-                .as_ref()
-                .map(|pk| {
-                    pk.key_type == signer.key_type && pk.key == signer.key
-                })
-                .unwrap_or(false)
-        })
+    let target = identity_content
+        .revocation_target_for(signer, collection)
         .ok_or_else(|| {
             Status::permission_denied(
-                "signer is not authorized by target identity",
-            )
-        })?;
-
-    let target = bound
-        .targets
-        .iter()
-        .find(|t| t.collection == collection)
-        .ok_or_else(|| {
-            Status::permission_denied(
-                "signer revoked with no target for this collection",
+                "signer is revoked or not authorized by target identity",
             )
         })?;
 

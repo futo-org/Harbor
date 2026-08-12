@@ -144,14 +144,6 @@ function DefaultErrorComponent({ error }: { error: Error }) {
   );
 }
 
-async function resolveIdentity(
-  client: PolycentricClient,
-): Promise<IdentityState | null> {
-  if (!client.activeIdentityKey) return null;
-  const state = await client.identityManager.getCurrent();
-  return state.identityKey ? state : null;
-}
-
 export function PolycentricProvider({
   children,
   loadingComponent,
@@ -212,7 +204,7 @@ export function PolycentricProvider({
 
         setClient(c);
         setStore(s);
-        setCurrentIdentity(await resolveIdentity(c));
+        setCurrentIdentity(await c.identityManager.resolveIdentity());
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
@@ -240,7 +232,7 @@ export function PolycentricProvider({
 
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
-          setCurrentIdentity(await resolveIdentity(c));
+          setCurrentIdentity(await c.identityManager.resolveIdentity());
           await s.getState().refreshIdentities();
           // TODO: Cleanup this up
           useFollows.getState().refresh(c);
@@ -253,7 +245,7 @@ export function PolycentricProvider({
         c.events.onContentCreated(async ({ content }) => {
           if (cancelled) return;
           if (content?.contentBody.oneofKind !== 'identity') return;
-          setCurrentIdentity(await resolveIdentity(c));
+          setCurrentIdentity(await c.identityManager.resolveIdentity());
         });
       } catch (err) {
         if (!cancelled) {
@@ -280,7 +272,7 @@ export function PolycentricProvider({
 
   const refreshCurrentIdentity = useCallback(async () => {
     if (!client) return;
-    setCurrentIdentity(await resolveIdentity(client));
+    setCurrentIdentity(await client.identityManager.resolveIdentity());
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {

@@ -16,6 +16,7 @@ path = "src/tests.rs"
 entity = { path = "../entity" }
 ed25519-dalek.workspace = true
 getrandom.workspace = true
+hex.workspace = true
 polycentric-common = { workspace = true, features = ["transport"] }
 prost = "0.14"
 sha2 = "0.10"

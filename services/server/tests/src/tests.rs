@@ -1,11 +1,10 @@
 use ed25519_dalek::SigningKey;
 use integration_tests::{
     COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
-    bundle_signature, connect_event_sync, derive_identity_string,
-    generate_signing_key, graph_service, leaf_hash, make_identity_bundle,
-    make_post_bundle, make_revocation_bound, make_verification_claim_bundle,
-    node_hash, public_key_of, random_string, repeated_string, search_service,
-    *,
+    bundle_signature, connect_event_sync, generate_signing_key, graph_service,
+    leaf_hash, make_identity_bundle, make_post_bundle, make_revocation_bound,
+    make_verification_claim_bundle, node_hash, public_key_of, random_string,
+    repeated_string, search_service, *,
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -72,7 +71,7 @@ async fn invalid_signature_rejected() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     let mut bundle = make_post_bundle(
         &identity,
@@ -122,7 +121,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis identity event signed by A. Dedup keys = [A, B]; VC = [1, 0].
     let genesis = make_identity_bundle(
@@ -298,7 +297,7 @@ async fn post_revocation_event_returns_without_proof() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis.
     let genesis = make_identity_bundle(
@@ -455,7 +454,7 @@ async fn rewritten_event_invalidates_proofs() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis.
     let genesis = make_identity_bundle(
@@ -624,7 +623,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     let genesis = make_identity_bundle(
         &identity,
@@ -857,12 +856,13 @@ async fn trusted_labels_served_in_feed_response() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -964,12 +964,13 @@ async fn labeler_identity_served_with_feed_response() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1041,12 +1042,13 @@ async fn omit_labels_hides_labeled_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1110,12 +1112,13 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1200,21 +1203,23 @@ async fn untrusted_labels_not_indexed() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     // Impostor — a random key that is NOT the configured moderator.
     let impostor_key = generate_signing_key();
-    let impostor_identity = derive_identity_string(&Identity {
+    let impostor_identity = Identity {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1298,20 +1303,22 @@ async fn omit_labels_untrusted_label_does_not_hide() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     let impostor_key = generate_signing_key();
-    let impostor_identity = derive_identity_string(&Identity {
+    let impostor_identity = Identity {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1380,12 +1387,13 @@ async fn thread_no_labels_returns_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1452,12 +1460,13 @@ async fn thread_omit_labels_matching_hides_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1541,12 +1550,13 @@ async fn thread_omit_labels_not_matching_keeps_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
