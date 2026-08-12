@@ -4,10 +4,18 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use futures::future::{Either, select};
+use futures_timer::Delay;
 
 use crate::client::PolycentricClient;
+use crate::logging::log_warn;
 use crate::query::query_observable::{QueryResult, QueryStatus};
 use crate::rx::observable::{Observable, Subscriber};
+
+/// Per-server timeout applied when `QueryOpts.server_timeout_ms` is unset.
+const DEFAULT_SERVER_TIMEOUT_MS: u32 = 5_000;
 
 /// Fetch method for the query
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
@@ -32,6 +40,18 @@ pub enum UpdateMode {
     Merge,
 }
 
+/// Specifies when merged data is emitted during a fan-out.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum EmitMode {
+    /// Emit only once every server has responded or timed out, so
+    /// results never reorder mid-render. Any cached data is still
+    /// emitted up front.
+    #[default]
+    Default,
+    /// Emit progressively as each server's response arrives.
+    Eager,
+}
+
 /// Options for the query such as the fetch mode or a list of servers
 #[derive(Clone, Debug, Default, uniffi::Record)]
 pub struct QueryOpts {
@@ -40,6 +60,11 @@ pub struct QueryOpts {
     /// Optional list of servers the query should call. `None` uses
     /// `client.servers()`.
     pub servers: Option<Vec<String>>,
+    pub emit_mode: Option<EmitMode>,
+    /// How long to wait for each server before treating it as errored,
+    /// in milliseconds. Defaults to 5000. Timeouts surface as `error`
+    /// emissions prefixed with `timeout [server]`.
+    pub server_timeout_ms: Option<u32>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -297,6 +322,12 @@ where
             .as_ref()
             .and_then(|opts| opts.update_mode)
             .unwrap_or_default();
+        let emit_mode = opts.as_ref().and_then(|o| o.emit_mode).unwrap_or_default();
+        let server_timeout = Duration::from_millis(
+            opts.as_ref()
+                .and_then(|o| o.server_timeout_ms)
+                .unwrap_or(DEFAULT_SERVER_TIMEOUT_MS) as u64,
+        );
         let servers = opts.and_then(|o| o.servers);
 
         Observable::new(move |subscriber| {
@@ -349,6 +380,8 @@ where
                 state,
                 target_servers,
                 update_mode,
+                emit_mode,
+                server_timeout,
                 query_fn.clone(),
                 merge_fn.clone(),
                 client.clone(),
@@ -420,10 +453,13 @@ where
 /// Calls each server in parallel and emits onto `subscriber` as
 /// responses land. `pending` is local to this fan-out so concurrent
 /// subscribes don't interfere with each other.
+#[allow(clippy::too_many_arguments)]
 fn spawn_fanout<T>(
     state: QueryStateHandle<T>,
     servers: Vec<String>,
     update_mode: UpdateMode,
+    emit_mode: EmitMode,
+    server_timeout: Duration,
     query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
     client: Arc<Mutex<PolycentricClient>>,
@@ -451,8 +487,20 @@ fn spawn_fanout<T>(
         let subscriber = subscriber.clone();
 
         spawn(async move {
-            // Do the query
-            let result = query_fn(server_url.clone()).await;
+            // Do the query, dropping (and thereby cancelling) it if the
+            // server doesn't respond in time.
+            let result =
+                match select(query_fn(server_url.clone()), Delay::new(server_timeout)).await {
+                    Either::Left((result, _)) => result,
+                    Either::Right(_) => {
+                        let msg = format!(
+                            "timeout [{server_url}]: no response within {}ms",
+                            server_timeout.as_millis()
+                        );
+                        log_warn(|| msg.clone());
+                        Err(msg)
+                    }
+                };
 
             // Lock the query state mutex and do what we need with it
             let (snapshot, error_msg, is_last) = {
@@ -478,13 +526,18 @@ fn spawn_fanout<T>(
                 // Gather results
                 let is_last = pending_servers == 0;
 
-                let data = compute_merged(&s.data, &merge_fn, &client);
-                let status = s.status(pending_servers);
-                let snapshot = QueryResult {
-                    data,
-                    status,
-                    successful_servers,
-                    pending_servers,
+                // When waiting for the whole fan-out, skip the (wasted)
+                // intermediate merge and emission and only the settled
+                // result is published.
+                let snapshot = if emit_mode == EmitMode::Default && !is_last {
+                    None
+                } else {
+                    Some(QueryResult {
+                        data: compute_merged(&s.data, &merge_fn, &client),
+                        status: s.status(pending_servers),
+                        successful_servers,
+                        pending_servers,
+                    })
                 };
 
                 (snapshot, error_msg, is_last)
@@ -494,7 +547,9 @@ fn spawn_fanout<T>(
             if subscriber.is_closed() {
                 return;
             }
-            subscriber.next(snapshot);
+            if let Some(snapshot) = snapshot {
+                subscriber.next(snapshot);
+            }
             if let Some(msg) = error_msg {
                 subscriber.error(msg);
             }

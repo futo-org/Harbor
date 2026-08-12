@@ -159,7 +159,7 @@ async fn process_event(
 
     let content_digest = event.content_digest;
 
-    if let (Some(serialized_content), Some(digest)) =
+    let content = if let (Some(serialized_content), Some(digest)) =
         (&event_bundle.serialized_content, &content_digest)
     {
         util::digest::verify_content_digest(
@@ -202,12 +202,17 @@ async fn process_event(
             ContentChildRepository::save_content_child(
                 &txn,
                 content_row.id,
-                content,
+                content.clone(),
                 &key.identity,
             )
             .await?;
+            Some(content)
+        } else {
+            None
         }
-    }
+    } else {
+        None
+    };
 
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
@@ -234,8 +239,14 @@ async fn process_event(
         synced_at: Set(OffsetDateTime::now_utc()),
     };
 
-    match EventsRepository::Mutation::add_event(&txn, active_model).await {
-        Ok(_) => {
+    match EventsRepository::Mutation::add_event(
+        &txn,
+        active_model,
+        content.as_ref(),
+    )
+    .await
+    {
+        Ok(()) => {
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
                 .await;

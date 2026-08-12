@@ -6,12 +6,12 @@ use crate::{
     service::{
         context::ServiceContext,
         feeds::{
-            repository::{FeedCursor, Query as FeedsRepository},
+            repository::{FeedCursor, PageInfo, Query as FeedsRepository},
             rpc::common::{
                 self as feeds_pipeline, GetFeedResponseFilter,
                 GetFeedResponseView,
             },
-            util::{PageInfo, map_db_err},
+            util::map_db_err,
         },
         proto::{GetFeedResponse, GetIdentityFeedRequest},
     },
@@ -55,7 +55,7 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
-        page_info: Some(result.page_info.proto()?),
+        page_info: Some(result.page_info.to_proto()?),
     })
 }
 
@@ -79,7 +79,7 @@ fn blocked_identity_response() -> Result<GetFeedResponse, Status> {
     Ok(GetFeedResponse {
         event_bundles: vec![],
         event_hints: vec![],
-        page_info: Some(page_info.proto()?),
+        page_info: Some(page_info.to_proto()?),
     })
 }
 
@@ -133,7 +133,6 @@ async fn view(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::feeds::util::PageCursor;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{Block, Content};
     use ::entity::content_model as ContentModel;

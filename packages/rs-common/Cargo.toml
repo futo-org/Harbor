@@ -9,6 +9,11 @@ repository = ""
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+# Enable generation of transport code.
+transport = []
+
 [dependencies]
 thiserror.workspace = true
 prost.workspace = true

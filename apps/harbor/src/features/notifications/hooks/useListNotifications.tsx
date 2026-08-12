@@ -11,7 +11,9 @@ export type UseListNotificationsResult = {
   refresh: () => void;
 };
 
-export default function useListNotifications(): UseListNotificationsResult {
+export default function useListNotifications(
+  enabled = true,
+): UseListNotificationsResult {
   const { client } = usePolycentricContext();
   const identity = client.activeIdentityKey || '';
 
@@ -19,7 +21,7 @@ export default function useListNotifications(): UseListNotificationsResult {
     ['list_notifications', identity],
     new Query.ListNotifications({ identity, omitLabels: [] }),
     undefined,
-    !!identity,
+    enabled && !!identity,
   );
 
   const items = useMemo<NotificationData[]>(() => {

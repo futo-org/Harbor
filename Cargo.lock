@@ -2824,14 +2824,13 @@ dependencies = [
  "ed25519-dalek",
  "entity",
  "getrandom 0.4.3",
+ "polycentric-common",
  "prost",
  "rand 0.10.1",
  "sea-orm",
  "sha2 0.10.9",
  "tokio",
  "tonic",
- "tonic-prost",
- "tonic-prost-build",
 ]
 
 [[package]]

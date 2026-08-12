@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import {
   List,
@@ -27,59 +27,108 @@ const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} compactLinkPreview />
 );
 
+/** Row shapes differ enough in height that sharing a recycle pool forces a
+ *  re-measure on every reuse. */
+const defaultGetItemType = (item: PostData) => {
+  if (item.images?.length) return 'images';
+  if (item.quoteId) return 'quote';
+  if (item.links?.length) return 'link';
+  return 'text';
+};
+
+/** We keep the skeleton overlaid until then and reveal the feed
+ *  settled. */
 const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   {
     feed,
     emptyMessage = 'No posts yet',
     renderItem = defaultRenderItem,
     keyExtractor = defaultKeyExtractor,
+    getItemType = defaultGetItemType,
+    initialHeaderHeight = 0,
     ...rest
   },
   ref,
 ) {
   const { theme } = useTheme();
 
+  const [firstLayoutDone, setFirstLayoutDone] = useState(false);
+  const onLoad = useCallback(() => setFirstLayoutDone(true), []);
+  const showLayoutShield = !firstLayoutDone && feed.items.length > 0 && !isWeb;
+
   const insets = useSafeAreaInsets();
 
+  const emptyComponent = useMemo(
+    () =>
+      feed.isLoading ? (
+        <PostSkeletonList />
+      ) : (
+        <ListEmpty>{emptyMessage}</ListEmpty>
+      ),
+    [feed.isLoading, emptyMessage],
+  );
+
+  const showLoadingMore = feed.hasMore && feed.items.length > 0;
+  const footerComponent = useMemo(
+    () => (
+      <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
+        {showLoadingMore ? (
+          <View style={[Atoms.items_center, Atoms.p_lg]}>
+            <ActivityIndicator
+              size="small"
+              color={theme.palette.neutral_500}
+              accessibilityLabel="Loading more posts"
+            />
+          </View>
+        ) : null}
+      </View>
+    ),
+    [showLoadingMore, insets.bottom, theme.palette.neutral_500],
+  );
+
   return (
-    <List<PostData>
-      ref={ref}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      data={feed.items}
-      ListEmptyComponent={
-        feed.isLoading ? (
+    <View style={Atoms.flex_1}>
+      <List<PostData>
+        ref={ref}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        getItemType={getItemType}
+        data={feed.items}
+        onLoad={onLoad}
+        initialHeaderHeight={initialHeaderHeight}
+        ListEmptyComponent={emptyComponent}
+        ListFooterComponent={footerComponent}
+        onEndReached={feed.hasMore ? feed.loadMore : undefined}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          !isWeb ? (
+            <RefreshControl
+              refreshing={feed.isRefreshing}
+              onRefresh={feed.refresh}
+            />
+          ) : undefined
+        }
+        showsVerticalScrollIndicator={false}
+        {...rest}
+      />
+      {showLayoutShield ? (
+        <View
+          pointerEvents="none"
+          style={[
+            Atoms.absolute,
+            {
+              top: initialHeaderHeight,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: theme.palette.neutral_0,
+            },
+          ]}
+        >
           <PostSkeletonList />
-        ) : (
-          <ListEmpty>{emptyMessage}</ListEmpty>
-        )
-      }
-      ListFooterComponent={
-        <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
-          {feed.hasMore && feed.items.length > 0 ? (
-            <View style={[Atoms.items_center, Atoms.p_lg]}>
-              <ActivityIndicator
-                size="small"
-                color={theme.palette.neutral_500}
-                accessibilityLabel="Loading more posts"
-              />
-            </View>
-          ) : null}
         </View>
-      }
-      onEndReached={feed.hasMore ? feed.loadMore : undefined}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        !isWeb ? (
-          <RefreshControl
-            refreshing={feed.isRefreshing}
-            onRefresh={feed.refresh}
-          />
-        ) : undefined
-      }
-      showsVerticalScrollIndicator={false}
-      {...rest}
-    />
+      ) : null}
+    </View>
   );
 });
 

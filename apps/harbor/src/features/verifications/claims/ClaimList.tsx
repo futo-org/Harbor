@@ -25,6 +25,8 @@ type ClaimListProps = {
   HeaderComponent?: ComponentType<unknown> | ReactElement | null;
   // Opens the create-claim sheet (the outbox's "Create new claim" row).
   onCreateClaim: () => void;
+  // Set to false to defer fetching (e.g. until the tab is focused).
+  enabled?: boolean;
 };
 
 // Outbox: claims the current identity created. Inbox: claims others have
@@ -37,15 +39,15 @@ type Row = { kind: 'create' } | { kind: 'claim'; claim: DecodedClaim };
 // The verifications screen's list, split into Inbox/Outbox tabs. Owns the
 // scroll + pull-to-refresh; the tab bar rides along as a list header.
 export const ClaimList = forwardRef<ListRef, ClaimListProps>(function ClaimList(
-  { HeaderComponent, onCreateClaim },
+  { HeaderComponent, onCreateClaim, enabled = true },
   ref,
 ) {
   const insets = useSafeAreaInsets();
   const { identityKey } = useCurrentIdentity();
   const [tab, setTab] = useState<ClaimsTab>('outbox');
 
-  const outbox = useClaimsList(identityKey ?? undefined);
-  const inbox = useRequestedVerifications(identityKey ?? undefined);
+  const outbox = useClaimsList(identityKey ?? undefined, enabled);
+  const inbox = useRequestedVerifications(identityKey ?? undefined, enabled);
   const active = tab === 'outbox' ? outbox : inbox;
 
   const rows = useMemo<Row[]>(() => {

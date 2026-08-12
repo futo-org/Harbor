@@ -15,6 +15,7 @@ import {
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -74,6 +75,8 @@ export type ListProps<T> = FlashListProps<T> & {
     | React.ExoticComponent<any>
     | null
     | undefined;
+  /** Known height of `HeaderComponent`, used until it reports its own. */
+  initialHeaderHeight?: number;
 };
 
 /** Imperative handle exposed by `List` (and `FeedList`). */
@@ -94,6 +97,7 @@ export const List = forwardRef(function List<T>(
 
 function NativeList<T>({
   HeaderComponent,
+  initialHeaderHeight = 0,
   contentContainerStyle,
   refreshControl,
   onScroll: _ignoredOnScroll,
@@ -101,18 +105,38 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
+  const {
+    onScroll,
+    headerAnimatedStyle,
+    onHeaderLayout,
+    scrollProps,
+    contentPaddingTop,
+    topOffset,
+  } = useHidingHeader(initialHeaderHeight);
+
   useImperativeHandle(
     listRef,
     () => ({
       scrollToTop: () =>
-        ref.current?.scrollToOffset({ offset: 0, animated: true }),
+        ref.current?.scrollToOffset({ offset: topOffset, animated: true }),
     }),
-    [],
+    [topOffset],
   );
-  const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
-    useHidingHeader();
 
   const renderedHeader = renderNode(HeaderComponent);
+
+  // A new style object each render invalidates FlashList's layout cache.
+  const mergedContentContainerStyle = useMemo(
+    () => ({
+      ...Atoms.flex_grow_1,
+      paddingTop: contentPaddingTop,
+      ...(typeof contentContainerStyle === 'object' &&
+      contentContainerStyle !== null
+        ? contentContainerStyle
+        : {}),
+    }),
+    [contentPaddingTop, contentContainerStyle],
+  );
 
   // Show below the sticky header
   const adjustedRefreshControl = (
@@ -120,7 +144,7 @@ function NativeList<T>({
       ? cloneElement(
           refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
           {
-            progressViewOffset: headerHeight,
+            progressViewOffset: contentPaddingTop,
           },
         )
       : refreshControl
@@ -137,17 +161,11 @@ function NativeList<T>({
       <AnimatedFlashList
         ref={ref as React.Ref<FlashListRef<unknown>>}
         {...(rest as FlashListProps<unknown>)}
+        {...scrollProps}
         refreshControl={adjustedRefreshControl}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{
-          ...Atoms.flex_grow_1,
-          paddingTop: headerHeight,
-          ...(typeof contentContainerStyle === 'object' &&
-          contentContainerStyle !== null
-            ? contentContainerStyle
-            : {}),
-        }}
+        contentContainerStyle={mergedContentContainerStyle}
       />
     </View>
   );

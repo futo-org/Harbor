@@ -13,6 +13,7 @@ export function Image({ uris, recyclingKey, ...rest }: Props) {
   const { uri, onError } = useFallbackUri(uris);
   return (
     <ExpoImage
+      cachePolicy="memory-disk"
       {...rest}
       source={uri ? { uri } : undefined}
       recyclingKey={recyclingKey ?? uris[0]}

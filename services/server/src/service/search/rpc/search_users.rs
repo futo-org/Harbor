@@ -35,7 +35,7 @@ pub async fn handle(
     Ok(SearchUsersResponse {
         results: result.results,
         event_hints: result.event_hints,
-        page_info: Some(result.page_info.proto()?),
+        page_info: Some(result.page_info.to_proto()?),
     })
 }
 
@@ -56,7 +56,7 @@ async fn fetch(
             SortUsersBy::Default => SortedUsersBy::Rank(row.search_rank),
             SortUsersBy::Alpha => SortedUsersBy::Name(row.profile_name.clone()),
         },
-        id: row.event.id,
+        event_id: row.event.id,
     });
     let rows = rows
         .into_iter()

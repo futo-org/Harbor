@@ -1,5 +1,6 @@
+use crate::data;
+use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::{events::TargetEventKey, feeds::util::PageCursor};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
@@ -8,57 +9,22 @@ use polycentric_common::models::collections;
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
-    sea_query::{
-        Expr, IntoCondition, IntoValueTuple, PostgresQueryBuilder,
-        Query as SeaQuery,
-    },
+    sea_query::{Expr, IntoCondition, PostgresQueryBuilder, Query as SeaQuery},
     *,
 };
-use serde::{Deserialize, Serialize};
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
-/// Cursor type for paginated feed queries.
-#[derive(Clone, Serialize, Deserialize)]
-pub enum FeedCursor {
-    /// Marks the start of the feed.
-    /// Forward queries return the first items and backward queries return nothing.
-    Start,
-    /// Marks somewhere in the feed.
-    /// Forward queries return items following this point and
-    /// backward queries return items preceding this point.
-    Mid(FeedMarker),
-    /// Marks the end of the feed.
-    /// Forward queries return nothing and backward queries return the last items.
-    End,
-}
+type CreatedAt = TimeDateTimeWithTimeZone;
+pub type PageInfo = data::PageInfo<CreatedAt>;
+pub type CursorFilter = data::CursorFilter<CreatedAt>;
+pub type FeedCursor = data::Cursor<CreatedAt>;
+pub type FeedMarker = data::Marker<CreatedAt>;
 
-/// Exclusive lowerbound/upperbound for a feed query
-#[derive(Clone, Serialize, Deserialize)]
-pub struct FeedMarker {
-    pub created_at: TimeDateTimeWithTimeZone,
-    pub id: i64,
-}
-
-impl PageCursor for FeedCursor {}
-
-impl FeedMarker {
-    /// Get the database columns to compare against a cursor as a rust tuple.
-    fn cols() -> impl IdentityOf<EventModel::Entity> {
-        (EventModel::Column::CreatedAt, EventModel::Column::Id)
-    }
-
-    /// Get a rust tuple of this cursor's fields.
-    fn values(&self) -> impl IntoValueTuple {
-        (self.created_at, self.id)
-    }
-}
-
-/// Retrieve items in the feed relative to a cursor.
-pub enum CursorFilter {
-    Forward(FeedCursor),
-    Backward(FeedCursor),
+/// Get the database columns to compare against a cursor.
+fn cursor_columns() -> impl IdentityOf<EventModel::Entity> {
+    (EventModel::Column::CreatedAt, EventModel::Column::Id)
 }
 
 pub struct Query;
@@ -111,7 +77,7 @@ impl Query {
                 query.filter(EventModel::Column::Identity.is_in(identities));
         }
 
-        let mut sea_cursor = query.cursor_by(FeedMarker::cols());
+        let mut sea_cursor = query.cursor_by(cursor_columns());
         sea_cursor.desc();
 
         match cursor_filter {

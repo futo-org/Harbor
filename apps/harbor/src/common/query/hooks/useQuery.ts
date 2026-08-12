@@ -7,6 +7,7 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
+import { toast } from '../../components/toast';
 import { usePolycentric } from '../../lib/polycentric-hooks/context';
 
 /**
@@ -108,6 +109,28 @@ const LOADING_ENTRY: Partial<QueryRef> = Object.freeze({
   pendingServers: undefined,
 });
 
+/**
+ * Toast once per window when a server times out — a slow server times
+ * out every in-flight query at once, and one warning is enough.
+ */
+const SLOW_SERVER_TOAST_THROTTLE_MS = 30_000;
+let lastSlowServerToastAt = 0;
+
+function notifySlowServer(message: string) {
+  const server = message.match(/^timeout \[([^\]]+)\]/)?.[1];
+  if (!server) return;
+
+  const now = Date.now();
+  if (now - lastSlowServerToastAt < SLOW_SERVER_TOAST_THROTTLE_MS) return;
+  lastSlowServerToastAt = now;
+
+  let host = server;
+  try {
+    host = new URL(server).host;
+  } catch {}
+  toast.warning(`${host} is responding slowly`);
+}
+
 export const useQueryStore = create<QueryStoreState>((set, get) => {
   const updateQueryRef = (key: string, patch: Partial<QueryRef>) => {
     set((state) => {
@@ -169,6 +192,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       },
       error(message) {
         console.warn(`useQuery[${key}] error: ${message}`);
+        notifySlowServer(message);
         if (get().queries.get(key)?.status === QueryStatus.Error) {
           updateQueryRef(key, { error: message });
         }
@@ -198,6 +222,10 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     subscriptions: new Map(),
 
     subscribe(key, args) {
+      // Resetting a populated entry to `Loading` re-renders every other
+      // consumer of the key, and scrolling remounts rows constantly.
+      const initState = get().queries.get(key)?.data ? {} : LOADING_ENTRY;
+
       const existing = get().subscriptions.get(key);
       if (existing) {
         existing.refCount += 1;
@@ -205,14 +233,14 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
 
         if (args.opts?.fetchMode === FetchMode.Default) {
           existing.dispose();
-          existing.dispose = fetch(key, args, LOADING_ENTRY);
+          existing.dispose = fetch(key, args, initState);
         }
 
         return;
       }
       get().subscriptions.set(key, {
         refCount: 1,
-        dispose: fetch(key, args, LOADING_ENTRY),
+        dispose: fetch(key, args, initState),
         args,
       });
     },

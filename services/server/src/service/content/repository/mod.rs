@@ -74,17 +74,17 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 
 /// The five denormalized `EventKey` columns shared by several tables.
 #[cfg_attr(test, derive(Debug))]
-struct EventKeyParts {
-    collection: i16,
-    identity: String,
-    public_key_type: i16,
-    public_key: Vec<u8>,
-    sequence: i64,
+pub struct EventKeyParts {
+    pub collection: i16,
+    pub identity: String,
+    pub public_key_type: i16,
+    pub public_key: Vec<u8>,
+    pub sequence: i64,
 }
 
 /// Split an `EventKey` and its signer into denormalized parts, erroring
 /// if either is absent. `subject` names the content type for the message.
-fn split_event_key(
+pub fn split_event_key(
     key: Option<EventKey>,
     subject: &str,
 ) -> Result<EventKeyParts, Status> {
