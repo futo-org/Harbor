@@ -15,7 +15,7 @@ export default function SettingsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="identity" options={sheetScreenOptions} />
-      <Stack.Screen name="pair-identity" options={sheetScreenOptions} />
+      <Stack.Screen name="pair-identity" />
       <Stack.Screen name="servers" options={sheetScreenOptions} />
       <Stack.Screen name="moderation-settings" options={sheetScreenOptions} />
     </Stack>
