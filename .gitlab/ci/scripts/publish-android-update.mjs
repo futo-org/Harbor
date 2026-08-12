@@ -42,6 +42,11 @@ const region = process.env.STATIC_S3_REGION || 'auto';
 
 function s3put(key, file, contentType, cacheControl) {
   console.log(`uploading ${key}`);
+  // curl doesn't hash streamed --upload-file bodies, and R2 rejects
+  // requests without x-amz-content-sha256 — provide it so curl signs it.
+  const bodySha256 = createHash('sha256')
+    .update(readFileSync(file))
+    .digest('hex');
   execFileSync(
     'curl',
     [
@@ -60,6 +65,8 @@ function s3put(key, file, contentType, cacheControl) {
       `content-type: ${contentType}`,
       '--header',
       `cache-control: ${cacheControl}`,
+      '--header',
+      `x-amz-content-sha256: ${bodySha256}`,
       `${endpoint}/${bucket}/${key}`,
     ],
     {
