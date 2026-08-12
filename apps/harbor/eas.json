@@ -20,6 +20,7 @@
     },
     "staging": {
       "autoIncrement": true,
+      "environment": "staging",
       "env": {
         "APP_VARIANT": "staging",
         "APP_DISTRIBUTION": "store"
@@ -28,6 +29,7 @@
     "staging-apk": {
       "extends": "staging",
       "distribution": "internal",
+      "environment": "staging",
       "env": {
         "APP_VARIANT": "staging",
         "APP_DISTRIBUTION": "apk"
@@ -35,6 +37,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
         "APP_DISTRIBUTION": "store"
       }
@@ -42,12 +45,18 @@
     "production-apk": {
       "extends": "production",
       "distribution": "internal",
+      "environment": "production",
       "env": {
         "APP_DISTRIBUTION": "apk"
       }
     }
   },
   "submit": {
+    "staging": {
+      "android": {
+        "track": "internal"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6504881935"

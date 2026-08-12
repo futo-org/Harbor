@@ -177,8 +177,9 @@ app-android-apk-production:
       when: manual
       allow_failure: true
 
-# Store builds: staging builds unsubmitted, production auto-submits on
-# release tags or a manual run.
+# Store builds auto-submit to their app's internal/TestFlight track:
+# staging from the default branch, production on release tags or a manual
+# run.
 .app-store-staging-rules:
   rules:
     - if: $CI_COMMIT_TAG
@@ -196,7 +197,7 @@ app-android-aab-staging:
   extends: .app-eas-build
   rules: !reference [.app-store-staging-rules, rules]
   script:
-    - npx eas-cli build --platform android --profile staging --non-interactive --no-wait
+    - npx eas-cli build --platform android --profile staging --non-interactive --no-wait --auto-submit
 
 app-android-aab-production:
   extends: .app-eas-build
@@ -208,7 +209,7 @@ app-ios-staging:
   extends: .app-eas-build
   rules: !reference [.app-store-staging-rules, rules]
   script:
-    - npx eas-cli build --platform ios --profile staging --non-interactive --no-wait
+    - npx eas-cli build --platform ios --profile staging --non-interactive --no-wait --auto-submit
 
 app-ios-production:
   extends: .app-eas-build
