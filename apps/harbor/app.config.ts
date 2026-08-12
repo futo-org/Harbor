@@ -3,14 +3,35 @@ import fs from 'fs';
 
 const { version: PKG_VERSION } = require('./package.json');
 
-const IS_DEV = process.env.APP_VARIANT === 'dev';
+// 'dev' | 'staging' | 'production'. Staging comes from the eas.json
+// profile env; dev from the local scripts.
+const VARIANT = process.env.APP_VARIANT ?? 'production';
+const IS_DEV = VARIANT === 'dev';
+const IS_STAGING = VARIANT === 'staging';
 
-const NAME = IS_DEV ? 'Harbor Dev' : 'Harbor';
-const ID = IS_DEV ? 'org.futo.polycentric.dev' : 'org.futo.polycentric';
+const NAME = IS_DEV ? 'Harbor Dev' : IS_STAGING ? 'Harbor Staging' : 'Harbor';
+const ID = IS_DEV
+  ? 'org.futo.polycentric.dev'
+  : IS_STAGING
+    ? 'org.futo.polycentric.staging'
+    : 'org.futo.polycentric';
 
 const GOOGLE_SERVICES_FILE =
   process.env.GOOGLE_SERVICES_JSON ?? './google-services.json';
-const HAS_GOOGLE_SERVICES = fs.existsSync(GOOGLE_SERVICES_FILE);
+// The google-services gradle plugin fails the build when the file has no
+// entry for the package, so skip it for uncovered variants.
+const HAS_GOOGLE_SERVICES = (() => {
+  try {
+    const config = JSON.parse(fs.readFileSync(GOOGLE_SERVICES_FILE, 'utf8'));
+    return (config.client ?? []).some(
+      (client: {
+        client_info?: { android_client_info?: { package_name?: string } };
+      }) => client.client_info?.android_client_info?.package_name === ID,
+    );
+  } catch {
+    return false;
+  }
+})();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -49,7 +70,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#FF6A00',
     },
     package: ID,
-    permissions: ['android.permission.CAMERA'],
+    permissions: [
+      'android.permission.CAMERA',
+      // Self-updater hands downloaded APKs to the system installer.
+      'android.permission.REQUEST_INSTALL_PACKAGES',
+    ],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
   },
   plugins: [
@@ -99,6 +124,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     router: {},
+    variant: VARIANT,
     eas: {
       projectId: '4db035ec-2de9-448a-a6cf-07347d6ae8b9',
     },

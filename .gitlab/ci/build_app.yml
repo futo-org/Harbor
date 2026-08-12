@@ -124,24 +124,95 @@ app-web-image:
         - .gitlab/ci/deploy_app.yml
     - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
 
-app-android-apk:
+# APKs follow the same staging/production split as the service deploys:
+# staging builds from MRs and the default branch, production from release
+# tags or a manual run. Each job also publishes to its variant's update feed
+# on the static bucket — see scripts/publish-android-update.mjs for the
+# STATIC_* variables that requires.
+.app-android-apk:
   extends: .app-eas-build
   script:
-    - npx eas-cli build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+    - npx eas-cli build --platform android --profile ${EAS_PROFILE} --non-interactive --wait --json > eas-build.json
     # eas only builds remotely; download the resulting APK so it is a CI artifact.
-    - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json polycentric.apk
+    - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json harbor.apk
+    # Publish the APK and latest.json to the update feed.
+    - cd "$CI_PROJECT_DIR"
+    - npm install --no-save --no-package-lock @aws-sdk/client-s3
+    - node .gitlab/ci/scripts/publish-android-update.mjs
   artifacts:
     paths:
-      - apps/harbor/polycentric.apk
+      - apps/harbor/harbor.apk
       - apps/harbor/eas-build.json
     expire_in: 1 week
 
-app-android-aab:
-  extends: .app-eas-build
-  script:
-    - npx eas-cli build --platform android --non-interactive --no-wait --auto-submit
+app-android-apk-staging:
+  extends: .app-android-apk
+  variables:
+    EAS_PROFILE: staging-apk
+    UPDATE_CHANNEL: staging
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - !reference [.app-eas-build, rules]
 
-app-ios:
+app-android-apk-production:
+  extends: .app-android-apk
+  # publish stage so release-changelog (tag pipelines) can feed the manifest.
+  stage: publish
+  variables:
+    EAS_PROFILE: production-apk
+    UPDATE_CHANNEL: production
+  needs:
+    - job: rn-sdk-build
+      artifacts: true
+    - job: js-sdks-build
+      artifacts: true
+    - job: rs-core-uniffi-web-build
+      artifacts: true
+    - job: release-changelog
+      artifacts: true
+      optional: true
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+
+# Store builds: staging builds unsubmitted, production auto-submits on
+# release tags or a manual run.
+.app-store-staging-rules:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - !reference [.app-eas-build, rules]
+
+.app-store-production-rules:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+
+app-android-aab-staging:
   extends: .app-eas-build
+  rules: !reference [.app-store-staging-rules, rules]
   script:
-    - npx eas-cli build --platform ios --non-interactive --no-wait --auto-submit
+    - npx eas-cli build --platform android --profile staging --non-interactive --no-wait
+
+app-android-aab-production:
+  extends: .app-eas-build
+  rules: !reference [.app-store-production-rules, rules]
+  script:
+    - npx eas-cli build --platform android --profile production --non-interactive --no-wait --auto-submit
+
+app-ios-staging:
+  extends: .app-eas-build
+  rules: !reference [.app-store-staging-rules, rules]
+  script:
+    - npx eas-cli build --platform ios --profile staging --non-interactive --no-wait
+
+app-ios-production:
+  extends: .app-eas-build
+  rules: !reference [.app-store-production-rules, rules]
+  script:
+    - npx eas-cli build --platform ios --profile production --non-interactive --no-wait --auto-submit

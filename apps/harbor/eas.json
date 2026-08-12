@@ -18,11 +18,22 @@
         "image": "latest"
       }
     },
-    "preview": {
+    "staging": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "staging"
+      }
+    },
+    "staging-apk": {
+      "extends": "staging",
       "distribution": "internal"
     },
     "production": {
       "autoIncrement": true
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal"
     }
   },
   "submit": {
