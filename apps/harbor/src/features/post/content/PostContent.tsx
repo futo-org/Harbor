@@ -7,7 +7,7 @@ import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostImages } from '../PostImages';
 import { PostLabels } from '../PostLabels';
@@ -19,7 +19,7 @@ const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
 
 /** A post's body: what it is replying to, its text, and its attachments. */
-export function PostContent({
+export const PostContent = memo(function PostContent({
   post,
   hideReplyingTo,
   compactLinkPreview,
@@ -50,7 +50,7 @@ export function PostContent({
       {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
     </View>
   );
-}
+});
 
 /** Post text capped at PREVIEW_LIMIT with a Show more / Show less toggle. */
 function ExpandablePostText({ content }: { content: string }) {

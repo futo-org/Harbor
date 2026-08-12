@@ -16,13 +16,15 @@ import Animated, {
 // this distance; only then does scroll-driven hiding kick in.
 const HEADER_HIDE_THRESHOLD = 50;
 
-export function useHidingHeader() {
+/** `initialHeight` avoids a re-layout when the header's height is known:
+ *  on Android `onLayout` lands after the list has already measured. */
+export function useHidingHeader(initialHeight = 0) {
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
-  const headerHeightShared = useSharedValue(0);
+  const headerHeightShared = useSharedValue(initialHeight);
   const isDragging = useSharedValue(false);
   const isMomentum = useSharedValue(false);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(initialHeight);
 
   const onScroll = useAnimatedScrollHandler({
     onBeginDrag: () => {

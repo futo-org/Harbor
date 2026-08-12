@@ -1,9 +1,9 @@
 import { openCompose } from '@/src/common/constants';
+import { memo } from 'react';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
-import usePostActions from '../hooks/usePostActions';
 import PostActionButton from './PostActionButton';
 import PostReactionButton from './PostReactionButton';
 import PostReactionOutput from './PostReactionOutput';
@@ -19,9 +19,10 @@ export type PostToolbarProps = {
  * The row of reply / vote actions underneath a post's body. Pure
  * presentation — takes callbacks for each action.
  */
-export function PostToolbar({ post, style }: PostToolbarProps) {
-  usePostActions(post);
-
+export const PostToolbar = memo(function PostToolbar({
+  post,
+  style,
+}: PostToolbarProps) {
   const onReplyPress = () => {
     openCompose({ replyTo: post.id });
   };
@@ -50,4 +51,4 @@ export function PostToolbar({ post, style }: PostToolbarProps) {
       <PostReactionOutput post={post} />
     </View>
   );
-}
+});

@@ -1,6 +1,7 @@
 import { Fab } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
+import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
 import { Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
@@ -69,7 +70,12 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList ref={listRef} feed={feed} HeaderComponent={ListHeader} />
+        <FeedList
+          ref={listRef}
+          feed={feed}
+          HeaderComponent={ListHeader}
+          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
+        />
         {showComposeFab ? (
           <Fab
             onPress={openCompose}
