@@ -64,7 +64,7 @@ class PolycentricClient(
         private set
 
     @Volatile
-    var servers: List<String> = seedServers.ifEmpty { listOf("http://localhost:3000") }
+    var servers: List<String> = seedServers
         private set
 
     val events = storageDriver.createEventRepository()
