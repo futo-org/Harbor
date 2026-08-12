@@ -2,12 +2,14 @@ use ed25519_dalek::SigningKey;
 use integration_tests::{
     COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
     bundle_signature, connect_event_sync, derive_identity_string,
-    generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
-    make_revocation_bound, make_verification_claim_bundle, node_hash,
-    public_key_of, random_string, repeated_string, search_service, *,
+    generate_signing_key, graph_service, leaf_hash, make_identity_bundle,
+    make_post_bundle, make_revocation_bound, make_verification_claim_bundle,
+    node_hash, public_key_of, random_string, repeated_string, search_service,
+    *,
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::*;
 use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
 use prost::Message as ProstMessage;
@@ -2372,5 +2374,110 @@ async fn expect_searched_posts2<F, Fut>(
         assert_eq!(post, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
+    }
+}
+
+#[tokio::test]
+async fn following() {
+    let mut search = graph_service().await;
+
+    let mut follower = TestClient::new().await;
+    let mut followees = Vec::with_capacity(2);
+    for _ in 0..followees.capacity() {
+        let mut followee = TestClient::new().await;
+        followee.submit_events().await; // Create the indetity.
+        let id = followee.identity().to_owned();
+        follower.follow_identity(id.clone(), DEFAULT_CREATED_AT);
+        followees.push(id);
+    }
+    let last_follow = follower.get_last_event_key();
+    follower.submit_events().await;
+    eprintln!("Follower: {}", follower.identity());
+    eprintln!("Followees: {followees:?}");
+
+    check_following(&mut search, follower.identity().to_owned(), &followees)
+        .await;
+    check_followers(&mut search, followees[1].clone(), &[follower.identity()])
+        .await;
+
+    follower.delete_key(last_follow, DEFAULT_CREATED_AT + 1);
+    let no_followers = followees.pop().unwrap();
+    follower.submit_events().await;
+
+    check_following(&mut search, follower.identity().to_owned(), &followees)
+        .await;
+    check_followers(&mut search, no_followers, &[]).await;
+}
+
+async fn check_following(
+    search: &mut GraphServiceClient<tonic::transport::Channel>,
+    for_identity: String,
+    expected: &[String],
+) {
+    let result = search
+        .list_following(ListFollowingRequest {
+            identity: for_identity.clone(),
+            page_params: None,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+    assert_eq!(result.event_bundles.len(), expected.len());
+    for event in &result.event_bundles {
+        dbg!(&event);
+        let signed_event =
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+        let followee_identity = signed_event.key.unwrap().identity;
+        assert_eq!(followee_identity, for_identity);
+
+        let content = Content::decode(
+            &*event.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let Some(ContentBody::Follow(follow)) = content.content_body else {
+            panic!("unexpected event content: {content:?}");
+        };
+        assert!(
+            expected.contains(&follow.identity),
+            "id: {}, expected: {expected:?}",
+            follow.identity
+        );
+    }
+}
+
+async fn check_followers(
+    search: &mut GraphServiceClient<tonic::transport::Channel>,
+    for_identity: String,
+    expected: &[&str],
+) {
+    let result = search
+        .list_followers(ListFollowersRequest {
+            identity: for_identity.clone(),
+            page_params: None,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+    assert_eq!(result.event_bundles.len(), expected.len());
+    for event in &result.event_bundles {
+        let signed_event =
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+        let followee_identity = signed_event.key.unwrap().identity;
+        assert!(
+            expected.contains(&&*followee_identity),
+            "id: {}, expected: {expected:?}",
+            followee_identity
+        );
+
+        let content = Content::decode(
+            &*event.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let Some(ContentBody::Follow(follow)) = content.content_body else {
+            panic!("unexpected event content: {content:?}");
+        };
+        assert_eq!(for_identity, follow.identity);
     }
 }

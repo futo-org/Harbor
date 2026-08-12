@@ -2,13 +2,14 @@ use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound, SearchResult,
-    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
-    VerificationClaim, VerificationSchema, content,
+    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
+    EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
+    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound,
+    SearchResult, SerializedContent, SerializedVerificationSchema, SignedEvent,
+    VectorClock, VerificationClaim, VerificationSchema, content,
 };
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -158,6 +159,12 @@ pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
         .expect("failed to connect to gRPC server")
 }
 
+pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
+    GraphServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
 pub fn generate_signing_key() -> SigningKey {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("OS random number generator failed");
@@ -297,6 +304,33 @@ impl TestClient {
 
     pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Labels(labels), created_at)
+    }
+
+    pub fn follow(&mut self, follow: Follow, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Follow(follow), created_at)
+    }
+
+    pub fn follow_identity(
+        &mut self,
+        identity: String,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.follow(Follow { identity }, created_at)
+    }
+
+    pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Delete(delete), created_at)
+    }
+
+    pub fn delete_key(
+        &mut self,
+        event_key: EventKey,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let delete = Delete {
+            event_key: Some(event_key),
+        };
+        self.delete(delete, created_at)
     }
 
     pub fn get_last_event_key(&self) -> EventKey {
