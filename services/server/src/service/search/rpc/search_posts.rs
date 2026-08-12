@@ -38,7 +38,7 @@ pub async fn handle(
     Ok(SearchPostsResponse {
         results: result.results,
         event_hints: result.event_hints,
-        page_info: Some(result.page_info.proto()?),
+        page_info: Some(result.page_info.to_proto()?),
     })
 }
 
@@ -59,7 +59,7 @@ async fn fetch(
             SortPostsBy::Default => SortedPostsBy::Rank(row.search_rank),
             SortPostsBy::Latest => SortedPostsBy::Latest(row.content.synced_at),
         },
-        id: row.event.id,
+        event_id: row.event.id,
     });
     let rows = rows
         .into_iter()

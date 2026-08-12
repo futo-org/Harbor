@@ -9,7 +9,6 @@ use crate::service::feeds::rpc::common::{
 use crate::service::feeds::rpc::common::{
     to_target_event_key, to_target_event_keys,
 };
-use crate::service::feeds::util::PageCursor;
 use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
@@ -17,7 +16,7 @@ use crate::service::identity::service::{
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
-    self, Content, EventBundle, EventHint, EventKey, PageParams, SearchResult,
+    Content, EventBundle, EventHint, EventKey, PageParams, SearchResult,
 };
 use crate::service::stats::service::{
     EventStats, assemble_bundles, gather_stats_for, include_stats,
@@ -25,9 +24,11 @@ use crate::service::stats::service::{
 use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2::content::ContentBody;
 use prost::Message;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashSet;
 use tonic::Status;
+
+pub use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
 
 // TODO: dedup with the logic in `src/service/feeds/rpc/common.rs`, a lot of it
 // is the same, but the types are slightly different. We could unify it and move
@@ -45,7 +46,7 @@ impl<SortedBy> Params<SortedBy> {
         params: &Option<PageParams>,
     ) -> Result<Params<SortedBy>, Status>
     where
-        Cursor<SortedBy>: PageCursor,
+        SortedBy: for<'a> Deserialize<'a>,
     {
         let query = prepare_search_query(&query)
             .ok_or_else(|| Status::invalid_argument("empty search query"))?;
@@ -592,65 +593,4 @@ pub struct SearchResponseView<SortedBy> {
     pub results: Vec<SearchResult>,
     pub event_hints: Vec<EventHint>,
     pub page_info: PageInfo<SortedBy>,
-}
-
-/// `PageInfo` to return to the client, except with our types
-/// instead of opaque cursor strings.
-#[derive(Debug)]
-pub struct PageInfo<SortedBy> {
-    pub backward_cursor: Cursor<SortedBy>,
-    pub forward_cursor: Cursor<SortedBy>,
-    pub has_previous_page: bool,
-    pub has_next_page: bool,
-}
-
-impl<SortedBy> PageInfo<SortedBy> {
-    /// Build the final `PageInfo` protobuf message to give the client.
-    pub fn proto(&self) -> Result<proto::PageInfo, Status>
-    where
-        Cursor<SortedBy>: PageCursor,
-    {
-        let start_cursor = self.backward_cursor.encode()?;
-        let end_cursor = self.forward_cursor.encode()?;
-
-        Ok(proto::PageInfo {
-            start_cursor,
-            end_cursor,
-            has_previous_page: self.has_previous_page,
-            has_next_page: self.has_next_page,
-        })
-    }
-}
-
-/// Retrieve items in the feed relative to a cursor.
-#[derive(Debug)]
-pub enum CursorFilter<SortedBy> {
-    Forward(Cursor<SortedBy>),
-    Backward(Cursor<SortedBy>),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum Cursor<SortedBy> {
-    /// Marks the start of the feed.
-    /// Forward queries return the first items and backward queries return nothing.
-    Start,
-    /// Marks somewhere in the feed.
-    /// Forward queries return items following this point and
-    /// backward queries return items preceding this point.
-    Mid(Marker<SortedBy>),
-    /// Marks the end of the feed.
-    /// Forward queries return nothing and backward queries return the last items.
-    End,
-}
-
-impl<SortedBy> PageCursor for Cursor<SortedBy> where
-    SortedBy: Serialize + for<'a> Deserialize<'a>
-{
-}
-
-/// Exclusive lowerbound/upperbound for a feed query
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Marker<SortedBy> {
-    pub sorted_by: SortedBy,
-    pub id: i64,
 }

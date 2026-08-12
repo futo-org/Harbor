@@ -6,11 +6,13 @@ use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::repository::{FeedCursor, Query as FeedsRepository};
+use crate::service::feeds::repository::{
+    FeedCursor, PageInfo, Query as FeedsRepository,
+};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
-use crate::service::feeds::util::{PageInfo, map_db_err};
+use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
 use std::collections::HashMap;
 use tonic::Status;

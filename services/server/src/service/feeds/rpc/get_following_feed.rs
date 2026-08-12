@@ -53,7 +53,7 @@ pub async fn handle(
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
-        page_info: Some(result.page_info.proto()?),
+        page_info: Some(result.page_info.to_proto()?),
     })
 }
 
