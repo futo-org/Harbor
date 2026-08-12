@@ -17,6 +17,9 @@ pub struct Model {
     /// Key of the identity that is being followed.
     #[sea_orm(unique_key = "following")]
     pub followee: String,
+
+    #[sea_orm(belongs_to, from = "event_id", to = "id")]
+    pub parent: HasOne<super::event_model::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -46,6 +46,9 @@ pub struct Model {
     pub created_at: TimeDateTimeWithTimeZone,
     // Timestamp the server received the event
     pub synced_at: TimeDateTimeWithTimeZone,
+
+    #[sea_orm(has_one)] // Really has zero or one.
+    pub follow: HasOne<super::follow_model::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
