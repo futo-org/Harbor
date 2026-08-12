@@ -403,7 +403,7 @@ class PolycentricClient(
         val pushTasks = if (doPush) {
             servers.map { server ->
                 async {
-                    runCatching {
+                    try {
                         val responseBytes = core.pushLocalEvents(identity, server, partialPush)
                             ?: return@async
                         val response = PutEventsResponse.ADAPTER.decode(responseBytes)
@@ -415,7 +415,11 @@ class PolycentricClient(
                             val body = filestore.get(digest) ?: continue
                             uploadBlob(blob, body, listOf(server))
                         }
-                    }.onFailure { log.warning("Sync failed for $server: $it") }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Throwable) {
+                        log.warning("Sync failed for $server: $e")
+                    }
                 }
             }
         } else {

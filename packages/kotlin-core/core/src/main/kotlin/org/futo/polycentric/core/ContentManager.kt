@@ -1,6 +1,7 @@
 package org.futo.polycentric.core
 
 import java.security.MessageDigest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -58,11 +59,15 @@ class ContentManager(private val client: PolycentricClient) {
         val digests = blobs.mapNotNull { it.digest }
         digests.map { digest ->
             async {
-                runCatching {
+                try {
                     if (client.filestore.has(digest)) return@async
                     val bytes = client.fetchBlobBytes(digest) ?: return@async
                     client.filestore.put(digest, bytes)
-                }.onFailure { log.warning("pullBlobs failed: $it") }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    log.warning("pullBlobs failed: $e")
+                }
             }
         }.awaitAll()
     }
