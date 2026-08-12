@@ -4,12 +4,13 @@ use integration_tests::{
     bundle_signature, connect_event_sync, derive_identity_string,
     generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
     make_revocation_bound, make_verification_claim_bundle, node_hash,
-    proto::{event_sync_service_client::EventSyncServiceClient, *},
     public_key_of, random_string, repeated_string, search_service, *,
 };
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::*;
+use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
 use prost::Message as ProstMessage;
-use proto::content::ContentBody;
-use proto::{SearchPostsRequest, SortUsersBy};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 

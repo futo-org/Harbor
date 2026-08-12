@@ -1,18 +1,16 @@
-pub mod proto;
-
 use ed25519_dalek::{Signer, SigningKey};
-use prost::Message;
-use proto::content::ContentBody;
-use proto::event_sync_service_client::EventSyncServiceClient;
-use proto::feeds_service_client::FeedsServiceClient;
-use proto::search_service_client::SearchServiceClient;
-use proto::{
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
+use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
     EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
     ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound, SearchResult,
     SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
     VerificationClaim, VerificationSchema, content,
 };
+use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
