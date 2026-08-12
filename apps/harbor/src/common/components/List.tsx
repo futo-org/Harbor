@@ -105,16 +105,23 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
+  const {
+    onScroll,
+    headerAnimatedStyle,
+    onHeaderLayout,
+    scrollProps,
+    contentPaddingTop,
+    topOffset,
+  } = useHidingHeader(initialHeaderHeight);
+
   useImperativeHandle(
     listRef,
     () => ({
       scrollToTop: () =>
-        ref.current?.scrollToOffset({ offset: 0, animated: true }),
+        ref.current?.scrollToOffset({ offset: topOffset, animated: true }),
     }),
-    [],
+    [topOffset],
   );
-  const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
-    useHidingHeader(initialHeaderHeight);
 
   const renderedHeader = renderNode(HeaderComponent);
 
@@ -122,13 +129,13 @@ function NativeList<T>({
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
-      paddingTop: headerHeight,
+      paddingTop: contentPaddingTop,
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [headerHeight, contentContainerStyle],
+    [contentPaddingTop, contentContainerStyle],
   );
 
   // Show below the sticky header
@@ -137,7 +144,7 @@ function NativeList<T>({
       ? cloneElement(
           refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
           {
-            progressViewOffset: headerHeight,
+            progressViewOffset: contentPaddingTop,
           },
         )
       : refreshControl
@@ -154,6 +161,7 @@ function NativeList<T>({
       <AnimatedFlashList
         ref={ref as React.Ref<FlashListRef<unknown>>}
         {...(rest as FlashListProps<unknown>)}
+        {...scrollProps}
         refreshControl={adjustedRefreshControl}
         onScroll={onScroll}
         scrollEventThrottle={16}
