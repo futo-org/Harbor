@@ -12,10 +12,8 @@ pub struct Model {
     pub event_id: i64,
     /// Key of the identity (sha256 hash of the initial Identity content) that
     /// is doing the following.
-    #[sea_orm(unique_key = "following")]
     pub follower: String,
     /// Key of the identity that is being followed.
-    #[sea_orm(unique_key = "following")]
     pub followee: String,
 
     #[sea_orm(belongs_to, from = "event_id", to = "id")]

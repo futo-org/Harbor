@@ -42,15 +42,17 @@ impl MigrationTrait for Migration {
                         .text()
                         .take()
                     })
-                    .index(
-                        IndexCreateStatement::new()
-                            .unique()
-                            .col("follower")
-                            .col("followee"),
-                    )
                     .take(),
             )
-            .await
+            .await?;
+
+        let index = IndexCreateStatement::new()
+            .table(follow_model::Entity.table_ref())
+            .col("follower")
+            .col("followee")
+            .take();
+
+        manager.create_index(index).await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
