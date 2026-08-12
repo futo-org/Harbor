@@ -1263,6 +1263,46 @@ const FfiConverterTypeUpdateMode = (() => {
 })();
 
 /**
+ * Specifies when merged data is emitted during a fan-out.
+ */
+export enum EmitMode {
+    /**
+     * Emit only once every server has responded or timed out, so
+     * results never reorder mid-render. Any cached data is still
+     * emitted up front.
+     */
+    Default,
+    /**
+     * Emit progressively as each server's response arrives.
+     */
+    Eager
+}
+
+const FfiConverterTypeEmitMode = (() => {
+    const ordinalConverter = FfiConverterInt32;
+    type TypeName = EmitMode;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            switch (ordinalConverter.read(from)) {
+                case 1: return EmitMode.Default;
+                case 2: return EmitMode.Eager;
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            switch (value) {
+                case EmitMode.Default: return ordinalConverter.write(1, into);
+                case EmitMode.Eager: return ordinalConverter.write(2, into);
+            }
+        }
+        allocationSize(value: TypeName): number {
+            return ordinalConverter.allocationSize(0);
+        }
+    }
+    return new FFIConverter();
+})();
+
+/**
  * Options for the query such as the fetch mode or a list of servers
  */
 export type QueryOpts = {
@@ -1272,7 +1312,14 @@ export type QueryOpts = {
      * Optional list of servers the query should call. `None` uses
      * `client.servers()`.
      */
-    servers?: Array<string>
+    servers?: Array<string>,
+    emitMode?: EmitMode,
+    /**
+     * How long to wait for each server before treating it as errored,
+     * in milliseconds. Defaults to 5000. Timeouts surface as `error`
+     * emissions prefixed with `timeout [server]`.
+     */
+    serverTimeoutMs?: number
 }
 
 /**
@@ -1298,18 +1345,24 @@ const FfiConverterTypeQueryOpts = (() => {
             return {
                 fetchMode: FfiConverterOptionalTypeFetchMode.read(from), 
                 updateMode: FfiConverterOptionalTypeUpdateMode.read(from), 
-                servers: FfiConverterOptionalSequenceString.read(from)
+                servers: FfiConverterOptionalSequenceString.read(from), 
+                emitMode: FfiConverterOptionalTypeEmitMode.read(from), 
+                serverTimeoutMs: FfiConverterOptionalUInt32.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
             FfiConverterOptionalTypeFetchMode.write(value.fetchMode, into);
             FfiConverterOptionalTypeUpdateMode.write(value.updateMode, into);
             FfiConverterOptionalSequenceString.write(value.servers, into);
+            FfiConverterOptionalTypeEmitMode.write(value.emitMode, into);
+            FfiConverterOptionalUInt32.write(value.serverTimeoutMs, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalTypeFetchMode.allocationSize(value.fetchMode) +
              FfiConverterOptionalTypeUpdateMode.allocationSize(value.updateMode) +
-             FfiConverterOptionalSequenceString.allocationSize(value.servers);
+             FfiConverterOptionalSequenceString.allocationSize(value.servers) +
+             FfiConverterOptionalTypeEmitMode.allocationSize(value.emitMode) +
+             FfiConverterOptionalUInt32.allocationSize(value.serverTimeoutMs);
             
         }
     };
@@ -5155,6 +5208,9 @@ const FfiConverterOptionalTypeUpdateMode = new FfiConverterOptional(FfiConverter
 // FfiConverter for Array<string> | undefined
 const FfiConverterOptionalSequenceString = new FfiConverterOptional(FfiConverterSequenceString);
 
+// FfiConverter for EmitMode | undefined
+const FfiConverterOptionalTypeEmitMode = new FfiConverterOptional(FfiConverterTypeEmitMode);
+
 // FfiConverter for ArrayBuffer | undefined
 const FfiConverterOptionalBytes = new FfiConverterOptional(FfiConverterArrayBuffer);
 
@@ -5345,6 +5401,7 @@ export default Object.freeze({
     FfiConverterTypeAuthTokenProvider,
     FfiConverterTypeContentEntry,
     FfiConverterTypeCoreError,
+    FfiConverterTypeEmitMode,
     FfiConverterTypeEventKey,
     FfiConverterTypeFetchMode,
     FfiConverterTypeGetEventArgs,
