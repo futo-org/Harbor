@@ -7,11 +7,12 @@ use proto::event_sync_service_client::EventSyncServiceClient;
 use proto::feeds_service_client::FeedsServiceClient;
 use proto::search_service_client::SearchServiceClient;
 use proto::{
-    Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey,
-    EventProofTarget, FieldDef, FieldKind, Identity, KeyType, Labels, Post,
-    ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound, SearchResult,
-    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
-    VerificationClaim, VerificationSchema, content,
+    AttributedTo, Content, ContentDigest, ContentDigestType, Event,
+    EventBundle, EventKey, EventProofTarget, FieldDef, FieldKind, Identity,
+    KeyType, Labels, Link, Post, ProfileUpdate, PublicKey, PutEventsRequest,
+    RevocationBound, SearchResult, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema, attributed_to, content,
 };
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
@@ -293,6 +294,8 @@ impl TestClient {
             images: Vec::new(),
             quote: None,
             links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
         };
         self.post(post, created_at)
     }
@@ -507,8 +510,18 @@ pub fn make_post_bundle(
     vector_clock: Vec<u64>,
     previous_root: Vec<u8>,
     text: &str,
+    attributed_urls: &[&str],
     created_at: u64,
 ) -> EventBundle {
+    let attributed_to = attributed_urls
+        .iter()
+        .map(|url| AttributedTo {
+            to: Some(attributed_to::To::Link(Link {
+                url: url.to_string(),
+                ..Default::default()
+            })),
+        })
+        .collect();
     let content = Content {
         content_body: Some(content::ContentBody::Post(Post {
             text: text.to_string(),
@@ -517,7 +530,7 @@ pub fn make_post_bundle(
             quote: None,
             links: vec![],
             labels: vec![],
-            attributed_to: vec![],
+            attributed_to,
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
