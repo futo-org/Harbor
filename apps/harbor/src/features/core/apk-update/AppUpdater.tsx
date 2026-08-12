@@ -1,12 +1,11 @@
-import { isAndroid } from '@/src/common/util/platform';
 import { useEffect } from 'react';
-import { checkForUpdate } from './checkForUpdate';
+import { canSelfUpdate, checkForUpdate } from './checkForUpdate';
 import { UpdateSheet } from './UpdateSheet';
 
 // Let startup (feed fan-out, first paint) settle before touching the network.
 const AUTO_CHECK_DELAY_MS = 5000;
 
-/** Launch update check + the update sheet. Android only. */
+/** Launch update check + the update sheet. Sideloaded Android builds only. */
 export function AppUpdater() {
   useEffect(() => {
     const timer = setTimeout(
@@ -16,6 +15,6 @@ export function AppUpdater() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (!isAndroid) return null;
+  if (!canSelfUpdate()) return null;
   return <UpdateSheet />;
 }

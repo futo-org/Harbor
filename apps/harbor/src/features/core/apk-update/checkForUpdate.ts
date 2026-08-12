@@ -7,6 +7,13 @@ import { type UpdateInfo, useUpdateStore } from './hooks/useUpdateStore';
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+/** Only sideloaded Android builds self-update. Store builds are signed by
+ *  Play, so our APKs can never install over them (see APP_DISTRIBUTION in
+ *  eas.json). */
+export function canSelfUpdate(): boolean {
+  return isAndroid && Constants.expoConfig?.extra?.distribution !== 'store';
+}
+
 /** Staging installs poll the staging feed; everything else production. */
 export function updateManifestUrl(): string {
   const variant = Constants.expoConfig?.extra?.variant;
@@ -47,7 +54,7 @@ export async function checkForUpdate({
 }: {
   manual: boolean;
 }): Promise<void> {
-  if (!isAndroid) return;
+  if (!canSelfUpdate()) return;
 
   const store = useUpdateStore.getState();
 

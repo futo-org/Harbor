@@ -19,8 +19,8 @@ import {
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { isAndroid, isWeb } from '@/src/common/util/platform';
-import { checkForUpdate } from '@/src/features/core/apk-update';
+import { isWeb } from '@/src/common/util/platform';
+import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -142,7 +142,7 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="About">
                 <VersionRow />
-                {isAndroid ? <CheckForUpdatesRow /> : null}
+                {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
               </ListItemGroup>
 
               <SourceCodeItem />

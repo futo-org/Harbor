@@ -6,6 +6,11 @@ const { version: PKG_VERSION } = require('./package.json');
 // 'dev' | 'staging' | 'production'. Staging comes from the eas.json
 // profile env; dev from the local scripts.
 const VARIANT = process.env.APP_VARIANT ?? 'production';
+
+// 'apk' | 'store'. Store builds (Play/App Store) must not self-update —
+// Play App Signing uses a different certificate, so a sideloaded APK
+// can never install over them.
+const DISTRIBUTION = process.env.APP_DISTRIBUTION ?? 'apk';
 const IS_DEV = VARIANT === 'dev';
 const IS_STAGING = VARIANT === 'staging';
 
@@ -15,6 +20,11 @@ const ID = IS_DEV
   : IS_STAGING
     ? 'org.futo.polycentric.staging'
     : 'org.futo.polycentric';
+
+// Play builds get their own package so the store channel can never
+// entangle with sideloaded installs (versionCodes and signatures stay
+// fully independent). iOS keeps `ID` — the App Store app is bound to it.
+const ANDROID_ID = !IS_DEV && DISTRIBUTION === 'store' ? `${ID}.store` : ID;
 
 const GOOGLE_SERVICES_FILE =
   process.env.GOOGLE_SERVICES_JSON ?? './google-services.json';
@@ -26,7 +36,8 @@ const HAS_GOOGLE_SERVICES = (() => {
     return (config.client ?? []).some(
       (client: {
         client_info?: { android_client_info?: { package_name?: string } };
-      }) => client.client_info?.android_client_info?.package_name === ID,
+      }) =>
+        client.client_info?.android_client_info?.package_name === ANDROID_ID,
     );
   } catch {
     return false;
@@ -69,7 +80,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         './src/common/assets/images/app-icons/android-icon-background.png',
       backgroundColor: '#FF6A00',
     },
-    package: ID,
+    package: ANDROID_ID,
     permissions: [
       'android.permission.CAMERA',
       // Self-updater hands downloaded APKs to the system installer.
@@ -125,6 +136,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: {},
     variant: VARIANT,
+    distribution: DISTRIBUTION,
     eas: {
       projectId: '4db035ec-2de9-448a-a6cf-07347d6ae8b9',
     },

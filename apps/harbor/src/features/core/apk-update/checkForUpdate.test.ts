@@ -6,7 +6,9 @@ jest.mock('expo-application', () => ({
   nativeBuildVersion: '57',
 }));
 
-const mockExtra: { variant?: string } = { variant: 'production' };
+const mockExtra: { variant?: string; distribution?: string } = {
+  variant: 'production',
+};
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: {
@@ -56,6 +58,7 @@ describe('checkForUpdate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockExtra.variant = 'production';
+    mockExtra.distribution = 'apk';
     useUpdateStore.setState({
       skippedVersionCode: null,
       available: null,
@@ -84,6 +87,16 @@ describe('checkForUpdate', () => {
     await checkForUpdate({ manual: true });
     expect(useUpdateStore.getState().available).toBeNull();
     expect(mockToastSuccess).toHaveBeenCalled();
+  });
+
+  it('never checks in store-distributed builds', async () => {
+    mockExtra.distribution = 'store';
+
+    const fetchFn = mockFetch(MANIFEST);
+    await checkForUpdate({ manual: false });
+    await checkForUpdate({ manual: true });
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(useUpdateStore.getState().available).toBeNull();
   });
 
   it('rejects a manifest for a different package', async () => {

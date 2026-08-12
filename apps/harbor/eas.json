@@ -21,19 +21,30 @@
     "staging": {
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "staging"
+        "APP_VARIANT": "staging",
+        "APP_DISTRIBUTION": "store"
       }
     },
     "staging-apk": {
       "extends": "staging",
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "staging",
+        "APP_DISTRIBUTION": "apk"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "APP_DISTRIBUTION": "store"
+      }
     },
     "production-apk": {
       "extends": "production",
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "APP_DISTRIBUTION": "apk"
+      }
     }
   },
   "submit": {
