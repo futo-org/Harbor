@@ -6,14 +6,8 @@ use tonic::Status;
 use super::repository::Query;
 use crate::service::context::ServiceContext;
 
-/// Anonymous callers block nobody.
 static NO_BLOCKS: LazyLock<Arc<HashSet<String>>> =
     LazyLock::new(|| Arc::new(HashSet::new()));
-
-/// An empty blocklist, for pipelines that don't apply blocking.
-pub fn no_blocks() -> Arc<HashSet<String>> {
-    Arc::clone(&NO_BLOCKS)
-}
 
 #[derive(Default)]
 pub struct BlockCache {
@@ -63,6 +57,11 @@ impl BlockCache {
             Some(caller) => self.blocked_set(ctx, caller).await,
             None => Ok(Arc::clone(&NO_BLOCKS)),
         }
+    }
+
+    /// Empty blocklist for pipelines that don't apply blocking.
+    pub fn empty_blocklist() -> Arc<HashSet<String>> {
+        Arc::clone(&NO_BLOCKS)
     }
 
     /// Drop the cached blocklist for `identity`.
