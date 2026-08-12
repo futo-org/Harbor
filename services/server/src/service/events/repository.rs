@@ -1,6 +1,8 @@
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
-use polycentric_common::models::protos_v2::EventKey;
+use ::entity::follow_model as FollowModel;
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::{Content, EventKey, Follow};
 use sea_orm::sea_query::{Expr, IntoCondition};
 use sea_orm::*;
 
@@ -137,7 +139,37 @@ impl Mutation {
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
         active_model: EventModel::ActiveModel,
-    ) -> Result<EventModel::Model, DbErr> {
-        active_model.insert(db).await
+        content: Option<&Content>,
+    ) -> Result<(), DbErr> {
+        let event = active_model.insert(db).await?;
+
+        let Some(Content {
+            content_body: Some(body),
+        }) = content
+        else {
+            return Ok(());
+        };
+        match body {
+            ContentBody::Follow(follow) => {
+                Mutation::follow(db, &event, follow).await
+            }
+            _ => Ok(()),
+        }
+    }
+
+    async fn follow<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        follow: &Follow,
+    ) -> Result<(), DbErr> {
+        FollowModel::ActiveModel {
+            event_id: Set(event.id),
+            follower: Set(event.identity.clone()),
+            followee: Set(follow.identity.clone()),
+        }
+        .insert(db)
+        .await?;
+
+        Ok(())
     }
 }
