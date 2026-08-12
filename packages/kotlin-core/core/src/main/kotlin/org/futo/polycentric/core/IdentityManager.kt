@@ -1,6 +1,8 @@
 package org.futo.polycentric.core
 
 import java.security.MessageDigest
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import org.futo.polycentric.ffi.ListEventsArgs
@@ -56,6 +58,17 @@ class IdentityManager(private val client: PolycentricClient) {
         fun keysEqual(a: PublicKey, b: PublicKey): Boolean =
             a.key_type == b.key_type && a.key == b.key
     }
+
+    /**
+     * Serializes identity-document mutations (add/remove key or server). Each
+     * is a getCurrent() → publish() read-modify-write against the same
+     * document; running two concurrently (e.g. approving two paired devices at
+     * once) makes the second overwrite the first's change based on a stale
+     * read, dropping a key. Holding this across the whole read-modify-write
+     * makes them run one at a time. Only guards same-process concurrency;
+     * cross-device conflicts are resolved by sequence numbers on the server.
+     */
+    private val mutationMutex = Mutex()
 
     /**
      * Resolves the current identity state by finding the latest Identity
@@ -272,10 +285,10 @@ class IdentityManager(private val client: PolycentricClient) {
     }
 
     /** Adds a signing key to the current identity and publishes the update. */
-    suspend fun addSigningKey(publicKey: PublicKey): SignedEvent {
+    suspend fun addSigningKey(publicKey: PublicKey): SignedEvent = mutationMutex.withLock {
         val state = getCurrent()
         val identityKey = state.identityKey ?: throw NoActiveIdentityException()
-        return publish(
+        publish(
             identityKey,
             state.rotationKeys,
             state.signingKeys + publicKey,
@@ -284,13 +297,13 @@ class IdentityManager(private val client: PolycentricClient) {
     }
 
     /** Adds a rotation key to the current identity and publishes the update. */
-    suspend fun addRotationKey(publicKey: PublicKey): SignedEvent {
+    suspend fun addRotationKey(publicKey: PublicKey): SignedEvent = mutationMutex.withLock {
         val state = getCurrent()
         val identityKey = state.identityKey ?: throw NoActiveIdentityException()
         if (state.rotationKeys.any { keysEqual(it, publicKey) }) {
             throw PolycentricException("Rotation key already exists")
         }
-        return publish(
+        publish(
             identityKey,
             state.rotationKeys + publicKey,
             state.signingKeys,
@@ -303,7 +316,7 @@ class IdentityManager(private val client: PolycentricClient) {
      * update. Calls the server's `GetInfo` first — an unreachable server
      * is not added.
      */
-    suspend fun addServer(url: String): SignedEvent {
+    suspend fun addServer(url: String): SignedEvent = mutationMutex.withLock {
         val state = getCurrent()
         val identityKey = state.identityKey ?: throw NoActiveIdentityException()
 
@@ -316,7 +329,7 @@ class IdentityManager(private val client: PolycentricClient) {
 
         client.core.getServerInfo(url)
 
-        return publish(
+        publish(
             identityKey,
             state.rotationKeys,
             state.signingKeys,
@@ -325,7 +338,7 @@ class IdentityManager(private val client: PolycentricClient) {
     }
 
     /** Removes a server from the current identity document and publishes the update. */
-    suspend fun removeServer(url: String): SignedEvent {
+    suspend fun removeServer(url: String): SignedEvent = mutationMutex.withLock {
         val state = getCurrent()
         val identityKey = state.identityKey ?: throw NoActiveIdentityException()
 
@@ -335,7 +348,7 @@ class IdentityManager(private val client: PolycentricClient) {
             throw PolycentricException("Server not found")
         }
 
-        return publish(
+        publish(
             identityKey,
             state.rotationKeys,
             state.signingKeys,
