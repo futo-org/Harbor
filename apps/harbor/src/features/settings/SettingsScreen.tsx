@@ -19,9 +19,14 @@ import {
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Linking, Switch, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Linking, Switch, View } from 'react-native';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -135,6 +140,11 @@ export default function SettingsTabScreen() {
                 </ListItemWrapper>
               </ListItemGroup>
 
+              <ListItemGroup label="About">
+                <VersionRow />
+                {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
+              </ListItemGroup>
+
               <SourceCodeItem />
             </View>
           </ScrollView>
@@ -192,6 +202,65 @@ function ListItemWrapper({
       >
         {children}
         <Icon name="chevronForward" size={18} color="neutral_500" />
+      </View>
+    </ListItem>
+  );
+}
+
+function VersionRow() {
+  const version = isWeb
+    ? Constants.expoConfig?.version
+    : Application.nativeApplicationVersion;
+  const build = isWeb ? null : Application.nativeBuildVersion;
+
+  return (
+    <ListItem pressable={false}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
+      >
+        <Text variant="body">Version</Text>
+        <Text variant="body" color="neutral_500">
+          {version ?? 'unknown'}
+          {build ? ` (${build})` : ''}
+        </Text>
+      </View>
+    </ListItem>
+  );
+}
+
+function CheckForUpdatesRow() {
+  const [checking, setChecking] = useState(false);
+
+  const onPress = async () => {
+    if (checking) return;
+    setChecking(true);
+    try {
+      await checkForUpdate({ manual: true });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <ListItem onPress={() => void onPress()}>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
+      >
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+          <Icon name="download" size={22} color="primary_600" />
+          <Text variant="body">Check for updates</Text>
+        </View>
+        {checking ? <ActivityIndicator size="small" /> : null}
       </View>
     </ListItem>
   );

@@ -84,7 +84,7 @@ const config: Config = {
             { label: 'Web app', href: 'https://harbor.social' },
             {
               label: 'Android APK',
-              href: 'https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk',
+              href: 'https://static.harbor.social/apk/production/harbor-latest.apk',
             },
             {
               label: 'iOS (TestFlight)',
