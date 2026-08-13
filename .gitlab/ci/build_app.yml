@@ -103,8 +103,10 @@ app-web-image:
     - cd ./apps/harbor
 
 # EAS builds run: manual on merge requests, automatic on the default branch and
-# on tags. Only the APK waits for completion (we download it); the others are
-# fire-and-forget.
+# on tags. Each job saves the EAS build metadata (eas-build.json) so the
+# deploy jobs in deploy_app.yml can submit or publish the result. Only the
+# APK jobs wait for completion (the update feed needs the file); the store
+# builds are queued with --no-wait and submitted later by build id.
 .app-eas-build:
   extends: .app-build-expo
   rules:
@@ -126,18 +128,14 @@ app-web-image:
 
 # APKs follow the same staging/production split as the service deploys:
 # staging builds from MRs and the default branch, production from release
-# tags or a manual run. Each job also publishes to its variant's update feed
-# on the static bucket — see scripts/publish-android-update.mjs for the
-# STATIC_* variables that requires.
+# tags or a manual run. These wait for EAS and download the APK so the
+# deploy jobs can publish it to the update feed.
 .app-android-apk:
   extends: .app-eas-build
   script:
     - npx eas-cli build --platform android --profile ${EAS_PROFILE} --non-interactive --wait --json > eas-build.json
     # eas only builds remotely; download the resulting APK so it is a CI artifact.
     - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json harbor.apk
-    # Publish the APK and latest.json to the update feed.
-    - cd "$CI_PROJECT_DIR"
-    - node .gitlab/ci/scripts/publish-android-update.mjs
   artifacts:
     paths:
       - apps/harbor/harbor.apk
@@ -148,7 +146,6 @@ app-android-apk-staging:
   extends: .app-android-apk
   variables:
     EAS_PROFILE: staging-apk
-    UPDATE_CHANNEL: staging
   rules:
     - if: $CI_COMMIT_TAG
       when: never
@@ -156,30 +153,17 @@ app-android-apk-staging:
 
 app-android-apk-production:
   extends: .app-android-apk
-  # publish stage so release-changelog (tag pipelines) can feed the manifest.
-  stage: publish
   variables:
     EAS_PROFILE: production-apk
-    UPDATE_CHANNEL: production
-  needs:
-    - job: rn-sdk-build
-      artifacts: true
-    - job: js-sdks-build
-      artifacts: true
-    - job: rs-core-uniffi-web-build
-      artifacts: true
-    - job: release-changelog
-      artifacts: true
-      optional: true
   rules:
     - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
       allow_failure: true
 
-# Store builds auto-submit to their app's internal/TestFlight track:
-# staging from the default branch, production on release tags or a manual
-# run.
+# Store builds only queue the build on EAS: staging from the default
+# branch, production on release tags or a manual run. Submission to the
+# internal/TestFlight track happens in the deploy jobs — see deploy_app.yml.
 .app-store-staging-rules:
   rules:
     - if: $CI_COMMIT_TAG
@@ -193,26 +177,39 @@ app-android-apk-production:
       when: manual
       allow_failure: true
 
-app-android-aab-staging:
+.app-store-build:
   extends: .app-eas-build
-  rules: !reference [.app-store-staging-rules, rules]
   script:
-    - npx eas-cli build --platform android --profile staging --non-interactive --no-wait --auto-submit
+    - npx eas-cli build --platform ${EAS_PLATFORM} --profile ${EAS_PROFILE} --non-interactive --no-wait --json > eas-build.json
+  artifacts:
+    paths:
+      - apps/harbor/eas-build.json
+    expire_in: 1 week
+
+app-android-aab-staging:
+  extends: .app-store-build
+  rules: !reference [.app-store-staging-rules, rules]
+  variables:
+    EAS_PLATFORM: android
+    EAS_PROFILE: staging
 
 app-android-aab-production:
-  extends: .app-eas-build
+  extends: .app-store-build
   rules: !reference [.app-store-production-rules, rules]
-  script:
-    - npx eas-cli build --platform android --profile production --non-interactive --no-wait --auto-submit
+  variables:
+    EAS_PLATFORM: android
+    EAS_PROFILE: production
 
 app-ios-staging:
-  extends: .app-eas-build
+  extends: .app-store-build
   rules: !reference [.app-store-staging-rules, rules]
-  script:
-    - npx eas-cli build --platform ios --profile staging --non-interactive --no-wait --auto-submit
+  variables:
+    EAS_PLATFORM: ios
+    EAS_PROFILE: staging
 
 app-ios-production:
-  extends: .app-eas-build
+  extends: .app-store-build
   rules: !reference [.app-store-production-rules, rules]
-  script:
-    - npx eas-cli build --platform ios --profile production --non-interactive --no-wait --auto-submit
+  variables:
+    EAS_PLATFORM: ios
+    EAS_PROFILE: production

@@ -42,3 +42,133 @@ app-deploy-image-production:
   when: manual
   environment:
     name: production/app
+
+###########################################
+# Store submissions and APK update feed   #
+###########################################
+
+# Same change set as the .app-eas-build jobs so a deploy job never exists
+# without the build job its needs point at.
+.app-deploy-staging-rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+
+.app-deploy-production-rules:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+
+# Submits the EAS build saved by the build job to the app's internal/
+# TestFlight track. eas-cli needs the expo project config even when
+# submitting by id; if the build is still running, the submission waits on
+# the EAS side (awaiting-build).
+.app-store-submit:
+  stage: deploy
+  interruptible: false
+  image: node:24-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+    - cd ./apps/harbor
+  script:
+    # eas build --json emits an array of builds; concat also tolerates a bare object.
+    - BUILD_ID=$(node -p "[].concat(JSON.parse(require('fs').readFileSync('eas-build.json', 'utf8')))[0].id")
+    - npx eas-cli submit --platform ${EAS_PLATFORM} --profile ${EAS_PROFILE} --id ${BUILD_ID} --non-interactive --no-wait
+
+app-deploy-android-store-staging:
+  extends: .app-store-submit
+  rules: !reference [.app-deploy-staging-rules, rules]
+  variables:
+    EAS_PLATFORM: android
+    EAS_PROFILE: staging
+  environment:
+    name: staging/app-android
+  needs:
+    - job: app-android-aab-staging
+      artifacts: true
+
+app-deploy-android-store-production:
+  extends: .app-store-submit
+  rules: !reference [.app-deploy-production-rules, rules]
+  variables:
+    EAS_PLATFORM: android
+    EAS_PROFILE: production
+  environment:
+    name: production/app-android
+  needs:
+    - job: app-android-aab-production
+      artifacts: true
+
+app-deploy-ios-store-staging:
+  extends: .app-store-submit
+  rules: !reference [.app-deploy-staging-rules, rules]
+  variables:
+    EAS_PLATFORM: ios
+    EAS_PROFILE: staging
+  environment:
+    name: staging/app-ios
+  needs:
+    - job: app-ios-staging
+      artifacts: true
+
+app-deploy-ios-store-production:
+  extends: .app-store-submit
+  rules: !reference [.app-deploy-production-rules, rules]
+  variables:
+    EAS_PLATFORM: ios
+    EAS_PROFILE: production
+  environment:
+    name: production/app-ios
+  needs:
+    - job: app-ios-production
+      artifacts: true
+
+# Publishes the APK and latest.json to the channel's update feed on the
+# static bucket — see scripts/publish-android-update.mjs for the STATIC_*
+# variables this requires.
+.app-deploy-apk:
+  stage: deploy
+  interruptible: false
+  image: node:24-slim
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+  script:
+    - node .gitlab/ci/scripts/publish-android-update.mjs
+
+app-deploy-apk-staging:
+  extends: .app-deploy-apk
+  rules: !reference [.app-deploy-staging-rules, rules]
+  variables:
+    UPDATE_CHANNEL: staging
+  environment:
+    name: staging/app-apk
+  needs:
+    - job: app-android-apk-staging
+      artifacts: true
+
+app-deploy-apk-production:
+  extends: .app-deploy-apk
+  rules: !reference [.app-deploy-production-rules, rules]
+  variables:
+    UPDATE_CHANNEL: production
+  environment:
+    name: production/app-apk
+  needs:
+    - job: app-android-apk-production
+      artifacts: true
+    # v* tags feed the release notes into latest.json.
+    - job: release-changelog
+      artifacts: true
+      optional: true
