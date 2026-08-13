@@ -12,7 +12,7 @@ multiple servers at once. If one server stops serving a user's content, clients
 fetch it from another server that holds a copy.
 
 Harbor is the flagship implementation of the
-[**Polycentric Protocol**](/protocol/overview), defined in the
+[**Polycentric Protocol**](./protocol/overview.md), defined in the
 [`protos`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/protos)
 directory of the repository. Anyone can build their own client or server against
 the same protocol and interoperate with Harbor.

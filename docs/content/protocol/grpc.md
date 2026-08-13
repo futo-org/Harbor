@@ -8,7 +8,7 @@ sidebar_position: 3
 
 The server exposes its API as gRPC services, served over both gRPC (h2c) and gRPC-Web
 on port `3000`. The message types referenced here are defined in
-[Data Model](/protocol/data-model).
+[Data Model](./data-model.md).
 
 ## EventSyncService
 
@@ -183,7 +183,7 @@ message PairingSession {
 
 Registers a device for push notifications. The request is a signed
 `RegisterPushNotificationRequest`. The server currently supports Expo as the push
-service (see `EXPO_ACCESS_TOKEN` in [Running a Server](/running-a-server#other)).
+service (configured with the push-notifications service's `EXPO_ACCESS_TOKEN`).
 
 ```protobuf
 service NotificationService {

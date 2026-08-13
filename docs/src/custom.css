@@ -3,7 +3,14 @@
  * Colors follow the Harbor app palette (apps/harbor/src/common/theme/palette.ts).
  */
 
+@import "@fontsource/open-sans/400.css";
+@import "@fontsource/open-sans/600.css";
+@import "@fontsource/open-sans/700.css";
+@import "@fontsource/open-sans/800.css";
+
 :root {
+  /* App light palette: primary_500 with 600/700/800 darks, 400/300/200
+     lights; white base, neutral_25 surfaces, neutral_900 text. */
   --ifm-color-primary: #ff6a00;
   --ifm-color-primary-dark: #f56600;
   --ifm-color-primary-darker: #e05e00;
@@ -12,29 +19,223 @@
   --ifm-color-primary-lighter: #ff8833;
   --ifm-color-primary-lightest: #ff9447;
 
-  --ifm-background-color: #f2f5f9;
-  --ifm-background-surface-color: #ffffff;
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f2f5f9;
   --ifm-navbar-background-color: #ffffff;
+  --ifm-font-color-base: #1a1f29;
+  /* Matches the landing pages' ground (app palette neutral_900). */
   --ifm-footer-background-color: #1a1f29;
 
   --ifm-code-font-size: 95%;
   --ifm-font-family-base:
-    system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] {
-  --ifm-color-primary: #ff8833;
-  --ifm-color-primary-dark: #ff731f;
-  --ifm-color-primary-darker: #ff6a00;
-  --ifm-color-primary-darkest: #e05e00;
-  --ifm-color-primary-light: #ff9447;
-  --ifm-color-primary-lighter: #ffa05c;
-  --ifm-color-primary-lightest: #ffc049;
+  /* App dark palette: same primary scale; neutral_0 #0D1016 base,
+     neutral_25 #1E2127 surfaces, neutral_900 #CBCCCD text. */
+  --ifm-color-primary: #ff6a00;
+  --ifm-color-primary-dark: #f56600;
+  --ifm-color-primary-darker: #e05e00;
+  --ifm-color-primary-darkest: #cc5500;
+  --ifm-color-primary-light: #ff731f;
+  --ifm-color-primary-lighter: #ff8833;
+  --ifm-color-primary-lightest: #ff9447;
 
   --ifm-background-color: #0d1016;
-  --ifm-background-surface-color: #121b26;
+  --ifm-background-surface-color: #1e2127;
   --ifm-navbar-background-color: #0d1016;
-  --ifm-footer-background-color: #0a0d12;
+  --ifm-font-color-base: #cbcccd;
+  --ifm-footer-background-color: #1a1f29;
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.06);
+}
+
+/* Primary buttons always use white text, in both color modes. */
+.button--primary {
+  --ifm-button-color: #fff;
+}
+
+.navbar__link {
+  font-weight: 600;
+}
+
+/* footer.style: 'dark' hard-codes Infima's #303846; match the landing
+   pages' ground instead (app palette neutral_900). */
+.footer--dark {
+  --ifm-footer-background-color: #1a1f29;
+}
+
+/* The brand shows the title on the left; the logo is centered in the bar. */
+.navbar__logo {
+  height: 3rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Flat navbar with a hairline divider (app palette neutral steps). */
+.navbar {
+  box-shadow: none;
+  border-bottom: 1px solid #dde3ee;
+}
+
+[data-theme="dark"] .navbar {
+  border-bottom-color: #303237;
+}
+
+/* On the landing pages (home, apps) the navbar floats transparently over
+   the dark page. */
+html:has(.landing-page) .navbar {
+  position: absolute;
+  width: 100%;
+  background: transparent;
+  box-shadow: none;
+  border-bottom: none;
+  --ifm-navbar-link-color: #fff;
+}
+
+.navbar__title {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 800;
+}
+
+/* Homepage illustration animations. Element transforms need
+   transform-box: fill-box so scale/translate happen around the element,
+   not the SVG origin. */
+@media (prefers-reduced-motion: no-preference) {
+  .viz-float {
+    animation: viz-float 7s ease-in-out infinite;
+  }
+  .viz-sparkle {
+    animation: viz-sparkle 2.8s ease-in-out infinite;
+  }
+  .viz-flow {
+    stroke-dasharray: 9 11;
+    animation: viz-flow 1.4s linear infinite;
+  }
+  .viz-dot,
+  .viz-heart,
+  .viz-knob-on,
+  .viz-knob-off,
+  .viz-slide,
+  .viz-slide-rev {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .viz-dot {
+    animation: viz-pulse 1.4s ease-in-out infinite;
+  }
+  .viz-heart {
+    animation: viz-pulse 1.8s ease-in-out infinite;
+  }
+  .viz-knob-off {
+    animation: viz-knob-off 6s ease-in-out infinite;
+  }
+  .viz-knob-on {
+    animation: viz-knob-on 6s ease-in-out infinite;
+  }
+  .viz-slide {
+    animation: viz-slide 3.2s ease-in-out infinite;
+  }
+  .viz-slide-rev {
+    animation: viz-slide-rev 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes viz-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes viz-sparkle {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+@keyframes viz-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+@keyframes viz-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+@keyframes viz-knob-off {
+  0%,
+  35%,
+  100% {
+    transform: translateX(0);
+  }
+  50%,
+  85% {
+    transform: translateX(-48px);
+  }
+}
+@keyframes viz-knob-on {
+  0%,
+  35%,
+  100% {
+    transform: translateX(0);
+  }
+  50%,
+  85% {
+    transform: translateX(48px);
+  }
+}
+@keyframes viz-slide {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(14px);
+  }
+}
+@keyframes viz-slide-rev {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-14px);
+  }
+}
+
+html:has(.landing-page) .navbar__title {
+  color: #fff;
+  font-size: 2rem;
+}
+
+html:has(.landing-page) .navbar__toggle {
+  color: #fff;
+}
+
+/* Mobile: the oversized landing brand overflows the bar. */
+@media (max-width: 996px) {
+  html:has(.landing-page) .navbar__title {
+    font-size: 1.25rem;
+  }
+}
+
+/* The color-mode toggle only makes sense on docs pages; the landing and
+   apps pages have a fixed look. */
+html:not(.docs-doc-page) .navbar [class*="colorModeToggle"] {
+  display: none;
 }

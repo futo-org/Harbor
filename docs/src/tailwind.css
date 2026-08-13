@@ -1,0 +1,29 @@
+/**
+ * Tailwind (v4) layer for the landing pages. Preflight is intentionally
+ * not imported — Infima owns the base styles on docs pages.
+ *
+ * This file is excluded from biome (biome.json): its CSS parser cannot
+ * parse the Tailwind `@theme` at-rule.
+ */
+
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+@theme {
+  --font-sans:
+    "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  /* Mirrors the app palette (apps/harbor/src/common/theme/palette.ts). */
+  --color-neutral-25: #f2f5f9;
+  --color-neutral-100: #dde3ee;
+  --color-neutral-300: #a8b2c4;
+  --color-neutral-600: #5f6b7f;
+  --color-neutral-800: #2a303d;
+  --color-neutral-900: #1a1f29;
+  --color-neutral-950: #12161e;
+  --color-neutral-975: #0d1016;
+  --color-primary-300: #ff8833;
+  --color-primary-400: #ff731f;
+  --color-primary-500: #ff6a00;
+  --color-primary-600: #f56600;
+}

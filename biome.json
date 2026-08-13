@@ -34,7 +34,8 @@
       "!packages/rs-core-wasm-node",
       "!packages/js-core/src/proto/polycentric.ts",
       "!packages/js-core/src/proto/polycentric/v2",
-      "!**/rust_modules"
+      "!**/rust_modules",
+      "!docs/src/tailwind.css"
     ]
   },
   "formatter": {

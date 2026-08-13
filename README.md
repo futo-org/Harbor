@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.polycentric.io/">Docs</a> - <a href="https://gitlab.futo.org/polycentric">Code</a>
+  <a href="https://join.harbor.social/docs/">Docs</a> - <a href="https://gitlab.futo.org/polycentric">Code</a>
 </p>
 
 ## Harbor is an open-source, distributed social network
