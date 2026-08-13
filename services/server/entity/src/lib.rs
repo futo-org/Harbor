@@ -21,6 +21,7 @@ pub mod moderator_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;
+pub mod reaction_model;
 pub mod reaction_summary_model;
 pub mod reaction_tally_model;
 pub mod reply_count_model;
