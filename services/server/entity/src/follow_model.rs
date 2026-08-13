@@ -1,6 +1,14 @@
+//! Model for the `follow` table.
+
 use sea_orm::entity::prelude::*;
 
-/// Computed table of which user is following which other users.
+/// Cache for follows.
+///
+/// This table contains a row for each *not-deleted* follow, based on the
+/// (valid) follow and deletion events in `events` table.
+///
+/// This table purely serves as a cache. The source of truth is always the
+/// `events` table and this table can be fully recreated based on it.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "follow")]
