@@ -35,6 +35,7 @@ mod m20260807_000001_migrate_missing_content_profile_update_data;
 mod m20260807_000002_align_report_categories_with_labels;
 mod m20260810_000001_search_query_function;
 mod m20260812_000001_add_content_attributed_to_reaction_table;
+mod m20260812_000002_add_attributed_to_reaction_summaries;
 
 pub struct Migrator;
 
@@ -90,6 +91,9 @@ impl MigratorTrait for Migrator {
             ),
             Box::new(
                 m20260812_000001_add_content_attributed_to_reaction_table::Migration,
+            ),
+            Box::new(
+                m20260812_000002_add_attributed_to_reaction_summaries::Migration,
             ),
         ]
     }

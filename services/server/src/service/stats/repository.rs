@@ -2,6 +2,7 @@ use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use ::entity::attributed_to_reaction_summary_model as AttributedSummaryModel;
 use ::entity::reaction_summary_model as ReactionSummaryModel;
 use ::entity::reaction_tally_model as ReactionTallyModel;
 use ::entity::reply_count_model as ReplyCountModel;
@@ -445,6 +446,84 @@ impl Mutation {
             .await?;
 
         Ok(())
+    }
+
+    /// Increment the upvote/downvote count for an out-of-network (URL)
+    /// reaction, creating the summary row with a count of 1 if none exists yet.
+    /// Mirrors `count_reaction_for` but keyed by URL.
+    pub async fn count_attributed_reaction_for(
+        db: &DbConn,
+        url: String,
+        positive: bool,
+    ) -> Result<(), DbErr> {
+        let (upvote, downvote) = if positive { (1, 0) } else { (0, 1) };
+
+        let count_col = if positive {
+            AttributedSummaryModel::Column::UpvoteCount
+        } else {
+            AttributedSummaryModel::Column::DownvoteCount
+        };
+
+        AttributedSummaryModel::Entity::insert(
+            AttributedSummaryModel::ActiveModel {
+                url: Set(url),
+                upvote_count: Set(upvote),
+                downvote_count: Set(downvote),
+            },
+        )
+        .on_conflict(
+            OnConflict::column(AttributedSummaryModel::Column::Url)
+                .value(
+                    count_col,
+                    Expr::col((AttributedSummaryModel::Entity, count_col))
+                        .add(1),
+                )
+                .to_owned(),
+        )
+        .exec(db)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Decrement the upvote/downvote count for an out-of-network (URL)
+    /// reaction, only when that count is greater than zero.
+    pub async fn remove_attributed_reaction_for(
+        db: &DbConn,
+        url: String,
+        positive: bool,
+    ) -> Result<(), DbErr> {
+        let count_col = if positive {
+            AttributedSummaryModel::Column::UpvoteCount
+        } else {
+            AttributedSummaryModel::Column::DownvoteCount
+        };
+
+        AttributedSummaryModel::Entity::update_many()
+            .col_expr(count_col, Expr::col(count_col).sub(1))
+            .filter(
+                AttributedSummaryModel::Column::Url
+                    .eq(url)
+                    .and(count_col.gt(0)),
+            )
+            .exec(db)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
+    /// no reactions have been recorded for it yet.
+    pub async fn get_attributed_reaction_summary(
+        db: &DbConn,
+        url: &str,
+    ) -> Result<(i64, i64), DbErr> {
+        let row = AttributedSummaryModel::Entity::find_by_id(url.to_owned())
+            .one(db)
+            .await?;
+        Ok(row
+            .map(|r| (r.upvote_count, r.downvote_count))
+            .unwrap_or((0, 0)))
     }
 
     /// Decrement the tally for a specific `(emoji, positive)` reaction to the

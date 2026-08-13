@@ -2,10 +2,10 @@ use crate::client::PolycentricClient;
 use crate::media::process_image;
 use crate::sync;
 use polycentric_common::models::protos_v2::{
-    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest,
-    UrlInfoRequest, content_service_client::ContentServiceClient,
+    ContentDigest, CreatePairingSessionRequest, Event, GetAttributedToReactionCountsRequest,
+    GetPairingSessionRequest, GetServerInfoRequest, Identity, JoinPairingSessionRequest,
+    ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest, SignedEvent,
+    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -529,6 +529,30 @@ impl PolycentricCore {
             .get_info(GetServerInfoRequest {})
             .await
             .map_err(|e| CoreError::Network(format!("get_server_info: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the maintained upvote/downvote counts for an out-of-network
+    /// target. `request_bytes` is a serialized
+    /// `GetAttributedToReactionCountsRequest` (carrying the AttributedTo, e.g.
+    /// a link to a video URL); returns serialized
+    /// `GetAttributedToReactionCountsResponse` proto bytes.
+    pub async fn get_attributed_to_reaction_counts(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = GetAttributedToReactionCountsRequest::decode(request_bytes.as_slice())
+            .map_err(|e| {
+                CoreError::Decode(format!(
+                    "Failed to decode GetAttributedToReactionCountsRequest: {e}"
+                ))
+            })?;
+        let mut client = EventSyncServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .get_attributed_to_reaction_counts(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("get_attributed_to_reaction_counts: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 

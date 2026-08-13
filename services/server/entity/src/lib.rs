@@ -1,3 +1,4 @@
+pub mod attributed_to_reaction_summary_model;
 pub mod ban_model;
 pub mod content_attributed_to_reaction_model;
 pub mod content_blob_model;
