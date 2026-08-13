@@ -13,10 +13,10 @@ use crate::{
             },
             util::map_db_err,
         },
+        graph::repository::Query as GraphRepository,
         proto::{GetFeedResponse, GetIdentityFeedRequest},
     },
 };
-use std::collections::HashSet;
 use tonic::Status;
 
 pub struct Params {
@@ -33,16 +33,14 @@ pub async fn handle(
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-
-    if caller_blocks_subject(caller, &blocked, &req.identity) {
+    if caller_blocks_subject(ctx, caller, &req.identity).await? {
         return blocked_identity_response();
     }
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
-        blocked,
+        caller.map(str::to_string),
     )?;
     let params = Params {
         common,
@@ -59,12 +57,17 @@ pub async fn handle(
     })
 }
 
-fn caller_blocks_subject(
+/// Whether the caller blocks the identity whose feed was requested. A caller
+/// never blocks their own feed.
+async fn caller_blocks_subject(
+    ctx: &ServiceContext,
     caller: Option<&str>,
-    blocked: &HashSet<String>,
     subject: &str,
-) -> bool {
-    caller.is_some_and(|caller| caller != subject && blocked.contains(subject))
+) -> Result<bool, Status> {
+    let Some(caller) = caller.filter(|caller| *caller != subject) else {
+        return Ok(false);
+    };
+    GraphRepository::blocks_identity(ctx, caller, subject).await
 }
 
 /// Produce a terminal empty page (`has_next_page: false`) for profile feeds
@@ -100,10 +103,10 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    feeds_pipeline::hydrate(ctx, params.common.caller.as_deref(), fetched).await
 }
 
 async fn filter(
@@ -116,7 +119,7 @@ async fn filter(
         fetched,
         hydration,
         &_params.common.omit_labels,
-        &_params.common.blocked,
+        &hydration.blocked_identities,
     )
     .await
 }
@@ -133,61 +136,17 @@ async fn view(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::proto::content::ContentBody;
-    use crate::service::proto::{Block, Content};
-    use ::entity::content_model as ContentModel;
-    use ::entity::event_model as EventModel;
-    use polycentric_common::models::collections;
-    use prost::Message;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
-    use sea_orm::{DbBackend, MockDatabase, MockRow};
+    use ::entity::block_model as BlockModel;
+    use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
-
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
-    }
-
-    fn graph_event_row(id: i64, identity: &str) -> EventModel::Model {
-        EventModel::Model {
-            id,
-            collection: collections::SOCIAL_GRAPH as i16,
-            identity: identity.to_string(),
-            public_key_type: 1,
-            public_key: vec![0xaa],
-            sequence: id,
-            content_digest_type: Some(1),
-            content_digest_bytes: Some(vec![id as u8]),
-            signature: vec![],
-            previous_signature: vec![],
-            previous_root: vec![],
-            event_bytes: vec![id as u8],
-            created_at: now(),
-            synced_at: now(),
-        }
-    }
-
-    fn block_content_row(id: i64, target: &str) -> ContentModel::Model {
-        let content = Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: target.to_string(),
-            })),
-        };
-        ContentModel::Model {
-            id,
-            digest_type: 1,
-            digest_bytes: vec![id as u8],
-            serialized_bytes: content.encode_to_vec(),
-            synced_at: now(),
-        }
-    }
 
     async fn ctx_where_alice_blocks_bob() -> Arc<ServiceContext> {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![(
-                graph_event_row(1, "alice"),
-                block_content_row(1, "bob"),
-            )]])
-            .append_query_results([Vec::<MockRow>::new()])
+            .append_query_results([vec![BlockModel::Model {
+                event_id: 1,
+                blocker: "alice".to_string(),
+                blocked: "bob".to_string(),
+            }]])
             .into_connection();
         let kafka_producer = common_kafka::build_producer()
             .await

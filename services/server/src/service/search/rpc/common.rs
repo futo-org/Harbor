@@ -9,6 +9,7 @@ use crate::service::feeds::rpc::common::{
 use crate::service::feeds::rpc::common::{
     to_target_event_key, to_target_event_keys,
 };
+use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
@@ -26,7 +27,6 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use prost::Message;
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::sync::Arc;
 use tonic::Status;
 
 pub use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
@@ -39,16 +39,15 @@ pub struct Params<SortedBy> {
     pub query: String,
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter<SortedBy>>,
-    /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous. Constructed from block events the server keeps.
-    pub blocked: Arc<HashSet<String>>,
+    /// The authenticated caller--`None` for anonymous requests
+    pub caller: Option<String>,
 }
 
 impl<SortedBy> Params<SortedBy> {
     pub fn from_req_params(
         query: String,
         params: &Option<PageParams>,
-        blocked: Arc<HashSet<String>>,
+        caller: Option<String>,
     ) -> Result<Params<SortedBy>, Status>
     where
         SortedBy: for<'a> Deserialize<'a>,
@@ -80,7 +79,7 @@ impl<SortedBy> Params<SortedBy> {
             query,
             limit,
             cursor_filter,
-            blocked,
+            caller,
         })
     }
 }
@@ -349,6 +348,7 @@ pub struct SearchResponseFilter<SortedBy> {
 
 pub async fn hydrate<SortedBy>(
     ctx: &ServiceContext,
+    caller: Option<&str>,
     fetched: &Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
     let rows = &fetched.rows;
@@ -402,6 +402,8 @@ pub async fn hydrate<SortedBy>(
             })
     };
 
+    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx, caller);
+
     let (
         deletes_by_target,
         identity_events,
@@ -409,6 +411,7 @@ pub async fn hydrate<SortedBy>(
         referenced,
         label_events,
         stats,
+        blocked_identities,
     ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
@@ -416,6 +419,7 @@ pub async fn hydrate<SortedBy>(
         referenced_fut,
         labels_fut,
         stats_fut,
+        blocked_fut,
     )?;
 
     let mut quote_post_events = Vec::new();
@@ -437,6 +441,7 @@ pub async fn hydrate<SortedBy>(
         repost_events,
         label_events,
         stats,
+        blocked_identities,
     })
 }
 

@@ -1,14 +1,16 @@
 use crate::service::content::repository::split_event_key;
+use ::entity::block_model as BlockModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow, Post,
+    Block, Content, Delete, EventKey, Follow, Post,
 };
 use sea_orm::sea_query::{
-    DeleteStatement, Expr, InsertStatement, IntoCondition, SelectStatement,
+    DeleteStatement, Expr, InsertStatement, IntoCondition, IntoTableRef,
+    SelectStatement,
 };
 use sea_orm::*;
 
@@ -163,7 +165,12 @@ impl Mutation {
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
-            ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
+            ContentBody::Block(block) => {
+                Mutation::block(db, &event, block).await
+            }
+            ContentBody::Delete(delete) => {
+                Mutation::delete(db, &event, delete).await
+            }
             _ => Ok(()),
         }
     }
@@ -201,12 +208,33 @@ impl Mutation {
         Ok(())
     }
 
+    async fn block<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        block: &Block,
+    ) -> Result<(), DbErr> {
+        BlockModel::ActiveModel {
+            event_id: Set(event.id),
+            blocker: Set(event.identity.clone()),
+            blocked: Set(block.identity.clone()),
+        }
+        .insert(db)
+        .await?;
+        Ok(())
+    }
+
     async fn delete<C: ConnectionTrait>(
         db: &C,
+        event: &EventModel::Model,
         delete: &Delete,
     ) -> Result<(), DbErr> {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
+
+        // An identity may only delete its own events
+        if key.identity != event.identity {
+            return Ok(());
+        }
 
         let mut event_id = SelectStatement::new();
         event_id
@@ -220,22 +248,172 @@ impl Mutation {
             .and_where(EventModel::Column::PublicKey.eq(key.public_key))
             .and_where(EventModel::Column::Sequence.eq(key.sequence));
 
-        let mut query = DeleteStatement::new();
         match key.collection {
             // Deletion of a post.
             COLLECTION_FEED => {
-                query.from_table("reaction_tally");
+                delete_cached_rows(db, "reaction_tally", &event_id).await?;
             }
-            // Deletion of a following.
+            // Deletion of a following or of a block. The event key does not
+            // say which, so clear both caches
             COLLECTION_SOCIAL => {
-                query.from_table(FollowModel::Entity);
+                delete_cached_rows(db, FollowModel::Entity, &event_id).await?;
+                delete_cached_rows(db, BlockModel::Entity, &event_id).await?;
             }
             // Nothing to delete.
             _ => return Ok(()),
         }
 
-        query.cond_where(Expr::col("event_id").in_subquery(event_id));
-        db.execute(&query).await?;
         Ok(())
+    }
+}
+
+/// Drop the rows `table` caches for the event selected by `event_id`.
+async fn delete_cached_rows<C: ConnectionTrait, T: IntoTableRef>(
+    db: &C,
+    table: T,
+    event_id: &SelectStatement,
+) -> Result<(), DbErr> {
+    let mut query = DeleteStatement::new();
+    query
+        .from_table(table)
+        .cond_where(Expr::col("event_id").in_subquery(event_id.clone()));
+    db.execute(&query).await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::entity::block_model as BlockModelEntity;
+    use polycentric_common::models::protos_v2::{EventKey, PublicKey};
+    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use sea_orm::{
+        DatabaseConnection, DbBackend, MockDatabase, MockExecResult,
+    };
+
+    /// The SQL every statement the connection ran, in order.
+    fn statements(db: DatabaseConnection) -> Vec<String> {
+        db.into_transaction_log()
+            .iter()
+            .flat_map(|txn| txn.statements())
+            .map(|stmt| stmt.sql.clone())
+            .collect()
+    }
+
+    fn now() -> TimeDateTimeWithTimeZone {
+        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    }
+
+    fn event_row(identity: &str) -> EventModel::Model {
+        EventModel::Model {
+            id: 1,
+            collection: COLLECTION_SOCIAL,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence: 1,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![1]),
+            signature: vec![],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![1],
+            created_at: now(),
+            synced_at: now(),
+        }
+    }
+
+    fn active_event(identity: &str) -> EventModel::ActiveModel {
+        event_row(identity).into_active_model()
+    }
+
+    fn block_content(blocked: &str) -> Content {
+        Content {
+            content_body: Some(ContentBody::Block(Block {
+                identity: blocked.to_string(),
+            })),
+        }
+    }
+
+    fn delete_content(target_identity: &str) -> Content {
+        Content {
+            content_body: Some(ContentBody::Delete(Delete {
+                event_key: Some(EventKey {
+                    collection: collections::SOCIAL_GRAPH,
+                    identity: target_identity.to_string(),
+                    signed_by: Some(PublicKey {
+                        key_type: 1,
+                        key: vec![0xaa],
+                    }),
+                    sequence: 1,
+                }),
+            })),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_block_event_is_cached_in_the_block_table() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![event_row("alice")]])
+            .append_query_results([vec![BlockModelEntity::Model {
+                event_id: 1,
+                blocker: "alice".to_string(),
+                blocked: "bob".to_string(),
+            }]])
+            .into_connection();
+
+        Mutation::add_event(
+            &db,
+            active_event("alice"),
+            Some(&block_content("bob")),
+        )
+        .await
+        .unwrap();
+
+        let statements = statements(db);
+        assert_eq!(statements.len(), 2);
+        assert!(statements[1].contains("INSERT INTO \"block\""));
+    }
+
+    #[tokio::test]
+    async fn deleting_a_graph_event_clears_both_graph_caches() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![event_row("alice")]])
+            .append_exec_results([
+                MockExecResult::default(),
+                MockExecResult::default(),
+            ])
+            .into_connection();
+
+        Mutation::add_event(
+            &db,
+            active_event("alice"),
+            Some(&delete_content("alice")),
+        )
+        .await
+        .unwrap();
+
+        let statements = statements(db);
+        assert_eq!(statements.len(), 3);
+        assert!(statements[1].contains("DELETE FROM \"follow\""));
+        assert!(statements[2].contains("DELETE FROM \"block\""));
+    }
+
+    #[tokio::test]
+    async fn a_delete_of_another_identitys_event_is_ignored() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![event_row("mallory")]])
+            .into_connection();
+
+        Mutation::add_event(
+            &db,
+            active_event("mallory"),
+            Some(&delete_content("alice")),
+        )
+        .await
+        .unwrap();
+
+        // Only the event insert ran: no cache row was dropped.
+        assert_eq!(statements(db).len(), 1);
     }
 }

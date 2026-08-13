@@ -478,17 +478,12 @@ impl From<&EventKey> for KeyColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::entity::content_model as ContentModel;
-    use ::entity::event_model as EventModel;
-    use polycentric_common::models::collections;
+    use ::entity::block_model as BlockModel;
     use polycentric_common::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
         VerificationTarget, VerificationVerify,
     };
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
-    use sea_orm::{
-        DatabaseConnection, DbBackend, DbErr, MockDatabase, MockRow,
-    };
+    use sea_orm::{DatabaseConnection, DbBackend, DbErr, MockDatabase};
 
     /// A fully-populated `EventKey` for `identity`.
     fn event_key(identity: &str) -> EventKey {
@@ -717,57 +712,22 @@ mod tests {
         }
     }
 
-    fn timestamp() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    fn block_row(blocker: &str, blocked: &str) -> BlockModel::Model {
+        BlockModel::Model {
+            event_id: 1,
+            blocker: blocker.to_string(),
+            blocked: blocked.to_string(),
+        }
     }
 
-    fn block_rows(
-        blocker: &str,
-        blocked: &str,
-    ) -> Vec<(EventModel::Model, ContentModel::Model)> {
-        let content = content(ContentBody::Block(Block {
-            identity: blocked.to_string(),
-        }));
-        vec![(
-            EventModel::Model {
-                id: 1,
-                collection: collections::SOCIAL_GRAPH as i16,
-                identity: blocker.to_string(),
-                public_key_type: 1,
-                public_key: vec![0xaa],
-                sequence: 1,
-                content_digest_type: Some(1),
-                content_digest_bytes: Some(vec![1]),
-                signature: vec![],
-                previous_signature: vec![],
-                previous_root: vec![],
-                event_bytes: vec![1],
-                created_at: timestamp(),
-                synced_at: timestamp(),
-            },
-            ContentModel::Model {
-                id: 1,
-                digest_type: 1,
-                digest_bytes: vec![1],
-                serialized_bytes: content.encode_to_vec(),
-                synced_at: timestamp(),
-            },
-        )]
-    }
-
-    fn no_block_rows() -> Vec<(EventModel::Model, ContentModel::Model)> {
-        Vec::new()
-    }
-
-    fn no_tombstones() -> Vec<MockRow> {
+    fn no_block_rows() -> Vec<BlockModel::Model> {
         Vec::new()
     }
 
     #[tokio::test]
     async fn recipients_blocking_the_author_are_dropped() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([block_rows("bob", "alice")])
-            .append_query_results([no_tombstones()])
+            .append_query_results([vec![block_row("bob", "alice")]])
             .append_query_results([no_block_rows()])
             .into_connection();
         let worker = worker(db).await;

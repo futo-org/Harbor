@@ -7,6 +7,7 @@ use crate::{
             repository::Query as FeedsRepository,
             rpc::common::has_matching_label, util::map_db_err,
         },
+        graph::repository::Query as GraphRepository,
         identity::service::{
             list_identity_events, list_profile_events, rows_to_bundles,
         },
@@ -31,9 +32,8 @@ struct Params {
     limit: u64,
     after_id: Option<i64>,
     omit_labels: Vec<String>,
-    /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous. Constructed from block events the server keeps.
-    blocked: Arc<HashSet<String>>,
+    /// The authenticated caller--`None` for anonymous requests
+    caller: Option<String>,
 }
 
 pub struct Fetched {
@@ -48,6 +48,7 @@ struct Hydrated {
     event_hints: Vec<EventHint>,
     /// Label events targeting the page's trigger events, for `filter`.
     trigger_labels: Vec<EventWithContentRow>,
+    blocked_identities: Arc<HashSet<String>>,
 }
 
 pub async fn handle(
@@ -72,14 +73,12 @@ pub async fn handle(
 
     let limit = req.first.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
 
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-
     let params = Params {
         identity: req.identity,
         limit,
         after_id,
         omit_labels: req.omit_labels,
-        blocked,
+        caller: caller.map(str::to_string),
     };
 
     pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view).await
@@ -111,7 +110,7 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: &Fetched,
 ) -> Result<Hydrated, Status> {
     let rows = &fetched.rows;
@@ -174,12 +173,16 @@ async fn hydrate(
 
     let identities: Vec<String> = identities.into_iter().collect();
 
+    let blocked_fut =
+        GraphRepository::blocked_set_for_caller(ctx, params.caller.as_deref());
+
     // Author identity, profile, and moderation label events all ship as hints.
-    let (identity_events, profile_events, label_rows, stats) = tokio::try_join!(
+    let (identity_events, profile_events, label_rows, stats, blocked) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),
         list_profile_events(ctx, identities),
         label_fut,
-        stats_fut
+        stats_fut,
+        blocked_fut,
     )?;
 
     let mut label_bundles = rows_to_bundles(label_rows.clone());
@@ -205,6 +208,7 @@ async fn hydrate(
         bundles,
         event_hints,
         trigger_labels: label_rows,
+        blocked,
     })
 }
 
@@ -233,7 +237,8 @@ async fn filter(
     };
 
     rows.retain(|row| {
-        !params.blocked.contains(&row.from_identity) && !is_omit_labeled(row)
+        !hydrated.blocked_identities.contains(&row.from_identity)
+            && !is_omit_labeled(row)
     });
 
     Ok(Fetched {
@@ -362,22 +367,17 @@ mod tests {
         }
     }
 
-    fn params(blocked: &[&str]) -> Params {
-        params_omitting(blocked, &[])
+    fn params() -> Params {
+        params_omitting(&[])
     }
 
-    fn params_omitting(blocked: &[&str], omit_labels: &[&str]) -> Params {
+    fn params_omitting(omit_labels: &[&str]) -> Params {
         Params {
             identity: "recipient".to_string(),
             limit: 50,
             after_id: None,
             omit_labels: omit_labels.iter().map(|s| s.to_string()).collect(),
-            blocked: Arc::new(
-                blocked
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect::<HashSet<_>>(),
-            ),
+            caller: Some("recipient".to_string()),
         }
     }
 
@@ -420,7 +420,14 @@ mod tests {
     }
 
     fn hydrated() -> Hydrated {
-        hydrated_with_labels(Vec::new())
+        hydrated_blocking(&[])
+    }
+
+    fn hydrated_blocking(blocked: &[&str]) -> Hydrated {
+        Hydrated {
+            blocked: Arc::new(blocked.iter().map(|s| s.to_string()).collect()),
+            ..hydrated_with_labels(Vec::new())
+        }
     }
 
     fn hydrated_with_labels(
@@ -430,6 +437,7 @@ mod tests {
             bundles: HashMap::new(),
             event_hints: Vec::new(),
             trigger_labels,
+            blocked: Arc::default(),
         }
     }
 
@@ -456,9 +464,10 @@ mod tests {
             has_previous_page: false,
         };
 
-        let result = filter(&ctx, &params(&["bob"]), fetched, &hydrated())
-            .await
-            .unwrap();
+        let result =
+            filter(&ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
+                .await
+                .unwrap();
 
         let from: Vec<&str> = result
             .rows
@@ -477,9 +486,10 @@ mod tests {
             has_previous_page: false,
         };
 
-        let result = filter(&ctx, &params(&["bob"]), fetched, &hydrated())
-            .await
-            .unwrap();
+        let result =
+            filter(&ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
+                .await
+                .unwrap();
 
         assert!(result.rows.is_empty());
         assert!(result.has_next_page);
@@ -494,9 +504,8 @@ mod tests {
             has_previous_page: false,
         };
 
-        let result = filter(&ctx, &params(&[]), fetched, &hydrated())
-            .await
-            .unwrap();
+        let result =
+            filter(&ctx, &params(), fetched, &hydrated()).await.unwrap();
 
         assert_eq!(result.rows.len(), 1);
     }
@@ -515,7 +524,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params_omitting(&[], &["spam"]), fetched, &hydrated)
+            filter(&ctx, &params_omitting(&["spam"]), fetched, &hydrated)
                 .await
                 .unwrap();
 
@@ -540,7 +549,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params_omitting(&[], &["hate"]), fetched, &hydrated)
+            filter(&ctx, &params_omitting(&["hate"]), fetched, &hydrated)
                 .await
                 .unwrap();
 
@@ -559,9 +568,7 @@ mod tests {
             has_previous_page: false,
         };
 
-        let result = filter(&ctx, &params(&[]), fetched, &hydrated)
-            .await
-            .unwrap();
+        let result = filter(&ctx, &params(), fetched, &hydrated).await.unwrap();
 
         assert_eq!(result.rows.len(), 1);
     }

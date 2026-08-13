@@ -27,12 +27,10 @@ pub async fn handle(
     req: GetExploreFeedRequest,
     caller: Option<&str>,
 ) -> Result<GetFeedResponse, Status> {
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
-        blocked,
+        caller.map(str::to_string),
     )?;
 
     let params = Params { common };
@@ -64,10 +62,10 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    feeds_pipeline::hydrate(ctx, params.common.caller.as_deref(), fetched).await
 }
 
 async fn filter(
@@ -80,7 +78,7 @@ async fn filter(
         fetched,
         hydration,
         &_params.common.omit_labels,
-        &_params.common.blocked,
+        &hydration.blocked_identities,
     )
     .await
 }

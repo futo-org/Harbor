@@ -9,7 +9,6 @@ use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::CursorFilter;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
-use crate::service::graph::block_cache::BlockCache;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     collect_identities, list_identity_and_profile_events, rows_to_bundles,
@@ -49,9 +48,7 @@ pub async fn handle(
         common: feeds_pipeline::Params::from_req_params(
             page_params,
             vec![],
-            // Follow listings carry no authenticated caller, so there is no
-            // caller whose block events a blocklist could be built from.
-            BlockCache::empty_blocklist(),
+            None,
         )?,
         identity,
         direction,

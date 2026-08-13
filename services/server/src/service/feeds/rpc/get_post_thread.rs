@@ -14,8 +14,7 @@ use crate::service::feeds::rpc::common::{
 };
 use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::collections::HashMap;
 use tonic::Status;
 
 const PARENT_HEIGHT_LIMIT: i32 = 50;
@@ -32,9 +31,8 @@ pub struct Params {
     pub sequence: i64,
     pub descendants_limit: u64,
     pub omit_labels: Vec<String>,
-    /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous. Constructed from block events the server keeps.
-    pub blocked: Arc<HashSet<String>>,
+    /// The authenticated caller--`None` for anonymous requests
+    pub caller: Option<String>,
 }
 
 pub async fn handle(
@@ -50,8 +48,6 @@ pub async fn handle(
 
     let event_key = TargetEventKey::from_request(req.event_key, "event_key")?;
 
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-
     let params = Params {
         collection: event_key.collection,
         identity: event_key.identity,
@@ -60,7 +56,7 @@ pub async fn handle(
         sequence: event_key.sequence,
         descendants_limit,
         omit_labels: req.omit_labels,
-        blocked,
+        caller: caller.map(str::to_string),
     };
 
     let result =
@@ -171,10 +167,10 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    feeds_pipeline::hydrate(ctx, params.caller.as_deref(), fetched).await
 }
 
 async fn filter(
@@ -187,7 +183,7 @@ async fn filter(
         fetched,
         hydration,
         &params.omit_labels,
-        &params.blocked,
+        &hydration.blocked_identities,
     )
     .await
 }
@@ -215,6 +211,7 @@ mod tests {
     use sea_orm::prelude::TimeDateTimeWithTimeZone;
     use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
     use std::collections::BTreeMap;
+    use std::sync::Arc;
 
     const POST_COLLECTION: i16 = 2;
 
@@ -311,7 +308,7 @@ mod tests {
         ServiceContext::new(db, kafka_producer)
     }
 
-    fn params(blocked: &[&str]) -> Params {
+    fn params() -> Params {
         Params {
             collection: POST_COLLECTION,
             identity: "alice".to_string(),
@@ -320,12 +317,17 @@ mod tests {
             sequence: 10,
             descendants_limit: 200,
             omit_labels: Vec::new(),
-            blocked: Arc::new(
-                blocked
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect::<HashSet<_>>(),
+            caller: Some("caller".to_string()),
+        }
+    }
+
+    /// Hydration whose caller blocks `blocked`.
+    fn hydration_blocking(blocked: &[&str]) -> HydrationState {
+        HydrationState {
+            blocked_identities: Arc::new(
+                blocked.iter().map(|s| s.to_string()).collect(),
             ),
+            ..Default::default()
         }
     }
 
@@ -349,7 +351,7 @@ mod tests {
             .into_connection();
         let ctx = ctx(db).await;
 
-        let fetched = fetch(&ctx, &params(&["bob"])).await.unwrap();
+        let fetched = fetch(&ctx, &params()).await.unwrap();
         let fetched_identities: Vec<&str> = fetched
             .rows
             .iter()
@@ -357,12 +359,12 @@ mod tests {
             .collect();
         assert_eq!(fetched_identities, ["alice", "bob", "charlie"]);
 
-        let hydration = HydrationState::default();
+        let hydration = hydration_blocking(&["bob"]);
         let filtered = feeds_pipeline::filter_thread(
             fetched,
             &hydration,
             &[],
-            &params(&["bob"]).blocked,
+            &hydration.blocked_identities,
         )
         .await
         .unwrap();

@@ -27,9 +27,11 @@ pub async fn handle(
     caller: Option<&str>,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-    let common =
-        rpc::Params::from_req_params(req.query, &req.page_params, blocked)?;
+    let common = rpc::Params::from_req_params(
+        req.query,
+        &req.page_params,
+        caller.map(str::to_string),
+    )?;
     let params = Params {
         common,
         sort_by,
@@ -89,10 +91,10 @@ impl SortedPostsBy {
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _: &Params,
+    params: &Params,
     fetched: &Fetched<SortedPostsBy>,
 ) -> Result<HydrationState, Status> {
-    rpc::hydrate(ctx, fetched).await
+    rpc::hydrate(ctx, params.common.caller.as_deref(), fetched).await
 }
 
 async fn filter(
@@ -105,7 +107,7 @@ async fn filter(
         fetched,
         hydration,
         &params.omit_labels,
-        &params.common.blocked,
+        &hydration.blocked_identities,
     )
     .await
 }

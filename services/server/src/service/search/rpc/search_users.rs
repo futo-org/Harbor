@@ -25,9 +25,11 @@ pub async fn handle(
     caller: Option<&str>,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
-    let blocked = ctx.block_cache.blocked_set_for_caller(ctx, caller).await?;
-    let common =
-        rpc::Params::from_req_params(req.query, &req.page_params, blocked)?;
+    let common = rpc::Params::from_req_params(
+        req.query,
+        &req.page_params,
+        caller.map(str::to_string),
+    )?;
     let params = Params { common, sort_by };
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
@@ -83,20 +85,26 @@ impl SortedUsersBy {
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _: &Params,
+    params: &Params,
     fetched: &Fetched<SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
-    rpc::hydrate(ctx, fetched).await
+    rpc::hydrate(ctx, params.common.caller.as_deref(), fetched).await
 }
 
 async fn filter(
     _: &ServiceContext,
-    params: &Params,
+    _params: &Params,
     fetched: Fetched<SortedUsersBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
     let omit_labels = &[];
-    rpc::filter(fetched, hydration, omit_labels, &params.common.blocked).await
+    rpc::filter(
+        fetched,
+        hydration,
+        omit_labels,
+        &hydration.blocked_identities,
+    )
+    .await
 }
 
 async fn view(

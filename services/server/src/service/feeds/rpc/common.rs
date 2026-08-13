@@ -11,6 +11,7 @@ use crate::service::feeds::repository::{
     CursorFilter, FeedCursor, FeedMarker, PageInfo, Query as FeedsRepository,
 };
 use crate::service::feeds::util::{map_db_err, page_limit};
+use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
@@ -24,7 +25,6 @@ use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use entity::content_model;
 use prost::Message;
 use std::collections::HashSet;
-use std::sync::Arc;
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
@@ -32,9 +32,8 @@ pub struct Params {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter>,
     pub omit_labels: Vec<String>,
-    /// Identities the authenticated caller blocks. Empty when the request
-    /// is anonymous. Constructed from block events the server keeps.
-    pub blocked: Arc<HashSet<String>>,
+    /// The authenticated caller--`None` with anonymous requests
+    pub caller: Option<String>,
 }
 
 impl Params {
@@ -42,7 +41,7 @@ impl Params {
     pub fn from_req_params(
         params: &Option<PageParams>,
         omit_labels: Vec<String>,
-        blocked: Arc<HashSet<String>>,
+        caller: Option<String>,
     ) -> Result<Params, Status> {
         let limit = page_limit(params);
 
@@ -69,7 +68,7 @@ impl Params {
             limit,
             cursor_filter,
             omit_labels,
-            blocked,
+            caller,
         })
     }
 }
@@ -187,6 +186,7 @@ pub fn finalize_fetch(
 ///   identity referenced
 pub async fn hydrate(
     ctx: &ServiceContext,
+    caller: Option<&str>,
     fetched: &Fetched,
 ) -> Result<HydrationState, Status> {
     let rows = &fetched.rows;
@@ -246,6 +246,8 @@ pub async fn hydrate(
             .map_err(map_db_err)
     };
 
+    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx, caller);
+
     let (
         deletes_by_target,
         identity_events,
@@ -253,6 +255,7 @@ pub async fn hydrate(
         referenced,
         label_events,
         stats,
+        blocked_identities,
     ) = tokio::try_join!(
         tombstones_fut,
         identity_events_fut,
@@ -260,6 +263,7 @@ pub async fn hydrate(
         referenced_fut,
         labels_fut,
         stats_fut,
+        blocked_fut,
     )?;
 
     let mut quote_post_events = Vec::new();
@@ -281,6 +285,7 @@ pub async fn hydrate(
         repost_events,
         label_events,
         stats,
+        blocked_identities,
     })
 }
 
