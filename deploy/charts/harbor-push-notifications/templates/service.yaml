@@ -11,5 +11,6 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      appProtocol: kubernetes.io/h2c
   selector:
     {{- include "harbor-push-notifications.selectorLabels" . | nindent 4 }}
