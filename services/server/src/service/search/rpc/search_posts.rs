@@ -10,7 +10,7 @@ use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
     self, Fetched, Marker, SearchResponseFilter, SearchResponseView,
 };
-use sea_orm::prelude::TimeDateTimeWithTimeZone;
+use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -77,7 +77,7 @@ async fn fetch(
 pub enum SortedPostsBy {
     /// ts_rank rank returned by Postgres.
     Rank(f32),
-    Latest(TimeDateTimeWithTimeZone),
+    Latest(DateTimeWithTimeZone),
 }
 
 impl SortedPostsBy {

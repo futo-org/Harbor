@@ -9,8 +9,8 @@ use crate::service::{
     },
     proto::{UploadBlobRequest, UploadBlobResponse},
 };
+use chrono::Utc;
 use sea_orm::{DatabaseConnection, TransactionTrait};
-use time::OffsetDateTime;
 use tonic::Status;
 
 pub async fn handle(
@@ -27,7 +27,7 @@ pub async fn handle(
     ContentRepository::Mutation::save_blob(
         &txn,
         &blob,
-        OffsetDateTime::now_utc(),
+        Utc::now().fixed_offset(),
     )
     .await
     .map_err(|e| {

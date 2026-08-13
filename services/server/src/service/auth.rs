@@ -260,9 +260,9 @@ mod tests {
         use crate::service::proto::content::ContentBody;
         use crate::service::proto::{Content, Identity};
         use ::entity::{content_model, event_model};
+        use chrono::DateTime;
         use polycentric_common::models::collections;
         use prost::Message;
-        use sea_orm::prelude::TimeDateTimeWithTimeZone;
 
         // Identity document that doesn't know the minting key yet, as
         // during pairing.
@@ -280,7 +280,7 @@ mod tests {
             content_body: Some(ContentBody::Identity(identity_content)),
         };
 
-        let now = TimeDateTimeWithTimeZone::from_unix_timestamp(1).unwrap();
+        let now = DateTime::from_timestamp_secs(1).unwrap().fixed_offset();
         let event = event_model::Model {
             id: 1,
             collection: collections::IDENTITY as i16,

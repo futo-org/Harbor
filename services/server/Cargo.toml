@@ -26,7 +26,6 @@ sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "ma
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2.workspace = true
-time.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["router", "transport"] }
 tonic-reflection = { version = "0.14", default-features = false, features = ["server"] }

@@ -476,11 +476,14 @@ mod tests {
     };
     use ::entity::content_model as ContentModel;
     use ::entity::event_model as EventModel;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use chrono::DateTime;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
 
-    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp_secs(seconds)
+            .unwrap()
+            .fixed_offset()
     }
 
     fn event_row(
