@@ -24,6 +24,7 @@ pub mod pairing_session_model;
 pub mod reaction_model;
 pub mod reaction_summary_model;
 pub mod reaction_tally_model;
+pub mod reaction_tally_model2;
 pub mod reply_count_model;
 pub mod url_info_cache_model;
 pub mod verification_schema_model;
