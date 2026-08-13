@@ -1,6 +1,7 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
+use crate::service::proto::content::ContentBody;
 use crate::service::{
     content::content_repository as ContentRepository,
     content::repository::Mutation as ContentChildRepository,
@@ -9,7 +10,7 @@ use crate::service::{
     identity::repository::Query as IdentityRepository,
     identity::service::authorize_event_signer,
     proto::{
-        Content, Event, EventBundle, PublicKey, PutEventError,
+        Content, Delete, Event, EventBundle, PublicKey, PutEventError,
         PutEventsRequest, PutEventsResponse,
     },
 };
@@ -233,14 +234,18 @@ async fn process_event(
         synced_at: Set(OffsetDateTime::now_utc()),
     };
 
-    match EventsRepository::Mutation::add_event(
-        &txn,
-        active_model,
-        content.as_ref(),
-    )
-    .await
-    {
-        Ok(()) => {
+    match EventsRepository::Mutation::add_event(&txn, active_model).await {
+        Ok(event) => {
+            let is_authorised = event_is_authorised(&event, content.as_ref());
+            if is_authorised {
+                EventsRepository::Mutation::update_cache(&txn, &event, content.as_ref())
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = %e, "sync_events updating cache error");
+                        Status::internal("internal server error")
+                    })?;
+            }
+
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
                 .await;
@@ -290,6 +295,51 @@ async fn process_event(
     }
 
     Ok(blobs)
+}
+
+/// Check if the `event` is authorised to perform its mutation.
+///
+/// This will return false if, for example, an event tries to delete a post
+/// that the identity of the deletion event didn't create.
+///
+/// `content` must be contained in the event itself.
+pub fn event_is_authorised(
+    event: &EventModel::Model,
+    content: Option<&Content>,
+) -> bool {
+    let Some(Content {
+        content_body: Some(content),
+    }) = content
+    else {
+        // Couldn't extract (valid) content, so don't consider the event as
+        // authorised.
+        return false;
+    };
+
+    match content {
+        // Only events items related to the identity themselves.
+        ContentBody::Post(_)
+        | ContentBody::Follow(_)
+        | ContentBody::Block(_)
+        | ContentBody::Reaction(_)
+        | ContentBody::ProfileUpdate(_)
+        | ContentBody::Identity(_)
+        | ContentBody::Repost(_)
+        // Can report other identity's events.
+        | ContentBody::Report(_) => true,
+        // Can only delete your own events.
+        ContentBody::Delete(Delete { event_key }) => {
+            let Some(event_key) = event_key else { return false; };
+            // Make sure the identity of the deletion event is the same
+            // as the identity of the to-be-deleted event.
+            event_key.identity == event.identity
+        },
+        // TODO: not sure about these.
+        ContentBody::Labels(_)
+        | ContentBody::VerificationClaim(_)
+        | ContentBody::VerificationVerify(_)
+        | ContentBody::VerificationTarget(_) => false,
+    }
 }
 
 fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
