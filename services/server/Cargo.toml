@@ -23,8 +23,8 @@ prost-types.workspace = true
 rdkafka = { workspace = true, features = ["cmake-build", "curl", "sasl"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
 sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
-serde = { version = "1", default-features = false, features = ["derive"] }
-serde_json = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["std", "derive"] }
+serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2.workspace = true
 time.workspace = true
 tokio = { workspace = true, features = ["full"] }
@@ -35,7 +35,7 @@ opentelemetry.workspace = true
 tracing.workspace = true
 tower-http = { version = "0.7", default-features = false, features = ["cors"] }
 tower-layer = { version = "0.3", default-features = false }
-http = { version = "1", default-features = false }
+http = { version = "1", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 ed25519-dalek.workspace = true
