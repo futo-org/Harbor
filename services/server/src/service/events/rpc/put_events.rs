@@ -91,7 +91,7 @@ async fn process_event(
 
     let event =
         Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            tracing::debug!(error = %e, "sync_events decode error");
+            tracing::debug!(error = %e, "put_events decode error");
             Status::invalid_argument("invalid event_bytes")
         })?;
 
@@ -117,7 +117,7 @@ async fn process_event(
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
     let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "sync_events txn begin error");
+        tracing::error!(error = %e, "put_events txn begin error");
         Status::internal("internal server error")
     })?;
 
@@ -168,7 +168,7 @@ async fn process_event(
             serialized_content.content_bytes.as_slice(),
         )
         .map_err(|e| {
-            tracing::debug!(error = %e, "sync_events content decode error");
+            tracing::debug!(error = %e, "put_events content decode error");
             Status::invalid_argument("invalid content_bytes")
         })?;
 
@@ -189,7 +189,7 @@ async fn process_event(
         )
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "sync_events content db error");
+            tracing::error!(error = %e, "put_events content db error");
             Status::internal("internal server error")
         })?;
 
@@ -241,7 +241,7 @@ async fn process_event(
                 EventsRepository::Mutation::update_cache(&txn, &event, content.as_ref())
                     .await
                     .map_err(|e| {
-                        tracing::error!(error = %e, "sync_events updating cache error");
+                        tracing::error!(error = %e, "put_events updating cache error");
                         Status::internal("internal server error")
                     })?;
             }
@@ -276,7 +276,7 @@ async fn process_event(
             });
 
             txn.commit().await.map_err(|e| {
-                tracing::error!(error = %e, "sync_events txn commit error");
+                tracing::error!(error = %e, "put_events txn commit error");
                 Status::internal("internal server error")
             })?;
         }
@@ -284,12 +284,12 @@ async fn process_event(
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
             txn.rollback().await.map_err(|e| {
-                tracing::error!(error = %e, "sync_events txn abort error");
+                tracing::error!(error = %e, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
         }
         Err(e) => {
-            tracing::error!(error = ?e, "sync_events db error");
+            tracing::error!(error = ?e, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
     }
