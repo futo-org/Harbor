@@ -274,8 +274,7 @@ impl Mutation {
                                 Expr::Constant(1.into()),
                             )
                             .finally(Expr::Constant(0.into())),
-                        )
-                        .into(),
+                        ),
                 ),
                 (
                     "negative_count",
@@ -286,8 +285,7 @@ impl Mutation {
                                 Expr::Constant(0.into()),
                             )
                             .finally(Expr::Constant(1.into())),
-                        )
-                        .into(),
+                        ),
                 ),
             ])
             .from("inserted_reaction")
@@ -351,8 +349,7 @@ impl Mutation {
                                     Expr::Constant(1.into()),
                                 )
                                 .finally(Expr::Constant(0.into())),
-                            )
-                            .into(),
+                            ),
                         ),
                         (
                             "negative_count",
@@ -365,8 +362,7 @@ impl Mutation {
                                     Expr::Constant(0.into()),
                                 )
                                 .finally(Expr::Constant(1.into())),
-                            )
-                            .into(),
+                            ),
                         ),
                     ])
                     .from("deleted_reaction")
