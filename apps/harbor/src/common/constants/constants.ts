@@ -22,3 +22,14 @@ export const POLYCENTRIC_APP_URL = (
     process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
   ) ?? 'https://harbor.social'
 ).replace(/\/+$/, '');
+
+/**
+ * Public base URL of the static-assets bucket. APK update feeds live under
+ * `apk/<channel>/`. Override with EXPO_PUBLIC_POLYCENTRIC_STATIC_URL.
+ */
+export const POLYCENTRIC_STATIC_URL = (
+  publicEnv(
+    'EXPO_PUBLIC_POLYCENTRIC_STATIC_URL',
+    process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
+  ) ?? 'https://static.harbor.social'
+).replace(/\/+$/, '');

@@ -109,10 +109,8 @@ const LOADING_ENTRY: Partial<QueryRef> = Object.freeze({
   pendingServers: undefined,
 });
 
-/**
- * Toast once per window when a server times out — a slow server times
- * out every in-flight query at once, and one warning is enough.
- */
+// A slow server times out every in-flight query at once; toast once per
+// window rather than per query.
 const SLOW_SERVER_TOAST_THROTTLE_MS = 30_000;
 let lastSlowServerToastAt = 0;
 

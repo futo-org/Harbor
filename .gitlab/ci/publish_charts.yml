@@ -70,7 +70,7 @@ charts-build:
       # The short SHA makes the version unique per commit — helm-controller
       # runs with DisableChartDigestTracking, so only a version change (not a
       # re-push of the same version) triggers an upgrade.
-      version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${CI_COMMIT_REF_SLUG}.${CI_COMMIT_SHORT_SHA}"
+      version="${1:-0}.${2:-0}.$(( ${3:-0} + 1 ))-${CI_COMMIT_REF_SLUG}.g${CI_COMMIT_SHORT_SHA}"
       echo "Publishing charts as version ${version}"
       for chart in deploy/charts/*/; do
         name=$(basename "$chart")

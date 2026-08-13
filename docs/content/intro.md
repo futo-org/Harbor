@@ -23,7 +23,7 @@ The [web client and app](https://harbor.social) and the
 ## Download
 
 - **Web app** — [harbor.social](https://harbor.social)
-- **Android** — [latest APK](https://gitlab.futo.org/polycentric/polycentric/-/releases/permalink/latest/downloads/polycentric-android.apk)
+- **Android** — [latest APK](https://static.harbor.social/apk/production/harbor-latest.apk)
 - **iOS** — [TestFlight beta](https://testflight.apple.com/join/bZ8py7Ny)
 
 ## Model

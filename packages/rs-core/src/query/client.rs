@@ -43,9 +43,8 @@ pub enum UpdateMode {
 /// Specifies when merged data is emitted during a fan-out.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum EmitMode {
-    /// Emit only once every server has responded or timed out, so
-    /// results never reorder mid-render. Any cached data is still
-    /// emitted up front.
+    /// Emit once every server has responded or timed out. Cached data
+    /// still emits up front.
     #[default]
     Default,
     /// Emit progressively as each server's response arrives.
@@ -487,8 +486,7 @@ fn spawn_fanout<T>(
         let subscriber = subscriber.clone();
 
         spawn(async move {
-            // Do the query, dropping (and thereby cancelling) it if the
-            // server doesn't respond in time.
+            // Drop (cancel) the query if the server doesn't respond in time.
             let result =
                 match select(query_fn(server_url.clone()), Delay::new(server_timeout)).await {
                     Either::Left((result, _)) => result,
@@ -526,9 +524,8 @@ fn spawn_fanout<T>(
                 // Gather results
                 let is_last = pending_servers == 0;
 
-                // When waiting for the whole fan-out, skip the (wasted)
-                // intermediate merge and emission and only the settled
-                // result is published.
+                // The default emit mode publishes only the settled result,
+                // so skip intermediate merges entirely.
                 let snapshot = if emit_mode == EmitMode::Default && !is_last {
                     None
                 } else {
@@ -557,5 +554,100 @@ fn spawn_fanout<T>(
                 subscriber.complete();
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    enum Ev {
+        Next(Vec<u8>),
+        Complete,
+    }
+
+    /// Parse comma-joined numbers from every response, dedup, and re-join.
+    fn merge_join(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+        let mut items: Vec<u32> = values
+            .iter()
+            .flat_map(|v| {
+                String::from_utf8_lossy(v)
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.parse::<u32>().unwrap())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        items.sort_unstable();
+        items.dedup();
+        items
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+            .into_bytes()
+    }
+
+    /// Run one fan-out for `key` where every server responds with
+    /// `response`, and collect the emitted data until completion.
+    async fn run_fanout(
+        qc: &QueryClient<Vec<u8>>,
+        key: &QueryKey,
+        response: &'static str,
+    ) -> Vec<String> {
+        let opts = QueryOpts {
+            update_mode: Some(UpdateMode::Merge),
+            ..Default::default()
+        };
+        let obs = qc.fetch(
+            Some(key.clone()),
+            move |_server| async move { Ok(response.as_bytes().to_vec()) },
+            merge_join,
+            Some(opts),
+        );
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_complete = tx.clone();
+        let _sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let _ = tx.send(Ev::Next(r.data.unwrap_or_default()));
+            },
+            |_e| {},
+            move || {
+                let _ = tx_complete.send(Ev::Complete);
+            },
+        );
+
+        let mut out = Vec::new();
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Complete => break,
+            }
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn merge_fanouts_accumulate_batches() {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
+        let key: QueryKey = vec!["feed".to_string()];
+
+        let first = run_fanout(&qc, &key, "1,2").await;
+        assert_eq!(first.last().map(String::as_str), Some("1,2"));
+
+        let second = run_fanout(&qc, &key, "3,4").await;
+        assert_eq!(
+            second.first().map(String::as_str),
+            Some("1,2"),
+            "extend should emit the cached history up front"
+        );
+        assert_eq!(
+            second.last().map(String::as_str),
+            Some("1,2,3,4"),
+            "the new batch should merge into the history"
+        );
     }
 }
