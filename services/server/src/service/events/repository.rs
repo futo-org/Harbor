@@ -16,6 +16,7 @@ use sea_orm::*;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
+const COLLECTION_INTERACTIONS: i16 = collections::INTERACTIONS as i16;
 
 pub struct Query;
 
@@ -317,6 +318,67 @@ impl Mutation {
             // Deletion of a following.
             COLLECTION_SOCIAL => {
                 query.from_table(FollowModel::Entity);
+            }
+            // Deletion of a reaction and updating the tally.
+            COLLECTION_INTERACTIONS => {
+                let mut delete_reaction = query;
+                delete_reaction
+                    .from_table("reaction")
+                    .cond_where(Expr::col("event_id").in_subquery(event_id))
+                    .returning_all();
+                let mut query = UpdateStatement::new();
+                query
+                    // This should be as easy as a subquery, but SeaQuery
+                    // doesn't support it. So we have to use CTEs.
+                    .with_cte({
+                        let mut c = WithClause::new();
+                        let mut cte = CommonTableExpression::new();
+                        cte.table_name("deleted_reaction")
+                            .query(delete_reaction);
+                        c.recursive(false).cte(cte);
+                        c
+                    })
+                    .table("reaction_tally")
+                    .values([
+                        (
+                            "positive_count",
+                            Expr::Column(
+                                ("reaction_tally", "positive_count").into(),
+                            )
+                            .sub(
+                                Expr::case(
+                                    Expr::Column("positive".into()),
+                                    Expr::Constant(1.into()),
+                                )
+                                .finally(Expr::Constant(0.into())),
+                            )
+                            .into(),
+                        ),
+                        (
+                            "negative_count",
+                            Expr::Column(
+                                ("reaction_tally", "negative_count").into(),
+                            )
+                            .sub(
+                                Expr::case(
+                                    Expr::Column("positive".into()),
+                                    Expr::Constant(0.into()),
+                                )
+                                .finally(Expr::Constant(1.into())),
+                            )
+                            .into(),
+                        ),
+                    ])
+                    .from("deleted_reaction")
+                    .and_where(
+                        Expr::Column(("reaction_tally", "event_id").into()).eq(
+                            Expr::Column(
+                                ("deleted_reaction", "on_post").into(),
+                            ),
+                        ),
+                    );
+                db.execute(&query).await?;
+                return Ok(());
             }
             // Nothing to delete.
             _ => return Ok(()),
