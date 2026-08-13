@@ -23,12 +23,22 @@ type NavItemProps = Omit<LinkProps, 'href' | 'children'> & {
   href?: LinkProps['href'];
   icon: ReactNode;
   label: string;
+  /** Overrides the width-based default (labels only above xl). */
+  showLabel?: boolean;
 };
 
-export function NavItem({ href, icon, label, ...props }: NavItemProps) {
+export function NavItem({
+  href,
+  icon,
+  label,
+  showLabel,
+  ...props
+}: NavItemProps) {
   const { theme } = useTheme();
 
   const { width: deviceWidth } = useWindowDimensions();
+
+  const labelVisible = showLabel ?? deviceWidth > Breakpoints.xl;
 
   const flatHref = flattenHref(href);
   const pathname = usePathname();
@@ -94,7 +104,7 @@ export function NavItem({ href, icon, label, ...props }: NavItemProps) {
         Atoms.py_md,
         Atoms.pl_lg,
         Atoms.pr_2xl,
-        deviceWidth <= Breakpoints.xl && Atoms.pr_lg,
+        !labelVisible && Atoms.pr_lg,
         Atoms.gap_md,
         isActive && activeItemStyle,
         hovering && hoverItemStyle,
@@ -102,7 +112,7 @@ export function NavItem({ href, icon, label, ...props }: NavItemProps) {
       {...props}
     >
       {renderIcon(icon)}
-      {deviceWidth > Breakpoints.xl && <Text style={labelStyle}>{label}</Text>}
+      {labelVisible && <Text style={labelStyle}>{label}</Text>}
     </Link>
   );
 }

@@ -1,19 +1,22 @@
 import {
   Atoms,
   Breakpoints,
+  Spacing,
   typography,
   useTheme,
+  withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
-import { type ExternalPathString, Link } from 'expo-router';
+import { type ExternalPathString, Link, usePathname } from 'expo-router';
 import {
   type ComponentProps,
   memo,
   type ReactElement,
   type ReactNode,
   useCallback,
+  useEffect,
   useState,
 } from 'react';
 import {
@@ -28,6 +31,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Icon from '@/src/common/components/Icon';
 import { IdentityFooter } from '@/src/features/core/identity/IdentityFooter';
+import {
+  SignupBar,
+  SignupWidget,
+} from '@/src/features/core/identity/SignupWidget';
 import { SidebarSearch } from '@/src/features/search/SidebarSearch';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { openCompose } from '../../constants';
@@ -130,8 +137,24 @@ function Screen({
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { width: deviceWidth } = useWindowDimensions();
+  const { identity } = useCurrentIdentity();
 
   showLeftSidebar = showLeftSidebar && isWeb;
+
+  // Narrow web viewports hide the right sidebar and its signup widget, so
+  // signed-out visitors get a fixed bottom bar instead.
+  const showSignupBar = isWeb && !identity && deviceWidth <= Breakpoints.md;
+
+  // On the smallest web viewports the left sidebar is replaced by a
+  // topbar whose menu button opens it as a drawer.
+  const drawerMode = isWeb && deviceWidth <= Breakpoints.sm;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: closes the drawer on every route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
@@ -149,7 +172,7 @@ function Screen({
     <View
       testID="layout-screen"
       style={[
-        Atoms.flex_row,
+        drawerMode ? Atoms.flex_col : Atoms.flex_row,
         // Web: grow with content so the sidebars' containing block spans the
         // full scroll height, letting `position: sticky` pin them. Native
         // keeps a fixed viewport-height screen.
@@ -163,8 +186,28 @@ function Screen({
       ]}
       dir="ltr"
     >
-      {showLeftSidebar && <LeftSidebar />}
+      {drawerMode && (
+        <View style={{ position: 'sticky', top: 0, zIndex: ZIndex.raised }}>
+          <Topbar
+            left={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open menu"
+                onPress={() => setDrawerOpen(true)}
+                hitSlop={Spacing.lg}
+              >
+                <Icon name="menu" size={24} color="neutral_900" />
+              </Pressable>
+            }
+          />
+        </View>
+      )}
+      {showLeftSidebar && !drawerMode && <LeftSidebar />}
       <Main>{body}</Main>
+      {showSignupBar && <SignupBar />}
+      {drawerMode && drawerOpen && (
+        <SidebarDrawer onClose={() => setDrawerOpen(false)} />
+      )}
       {!isWeb && insets.top > 0 ? (
         // Opaque cap that sits on top of all descendants and visually
         // masks any content that overflows into the status-bar zone
@@ -190,15 +233,136 @@ function Screen({
   );
 }
 
+type SidebarContentProps = {
+  narrow?: boolean;
+  /** The mobile drawer also shows the app footer links. */
+  showAppFooter?: boolean;
+};
+
+function SidebarContent({
+  narrow = false,
+  showAppFooter = false,
+}: SidebarContentProps) {
+  const { identity } = useCurrentIdentity();
+
+  return (
+    <>
+      {/* 1st section (top) */}
+      <View
+        style={[Atoms.w_full, narrow && Atoms.align_center, Atoms.flex_col]}
+      >
+        <Link
+          href="/"
+          style={[
+            Atoms.pt_sm,
+            Atoms.pb_lg,
+            Atoms.flex,
+            Atoms.align_center,
+            !narrow && Atoms.px_lg,
+            narrow && Atoms.justify_center,
+          ]}
+        >
+          <Image
+            source={HARBOR_LOGO}
+            contentFit="contain"
+            style={{ width: 40, height: 40 }}
+          />
+        </Link>
+
+        <VerticalNav showLabels={!narrow} />
+
+        <View
+          style={[
+            Atoms.py_md,
+            Atoms.self_stretch,
+            narrow && Atoms.align_center,
+          ]}
+        >
+          {identity && (
+            <Button
+              title={narrow ? '' : 'Post'}
+              variant="primary"
+              size="md"
+              fullWidth={!narrow}
+              icon={({ size, color }) => (
+                <Icon name="add" size={size} color={color} />
+              )}
+              onPress={() => openCompose()}
+            />
+          )}
+        </View>
+      </View>
+      {/* 2nd Section (bottom) */}
+      <View
+        style={[
+          Atoms.py_md,
+          Atoms.self_stretch,
+          narrow && Atoms.align_center,
+          showAppFooter && Atoms.gap_md,
+        ]}
+      >
+        {identity && <IdentityFooter compact={narrow} />}
+        {showAppFooter && <AppFooter />}
+      </View>
+    </>
+  );
+}
+
+/** Drawer for the smallest web viewports: the sidebar content plus the
+    app footer, over a dismissible backdrop. */
+function SidebarDrawer({ onClose }: { onClose: () => void }) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        Atoms.flex_row,
+        {
+          position: 'fixed' as 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: ZIndex.modal,
+        },
+      ]}
+    >
+      <View
+        style={{
+          width: 300,
+          height: '100%',
+          backgroundColor: theme.palette.neutral_0,
+        }}
+      >
+        <RNScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            Atoms.justify_between,
+            { minHeight: '100%', paddingHorizontal: 30 },
+          ]}
+        >
+          <SidebarContent showAppFooter />
+        </RNScrollView>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close menu"
+        onPress={onClose}
+        style={[
+          Atoms.flex_1,
+          { backgroundColor: withHexOpacity(theme.palette.black, '66') },
+        ]}
+      />
+    </View>
+  );
+}
+
 type LeftSidebarProps = {} & ComponentProps<typeof View>;
 
 export const LeftSidebar = memo(function LeftSidebar({
   ...props
 }: LeftSidebarProps) {
   const { width: deviceWidth } = useWindowDimensions();
-  const { theme } = useTheme();
-
-  const { identity } = useCurrentIdentity();
 
   const narrowSidebar = deviceWidth <= Breakpoints.xl;
 
@@ -233,65 +397,7 @@ export const LeftSidebar = memo(function LeftSidebar({
               },
             ]}
           >
-            {/* 1st section (top) */}
-            <View
-              style={[
-                Atoms.w_full,
-                narrowSidebar && Atoms.align_center,
-                Atoms.flex_col,
-              ]}
-            >
-              <Link
-                href="/"
-                style={[
-                  Atoms.pt_sm,
-                  Atoms.pb_lg,
-                  Atoms.flex,
-                  Atoms.align_center,
-                  !narrowSidebar && Atoms.px_lg,
-                  narrowSidebar && Atoms.justify_center,
-                ]}
-              >
-                <Image
-                  source={HARBOR_LOGO}
-                  contentFit="contain"
-                  style={{ width: 40, height: 40 }}
-                />
-              </Link>
-
-              <VerticalNav />
-
-              <View
-                style={[
-                  Atoms.py_md,
-                  Atoms.self_stretch,
-                  narrowSidebar && Atoms.align_center,
-                ]}
-              >
-                {identity && (
-                  <Button
-                    title={narrowSidebar ? '' : 'Post'}
-                    variant="primary"
-                    size="md"
-                    fullWidth={!narrowSidebar}
-                    icon={({ size, color }) => (
-                      <Icon name="add" size={size} color={color} />
-                    )}
-                    onPress={() => openCompose()}
-                  />
-                )}
-              </View>
-            </View>
-            {/* 2nd Section (bottom) */}
-            <View
-              style={[
-                Atoms.py_md,
-                Atoms.self_stretch,
-                narrowSidebar && Atoms.align_center,
-              ]}
-            >
-              {identity && <IdentityFooter compact={narrowSidebar} />}
-            </View>
+            <SidebarContent narrow={narrowSidebar} />
           </RNScrollView>
         </View>
       </View>
@@ -302,7 +408,10 @@ export const LeftSidebar = memo(function LeftSidebar({
 export const RightSidebar = memo(function RightSidebar() {
   const { width: deviceWidth } = useWindowDimensions();
   const width = 350;
-  const marginRight = deviceWidth <= Breakpoints['2xl'] ? 10 : 70;
+  const narrow = deviceWidth <= Breakpoints['2xl'];
+  const marginRight = narrow ? 10 : 70;
+
+  const { identity } = useCurrentIdentity();
 
   return (
     <View style={{ width, marginRight, height: '100%' }}>
@@ -319,10 +428,13 @@ export const RightSidebar = memo(function RightSidebar() {
             Atoms.align_center,
             Atoms.h_full,
             Atoms.pb_lg,
+            narrow && Atoms.px_md,
           ]}
         >
-          <View style={[Atoms.flex_1, Atoms.w_full, Atoms.pt_lg]}>
+          <View style={[Atoms.flex_1, Atoms.w_full, Atoms.pt_lg, Atoms.gap_md]}>
             <SidebarSearch />
+
+            {!identity && <SignupWidget />}
           </View>
           <AppFooter />
         </View>

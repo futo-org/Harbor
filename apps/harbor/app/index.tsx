@@ -1,5 +1,7 @@
 import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
+import { isWeb } from '@/src/common/util/platform';
+import ExploreScreen from '@/src/features/feed/ExploreScreen';
 import type { Href } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
@@ -16,8 +18,11 @@ export default function IndexScreen() {
     );
   }
 
-  // If no identity, then prompt signup
   if (!currentIdentity) {
+    // Web lands on the explore feed
+    if (isWeb) {
+      return <ExploreScreen />;
+    }
     return <Redirect href="/(onboarding)" />;
   }
 

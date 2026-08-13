@@ -227,7 +227,7 @@ export default function Home() {
       <div className="landing-page bg-neutral-900 text-white">
         <header
           id="homepage-hero"
-          className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-[linear-gradient(180deg,rgba(26,31,41,0)_75%,#1a1f29_100%),url('/img/harbor-scene-splash.svg')] bg-cover bg-center px-6 py-24 text-center text-white"
+          className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-[linear-gradient(180deg,rgba(26,31,41,0)_75%,#1a1f29_100%),url('/img/harbor-scene-splash.svg')] bg-cover bg-center px-6 pt-24 pb-[28vh] text-center text-white md:pb-24"
         >
           <h1 className="m-0 max-w-4xl text-5xl leading-[1.1] text-shadow-sm font-extrabold md:text-[4.25rem]">
             {siteConfig.tagline}
