@@ -53,6 +53,9 @@
   },
   "submit": {
     "staging": {
+      "ios": {
+        "ascAppId": "6800794994"
+      },
       "android": {
         "track": "internal"
       }
