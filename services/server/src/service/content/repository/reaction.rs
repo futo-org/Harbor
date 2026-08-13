@@ -9,19 +9,11 @@ pub(super) async fn add<C: ConnectionTrait>(
     ctx: &ChildContext<'_>,
     reaction: Reaction,
 ) -> Result<(), Status> {
-    // A reaction targets either an in-network event (`event_key`) or an
-    // external subject via `attributed_to` — e.g. a URL (video like/dislike).
+    // A reaction targets an in-network event via `event_key`. Out-of-network
+    // reactions (e.g. a URL / video like) use `AttributedToReaction` instead,
+    // which is stored as generic content with no typed row (see mod.rs).
     let Some(event_key) = reaction.event_key else {
-        // URL/attributed reaction: accept and store as generic content (so it
-        // syncs and each client can query its own opinions locally), but write
-        // no typed `content_reaction` row — that table is event-keyed, and
-        // server-side URL reaction counts are intentionally not maintained.
-        if reaction.attributed_to.is_none() {
-            return Err(Status::invalid_argument(
-                "reaction must set event_key or attributed_to",
-            ));
-        }
-        return Ok(());
+        return Err(Status::invalid_argument("reaction must set event_key"));
     };
 
     let key = split_event_key(Some(event_key), "reaction content")?;

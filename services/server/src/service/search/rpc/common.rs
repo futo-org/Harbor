@@ -327,6 +327,7 @@ pub fn collect_referenced_keys(
             | Some(ContentBody::ProfileUpdate(_))
             | Some(ContentBody::Identity(_))
             | Some(ContentBody::VerificationClaim(_))
+            | Some(ContentBody::AttributedToReaction(_))
             | None => {}
         }
     }

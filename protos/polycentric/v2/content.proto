@@ -14,6 +14,7 @@ message Content {
     Follow follow = 4;
     Block block = 5;
     Reaction reaction = 6;
+    AttributedToReaction attributed_to_reaction = 15;
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
     Repost repost = 9;
@@ -95,10 +96,17 @@ message Reaction {
   optional string emoji = 2;
   // Upvote = true. Downvote = false.
   bool positive = 3;
-  // What the reaction is attributed to when it targets something that is not
-  // an in-network event — e.g. a URL (reacting to a video). Set exactly one
-  // of `event_key` or `attributed_to`.
-  optional AttributedTo attributed_to = 4;
+}
+
+// A reaction targeting something that is not an in-network event — e.g. a URL
+// (reacting to a video). The out-of-network counterpart of `Reaction`.
+message AttributedToReaction {
+  // What the reaction is attributed to (e.g. a link/URL).
+  AttributedTo attributed_to = 1;
+  // Optional emoji
+  optional string emoji = 2;
+  // Upvote = true. Downvote = false.
+  bool positive = 3;
 }
 
 message ProfileUpdate {

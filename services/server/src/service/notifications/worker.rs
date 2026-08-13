@@ -541,7 +541,6 @@ mod tests {
             event_key: Some(target.clone()),
             emoji: None,
             positive: true,
-            attributed_to: None,
         }));
 
         let notification = single(build_notifications("alice", &c))
