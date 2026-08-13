@@ -10,13 +10,11 @@ common-kafka = { path = "../common/kafka" }
 common-object-store = { path = "../common/object-store" }
 common-telemetry = { path = "../common/telemetry" }
 entity = { path = "./entity" }
-migration = { path = "./migration" }
 
 # 3rd Party
 axum = { version = "0.8.8", default-features = false, features = ["http2"] }
 base64.workspace = true
 chrono.workspace = true
-ed25519-dalek.workspace = true
 hex.workspace = true
 log.workspace = true
 polycentric-common.workspace = true
@@ -31,19 +29,15 @@ sha2.workspace = true
 time.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["router", "transport"] }
-tonic-prost.workspace = true
 tonic-reflection = { version = "0.14", default-features = false, features = ["server"] }
 tonic-web = { version = "0.14", default-features = false }
 opentelemetry.workspace = true
 tracing.workspace = true
-tower = { version = "0.5", default-features = false }
 tower-http = { version = "0.7", default-features = false, features = ["cors"] }
 tower-layer = { version = "0.3", default-features = false }
 http = { version = "1", default-features = false }
-http-body-util = { version = "0.1", default-features = false }
 
 [dev-dependencies]
-bytes = { version = "1", default-features = false }
+ed25519-dalek.workspace = true
 mockito = { version = "1", default-features = false }
-tonic-prost-build = { version = "*", default-features = false }
-tower = { version = "0.5", default-features = false, features = ["util"] }
+tower = { version = "0.5", default-features = false }
