@@ -123,6 +123,9 @@ val uniffiGenerate = tasks.register<Exec>("uniffiGenerate") {
         "--out-dir", uniffiOutDir.absolutePath,
         "--no-format",
     )
+    // Regenerate when the host cdylib (rs-core's exported FFI) changes;
+    // without this input the task is wrongly cached and stale bindings persist.
+    inputs.file(hostLib)
     outputs.dir(uniffiOutDir)
 }
 
