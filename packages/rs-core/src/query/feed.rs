@@ -1,10 +1,11 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    Event, EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
+    EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
     GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams,
     feeds_service_client::FeedsServiceClient,
 };
@@ -17,11 +18,11 @@ use crate::{
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, copy_hints, merge_bundle_responses, merge_event_bundles,
-                merge_event_hints,
+                EventBundleResponse, bundle_created_at, copy_hints, merge_bundle_responses,
+                merge_event_bundles, merge_event_hints,
             },
         },
-        pagination::{FakeCursorToken, merge_page_info, prepare_page_info},
+        pagination::{FakeCursorToken, merge_page_info, pagination_horizon, prepare_page_info},
         validation::{retain_validated_bundles, retain_validated_hints},
     },
 };
@@ -77,8 +78,26 @@ fn do_feed_merge(
     validate: bool,
 ) -> Vec<u8> {
     let mut response = GetFeedResponse::default();
+    let mut oldest_by_server: BTreeMap<String, u64> = BTreeMap::new();
     for v in values {
         if let Ok(incoming) = GetFeedResponse::decode(v.as_slice()) {
+            let server = incoming
+                .page_info
+                .as_ref()
+                .and_then(|i| FakeCursorToken::decode(&i.end_cursor).ok())
+                .and_then(|t| t.sole_server().map(str::to_string));
+            let oldest = incoming
+                .event_bundles
+                .iter()
+                .filter_map(bundle_created_at)
+                .min();
+            if let (Some(server), Some(oldest)) = (server, oldest) {
+                oldest_by_server
+                    .entry(server)
+                    .and_modify(|o| *o = (*o).min(oldest))
+                    .or_insert(oldest);
+            }
+
             response.event_bundles.extend(incoming.event_bundles);
             response.event_hints.extend(incoming.event_hints);
             response.page_info = merge_page_info(response.page_info, incoming.page_info);
@@ -94,17 +113,22 @@ fn do_feed_merge(
         retain_validated_hints(&c, &mut response.event_hints);
     }
 
-    // Ensure the merged events are sorted in feed order
-    response.event_bundles.sort_by_cached_key(|bundle| {
-        let created_at = bundle
-            .signed_event
-            .as_ref()
-            // Events we cannot decode will be mapped to `None` and sorted at the end.
-            .and_then(|se| Event::decode(se.event_bytes.as_slice()).ok())
-            .map(|event| event.created_at);
+    // Newest first; undecodable events sort last.
+    response
+        .event_bundles
+        .sort_by_cached_key(|bundle| Reverse(bundle_created_at(bundle)));
 
-        Reverse(created_at)
-    });
+    // Hold back items that servers with more data haven't paged past yet,
+    // so later pages never insert above already-emitted items.
+    let horizon = response
+        .page_info
+        .as_ref()
+        .and_then(|i| pagination_horizon(&oldest_by_server, &i.end_cursor));
+    if let Some(horizon) = horizon {
+        response
+            .event_bundles
+            .retain(|b| bundle_created_at(b).is_some_and(|t| t >= horizon));
+    }
 
     response.encode_to_vec()
 }
@@ -341,7 +365,7 @@ mod tests {
 
     use super::*;
     use polycentric_common::models::protos_v2::{
-        Event, EventBundle, EventHint, EventKey, GetFeedResponse, PublicKey, SignedEvent,
+        Event, EventBundle, EventHint, EventKey, GetFeedResponse, PageInfo, PublicKey, SignedEvent,
     };
 
     fn make_bundle(
@@ -351,6 +375,17 @@ mod tests {
         key: Vec<u8>,
         sequence: u64,
     ) -> EventBundle {
+        make_bundle_at(collection, identity, key_type, key, sequence, 0)
+    }
+
+    fn make_bundle_at(
+        collection: i32,
+        identity: &str,
+        key_type: i32,
+        key: Vec<u8>,
+        sequence: u64,
+        created_at: u64,
+    ) -> EventBundle {
         let event = Event {
             key: Some(EventKey {
                 collection,
@@ -358,6 +393,7 @@ mod tests {
                 signed_by: Some(PublicKey { key_type, key }),
                 sequence,
             }),
+            created_at,
             ..Default::default()
         };
         EventBundle {
@@ -487,5 +523,101 @@ mod tests {
         // Parseable + both unparseables retained (no dedup key to compare).
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 3);
+    }
+
+    fn paged_response(server: &str, bundles: Vec<EventBundle>, has_next: bool) -> Vec<u8> {
+        GetFeedResponse {
+            event_bundles: bundles,
+            event_hints: Vec::new(),
+            page_info: Some(PageInfo {
+                start_cursor: FakeCursorToken::encode_new(server, "start", -1, false).unwrap(),
+                end_cursor: FakeCursorToken::encode_new(server, "end", 1, has_next).unwrap(),
+                has_previous_page: false,
+                has_next_page: has_next,
+            }),
+        }
+        .encode_to_vec()
+    }
+
+    fn created_ats(merged: &[u8]) -> Vec<u64> {
+        GetFeedResponse::decode(merged)
+            .unwrap()
+            .event_bundles
+            .iter()
+            .filter_map(bundle_created_at)
+            .collect()
+    }
+
+    #[test]
+    fn holds_back_items_below_the_pagination_horizon() {
+        // server-a has more data but has only paged down to t=90;
+        // server-b is exhausted with much older items.
+        let a = paged_response(
+            "server-a",
+            vec![
+                make_bundle_at(2, "a1", 1, vec![1], 1, 100),
+                make_bundle_at(2, "a2", 1, vec![2], 1, 90),
+            ],
+            true,
+        );
+        let b = paged_response(
+            "server-b",
+            vec![
+                make_bundle_at(2, "b1", 1, vec![3], 1, 50),
+                make_bundle_at(2, "b2", 1, vec![4], 1, 40),
+            ],
+            false,
+        );
+
+        let merged = merge_feed_responses(&[a, b], &test_client());
+        assert_eq!(created_ats(&merged), vec![100, 90]);
+    }
+
+    #[test]
+    fn emits_everything_once_every_server_is_exhausted() {
+        let a = paged_response(
+            "server-a",
+            vec![
+                make_bundle_at(2, "a1", 1, vec![1], 1, 100),
+                make_bundle_at(2, "a2", 1, vec![2], 1, 90),
+            ],
+            false,
+        );
+        let b = paged_response(
+            "server-b",
+            vec![
+                make_bundle_at(2, "b1", 1, vec![3], 1, 50),
+                make_bundle_at(2, "b2", 1, vec![4], 1, 40),
+            ],
+            false,
+        );
+
+        let merged = merge_feed_responses(&[a, b], &test_client());
+        assert_eq!(created_ats(&merged), vec![100, 90, 50, 40]);
+    }
+
+    #[test]
+    fn same_server_pages_do_not_truncate_each_other() {
+        // Per-server accumulation runs through the same merge: an earlier
+        // page must not hold back the next page's older items.
+        let page1 = paged_response(
+            "server-a",
+            vec![
+                make_bundle_at(2, "a1", 1, vec![1], 1, 100),
+                make_bundle_at(2, "a2", 1, vec![2], 1, 90),
+            ],
+            true,
+        );
+        let page2 = paged_response(
+            "server-a",
+            vec![
+                make_bundle_at(2, "a3", 1, vec![3], 1, 80),
+                make_bundle_at(2, "a4", 1, vec![4], 1, 70),
+            ],
+            true,
+        );
+
+        let merged = merge_feed_responses(&[page1, page2], &test_client());
+        assert_eq!(created_ats(&merged), vec![100, 90, 80, 70]);
     }
 }

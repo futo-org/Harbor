@@ -1,5 +1,6 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
+import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
@@ -7,10 +8,7 @@ import {
   useFeedPageInfo,
   useFeedWithOverlays,
 } from './feedCache';
-import {
-  extractFeedToken,
-  shouldExtend,
-} from '@/src/common/lib/polycentric-hooks';
+import { extractFeedToken } from '@/src/common/lib/polycentric-hooks';
 
 export function useIdentityFeed(
   identityId: string | null | undefined,
@@ -40,17 +38,14 @@ export function useIdentityFeed(
   const items = useFeedWithOverlays(queryKey, query.data);
   const pageInfo = useFeedPageInfo(queryKey, query.data);
   const hasNext = pageInfo?.hasNextPage ?? false;
+  const requestMore = useChainedExtend(query, items.length, hasNext);
 
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: async () => {
-      if (shouldExtend(hasNext, query)) {
-        query.extend();
-      }
-    },
+    loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };

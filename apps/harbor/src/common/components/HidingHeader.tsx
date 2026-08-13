@@ -25,12 +25,10 @@ const HEADER_HIDE_THRESHOLD = 50;
 /** `initialHeight` avoids a re-layout when the header's height is known:
  *  on Android `onLayout` lands after the list has already measured.
  *
- *  The header's space is reserved with `contentInset` on iOS — UIKit then
- *  anchors the refresh spinner to the inset, below the sticky header —
- *  and with content padding on Android, where the spinner is positioned
- *  via `progressViewOffset` instead. Consumers spread `scrollProps` onto
- *  the scrollable, pad their content by `contentPaddingTop`, and treat
- *  `topOffset` as the scroll offset of the very top. */
+ *  iOS reserves the header space with `contentInset` (UIKit then anchors
+ *  the refresh spinner below the header); Android uses content padding.
+ *  Consumers spread `scrollProps`, pad content by `contentPaddingTop`,
+ *  and treat `topOffset` as the scroll offset of the top. */
 export function useHidingHeader(initialHeight = 0) {
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
