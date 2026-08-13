@@ -5,12 +5,15 @@ use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow,
+    Content, Delete, EventKey, Follow, Post,
 };
 use sea_orm::sea_query::{
-    DeleteStatement, Expr, IntoCondition, SelectStatement,
+    DeleteStatement, Expr, InsertStatement, IntoCondition, SelectStatement,
 };
 use sea_orm::*;
+
+const COLLECTION_FEED: i16 = collections::FEED as i16;
+const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
 
 pub struct Query;
 
@@ -156,12 +159,30 @@ impl Mutation {
             return Ok(());
         };
         match body {
+            ContentBody::Post(post) => Mutation::post(db, &event, post).await,
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
+    }
+
+    async fn post<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        _: &Post,
+    ) -> Result<(), DbErr> {
+        let mut query = InsertStatement::new();
+        query
+            .into_table("reaction_tally")
+            .columns(["event_id", "positive_count", "negative_count"])
+            .values([Expr::from(event.id), Expr::from(0), Expr::from(0)])
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+        db.execute(&query).await?;
+        Ok(())
     }
 
     async fn follow<C: ConnectionTrait>(
@@ -187,10 +208,6 @@ impl Mutation {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
 
-        if key.collection != collections::SOCIAL_GRAPH as i16 {
-            return Ok(());
-        }
-
         let mut event_id = SelectStatement::new();
         event_id
             .column(EventModel::Column::Id)
@@ -204,10 +221,20 @@ impl Mutation {
             .and_where(EventModel::Column::Sequence.eq(key.sequence));
 
         let mut query = DeleteStatement::new();
-        query
-            .from_table(FollowModel::Entity)
-            .cond_where(FollowModel::Column::EventId.in_subquery(event_id));
+        match key.collection {
+            // Deletion of a post.
+            COLLECTION_FEED => {
+                query.from_table("reaction_tally");
+            }
+            // Deletion of a following.
+            COLLECTION_SOCIAL => {
+                query.from_table(FollowModel::Entity);
+            }
+            // Nothing to delete.
+            _ => return Ok(()),
+        }
 
+        query.cond_where(Expr::col("event_id").in_subquery(event_id));
         db.execute(&query).await?;
         Ok(())
     }
