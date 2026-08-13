@@ -161,7 +161,6 @@ pub fn row_to_bundle(row: EventWithContentRow) -> EventBundle {
         signed_event: Some(SignedEvent {
             event_bytes: event.event_bytes,
             signature: event.signature,
-            endorsement: event.endorsement,
         }),
         serialized_content: content.map(|c| SerializedContent {
             content_bytes: c.serialized_bytes,

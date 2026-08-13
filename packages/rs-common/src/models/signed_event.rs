@@ -81,14 +81,9 @@ impl fmt::Debug for SignedEvent {
         let SignedEvent {
             signature,
             event_bytes,
-            endorsement,
         } = self;
 
         let signature = &URL_SAFE_NO_PAD.encode(signature);
-
-        let endorsement = &endorsement
-            .as_ref()
-            .map(|bytes| URL_SAFE_NO_PAD.encode(bytes));
 
         let decoded_event = Event::decode(event_bytes.as_slice()).ok();
         let event: &dyn fmt::Debug = if let Some(event) = decoded_event.as_ref() {
@@ -99,7 +94,6 @@ impl fmt::Debug for SignedEvent {
 
         f.debug_struct("SignedEvent")
             .field("signature", signature)
-            .field("endorsement", endorsement)
             .field("event", event)
             .finish()
     }

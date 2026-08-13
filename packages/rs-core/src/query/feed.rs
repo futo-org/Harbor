@@ -466,7 +466,6 @@ mod tests {
             signed_event: Some(SignedEvent {
                 signature: Vec::new(),
                 event_bytes: event.encode_to_vec(),
-                endorsement: None,
             }),
             serialized_content: None,
             event_proofs: Vec::new(),
@@ -516,7 +515,6 @@ mod tests {
             signed_event: Some(SignedEvent {
                 signature: Vec::new(),
                 event_bytes: vec![0xFF, 0xFF, 0xFF],
-                endorsement: None,
             }),
             serialized_content: None,
             event_proofs: Vec::new(),
@@ -581,7 +579,6 @@ mod tests {
             signed_event: Some(SignedEvent {
                 signature: Vec::new(),
                 event_bytes: vec![0xFF, 0xFF, 0xFF],
-                endorsement: None,
             }),
             serialized_content: None,
             event_proofs: Vec::new(),

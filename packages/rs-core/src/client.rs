@@ -570,7 +570,8 @@ mod tests {
                 signing_keys: signing,
                 revocation_bounds,
                 servers: None,
-                backup_key: None,
+                recovery_key: None,
+                recovery_signature: None,
             })),
         };
         let bytes = content.encode_to_vec();
@@ -628,7 +629,6 @@ mod tests {
         SignedEvent {
             signature,
             event_bytes,
-            endorsement: None,
         }
     }
 
@@ -656,7 +656,8 @@ mod tests {
             signing_keys: signing.clone(),
             revocation_bounds: Vec::new(),
             servers: None,
-            backup_key: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
         let id_string = identity
             .map(|s| s.to_string())
@@ -761,7 +762,8 @@ mod tests {
             signing_keys: signing,
             revocation_bounds,
             servers: None,
-            backup_key: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
 
         let dedup = signer_identity_content.deduplicated_keys();
@@ -832,7 +834,8 @@ mod tests {
             signing_keys: vec![],
             revocation_bounds: Vec::new(),
             servers: None,
-            backup_key: None,
+            recovery_key: None,
+            recovery_signature: None,
         }
         .derive_hex_key();
         let genesis = sign_event(
@@ -1302,7 +1305,8 @@ mod tests {
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
-            backup_key: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
         let identity = add_identity_event(
             &mut client,

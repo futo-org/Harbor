@@ -33,7 +33,6 @@ pub struct Model {
 
     // Signatures
     pub signature: Vec<u8>,
-    pub endorsement: Option<Vec<u8>>,
     pub previous_signature: Vec<u8>,
 
     // Merkle root over this signer's canonical (identity, collection) history

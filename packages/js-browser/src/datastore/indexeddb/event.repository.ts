@@ -19,7 +19,6 @@ interface PersistedEvent {
   /** The raw SignedEvent proto fields */
   signature: Uint8Array;
   eventBytes: Uint8Array;
-  endorsement?: Uint8Array;
 }
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -75,7 +74,6 @@ export class IndexedDBEventRepository implements IEventRepository {
       sequence: Number(event.key.sequence),
       signature: signedEvent.signature,
       eventBytes: signedEvent.eventBytes,
-      endorsement: signedEvent.endorsement,
     };
   }
 
@@ -83,7 +81,6 @@ export class IndexedDBEventRepository implements IEventRepository {
     return Proto.SignedEvent.create({
       signature: persisted.signature,
       eventBytes: persisted.eventBytes,
-      endorsement: persisted.endorsement,
     });
   }
 

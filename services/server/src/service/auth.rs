@@ -291,7 +291,6 @@ mod tests {
             content_digest_type: Some(1),
             content_digest_bytes: Some(vec![1]),
             signature: vec![1],
-            endorsement: None,
             previous_signature: vec![],
             previous_root: vec![],
             event_bytes: vec![1],

@@ -13,7 +13,8 @@ pub fn build(rotation_keys: Vec<PublicKey>, signing_keys: Vec<PublicKey>) -> Ide
         signing_keys,
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
 }
 

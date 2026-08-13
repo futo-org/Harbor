@@ -285,7 +285,6 @@ impl PolycentricCore {
         let signed_event = SignedEvent {
             signature,
             event_bytes,
-            endorsement: None,
         };
 
         let signed_event_bytes = signed_event

@@ -92,10 +92,6 @@ pub struct IdentityCandidate<'a> {
 
     /// Signature of the event bytes using the signer in the event's event key.
     pub signature: &'a [u8],
-
-    /// Signature of the event bytes using the backup key in the preceding
-    /// identity document.
-    pub endorsement: Option<&'a [u8]>,
 }
 
 /// Information extracted from an identity candidate.
@@ -123,16 +119,14 @@ pub fn resolve_chain<'a>(
 ) -> Option<IdentityChain> {
     // Filter out bad candidates and collect into a map
     let mut by_seq = {
-        let mut map: HashMap<u64, Vec<(IdentityCandidate, IdentityEvent)>> = HashMap::new();
+        let mut map: HashMap<u64, Vec<IdentityEvent>> = HashMap::new();
 
         for candidate in candidates {
             let Some(decoded) = preprocess_candidate(identity, &candidate) else {
                 continue;
             };
 
-            map.entry(decoded.sequence)
-                .or_default()
-                .push((candidate, decoded));
+            map.entry(decoded.sequence).or_default().push(decoded);
         }
 
         map
@@ -142,7 +136,6 @@ pub fn resolve_chain<'a>(
     let genesis = by_seq
         .remove(&1)?
         .into_iter()
-        .map(|(_, event)| event)
         .filter(|c| c.document.derive_hex_key() == identity)
         .filter(|c| c.document.authorizes_rotation(&c.signer))
         // Pick among the valid candidates deterministically:
@@ -163,14 +156,14 @@ pub fn resolve_chain<'a>(
             .into_iter()
             // Keep only candidates that can succeed the head and record why
             .filter_map(|c| {
-                let reason = justify_succession(head, &c)?;
+                let reason = justify_succession(identity, head, &c)?;
                 Some((c, reason))
             })
             // Pick among the valid candidates deterministically:
             // We need both the identity event and the succession reason
-            .max_by(|((_, e1), r1), ((_, e2), r2)| compare_successors((e1, *r1), (e2, *r2)));
+            .max_by(|(e1, r1), (e2, r2)| compare_successors((e1, *r1), (e2, *r2)));
 
-        if let Some(((_, next), _)) = next {
+        if let Some((next, _)) = next {
             chain.push(next);
         } else {
             break;
@@ -254,31 +247,49 @@ enum SuccessionReason {
 /// Return a reason to allow `candidate` to succeed `head` or `None` if it
 /// should not be permitted to do so.
 fn justify_succession(
+    identity: &str,
     head: &IdentityEvent,
-    candidate: &(IdentityCandidate, IdentityEvent),
+    candidate: &IdentityEvent,
 ) -> Option<SuccessionReason> {
-    let (c, e) = candidate;
-
     // A rotation key can always create a new identity document
-    if head.document.authorizes_rotation(&e.signer) {
+    if head.document.authorizes_rotation(&candidate.signer) {
         return Some(SuccessionReason::Rotation);
     }
 
     // Permit even a non-rotation key to add to the chain if it doesn't change anything
-    if e.document == head.document && head.document.authorizes_signer(&e.signer) {
+    if candidate.document == head.document && head.document.authorizes_signer(&candidate.signer) {
         return Some(SuccessionReason::Republish);
     }
 
-    // Allow a brand new document to continue the chain if it is endorsed by
-    // the backup key
-    let key = head.document.backup_key.as_ref()?;
-    let endorsement = c.endorsement?;
+    // Allow a brand new document to continue the chain if the recovery key vouches
+    // for the signing rotation key of the event:
 
-    if signature_matches(key, endorsement, c.event_bytes) {
+    // Require the signer to be in the document as a rotation key.
+    if !candidate.document.authorizes_rotation(&candidate.signer) {
+        return None;
+    }
+
+    // Check if we have a valid recovery signature.
+    let key = head.document.recovery_key.as_ref()?;
+    let signature = candidate.document.recovery_signature.as_deref()?;
+    let payload = assemble_recovery_payload(identity, &candidate.signer);
+
+    if signature_matches(key, signature, &payload) {
         Some(SuccessionReason::Recovery)
     } else {
         None
     }
+}
+
+/// The bytes a recovery signature covers:
+/// (identity_string, rotation_key_type, rotation_key_bytes)
+/// These should be appended back-to-back and the key type should be in network byte order.
+pub fn assemble_recovery_payload(identity: &str, rotation_key: &PublicKey) -> Vec<u8> {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(identity.as_bytes());
+    payload.extend_from_slice(&rotation_key.key_type.to_be_bytes());
+    payload.extend_from_slice(&rotation_key.key);
+    payload
 }
 
 impl IdentityChain {
@@ -394,7 +405,8 @@ mod tests {
             signing_keys: signing,
             revocation_bounds: Vec::new(),
             servers: None,
-            backup_key: None,
+            recovery_key: None,
+            recovery_signature: None,
         }
     }
 

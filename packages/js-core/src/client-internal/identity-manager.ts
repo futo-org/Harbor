@@ -25,9 +25,15 @@ export interface IdentityState {
    */
   servers: string[] | null;
   /**
-   * Optional backup key for restoring access when there are no active sessions.
+   * Optional recovery key for recovering access when there are no active
+   * sessions. Its only use is for producing recovery signatures.
    */
-  backupKey: Proto.PublicKey | null;
+  recoveryKey: Proto.PublicKey | null;
+  /**
+   * Signature from the recovery key of the preceding identity document,
+   * present when this document was published as a recovery.
+   */
+  recoverySignature: Uint8Array | null;
 }
 
 /**
@@ -40,7 +46,8 @@ export interface PublishArgs {
   signingKeys: Proto.PublicKey[];
   servers?: string[] | null;
   revocationBounds?: Proto.RevocationBound[];
-  backupKey?: Proto.PublicKey | null;
+  recoveryKey?: Proto.PublicKey | null;
+  recoverySignature?: Uint8Array | null;
 }
 
 /**
@@ -75,7 +82,8 @@ export class IdentityManager {
       signingKeys: identity.signingKeys,
       revocationBounds: identity.revocationBounds,
       servers: identity.servers ? identity.servers.urls : null,
-      backupKey: identity.backupKey ?? null,
+      recoveryKey: identity.recoveryKey ?? null,
+      recoverySignature: identity.recoverySignature ?? null,
     };
   }
 
@@ -94,7 +102,8 @@ export class IdentityManager {
       signingKeys,
       servers = null,
       revocationBounds = [],
-      backupKey = null,
+      recoveryKey = null,
+      recoverySignature = null,
     } = args;
 
     if (!this.client.currentKeyPair) {
@@ -106,7 +115,8 @@ export class IdentityManager {
       signingKeys,
       revocationBounds,
       servers: servers ? { urls: servers } : undefined,
-      backupKey: backupKey ?? undefined,
+      recoveryKey: recoveryKey ?? undefined,
+      recoverySignature: recoverySignature ?? undefined,
     });
     const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },

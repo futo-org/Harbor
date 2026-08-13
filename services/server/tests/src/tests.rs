@@ -70,7 +70,8 @@ async fn invalid_signature_rejected() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = initial.derive_hex_key();
 
@@ -121,7 +122,8 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = initial.derive_hex_key();
 
@@ -196,7 +198,8 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
             1,
         )],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -299,7 +302,8 @@ async fn post_revocation_event_returns_without_proof() {
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = initial.derive_hex_key();
 
@@ -370,7 +374,8 @@ async fn post_revocation_event_returns_without_proof() {
             1,
         )],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -458,7 +463,8 @@ async fn rewritten_event_invalidates_proofs() {
         signing_keys: vec![public_key_of(&signing_key)],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = initial.derive_hex_key();
 
@@ -547,7 +553,8 @@ async fn rewritten_event_invalidates_proofs() {
             2,
         )],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let rotation = make_identity_bundle(
         &identity,
@@ -629,7 +636,8 @@ async fn put_verification_claim_is_ingested_and_listable() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = initial.derive_hex_key();
 
@@ -749,7 +757,8 @@ async fn publish_genesis(
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
@@ -870,7 +879,8 @@ async fn trusted_labels_served_in_feed_response() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();
@@ -979,7 +989,8 @@ async fn labeler_identity_served_with_feed_response() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();
@@ -1058,7 +1069,8 @@ async fn omit_labels_hides_labeled_post() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();
@@ -1129,7 +1141,8 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();
@@ -1221,7 +1234,8 @@ async fn untrusted_labels_not_indexed() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1232,7 +1246,8 @@ async fn untrusted_labels_not_indexed() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1323,7 +1338,8 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1333,7 +1349,8 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1409,7 +1426,8 @@ async fn thread_no_labels_returns_post() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1483,7 +1501,8 @@ async fn thread_omit_labels_matching_hides_post() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();
@@ -1574,7 +1593,8 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-        backup_key: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();

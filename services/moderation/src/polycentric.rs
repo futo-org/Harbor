@@ -279,7 +279,6 @@ impl PolycentricClient {
         let signed_event = SignedEvent {
             signature: signature.clone(),
             event_bytes: event_bytes.clone(),
-            endorsement: None,
         };
         let bundle = EventBundle {
             signed_event: Some(signed_event),
