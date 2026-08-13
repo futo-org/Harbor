@@ -1,9 +1,9 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
   extractFeedToken,
-  shouldExtend,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
@@ -42,17 +42,14 @@ export function useFollowingFeed(options?: {
   const items = useFeedWithOverlays(queryKey, query.data);
   const pageInfo = useFeedPageInfo(queryKey, query.data);
   const hasNext = pageInfo?.hasNextPage ?? false;
+  const requestMore = useChainedExtend(query, items.length, hasNext);
 
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: async () => {
-      if (shouldExtend(hasNext, query)) {
-        query.extend();
-      }
-    },
+    loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };

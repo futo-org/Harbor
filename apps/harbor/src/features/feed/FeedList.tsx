@@ -1,5 +1,10 @@
-import { forwardRef, useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { forwardRef, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  InteractionManager,
+  RefreshControl,
+  View,
+} from 'react-native';
 import {
   List,
   type ListProps,
@@ -36,8 +41,10 @@ const defaultGetItemType = (item: PostData) => {
   return 'text';
 };
 
-/** We keep the skeleton overlaid until then and reveal the feed
- *  settled. */
+/** First paint mounts only a viewport's worth of rows; the rest follow
+ *  once the initial render has settled. */
+const INITIAL_RENDER_COUNT = 8;
+
 const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   {
     feed,
@@ -52,9 +59,23 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
 ) {
   const { theme } = useTheme();
 
-  const [firstLayoutDone, setFirstLayoutDone] = useState(false);
-  const onLoad = useCallback(() => setFirstLayoutDone(true), []);
-  const showLayoutShield = !firstLayoutDone && feed.items.length > 0 && !isWeb;
+  const [expanded, setExpanded] = useState(isWeb);
+  const hasItems = feed.items.length > 0;
+  useEffect(() => {
+    if (expanded || !hasItems) return;
+    const task = InteractionManager.runAfterInteractions(() =>
+      setExpanded(true),
+    );
+    return () => task.cancel();
+  }, [expanded, hasItems]);
+
+  const items = useMemo(
+    () =>
+      expanded || feed.items.length <= INITIAL_RENDER_COUNT
+        ? feed.items
+        : feed.items.slice(0, INITIAL_RENDER_COUNT),
+    [expanded, feed.items],
+  );
 
   const insets = useSafeAreaInsets();
 
@@ -87,48 +108,28 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   );
 
   return (
-    <View style={Atoms.flex_1}>
-      <List<PostData>
-        ref={ref}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        getItemType={getItemType}
-        data={feed.items}
-        onLoad={onLoad}
-        initialHeaderHeight={initialHeaderHeight}
-        ListEmptyComponent={emptyComponent}
-        ListFooterComponent={footerComponent}
-        onEndReached={feed.hasMore ? feed.loadMore : undefined}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          !isWeb ? (
-            <RefreshControl
-              refreshing={feed.isRefreshing}
-              onRefresh={feed.refresh}
-            />
-          ) : undefined
-        }
-        showsVerticalScrollIndicator={false}
-        {...rest}
-      />
-      {showLayoutShield ? (
-        <View
-          pointerEvents="none"
-          style={[
-            Atoms.absolute,
-            {
-              top: initialHeaderHeight,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: theme.palette.neutral_0,
-            },
-          ]}
-        >
-          <PostSkeletonList />
-        </View>
-      ) : null}
-    </View>
+    <List<PostData>
+      ref={ref}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      getItemType={getItemType}
+      data={items}
+      initialHeaderHeight={initialHeaderHeight}
+      ListEmptyComponent={emptyComponent}
+      ListFooterComponent={footerComponent}
+      onEndReached={feed.hasMore ? feed.loadMore : undefined}
+      onEndReachedThreshold={0.5}
+      refreshControl={
+        !isWeb ? (
+          <RefreshControl
+            refreshing={feed.isRefreshing}
+            onRefresh={feed.refresh}
+          />
+        ) : undefined
+      }
+      showsVerticalScrollIndicator={false}
+      {...rest}
+    />
   );
 });
 
