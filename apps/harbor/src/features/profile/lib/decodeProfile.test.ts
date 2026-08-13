@@ -90,6 +90,13 @@ describe('decodeProfile', () => {
     expect(decodeProfile(serializedResponse([])).alias).toBeNull();
   });
 
+  it('caps pathological names at 50 characters', () => {
+    const bytes = serializedResponse([
+      bundle(profileContent({ name: 'x'.repeat(500) }), 1),
+    ]);
+    expect(decodeProfile(bytes).name).toBe(`${'x'.repeat(50)}…`);
+  });
+
   it('extracts the follow counters', () => {
     const bytes = serializedResponse(
       [bundle(profileContent({ name: 'Alice' }), 1)],

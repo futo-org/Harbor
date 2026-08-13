@@ -1,4 +1,9 @@
 import { v2 } from '@polycentric/react-native';
+import { truncateName } from '@/src/common/lib/polycentric-hooks/helpers';
+
+// Every rendered display name flows through this decode; capping here keeps
+// pathological names from bloating text layout.
+const MAX_NAME_LENGTH = 50;
 
 export type DecodedProfile = {
   name: string | null;
@@ -39,7 +44,9 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
   }
 
   return {
-    name: latest?.update.name ?? null,
+    name: latest?.update.name
+      ? truncateName(latest.update.name, MAX_NAME_LENGTH)
+      : null,
     description: latest?.update.description ?? null,
     avatar: latest?.update.avatar ?? null,
     banner: latest?.update.banner ?? null,
