@@ -142,15 +142,19 @@ function Screen({
 
   showLeftSidebar = showLeftSidebar && isWeb;
 
-  // Narrow web viewports hide the right sidebar and its signup widget, so
-  // signed-out visitors get a fixed bottom bar instead.
-  const showSignupBar = isWeb && !identity && deviceWidth <= Breakpoints.md;
-
   // On the smallest web viewports the left sidebar is replaced by a
   // topbar whose menu button opens it as a drawer.
   const drawerMode = isWeb && deviceWidth <= Breakpoints.sm;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
+
+  // Narrow web viewports hide the right sidebar and its signup widget, so
+  // signed-out visitors get a fixed bottom bar instead — except inside the
+  // signup/pairing flow itself, where it would cover the flow's buttons.
+  const inOnboarding =
+    pathname.startsWith('/signup') || pathname.startsWith('/login');
+  const showSignupBar =
+    isWeb && !identity && deviceWidth <= Breakpoints.md && !inOnboarding;
   // biome-ignore lint/correctness/useExhaustiveDependencies: closes the drawer on every route change
   useEffect(() => {
     setDrawerOpen(false);
