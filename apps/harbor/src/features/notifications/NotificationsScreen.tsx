@@ -13,7 +13,8 @@ import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
   const enabled = useEagerLoad();
-  const { items, isLoading, refresh } = useListNotifications(enabled);
+  const { items, isLoading, isRefreshing, refresh } =
+    useListNotifications(enabled);
   useFocusedRefresh(refresh);
 
   return (
@@ -21,10 +22,9 @@ export default function NotificationsScreen() {
       <Screen.PrimaryColumn>
         <List<NotificationData>
           data={items}
-          refreshing={isLoading}
           refreshControl={
             isWeb ? undefined : (
-              <RefreshControl refreshing={isLoading} onRefresh={refresh} />
+              <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
             )
           }
           keyExtractor={(notification) => notification.id}

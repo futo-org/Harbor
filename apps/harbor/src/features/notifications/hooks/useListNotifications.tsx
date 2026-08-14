@@ -7,6 +7,8 @@ import { decodeNotifications, type NotificationData } from '../utils';
 export type UseListNotificationsResult = {
   items: NotificationData[];
   isLoading: boolean;
+  /** True only for a user-initiated refresh — drives the RefreshControl. */
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => void;
 };
@@ -35,6 +37,7 @@ export default function useListNotifications(
   return {
     items,
     isLoading: query.isLoading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
