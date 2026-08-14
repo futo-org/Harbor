@@ -6,6 +6,7 @@ pub mod get_explore_feed;
 pub mod get_following_feed;
 pub mod get_identity_feed;
 pub mod get_post_thread;
+pub mod get_top_feed;
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::feeds_service_server::{
@@ -14,6 +15,7 @@ use crate::service::proto::feeds_service_server::{
 use crate::service::proto::{
     GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
     GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
+    GetTopFeedRequest,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -48,6 +50,15 @@ impl FeedsService for FeedsServiceImpl {
     ) -> Result<Response<GetFeedResponse>, Status> {
         Ok(Response::new(
             get_explore_feed::handle(&self.ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_top_feed(
+        &self,
+        request: Request<GetTopFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        Ok(Response::new(
+            get_top_feed::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
