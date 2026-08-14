@@ -17,8 +17,8 @@ for (const [key, value] of Object.entries(process.env)) {
 // SSR reads the same global.
 globalThis.__POLYCENTRIC_ENV__ = runtimeEnv;
 
-// Base URL for the exported /_expo js/css (e.g. the static CDN). /assets
-// stays on the origin: the bundle requests those relative to the page.
+// Base URL for the exported bundle (e.g. the static CDN). CI uploads the
+// same /_expo and /assets tree under it and rewrites the js/css to match.
 const assetsBaseUrl = (process.env.POLYCENTRIC_STATIC_ASSETS_URL || '').replace(
   /\/$/,
   '',
@@ -40,8 +40,8 @@ for (const entry of fs.readdirSync(DIST_DIR, {
   );
   if (assetsBaseUrl) {
     patched = patched.replace(
-      /(src|href)="\/_expo\//g,
-      `$1="${assetsBaseUrl}/_expo/`,
+      /(src|href)="\/(_expo|assets)\//g,
+      `$1="${assetsBaseUrl}/$2/`,
     );
   }
   if (patched !== html) fs.writeFileSync(file, patched);

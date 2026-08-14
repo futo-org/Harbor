@@ -24,10 +24,12 @@
   script:
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - ENVIRONMENT_TAG="${CI_ENVIRONMENT_NAME%%/*}"
-    # Upload the web bundle to this environment's static dir before the
-    # image tag flips (served via POLYCENTRIC_STATIC_ASSETS_URL, server.js).
-    - crane export $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA - | tar -x app/dist/client/_expo
-    - node .gitlab/ci/scripts/publish-web-assets.mjs app/dist/client/_expo web/${ENVIRONMENT_TAG}/_expo
+    # Upload the web bundle (js/css plus the fonts, images and wasm under
+    # /assets) to this environment's static dir before the image tag flips.
+    # Set POLYCENTRIC_STATIC_ASSETS_URL to this base on the deployment.
+    - ASSETS_BASE_URL="${STATIC_PUBLIC_BASE_URL%/}/web/${ENVIRONMENT_TAG}"
+    - crane export $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA - | tar -x app/dist/client
+    - node .gitlab/ci/scripts/publish-web-assets.mjs app/dist/client web/${ENVIRONMENT_TAG} $ASSETS_BASE_URL
     - crane tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA $ENVIRONMENT_TAG
     - crane tag $CI_REGISTRY_IMAGE/charts/harbor-web:$CHART_VERSION $ENVIRONMENT_TAG
   needs:
