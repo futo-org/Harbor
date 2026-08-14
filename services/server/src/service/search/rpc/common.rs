@@ -50,30 +50,11 @@ impl<SortedBy> Params<SortedBy> {
     {
         let query = prepare_search_query(&query)
             .ok_or_else(|| Status::invalid_argument("empty search query"))?;
-        let limit = page_limit(params);
-
-        let tokens = params
-            .as_ref()
-            .map(|p| (&p.backward_token, &p.forward_token));
-
-        let cursor_filter = match tokens {
-            Some((Some(_), Some(_))) => {
-                return Err(Status::invalid_argument(
-                    "Only one cursor is allowed",
-                ));
-            }
-            Some((Some(token), None)) => {
-                Some(CursorFilter::Backward(Cursor::decode(token)?))
-            }
-            Some((None, Some(token))) => {
-                Some(CursorFilter::Forward(Cursor::decode(token)?))
-            }
-            _ => None,
-        };
-
+        let (cursor_filter, limit) =
+            CursorFilter::from_page_params(params.as_ref())?;
         Ok(Params {
             query,
-            limit,
+            limit: limit.into(),
             cursor_filter,
         })
     }
@@ -165,103 +146,12 @@ fn test_prepare_search_query() {
     }
 }
 
-pub fn page_limit(page_params: &Option<PageParams>) -> u64 {
-    page_params
-        .as_ref()
-        .and_then(|p| p.limit)
-        .unwrap_or(50)
-        .clamp(1, 200) as u64
-}
-
 /// Event, content and search rank.
 pub type SearchRow = (event_model::Model, content_model::Model, f32);
 
 pub struct Fetched<SortedBy> {
     pub rows: Vec<SearchRow>,
     pub page_info: PageInfo<SortedBy>,
-}
-
-/// Remove any extra rows (for checking next page existence) and extract page info.
-/// Return the final fetch stage result.
-pub fn finalize_fetch<E, F, SortedBy>(
-    rows: &mut Vec<E>,
-    params: &Params<SortedBy>,
-    row_to_marker: F,
-) -> PageInfo<SortedBy>
-where
-    F: Fn(&E) -> Marker<SortedBy>,
-    SortedBy: Clone,
-{
-    // We tried fetching more rows than the client limit.
-    // If we got more back, then there is more data past the page we will return.
-    let has_extra_row = rows.len() as u64 > params.limit;
-
-    // Simple heuristic: if a forward token was used, then there was a previous page.
-    // Unless the forward token was a start token.
-    // Similar logic applies for backward tokens.
-    // There are false negatives when navigating forward from an
-    // end token or backward from a start token.
-    // We do not handle these cases.
-    let mid_cursor_was_used = matches!(
-        params.cursor_filter,
-        Some(CursorFilter::Forward(Cursor::Mid(_)))
-            | Some(CursorFilter::Backward(Cursor::Mid(_)))
-    );
-
-    let (has_previous_page, has_next_page) = match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            // Backwards queries have a cursor if there is a page following this one
-            // and the extra row would be preceding the current page.
-            (has_extra_row, mid_cursor_was_used)
-        }
-        _ => (mid_cursor_was_used, has_extra_row),
-    };
-
-    // Remove from the end if we fetched extra rows at the end
-    // and remove from the beginning if we are doing a backwards query
-    match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            let drop = rows.len().saturating_sub(params.limit as usize);
-            rows.drain(0..drop);
-        }
-        _ => rows.truncate(params.limit as usize),
-    }
-
-    let backward_marker = rows.first().map(&row_to_marker);
-    let forward_marker = rows.last().map(&row_to_marker);
-
-    let backward_cursor = match (backward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: we stay here.
-        (None, Some(CursorFilter::Backward(cur))) => cur.clone(),
-        // Truly empty feed: we are at the end and new items will be
-        // placed preceding our cursor.
-        // OR
-        // Forward query from the end of the feed: we get the last items
-        // if we navigate backward.
-        _ => Cursor::End,
-    };
-
-    let forward_cursor = match (forward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: a forward query
-        // should return the first items in the feed.
-        (None, Some(CursorFilter::Backward(_))) => Cursor::Start,
-        // There are zero rows following the previous cursor: we stay here.
-        (None, Some(CursorFilter::Forward(cur))) => cur.clone(),
-        // Truly empty feed: we are at the end and a forward query will continue
-        // to return no items.
-        _ => Cursor::End,
-    };
-
-    PageInfo {
-        backward_cursor,
-        forward_cursor,
-        has_previous_page,
-        has_next_page,
-    }
 }
 
 /// Returns all event keys references in `rows` as well as a set for the quoutes

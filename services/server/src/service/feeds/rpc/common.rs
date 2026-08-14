@@ -2,15 +2,16 @@
 //! Mostly pipeline related
 
 use crate::data::hydration::HydrationState;
+use crate::data::{CursorFilter, Marker, PageInfo, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
 use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, FeedMarker, PageInfo, Query as FeedsRepository,
+    EventCreatedAt, Query as FeedsRepository,
 };
-use crate::service::feeds::util::{map_db_err, page_limit};
+use crate::service::feeds::util::map_db_err;
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
@@ -23,67 +24,52 @@ use crate::service::proto::{
 use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use entity::content_model;
 use prost::Message;
+use serde::Deserialize;
 use std::collections::HashSet;
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
-pub struct Params {
+pub struct Params<SortedBy = EventCreatedAt> {
     pub limit: u64,
-    pub cursor_filter: Option<CursorFilter>,
+    pub cursor_filter: Option<CursorFilter<SortedBy>>,
     pub omit_labels: Vec<String>,
 }
 
-impl Params {
+impl<SortedBy> Params<SortedBy> {
     /// Extract values from the client request's page params and `omit_labels` set.
     pub fn from_req_params(
         params: &Option<PageParams>,
         omit_labels: Vec<String>,
-    ) -> Result<Params, Status> {
-        let limit = page_limit(params);
-
-        let tokens = params
-            .as_ref()
-            .map(|p| (&p.backward_token, &p.forward_token));
-
-        let cursor_filter = match tokens {
-            Some((Some(_), Some(_))) => {
-                return Err(Status::invalid_argument(
-                    "Only one cursor is allowed",
-                ));
-            }
-            Some((Some(token), None)) => {
-                Some(CursorFilter::Backward(FeedCursor::decode(token)?))
-            }
-            Some((None, Some(token))) => {
-                Some(CursorFilter::Forward(FeedCursor::decode(token)?))
-            }
-            _ => None,
-        };
-
+    ) -> Result<Params<SortedBy>, Status>
+    where
+        SortedBy: for<'a> Deserialize<'a>,
+    {
+        let (cursor_filter, limit) =
+            CursorFilter::from_page_params(params.as_ref())?;
         Ok(Params {
-            limit,
+            limit: limit.into(),
             cursor_filter,
             omit_labels,
         })
     }
 }
 
-pub struct Fetched {
+pub struct Fetched<SortedBy = EventCreatedAt> {
     pub rows: Vec<EventWithContentRow>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
-pub struct GetFeedResponseFilter {
+pub struct GetFeedResponseFilter<SortedBy = EventCreatedAt> {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventWithContentRow>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
-pub struct GetFeedResponseView {
+pub struct GetFeedResponseView<SortedBy = EventCreatedAt> {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
 /// Remove any extra rows (for checking next page existence) and extract page info.
@@ -92,85 +78,22 @@ pub fn finalize_fetch(
     mut rows: Vec<EventWithContentRow>,
     params: &Params,
 ) -> Fetched {
-    // We tried fetching more rows than the client limit.
-    // If we got more back, then there is more data past the page we will return.
-    let has_extra_row = rows.len() as u64 > params.limit;
-
-    // Simple heuristic: if a forward token was used, then there was a previous page.
-    // Unless the forward token was a start token.
-    // Similar logic applies for backward tokens.
-    // There are false negatives when navigating forward from an
-    // end token or backward from a start token.
-    // We do not handle these cases.
-    let mid_cursor_was_used = matches!(
-        params.cursor_filter,
-        Some(CursorFilter::Forward(FeedCursor::Mid(_)))
-            | Some(CursorFilter::Backward(FeedCursor::Mid(_)))
+    let page_info = pipeline::finalize_fetch(
+        &mut rows,
+        params.cursor_filter.as_ref(),
+        params.limit as u32,
+        create_event_created_at_marker,
     );
-
-    let (has_previous_page, has_next_page) = match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            // Backwards queries have a cursor if there is a page following this one
-            // and the extra row would be preceding the current page.
-            (has_extra_row, mid_cursor_was_used)
-        }
-        _ => (mid_cursor_was_used, has_extra_row),
-    };
-
-    // Remove from the end if we fetched extra rows at the end
-    // and remove from the beginning if we are doing a backwards query
-    match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            let drop = rows.len().saturating_sub(params.limit as usize);
-            rows.drain(0..drop);
-        }
-        _ => rows.truncate(params.limit as usize),
-    }
-
-    let backward_marker = rows.first().map(|(event, _)| FeedMarker {
-        sorted_by: event.created_at,
-        event_id: event.id,
-    });
-
-    let forward_marker = rows.last().map(|(event, _)| FeedMarker {
-        sorted_by: event.created_at,
-        event_id: event.id,
-    });
-
-    let backward_cursor = match (backward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => FeedCursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: we stay here.
-        (None, Some(CursorFilter::Backward(cur))) => *cur,
-        // Truly empty feed: we are at the end and new items will be
-        // placed preceding our cursor.
-        // OR
-        // Forward query from the end of the feed: we get the last items
-        // if we navigate backward.
-        _ => FeedCursor::End,
-    };
-
-    let forward_cursor = match (forward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => FeedCursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: a forward query
-        // should return the first items in the feed.
-        (None, Some(CursorFilter::Backward(_))) => FeedCursor::Start,
-        // There are zero rows following the previous cursor: we stay here.
-        (None, Some(CursorFilter::Forward(cur))) => *cur,
-        // Truly empty feed: we are at the end and a forward query will continue
-        // to return no items.
-        _ => FeedCursor::End,
-    };
-
-    let page_info = PageInfo {
-        backward_cursor,
-        forward_cursor,
-        has_previous_page,
-        has_next_page,
-    };
-
     Fetched { rows, page_info }
+}
+
+fn create_event_created_at_marker(
+    (event, _): &EventWithContentRow,
+) -> Marker<EventCreatedAt> {
+    Marker {
+        sorted_by: event.created_at,
+        event_id: event.id,
+    }
 }
 
 /// Return relevant content such as:
@@ -669,8 +592,8 @@ mod tests {
         Fetched {
             rows,
             page_info: PageInfo {
-                backward_cursor: FeedCursor::End,
-                forward_cursor: FeedCursor::End,
+                backward_cursor: Cursor::End,
+                forward_cursor: Cursor::End,
                 has_previous_page: false,
                 has_next_page: false,
             },

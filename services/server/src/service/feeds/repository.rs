@@ -1,4 +1,4 @@
-use crate::data;
+use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
 use ::entity::{
@@ -16,11 +16,8 @@ use sea_orm::{
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
-type CreatedAt = TimeDateTimeWithTimeZone;
-pub type PageInfo = data::PageInfo<CreatedAt>;
-pub type CursorFilter = data::CursorFilter<CreatedAt>;
-pub type FeedCursor = data::Cursor<CreatedAt>;
-pub type FeedMarker = data::Marker<CreatedAt>;
+/// Type used when ordering events by the create at column.
+pub type EventCreatedAt = TimeDateTimeWithTimeZone;
 
 /// Get the database columns to compare against a cursor.
 fn cursor_columns() -> impl IdentityOf<EventModel::Entity> {
@@ -35,7 +32,7 @@ impl Query {
     pub async fn list_feed_events(
         db: &DbConn,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(db, limit, None, cursor_filter).await
     }
@@ -47,7 +44,7 @@ impl Query {
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
             .await
@@ -57,11 +54,11 @@ impl Query {
         db: &DbConn,
         limit: u64,
         only_identities: Option<Vec<String>>,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let cursor_filter = cursor_filter
             .as_ref()
-            .unwrap_or(&CursorFilter::Forward(FeedCursor::Start));
+            .unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
@@ -83,22 +80,22 @@ impl Query {
         match cursor_filter {
             CursorFilter::Forward(cur) => {
                 match cur {
-                    FeedCursor::Start => {}
-                    FeedCursor::Mid(marker) => {
+                    Cursor::Start => {}
+                    Cursor::Mid(marker) => {
                         sea_cursor.after(marker.values());
                     }
-                    FeedCursor::End => return Ok(vec![]),
+                    Cursor::End => return Ok(vec![]),
                 }
 
                 sea_cursor.first(limit);
             }
             CursorFilter::Backward(cur) => {
                 match cur {
-                    FeedCursor::Start => return Ok(vec![]),
-                    FeedCursor::Mid(marker) => {
+                    Cursor::Start => return Ok(vec![]),
+                    Cursor::Mid(marker) => {
                         sea_cursor.before(marker.values());
                     }
-                    FeedCursor::End => {}
+                    Cursor::End => {}
                 }
                 sea_cursor.last(limit);
             }
