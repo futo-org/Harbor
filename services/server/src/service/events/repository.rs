@@ -152,20 +152,30 @@ impl Mutation {
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
         active_model: EventModel::ActiveModel,
+    ) -> Result<EventModel::Model, DbErr> {
+        active_model.insert(db).await
+    }
+
+    /// Update the cache tables based on a new `event` and its `content`.
+    ///
+    /// Caller must ensure that the `event` is authorised, i.e. not an event
+    /// created by identity A that is deleting an event of identity B.
+    pub async fn update_cache<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
         content: Option<&Content>,
     ) -> Result<(), DbErr> {
-        let event = active_model.insert(db).await?;
-
         let Some(Content {
             content_body: Some(body),
         }) = content
         else {
             return Ok(());
         };
+
         match body {
-            ContentBody::Post(post) => Mutation::post(db, &event, post).await,
+            ContentBody::Post(post) => Mutation::post(db, event, post).await,
             ContentBody::Follow(follow) => {
-                Mutation::follow(db, &event, follow).await
+                Mutation::follow(db, event, follow).await
             }
             ContentBody::Reaction(reaction) => {
                 Mutation::reaction(db, &event, reaction).await
