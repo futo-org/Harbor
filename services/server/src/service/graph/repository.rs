@@ -9,12 +9,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
 
+use crate::data::{Cursor, CursorFilter};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
-use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, content_join,
-};
+use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
 
@@ -196,7 +195,7 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(EventModel::Column::Identity.eq(identity));
@@ -209,7 +208,7 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(ContentFollowModel::Column::IdentityId.eq(identity));
@@ -242,11 +241,11 @@ async fn page_follow_events(
     db: &DbConn,
     query: SelectTwo<EventModel::Entity, ContentModel::Entity>,
     limit: u64,
-    cursor_filter: &Option<CursorFilter>,
+    cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
 ) -> Result<Vec<EventWithContentRow>, DbErr> {
     let cursor_filter = cursor_filter
         .as_ref()
-        .unwrap_or(&CursorFilter::Forward(FeedCursor::Start));
+        .unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
     let mut sea_cursor = query
         .cursor_by((EventModel::Column::CreatedAt, EventModel::Column::Id));
@@ -255,21 +254,21 @@ async fn page_follow_events(
     match cursor_filter {
         CursorFilter::Forward(cur) => {
             match cur {
-                FeedCursor::Start => {}
-                FeedCursor::Mid(marker) => {
+                Cursor::Start => {}
+                Cursor::Mid(marker) => {
                     sea_cursor.after(marker.values());
                 }
-                FeedCursor::End => return Ok(vec![]),
+                Cursor::End => return Ok(vec![]),
             }
             sea_cursor.first(limit);
         }
         CursorFilter::Backward(cur) => {
             match cur {
-                FeedCursor::Start => return Ok(vec![]),
-                FeedCursor::Mid(marker) => {
+                Cursor::Start => return Ok(vec![]),
+                Cursor::Mid(marker) => {
                     sea_cursor.before(marker.values());
                 }
-                FeedCursor::End => {}
+                Cursor::End => {}
             }
             sea_cursor.last(limit);
         }
@@ -512,7 +511,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Forward(FeedCursor::End)),
+            &Some(CursorFilter::Forward(Cursor::End)),
         )
         .await
         .unwrap();
@@ -527,7 +526,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Backward(FeedCursor::Start)),
+            &Some(CursorFilter::Backward(Cursor::Start)),
         )
         .await
         .unwrap();

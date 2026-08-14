@@ -2,11 +2,11 @@
 //! newest first.
 
 use crate::{
-    data::{hydration::HydrationState, pipeline},
+    data::{Cursor, PageInfo, hydration::HydrationState, pipeline},
     service::{
         context::ServiceContext,
         feeds::{
-            repository::{FeedCursor, PageInfo, Query as FeedsRepository},
+            repository::{EventCreatedAt, Query as FeedsRepository},
             rpc::common::{
                 self as feeds_pipeline, GetFeedResponseFilter,
                 GetFeedResponseView,
@@ -73,9 +73,9 @@ async fn caller_blocks_subject(
 /// Produce a terminal empty page (`has_next_page: false`) for profile feeds
 /// that the authenticated user has blocked.
 fn blocked_identity_response() -> Result<GetFeedResponse, Status> {
-    let page_info = PageInfo {
-        backward_cursor: FeedCursor::End,
-        forward_cursor: FeedCursor::End,
+    let page_info: PageInfo<EventCreatedAt> = PageInfo {
+        backward_cursor: Cursor::End,
+        forward_cursor: Cursor::End,
         has_previous_page: false,
         has_next_page: false,
     };
@@ -176,12 +176,12 @@ mod tests {
         assert!(!page_info.has_next_page);
         assert!(!page_info.has_previous_page);
         assert!(matches!(
-            FeedCursor::decode(&page_info.start_cursor).unwrap(),
-            FeedCursor::End
+            Cursor::<EventCreatedAt>::decode(&page_info.start_cursor).unwrap(),
+            Cursor::End
         ));
         assert!(matches!(
-            FeedCursor::decode(&page_info.end_cursor).unwrap(),
-            FeedCursor::End
+            Cursor::<EventCreatedAt>::decode(&page_info.end_cursor).unwrap(),
+            Cursor::End
         ));
     }
 
