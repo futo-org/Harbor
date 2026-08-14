@@ -4371,6 +4371,14 @@ export interface PolycentricCoreLike {
  */
     fetchQuery(queryKey: Array<string> | undefined, query: Query, opts: QueryOpts | undefined): QueryObservable;
 /**
+ * Fetch the maintained upvote/downvote counts for an out-of-network
+ * target. `request_bytes` is a serialized
+ * `GetAttributedToReactionCountsRequest` (carrying the AttributedTo, e.g.
+ * a link to a video URL); returns serialized
+ * `GetAttributedToReactionCountsResponse` proto bytes.
+ */
+    getAttributedToReactionCounts(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
  * Max sequence of identity events signed by `signer` for `identity`,
  * or `None` if this signer has no identity events.
  */
@@ -4644,6 +4652,45 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
+    }
+    
+/**
+ * Fetch the maintained upvote/downvote counts for an out-of-network
+ * target. `request_bytes` is a serialized
+ * `GetAttributedToReactionCountsRequest` (carrying the AttributedTo, e.g.
+ * a link to a video URL); returns serialized
+ * `GetAttributedToReactionCountsResponse` proto bytes.
+ */
+    async getAttributedToReactionCounts(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(requestBytes, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
     }
     
 /**
@@ -5460,6 +5507,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !== 52560) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts() !== 53940) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !== 8615) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence");
