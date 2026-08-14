@@ -28,10 +28,20 @@ message GetFollowingFeedRequest {
 }
 
 message GetExploreFeedRequest {
-  // Identity of the caller to return relevant posts fort
+  // Identity of the caller to return relevant posts for
   optional string identity = 1;
   optional PageParams page_params = 2;
   // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
+}
+
+message GetTopFeedRequest {
+  // If this is set the feed will be personal for the given identity.
+  //
+  // If this is not set this will return the global top feed.
+  optional string identity = 1;
+  optional PageParams page_params = 2;
+  // Label values for which the requester does not want to see content.
   repeated string omit_labels = 3;
 }
 
@@ -64,6 +74,8 @@ service FeedsService {
   rpc GetFollowingFeed(GetFollowingFeedRequest) returns (GetFeedResponse);
   //
   rpc GetExploreFeed(GetExploreFeedRequest) returns (GetFeedResponse);
+  // Current top posts.
+  rpc GetTopFeed(GetTopFeedRequest) returns (GetFeedResponse);
   // Replies to a post
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
 }

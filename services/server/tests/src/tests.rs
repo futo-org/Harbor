@@ -8,6 +8,7 @@ use integration_tests::{
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::*;
 use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
@@ -2489,5 +2490,192 @@ async fn check_followers(
             panic!("unexpected event content: {content:?}");
         };
         assert_eq!(for_identity, follow.identity);
+    }
+}
+
+#[tokio::test]
+async fn global_top_feed_exists() {
+    let mut feeds = connect_feeds().await;
+
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client.submit_events().await;
+
+    let request = GetTopFeedRequest {
+        identity: None,
+        page_params: None,
+        omit_labels: Vec::new(),
+    };
+    let result = feeds.get_top_feed(request).await.unwrap().into_inner();
+
+    assert!(result.event_bundles.len() >= 2);
+    // NOTE: because the global feed contains all posts made it's difficult to
+    // test it without isolation, which we don't have between tests or between
+    // test runs.
+}
+
+#[tokio::test]
+async fn personal_top_feed_empty() {
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+    let follower = client.identity();
+
+    // Not following anyone and hasn't made any posts themselves, so no results.
+    personal_top_feed(follower, &[]).await;
+}
+
+#[tokio::test]
+async fn personal_top_feed_ordering() {
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    let post1_key = client.get_last_event_key();
+    client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    let post2_key = client.get_last_event_key();
+    client.submit_events().await;
+    let followee = client.identity();
+
+    let mut client = TestClient::new().await;
+    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 2);
+    client.submit_events().await;
+    let follower = client.identity();
+
+    personal_top_feed(follower, &[post2_key, post1_key]).await;
+}
+
+#[tokio::test]
+#[ignore = "pagination is currently not implemented"]
+async fn personal_top_feed_pagination() {
+    // Followee 1, post 1.
+    let mut client1 = TestClient::new().await;
+    client1.post_text("Post 1", DEFAULT_CREATED_AT);
+    let post1_key = client1.get_last_event_key();
+    client1.submit_events().await;
+    let followee1 = client1.identity().to_owned();
+
+    // Followee 2, post 2.
+    let mut client2 = TestClient::new().await;
+    client2.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    let post2_key = client2.get_last_event_key();
+    client2.submit_events().await;
+    let followee2 = client2.identity().to_owned();
+
+    // Follower, post 3.
+    let mut client3 = TestClient::new().await;
+    client3.post_text("Post 3", DEFAULT_CREATED_AT + 2);
+    let post3_key = client3.get_last_event_key();
+    client3.follow_identity(followee1, DEFAULT_CREATED_AT);
+    client3.follow_identity(followee2, DEFAULT_CREATED_AT);
+    client3.submit_events().await;
+    let follower = client3.identity().to_owned();
+
+    // Post 1, 1 reaction.
+    client3.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
+    // Post 2, 2 reactions.
+    client3.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
+    client2.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
+    // Post 3, 3 reactions.
+    client3.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
+    client2.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
+    client1.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
+    client1.submit_events().await;
+    client2.submit_events().await;
+    client3.submit_events().await;
+
+    let mut feeds = connect_feeds().await;
+
+    // Forward.
+    let mut page_info: Option<PageInfo> = None;
+    let mut expected_iter =
+        [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
+    while let Some(expected) = expected_iter.next() {
+        let request = async {
+            let mut feeds = connect_feeds().await;
+            let request = GetTopFeedRequest {
+                identity: Some(follower.clone()),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: page_info.take().map(|i| i.start_cursor),
+                    forward_token: None,
+                }),
+                omit_labels: Vec::new(),
+            };
+            let response =
+                feeds.get_top_feed(request).await.unwrap().into_inner();
+            page_info = response.page_info.clone();
+            response
+        };
+        top_feed(request, &[expected]).await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
+    }
+
+    // Backward.
+    let mut expected_iter = [post1_key, post2_key].into_iter();
+    while let Some(expected) = expected_iter.next() {
+        let request = async {
+            let mut feeds = connect_feeds().await;
+            let request = GetTopFeedRequest {
+                identity: Some(follower.clone()),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: page_info.take().map(|i| i.start_cursor),
+                    forward_token: None,
+                }),
+                omit_labels: Vec::new(),
+            };
+            let response =
+                feeds.get_top_feed(request).await.unwrap().into_inner();
+            page_info = response.page_info.clone();
+            response
+        };
+        top_feed(request, &[expected]).await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
+        assert_eq!(page_info.has_next_page, true);
+    }
+}
+
+async fn personal_top_feed(for_identity: &str, expected: &[EventKey]) {
+    eprintln!("for_identity: {for_identity:?}");
+    let request = async {
+        let mut feeds = connect_feeds().await;
+        let request = GetTopFeedRequest {
+            identity: Some(for_identity.to_owned()),
+            page_params: None,
+            omit_labels: Vec::new(),
+        };
+        feeds.get_top_feed(request).await.unwrap().into_inner()
+    };
+    top_feed(request, expected).await
+}
+
+async fn top_feed<Fut>(request: Fut, expected: &[EventKey])
+where
+    Fut: Future<Output = GetFeedResponse>,
+{
+    eprintln!("expected: {expected:#?}");
+    let result = request.await;
+    eprintln!("results: {:#?}", &result.event_bundles);
+
+    assert_eq!(result.event_bundles.len(), expected.len());
+    for (event, expected) in result.event_bundles.iter().zip(expected) {
+        let content = Content::decode(
+            &*event.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        if !matches!(&content.content_body, Some(ContentBody::Post(_))) {
+            panic!("unexpected event content: {content:?}");
+        };
+
+        let event =
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+        let key = event.key.as_ref().unwrap();
+        assert_eq!(key, expected, "expected: {expected:?}, event: {event:?}");
     }
 }
