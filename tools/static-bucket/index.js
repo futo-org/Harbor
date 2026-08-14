@@ -14,6 +14,22 @@ function requireEnv(env, name) {
   return value;
 }
 
+// curl signs the path exactly as given, while S3 canonicalises it with
+// everything outside RFC 3986 unreserved escaped, so keys holding e.g. the
+// `@` and `+` of pnpm directory names must be encoded here or the
+// signature will not match.
+function encodeKey(key) {
+  return key
+    .split('/')
+    .map((segment) =>
+      encodeURIComponent(segment).replace(
+        /[!'()*]/g,
+        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+      ),
+    )
+    .join('/');
+}
+
 /**
  * Bucket client configured from STATIC_S3_ENDPOINT, STATIC_S3_BUCKET,
  * STATIC_S3_ACCESS_KEY_ID, STATIC_S3_SECRET_ACCESS_KEY and the optional
@@ -53,7 +69,7 @@ export function createStaticBucket(env = process.env) {
         `cache-control: ${cacheControl}`,
         '--header',
         `x-amz-content-sha256: ${bodySha256}`,
-        `${endpoint}/${bucket}/${key}`,
+        `${endpoint}/${bucket}/${encodeKey(key)}`,
       ],
       {
         input: `user = "${accessKeyId}:${secretAccessKey}"\n`,
