@@ -46,7 +46,7 @@ export default function PairSuccessScreen() {
               <Text
                 variant="title"
                 numberOfLines={1}
-                style={{ textAlign: 'center' }}
+                style={[Atoms.text_center, Atoms.max_w_full]}
               >
                 {displayName}
               </Text>

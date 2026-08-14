@@ -86,7 +86,7 @@ if (!versionName || !Number.isInteger(versionCode) || versionCode <= 0) {
 
 const notes = existsSync('release_notes.md')
   ? readFileSync('release_notes.md', 'utf8').trim()
-  : `Staging build ${process.env.CI_COMMIT_SHORT_SHA ?? ''}: ${process.env.CI_COMMIT_TITLE ?? ''}`.trim();
+  : `${process.env.CI_COMMIT_SHORT_SHA ?? ''}: ${process.env.CI_COMMIT_TITLE ?? ''}`.trim();
 
 const apkFile = 'apps/harbor/harbor.apk';
 const apkKey = `apk/${channel}/harbor-v${versionName}-${versionCode}.apk`;

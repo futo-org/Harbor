@@ -39,7 +39,6 @@ export {
   bundleEventId,
   hexToBytes,
   eventKeyId,
-  truncateName,
   publicKeyToString,
   stringToPublicKey,
   publicKeyToStringURLSafe,
@@ -52,6 +51,7 @@ export {
   toBase64,
   fromBase64,
 } from './helpers';
+export { truncateText as truncateName } from '../../util/truncateText';
 export type {
   PostData,
   ContentKind,

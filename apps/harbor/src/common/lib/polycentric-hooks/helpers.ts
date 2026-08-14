@@ -399,11 +399,6 @@ export function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-export function truncateName(name: string, maxLen = 16): string {
-  if (name.length <= maxLen) return name;
-  return `${name.slice(0, maxLen).trimEnd()}\u2026`;
-}
-
 export function pubkeyStr(key: v2.PublicKey): string {
   return Array.from(key.key ?? new Uint8Array()).join(',');
 }
