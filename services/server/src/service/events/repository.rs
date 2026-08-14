@@ -1,19 +1,23 @@
-use crate::service::content::repository::split_event_key;
+use crate::service::content::repository::{EventKeyParts, split_event_key};
+use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow, Post,
+    Content, Delete, EventKey, Follow, Post, Reaction,
 };
 use sea_orm::sea_query::{
-    DeleteStatement, Expr, InsertStatement, IntoCondition, SelectStatement,
+    CommonTableExpression, DeleteStatement, Expr, InsertStatement,
+    IntoColumnRef, IntoCondition, SelectExpr, SelectStatement, UpdateStatement,
+    WithClause,
 };
 use sea_orm::*;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
+const COLLECTION_INTERACTIONS: i16 = collections::INTERACTIONS as i16;
 
 pub struct Query;
 
@@ -163,6 +167,9 @@ impl Mutation {
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, &event, follow).await
             }
+            ContentBody::Reaction(reaction) => {
+                Mutation::reaction(db, &event, reaction).await
+            }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
@@ -201,34 +208,223 @@ impl Mutation {
         Ok(())
     }
 
+    async fn reaction<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        reaction: &Reaction,
+    ) -> Result<(), DbErr> {
+        let key = split_event_key(reaction.event_key.clone(), "reaction")
+            .map_err(|err| DbErr::Custom(err.message().into()))?;
+        let mut post_event_id = select_event_id(key);
+        // Make sure the post is not deleted.
+        post_event_id.and_where(Expr::not_exists({
+            let mut q = SelectStatement::new();
+            q.expr(Expr::Constant(true.into()))
+                .from(ContentDeleteModel::Entity)
+                .and_where(
+                    Expr::col(ContentDeleteModel::Column::EventKeyCollection)
+                        .eq(Expr::col(EventModel::Column::Collection)),
+                )
+                .and_where(
+                    Expr::col(ContentDeleteModel::Column::EventKeyIdentity)
+                        .eq(Expr::col(EventModel::Column::Identity)),
+                )
+                .and_where(
+                    Expr::col(
+                        ContentDeleteModel::Column::EventKeyPublicKeyType,
+                    )
+                    .eq(Expr::col(EventModel::Column::PublicKeyType)),
+                )
+                .and_where(
+                    Expr::col(ContentDeleteModel::Column::EventKeyPublicKey)
+                        .eq(Expr::col(EventModel::Column::PublicKey)),
+                )
+                .and_where(
+                    Expr::col(ContentDeleteModel::Column::EventKeySequence)
+                        .eq(Expr::col(EventModel::Column::Sequence)),
+                );
+            q
+        }));
+
+        let mut insert_reaction = InsertStatement::new();
+        insert_reaction
+            .into_table("reaction")
+            .columns(["event_id", "on_post", "emoji", "positive"])
+            .select_from({
+                post_event_id
+                    .clear_selects() // Need to rename.
+                    .expr(SelectExpr {
+                        expr: Expr::from(event.id),
+                        alias: Some("event_id".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::Column(
+                            EventModel::Column::Id.into_column_ref(),
+                        ),
+                        alias: Some("on_post".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(reaction.emoji.clone()),
+                        alias: Some("emoji".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(reaction.positive),
+                        alias: Some("positive".into()),
+                        window: None,
+                    });
+                post_event_id
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            .returning_all();
+
+        let positive = if reaction.positive { 1 } else { 0 };
+        let negative = if reaction.positive { 0 } else { 1 };
+
+        let mut query = UpdateStatement::new();
+        query
+            // This should be as easy as a subquery, but SeaQuery doesn't
+            // support it. So we have to use CTEs.
+            .with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_reaction").query(insert_reaction);
+                c.recursive(false).cte(cte);
+                c
+            })
+            .table("reaction_tally")
+            .values([
+                (
+                    "positive_count",
+                    Expr::Column(("reaction_tally", "positive_count").into())
+                        .add(Expr::Constant(positive.into())),
+                ),
+                (
+                    "negative_count",
+                    Expr::Column(("reaction_tally", "negative_count").into())
+                        .add(Expr::Constant(negative.into())),
+                ),
+            ])
+            .from("inserted_reaction")
+            .and_where(
+                Expr::Column(("reaction_tally", "event_id").into())
+                    .eq(Expr::Column(("inserted_reaction", "on_post").into())),
+            );
+
+        db.execute(&query).await?;
+        Ok(())
+    }
+
     async fn delete<C: ConnectionTrait>(
         db: &C,
         delete: &Delete,
     ) -> Result<(), DbErr> {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
-
-        let mut event_id = SelectStatement::new();
-        event_id
-            .column(EventModel::Column::Id)
-            .from(EventModel::Entity)
-            .and_where(EventModel::Column::Collection.eq(key.collection))
-            .and_where(EventModel::Column::Identity.eq(key.identity))
-            .and_where(
-                EventModel::Column::PublicKeyType.eq(key.public_key_type),
-            )
-            .and_where(EventModel::Column::PublicKey.eq(key.public_key))
-            .and_where(EventModel::Column::Sequence.eq(key.sequence));
+        let collection = key.collection;
+        let event_id = select_event_id(key);
 
         let mut query = DeleteStatement::new();
-        match key.collection {
+        match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
-                query.from_table("reaction_tally");
+                // Delete the tally for the post.
+                let mut delete_reaction_tally = query;
+                delete_reaction_tally
+                    .from_table("reaction_tally")
+                    .cond_where(Expr::col("event_id").in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column("id").from("event_id");
+                        q
+                    }));
+
+                let mut with = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("event_id").query(event_id);
+                let mut cte2 = CommonTableExpression::new();
+                cte2.table_name("deleted_reaction_tally")
+                    .query(delete_reaction_tally);
+                with.recursive(false).cte(cte).cte(cte2);
+
+                // Delete all reactions to the post.
+                let mut query = DeleteStatement::new();
+                query.with_cte(with).from_table("reaction").cond_where(
+                    Expr::col("on_post").in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column("id").from("event_id");
+                        q
+                    }),
+                );
+
+                db.execute(&query).await?;
+                return Ok(());
             }
             // Deletion of a following.
             COLLECTION_SOCIAL => {
                 query.from_table(FollowModel::Entity);
+            }
+            // Deletion of a reaction and updating the tally.
+            COLLECTION_INTERACTIONS => {
+                let mut delete_reaction = query;
+                delete_reaction
+                    .from_table("reaction")
+                    .cond_where(Expr::col("event_id").in_subquery(event_id))
+                    .returning_all();
+                let mut query = UpdateStatement::new();
+                query
+                    // This should be as easy as a subquery, but SeaQuery
+                    // doesn't support it. So we have to use CTEs.
+                    .with_cte({
+                        let mut c = WithClause::new();
+                        let mut cte = CommonTableExpression::new();
+                        cte.table_name("deleted_reaction")
+                            .query(delete_reaction);
+                        c.recursive(false).cte(cte);
+                        c
+                    })
+                    .table("reaction_tally")
+                    .values([
+                        (
+                            "positive_count",
+                            Expr::Column(
+                                ("reaction_tally", "positive_count").into(),
+                            )
+                            .sub(
+                                Expr::case(
+                                    Expr::Column("positive".into()),
+                                    Expr::Constant(1.into()),
+                                )
+                                .finally(Expr::Constant(0.into())),
+                            ),
+                        ),
+                        (
+                            "negative_count",
+                            Expr::Column(
+                                ("reaction_tally", "negative_count").into(),
+                            )
+                            .sub(
+                                Expr::case(
+                                    Expr::Column("positive".into()),
+                                    Expr::Constant(0.into()),
+                                )
+                                .finally(Expr::Constant(1.into())),
+                            ),
+                        ),
+                    ])
+                    .from("deleted_reaction")
+                    .and_where(
+                        Expr::Column(("reaction_tally", "event_id").into()).eq(
+                            Expr::Column(
+                                ("deleted_reaction", "on_post").into(),
+                            ),
+                        ),
+                    );
+                db.execute(&query).await?;
+                return Ok(());
             }
             // Nothing to delete.
             _ => return Ok(()),
@@ -238,4 +434,18 @@ impl Mutation {
         db.execute(&query).await?;
         Ok(())
     }
+}
+
+/// Returns a select statement to get the event id from `key`.
+fn select_event_id(key: EventKeyParts) -> SelectStatement {
+    let mut query = SelectStatement::new();
+    query
+        .column(EventModel::Column::Id)
+        .from(EventModel::Entity)
+        .and_where(EventModel::Column::Collection.eq(key.collection))
+        .and_where(EventModel::Column::Identity.eq(key.identity))
+        .and_where(EventModel::Column::PublicKeyType.eq(key.public_key_type))
+        .and_where(EventModel::Column::PublicKey.eq(key.public_key))
+        .and_where(EventModel::Column::Sequence.eq(key.sequence));
+    query
 }
