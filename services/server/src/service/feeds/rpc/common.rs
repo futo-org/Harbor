@@ -2,13 +2,14 @@
 //! Mostly pipeline related
 
 use crate::data::hydration::HydrationState;
+use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
 };
 use crate::service::feeds::repository::{
-    CursorFilter, FeedCursor, FeedMarker, PageInfo, Query as FeedsRepository,
+    EventCreatedAt, Query as FeedsRepository,
 };
 use crate::service::feeds::util::{map_db_err, page_limit};
 use crate::service::identity::service::{
@@ -23,22 +24,26 @@ use crate::service::proto::{
 use crate::service::stats::service::{assemble_bundles, gather_stats_for};
 use entity::content_model;
 use prost::Message;
+use serde::Deserialize;
 use std::collections::HashSet;
 use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
-pub struct Params {
+pub struct Params<SortedBy = EventCreatedAt> {
     pub limit: u64,
-    pub cursor_filter: Option<CursorFilter>,
+    pub cursor_filter: Option<CursorFilter<SortedBy>>,
     pub omit_labels: Vec<String>,
 }
 
-impl Params {
+impl<SortedBy> Params<SortedBy> {
     /// Extract values from the client request's page params and `omit_labels` set.
     pub fn from_req_params(
         params: &Option<PageParams>,
         omit_labels: Vec<String>,
-    ) -> Result<Params, Status> {
+    ) -> Result<Params<SortedBy>, Status>
+    where
+        SortedBy: for<'a> Deserialize<'a>,
+    {
         let limit = page_limit(params);
 
         let tokens = params
@@ -52,10 +57,10 @@ impl Params {
                 ));
             }
             Some((Some(token), None)) => {
-                Some(CursorFilter::Backward(FeedCursor::decode(token)?))
+                Some(CursorFilter::Backward(Cursor::decode(token)?))
             }
             Some((None, Some(token))) => {
-                Some(CursorFilter::Forward(FeedCursor::decode(token)?))
+                Some(CursorFilter::Forward(Cursor::decode(token)?))
             }
             _ => None,
         };
@@ -68,22 +73,22 @@ impl Params {
     }
 }
 
-pub struct Fetched {
+pub struct Fetched<SortedBy = EventCreatedAt> {
     pub rows: Vec<EventWithContentRow>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
-pub struct GetFeedResponseFilter {
+pub struct GetFeedResponseFilter<SortedBy = EventCreatedAt> {
     pub live_rows: Vec<EventWithContentRow>,
     pub tombstone_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventWithContentRow>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
-pub struct GetFeedResponseView {
+pub struct GetFeedResponseView<SortedBy = EventCreatedAt> {
     pub event_bundles: Vec<EventBundle>,
     pub event_hints: Vec<EventHint>,
-    pub page_info: PageInfo,
+    pub page_info: PageInfo<SortedBy>,
 }
 
 /// Remove any extra rows (for checking next page existence) and extract page info.
@@ -104,8 +109,8 @@ pub fn finalize_fetch(
     // We do not handle these cases.
     let mid_cursor_was_used = matches!(
         params.cursor_filter,
-        Some(CursorFilter::Forward(FeedCursor::Mid(_)))
-            | Some(CursorFilter::Backward(FeedCursor::Mid(_)))
+        Some(CursorFilter::Forward(Cursor::Mid(_)))
+            | Some(CursorFilter::Backward(Cursor::Mid(_)))
     );
 
     let (has_previous_page, has_next_page) = match params.cursor_filter {
@@ -127,19 +132,19 @@ pub fn finalize_fetch(
         _ => rows.truncate(params.limit as usize),
     }
 
-    let backward_marker = rows.first().map(|(event, _)| FeedMarker {
+    let backward_marker = rows.first().map(|(event, _)| Marker {
         sorted_by: event.created_at,
         event_id: event.id,
     });
 
-    let forward_marker = rows.last().map(|(event, _)| FeedMarker {
+    let forward_marker = rows.last().map(|(event, _)| Marker {
         sorted_by: event.created_at,
         event_id: event.id,
     });
 
     let backward_cursor = match (backward_marker, &params.cursor_filter) {
         // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => FeedCursor::Mid(marker),
+        (Some(marker), _) => Cursor::Mid(marker),
         // There are zero rows preceding the previous cursor: we stay here.
         (None, Some(CursorFilter::Backward(cur))) => *cur,
         // Truly empty feed: we are at the end and new items will be
@@ -147,20 +152,20 @@ pub fn finalize_fetch(
         // OR
         // Forward query from the end of the feed: we get the last items
         // if we navigate backward.
-        _ => FeedCursor::End,
+        _ => Cursor::End,
     };
 
     let forward_cursor = match (forward_marker, &params.cursor_filter) {
         // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => FeedCursor::Mid(marker),
+        (Some(marker), _) => Cursor::Mid(marker),
         // There are zero rows preceding the previous cursor: a forward query
         // should return the first items in the feed.
-        (None, Some(CursorFilter::Backward(_))) => FeedCursor::Start,
+        (None, Some(CursorFilter::Backward(_))) => Cursor::Start,
         // There are zero rows following the previous cursor: we stay here.
         (None, Some(CursorFilter::Forward(cur))) => *cur,
         // Truly empty feed: we are at the end and a forward query will continue
         // to return no items.
-        _ => FeedCursor::End,
+        _ => Cursor::End,
     };
 
     let page_info = PageInfo {
@@ -669,8 +674,8 @@ mod tests {
         Fetched {
             rows,
             page_info: PageInfo {
-                backward_cursor: FeedCursor::End,
-                forward_cursor: FeedCursor::End,
+                backward_cursor: Cursor::End,
+                forward_cursor: Cursor::End,
                 has_previous_page: false,
                 has_next_page: false,
             },

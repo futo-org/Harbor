@@ -2,13 +2,11 @@
 //! itself, then descendants (one branch deep for now).
 
 use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
+use crate::data::{Cursor, PageInfo, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::feeds::repository::{
-    FeedCursor, PageInfo, Query as FeedsRepository,
-};
+use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
@@ -153,8 +151,8 @@ async fn fetch(
     Ok(feeds_pipeline::Fetched {
         rows: thread,
         page_info: PageInfo {
-            backward_cursor: FeedCursor::Start,
-            forward_cursor: FeedCursor::End,
+            backward_cursor: Cursor::Start,
+            forward_cursor: Cursor::End,
             has_previous_page: false,
             has_next_page: false,
         },
