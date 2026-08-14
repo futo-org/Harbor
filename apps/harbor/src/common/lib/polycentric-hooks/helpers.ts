@@ -42,6 +42,10 @@ export type PostData = {
   /** Hex of the quoted post's EventKey — same encoding as `PostData.id`. */
   quoteId?: string;
 
+  /** Quoted post resolved from the feed's `event_hints`, when the server
+   *  shipped it alongside — lets the quote box render without a fetch. */
+  quotePost?: PostData;
+
   /** Identity that reposted this post, when this item represents a
    *  repost. The rest of the fields are the *reposted* post's data. */
   repostedBy?: string;
@@ -300,6 +304,12 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
           repostId: repost.repostId,
         });
       }
+    }
+  }
+
+  for (const item of items) {
+    if (item.quoteId) {
+      item.quotePost = hintPosts.get(item.quoteId);
     }
   }
   return items;

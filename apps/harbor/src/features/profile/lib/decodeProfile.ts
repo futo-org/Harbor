@@ -14,12 +14,19 @@ export type DecodedProfile = {
   followersCount: number;
 };
 
+// Every subscriber of a profile query shares the same response buffer, so
+// one decode serves all of them (name, avatar, quote header, …).
+const decodeCache = new WeakMap<ArrayBuffer | Uint8Array, DecodedProfile>();
+
 /**
  * Decode a serialised `GetProfileResponse` into a flattened profile
  * snapshot using only the highest-sequence `ProfileUpdate` event; older
  * updates are ignored.
  */
 export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
+  const cached = decodeCache.get(bytes);
+  if (cached) return cached;
+
   const response = v2.GetProfileResponse.fromBinary(
     bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
   );
@@ -42,7 +49,7 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     } catch {}
   }
 
-  return {
+  const decoded: DecodedProfile = {
     name: latest?.update.name
       ? truncateText(latest.update.name, MAX_NAME_LENGTH)
       : null,
@@ -55,4 +62,6 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     followingCount: Number(response.followingCount),
     followersCount: Number(response.followersCount),
   };
+  decodeCache.set(bytes, decoded);
+  return decoded;
 }

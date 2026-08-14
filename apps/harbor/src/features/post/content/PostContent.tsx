@@ -47,7 +47,9 @@ export const PostContent = memo(function PostContent({
         <LinkPreviewCard link={post.links[0]} compact={compactLinkPreview} />
       ) : null}
       {post.images?.length > 0 && <PostImages images={post.images} />}
-      {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
+      {post.quoteId ? (
+        <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
+      ) : null}
     </View>
   );
 });
