@@ -178,7 +178,7 @@ impl Mutation {
                 Mutation::follow(db, event, follow).await
             }
             ContentBody::Reaction(reaction) => {
-                Mutation::reaction(db, &event, reaction).await
+                Mutation::reaction(db, event, reaction).await
             }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
