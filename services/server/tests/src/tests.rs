@@ -1150,19 +1150,21 @@ async fn attribution_feed_returns_only_matching_posts() {
     let other_url = format!("https://example.com/{}", random_string());
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let other_key = generate_signing_key();
-    let other_identity = derive_identity_string(&Identity {
+    let other_identity = Identity {
         rotation_keys: vec![public_key_of(&other_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1231,12 +1233,13 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
     let url = format!("https://example.com/{}", random_string());
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 

@@ -470,6 +470,7 @@ pub async fn view(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data::Cursor;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
         Content, EventBundle, EventKey, Labels, Post, PublicKey, Repost,

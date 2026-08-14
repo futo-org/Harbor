@@ -67,7 +67,10 @@ impl Query {
         limit: u64,
         cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
+        if url.is_empty() {
+            return Ok(Vec::new());
+        }
+        Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
             .await
     }
 
@@ -104,7 +107,7 @@ impl Query {
                 .filter(ContentPostAttributedUrlModel::Column::Url.eq(url));
         }
 
-        let mut sea_cursor = query.cursor_by(FeedMarker::cols());
+        let mut sea_cursor = query.cursor_by(cursor_columns());
         sea_cursor.desc();
 
         match cursor_filter {
