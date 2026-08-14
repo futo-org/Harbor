@@ -3162,18 +3162,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "migration"
-version = "0.1.0"
-dependencies = [
- "entity",
- "polycentric-common",
- "prost",
- "sea-orm-migration",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5039,7 +5027,6 @@ version = "0.0.1"
 dependencies = [
  "axum",
  "base64",
- "bytes",
  "chrono",
  "common-dotenv",
  "common-kafka",
@@ -5049,9 +5036,7 @@ dependencies = [
  "entity",
  "hex",
  "http 1.4.2",
- "http-body-util",
  "log",
- "migration",
  "mockito",
  "opentelemetry",
  "polycentric-common",
@@ -5066,14 +5051,24 @@ dependencies = [
  "time",
  "tokio",
  "tonic",
- "tonic-prost",
- "tonic-prost-build",
  "tonic-reflection",
  "tonic-web",
  "tower",
  "tower-http 0.7.0",
  "tower-layer",
  "tracing",
+]
+
+[[package]]
+name = "server-migration"
+version = "0.1.0"
+dependencies = [
+ "entity",
+ "polycentric-common",
+ "prost",
+ "sea-orm-migration",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

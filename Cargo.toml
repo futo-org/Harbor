@@ -3,6 +3,8 @@ members = [
     "packages/rs-common",
     "packages/rs-core",
     "services/server",
+    "services/server/entity",
+    "services/server/migration",
     "services/server/tests",
     "services/moderation",
     "services/push-notifications",
