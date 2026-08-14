@@ -332,7 +332,36 @@ impl Mutation {
         match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
-                query.from_table("reaction_tally");
+                // Delete the tally for the post.
+                let mut delete_reaction_tally = query;
+                delete_reaction_tally
+                    .from_table("reaction_tally")
+                    .cond_where(Expr::col("event_id").in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column("id").from("event_id");
+                        q
+                    }));
+
+                let mut with = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("event_id").query(event_id);
+                let mut cte2 = CommonTableExpression::new();
+                cte2.table_name("deleted_reaction_tally")
+                    .query(delete_reaction_tally);
+                with.recursive(false).cte(cte).cte(cte2);
+
+                // Delete all reactions to the post.
+                let mut query = DeleteStatement::new();
+                query.with_cte(with).from_table("reaction").cond_where(
+                    Expr::col("on_post").in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column("id").from("event_id");
+                        q
+                    }),
+                );
+
+                db.execute(&query).await?;
+                return Ok(());
             }
             // Deletion of a following.
             COLLECTION_SOCIAL => {
