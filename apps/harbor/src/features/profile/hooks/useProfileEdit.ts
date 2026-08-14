@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { resolveAlias } from '@polycentric/react-native';
+import { resolveAlias, type v2 } from '@polycentric/react-native';
 import { usePolycentric } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
@@ -8,6 +8,8 @@ import { profileQueryKey } from './useProfile';
 interface ProfileRef {
   description: string | null;
   alias: string | null;
+  avatar: v2.ImageSet | null;
+  banner: v2.ImageSet | null;
 }
 
 export type ProfileEditState = {
@@ -83,6 +85,8 @@ export function useProfileEdit(
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
+        avatar: profile.avatar,
+        banner: profile.banner,
         alias: aliasDraft,
       });
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
