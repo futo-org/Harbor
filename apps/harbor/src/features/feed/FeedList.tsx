@@ -119,6 +119,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       ListFooterComponent={footerComponent}
       onEndReached={feed.hasMore ? feed.loadMore : undefined}
       onEndReachedThreshold={0.5}
+      drawDistance={500}
       refreshControl={
         !isWeb ? (
           <RefreshControl
