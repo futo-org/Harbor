@@ -5,7 +5,6 @@
 //! the internal file layout.
 
 pub mod auth;
-pub(crate) mod blocks;
 pub mod client;
 pub mod event;
 pub mod feed;

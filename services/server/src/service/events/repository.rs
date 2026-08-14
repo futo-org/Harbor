@@ -1,5 +1,4 @@
 use crate::service::content::repository::{EventKeyParts, split_event_key};
-use ::entity::block_model as BlockModel;
 use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
@@ -7,12 +6,12 @@ use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Block, Content, Delete, EventKey, Follow, Post, Reaction,
+    Content, Delete, EventKey, Follow, Post, Reaction,
 };
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
-    IntoColumnRef, IntoCondition, IntoTableRef, SelectExpr, SelectStatement,
-    UpdateStatement, WithClause,
+    IntoColumnRef, IntoCondition, SelectExpr, SelectStatement, UpdateStatement,
+    WithClause,
 };
 use sea_orm::*;
 
@@ -178,11 +177,8 @@ impl Mutation {
             ContentBody::Follow(follow) => {
                 Mutation::follow(db, event, follow).await
             }
-            ContentBody::Block(block) => {
-                Mutation::block(db, event, block).await
-            }
             ContentBody::Reaction(reaction) => {
-                Mutation::reaction(db, event, reaction).await
+                Mutation::reaction(db, &event, reaction).await
             }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
@@ -219,21 +215,6 @@ impl Mutation {
         .insert(db)
         .await?;
 
-        Ok(())
-    }
-
-    async fn block<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
-        block: &Block,
-    ) -> Result<(), DbErr> {
-        BlockModel::ActiveModel {
-            event_id: Set(event.id),
-            blocker: Set(event.identity.clone()),
-            blocked: Set(block.identity.clone()),
-        }
-        .insert(db)
-        .await?;
         Ok(())
     }
 
@@ -357,11 +338,12 @@ impl Mutation {
         let collection = key.collection;
         let event_id = select_event_id(key);
 
+        let mut query = DeleteStatement::new();
         match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
                 // Delete the tally for the post.
-                let mut delete_reaction_tally = DeleteStatement::new();
+                let mut delete_reaction_tally = query;
                 delete_reaction_tally
                     .from_table("reaction_tally")
                     .cond_where(Expr::col("event_id").in_subquery({
@@ -389,18 +371,15 @@ impl Mutation {
                 );
 
                 db.execute(&query).await?;
-                Ok(())
+                return Ok(());
             }
-            // Deletion of a following or of a block. The event key does not
-            // say which, so clear both caches.
+            // Deletion of a following.
             COLLECTION_SOCIAL => {
-                delete_cached_rows(db, FollowModel::Entity, &event_id).await?;
-                delete_cached_rows(db, BlockModel::Entity, &event_id).await?;
-                Ok(())
+                query.from_table(FollowModel::Entity);
             }
             // Deletion of a reaction and updating the tally.
             COLLECTION_INTERACTIONS => {
-                let mut delete_reaction = DeleteStatement::new();
+                let mut delete_reaction = query;
                 delete_reaction
                     .from_table("reaction")
                     .cond_where(Expr::col("event_id").in_subquery(event_id))
@@ -455,26 +434,16 @@ impl Mutation {
                         ),
                     );
                 db.execute(&query).await?;
-                Ok(())
+                return Ok(());
             }
             // Nothing to delete.
-            _ => Ok(()),
+            _ => return Ok(()),
         }
-    }
-}
 
-/// Drop the rows `table` caches for the event selected by `event_id`.
-async fn delete_cached_rows<C: ConnectionTrait, T: IntoTableRef>(
-    db: &C,
-    table: T,
-    event_id: &SelectStatement,
-) -> Result<(), DbErr> {
-    let mut query = DeleteStatement::new();
-    query
-        .from_table(table)
-        .cond_where(Expr::col("event_id").in_subquery(event_id.clone()));
-    db.execute(&query).await?;
-    Ok(())
+        query.cond_where(Expr::col("event_id").in_subquery(event_id));
+        db.execute(&query).await?;
+        Ok(())
+    }
 }
 
 /// Returns a select statement to get the event id from `key`.
@@ -489,117 +458,4 @@ fn select_event_id(key: EventKeyParts) -> SelectStatement {
         .and_where(EventModel::Column::PublicKey.eq(key.public_key))
         .and_where(EventModel::Column::Sequence.eq(key.sequence));
     query
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ::entity::block_model as BlockModelEntity;
-    use polycentric_common::models::protos_v2::{EventKey, PublicKey};
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
-    use sea_orm::{
-        DatabaseConnection, DbBackend, MockDatabase, MockExecResult,
-    };
-
-    /// The SQL every statement the connection ran, in order.
-    fn statements(db: DatabaseConnection) -> Vec<String> {
-        db.into_transaction_log()
-            .iter()
-            .flat_map(|txn| txn.statements())
-            .map(|stmt| stmt.sql.clone())
-            .collect()
-    }
-
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
-    }
-
-    fn event_row(identity: &str) -> EventModel::Model {
-        EventModel::Model {
-            id: 1,
-            collection: COLLECTION_SOCIAL,
-            identity: identity.to_string(),
-            public_key_type: 1,
-            public_key: vec![0xaa],
-            sequence: 1,
-            content_digest_type: Some(1),
-            content_digest_bytes: Some(vec![1]),
-            signature: vec![],
-            previous_signature: vec![],
-            previous_root: vec![],
-            event_bytes: vec![1],
-            created_at: now(),
-            synced_at: now(),
-        }
-    }
-
-    fn block_content(blocked: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: blocked.to_string(),
-            })),
-        }
-    }
-
-    fn delete_content(target_identity: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Delete(Delete {
-                event_key: Some(EventKey {
-                    collection: collections::SOCIAL_GRAPH,
-                    identity: target_identity.to_string(),
-                    signed_by: Some(PublicKey {
-                        key_type: 1,
-                        key: vec![0xaa],
-                    }),
-                    sequence: 1,
-                }),
-            })),
-        }
-    }
-
-    #[tokio::test]
-    async fn a_block_event_is_cached_in_the_block_table() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![BlockModelEntity::Model {
-                event_id: 1,
-                blocker: "alice".to_string(),
-                blocked: "bob".to_string(),
-            }]])
-            .into_connection();
-
-        Mutation::update_cache(
-            &db,
-            &event_row("alice"),
-            Some(&block_content("bob")),
-        )
-        .await
-        .unwrap();
-
-        let statements = statements(db);
-        assert_eq!(statements.len(), 1);
-        assert!(statements[0].contains("INSERT INTO \"block\""));
-    }
-
-    #[tokio::test]
-    async fn deleting_a_graph_event_clears_both_graph_caches() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_exec_results([
-                MockExecResult::default(),
-                MockExecResult::default(),
-            ])
-            .into_connection();
-
-        Mutation::update_cache(
-            &db,
-            &event_row("alice"),
-            Some(&delete_content("alice")),
-        )
-        .await
-        .unwrap();
-
-        let statements = statements(db);
-        assert_eq!(statements.len(), 2);
-        assert!(statements[0].contains("DELETE FROM \"follow\""));
-        assert!(statements[1].contains("DELETE FROM \"block\""));
-    }
 }

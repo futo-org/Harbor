@@ -7,7 +7,6 @@ pub mod get_following_feed;
 pub mod get_identity_feed;
 pub mod get_post_thread;
 
-use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
@@ -29,14 +28,8 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetIdentityFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            get_identity_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_identity_feed::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
@@ -44,14 +37,8 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetFollowingFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            get_following_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_following_feed::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
@@ -59,14 +46,8 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetExploreFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            get_explore_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_explore_feed::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
@@ -74,14 +55,8 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetPostThreadRequest>,
     ) -> Result<Response<GetPostThreadResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            get_post_thread::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_post_thread::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }

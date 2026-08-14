@@ -27,26 +27,23 @@ pub struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: GetFollowingFeedRequest,
-    caller: Option<&str>,
 ) -> Result<GetFeedResponse, Status> {
     if req.follower_identity.is_empty() {
         return Err(Status::invalid_argument("follower_identity is required"));
     }
-    let follower = req.follower_identity;
+    let caller = req.follower_identity;
 
     let mut identities =
-        GraphRepository::Query::list_followed_identities(ctx, &follower)
-            .await?;
+        GraphRepository::Query::list_followed_identities(ctx, &caller).await?;
 
     // Include the caller's own posts in their following feed.
-    if !identities.iter().any(|a| a == &follower) {
-        identities.push(follower);
+    if !identities.iter().any(|a| a == &caller) {
+        identities.push(caller);
     }
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
-        caller.map(str::to_string),
     )?;
     let params = Params { common, identities };
 
@@ -78,10 +75,10 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    params: &Params,
+    _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, params.common.caller.as_deref(), fetched).await
+    feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
@@ -90,13 +87,8 @@ async fn filter(
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(
-        fetched,
-        hydration,
-        &_params.common.omit_labels,
-        &hydration.blocked_identities,
-    )
-    .await
+    feeds_pipeline::filter(fetched, hydration, &_params.common.omit_labels)
+        .await
 }
 
 async fn view(

@@ -5,7 +5,6 @@ pub mod common;
 pub mod search_posts;
 pub mod search_users;
 
-use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
 use crate::service::proto::search_service_server::{
     SearchService, SearchServiceServer,
@@ -29,14 +28,8 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchUsersRequest>,
     ) -> Result<Response<SearchUsersResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            search_users::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            search_users::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
@@ -44,14 +37,8 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchPostsRequest>,
     ) -> Result<Response<SearchPostsResponse>, Status> {
-        let caller = authenticated_identity(&request);
         Ok(Response::new(
-            search_posts::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            search_posts::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }

@@ -130,11 +130,6 @@ export default function SettingsTabScreen() {
                 >
                   <Text variant="body">Moderation preferences</Text>
                 </ListItemWrapper>
-                <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.blockedUsers)}
-                >
-                  <Text variant="body">Blocked users</Text>
-                </ListItemWrapper>
               </ListItemGroup>
 
               <ListItemGroup>
