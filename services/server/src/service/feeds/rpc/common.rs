@@ -11,7 +11,7 @@ use crate::service::events::tombstone::{
 use crate::service::feeds::repository::{
     EventCreatedAt, Query as FeedsRepository,
 };
-use crate::service::feeds::util::{map_db_err, page_limit};
+use crate::service::feeds::util::map_db_err;
 use crate::service::identity::service::{
     bundles_to_hints, collect_identities, list_identity_events,
     list_profile_events, rows_to_bundles,
@@ -44,29 +44,10 @@ impl<SortedBy> Params<SortedBy> {
     where
         SortedBy: for<'a> Deserialize<'a>,
     {
-        let limit = page_limit(params);
-
-        let tokens = params
-            .as_ref()
-            .map(|p| (&p.backward_token, &p.forward_token));
-
-        let cursor_filter = match tokens {
-            Some((Some(_), Some(_))) => {
-                return Err(Status::invalid_argument(
-                    "Only one cursor is allowed",
-                ));
-            }
-            Some((Some(token), None)) => {
-                Some(CursorFilter::Backward(Cursor::decode(token)?))
-            }
-            Some((None, Some(token))) => {
-                Some(CursorFilter::Forward(Cursor::decode(token)?))
-            }
-            _ => None,
-        };
-
+        let (cursor_filter, limit) =
+            CursorFilter::from_page_params(params.as_ref())?;
         Ok(Params {
-            limit,
+            limit: limit.into(),
             cursor_filter,
             omit_labels,
         })

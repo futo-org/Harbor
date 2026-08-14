@@ -50,30 +50,11 @@ impl<SortedBy> Params<SortedBy> {
     {
         let query = prepare_search_query(&query)
             .ok_or_else(|| Status::invalid_argument("empty search query"))?;
-        let limit = page_limit(params);
-
-        let tokens = params
-            .as_ref()
-            .map(|p| (&p.backward_token, &p.forward_token));
-
-        let cursor_filter = match tokens {
-            Some((Some(_), Some(_))) => {
-                return Err(Status::invalid_argument(
-                    "Only one cursor is allowed",
-                ));
-            }
-            Some((Some(token), None)) => {
-                Some(CursorFilter::Backward(Cursor::decode(token)?))
-            }
-            Some((None, Some(token))) => {
-                Some(CursorFilter::Forward(Cursor::decode(token)?))
-            }
-            _ => None,
-        };
-
+        let (cursor_filter, limit) =
+            CursorFilter::from_page_params(params.as_ref())?;
         Ok(Params {
             query,
-            limit,
+            limit: limit.into(),
             cursor_filter,
         })
     }
@@ -163,14 +144,6 @@ fn test_prepare_search_query() {
         let got = prepare_search_query(input);
         assert_eq!(got.as_deref(), expected, "input: {input}");
     }
-}
-
-pub fn page_limit(page_params: &Option<PageParams>) -> u64 {
-    page_params
-        .as_ref()
-        .and_then(|p| p.limit)
-        .unwrap_or(50)
-        .clamp(1, 200) as u64
 }
 
 /// Event, content and search rank.
