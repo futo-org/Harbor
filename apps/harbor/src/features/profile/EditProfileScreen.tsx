@@ -1,4 +1,4 @@
-import { Button, Text, TextInput } from '@/src/common/components';
+import { Button, CharCount, Text, TextInput } from '@/src/common/components';
 import { InfoTooltip } from '@/src/common/components/InfoTooltip';
 import { Sheet } from '@/src/common/components/sheet';
 import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAvatar';
@@ -9,6 +9,10 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ZIndex } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import {
+  MAX_BIO_LENGTH,
+  MAX_NAME_LENGTH,
+} from '@/src/features/profile/lib/decodeProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
@@ -69,8 +73,10 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               value={edit.nameDraft}
               onChangeText={edit.setNameDraft}
               placeholder="Display name"
+              maxLength={MAX_NAME_LENGTH}
               autoFocus
             />
+            <CharCount count={edit.nameDraft.length} max={MAX_NAME_LENGTH} />
           </View>
 
           <View style={Atoms.gap_xs}>
@@ -81,7 +87,12 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               value={edit.descriptionDraft}
               onChangeText={edit.setDescriptionDraft}
               placeholder="Bio"
+              maxLength={MAX_BIO_LENGTH}
               numberOfLines={3}
+            />
+            <CharCount
+              count={edit.descriptionDraft.length}
+              max={MAX_BIO_LENGTH}
             />
           </View>
 
