@@ -2,6 +2,7 @@ import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { EMPTY_FEED } from '@/src/features/feed/hooks/types';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
   FetchMode,
@@ -17,6 +18,7 @@ import {
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import useBlocks from '../block/hooks/useBlocks';
 import { ProfileHeader } from './ProfileHeader';
 import { useProfile } from './hooks/useProfile';
 import {
@@ -32,6 +34,9 @@ import {
 import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+
+const BLOCKED_PROFILE_MESSAGE =
+  'You blocked this profile. Unblock to see their posts.';
 
 export default function ProfileScreen({
   tab = 'posts',
@@ -138,8 +143,10 @@ function ProfileScreenContent() {
     }, []),
   );
 
+  const isBlocked = useBlocks((s) => s.isBlocked(identityKey ?? ''));
+
   const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
-    enabled: isFocused,
+    enabled: isFocused && !isBlocked,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -167,8 +174,15 @@ function ProfileScreenContent() {
   );
 
   const tabs = useMemo(
-    () => [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
-    [identityFeed],
+    () => [
+      {
+        key: 'posts',
+        feed: isBlocked ? EMPTY_FEED : identityFeed,
+        bottomPadding: 40,
+        emptyMessage: isBlocked ? BLOCKED_PROFILE_MESSAGE : undefined,
+      },
+    ],
+    [identityFeed, isBlocked],
   );
 
   return (

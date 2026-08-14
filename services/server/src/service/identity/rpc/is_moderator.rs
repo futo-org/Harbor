@@ -2,9 +2,9 @@
 //! this server. Authenticated by the bearer JWT (the caller is the
 //! subject).
 
+use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
 use crate::service::identity::repository as id_repo;
-use crate::service::identity::rpc::common::authenticated_identity;
 use crate::service::proto::{IsModeratorRequest, IsModeratorResponse};
 use tonic::{Request, Status};
 

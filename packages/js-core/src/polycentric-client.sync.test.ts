@@ -458,6 +458,7 @@ function makeCoreMock(opts: CoreMockOptions = {}) {
     copyEvents: vi.fn(),
     copyContents: vi.fn(),
     setServers: vi.fn(),
+    setActiveIdentity: vi.fn(),
     setAuthTokenProvider: vi.fn(),
     clearAuthTokens: vi.fn(),
     uploadBlob: vi.fn(async () => {}),

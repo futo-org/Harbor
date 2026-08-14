@@ -14,6 +14,18 @@ use crate::service::identity::service::cached_identity_content;
 #[derive(Debug, Clone)]
 pub struct AuthenticatedIdentity(pub String);
 
+/// The identity the request is authenticated as, or `None` when it
+/// arrived without a verified auth token. Populated by [`auth_middleware`]
+/// from the bearer JWT and carried through as a request extension.
+pub fn authenticated_identity<T>(
+    request: &tonic::Request<T>,
+) -> Option<String> {
+    request
+        .extensions()
+        .get::<AuthenticatedIdentity>()
+        .map(|AuthenticatedIdentity(identity)| identity.clone())
+}
+
 #[derive(Clone)]
 pub struct AuthState {
     pub ctx: std::sync::Arc<ServiceContext>,

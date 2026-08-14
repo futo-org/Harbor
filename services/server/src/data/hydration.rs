@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use polycentric_common::models::protos_v2::{EventBundle, EventHint};
 
@@ -15,6 +16,9 @@ pub struct HydrationState {
     pub repost_events: Vec<EventWithContentRow>,
     pub stats: EventStats,
     pub label_events: Vec<EventWithContentRow>,
+    /// Blocked identities for the authenticated caller. Empty for anonymous
+    /// requests or pipelines where blocking is not applicable.
+    pub blocked_identities: Arc<HashSet<String>>,
 }
 
 impl HydrationState {

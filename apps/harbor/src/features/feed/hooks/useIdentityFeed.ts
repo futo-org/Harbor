@@ -1,4 +1,4 @@
-import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
+import { Query, UpdateMode } from '@polycentric/react-native';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';
@@ -42,7 +42,7 @@ export function useIdentityFeed(
 
   return {
     items,
-    isLoading: query.status === QueryStatus.Loading,
+    isLoading: query.isLoading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
     loadMore: async () => requestMore(),

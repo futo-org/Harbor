@@ -20,6 +20,7 @@ use sea_orm::{ActiveModelTrait, NotSet, Set};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::rows_to_bundles;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
@@ -107,6 +108,29 @@ impl NotificationWorker {
         .await?)
     }
 
+    /// The recipients of `notifications` that do not block `author`. A
+    /// recipient that blocks the actor gets neither a stored notification
+    /// nor a push.
+    async fn unblocked_recipients<'a>(
+        &self,
+        notifications: &'a [PendingNotification],
+        author: &str,
+    ) -> Result<Vec<&'a String>, WorkerError> {
+        let mut recipients = Vec::with_capacity(notifications.len());
+        for notification in notifications {
+            let blocks = GraphRepository::blocks_identity(
+                &self.ctx,
+                &notification.to_identity,
+                author,
+            )
+            .await?;
+            if !blocks {
+                recipients.push(&notification.to_identity);
+            }
+        }
+        Ok(recipients)
+    }
+
     // Emit a Notification event to Kafka, that can be consumed by the
     // push-notifications service. The message key carries the recipient.
     async fn emit(
@@ -186,8 +210,6 @@ impl MessageHandler for NotificationWorker {
             return Outcome::Commit;
         };
         let kind = *kind;
-        let recipients: Vec<&String> =
-            notifications.iter().map(|n| &n.to_identity).collect();
 
         // A completed verification only notifies when the claim's owner
         // actually requested it from this verifier — unsolicited verify
@@ -208,6 +230,24 @@ impl MessageHandler for NotificationWorker {
                     return Outcome::Retry;
                 }
             }
+        }
+
+        let recipients = match self
+            .unblocked_recipients(&notifications, &trigger_key.identity)
+            .await
+        {
+            Ok(recipients) => recipients,
+            Err(e) => {
+                tracing::warn!(
+                    worker = Self::NAME,
+                    error = %e,
+                    "failed to check recipient blocks"
+                );
+                return Outcome::Retry;
+            }
+        };
+        if recipients.is_empty() {
+            return Outcome::Commit;
         }
 
         tracing::info!(
@@ -438,10 +478,12 @@ impl From<&EventKey> for KeyColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ::entity::block_model as BlockModel;
     use polycentric_common::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
         VerificationTarget, VerificationVerify,
     };
+    use sea_orm::{DatabaseConnection, DbBackend, DbErr, MockDatabase};
 
     /// A fully-populated `EventKey` for `identity`.
     fn event_key(identity: &str) -> EventKey {
@@ -653,6 +695,80 @@ mod tests {
             target_identities: vec![],
         }));
         assert!(build_notifications("alice", &c).is_empty());
+    }
+
+    async fn worker(db: DatabaseConnection) -> NotificationWorker {
+        let kafka_producer = common_kafka::build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        NotificationWorker::new(ServiceContext::new(db, kafka_producer))
+    }
+
+    fn pending(to_identity: &str) -> PendingNotification {
+        PendingNotification {
+            kind: NotificationKind::Reply,
+            to_identity: to_identity.to_string(),
+            target: Some(event_key("alice")),
+        }
+    }
+
+    fn block_row(blocker: &str, blocked: &str) -> BlockModel::Model {
+        BlockModel::Model {
+            event_id: 1,
+            blocker: blocker.to_string(),
+            blocked: blocked.to_string(),
+        }
+    }
+
+    fn no_block_rows() -> Vec<BlockModel::Model> {
+        Vec::new()
+    }
+
+    #[tokio::test]
+    async fn recipients_blocking_the_author_are_dropped() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![block_row("bob", "alice")]])
+            .append_query_results([no_block_rows()])
+            .into_connection();
+        let worker = worker(db).await;
+        let notifications = vec![pending("bob"), pending("carol")];
+
+        let recipients = worker
+            .unblocked_recipients(&notifications, "alice")
+            .await
+            .expect("block lookup should succeed");
+        assert_eq!(recipients, [&"carol".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn recipients_are_kept_when_none_block_the_author() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([no_block_rows()])
+            .append_query_results([no_block_rows()])
+            .into_connection();
+        let worker = worker(db).await;
+        let notifications = vec![pending("bob"), pending("carol")];
+
+        let recipients = worker
+            .unblocked_recipients(&notifications, "alice")
+            .await
+            .expect("block lookup should succeed");
+        assert_eq!(recipients, [&"bob".to_string(), &"carol".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn a_failed_block_lookup_is_an_error() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_errors([DbErr::Custom("db is down".to_string())])
+            .into_connection();
+        let worker = worker(db).await;
+
+        assert!(
+            worker
+                .unblocked_recipients(&[pending("bob")], "alice")
+                .await
+                .is_err()
+        );
     }
 
     #[test]

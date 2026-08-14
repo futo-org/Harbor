@@ -23,9 +23,14 @@ struct Params {
 pub async fn handle(
     ctx: &ServiceContext,
     req: SearchPostsRequest,
+    caller: Option<&str>,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
-    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
+    let common = rpc::Params::from_req_params(
+        req.query,
+        &req.page_params,
+        caller.map(str::to_string),
+    )?;
     let params = Params {
         common,
         sort_by,
@@ -91,10 +96,10 @@ impl SortedPostsBy {
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _: &Params,
+    params: &Params,
     fetched: &Fetched<SortedPostsBy>,
 ) -> Result<HydrationState, Status> {
-    rpc::hydrate(ctx, fetched).await
+    rpc::hydrate(ctx, params.common.caller.as_deref(), fetched).await
 }
 
 async fn filter(
@@ -103,7 +108,13 @@ async fn filter(
     fetched: Fetched<SortedPostsBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedPostsBy>, Status> {
-    rpc::filter(fetched, hydration, &params.omit_labels).await
+    rpc::filter(
+        fetched,
+        hydration,
+        &params.omit_labels,
+        &hydration.blocked_identities,
+    )
+    .await
 }
 
 async fn view(
