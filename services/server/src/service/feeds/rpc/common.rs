@@ -2,7 +2,7 @@
 //! Mostly pipeline related
 
 use crate::data::hydration::HydrationState;
-use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
+use crate::data::{CursorFilter, Marker, PageInfo, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
@@ -78,85 +78,22 @@ pub fn finalize_fetch(
     mut rows: Vec<EventWithContentRow>,
     params: &Params,
 ) -> Fetched {
-    // We tried fetching more rows than the client limit.
-    // If we got more back, then there is more data past the page we will return.
-    let has_extra_row = rows.len() as u64 > params.limit;
-
-    // Simple heuristic: if a forward token was used, then there was a previous page.
-    // Unless the forward token was a start token.
-    // Similar logic applies for backward tokens.
-    // There are false negatives when navigating forward from an
-    // end token or backward from a start token.
-    // We do not handle these cases.
-    let mid_cursor_was_used = matches!(
-        params.cursor_filter,
-        Some(CursorFilter::Forward(Cursor::Mid(_)))
-            | Some(CursorFilter::Backward(Cursor::Mid(_)))
+    let page_info = pipeline::finalize_fetch(
+        &mut rows,
+        params.cursor_filter.as_ref(),
+        params.limit as u32,
+        create_event_created_at_marker,
     );
-
-    let (has_previous_page, has_next_page) = match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            // Backwards queries have a cursor if there is a page following this one
-            // and the extra row would be preceding the current page.
-            (has_extra_row, mid_cursor_was_used)
-        }
-        _ => (mid_cursor_was_used, has_extra_row),
-    };
-
-    // Remove from the end if we fetched extra rows at the end
-    // and remove from the beginning if we are doing a backwards query
-    match params.cursor_filter {
-        Some(CursorFilter::Backward(_)) => {
-            let drop = rows.len().saturating_sub(params.limit as usize);
-            rows.drain(0..drop);
-        }
-        _ => rows.truncate(params.limit as usize),
-    }
-
-    let backward_marker = rows.first().map(|(event, _)| Marker {
-        sorted_by: event.created_at,
-        event_id: event.id,
-    });
-
-    let forward_marker = rows.last().map(|(event, _)| Marker {
-        sorted_by: event.created_at,
-        event_id: event.id,
-    });
-
-    let backward_cursor = match (backward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: we stay here.
-        (None, Some(CursorFilter::Backward(cur))) => *cur,
-        // Truly empty feed: we are at the end and new items will be
-        // placed preceding our cursor.
-        // OR
-        // Forward query from the end of the feed: we get the last items
-        // if we navigate backward.
-        _ => Cursor::End,
-    };
-
-    let forward_cursor = match (forward_marker, &params.cursor_filter) {
-        // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: a forward query
-        // should return the first items in the feed.
-        (None, Some(CursorFilter::Backward(_))) => Cursor::Start,
-        // There are zero rows following the previous cursor: we stay here.
-        (None, Some(CursorFilter::Forward(cur))) => *cur,
-        // Truly empty feed: we are at the end and a forward query will continue
-        // to return no items.
-        _ => Cursor::End,
-    };
-
-    let page_info = PageInfo {
-        backward_cursor,
-        forward_cursor,
-        has_previous_page,
-        has_next_page,
-    };
-
     Fetched { rows, page_info }
+}
+
+fn create_event_created_at_marker(
+    (event, _): &EventWithContentRow,
+) -> Marker<EventCreatedAt> {
+    Marker {
+        sorted_by: event.created_at,
+        event_id: event.id,
+    }
 }
 
 /// Return relevant content such as:

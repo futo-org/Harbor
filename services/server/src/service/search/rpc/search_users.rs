@@ -1,7 +1,7 @@
 //! `search_users`: searches users.
 
 use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
+use crate::data::pipeline::{create_pipeline, finalize_fetch};
 use crate::service::context::ServiceContext;
 use crate::service::proto::{
     SearchUsersRequest, SearchUsersResponse, SortUsersBy,
@@ -9,7 +9,6 @@ use crate::service::proto::{
 use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
     self, Fetched, Marker, SearchResponseFilter, SearchResponseView,
-    finalize_fetch,
 };
 use serde::{Deserialize, Serialize};
 use tonic::Status;
@@ -27,8 +26,7 @@ pub async fn handle(
     let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
     let params = Params { common, sort_by };
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+        create_pipeline(ctx, &params, fetch, hydrate, filter, view).await?;
     Ok(SearchUsersResponse {
         results: result.results,
         event_hints: result.event_hints,
@@ -48,13 +46,20 @@ async fn fetch(
         params.common.cursor_filter.as_ref(),
     )
     .await?;
-    let page_info = finalize_fetch(&mut rows, &params.common, |row| Marker {
-        sorted_by: match params.sort_by {
-            SortUsersBy::Default => SortedUsersBy::Rank(row.search_rank),
-            SortUsersBy::Alpha => SortedUsersBy::Name(row.profile_name.clone()),
+    let page_info = finalize_fetch(
+        &mut rows,
+        params.common.cursor_filter.as_ref(),
+        params.common.limit as u32,
+        |row| Marker {
+            sorted_by: match params.sort_by {
+                SortUsersBy::Default => SortedUsersBy::Rank(row.search_rank),
+                SortUsersBy::Alpha => {
+                    SortedUsersBy::Name(row.profile_name.clone())
+                }
+            },
+            event_id: row.event.id,
         },
-        event_id: row.event.id,
-    });
+    );
     let rows = rows
         .into_iter()
         .map(|row| (row.event, row.content, row.search_rank))
