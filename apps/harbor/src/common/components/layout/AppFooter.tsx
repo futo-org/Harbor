@@ -8,7 +8,7 @@ import { FUTO_URL } from '../../constants';
 const LINKS: { text: string; href: ExternalPathString }[] = [
   {
     text: 'Privacy Policy',
-    href: 'https://docs.polycentric.io/privacy-policy/',
+    href: 'https://join.harbor.social/docs/privacy-policy/',
   },
   {
     text: 'Source Code',

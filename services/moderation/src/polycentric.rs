@@ -401,17 +401,10 @@ fn now_millis() -> u64 {
 
 /// Decode a 64-character hex string into 32 bytes.
 fn decode_hex_32(s: &str) -> Result<[u8; 32], String> {
-    if s.len() != 64 {
-        return Err(format!(
-            "signing key must be 64 hex chars (32 bytes), got {}",
-            s.len()
-        ));
-    }
-    let mut out = [0u8; 32];
-    for (i, byte) in out.iter_mut().enumerate() {
-        *byte = u8::from_str_radix(&s[i * 2..i * 2 + 2], 16)
-            .map_err(|e| format!("invalid hex in signing key: {e}"))?;
-    }
+    let bytes = hex::decode(s).map_err(|e| format!("invalid signing key hex: {e}"))?;
+    let out = bytes
+        .try_into()
+        .map_err(|_| "signing key must decode to 32 bytes")?;
     Ok(out)
 }
 
@@ -422,8 +415,8 @@ mod tests {
     #[test]
     fn decode_hex_32_roundtrip() {
         let bytes = [0xABu8; 32];
-        let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-        assert_eq!(decode_hex_32(&hex).unwrap(), bytes);
+        let as_hex: String = hex::encode(bytes);
+        assert_eq!(decode_hex_32(&as_hex).unwrap(), bytes);
     }
 
     #[test]

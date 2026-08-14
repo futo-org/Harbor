@@ -3,6 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { useFocusEffect } from 'expo-router';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { ClaimCreateSheet } from './claims/create/ClaimCreateSheet';
@@ -11,10 +12,17 @@ import { ClaimList } from './claims/ClaimList';
 export default function VerificationsScreen() {
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Tabs mount eagerly; don't fetch until the tab is first focused.
+  const [enabled, setEnabled] = useState(false);
+  useFocusEffect(() => {
+    setEnabled(true);
+  });
+
   return (
     <Screen>
       <Screen.PrimaryColumn>
         <ClaimList
+          enabled={enabled}
           HeaderComponent={() => (
             <Topbar
               title="Verifications"

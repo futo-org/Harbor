@@ -100,7 +100,7 @@ impl IdentityStore {
         self.store_private_key(&primary)?;
 
         let doc = identity::genesis(primary.to_public_key());
-        let identity_string = identity::identity_string(&doc);
+        let identity_string = doc.derive_hex_key();
 
         // Genesis: sequence 1, identity_sequence 1 (self-reference).
         self.append_event(&identity_string, &primary, 1, 1, &doc)?;

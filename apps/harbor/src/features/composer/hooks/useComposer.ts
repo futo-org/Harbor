@@ -24,6 +24,7 @@ import { useComposerStore } from './useComposerStore';
 import { useLinkPreview } from './useLinkPreview';
 
 export const MAX_ATTACHMENTS = 4;
+export const MAX_POST_LENGTH = 2000;
 
 /** Longest edge lengths for post image variants. */
 const POST_VARIANT_SIZES = [512, 1280];

@@ -32,8 +32,13 @@ export const ScrollView = React.forwardRef<
   },
   ref,
 ) {
-  const { onScroll, headerHeight, headerAnimatedStyle, onHeaderLayout } =
-    useHidingHeader();
+  const {
+    onScroll,
+    headerAnimatedStyle,
+    onHeaderLayout,
+    scrollProps,
+    contentPaddingTop,
+  } = useHidingHeader();
 
   const header = renderNode(HeaderComponent);
 
@@ -48,10 +53,11 @@ export const ScrollView = React.forwardRef<
       <Animated.ScrollView
         ref={ref}
         {...rest}
+        {...scrollProps}
         onScroll={onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={StyleSheet.flatten([
-          { paddingTop: headerHeight },
+          { paddingTop: contentPaddingTop },
           contentContainerStyle,
         ])}
       >

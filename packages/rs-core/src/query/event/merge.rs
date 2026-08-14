@@ -37,6 +37,13 @@ pub fn event_dedup_key(bundle: &EventBundle) -> Option<EventDedupKey> {
     ))
 }
 
+/// The `created_at` of the bundle's event, when it decodes.
+pub fn bundle_created_at(bundle: &EventBundle) -> Option<u64> {
+    let signed = bundle.signed_event.as_ref()?;
+    let event = Event::decode(signed.event_bytes.as_slice()).ok()?;
+    Some(event.created_at)
+}
+
 /// Pull bundles out of each `EventHint` and copy them into the local
 /// client stores. Hints are useful side-information the server
 /// provides (e.g. the profile of a post's author).

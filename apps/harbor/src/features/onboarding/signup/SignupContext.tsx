@@ -9,6 +9,8 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { publishProfileUpdate } from '@/src/features/profile/lib/publishProfileUpdate';
+import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
+import { profileQueryKey } from '@/src/features/profile/hooks/useProfile';
 
 type ModerationLevel = 1 | 2 | 3;
 
@@ -92,6 +94,7 @@ export function useSignup() {
         avatarUri: data.avatarUri,
       });
       await refreshCurrentIdentity();
+      invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       reset();
       router.replace(Routes.tabs.feed.index as Href);
     } catch (error) {

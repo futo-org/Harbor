@@ -128,17 +128,17 @@ impl Query {
                     query = match marker {
                         Marker {
                             sorted_by: SortedUsersBy::Rank(rank),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
-                            [Value::from(rank), Value::from(id)],
+                            [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
                             sorted_by: SortedUsersBy::Name(name),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(name, events.id) > ($1, $2)",
-                            [Value::from(name), Value::from(id)],
+                            [Value::from(name), Value::from(event_id)],
                         )),
                     };
                 }
@@ -156,17 +156,17 @@ impl Query {
                     query = match marker {
                         Marker {
                             sorted_by: SortedUsersBy::Rank(rank),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
-                            [Value::from(rank), Value::from(id)],
+                            [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
                             sorted_by: SortedUsersBy::Name(name),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(name, events.id) < ($1, $2)",
-                            [Value::from(name), Value::from(id)],
+                            [Value::from(name), Value::from(event_id)],
                         )),
                     };
                 }
@@ -249,17 +249,17 @@ impl Query {
                     query = match marker {
                         Marker {
                             sorted_by: SortedPostsBy::Rank(rank),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
-                            [Value::from(rank), Value::from(id)],
+                            [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
                             sorted_by: SortedPostsBy::Latest(synced_at),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(content.synced_at, events.id) < ($1, $2)",
-                            [Value::from(*synced_at), Value::from(id)],
+                            [Value::from(*synced_at), Value::from(event_id)],
                         )),
                     };
                 }
@@ -277,17 +277,17 @@ impl Query {
                     query = match marker {
                         Marker {
                             sorted_by: SortedPostsBy::Rank(rank),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
-                            [Value::from(rank), Value::from(id)],
+                            [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
                             sorted_by: SortedPostsBy::Latest(synced_at),
-                            id,
+                            event_id,
                         } => query.filter(Expr::cust_with_values(
                             "(content.synced_at, events.id) > ($1, $2)",
-                            [Value::from(*synced_at), Value::from(id)],
+                            [Value::from(*synced_at), Value::from(event_id)],
                         )),
                     };
                 }

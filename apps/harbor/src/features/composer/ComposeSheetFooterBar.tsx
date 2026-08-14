@@ -1,5 +1,5 @@
 import Icon from '@/src/common/components/Icon';
-import { Text } from '@/src/common/components/primitives';
+import { CharCount } from '@/src/common/components/composites/CharCount';
 import { useKeyboardOffset } from '@/src/common/lib/animation';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Pressable, View } from 'react-native';
@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MAX_POST_LENGTH } from './hooks/useComposer';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -81,9 +82,7 @@ export function ComposeSheetFooterBar({
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       {attachButton}
       {captureButton}
-      <Text variant="small" color="neutral_500">
-        {charCount}/2000
-      </Text>
+      <CharCount count={charCount} max={MAX_POST_LENGTH} />
     </View>
   );
 

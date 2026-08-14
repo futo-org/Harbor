@@ -4,10 +4,18 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use futures::future::{Either, select};
+use futures_timer::Delay;
 
 use crate::client::PolycentricClient;
+use crate::logging::log_warn;
 use crate::query::query_observable::{QueryResult, QueryStatus};
 use crate::rx::observable::{Observable, Subscriber};
+
+/// Per-server timeout applied when `QueryOpts.server_timeout_ms` is unset.
+const DEFAULT_SERVER_TIMEOUT_MS: u32 = 5_000;
 
 /// Fetch method for the query
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
@@ -32,6 +40,17 @@ pub enum UpdateMode {
     Merge,
 }
 
+/// Specifies when merged data is emitted during a fan-out.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum EmitMode {
+    /// Emit once every server has responded or timed out. Cached data
+    /// still emits up front.
+    #[default]
+    Default,
+    /// Emit progressively as each server's response arrives.
+    Eager,
+}
+
 /// Options for the query such as the fetch mode or a list of servers
 #[derive(Clone, Debug, Default, uniffi::Record)]
 pub struct QueryOpts {
@@ -40,6 +59,11 @@ pub struct QueryOpts {
     /// Optional list of servers the query should call. `None` uses
     /// `client.servers()`.
     pub servers: Option<Vec<String>>,
+    pub emit_mode: Option<EmitMode>,
+    /// How long to wait for each server before treating it as errored,
+    /// in milliseconds. Defaults to 5000. Timeouts surface as `error`
+    /// emissions prefixed with `timeout [server]`.
+    pub server_timeout_ms: Option<u32>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -297,6 +321,12 @@ where
             .as_ref()
             .and_then(|opts| opts.update_mode)
             .unwrap_or_default();
+        let emit_mode = opts.as_ref().and_then(|o| o.emit_mode).unwrap_or_default();
+        let server_timeout = Duration::from_millis(
+            opts.as_ref()
+                .and_then(|o| o.server_timeout_ms)
+                .unwrap_or(DEFAULT_SERVER_TIMEOUT_MS) as u64,
+        );
         let servers = opts.and_then(|o| o.servers);
 
         Observable::new(move |subscriber| {
@@ -349,6 +379,8 @@ where
                 state,
                 target_servers,
                 update_mode,
+                emit_mode,
+                server_timeout,
                 query_fn.clone(),
                 merge_fn.clone(),
                 client.clone(),
@@ -420,10 +452,13 @@ where
 /// Calls each server in parallel and emits onto `subscriber` as
 /// responses land. `pending` is local to this fan-out so concurrent
 /// subscribes don't interfere with each other.
+#[allow(clippy::too_many_arguments)]
 fn spawn_fanout<T>(
     state: QueryStateHandle<T>,
     servers: Vec<String>,
     update_mode: UpdateMode,
+    emit_mode: EmitMode,
+    server_timeout: Duration,
     query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
     client: Arc<Mutex<PolycentricClient>>,
@@ -451,8 +486,19 @@ fn spawn_fanout<T>(
         let subscriber = subscriber.clone();
 
         spawn(async move {
-            // Do the query
-            let result = query_fn(server_url.clone()).await;
+            // Drop (cancel) the query if the server doesn't respond in time.
+            let result =
+                match select(query_fn(server_url.clone()), Delay::new(server_timeout)).await {
+                    Either::Left((result, _)) => result,
+                    Either::Right(_) => {
+                        let msg = format!(
+                            "timeout [{server_url}]: no response within {}ms",
+                            server_timeout.as_millis()
+                        );
+                        log_warn(|| msg.clone());
+                        Err(msg)
+                    }
+                };
 
             // Lock the query state mutex and do what we need with it
             let (snapshot, error_msg, is_last) = {
@@ -478,13 +524,17 @@ fn spawn_fanout<T>(
                 // Gather results
                 let is_last = pending_servers == 0;
 
-                let data = compute_merged(&s.data, &merge_fn, &client);
-                let status = s.status(pending_servers);
-                let snapshot = QueryResult {
-                    data,
-                    status,
-                    successful_servers,
-                    pending_servers,
+                // The default emit mode publishes only the settled result,
+                // so skip intermediate merges entirely.
+                let snapshot = if emit_mode == EmitMode::Default && !is_last {
+                    None
+                } else {
+                    Some(QueryResult {
+                        data: compute_merged(&s.data, &merge_fn, &client),
+                        status: s.status(pending_servers),
+                        successful_servers,
+                        pending_servers,
+                    })
                 };
 
                 (snapshot, error_msg, is_last)
@@ -494,7 +544,9 @@ fn spawn_fanout<T>(
             if subscriber.is_closed() {
                 return;
             }
-            subscriber.next(snapshot);
+            if let Some(snapshot) = snapshot {
+                subscriber.next(snapshot);
+            }
             if let Some(msg) = error_msg {
                 subscriber.error(msg);
             }
@@ -502,5 +554,100 @@ fn spawn_fanout<T>(
                 subscriber.complete();
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    enum Ev {
+        Next(Vec<u8>),
+        Complete,
+    }
+
+    /// Parse comma-joined numbers from every response, dedup, and re-join.
+    fn merge_join(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+        let mut items: Vec<u32> = values
+            .iter()
+            .flat_map(|v| {
+                String::from_utf8_lossy(v)
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.parse::<u32>().unwrap())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        items.sort_unstable();
+        items.dedup();
+        items
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+            .into_bytes()
+    }
+
+    /// Run one fan-out for `key` where every server responds with
+    /// `response`, and collect the emitted data until completion.
+    async fn run_fanout(
+        qc: &QueryClient<Vec<u8>>,
+        key: &QueryKey,
+        response: &'static str,
+    ) -> Vec<String> {
+        let opts = QueryOpts {
+            update_mode: Some(UpdateMode::Merge),
+            ..Default::default()
+        };
+        let obs = qc.fetch(
+            Some(key.clone()),
+            move |_server| async move { Ok(response.as_bytes().to_vec()) },
+            merge_join,
+            Some(opts),
+        );
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_complete = tx.clone();
+        let _sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let _ = tx.send(Ev::Next(r.data.unwrap_or_default()));
+            },
+            |_e| {},
+            move || {
+                let _ = tx_complete.send(Ev::Complete);
+            },
+        );
+
+        let mut out = Vec::new();
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Complete => break,
+            }
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn merge_fanouts_accumulate_batches() {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
+        let key: QueryKey = vec!["feed".to_string()];
+
+        let first = run_fanout(&qc, &key, "1,2").await;
+        assert_eq!(first.last().map(String::as_str), Some("1,2"));
+
+        let second = run_fanout(&qc, &key, "3,4").await;
+        assert_eq!(
+            second.first().map(String::as_str),
+            Some("1,2"),
+            "extend should emit the cached history up front"
+        );
+        assert_eq!(
+            second.last().map(String::as_str),
+            Some("1,2,3,4"),
+            "the new batch should merge into the history"
+        );
     }
 }

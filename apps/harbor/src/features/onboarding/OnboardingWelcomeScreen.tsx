@@ -1,7 +1,9 @@
-import { Button, Screen } from '@/src/common/components';
+import { Button, Screen, Text } from '@/src/common/components';
 import { AppFooter } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants/routes';
+import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, themes, useTheme, ZIndex } from '@/src/common/theme';
+import { PRIVATE_BROWSING_NOTICE } from '@/src/features/core/identity/SignupWidget';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -11,6 +13,7 @@ import LOGO_WITH_TEXT from '../../common/assets/images/harbor-scene-splash.svg';
 
 export default function OnboardingWelcomeScreen() {
   const { theme } = useTheme();
+  const isStoragePersistent = useIsStoragePersistent();
   return (
     // <Screen showLeftSidebar={false}>
     //   <Screen.PrimaryColumn>
@@ -67,18 +70,28 @@ export default function OnboardingWelcomeScreen() {
           { backgroundColor: theme.palette.neutral_0 },
         ]}
       >
-        <Button
-          title="Create new identity"
-          variant="primary"
-          fullWidth
-          onPress={() => router.push(Routes.onboarding.signup.setDisplayName)}
-        />
-        <Button
-          title="Pair existing identity"
-          variant="tertiary"
-          fullWidth
-          onPress={() => router.push('/(onboarding)/login')}
-        />
+        {isStoragePersistent ? (
+          <>
+            <Button
+              title="Create new identity"
+              variant="primary"
+              fullWidth
+              onPress={() =>
+                router.push(Routes.onboarding.signup.setDisplayName)
+              }
+            />
+            <Button
+              title="Pair existing identity"
+              variant="tertiary"
+              fullWidth
+              onPress={() => router.push('/(onboarding)/login')}
+            />
+          </>
+        ) : (
+          <Text variant="small" color="neutral_500" style={Atoms.text_center}>
+            {PRIVATE_BROWSING_NOTICE}
+          </Text>
+        )}
         <AppFooter style={[Atoms.justify_center]} />
       </View>
     </View>

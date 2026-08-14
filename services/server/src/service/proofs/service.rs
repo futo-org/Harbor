@@ -3,7 +3,7 @@
 
 use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::{
-    Event, EventBundle, EventProof, EventProofTarget, Identity, PublicKey,
+    Event, EventBundle, EventProof, EventProofTarget, PublicKey,
 };
 use prost::Message;
 use tonic::Status;
@@ -68,29 +68,12 @@ pub async fn build_revocation_proof(
     let Some(content) = ctx.proof_cache.identity_content(identity).await else {
         return Ok(None);
     };
-    let Some(target) = find_revocation_target(&content, signer, collection)
-    else {
+    let Some(target) = content.revocation_target_for(signer, collection) else {
         return Ok(None);
     };
     let target = target.clone();
     build_proof_against(ctx, identity, collection, &target, leaf_signature)
         .await
-}
-
-/// `EventProofTarget` recorded for `(signer, collection)` in
-/// `identity_content`'s `revocation_bounds`.
-fn find_revocation_target<'a>(
-    identity_content: &'a Identity,
-    signer: &PublicKey,
-    collection: i32,
-) -> Option<&'a EventProofTarget> {
-    let bound = identity_content.revocation_bounds.iter().find(|rb| {
-        rb.revoked_key
-            .as_ref()
-            .map(|pk| pk.key_type == signer.key_type && pk.key == signer.key)
-            .unwrap_or(false)
-    })?;
-    bound.targets.iter().find(|t| t.collection == collection)
 }
 
 /// Add a revocation `EventProof` to each bundle whose signer is recorded

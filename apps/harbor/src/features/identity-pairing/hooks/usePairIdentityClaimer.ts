@@ -1,7 +1,4 @@
-import {
-  publicKeyToString,
-  usePolycentric,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useEffect, useState } from 'react';
 import type { PairingSessionInfo } from '../pairingCode';
 
@@ -16,7 +13,7 @@ type StageResult = (() => void) | undefined;
 
 type ErrorState = { message: string };
 type JoiningState = { sessionInfo: PairingSessionInfo };
-type PollingState = JoiningState;
+type PollingState = JoiningState & { marker: bigint | null };
 type ClaimingState = PollingState;
 
 type ClaimerState =
@@ -74,7 +71,7 @@ export function usePairIdentityClaimer(
             );
           }
 
-          setState({ stage: 'polling', sessionInfo });
+          setState({ stage: 'polling', sessionInfo, marker: null });
         } catch (err) {
           if (cancelled) return;
 
@@ -93,38 +90,37 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenPolling = ({ sessionInfo }: PollingState): StageResult => {
+    const whenPolling = ({
+      sessionInfo,
+      marker,
+    }: PollingState): StageResult => {
       let cancelled = false;
 
-      const pollAuthorization = async () => {
+      // Poll until we get a different marker and then try claiming
+      const pollForRemoteChange = async () => {
         try {
-          const state = await client.identityManager.fetchIdentityState(
-            sessionInfo.identity,
-            sessionInfo.origin,
-          );
+          const newMarker =
+            await client.identityManager.pollRemoteIdentityMarker(
+              sessionInfo.identity,
+              sessionInfo.origin,
+            );
+
           if (cancelled) return;
-          const currentKey = client.currentKeyPair?.publicKey;
-          if (!currentKey) return;
+          if (newMarker === null || newMarker === marker) return;
 
-          const keys = new Set<string>();
-          state.rotationKeys.forEach((k) => {
-            keys.add(publicKeyToString(k));
+          setState({
+            stage: 'claiming',
+            sessionInfo,
+            marker: newMarker,
           });
-          state.signingKeys.forEach((k) => {
-            keys.add(publicKeyToString(k));
-          });
-
-          if (keys.has(publicKeyToString(currentKey))) {
-            setState({ stage: 'claiming', sessionInfo });
-          }
         } catch {
           // polling failed, will retry on next interval
         }
       };
 
-      void pollAuthorization();
+      void pollForRemoteChange();
       const interval = setInterval(() => {
-        void pollAuthorization();
+        void pollForRemoteChange();
       }, 2000);
 
       return () => {
@@ -133,7 +129,10 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenClaiming = ({ sessionInfo }: ClaimingState): StageResult => {
+    const whenClaiming = ({
+      sessionInfo,
+      marker,
+    }: ClaimingState): StageResult => {
       const server = sessionInfo.origin;
       let cancelled = false;
 
@@ -141,9 +140,26 @@ export function usePairIdentityClaimer(
         try {
           if (!client.servers.includes(server)) {
             client.servers.push(server);
+            client.core.setServers(client.servers);
           }
-          await client.identityManager.claim(sessionInfo.identity);
-          if (!cancelled) setState({ stage: 'done' });
+
+          const identityState = await client.identityManager.claim(
+            sessionInfo.identity,
+          );
+
+          if (cancelled) return;
+
+          if (identityState) {
+            setState({ stage: 'done' });
+            return;
+          }
+
+          // Continue polling if our key still isn't authorized
+          setState({
+            stage: 'polling',
+            sessionInfo,
+            marker,
+          });
         } catch (err) {
           if (!cancelled) {
             const message =

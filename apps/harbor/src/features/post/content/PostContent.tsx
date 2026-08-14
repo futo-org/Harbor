@@ -7,7 +7,7 @@ import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostImages } from '../PostImages';
 import { PostLabels } from '../PostLabels';
@@ -19,7 +19,7 @@ const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
 
 /** A post's body: what it is replying to, its text, and its attachments. */
-export function PostContent({
+export const PostContent = memo(function PostContent({
   post,
   hideReplyingTo,
   compactLinkPreview,
@@ -47,10 +47,12 @@ export function PostContent({
         <LinkPreviewCard link={post.links[0]} compact={compactLinkPreview} />
       ) : null}
       {post.images?.length > 0 && <PostImages images={post.images} />}
-      {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
+      {post.quoteId ? (
+        <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
+      ) : null}
     </View>
   );
-}
+});
 
 /** Post text capped at PREVIEW_LIMIT with a Show more / Show less toggle. */
 function ExpandablePostText({ content }: { content: string }) {
@@ -127,7 +129,12 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
   return (
     <Pressable
       onPress={handlePress}
-      style={[Atoms.flex_row, Atoms.align_center, Atoms.self_start]}
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.self_start,
+        Atoms.max_w_full,
+      ]}
     >
       <Text variant="secondary" color="neutral_500" fontWeight="regular">
         Replying to{' '}

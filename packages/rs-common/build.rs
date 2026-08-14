@@ -56,8 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out_dir_path = PathBuf::from(&out_dir);
     let mut conf = tonic_prost_build::configure()
-        .build_transport(false)
         .file_descriptor_set_path(out_dir_path.join("polycentric_v2.bin"))
+        // Requires the transport feature.
+        .build_transport(env::var("CARGO_FEATURE_TRANSPORT").is_ok())
         .skip_debug([
             "EventKey",
             "ContentDigest",

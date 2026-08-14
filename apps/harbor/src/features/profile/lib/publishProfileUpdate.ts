@@ -1,10 +1,19 @@
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
-import { COLLECTION, type PolycentricClient } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  type PolycentricClient,
+  type v2,
+} from '@polycentric/react-native';
 
 type PublishProfileUpdateInput = {
   name: string;
   description: string;
+  /** New avatar to upload; when absent, `avatar` is republished as-is. */
   avatarUri?: string | null;
+  /** Existing image sets to carry forward — a ProfileUpdate is a full
+   *  snapshot and readers only use the newest one. */
+  avatar?: v2.ImageSet | null;
+  banner?: v2.ImageSet | null;
   alias?: string | null;
 };
 
@@ -13,18 +22,26 @@ type PublishProfileUpdateInput = {
 // `fill` mode give us the square variants avatars want.
 export async function publishProfileUpdate(
   client: PolycentricClient,
-  { name, description, avatarUri, alias }: PublishProfileUpdateInput,
+  {
+    name,
+    description,
+    avatarUri,
+    avatar,
+    banner,
+    alias,
+  }: PublishProfileUpdateInput,
 ): Promise<void> {
-  const avatar = avatarUri
+  const nextAvatar = avatarUri
     ? await processAndUploadImage(client, avatarUri)
-    : undefined;
+    : (avatar ?? undefined);
   const trimmedAlias = alias?.trim();
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: {
       name,
       description,
-      avatar,
+      avatar: nextAvatar,
+      banner: banner ?? undefined,
       alias: trimmedAlias ? trimmedAlias : undefined,
     },
   });

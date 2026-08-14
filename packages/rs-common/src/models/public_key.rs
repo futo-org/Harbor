@@ -20,11 +20,7 @@ impl PublicKey {
 
     /// Gets the key as a hex string
     pub fn key_as_hex(&self) -> String {
-        self.key
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect::<Vec<String>>()
-            .join("")
+        hex::encode(self.key())
     }
 
     /// Validates that the key has the expected length

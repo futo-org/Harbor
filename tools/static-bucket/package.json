@@ -1,0 +1,6 @@
+{
+  "name": "@polycentric/static-bucket",
+  "private": true,
+  "type": "module",
+  "exports": "./index.js"
+}

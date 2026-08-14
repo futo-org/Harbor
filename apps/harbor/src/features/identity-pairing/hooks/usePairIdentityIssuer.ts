@@ -4,6 +4,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import type { ActivePairingSession } from '@polycentric/react-native';
+import { SyncStrategy } from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function usePairIdentityIssuer(identityKey: string | null | undefined) {
@@ -21,23 +22,25 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     Set<string>
   >(new Set());
 
-  // Keep authorized claimers state up-to-date
-  useEffect(() => {
+  // Update the list of already-authorized keys from *local* state.
+  const refreshAuthorizedClaimers = useCallback(async () => {
     if (!identityKey) return;
-    client.identityManager
-      .fetchIdentityState(identityKey)
-      .then((state) => {
-        const next = new Set<string>();
-        state.rotationKeys.forEach((k) => {
-          next.add(publicKeyToString(k));
-        });
-        state.signingKeys.forEach((k) => {
-          next.add(publicKeyToString(k));
-        });
-        setAuthorizedClaimers(next);
-      })
-      .catch(() => {});
+    const state = await client.identityManager.resolveIdentity(identityKey);
+    if (!state) return;
+
+    const next = new Set<string>();
+    state.rotationKeys.forEach((k) => {
+      next.add(publicKeyToString(k));
+    });
+    state.signingKeys.forEach((k) => {
+      next.add(publicKeyToString(k));
+    });
+    setAuthorizedClaimers(next);
   }, [client.identityManager, identityKey]);
+
+  useEffect(() => {
+    void refreshAuthorizedClaimers().catch(() => {});
+  }, [refreshAuthorizedClaimers]);
 
   const code = currentPairingSession?.code ?? null;
   const server = currentPairingSession?.server ?? null;
@@ -109,6 +112,11 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     try {
       const currentKey = client.currentKeyPair?.publicKey;
       if (!currentKey) throw new Error('No active key pair');
+
+      // Pull latest identity state
+      await client.sync(SyncStrategy.PARTIAL_PULL);
+      await refreshAuthorizedClaimers();
+
       const isRotationKey =
         await client.identityManager.isRotationKeyForIdentity(
           identityKey,
@@ -142,7 +150,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
     } finally {
       setPairingSessionLoading(false);
     }
-  }, [client, identityKey]);
+  }, [client, identityKey, refreshAuthorizedClaimers]);
 
   const clearPairingSession = useCallback(() => {
     setCurrentPairingSession(null);
@@ -165,6 +173,8 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
         } else {
           await client.identityManager.addSigningKey(claimer);
         }
+        // Update local hook state to include the new key
+        await refreshAuthorizedClaimers();
       } catch (err) {
         setHiddenClaimers((prev) => {
           const next = new Set(prev);
@@ -174,7 +184,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
         throw err;
       }
     },
-    [client, identityKey],
+    [client, identityKey, refreshAuthorizedClaimers],
   );
 
   return {

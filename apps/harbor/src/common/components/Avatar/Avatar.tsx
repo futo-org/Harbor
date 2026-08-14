@@ -73,6 +73,7 @@ export function Avatar({
 
   const image = (
     <Image
+      cachePolicy="memory-disk"
       {...restImageProps}
       source={source}
       recyclingKey={recyclingKey ?? sourceUri(source)}

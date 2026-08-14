@@ -1,6 +1,6 @@
 [package]
 edition      = "2024"
-name         = "migration"
+name         = "server-migration"
 publish      = false
 rust-version = "1.85.0"
 version      = "0.1.0"

@@ -16,13 +16,11 @@ path = "src/tests.rs"
 entity = { path = "../entity" }
 ed25519-dalek.workspace = true
 getrandom.workspace = true
-prost = "0.14"
-sha2 = "0.10"
+hex.workspace = true
+polycentric-common = { workspace = true, features = ["transport"] }
+prost = { version = "0.14", default-features = false }
+sha2 = { version = "0.10", default-features = false }
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 tokio = { workspace = true, features = ["full"] }
-tonic = "*"
-tonic-prost = "*"
+tonic = { workspace = true, features = ["transport"] }
 rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
-
-[build-dependencies]
-tonic-prost-build = "*"

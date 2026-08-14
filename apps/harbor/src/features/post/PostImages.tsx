@@ -5,7 +5,7 @@ import {
 import { Atoms } from '@/src/common/theme';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
 import type { v2 } from '@polycentric/react-native';
-import { useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';
 
@@ -27,7 +27,11 @@ type PostImageSource = {
  * are dropped (matches the composer's `MAX_ATTACHMENTS`). Tapping any
  * tile opens the full-screen `ImageViewer`.
  */
-export function PostImages({ images }: { images: v2.ImageSet[] }) {
+export const PostImages = memo(function PostImages({
+  images,
+}: {
+  images: v2.ImageSet[];
+}) {
   const client = usePolycentric();
   const capped = useMemo(() => images.slice(0, 4), [images]);
   const sources = useMemo<PostImageSource[]>(
@@ -74,7 +78,7 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
       >
         <Image
           uris={sources[0].uris}
-          contentFit="cover"
+          contentFit="contain"
           style={[
             Atoms.w_full,
             Atoms.rounded_md,
@@ -133,7 +137,7 @@ export function PostImages({ images }: { images: v2.ImageSet[] }) {
       )}
     </View>
   );
-}
+});
 
 function GridTile({
   uris,

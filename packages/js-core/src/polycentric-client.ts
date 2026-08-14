@@ -70,6 +70,12 @@ export interface PolycentricClientConfig {
    * `ServerInfo`.
    */
   seedServers?: string[];
+  /**
+   * False when the storage drivers do not survive a restart (e.g. the
+   * in-memory fallback used when private browsing blocks IndexedDB).
+   * UIs should not offer identity creation/pairing in that case.
+   */
+  persistentStorage?: boolean;
 }
 
 /**
@@ -100,11 +106,13 @@ export class PolycentricClient {
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
   public readonly filestoreDriver: IFileStoreDriver;
+  public readonly persistentStorage: boolean;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.storageDriver = config.storageDriver;
     this.filestoreDriver = config.filestoreDriver;
+    this.persistentStorage = config.persistentStorage ?? true;
     if (config.seedServers && config.seedServers.length > 0) {
       this.servers = [...config.seedServers];
     }
@@ -936,9 +944,9 @@ export class PolycentricClient {
    */
   public async refreshServers(): Promise<void> {
     if (this.activeIdentityKey) {
-      const { servers } = await this.identityManager.getCurrent();
-      if (servers) {
-        this.servers = [...servers];
+      const state = await this.identityManager.resolveIdentity();
+      if (state?.servers) {
+        this.servers = [...state.servers];
       }
     }
     this.core.setServers(this.servers);

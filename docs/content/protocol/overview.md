@@ -27,7 +27,7 @@ servers — if a server is unavailable or hides data, clients read from elsewher
 ## Identities and keys
 
 An **identity** is not a server account. It is a document
-([`Identity`](/protocol/data-model#identity)) describing a set of keys:
+([`Identity`](./data-model.md#identity)) describing a set of keys:
 
 - **Rotation keys** — a priority-ordered list of public keys that control the
   identity itself and can authorize new keys.
@@ -55,19 +55,19 @@ reserved collections are:
 | 4          | Interactions (reactions, etc.)|
 | 5          | Social graph (follows)        |
 
-An event is addressed by an [`EventKey`](/protocol/data-model#eventkey): the tuple of
+An event is addressed by an [`EventKey`](./data-model.md#eventkey): the tuple of
 `(collection, identity, signed_by, sequence)`.
 
 ## Events and content
 
-To keep events small and cacheable, an [`Event`](/protocol/data-model#event)
+To keep events small and cacheable, an [`Event`](./data-model.md#event)
 references its content by digest rather than embedding it. The body lives in a
-separate [`Content`](/protocol/data-model#content) message, and the event carries a
+separate [`Content`](./data-model.md#content) message, and the event carries a
 `ContentDigest` (SHA-256 over the serialized content). The two travel together in an
-[`EventBundle`](/protocol/data-model#eventbundle), which lets a recipient verify that
+[`EventBundle`](./data-model.md#eventbundle), which lets a recipient verify that
 the content matches the digest the event signed.
 
-An event is signed as a [`SignedEvent`](/protocol/data-model#signedevent): the
+An event is signed as a [`SignedEvent`](./data-model.md#signedevent): the
 signature is computed over the serialized `Event` bytes, and those exact bytes are
 stored as-is so the signature stays verifiable regardless of how a library
 re-serializes the message.
@@ -82,14 +82,14 @@ Within a collection, each event records:
   Merkle root over that signer's prior signatures in the collection.
 
 Later events therefore attest to the writer's history. An
-[`EventProof`](/protocol/data-model#eventproof) is a Merkle inclusion proof showing
+[`EventProof`](./data-model.md#eventproof) is a Merkle inclusion proof showing
 that a given event is a leaf in the tree rooted at some later event. This is what
 makes revocation safe: the identity's revocation bounds anchor verification at a known
 head, and proofs establish which events fall before the revocation point.
 
 ## Vector clocks
 
-An event's [`VectorClock`](/protocol/data-model#vectorclock) records the sequence
+An event's [`VectorClock`](./data-model.md#vectorclock) records the sequence
 numbers, in other collections, that the signer was aware of when writing it. This lets
 consumers order events across collections under eventual consistency.
 
@@ -107,4 +107,4 @@ ask any server for an identity's events and verify every signature itself. Searc
 recommendation, and curated feeds are different — they are computed by servers. A
 client queries several servers, deduplicates, and attributes results, so no single
 server fully controls what a user sees. See
-[Protocol → gRPC](/protocol/grpc) for the feed and sync APIs.
+[Protocol → gRPC](./grpc.md) for the feed and sync APIs.

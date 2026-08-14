@@ -5,6 +5,7 @@ import 'fast-text-encoding';
 // wasm module).
 export {
   uniffiInitAsync,
+  EmitMode,
   FetchMode,
   PolycentricCore,
   Query,

@@ -90,6 +90,31 @@ impl FakeCursorToken {
             .map(|info| (Some(info.token), info.offset))
             .unwrap_or((None, 0))
     }
+
+    /// The server this token belongs to, when it holds exactly one.
+    pub fn sole_server(&self) -> Option<&str> {
+        if self.map.len() == 1 {
+            self.map.keys().next().map(String::as_str)
+        } else {
+            None
+        }
+    }
+}
+
+/// The oldest timestamp every server with more data has paged past.
+/// Items below it may still be preceded by a later page, so merges hold
+/// them back. `None` when no server has more data.
+pub fn pagination_horizon(
+    oldest_by_server: &BTreeMap<String, u64>,
+    merged_end_cursor: &str,
+) -> Option<u64> {
+    let token = FakeCursorToken::decode(merged_end_cursor).ok()?;
+    token
+        .map
+        .iter()
+        .filter(|(_, info)| info.more_data)
+        .filter_map(|(server, _)| oldest_by_server.get(server).copied())
+        .max()
 }
 
 /// Empty map

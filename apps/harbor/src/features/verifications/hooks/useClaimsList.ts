@@ -9,11 +9,11 @@ const parse = (bytes: Uint8Array) =>
  * carrying its verification status. Backed by the dedicated
  * `VerificationsService.ListVerificationClaims` RPC.
  */
-export function useClaimsList(identity: string | undefined) {
+export function useClaimsList(identity: string | undefined, enabled = true) {
   return useClaimBundleList(
     ['claims-list', identity ?? ''],
     new Query.ListVerificationClaims({ claimedByIdentity: identity ?? '' }),
     parse,
-    !!identity,
+    enabled && !!identity,
   );
 }

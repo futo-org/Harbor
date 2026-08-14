@@ -7,6 +7,7 @@ export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';
 
 export {
+  EmitMode,
   FetchMode,
   PolycentricCore,
   Query,

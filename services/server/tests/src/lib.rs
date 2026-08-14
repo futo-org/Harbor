@@ -1,6 +1,17 @@
-pub mod proto;
-
 use ed25519_dalek::{Signer, SigningKey};
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
+use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
+use polycentric_common::models::protos_v2::{
+    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
+    EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
+    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction,
+    RevocationBound, SearchResult, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema, content,
+};
 use prost::Message;
 use proto::content::ContentBody;
 use proto::event_sync_service_client::EventSyncServiceClient;
@@ -41,13 +52,7 @@ pub const COLLECTION_VERIFICATIONS: i32 = 8;
 pub const COLLECTION_MAX: i32 = COLLECTION_VERIFICATIONS;
 
 pub fn sha256(data: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    hasher.finalize().to_vec()
-}
-
-pub fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    Sha256::digest(data).to_vec()
 }
 
 pub fn random_string() -> String {
@@ -161,6 +166,12 @@ pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
         .expect("failed to connect to gRPC server")
 }
 
+pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
+    GraphServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
 pub fn generate_signing_key() -> SigningKey {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("OS random number generator failed");
@@ -172,11 +183,6 @@ pub fn public_key_of(key: &SigningKey) -> PublicKey {
         key_type: KeyType::Ed25519.into(),
         key: key.verifying_key().as_bytes().to_vec(),
     }
-}
-
-/// Identity string = hex(sha256(encoded initial Identity content)).
-pub fn derive_identity_string(initial: &Identity) -> String {
-    hex(&sha256(&prost::Message::encode_to_vec(initial)))
 }
 
 fn content_with_digest(content: Content) -> (Vec<u8>, ContentDigest) {
@@ -244,7 +250,7 @@ impl TestClient {
         };
         let mut client = TestClient {
             key,
-            identity: derive_identity_string(&identity),
+            identity: identity.derive_hex_key(),
             event_sync_client,
             pending: Vec::new(),
             identity_sequence: Sequence::new(),
@@ -302,6 +308,59 @@ impl TestClient {
 
     pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Labels(labels), created_at)
+    }
+
+    pub fn follow(&mut self, follow: Follow, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Follow(follow), created_at)
+    }
+
+    pub fn follow_identity(
+        &mut self,
+        identity: String,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.follow(Follow { identity }, created_at)
+    }
+
+    pub fn react(&mut self, reaction: Reaction, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Reaction(reaction), created_at)
+    }
+
+    pub fn thumbs_up(&mut self, on: EventKey, created_at: u64) -> Vec<u8> {
+        self.react(
+            Reaction {
+                event_key: Some(on),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+            created_at,
+        )
+    }
+
+    pub fn thumbs_down(&mut self, on: EventKey, created_at: u64) -> Vec<u8> {
+        self.react(
+            Reaction {
+                event_key: Some(on),
+                emoji: Some("👎".to_owned()),
+                positive: false,
+            },
+            created_at,
+        )
+    }
+
+    pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Delete(delete), created_at)
+    }
+
+    pub fn delete_key(
+        &mut self,
+        event_key: EventKey,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let delete = Delete {
+            event_key: Some(event_key),
+        };
+        self.delete(delete, created_at)
     }
 
     pub fn get_last_event_key(&self) -> EventKey {
@@ -680,7 +739,7 @@ pub fn test_moderator_identity() -> String {
         revocation_bounds: vec![],
         servers: None,
     };
-    derive_identity_string(&initial)
+    initial.derive_hex_key()
 }
 
 /// Build a signed Labels-collection (collection 7) event bundle targeting

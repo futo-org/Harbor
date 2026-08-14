@@ -5,12 +5,12 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
 const LEFT_COL_FLEX_BASIS = 40;
 
-export function PostHeader({
+export const PostHeader = memo(function PostHeader({
   repostedBy,
   showThreadLineAbove,
 }: {
@@ -23,7 +23,7 @@ export function PostHeader({
       {repostedBy ? <RepostHeader identity={repostedBy} /> : null}
     </View>
   );
-}
+});
 
 function ThreadHeader() {
   const { theme } = useTheme();

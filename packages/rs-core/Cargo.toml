@@ -33,9 +33,9 @@ futures = "0.3"
 futures-timer = { version = "3", features = ["wasm-bindgen"] }
 tonic.workspace = true
 ed25519-dalek.workspace = true
-hmac-sha256.workspace = true
 base64.workspace = true
 uniffi.workspace = true
+hex.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

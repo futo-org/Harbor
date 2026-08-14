@@ -1,5 +1,6 @@
 import {
   Button,
+  CharCount,
   Screen,
   ScreenHeader,
   Text,
@@ -7,6 +8,7 @@ import {
 } from '@/src/common/components';
 import { Atoms } from '@/src/common/theme';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
+import { MAX_NAME_LENGTH } from '@/src/features/profile/lib/decodeProfile';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -44,8 +46,13 @@ export default function SetDisplayNameScreen() {
                 value={data.displayName}
                 onChangeText={handleChangeText}
                 error={error ? true : false}
+                maxLength={MAX_NAME_LENGTH}
                 autoCapitalize="words"
                 autoFocus
+              />
+              <CharCount
+                count={data.displayName.length}
+                max={MAX_NAME_LENGTH}
               />
               {error && (
                 <Text variant="secondary" color="negative_500">

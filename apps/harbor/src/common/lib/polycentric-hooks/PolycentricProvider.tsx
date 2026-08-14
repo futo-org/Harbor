@@ -2,6 +2,7 @@ import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import { publicEnv } from '@/src/common/util/env';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -144,14 +145,6 @@ function DefaultErrorComponent({ error }: { error: Error }) {
   );
 }
 
-async function resolveIdentity(
-  client: PolycentricClient,
-): Promise<IdentityState | null> {
-  if (!client.activeIdentityKey) return null;
-  const state = await client.identityManager.getCurrent();
-  return state.identityKey ? state : null;
-}
-
 export function PolycentricProvider({
   children,
   loadingComponent,
@@ -212,7 +205,7 @@ export function PolycentricProvider({
 
         setClient(c);
         setStore(s);
-        setCurrentIdentity(await resolveIdentity(c));
+        setCurrentIdentity(await c.identityManager.resolveIdentity());
 
         // Only sync when we already have an identity to sync for.
         if (c.activeIdentityKey) {
@@ -240,7 +233,7 @@ export function PolycentricProvider({
 
         c.events.onKeyPairChanged(async () => {
           if (cancelled) return;
-          setCurrentIdentity(await resolveIdentity(c));
+          setCurrentIdentity(await c.identityManager.resolveIdentity());
           await s.getState().refreshIdentities();
           // TODO: Cleanup this up
           useFollows.getState().refresh(c);
@@ -253,7 +246,7 @@ export function PolycentricProvider({
         c.events.onContentCreated(async ({ content }) => {
           if (cancelled) return;
           if (content?.contentBody.oneofKind !== 'identity') return;
-          setCurrentIdentity(await resolveIdentity(c));
+          setCurrentIdentity(await c.identityManager.resolveIdentity());
         });
       } catch (err) {
         if (!cancelled) {
@@ -280,7 +273,7 @@ export function PolycentricProvider({
 
   const refreshCurrentIdentity = useCallback(async () => {
     if (!client) return;
-    setCurrentIdentity(await resolveIdentity(client));
+    setCurrentIdentity(await client.identityManager.resolveIdentity());
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
@@ -347,8 +340,17 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useUsername(_identityKey: string | null | undefined): string {
-  const name = undefined;
+export function useUsername(identityKey: string | null | undefined): string {
+  const profile = useProfile(identityKey);
+  return profile.name ?? DEFAULT_IDENTITY_NAME;
+}
 
-  return name ?? DEFAULT_IDENTITY_NAME;
+/**
+ * False when the client runs on the in-memory storage fallback (private
+ * browsing) — identities created there would be lost on reload, so
+ * signup/pairing should not be offered.
+ */
+export function useIsStoragePersistent(): boolean {
+  const { client } = usePolycentricContext();
+  return client?.persistentStorage ?? true;
 }

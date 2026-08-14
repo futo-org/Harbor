@@ -2,11 +2,11 @@
 //! Follow events, tombstone-filtered, newest first.
 
 use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
+use crate::data::{CursorFilter, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
-use crate::service::feeds::repository::CursorFilter;
+use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
@@ -57,7 +57,7 @@ async fn list_page(
     db: &DbConn,
     params: &Params,
     limit: u64,
-    cursor_filter: &Option<CursorFilter>,
+    cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
 ) -> Result<Vec<EventWithContentRow>, sea_orm::DbErr> {
     match params.direction {
         Direction::Following => {
@@ -160,7 +160,7 @@ async fn view(
 ) -> Result<ListFollowsResponse, Status> {
     Ok(ListFollowsResponse {
         event_bundles: rows_to_bundles(filtered.live_rows),
-        page_info: Some(filtered.page_info.page_info.proto()?),
+        page_info: Some(filtered.page_info.page_info.to_proto()?),
         event_hints: hydration.identity_profile_hints(),
     })
 }

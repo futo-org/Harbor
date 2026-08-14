@@ -87,7 +87,7 @@ export default function SearchScreen() {
 
   const submit = () => {
     if (!query.trim()) return;
-    router.setParams({ q: query.trim(), f: '' });
+    router.setParams({ ...params, q: query.trim() });
     setSubmitted(true);
     Keyboard.dismiss();
   };

@@ -1,4 +1,5 @@
 import { Text } from '@/src/common/components/primitives';
+import { memo, useMemo } from 'react';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
@@ -22,7 +23,7 @@ export const COMPACT_IMAGE_WIDTH = 96;
  * With `compact`, the image is a fixed-width thumbnail on the right of the
  * text instead of a full-width banner above it.
  */
-export function LinkPreviewCard({
+export const LinkPreviewCard = memo(function LinkPreviewCard({
   link,
   compact = false,
 }: {
@@ -34,14 +35,19 @@ export function LinkPreviewCard({
 
   // Load the thumbnail through the server image proxy rather
   // than hotlinking the third-party host directly.
-  const imageUris = link.image ? client.imageProxyUrls(link.image) : [];
+  const imageUris = useMemo(
+    () => (link.image ? client.imageProxyUrls(link.image) : []),
+    [client, link.image],
+  );
 
-  let host = link.url;
-  try {
-    host = new URL(link.url).hostname;
-  } catch {
-    // Leave host as the raw URL if it doesn't parse.
-  }
+  const host = useMemo(() => {
+    try {
+      return new URL(link.url).hostname;
+    } catch {
+      // Fall back to the raw URL if it doesn't parse.
+      return link.url;
+    }
+  }, [link.url]);
 
   const image =
     imageUris.length > 0 ? (
@@ -122,4 +128,4 @@ export function LinkPreviewCard({
       )}
     </Pressable>
   );
-}
+});

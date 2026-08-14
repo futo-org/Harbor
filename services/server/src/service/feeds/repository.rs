@@ -1,5 +1,6 @@
+use crate::data::{Cursor, CursorFilter};
+use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
-use crate::service::{events::TargetEventKey, feeds::util::PageCursor};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_post_attributed_url_model as ContentPostAttributedUrlModel,
@@ -9,57 +10,19 @@ use polycentric_common::models::collections;
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
-    sea_query::{
-        Expr, IntoCondition, IntoValueTuple, PostgresQueryBuilder,
-        Query as SeaQuery,
-    },
+    sea_query::{Expr, IntoCondition, PostgresQueryBuilder, Query as SeaQuery},
     *,
 };
-use serde::{Deserialize, Serialize};
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
-/// Cursor type for paginated feed queries.
-#[derive(Clone, Serialize, Deserialize)]
-pub enum FeedCursor {
-    /// Marks the start of the feed.
-    /// Forward queries return the first items and backward queries return nothing.
-    Start,
-    /// Marks somewhere in the feed.
-    /// Forward queries return items following this point and
-    /// backward queries return items preceding this point.
-    Mid(FeedMarker),
-    /// Marks the end of the feed.
-    /// Forward queries return nothing and backward queries return the last items.
-    End,
-}
+/// Type used when ordering events by the create at column.
+pub type EventCreatedAt = TimeDateTimeWithTimeZone;
 
-/// Exclusive lowerbound/upperbound for a feed query
-#[derive(Clone, Serialize, Deserialize)]
-pub struct FeedMarker {
-    pub created_at: TimeDateTimeWithTimeZone,
-    pub id: i64,
-}
-
-impl PageCursor for FeedCursor {}
-
-impl FeedMarker {
-    /// Get the database columns to compare against a cursor as a rust tuple.
-    fn cols() -> impl IdentityOf<EventModel::Entity> {
-        (EventModel::Column::CreatedAt, EventModel::Column::Id)
-    }
-
-    /// Get a rust tuple of this cursor's fields.
-    fn values(&self) -> impl IntoValueTuple {
-        (self.created_at, self.id)
-    }
-}
-
-/// Retrieve items in the feed relative to a cursor.
-pub enum CursorFilter {
-    Forward(FeedCursor),
-    Backward(FeedCursor),
+/// Get the database columns to compare against a cursor.
+fn cursor_columns() -> impl IdentityOf<EventModel::Entity> {
+    (EventModel::Column::CreatedAt, EventModel::Column::Id)
 }
 
 pub struct Query;
@@ -70,7 +33,7 @@ impl Query {
     pub async fn list_feed_events(
         db: &DbConn,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(db, limit, None, None, cursor_filter).await
     }
@@ -82,7 +45,7 @@ impl Query {
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(
             db,
@@ -102,12 +65,9 @@ impl Query {
         db: &DbConn,
         url: String,
         limit: u64,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        if url.is_empty() {
-            return Ok(Vec::new());
-        }
-        Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
+        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
             .await
     }
 
@@ -116,11 +76,11 @@ impl Query {
         limit: u64,
         only_identities: Option<Vec<String>>,
         only_attributed_url: Option<String>,
-        cursor_filter: &Option<CursorFilter>,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let cursor_filter = cursor_filter
             .as_ref()
-            .unwrap_or(&CursorFilter::Forward(FeedCursor::Start));
+            .unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = EventModel::Entity::find()
             .select_also(ContentModel::Entity)
@@ -150,22 +110,22 @@ impl Query {
         match cursor_filter {
             CursorFilter::Forward(cur) => {
                 match cur {
-                    FeedCursor::Start => {}
-                    FeedCursor::Mid(marker) => {
+                    Cursor::Start => {}
+                    Cursor::Mid(marker) => {
                         sea_cursor.after(marker.values());
                     }
-                    FeedCursor::End => return Ok(vec![]),
+                    Cursor::End => return Ok(vec![]),
                 }
 
                 sea_cursor.first(limit);
             }
             CursorFilter::Backward(cur) => {
                 match cur {
-                    FeedCursor::Start => return Ok(vec![]),
-                    FeedCursor::Mid(marker) => {
+                    Cursor::Start => return Ok(vec![]),
+                    Cursor::Mid(marker) => {
                         sea_cursor.before(marker.values());
                     }
-                    FeedCursor::End => {}
+                    Cursor::End => {}
                 }
                 sea_cursor.last(limit);
             }

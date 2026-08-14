@@ -1,15 +1,17 @@
 use ed25519_dalek::SigningKey;
 use integration_tests::{
     COLLECTION_FEED, COLLECTION_VERIFICATIONS, DEFAULT_CREATED_AT, HOUR,
-    bundle_signature, connect_event_sync, derive_identity_string,
-    generate_signing_key, leaf_hash, make_identity_bundle, make_post_bundle,
-    make_revocation_bound, make_verification_claim_bundle, node_hash,
-    proto::{event_sync_service_client::EventSyncServiceClient, *},
-    public_key_of, random_string, repeated_string, search_service, *,
+    bundle_signature, connect_event_sync, generate_signing_key, graph_service,
+    leaf_hash, make_identity_bundle, make_post_bundle, make_revocation_bound,
+    make_verification_claim_bundle, node_hash, public_key_of, random_string,
+    repeated_string, search_service, *,
 };
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_common::models::protos_v2::*;
+use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
 use prost::Message as ProstMessage;
-use proto::content::ContentBody;
-use proto::{SearchPostsRequest, SortUsersBy};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
@@ -69,7 +71,7 @@ async fn invalid_signature_rejected() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     let mut bundle = make_post_bundle(
         &identity,
@@ -120,7 +122,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis identity event signed by A. Dedup keys = [A, B]; VC = [1, 0].
     let genesis = make_identity_bundle(
@@ -298,7 +300,7 @@ async fn post_revocation_event_returns_without_proof() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis.
     let genesis = make_identity_bundle(
@@ -458,7 +460,7 @@ async fn rewritten_event_invalidates_proofs() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     // Genesis.
     let genesis = make_identity_bundle(
@@ -632,7 +634,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         revocation_bounds: vec![],
         servers: None,
     };
-    let identity = derive_identity_string(&initial);
+    let identity = initial.derive_hex_key();
 
     let genesis = make_identity_bundle(
         &identity,
@@ -867,12 +869,13 @@ async fn trusted_labels_served_in_feed_response() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -975,12 +978,13 @@ async fn labeler_identity_served_with_feed_response() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1053,12 +1057,13 @@ async fn omit_labels_hides_labeled_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1306,12 +1311,13 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1397,21 +1403,23 @@ async fn untrusted_labels_not_indexed() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     // Impostor — a random key that is NOT the configured moderator.
     let impostor_key = generate_signing_key();
-    let impostor_identity = derive_identity_string(&Identity {
+    let impostor_identity = Identity {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1496,20 +1504,22 @@ async fn omit_labels_untrusted_label_does_not_hide() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     let impostor_key = generate_signing_key();
-    let impostor_identity = derive_identity_string(&Identity {
+    let impostor_identity = Identity {
         rotation_keys: vec![public_key_of(&impostor_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1579,12 +1589,13 @@ async fn thread_no_labels_returns_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
 
     publish_genesis(
         &mut event,
@@ -1652,12 +1663,13 @@ async fn thread_omit_labels_matching_hides_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -1742,12 +1754,13 @@ async fn thread_omit_labels_not_matching_keeps_post() {
     let mut feed = connect_feeds().await;
 
     let author_key = generate_signing_key();
-    let author_identity = derive_identity_string(&Identity {
+    let author_identity = Identity {
         rotation_keys: vec![public_key_of(&author_key)],
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
-    });
+    }
+    .derive_hex_key();
     let mod_key = test_moderator_key();
     let mod_identity = test_moderator_identity();
 
@@ -2590,5 +2603,110 @@ async fn expect_searched_posts2<F, Fut>(
         assert_eq!(post, expected);
         // Hard to assert the actual rank, so just check we have it.
         assert!(result.rank >= 0.0);
+    }
+}
+
+#[tokio::test]
+async fn following() {
+    let mut search = graph_service().await;
+
+    let mut follower = TestClient::new().await;
+    let mut followees = Vec::with_capacity(2);
+    for _ in 0..followees.capacity() {
+        let mut followee = TestClient::new().await;
+        followee.submit_events().await; // Create the indetity.
+        let id = followee.identity().to_owned();
+        follower.follow_identity(id.clone(), DEFAULT_CREATED_AT);
+        followees.push(id);
+    }
+    let last_follow = follower.get_last_event_key();
+    follower.submit_events().await;
+    eprintln!("Follower: {}", follower.identity());
+    eprintln!("Followees: {followees:?}");
+
+    check_following(&mut search, follower.identity().to_owned(), &followees)
+        .await;
+    check_followers(&mut search, followees[1].clone(), &[follower.identity()])
+        .await;
+
+    follower.delete_key(last_follow, DEFAULT_CREATED_AT + 1);
+    let no_followers = followees.pop().unwrap();
+    follower.submit_events().await;
+
+    check_following(&mut search, follower.identity().to_owned(), &followees)
+        .await;
+    check_followers(&mut search, no_followers, &[]).await;
+}
+
+async fn check_following(
+    search: &mut GraphServiceClient<tonic::transport::Channel>,
+    for_identity: String,
+    expected: &[String],
+) {
+    let result = search
+        .list_following(ListFollowingRequest {
+            identity: for_identity.clone(),
+            page_params: None,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+    assert_eq!(result.event_bundles.len(), expected.len());
+    for event in &result.event_bundles {
+        dbg!(&event);
+        let signed_event =
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+        let followee_identity = signed_event.key.unwrap().identity;
+        assert_eq!(followee_identity, for_identity);
+
+        let content = Content::decode(
+            &*event.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let Some(ContentBody::Follow(follow)) = content.content_body else {
+            panic!("unexpected event content: {content:?}");
+        };
+        assert!(
+            expected.contains(&follow.identity),
+            "id: {}, expected: {expected:?}",
+            follow.identity
+        );
+    }
+}
+
+async fn check_followers(
+    search: &mut GraphServiceClient<tonic::transport::Channel>,
+    for_identity: String,
+    expected: &[&str],
+) {
+    let result = search
+        .list_followers(ListFollowersRequest {
+            identity: for_identity.clone(),
+            page_params: None,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+    assert_eq!(result.event_bundles.len(), expected.len());
+    for event in &result.event_bundles {
+        let signed_event =
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+        let followee_identity = signed_event.key.unwrap().identity;
+        assert!(
+            expected.contains(&&*followee_identity),
+            "id: {}, expected: {expected:?}",
+            followee_identity
+        );
+
+        let content = Content::decode(
+            &*event.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let Some(ContentBody::Follow(follow)) = content.content_body else {
+            panic!("unexpected event content: {content:?}");
+        };
+        assert_eq!(for_identity, follow.identity);
     }
 }

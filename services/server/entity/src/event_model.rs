@@ -46,6 +46,16 @@ pub struct Model {
     pub created_at: TimeDateTimeWithTimeZone,
     // Timestamp the server received the event
     pub synced_at: TimeDateTimeWithTimeZone,
+
+    /// Only if this is a follow event.
+    #[sea_orm(has_one)] // Really has zero or one.
+    pub follow: HasOne<super::follow_model::Entity>,
+    /// Only if this is a post event.
+    #[sea_orm(has_one)] // Really has zero or one.
+    pub reaction_tally: HasOne<super::reaction_tally_model2::Entity>,
+    /// Only if this is a reaction event.
+    #[sea_orm(has_one)] // Really has zero or one.
+    pub reaction: HasOne<super::reaction_model::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

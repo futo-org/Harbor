@@ -165,12 +165,7 @@ mod tests {
     /// Mint a token matching js-core's `createServerJwt` format.
     fn mint(iss: &str, aud: &str) -> String {
         let key = SigningKey::from_bytes(&[7u8; 32]);
-        let kid: String = key
-            .verifying_key()
-            .to_bytes()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let kid: String = hex::encode(key.verifying_key().to_bytes());
         let exp = now_secs() + 3600;
         let header = format!(r#"{{"alg":"EdDSA","typ":"JWT","kid":"{kid}"}}"#);
         let claims =
@@ -268,7 +263,6 @@ mod tests {
         use polycentric_common::models::collections;
         use prost::Message;
         use sea_orm::prelude::TimeDateTimeWithTimeZone;
-        use sha2::{Digest, Sha256};
 
         // Identity document that doesn't know the minting key yet, as
         // during pairing.
@@ -281,10 +275,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let iss: String = Sha256::digest(identity_content.encode_to_vec())
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
+        let iss = identity_content.derive_hex_key();
         let content = Content {
             content_body: Some(ContentBody::Identity(identity_content)),
         };

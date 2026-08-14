@@ -7,8 +7,7 @@ export const WEB_MAX_CONTENT_WIDTH = 600;
 export const DEFAULT_IDENTITY_NAME = 'Anon';
 
 export const FUTO_URL = 'https://futo.tech';
-export const SOURCE_CODE_URL =
-  'https://gitlab.futo.org/polycentric/polycentric';
+export const SOURCE_CODE_URL = 'https://gitlab.futo.org/harbor/harbor';
 export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 
 /**
@@ -21,4 +20,15 @@ export const POLYCENTRIC_APP_URL = (
     'EXPO_PUBLIC_POLYCENTRIC_APP_URL',
     process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
   ) ?? 'https://harbor.social'
+).replace(/\/+$/, '');
+
+/**
+ * Public base URL of the static-assets bucket. APK update feeds live under
+ * `apk/<channel>/`. Override with EXPO_PUBLIC_POLYCENTRIC_STATIC_URL.
+ */
+export const POLYCENTRIC_STATIC_URL = (
+  publicEnv(
+    'EXPO_PUBLIC_POLYCENTRIC_STATIC_URL',
+    process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
+  ) ?? 'https://static.harbor.social'
 ).replace(/\/+$/, '');

@@ -18,14 +18,48 @@
         "image": "latest"
       }
     },
-    "preview": {
-      "distribution": "internal"
+    "staging": {
+      "autoIncrement": true,
+      "environment": "staging",
+      "env": {
+        "APP_VARIANT": "staging",
+        "APP_DISTRIBUTION": "store"
+      }
+    },
+    "staging-apk": {
+      "extends": "staging",
+      "distribution": "internal",
+      "environment": "staging",
+      "env": {
+        "APP_VARIANT": "staging",
+        "APP_DISTRIBUTION": "apk"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "APP_DISTRIBUTION": "store"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "environment": "production",
+      "env": {
+        "APP_DISTRIBUTION": "apk"
+      }
     }
   },
   "submit": {
+    "staging": {
+      "ios": {
+        "ascAppId": "6800794994"
+      },
+      "android": {
+        "track": "internal"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6504881935"

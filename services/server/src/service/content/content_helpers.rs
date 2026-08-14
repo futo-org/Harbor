@@ -1,5 +1,4 @@
 use crate::service::proto::{Blob, ContentDigest, UploadBlobRequest};
-use crate::util;
 use tonic::Status;
 
 /// Pull the blob, digest, and body out of an `UploadBlobRequest`,
@@ -24,7 +23,8 @@ pub fn parse_upload_blob_request(
         )));
     }
 
-    util::digest::verify_content_digest(digest.r#type, &digest.value, &body)
+    digest
+        .verify_against(&body)
         .map_err(|e| Status::invalid_argument(e.to_string()))?;
 
     Ok((blob, digest, body))

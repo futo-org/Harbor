@@ -1,5 +1,10 @@
-import { forwardRef } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { forwardRef, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  InteractionManager,
+  RefreshControl,
+  View,
+} from 'react-native';
 import {
   List,
   type ListProps,
@@ -27,48 +32,96 @@ const defaultRenderItem: ListRenderItem<PostData> = ({ item }) => (
   <Post post={item} compactLinkPreview />
 );
 
+/** Row shapes differ enough in height that sharing a recycle pool forces a
+ *  re-measure on every reuse. */
+const defaultGetItemType = (item: PostData) => {
+  if (item.images?.length) return 'images';
+  if (item.quoteId) return 'quote';
+  if (item.links?.length) return 'link';
+  return 'text';
+};
+
+/** First paint mounts only a viewport's worth of rows; the rest follow
+ *  once the initial render has settled. */
+const INITIAL_RENDER_COUNT = 8;
+
 const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   {
     feed,
     emptyMessage = 'No posts yet',
     renderItem = defaultRenderItem,
     keyExtractor = defaultKeyExtractor,
+    getItemType = defaultGetItemType,
+    initialHeaderHeight = 0,
     ...rest
   },
   ref,
 ) {
   const { theme } = useTheme();
 
+  const [expanded, setExpanded] = useState(isWeb);
+  const hasItems = feed.items.length > 0;
+  useEffect(() => {
+    if (expanded || !hasItems) return;
+    const task = InteractionManager.runAfterInteractions(() =>
+      setExpanded(true),
+    );
+    return () => task.cancel();
+  }, [expanded, hasItems]);
+
+  const items = useMemo(
+    () =>
+      expanded || feed.items.length <= INITIAL_RENDER_COUNT
+        ? feed.items
+        : feed.items.slice(0, INITIAL_RENDER_COUNT),
+    [expanded, feed.items],
+  );
+
   const insets = useSafeAreaInsets();
+
+  const emptyComponent = useMemo(
+    () =>
+      feed.isLoading ? (
+        <PostSkeletonList />
+      ) : (
+        <ListEmpty>{emptyMessage}</ListEmpty>
+      ),
+    [feed.isLoading, emptyMessage],
+  );
+
+  const showLoadingMore = feed.hasMore && feed.items.length > 0;
+  const footerComponent = useMemo(
+    () => (
+      <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
+        {showLoadingMore ? (
+          <View style={[Atoms.items_center, Atoms.p_lg]}>
+            <ActivityIndicator
+              size="small"
+              color={theme.palette.neutral_500}
+              accessibilityLabel="Loading more posts"
+            />
+          </View>
+        ) : null}
+      </View>
+    ),
+    [showLoadingMore, insets.bottom, theme.palette.neutral_500],
+  );
 
   return (
     <List<PostData>
       ref={ref}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
-      data={feed.items}
-      ListEmptyComponent={
-        feed.isLoading ? (
-          <PostSkeletonList />
-        ) : (
-          <ListEmpty>{emptyMessage}</ListEmpty>
-        )
-      }
-      ListFooterComponent={
-        <View style={[!isWeb && { paddingBottom: insets.bottom }]}>
-          {feed.hasMore && feed.items.length > 0 ? (
-            <View style={[Atoms.items_center, Atoms.p_lg]}>
-              <ActivityIndicator
-                size="small"
-                color={theme.palette.neutral_500}
-                accessibilityLabel="Loading more posts"
-              />
-            </View>
-          ) : null}
-        </View>
-      }
+      getItemType={getItemType}
+      data={items}
+      initialHeaderHeight={initialHeaderHeight}
+      ListEmptyComponent={emptyComponent}
+      ListFooterComponent={footerComponent}
       onEndReached={feed.hasMore ? feed.loadMore : undefined}
-      onEndReachedThreshold={0.5}
+      // Start fetching the next page two viewports before the end so
+      // infinite scroll stays ahead of the reader.
+      onEndReachedThreshold={2}
+      drawDistance={500}
       refreshControl={
         !isWeb ? (
           <RefreshControl

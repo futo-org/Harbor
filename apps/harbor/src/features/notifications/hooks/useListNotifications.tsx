@@ -7,11 +7,15 @@ import { decodeNotifications, type NotificationData } from '../utils';
 export type UseListNotificationsResult = {
   items: NotificationData[];
   isLoading: boolean;
+  /** True only for a user-initiated refresh — drives the RefreshControl. */
+  isRefreshing: boolean;
   error: string | null;
   refresh: () => void;
 };
 
-export default function useListNotifications(): UseListNotificationsResult {
+export default function useListNotifications(
+  enabled = true,
+): UseListNotificationsResult {
   const { client } = usePolycentricContext();
   const identity = client.activeIdentityKey || '';
 
@@ -19,7 +23,7 @@ export default function useListNotifications(): UseListNotificationsResult {
     ['list_notifications', identity],
     new Query.ListNotifications({ identity, omitLabels: [] }),
     undefined,
-    !!identity,
+    enabled && !!identity,
   );
 
   const items = useMemo<NotificationData[]>(() => {
@@ -33,6 +37,7 @@ export default function useListNotifications(): UseListNotificationsResult {
   return {
     items,
     isLoading: query.isLoading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };

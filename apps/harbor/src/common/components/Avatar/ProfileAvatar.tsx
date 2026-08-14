@@ -31,8 +31,11 @@ export function ProfileAvatar({
     const blobUris = variant?.blob?.digest
       ? client.blobUrls(variant.blob.digest)
       : [];
+    // Until the profile has resolved we don't know whether an avatar
+    // exists, so render the empty circle
+    if (blobUris.length === 0 && profile.isLoading) return [];
     return [...blobUris, identiconUrl(identityKey, pixelSize)];
-  }, [profile.avatar, client, identityKey, pixelSize]);
+  }, [profile.avatar, profile.isLoading, client, identityKey, pixelSize]);
 
   const { uri, onError } = useFallbackUri(candidates);
 
@@ -40,8 +43,9 @@ export function ProfileAvatar({
     <Avatar
       {...rest}
       size={size}
-      source={{ uri }}
-      recyclingKey={candidates[0]}
+      source={uri ? { uri } : undefined}
+      // The identity, not the URL
+      recyclingKey={identityKey}
       onError={onError}
     />
   );

@@ -1,4 +1,3 @@
-import { shouldExtend } from '@/src/common/lib/polycentric-hooks';
 import {
   decodeFeedItems,
   type PostData,
@@ -19,6 +18,7 @@ import {
 import { useEffect } from 'react';
 import { useFeedDataStore } from '../../feed/hooks/feedCache';
 import { EMPTY_POSTS, type FeedHookResult } from '../../feed/hooks/types';
+import { useChainedExtend } from '../../feed/hooks/useChainedExtend';
 
 export type PostSearchSort = 'top' | 'latest';
 
@@ -134,17 +134,14 @@ export function useSearchPosts(
   const items = useSearchPostsWithOverlays(queryKey, query.data);
   const pageInfo = useSearchPostsPageInfo(queryKey, query.data);
   const hasNext = pageInfo?.hasNextPage ?? false;
+  const requestMore = useChainedExtend(query, items.length, hasNext);
 
   return {
     items,
     isLoading: query.status === QueryStatus.Loading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: async () => {
-      if (shouldExtend(hasNext, query)) {
-        query.extend();
-      }
-    },
+    loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };

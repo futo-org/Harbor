@@ -10,7 +10,6 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-pub use identity::identity_string;
 pub use key::{KeyKind, KeyPair};
 pub use store::{AddedKey, ChainEntry, ExportedEvent, IdentityStore};
 
