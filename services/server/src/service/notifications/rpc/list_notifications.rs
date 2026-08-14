@@ -208,7 +208,7 @@ async fn hydrate(
         bundles,
         event_hints,
         trigger_labels: label_rows,
-        blocked,
+        blocked_identities: blocked,
     })
 }
 
@@ -425,7 +425,9 @@ mod tests {
 
     fn hydrated_blocking(blocked: &[&str]) -> Hydrated {
         Hydrated {
-            blocked: Arc::new(blocked.iter().map(|s| s.to_string()).collect()),
+            blocked_identities: Arc::new(
+                blocked.iter().map(|s| s.to_string()).collect(),
+            ),
             ..hydrated_with_labels(Vec::new())
         }
     }
@@ -437,7 +439,7 @@ mod tests {
             bundles: HashMap::new(),
             event_hints: Vec::new(),
             trigger_labels,
-            blocked: Arc::default(),
+            blocked_identities: Arc::default(),
         }
     }
 

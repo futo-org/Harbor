@@ -19,8 +19,6 @@ use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
 
 const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
-static NO_BLOCKS: LazyLock<Arc<HashSet<String>>> =
-    LazyLock::new(|| Arc::new(HashSet::new()));
 
 pub struct Query;
 
@@ -83,7 +81,7 @@ impl Query {
     ) -> Result<Arc<HashSet<String>>, Status> {
         match caller {
             Some(caller) => Self::blocked_set(ctx, caller).await,
-            None => Ok(Arc::clone(NO_BLOCKS)),
+            None => Ok(Arc::new(HashSet::new())),
         }
     }
 
