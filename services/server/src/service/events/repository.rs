@@ -252,6 +252,9 @@ impl Mutation {
             })?
             .returning_all();
 
+        let positive = if reaction.positive { 1 } else { 0 };
+        let negative = if reaction.positive { 0 } else { 1 };
+
         let mut query = UpdateStatement::new();
         query
             // This should be as easy as a subquery, but SeaQuery doesn't
@@ -268,24 +271,12 @@ impl Mutation {
                 (
                     "positive_count",
                     Expr::Column(("reaction_tally", "positive_count").into())
-                        .add(
-                            Expr::case(
-                                Expr::Column("positive".into()),
-                                Expr::Constant(1.into()),
-                            )
-                            .finally(Expr::Constant(0.into())),
-                        ),
+                        .add(Expr::Constant(positive.into())),
                 ),
                 (
                     "negative_count",
                     Expr::Column(("reaction_tally", "negative_count").into())
-                        .add(
-                            Expr::case(
-                                Expr::Column("positive".into()),
-                                Expr::Constant(0.into()),
-                            )
-                            .finally(Expr::Constant(1.into())),
-                        ),
+                        .add(Expr::Constant(negative.into())),
                 ),
             ])
             .from("inserted_reaction")
