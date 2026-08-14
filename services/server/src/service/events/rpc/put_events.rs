@@ -326,7 +326,11 @@ pub fn event_is_authorised(
         | ContentBody::Identity(_)
         | ContentBody::Repost(_)
         // Can report other identity's events.
-        | ContentBody::Report(_) => true,
+        | ContentBody::Report(_)
+        // Anyone can add any label.
+        | ContentBody::Labels(_)
+        // Anyone can make a claim.
+        | ContentBody::VerificationClaim(_) => true,
         // Can only delete your own events.
         ContentBody::Delete(Delete { event_key }) => {
             let Some(event_key) = event_key else { return false; };
@@ -334,10 +338,8 @@ pub fn event_is_authorised(
             // as the identity of the to-be-deleted event.
             event_key.identity == event.identity
         },
-        // TODO: not sure about these.
-        ContentBody::Labels(_)
-        | ContentBody::VerificationClaim(_)
-        | ContentBody::VerificationVerify(_)
+        // TODO: these will need verification.
+        ContentBody::VerificationVerify(_)
         | ContentBody::VerificationTarget(_) => false,
     }
 }
