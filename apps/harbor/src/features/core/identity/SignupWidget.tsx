@@ -1,5 +1,6 @@
 import { Button, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
+import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -8,9 +9,13 @@ import SCENE_SPLASH from '../../../common/assets/images/harbor-scene-splash.svg'
 
 const startSignup = () => router.push(Routes.onboarding.signup.setDisplayName);
 
+export const PRIVATE_BROWSING_NOTICE =
+  'Sign up is unavailable in private browsing: this browser cannot store identity keys.';
+
 /** Sidebar signup prompt shown to signed-out visitors on web. */
 export function SignupWidget() {
   const { theme } = useTheme();
+  const isStoragePersistent = useIsStoragePersistent();
 
   return (
     <View
@@ -33,20 +38,26 @@ export function SignupWidget() {
             Share to the world, not platforms.
           </Text>
         </View>
-        <View style={Atoms.gap_sm}>
-          <Button
-            title="Create new identity"
-            variant="primary"
-            fullWidth
-            onPress={startSignup}
-          />
-          <Button
-            title="Pair existing identity"
-            variant="tertiary"
-            fullWidth
-            onPress={() => router.push('/(onboarding)/login')}
-          />
-        </View>
+        {isStoragePersistent ? (
+          <View style={Atoms.gap_sm}>
+            <Button
+              title="Create new identity"
+              variant="primary"
+              fullWidth
+              onPress={startSignup}
+            />
+            <Button
+              title="Pair existing identity"
+              variant="tertiary"
+              fullWidth
+              onPress={() => router.push('/(onboarding)/login')}
+            />
+          </View>
+        ) : (
+          <Text variant="small" color="neutral_500">
+            {PRIVATE_BROWSING_NOTICE}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -58,6 +69,7 @@ export function SignupWidget() {
  */
 export function SignupBar() {
   const { theme } = useTheme();
+  const isStoragePersistent = useIsStoragePersistent();
 
   return (
     <View
@@ -86,14 +98,16 @@ export function SignupBar() {
           Share to the world, not platforms.
         </Text>
       </View>
-      <View style={[Atoms.flex_row, Atoms.gap_sm]}>
-        <Button title="Sign up" variant="primary" onPress={startSignup} />
-        <Button
-          title="Pair"
-          variant="tertiary"
-          onPress={() => router.push('/(onboarding)/login')}
-        />
-      </View>
+      {isStoragePersistent ? (
+        <View style={[Atoms.flex_row, Atoms.gap_sm]}>
+          <Button title="Sign up" variant="primary" onPress={startSignup} />
+          <Button
+            title="Pair"
+            variant="tertiary"
+            onPress={() => router.push('/(onboarding)/login')}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
