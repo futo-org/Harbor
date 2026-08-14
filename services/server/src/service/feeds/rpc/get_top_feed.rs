@@ -9,7 +9,7 @@ use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
 };
 use crate::service::feeds::util::map_db_err;
-use crate::service::proto::{GetFeedResponse, GetTopFeedRequest};
+use crate::service::proto::{GetExploreFeedRequest, GetFeedResponse};
 use tonic::Status;
 
 pub struct Params {
@@ -19,7 +19,7 @@ pub struct Params {
 
 pub async fn handle(
     ctx: &ServiceContext,
-    req: GetTopFeedRequest,
+    req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,

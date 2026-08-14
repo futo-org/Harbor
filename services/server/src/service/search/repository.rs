@@ -326,6 +326,7 @@ fn sort_users_by_column(sort_by: SortUsersBy) -> (&'static str, Order) {
 fn sort_posts_by_column(sort_by: SortPostsBy) -> (&'static str, Order) {
     match sort_by {
         SortPostsBy::Default => ("search_rank", Order::Desc),
+        SortPostsBy::Top => unimplemented!(),
         SortPostsBy::Latest => ("content_synced_at", Order::Desc),
     }
 }

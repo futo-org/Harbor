@@ -15,7 +15,7 @@ use crate::service::proto::feeds_service_server::{
 use crate::service::proto::{
     GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
     GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
-    GetTopFeedRequest,
+    SortPostsBy,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -48,18 +48,15 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetExploreFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        Ok(Response::new(
-            get_explore_feed::handle(&self.ctx, request.into_inner()).await?,
-        ))
-    }
+        let request = request.into_inner();
+        let response = match request.sort_by() {
+            SortPostsBy::Default | SortPostsBy::Latest => {
+                get_explore_feed::handle(&self.ctx, request).await
+            }
+            SortPostsBy::Top => get_top_feed::handle(&self.ctx, request).await,
+        }?;
 
-    async fn get_top_feed(
-        &self,
-        request: Request<GetTopFeedRequest>,
-    ) -> Result<Response<GetFeedResponse>, Status> {
-        Ok(Response::new(
-            get_top_feed::handle(&self.ctx, request.into_inner()).await?,
-        ))
+        Ok(Response::new(response))
     }
 
     async fn get_post_thread(

@@ -26,6 +26,14 @@ pub async fn handle(
     req: SearchPostsRequest,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
+
+    // TODO: implemented this. Alos remove the unreachable call from fetch.
+    if sort_by == SortPostsBy::Top {
+        return Err(Status::unimplemented(
+            "ordering by top is not implemented",
+        ));
+    }
+
     let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
     let params = Params {
         common,
@@ -57,6 +65,8 @@ async fn fetch(
     let page_info = finalize_fetch(&mut rows, &params.common, |row| Marker {
         sorted_by: match params.sort_by {
             SortPostsBy::Default => SortedPostsBy::Rank(row.search_rank),
+            // Checked in handle above.
+            SortPostsBy::Top => unimplemented!(),
             SortPostsBy::Latest => SortedPostsBy::Latest(row.content.synced_at),
         },
         event_id: row.event.id,
