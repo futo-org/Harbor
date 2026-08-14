@@ -118,7 +118,9 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       ListEmptyComponent={emptyComponent}
       ListFooterComponent={footerComponent}
       onEndReached={feed.hasMore ? feed.loadMore : undefined}
-      onEndReachedThreshold={0.5}
+      // Start fetching the next page two viewports before the end so
+      // infinite scroll stays ahead of the reader.
+      onEndReachedThreshold={2}
       drawDistance={500}
       refreshControl={
         !isWeb ? (

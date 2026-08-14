@@ -31,8 +31,8 @@ const AnimatedFlashList = Animated.createAnimatedComponent(FlashList);
 
 const WEB_ESTIMATED_ITEM_HEIGHT = 150;
 // Call onEndReached once the last rendered row is within this many rows of
-// the end — roughly one viewport ahead, like the native onEndReachedThreshold.
-const WEB_END_REACHED_BUFFER = 4;
+// the end — roughly two viewports ahead, like the native onEndReachedThreshold.
+const WEB_END_REACHED_BUFFER = 12;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 

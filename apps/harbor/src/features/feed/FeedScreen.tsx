@@ -5,12 +5,12 @@ import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
 import { Text } from '@/src/common/components/primitives';
 import { openCompose } from '@/src/common/constants';
+import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import type { ListRef } from '@/src/common/components/List';
 import FeedList from './FeedList';
@@ -29,15 +29,9 @@ export default function FeedScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
 
-  const [enabled, setEnabled] = useState<boolean>(false);
+  const enabled = useEagerLoad();
   const feed = useFollowingFeed({ enabled });
   const listRef = useRef<ListRef>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      setEnabled(true);
-    }, []),
-  );
 
   // Re-tapping the active tab scrolls to the top and refreshes.
   const { refresh } = feed;
