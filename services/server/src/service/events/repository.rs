@@ -194,7 +194,11 @@ impl Mutation {
         query
             .into_table("reaction_tally")
             .columns(["event_id", "positive_count", "negative_count"])
-            .values([Expr::from(event.id), Expr::from(0), Expr::from(0)])
+            .values([
+                Expr::from(event.id),
+                Expr::Constant(0.into()),
+                Expr::Constant(0.into()),
+            ])
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?;
