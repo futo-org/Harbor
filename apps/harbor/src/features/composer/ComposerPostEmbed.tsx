@@ -19,7 +19,9 @@ export default function ComposerPostEmbed({
   const authorName = useUsername(post?.identity ?? null);
   const content = post?.content ?? '';
   const contentPreview =
-    content.length > 30 ? `${content.slice(0, 30)}…` : content;
+    content.length > 30
+      ? `${content.slice(0, 30)}…`
+      : content || (post?.images?.length ? 'Image' : '');
 
   const { theme } = useTheme();
   return (

@@ -7,7 +7,7 @@ export {
 export { usePolycentric, usePolycentricContext } from './context';
 
 // Data query hooks
-export { useUsername } from './PolycentricProvider';
+export { useIsStoragePersistent, useUsername } from './PolycentricProvider';
 
 // Action hooks
 export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
