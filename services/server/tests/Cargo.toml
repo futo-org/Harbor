@@ -18,8 +18,8 @@ ed25519-dalek.workspace = true
 getrandom.workspace = true
 hex.workspace = true
 polycentric-common = { workspace = true, features = ["transport"] }
-prost = "0.14"
-sha2 = "0.10"
+prost = { version = "0.14", default-features = false }
+sha2 = { version = "0.10", default-features = false }
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }

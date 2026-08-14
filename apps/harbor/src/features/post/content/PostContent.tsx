@@ -47,7 +47,9 @@ export const PostContent = memo(function PostContent({
         <LinkPreviewCard link={post.links[0]} compact={compactLinkPreview} />
       ) : null}
       {post.images?.length > 0 && <PostImages images={post.images} />}
-      {post.quoteId ? <PostContentQuote quoteId={post.quoteId} /> : null}
+      {post.quoteId ? (
+        <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
+      ) : null}
     </View>
   );
 });
@@ -127,7 +129,12 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
   return (
     <Pressable
       onPress={handlePress}
-      style={[Atoms.flex_row, Atoms.align_center, Atoms.self_start]}
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.self_start,
+        Atoms.max_w_full,
+      ]}
     >
       <Text variant="secondary" color="neutral_500" fontWeight="regular">
         Replying to{' '}

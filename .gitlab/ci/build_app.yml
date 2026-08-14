@@ -109,6 +109,9 @@ app-web-image:
 # builds are queued with --no-wait and submitted later by build id.
 .app-eas-build:
   extends: .app-build-expo
+  # EAS builds are long, cost real build minutes, and feed the deploy jobs;
+  # a new commit on the ref must not cancel them mid-build.
+  interruptible: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
@@ -157,6 +160,8 @@ app-android-apk-production:
     EAS_PROFILE: production-apk
   rules:
     - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+    # Blocking manual (no allow_failure): the deploy jobs that need this
+    # must wait for it instead of starting without its artifacts.
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - pnpm-lock.yaml
@@ -164,7 +169,6 @@ app-android-apk-production:
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
       when: manual
-      allow_failure: true
 
 # Store builds only queue the build on EAS: staging from the default
 # branch, production on release tags or a manual run. Submission to the
@@ -178,6 +182,8 @@ app-android-apk-production:
 .app-store-production-rules:
   rules:
     - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+    # Blocking manual (no allow_failure): the deploy jobs that need this
+    # must wait for it instead of starting without its artifacts.
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - pnpm-lock.yaml
@@ -185,7 +191,6 @@ app-android-apk-production:
         - .gitlab/ci/build_app.yml
         - .gitlab/ci/deploy_app.yml
       when: manual
-      allow_failure: true
 
 .app-store-build:
   extends: .app-eas-build

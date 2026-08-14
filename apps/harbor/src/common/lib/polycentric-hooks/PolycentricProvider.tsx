@@ -3,6 +3,7 @@ import { publicEnv } from '@/src/common/util/env';
 import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -343,8 +344,17 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useUsername(_identityKey: string | null | undefined): string {
-  const name = undefined;
+export function useUsername(identityKey: string | null | undefined): string {
+  const profile = useProfile(identityKey);
+  return profile.name ?? DEFAULT_IDENTITY_NAME;
+}
 
-  return name ?? DEFAULT_IDENTITY_NAME;
+/**
+ * False when the client runs on the in-memory storage fallback (private
+ * browsing) — identities created there would be lost on reload, so
+ * signup/pairing should not be offered.
+ */
+export function useIsStoragePersistent(): boolean {
+  const { client } = usePolycentricContext();
+  return client?.persistentStorage ?? true;
 }

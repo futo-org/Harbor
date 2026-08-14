@@ -11,7 +11,13 @@ import { publishProfileUpdate } from './publishProfileUpdate';
 
 type BuildArg = {
   oneofKind: 'profileUpdate';
-  profileUpdate: { name: string; description: string; alias?: string };
+  profileUpdate: {
+    name: string;
+    description: string;
+    alias?: string;
+    avatar?: unknown;
+    banner?: unknown;
+  };
 };
 
 function makeClient() {
@@ -63,6 +69,36 @@ describe('publishProfileUpdate', () => {
     const { client, builtProfile } = makeClient();
     await publishProfileUpdate(client as never, { name: 'A', description: '' });
     expect(builtProfile().alias).toBeUndefined();
+  });
+
+  it('carries the existing avatar and banner forward when no new image is picked', async () => {
+    const { client, builtProfile } = makeClient();
+    const avatar = { variants: [{ width: 1 }] };
+    const banner = { variants: [{ width: 2 }] };
+    await publishProfileUpdate(client as never, {
+      name: 'A',
+      description: 'new bio',
+      avatar: avatar as never,
+      banner: banner as never,
+    });
+    expect(builtProfile().avatar).toBe(avatar);
+    expect(builtProfile().banner).toBe(banner);
+  });
+
+  it('uploads a newly picked avatar instead of the existing one', async () => {
+    const { processAndUploadImage } = jest.requireMock(
+      '@/src/common/lib/images/processAndUploadImage',
+    );
+    const uploaded = { variants: [{ width: 3 }] };
+    processAndUploadImage.mockResolvedValueOnce(uploaded);
+    const { client, builtProfile } = makeClient();
+    await publishProfileUpdate(client as never, {
+      name: 'A',
+      description: '',
+      avatarUri: 'file://new.png',
+      avatar: { variants: [{ width: 1 }] } as never,
+    });
+    expect(builtProfile().avatar).toBe(uploaded);
   });
 
   it('commits and syncs the built content', async () => {

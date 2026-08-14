@@ -1,12 +1,13 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import tailwindPostcss from '@tailwindcss/postcss';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Harbor Docs',
-  tagline: 'An open-source, distributed social network',
+  title: 'Harbor',
+  tagline: 'Share to the world, not platforms.',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -19,7 +20,7 @@ const config: Config = {
     },
   },
 
-  url: 'https://docs.polycentric.io',
+  url: 'https://join.harbor.social',
   baseUrl: '/',
 
   organizationName: 'FUTO',
@@ -32,6 +33,19 @@ const config: Config = {
     locales: ['en'],
   },
 
+  plugins: [
+    // Tailwind (v4) for the landing pages; docs pages stay on Infima.
+    async function tailwindPlugin() {
+      return {
+        name: 'tailwind-plugin',
+        configurePostCss(postcssOptions) {
+          postcssOptions.plugins.push(tailwindPostcss);
+          return postcssOptions;
+        },
+      };
+    },
+  ],
+
   presets: [
     [
       'classic',
@@ -39,14 +53,15 @@ const config: Config = {
         docs: {
           // Markdown content lives in ./content (not the Docusaurus default ./docs).
           path: 'content',
-          // Serve docs at the site root; there is no separate landing page.
-          routeBasePath: '/',
+          // The landing page lives at the site root (src/pages/index.tsx);
+          // docs are served under /docs.
+          routeBasePath: 'docs',
           sidebarPath: './src/sidebars.ts',
         },
         // No blog.
         blog: false,
         theme: {
-          customCss: './src/custom.css',
+          customCss: ['./src/tailwind.css', './src/custom.css'],
         },
       } satisfies Preset.Options,
     ],
@@ -61,7 +76,7 @@ const config: Config = {
       disableSwitch: false,
     },
     navbar: {
-      title: 'Harbor Docs',
+      title: 'Harbor',
       logo: {
         alt: 'Harbor',
         src: 'img/logo.png',
@@ -69,8 +84,19 @@ const config: Config = {
       },
       items: [
         {
-          href: 'https://gitlab.futo.org/polycentric/polycentric',
-          label: 'Project Repository',
+          to: '/apps',
+          label: 'Apps',
+          position: 'right',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'docsSidebar',
+          label: 'Docs',
+          position: 'right',
+        },
+        {
+          href: 'https://gitlab.futo.org/harbor/harbor',
+          label: 'Code',
           position: 'right',
         },
       ],
@@ -95,20 +121,14 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            { label: 'Introduction', to: '/' },
-            { label: 'Running a Server', to: '/running-a-server' },
-            { label: 'Protocol', to: '/protocol/overview' },
+            { label: 'Introduction', to: '/docs' },
+            { label: 'Running a Server', to: '/docs/running-a-server' },
+            { label: 'Protocol', to: '/docs/protocol/overview' },
           ],
         },
         {
           title: 'Community',
-          items: [
-            { label: 'Chat', href: 'https://chat.futo.org' },
-            {
-              label: 'Feed',
-              href: 'https://polycentric.io/feed/Polycentric%20Official/CiCGet0WuZW24rZ7NeP7gM2Z2jI55wctOhP-qpu9Onl1jBIbaHR0cHM6Ly9zcnYxLnBvbHljZW50cmljLmlv',
-            },
-          ],
+          items: [{ label: 'Chat', href: 'https://chat.futo.org' }],
         },
         {
           title: 'More',

@@ -7,7 +7,7 @@ export {
 export { usePolycentric, usePolycentricContext } from './context';
 
 // Data query hooks
-export { useUsername } from './PolycentricProvider';
+export { useIsStoragePersistent, useUsername } from './PolycentricProvider';
 
 // Action hooks
 export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
@@ -39,7 +39,6 @@ export {
   bundleEventId,
   hexToBytes,
   eventKeyId,
-  truncateName,
   publicKeyToString,
   stringToPublicKey,
   publicKeyToStringURLSafe,
@@ -52,6 +51,7 @@ export {
   toBase64,
   fromBase64,
 } from './helpers';
+export { truncateText as truncateName } from '../../util/truncateText';
 export type {
   PostData,
   ContentKind,

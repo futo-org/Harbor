@@ -78,7 +78,7 @@ export const PostImages = memo(function PostImages({
       >
         <Image
           uris={sources[0].uris}
-          contentFit="cover"
+          contentFit="contain"
           style={[
             Atoms.w_full,
             Atoms.rounded_md,

@@ -7,9 +7,10 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
     EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, RevocationBound,
-    SearchResult, SerializedContent, SerializedVerificationSchema, SignedEvent,
-    VectorClock, VerificationClaim, VerificationSchema, content,
+    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction,
+    RevocationBound, SearchResult, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema, content,
 };
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -305,6 +306,32 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         self.follow(Follow { identity }, created_at)
+    }
+
+    pub fn react(&mut self, reaction: Reaction, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Reaction(reaction), created_at)
+    }
+
+    pub fn thumbs_up(&mut self, on: EventKey, created_at: u64) -> Vec<u8> {
+        self.react(
+            Reaction {
+                event_key: Some(on),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+            created_at,
+        )
+    }
+
+    pub fn thumbs_down(&mut self, on: EventKey, created_at: u64) -> Vec<u8> {
+        self.react(
+            Reaction {
+                event_key: Some(on),
+                emoji: Some("👎".to_owned()),
+                positive: false,
+            },
+            created_at,
+        )
     }
 
     pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {

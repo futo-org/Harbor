@@ -21,12 +21,12 @@ COPY services services
 COPY tools tools
 RUN cargo build --release \
     --package server \
-    --package migration
+    --package server-migration
 
 FROM rust:1.97-slim
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
 COPY --from=builder /app/target/release/server /app/server
-COPY --from=builder /app/target/release/migration /app/migration
+COPY --from=builder /app/target/release/server-migration /app/migration
 CMD ["/app/server"]

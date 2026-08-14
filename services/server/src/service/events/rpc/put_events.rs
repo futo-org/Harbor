@@ -1,6 +1,7 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
+use crate::service::proto::content::ContentBody;
 use crate::service::{
     content::content_repository as ContentRepository,
     content::repository::Mutation as ContentChildRepository,
@@ -9,7 +10,7 @@ use crate::service::{
     identity::repository::Query as IdentityRepository,
     identity::service::authorize_event_signer,
     proto::{
-        Content, Event, EventBundle, PublicKey, PutEventError,
+        Content, Delete, Event, EventBundle, PublicKey, PutEventError,
         PutEventsRequest, PutEventsResponse,
     },
 };
@@ -90,7 +91,7 @@ async fn process_event(
 
     let event =
         Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            tracing::debug!(error = %e, "sync_events decode error");
+            tracing::debug!(error = %e, "put_events decode error");
             Status::invalid_argument("invalid event_bytes")
         })?;
 
@@ -116,7 +117,7 @@ async fn process_event(
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
     let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "sync_events txn begin error");
+        tracing::error!(error = %e, "put_events txn begin error");
         Status::internal("internal server error")
     })?;
 
@@ -167,7 +168,7 @@ async fn process_event(
             serialized_content.content_bytes.as_slice(),
         )
         .map_err(|e| {
-            tracing::debug!(error = %e, "sync_events content decode error");
+            tracing::debug!(error = %e, "put_events content decode error");
             Status::invalid_argument("invalid content_bytes")
         })?;
 
@@ -188,7 +189,7 @@ async fn process_event(
         )
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "sync_events content db error");
+            tracing::error!(error = %e, "put_events content db error");
             Status::internal("internal server error")
         })?;
 
@@ -233,14 +234,18 @@ async fn process_event(
         synced_at: Set(OffsetDateTime::now_utc()),
     };
 
-    match EventsRepository::Mutation::add_event(
-        &txn,
-        active_model,
-        content.as_ref(),
-    )
-    .await
-    {
-        Ok(()) => {
+    match EventsRepository::Mutation::add_event(&txn, active_model).await {
+        Ok(event) => {
+            let is_authorised = event_is_authorised(&event, content.as_ref());
+            if is_authorised {
+                EventsRepository::Mutation::update_cache(&txn, &event, content.as_ref())
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = %e, "put_events updating cache error");
+                        Status::internal("internal server error")
+                    })?;
+            }
+
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
                 .await;
@@ -271,7 +276,7 @@ async fn process_event(
             });
 
             txn.commit().await.map_err(|e| {
-                tracing::error!(error = %e, "sync_events txn commit error");
+                tracing::error!(error = %e, "put_events txn commit error");
                 Status::internal("internal server error")
             })?;
         }
@@ -279,17 +284,64 @@ async fn process_event(
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
             txn.rollback().await.map_err(|e| {
-                tracing::error!(error = %e, "sync_events txn abort error");
+                tracing::error!(error = %e, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
         }
         Err(e) => {
-            tracing::error!(error = ?e, "sync_events db error");
+            tracing::error!(error = ?e, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
     }
 
     Ok(blobs)
+}
+
+/// Check if the `event` is authorised to perform its mutation.
+///
+/// This will return false if, for example, an event tries to delete a post
+/// that the identity of the deletion event didn't create.
+///
+/// `content` must be contained in the event itself.
+pub fn event_is_authorised(
+    event: &EventModel::Model,
+    content: Option<&Content>,
+) -> bool {
+    let Some(Content {
+        content_body: Some(content),
+    }) = content
+    else {
+        // Couldn't extract (valid) content, so don't consider the event as
+        // authorised.
+        return false;
+    };
+
+    match content {
+        // Only events items related to the identity themselves.
+        ContentBody::Post(_)
+        | ContentBody::Follow(_)
+        | ContentBody::Block(_)
+        | ContentBody::Reaction(_)
+        | ContentBody::ProfileUpdate(_)
+        | ContentBody::Identity(_)
+        | ContentBody::Repost(_)
+        // Can report other identity's events.
+        | ContentBody::Report(_)
+        // Anyone can add any label.
+        | ContentBody::Labels(_)
+        // Anyone can make a claim.
+        | ContentBody::VerificationClaim(_) => true,
+        // Can only delete your own events.
+        ContentBody::Delete(Delete { event_key }) => {
+            let Some(event_key) = event_key else { return false; };
+            // Make sure the identity of the deletion event is the same
+            // as the identity of the to-be-deleted event.
+            event_key.identity == event.identity
+        },
+        // TODO: these will need verification.
+        ContentBody::VerificationVerify(_)
+        | ContentBody::VerificationTarget(_) => false,
+    }
 }
 
 fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
@@ -332,4 +384,89 @@ async fn remove_present_blobs(
         .collect();
 
     Ok(missing_blobs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::{Block, EventKey};
+    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+
+    fn now() -> TimeDateTimeWithTimeZone {
+        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    }
+
+    fn event_row(identity: &str) -> EventModel::Model {
+        EventModel::Model {
+            id: 1,
+            collection: collections::SOCIAL_GRAPH as i16,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence: 1,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![1]),
+            signature: vec![],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![1],
+            created_at: now(),
+            synced_at: now(),
+        }
+    }
+
+    fn delete_content(target_identity: &str) -> Content {
+        Content {
+            content_body: Some(ContentBody::Delete(Delete {
+                event_key: Some(EventKey {
+                    collection: collections::SOCIAL_GRAPH,
+                    identity: target_identity.to_string(),
+                    signed_by: Some(PublicKey {
+                        key_type: 1,
+                        key: vec![0xaa],
+                    }),
+                    sequence: 1,
+                }),
+            })),
+        }
+    }
+
+    #[test]
+    fn a_delete_of_your_own_event_is_authorised() {
+        assert!(event_is_authorised(
+            &event_row("alice"),
+            Some(&delete_content("alice")),
+        ));
+    }
+
+    #[test]
+    fn a_delete_of_another_identitys_event_is_not_authorised() {
+        assert!(!event_is_authorised(
+            &event_row("mallory"),
+            Some(&delete_content("alice")),
+        ));
+    }
+
+    #[test]
+    fn a_delete_without_an_event_key_is_not_authorised() {
+        let content = Content {
+            content_body: Some(ContentBody::Delete(Delete { event_key: None })),
+        };
+        assert!(!event_is_authorised(&event_row("alice"), Some(&content)));
+    }
+
+    #[test]
+    fn an_event_without_content_is_not_authorised() {
+        assert!(!event_is_authorised(&event_row("alice"), None));
+    }
+
+    #[test]
+    fn a_block_of_another_identity_is_authorised() {
+        let content = Content {
+            content_body: Some(ContentBody::Block(Block {
+                identity: "bob".to_string(),
+            })),
+        };
+        assert!(event_is_authorised(&event_row("alice"), Some(&content)));
+    }
 }

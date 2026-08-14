@@ -4,17 +4,19 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { timeAgo } from '@/src/common/lib/polycentric-hooks';
+import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   getKeyFingerprint,
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
+import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
 import { PostImages } from '../PostImages';
 
@@ -22,7 +24,15 @@ const QUOTE_PREVIEW_LIMIT = 200;
 
 /** Embedded preview of a quoted post. Rendered inside a parent Post
  *  when its `quoteId` is set. Tapping routes to the quoted post. */
-export function PostContentQuote({ quoteId }: { quoteId: string }) {
+export function PostContentQuote({
+  quoteId,
+  quotePost,
+}: {
+  quoteId: string;
+  /** Quoted post already resolved from the feed's `event_hints`;
+   *  when set the fetch is skipped and the box renders immediately. */
+  quotePost?: PostData;
+}) {
   const { theme } = useTheme();
 
   const eventKey = useMemo(() => {
@@ -33,11 +43,13 @@ export function PostContentQuote({ quoteId }: { quoteId: string }) {
     }
   }, [quoteId]);
 
-  const { post } = usePostById(
-    eventKey?.identity,
+  const fetched = usePostById(
+    quotePost ? undefined : eventKey?.identity,
     getKeyFingerprint(eventKey?.signedBy),
     eventKey?.sequence,
   );
+  const post = quotePost ?? fetched.post;
+  const isLoading = !quotePost && fetched.isLoading;
 
   const authorProfile = useProfile(post?.identity ?? null);
   const authorName = authorProfile.name ?? '';
@@ -53,7 +65,7 @@ export function PostContentQuote({ quoteId }: { quoteId: string }) {
     );
   }, [post]);
 
-  if (!post) return null;
+  if (!post) return isLoading ? <QuoteSkeleton /> : null;
 
   const content = post.content ?? '';
   const preview =
@@ -116,5 +128,33 @@ export function PostContentQuote({ quoteId }: { quoteId: string }) {
         </View>
       ) : null}
     </Pressable>
+  );
+}
+
+/** Mirrors the quote box's header-plus-line shape at a stable height. */
+function QuoteSkeleton() {
+  const { theme } = useTheme();
+  const animatedStyle = useShimmerOpacity();
+  return (
+    <Animated.View
+      style={[
+        Atoms.p_md,
+        Atoms.rounded_md,
+        Atoms.mt_sm,
+        animatedStyle,
+        {
+          borderWidth: 1,
+          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
+        },
+      ]}
+    >
+      <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
+        <Block width={24} height={24} />
+        <Block width={120} />
+      </View>
+      <View style={Atoms.mt_xs}>
+        <Block width="90%" />
+      </View>
+    </Animated.View>
   );
 }

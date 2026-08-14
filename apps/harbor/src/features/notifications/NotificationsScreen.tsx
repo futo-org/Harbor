@@ -2,10 +2,9 @@ import { Text } from '@/src/common/components';
 import { List } from '@/src/common/components/List';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
+import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
-import { useFocusEffect } from 'expo-router';
-import { useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
@@ -13,13 +12,9 @@ import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
-  // Tabs mount eagerly; don't fetch until the tab is first focused.
-  const [enabled, setEnabled] = useState(false);
-  useFocusEffect(() => {
-    setEnabled(true);
-  });
-
-  const { items, isLoading, refresh } = useListNotifications(enabled);
+  const enabled = useEagerLoad();
+  const { items, isLoading, isRefreshing, refresh } =
+    useListNotifications(enabled);
   useFocusedRefresh(refresh);
 
   return (
@@ -27,10 +22,9 @@ export default function NotificationsScreen() {
       <Screen.PrimaryColumn>
         <List<NotificationData>
           data={items}
-          refreshing={isLoading}
           refreshControl={
             isWeb ? undefined : (
-              <RefreshControl refreshing={isLoading} onRefresh={refresh} />
+              <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
             )
           }
           keyExtractor={(notification) => notification.id}

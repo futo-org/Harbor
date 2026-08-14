@@ -19,7 +19,7 @@ import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
-import type { useComposer } from './hooks/useComposer';
+import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ScrollView } from '@/src/common/components/ScrollView';
 
@@ -160,7 +160,7 @@ export function ComposerFields({
               setText(next);
             }}
             // disabled={submitting}
-            maxLength={2000}
+            maxLength={MAX_POST_LENGTH}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
             style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
