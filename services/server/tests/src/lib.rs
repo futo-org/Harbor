@@ -321,7 +321,9 @@ impl TestClient {
             ContentBody::Follow(_) | ContentBody::Block(_) => {
                 COLLECTION_SOCIAL_GRAPH
             }
-            ContentBody::Reaction(_) => COLLECTION_INTERACTIONS,
+            ContentBody::Reaction(_) | ContentBody::AttributedToReaction(_) => {
+                COLLECTION_INTERACTIONS
+            }
             ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
             ContentBody::Identity(_) => COLLECTION_IDENTITY,
             ContentBody::Repost(_) => COLLECTION_FEED,
