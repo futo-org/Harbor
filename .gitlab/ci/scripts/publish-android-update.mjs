@@ -3,71 +3,28 @@
 //   apk/<channel>/harbor-latest.apk              (stable download link)
 //   apk/<channel>/latest.json                    (polled by the app)
 //
-// Uploads are signed by curl (--aws-sigv4), so this needs no npm packages.
 // Reads apps/harbor/{eas-build.json,harbor.apk} and release_notes.md
 // (production tags only) from earlier jobs' artifacts.
 //
-// Env: UPDATE_CHANNEL (staging|production), STATIC_S3_ENDPOINT,
-// STATIC_S3_BUCKET, STATIC_S3_ACCESS_KEY_ID, STATIC_S3_SECRET_ACCESS_KEY,
-// STATIC_PUBLIC_BASE_URL, [STATIC_S3_REGION].
+// Env: UPDATE_CHANNEL (staging|production), STATIC_PUBLIC_BASE_URL, and
+// the STATIC_S3_* variables read by tools/static-bucket.
 
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createStaticBucket } from '../../../tools/static-bucket/index.js';
 
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`missing required env var ${name}`);
-    process.exit(1);
-  }
-  return value;
-}
-
-const channel = requireEnv('UPDATE_CHANNEL');
+const channel = process.env.UPDATE_CHANNEL;
 if (channel !== 'staging' && channel !== 'production') {
   console.error(`UPDATE_CHANNEL must be staging or production, got ${channel}`);
   process.exit(1);
 }
-const endpoint = requireEnv('STATIC_S3_ENDPOINT').replace(/\/$/, '');
-const bucket = requireEnv('STATIC_S3_BUCKET');
-const accessKeyId = requireEnv('STATIC_S3_ACCESS_KEY_ID');
-const secretAccessKey = requireEnv('STATIC_S3_SECRET_ACCESS_KEY');
-const publicBaseUrl = requireEnv('STATIC_PUBLIC_BASE_URL').replace(/\/$/, '');
-const region = process.env.STATIC_S3_REGION || 'auto';
-
-function s3put(key, file, contentType, cacheControl) {
-  console.log(`uploading ${key}`);
-  // curl doesn't hash streamed --upload-file bodies, and R2 rejects
-  // requests without x-amz-content-sha256 — provide it so curl signs it.
-  const bodySha256 = createHash('sha256')
-    .update(readFileSync(file))
-    .digest('hex');
-  execFileSync(
-    'curl',
-    [
-      '-sS',
-      '--fail-with-body',
-      '--aws-sigv4',
-      `aws:amz:${region}:s3`,
-      '--config',
-      '-',
-      '--upload-file',
-      file,
-      '--header',
-      `content-type: ${contentType}`,
-      '--header',
-      `cache-control: ${cacheControl}`,
-      '--header',
-      `x-amz-content-sha256: ${bodySha256}`,
-      `${endpoint}/${bucket}/${key}`,
-    ],
-    {
-      input: `user = "${accessKeyId}:${secretAccessKey}"\n`,
-      stdio: ['pipe', 'inherit', 'inherit'],
-    },
-  );
+const publicBaseUrl = process.env.STATIC_PUBLIC_BASE_URL?.replace(/\/$/, '');
+if (!publicBaseUrl) {
+  console.error('missing required env var STATIC_PUBLIC_BASE_URL');
+  process.exit(1);
 }
+
+const bucket = createStaticBucket();
 
 // `eas build --json` emits an array of builds.
 const easOutput = JSON.parse(
@@ -110,9 +67,19 @@ writeFileSync('latest.json', `${JSON.stringify(manifest, null, 2)}\n`);
 
 const APK_CONTENT_TYPE = 'application/vnd.android.package-archive';
 
-s3put(apkKey, apkFile, APK_CONTENT_TYPE, 'public, max-age=31536000, immutable');
-s3put(latestApkKey, apkFile, APK_CONTENT_TYPE, 'public, max-age=300');
+bucket.put(
+  apkKey,
+  apkFile,
+  APK_CONTENT_TYPE,
+  'public, max-age=31536000, immutable',
+);
+bucket.put(latestApkKey, apkFile, APK_CONTENT_TYPE, 'public, max-age=300');
 // Manifest goes last so it never points at an APK that isn't there yet.
-s3put(manifestKey, 'latest.json', 'application/json', 'public, max-age=300');
+bucket.put(
+  manifestKey,
+  'latest.json',
+  'application/json',
+  'public, max-age=300',
+);
 
 console.log(`published ${manifest.url}`);

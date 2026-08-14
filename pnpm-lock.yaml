@@ -781,6 +781,8 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  tools/static-bucket: {}
+
   tools/tsconfig: {}
 
 packages:
