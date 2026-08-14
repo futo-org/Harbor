@@ -16,7 +16,7 @@ import {
   v2,
 } from '@polycentric/react-native';
 import { useEffect } from 'react';
-import { useBlocksVersion, useFeedDataStore } from '../../feed/hooks/feedCache';
+import { useFeedDataStore } from '../../feed/hooks/feedCache';
 import { EMPTY_POSTS, type FeedHookResult } from '../../feed/hooks/types';
 import { useChainedExtend } from '../../feed/hooks/useChainedExtend';
 
@@ -67,7 +67,6 @@ function useSearchPostsWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
-  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeSearchPostsResponse)?.output ??
@@ -77,7 +76,7 @@ function useSearchPostsWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output, blocksVersion]);
+  }, [key, queryData, output]);
 
   return output;
 }

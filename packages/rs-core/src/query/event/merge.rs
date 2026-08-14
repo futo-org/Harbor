@@ -64,17 +64,8 @@ pub trait EventBundleResponse: Message + Default {
 /// Concatenate per-server bundles, merge by `EventKey`, drop invalid ones.
 pub fn merge_bundle_responses<T: EventBundleResponse>(
     values: &[Vec<u8>],
-    client: &Arc<Mutex<PolycentricClient>>,
+    client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
-    merge_bundle_response::<T>(values, client).encode_to_vec()
-}
-
-/// [`merge_bundle_responses`] without encoding, for callers that run further
-/// passes over the merged response.
-pub fn merge_bundle_response<T: EventBundleResponse>(
-    values: &[Vec<u8>],
-    client: &Arc<Mutex<PolycentricClient>>,
-) -> T {
     let mut merged = T::default();
     for v in values {
         if let Ok(mut incoming) = T::decode(v.as_slice()) {
@@ -92,7 +83,7 @@ pub fn merge_bundle_response<T: EventBundleResponse>(
         retain_validated_hints(&c, merged.hints_mut());
     }
 
-    merged
+    merged.encode_to_vec()
 }
 
 /// Assume the event keys are the same and merge data.

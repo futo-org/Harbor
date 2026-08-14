@@ -69,11 +69,6 @@ jest.mock('./ProfileVerificationsList', () => ({
 jest.mock('@/src/features/feed/hooks/useIdentityFeed', () => ({
   useIdentityFeed: () => ({ refresh: () => undefined }),
 }));
-jest.mock('../block/hooks/useBlocks', () => ({
-  __esModule: true,
-  default: (selector: (state: unknown) => unknown) =>
-    selector({ isBlocked: () => false }),
-}));
 jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
 }));
