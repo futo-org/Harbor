@@ -9,14 +9,7 @@ pub(super) async fn add<C: ConnectionTrait>(
     ctx: &ChildContext<'_>,
     reaction: Reaction,
 ) -> Result<(), Status> {
-    // A reaction targets an in-network event via `event_key`. Out-of-network
-    // reactions (e.g. a URL / video like) use `AttributedToReaction` instead,
-    // which is stored as generic content with no typed row (see mod.rs).
-    let Some(event_key) = reaction.event_key else {
-        return Err(Status::invalid_argument("reaction must set event_key"));
-    };
-
-    let key = split_event_key(Some(event_key), "reaction content")?;
+    let key = split_event_key(reaction.event_key, "reaction content")?;
 
     ContentReactionModel::ActiveModel {
         content_id: Set(ctx.content_id),
