@@ -201,10 +201,8 @@ async fn process_event(
                 &key.identity,
             )
             .await?;
-            Some(content)
-        } else {
-            None
         }
+        Some(content)
     } else {
         None
     };
