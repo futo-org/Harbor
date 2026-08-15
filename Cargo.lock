@@ -2786,13 +2786,10 @@ name = "integration-tests"
 version = "0.0.1"
 dependencies = [
  "ed25519-dalek",
- "entity",
  "getrandom 0.4.3",
- "hex",
  "polycentric-common",
  "prost",
  "rand 0.10.1",
- "sea-orm",
  "sha2 0.10.9",
  "tokio",
  "tonic",
