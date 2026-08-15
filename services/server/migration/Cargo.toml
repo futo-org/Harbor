@@ -18,4 +18,4 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [dependencies.sea-orm-migration]
 workspace = true
-features = [ "sqlx-postgres", "runtime-tokio" ]
+features = ["cli", "sqlx-postgres", "runtime-tokio" ]
