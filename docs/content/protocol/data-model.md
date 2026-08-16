@@ -49,6 +49,7 @@ message Identity {
   repeated PublicKey rotation_keys = 1;
   repeated PublicKey signing_keys = 2;
   repeated RevocationBound revocation_bounds = 3;
+  ServerList servers = 4;
 }
 
 message RevocationBound {
