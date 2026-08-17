@@ -26,6 +26,7 @@ message GetFollowingFeedRequest {
   optional PageParams page_params = 2;
   // Label values for which the requester does not want to see content
   repeated string omit_labels = 3;
+  optional SortPostsBy sort_by = 4;
 }
 
 message GetExploreFeedRequest {

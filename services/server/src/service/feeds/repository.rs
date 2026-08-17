@@ -87,11 +87,39 @@ impl SortedBy {
 pub struct Query;
 
 impl Query {
-    /// List post events for a feed.
+    /// Returns posts for the global Explore feed.
+    pub async fn explore_feed(
+        db: &DbConn,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(db, None, sort_by, limit, cursor_filter).await
+    }
+
+    /// Returns posts for the Following feed.
+    pub async fn following_feed(
+        db: &DbConn,
+        for_identity: &str,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            Some(for_identity),
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// List post events for an explore feed.
     ///
-    /// If `for_identity` is empty this will return the global feed, otherwise a
-    /// personal feed.
-    pub async fn list_feed_events(
+    /// If `for_identity` is empty this will return the global Explore feed,
+    /// otherwise a personal Following feed.
+    async fn explore_posts(
         db: &DbConn,
         for_identity: Option<&str>,
         sort_by: SortPostsBy,
