@@ -5506,12 +5506,6 @@ const uniffiTypePolycentricCoreObjectFactory: UniffiObjectFactory<PolycentricCor
 }})();
 const FfiConverterTypePolycentricCore = new FfiConverterObject(uniffiTypePolycentricCoreObjectFactory);
 
-// FfiConverter for string | undefined
-const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
-
-// FfiConverter for ExploreFeedSort | undefined
-const FfiConverterOptionalTypeExploreFeedSort = new FfiConverterOptional(FfiConverterTypeExploreFeedSort);
-
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 
@@ -5520,6 +5514,9 @@ const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
 // FfiConverter for Array<string>
 const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
+// FfiConverter for ExploreFeedSort | undefined
+const FfiConverterOptionalTypeExploreFeedSort = new FfiConverterOptional(FfiConverterTypeExploreFeedSort);
 
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
