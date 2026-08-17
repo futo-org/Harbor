@@ -9,15 +9,22 @@ import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { ListRef } from '@/src/common/components/List';
 import { ComposerInput } from '../composer';
 import { SearchBar } from '../search/SearchBar';
 import FeedList from './FeedList';
+import type { ExploreSort } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
+import { Tabs } from '@/src/common/components/Tabs';
 
-const ListHeader = () => {
+type ListHeaderProps = {
+  sort: ExploreSort;
+  onSortPress: (sort: ExploreSort) => void;
+};
+
+const ListHeader = ({ sort, onSortPress }: ListHeaderProps) => {
   return (
     <>
       {!isWeb ? (
@@ -26,6 +33,19 @@ const ListHeader = () => {
           right={<TopbarSettingsButton />}
         />
       ) : null}
+
+      <Tabs>
+        <Tabs.Tab active={sort === 'top'} onPress={() => onSortPress('top')}>
+          Top
+        </Tabs.Tab>
+        <Tabs.Tab
+          active={sort === 'latest'}
+          onPress={() => onSortPress('latest')}
+        >
+          Latest
+        </Tabs.Tab>
+      </Tabs>
+
       {isWeb && <ComposerInput />}
     </>
   );
@@ -36,11 +56,27 @@ export default function ExploreScreen() {
   const showComposeFab = !isWeb && !isIOS;
 
   const enabled = useEagerLoad();
-  const feed = useExploreFeed({ enabled });
+  const [sort, setSort] = useState<ExploreSort>('top');
+  const feed = useExploreFeed({ sort, enabled });
   const listRef = useRef<ListRef>(null);
-
-  // Re-tapping the active tab scrolls to the top and refreshes.
   const { refresh } = feed;
+
+  const onSortPress = useCallback(
+    (next: ExploreSort) => {
+      listRef.current?.scrollToTop();
+      // Each sort is its own query, so switching already shows the other list.
+      if (next === sort) refresh();
+      else setSort(next);
+    },
+    [sort, refresh],
+  );
+
+  const header = useCallback(
+    () => <ListHeader sort={sort} onSortPress={onSortPress} />,
+    [sort, onSortPress],
+  );
+
+  // Re-tapping the active navigation tab scrolls to the top and refreshes.
   useFocusedRefresh(
     useCallback(() => {
       listRef.current?.scrollToTop();
@@ -73,7 +109,7 @@ export default function ExploreScreen() {
         <FeedList
           ref={listRef}
           feed={feed}
-          HeaderComponent={ListHeader}
+          HeaderComponent={header}
           initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
         />
         {showComposeFab ? (

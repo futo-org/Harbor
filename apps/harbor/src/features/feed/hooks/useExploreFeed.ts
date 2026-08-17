@@ -1,4 +1,9 @@
-import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
+import {
+  ExploreFeedSort,
+  Query,
+  QueryStatus,
+  UpdateMode,
+} from '@polycentric/react-native';
 import {
   extractFeedToken,
   usePolycentricContext,
@@ -8,19 +13,27 @@ import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
+  type ExploreSort,
   feedQueryKeys,
   useFeedPageInfo,
   useFeedWithOverlays,
 } from './feedCache';
 
+const SORT_BY: Record<ExploreSort, ExploreFeedSort> = {
+  top: ExploreFeedSort.Top,
+  latest: ExploreFeedSort.Latest,
+};
+
 export function useExploreFeed(options?: {
+  sort?: ExploreSort;
   perServerLimit?: number;
   enabled?: boolean;
 }): FeedHookResult {
   const { client } = usePolycentricContext();
   const enabled = options?.enabled ?? true;
+  const sort = options?.sort ?? 'top';
   const identity = client.activeIdentityKey ?? '';
-  const queryKey = feedQueryKeys.explore(identity);
+  const queryKey = feedQueryKeys.explore(identity, sort);
   const omitLabels = useOmitLabels();
 
   const query = useQuery(
@@ -30,6 +43,7 @@ export function useExploreFeed(options?: {
 
       return new Query.GetExploreFeed({
         identity: identity === '' ? undefined : identity,
+        sortBy: SORT_BY[sort],
         limit: options?.perServerLimit,
         forwardToken,
         omitLabels,
