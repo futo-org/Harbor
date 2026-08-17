@@ -1,4 +1,4 @@
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, typography, useTheme } from '@/src/common/theme';
 import {
   createContext,
   useContext,
@@ -10,6 +10,9 @@ import { HorizontalScrollGroup, Text } from './primitives';
 
 /** See `expand` in `TabsProps`. */
 const ExpandContext = createContext(true);
+
+/** Exported so a sticky header containing tabs can reserve their space. */
+export const TABS_HEIGHT = Spacing.md * 2 + typography.lineHeight.md + 1;
 
 type TabsProps = {
   children: (ReactElement<TabProps> | boolean)[] | ReactElement<TabProps>;
@@ -33,7 +36,8 @@ type TabsProps = {
 export function Tabs({ children, expand = true, style, ...props }: TabsProps) {
   const { theme } = useTheme();
 
-  const border = {
+  const surface = {
+    backgroundColor: theme.palette.neutral_0,
     borderBottomWidth: 1,
     borderBottomColor: theme.palette.neutral_25,
   };
@@ -42,14 +46,20 @@ export function Tabs({ children, expand = true, style, ...props }: TabsProps) {
     <ExpandContext.Provider value={expand}>
       {expand ? (
         <View
-          style={[Atoms.flex_row, Atoms.align_center, border, style]}
+          style={[
+            Atoms.flex_row,
+            Atoms.align_center,
+            surface,
+            { minHeight: TABS_HEIGHT },
+            style,
+          ]}
           {...props}
         >
           {children}
         </View>
       ) : (
         <HorizontalScrollGroup
-          style={[Atoms.flex_grow_0, border, style]}
+          style={[Atoms.flex_grow_0, surface, style]}
           contentContainerStyle={Atoms.px_lg}
           {...props}
         >

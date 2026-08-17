@@ -89,6 +89,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useUsername: () => 'fallback',
 }));
 jest.mock('@/src/common/theme', () => ({
+  ...jest.requireActual('@/src/common/theme'),
   useTheme: () => ({ theme: { palette: { neutral_0: '#fff' } } }),
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));

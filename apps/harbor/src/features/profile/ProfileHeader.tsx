@@ -14,7 +14,6 @@ import {
   truncateName,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { Tabs } from '@/src/common/components/Tabs';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
@@ -24,6 +23,7 @@ import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
+import { ProfileTabs } from './ProfileTabs';
 
 const BANNER_HEIGHT = 150;
 
@@ -34,8 +34,7 @@ export interface ProfileHeaderProps {
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
-  const { identityKey, isSelf, activeFeed, setActiveFeed, alias } =
-    useProfileContext();
+  const { identityKey, isSelf, alias } = useProfileContext();
 
   const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
@@ -169,20 +168,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         </View>
       </View>
 
-      <Tabs>
-        <Tabs.Tab
-          active={activeFeed === 'posts'}
-          onPress={() => setActiveFeed('posts')}
-        >
-          Posts
-        </Tabs.Tab>
-        <Tabs.Tab
-          active={activeFeed === 'verifications'}
-          onPress={() => setActiveFeed('verifications')}
-        >
-          Verifications
-        </Tabs.Tab>
-      </Tabs>
+      <ProfileTabs />
     </View>
   );
 }

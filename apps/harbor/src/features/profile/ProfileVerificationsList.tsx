@@ -18,6 +18,7 @@ import {
   useState,
 } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from './hooks/useProfile';
 import { useProfileContext } from './ProfileContext';
@@ -72,10 +73,12 @@ function sectionRows(
 // The profile's Verifications tab: claims the identity has requested, and
 // claims it has verified.
 export function ProfileVerificationsList({
-  HeaderComponent,
+  ListHeaderComponent,
+  scrollY,
 }: {
-  // Sticky hiding header (the profile header).
-  HeaderComponent?: ComponentType<unknown> | ReactElement | null;
+  // The profile header; scrolls with the list.
+  ListHeaderComponent?: ComponentType<unknown> | ReactElement | null;
+  scrollY?: SharedValue<number>;
 }) {
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
@@ -155,7 +158,8 @@ export function ProfileVerificationsList({
   return (
     <>
       <List<Row>
-        HeaderComponent={HeaderComponent}
+        ListHeaderComponent={ListHeaderComponent}
+        scrollY={scrollY}
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={(row) => row.kind}

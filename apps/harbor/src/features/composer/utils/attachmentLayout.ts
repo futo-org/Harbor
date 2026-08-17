@@ -1,12 +1,14 @@
 /**
- * Pure layout math for composer attachment previews. Kept separate from the
- * component so it can be unit-tested without rendering.
+ * Pure layout math for image previews, shared with `PostImages` so a preview
+ * matches the posted result. Kept separate from the components so it can be
+ * unit-tested without rendering.
  */
 
 /** Fallback aspect ratio when an attachment's dimensions are unknown. */
 export const DEFAULT_ASPECT_RATIO = 16 / 9;
-/** Clamp the single-image preview so tall/wide images don't dominate. */
-export const MIN_ASPECT_RATIO = 3 / 4;
+/** Clamp so tall/wide images don't dominate. The minimum is a portrait phone
+ *  screen; taller than that is letterboxed. */
+export const MIN_ASPECT_RATIO = 9 / 16;
 export const MAX_ASPECT_RATIO = 16 / 9;
 
 /**

@@ -62,6 +62,9 @@ jest.mock('./ProfileContext', () => {
 
 // Inert stubs for the module-level imports the screen pulls in.
 jest.mock('./ProfileHeader', () => ({ ProfileHeader: () => null }));
+jest.mock('./ProfileCompactHeader', () => ({
+  ProfileCompactHeader: () => null,
+}));
 jest.mock('./ProfileFeedSwitcher', () => ({ ProfileFeedSwitcher: () => null }));
 jest.mock('./ProfileVerificationsList', () => ({
   ProfileVerificationsList: () => null,

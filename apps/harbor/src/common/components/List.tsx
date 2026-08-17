@@ -9,9 +9,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
 import {
-  cloneElement,
   forwardRef,
-  isValidElement,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -20,9 +18,9 @@ import {
   useState,
 } from 'react';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type SharedValue } from 'react-native-reanimated';
 import { Atoms, useTheme } from '../theme';
-import { HidingHeader, renderNode, useHidingHeader } from './HidingHeader';
+import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
 import { InfoTooltip } from './InfoTooltip';
 import { Text } from './primitives';
 
@@ -77,10 +75,14 @@ export type ListProps<T> = FlashListProps<T> & {
     | undefined;
   /** Known height of `HeaderComponent`, used until it reports its own. */
   initialHeaderHeight?: number;
+  /** Tracks the scroll offset */
+  scrollY?: SharedValue<number>;
 };
 
 /** Imperative handle exposed by `List` (and `FeedList`). */
-export type ListRef = { scrollToTop: () => void };
+export type ListRef = {
+  scrollToTop: (options?: { animated?: boolean }) => void;
+};
 
 export const List = forwardRef(function List<T>(
   props: ListProps<T>,
@@ -102,25 +104,20 @@ function NativeList<T>({
   refreshControl,
   onScroll: _ignoredOnScroll,
   listRef,
+  scrollY,
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const {
-    onScroll,
-    headerAnimatedStyle,
-    onHeaderLayout,
-    scrollProps,
-    contentPaddingTop,
-    topOffset,
-  } = useHidingHeader(initialHeaderHeight);
+  const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
+    useHidingHeader(initialHeaderHeight, scrollY);
 
   useImperativeHandle(
     listRef,
     () => ({
-      scrollToTop: () =>
-        ref.current?.scrollToOffset({ offset: topOffset, animated: true }),
+      scrollToTop: ({ animated = true } = {}) =>
+        ref.current?.scrollToOffset({ offset: 0, animated }),
     }),
-    [topOffset],
+    [],
   );
 
   const renderedHeader = renderNode(HeaderComponent);
@@ -129,45 +126,31 @@ function NativeList<T>({
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
-      paddingTop: contentPaddingTop,
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentPaddingTop, contentContainerStyle],
+    [contentContainerStyle],
   );
 
-  // Show below the sticky header
-  const adjustedRefreshControl = (
-    isValidElement(refreshControl)
-      ? cloneElement(
-          refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
-          {
-            progressViewOffset: contentPaddingTop,
-          },
-        )
-      : refreshControl
-  ) as FlashListProps<T>['refreshControl'];
-
   return (
-    <View style={[Atoms.flex_1]}>
+    <HidingHeaderStack style={stackStyle}>
       {renderedHeader ? (
-        <HidingHeader style={headerAnimatedStyle} onLayout={onHeaderLayout}>
-          {renderedHeader}
-        </HidingHeader>
+        <View onLayout={onHeaderLayout}>{renderedHeader}</View>
       ) : null}
 
-      <AnimatedFlashList
-        ref={ref as React.Ref<FlashListRef<unknown>>}
-        {...(rest as FlashListProps<unknown>)}
-        {...scrollProps}
-        refreshControl={adjustedRefreshControl}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={mergedContentContainerStyle}
-      />
-    </View>
+      <View style={scrollableStyle}>
+        <AnimatedFlashList
+          ref={ref as React.Ref<FlashListRef<unknown>>}
+          {...(rest as FlashListProps<unknown>)}
+          refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={mergedContentContainerStyle}
+        />
+      </View>
+    </HidingHeaderStack>
   );
 }
 
@@ -213,8 +196,11 @@ function WebFeedViewer<T>({
   useImperativeHandle(
     listRef,
     () => ({
-      scrollToTop: () => {
-        (scrollEl ?? window).scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop: ({ animated = true } = {}) => {
+        (scrollEl ?? window).scrollTo({
+          top: 0,
+          behavior: animated ? 'smooth' : 'auto',
+        });
       },
     }),
     [scrollEl],

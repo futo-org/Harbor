@@ -17,8 +17,10 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, type LayoutChangeEvent, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import useBlocks from '../block/hooks/useBlocks';
+import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
 import { useProfile } from './hooks/useProfile';
 import {
@@ -168,9 +170,22 @@ function ProfileScreenContent() {
     ],
     [theme.palette.background_secondary, theme.palette.background_primary],
   );
+  // The full header scrolls with the feed; the compact one takes over once its
+  // measured height has passed.
+  const scrollY = useSharedValue(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const onHeaderLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.height;
+    if (next) setHeaderHeight(next);
+  }, []);
+
   const profileHeader = useMemo(
-    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
-    [bannerColors, handleBack],
+    () => (
+      <View onLayout={onHeaderLayout}>
+        <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />
+      </View>
+    ),
+    [bannerColors, handleBack, onHeaderLayout],
   );
 
   const tabs = useMemo(
@@ -189,14 +204,24 @@ function ProfileScreenContent() {
     <Screen>
       <Screen.PrimaryColumn>
         {activeFeed === 'verifications' ? (
-          <ProfileVerificationsList HeaderComponent={profileHeader} />
+          <ProfileVerificationsList
+            ListHeaderComponent={profileHeader}
+            scrollY={scrollY}
+          />
         ) : (
           <ProfileFeedSwitcher
             tabs={tabs}
             activeKey={activeFeed}
-            HeaderComponent={profileHeader}
+            ListHeaderComponent={profileHeader}
+            scrollY={scrollY}
           />
         )}
+
+        <ProfileCompactHeader
+          scrollY={scrollY}
+          headerHeight={headerHeight}
+          onBack={handleBack}
+        />
       </Screen.PrimaryColumn>
     </Screen>
   );
