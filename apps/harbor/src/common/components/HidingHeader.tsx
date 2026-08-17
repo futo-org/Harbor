@@ -1,12 +1,17 @@
-import { Atoms } from '@/src/common/theme';
+import { Atoms, ZIndex } from '@/src/common/theme';
+import { isIOS } from '@/src/common/util/platform';
 import React, {
   isValidElement,
   useCallback,
-  useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import { type LayoutChangeEvent, View } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -20,15 +25,16 @@ import Animated, {
 const HEADER_HIDE_THRESHOLD = 50;
 const HEADER_SETTLE_MS = 180;
 
+/** iOS draws its refresh control at the scrollable's top edge, so the header
+ *  can't float over it. Android can, and must — transforming a scrolling list
+ *  there stutters — and offsets the control with `progressViewOffset`. */
+const SLIDES_TOGETHER = isIOS;
+
 /** A header that slides away as the scrollable below it scrolls down.
  *
- *  The header sits above the scrollable, not over it, so the scrollable's top
- *  edge — where both platforms draw the refresh control — stays clear of it.
- *  `initialHeight` is used until the header reports its own.
- *
- *  Put both in a `HidingHeaderStack` with `stackStyle`, `onHeaderLayout` on the
- *  header, and `scrollableStyle` on the scrollable. `scrollY`, if given, tracks
- *  the scroll offset. */
+ *  `initialHeight` is used until the header reports its own. Feed the results to
+ *  `HidingHeaderStack` and pad the content by `contentPaddingTop`. `scrollY`, if
+ *  given, tracks the scroll offset. */
 export function useHidingHeader(
   initialHeight = 0,
   scrollY?: SharedValue<number>,
@@ -90,16 +96,9 @@ export function useHidingHeader(
     },
   });
 
-  const stackStyle = useAnimatedStyle(() => ({
+  const translateStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslate.value }],
   }));
-
-  // Hangs below the stack so the scrollable still fills the screen once the
-  // header has slid away.
-  const scrollableStyle = useMemo(
-    () => ({ ...Atoms.flex_1, marginBottom: -headerHeight }),
-    [headerHeight],
-  );
 
   const onHeaderLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.height;
@@ -109,21 +108,56 @@ export function useHidingHeader(
     if (next !== headerHeight) setHeaderHeight(next);
   };
 
-  return { onScroll, onHeaderLayout, stackStyle, scrollableStyle };
+  return {
+    onScroll,
+    onHeaderLayout,
+    translateStyle,
+    headerHeight,
+    contentPaddingTop: SLIDES_TOGETHER ? 0 : headerHeight,
+  };
 }
 
-/** Slides a header and the scrollable under it together, clipping the header
- *  once it leaves the stack. */
+/** Lays out a hiding header above a scrollable. `SLIDES_TOGETHER` picks which
+ *  of the two moves. */
 export function HidingHeaderStack({
-  children,
+  header,
+  headerHeight,
+  onHeaderLayout,
   style,
+  children,
 }: {
-  children: ReactNode;
+  header: ReactNode;
+  headerHeight: number;
+  onHeaderLayout: (event: LayoutChangeEvent) => void;
   style: StyleProps;
+  children: ReactNode;
 }) {
   return (
-    <View style={[Atoms.flex_1, Atoms.overflow_hidden]}>
-      <Animated.View style={[Atoms.flex_1, style]}>{children}</Animated.View>
+    <View style={[Atoms.flex_1, SLIDES_TOGETHER && Atoms.overflow_hidden]}>
+      <Animated.View style={[Atoms.flex_1, SLIDES_TOGETHER && style]}>
+        {header ? (
+          <Animated.View
+            onLayout={onHeaderLayout}
+            style={
+              SLIDES_TOGETHER
+                ? undefined
+                : [Atoms.absolute, styles.floatingHeader, style]
+            }
+          >
+            {header}
+          </Animated.View>
+        ) : null}
+
+        {/* Hangs past the bottom, to cover the gap sliding leaves. */}
+        <View
+          style={[
+            Atoms.flex_1,
+            SLIDES_TOGETHER && { marginBottom: -headerHeight },
+          ]}
+        >
+          {children}
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -141,3 +175,12 @@ export function renderNode(node: ReactNodeOrComponent) {
   const Component = node as React.ComponentType;
   return <Component />;
 }
+
+const styles = StyleSheet.create({
+  floatingHeader: {
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: ZIndex.raised,
+  } satisfies ViewStyle,
+});

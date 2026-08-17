@@ -9,7 +9,9 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
 import {
+  cloneElement,
   forwardRef,
+  isValidElement,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -108,8 +110,13 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
-    useHidingHeader(initialHeaderHeight, scrollY);
+  const {
+    onScroll,
+    onHeaderLayout,
+    translateStyle,
+    headerHeight,
+    contentPaddingTop,
+  } = useHidingHeader(initialHeaderHeight, scrollY);
 
   useImperativeHandle(
     listRef,
@@ -126,30 +133,40 @@ function NativeList<T>({
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
+      paddingTop: contentPaddingTop,
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentContainerStyle],
+    [contentPaddingTop, contentContainerStyle],
   );
 
-  return (
-    <HidingHeaderStack style={stackStyle}>
-      {renderedHeader ? (
-        <View onLayout={onHeaderLayout}>{renderedHeader}</View>
-      ) : null}
+  // Positions Android's refresh spinner; iOS ignores it.
+  const adjustedRefreshControl = (
+    isValidElement(refreshControl)
+      ? cloneElement(
+          refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
+          { progressViewOffset: contentPaddingTop },
+        )
+      : refreshControl
+  ) as FlashListProps<T>['refreshControl'];
 
-      <View style={scrollableStyle}>
-        <AnimatedFlashList
-          ref={ref as React.Ref<FlashListRef<unknown>>}
-          {...(rest as FlashListProps<unknown>)}
-          refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={mergedContentContainerStyle}
-        />
-      </View>
+  return (
+    <HidingHeaderStack
+      header={renderedHeader}
+      headerHeight={headerHeight}
+      onHeaderLayout={onHeaderLayout}
+      style={translateStyle}
+    >
+      <AnimatedFlashList
+        ref={ref as React.Ref<FlashListRef<unknown>>}
+        {...(rest as FlashListProps<unknown>)}
+        refreshControl={adjustedRefreshControl}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={mergedContentContainerStyle}
+      />
     </HidingHeaderStack>
   );
 }
