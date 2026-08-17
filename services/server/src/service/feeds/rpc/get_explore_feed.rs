@@ -8,7 +8,6 @@ use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, Fetched, GetFeedResponseFilter, GetFeedResponseView,
 };
-use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{
     GetExploreFeedRequest, GetFeedResponse, SortPostsBy,
 };
@@ -61,8 +60,7 @@ async fn fetch(
         params.common.limit + 1,
         params.common.cursor_filter.as_ref(),
     )
-    .await
-    .map_err(map_db_err)?;
+    .await?;
 
     let page_info = pipeline::finalize_fetch(
         &mut rows,
@@ -73,8 +71,6 @@ async fn fetch(
                 SortPostsBy::Default | SortPostsBy::Latest => {
                     SortedBy::CreatedAt(row.event.created_at)
                 }
-                // TODO: rows are currently of type EventWithContentRow, need
-                // one with the reaction count to extract it here.
                 SortPostsBy::Top => SortedBy::ReactionCount(row.reactions),
             };
             Marker {
@@ -92,14 +88,14 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
     feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _: &ServiceContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,

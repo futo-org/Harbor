@@ -1,4 +1,4 @@
-use crate::data::{Cursor, CursorFilter, Marker};
+use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
@@ -17,6 +17,7 @@ use sea_orm::{
 };
 use sea_query::{SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
+use tonic::Status;
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
@@ -65,6 +66,16 @@ pub enum SortedBy {
 }
 
 impl SortedBy {
+    fn matches(&self, sort_by: SortPostsBy) -> bool {
+        match self {
+            SortedBy::CreatedAt(_) => {
+                sort_by == SortPostsBy::Default
+                    || sort_by == SortPostsBy::Latest
+            }
+            SortedBy::ReactionCount(_) => sort_by == SortPostsBy::Top,
+        }
+    }
+
     fn as_db_value(&self) -> Value {
         match self {
             SortedBy::CreatedAt(created_at) => Value::from(*created_at),
@@ -86,7 +97,7 @@ impl Query {
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: Option<&CursorFilter<SortedBy>>,
-    ) -> Result<Vec<ExploreEvent>, DbErr> {
+    ) -> Result<Vec<ExploreEvent>, Status> {
         let cursor_filter =
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
@@ -101,9 +112,10 @@ impl Query {
             CONTENT_PREFIX,
             ContentModel::Column::iter(),
         );
-        query = query
-            .join(JoinType::InnerJoin, content_join())
-            .filter(EventModel::Column::Collection.eq(collections::FEED));
+        query = query.join(JoinType::InnerJoin, content_join()).filter(
+            Expr::col(EventModel::Column::Collection.as_column_ref())
+                .eq(Expr::Constant(collections::FEED.into())),
+        );
 
         if let Some(for_identity) = for_identity {
             // List of identities the `for_identity` is following and
@@ -150,8 +162,8 @@ impl Query {
                         ReactionTallyModel::Entity,
                         ReactionTallyModel::Relation::EventModel.def().rev(),
                     )
-                    // TODO: use negative count for reactions? Maybe `positive - negative`?
                     // TODO: decay reactions by age.
+                    // NOTE: keep in sync with `sort_posts_by_column`.
                     .expr_as(
                         Expr::col(
                             ReactionTallyModel::Column::PositiveCount
@@ -175,18 +187,20 @@ impl Query {
         match cursor_filter {
             CursorFilter::Forward(cur) => match cur {
                 Cursor::Start => { /* No filtering. */ }
-                Cursor::Mid(Marker {
-                    sorted_by,
-                    event_id,
-                }) => {
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
                     query = query.filter(
                         Expr::tuple([
                             order_column,
                             Expr::col(EventModel::Column::Id.as_column_ref()),
                         ])
                         .lt(Expr::tuple([
-                            Expr::from(sorted_by.as_db_value()),
-                            Expr::from(*event_id),
+                            Expr::from(marker.sorted_by.as_db_value()),
+                            Expr::from(marker.event_id),
                         ])),
                     );
                 }
@@ -194,18 +208,20 @@ impl Query {
             },
             CursorFilter::Backward(cur) => match cur {
                 Cursor::Start => return Ok(Vec::new()),
-                Cursor::Mid(Marker {
-                    sorted_by,
-                    event_id,
-                }) => {
+                Cursor::Mid(marker) => {
+                    if !marker.sorted_by.matches(sort_by) {
+                        return Err(Status::internal(
+                            "wrong combination of sort_by and pagination parameters",
+                        ));
+                    }
                     query = query.filter(
                         Expr::tuple([
                             order_column,
                             Expr::col(EventModel::Column::Id.as_column_ref()),
                         ])
-                        .lt(Expr::tuple([
-                            Expr::from(sorted_by.as_db_value()),
-                            Expr::from(*event_id),
+                        .gt(Expr::tuple([
+                            Expr::from(marker.sorted_by.as_db_value()),
+                            Expr::from(marker.event_id),
                         ])),
                     );
                 }
@@ -214,7 +230,10 @@ impl Query {
         }
         query = query.limit(limit + 1); // + 1 for pagination.
 
-        query.into_tuple().all(db).await
+        query.into_tuple().all(db).await.map_err(|err| {
+            log::warn!("failed to list feed events: {err}");
+            Status::internal("internal server error")
+        })
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
@@ -706,7 +725,12 @@ fn sort_posts_by_column(sort_by: SortPostsBy) -> (Expr, Order) {
             Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
             Order::Desc,
         ),
-        SortPostsBy::Top => (Expr::col(REACTION_COUNT_COLUMN), Order::Desc),
+        SortPostsBy::Top => (
+            Expr::col(
+                ReactionTallyModel::Column::PositiveCount.as_column_ref(),
+            ),
+            Order::Desc,
+        ),
     }
 }
 

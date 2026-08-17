@@ -2545,7 +2545,6 @@ async fn personal_top_feed_ordering() {
 }
 
 #[tokio::test]
-#[ignore = "pagination is currently not working correctly"]
 async fn personal_top_feed_pagination() {
     // Followee 1, post 1.
     let mut client1 = TestClient::new().await;
@@ -2595,8 +2594,8 @@ async fn personal_top_feed_pagination() {
                 identity: Some(follower.clone()),
                 page_params: Some(PageParams {
                     limit: Some(1),
-                    backward_token: page_info.take().map(|i| i.start_cursor),
-                    forward_token: None,
+                    backward_token: None,
+                    forward_token: page_info.take().map(|i| i.end_cursor),
                 }),
                 omit_labels: Vec::new(),
                 sort_by: Some(SortPostsBy::Top.into()),
@@ -2614,7 +2613,7 @@ async fn personal_top_feed_pagination() {
     }
 
     // Backward.
-    let mut expected_iter = [post1_key, post2_key].into_iter();
+    let mut expected_iter = [post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
