@@ -3,8 +3,8 @@ use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
 use crate::service::search::rpc::{Cursor, CursorFilter, Marker};
+use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use entity::{content_model, event_model};
-use sea_orm::prelude::*;
 use sea_orm::sea_query::{Expr, Order, Value};
 use sea_orm::{
     ConnectionTrait, EntityTrait, FromQueryResult, Iterable, JoinType,
@@ -35,8 +35,8 @@ impl TryGetableMany for SearchUsersEvent {
 
     fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
         Ok(SearchUsersEvent {
-            event: FromQueryResult::from_query_result(res, "event_")?,
-            content: FromQueryResult::from_query_result(res, "content_")?,
+            event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
+            content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             search_rank: res.try_get_by("search_rank")?,
             profile_name: res.try_get_by("profile_name")?,
         })
@@ -63,8 +63,8 @@ impl TryGetableMany for SearchPostsEvent {
 
     fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
         Ok(SearchPostsEvent {
-            event: FromQueryResult::from_query_result(res, "event_")?,
-            content: FromQueryResult::from_query_result(res, "content_")?,
+            event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
+            content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             search_rank: res.try_get_by("search_rank")?,
         })
     }
@@ -84,14 +84,14 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = event_model::Entity::find().select_only();
-        query = add_model_columns(
+        query = select_model_columns(
             query,
-            "event",
+            EVENT_PREFIX,
             entity::event_model::Column::iter(),
         );
-        query = add_model_columns(
+        query = select_model_columns(
             query,
-            "content",
+            CONTENT_PREFIX,
             entity::content_model::Column::iter(),
         );
         query = query
@@ -206,14 +206,14 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = event_model::Entity::find().select_only();
-        query = add_model_columns(
+        query = select_model_columns(
             query,
-            "event",
+            EVENT_PREFIX,
             entity::event_model::Column::iter(),
         );
-        query = add_model_columns(
+        query = select_model_columns(
             query,
-            "content",
+            CONTENT_PREFIX,
             entity::content_model::Column::iter(),
         );
         query = query
@@ -303,19 +303,6 @@ impl Query {
     }
 }
 
-fn add_model_columns<Q: QuerySelect>(
-    mut query: Q,
-    prefix: &str,
-    columns: impl Iterator<Item = impl ColumnTrait>,
-) -> Q {
-    for column in columns {
-        let (table, column) = column.as_column_ref();
-        let alias = format!("{prefix}_{column}");
-        query = query.tbl_col_as((table, column), alias);
-    }
-    query
-}
-
 fn sort_users_by_column(sort_by: SortUsersBy) -> (&'static str, Order) {
     match sort_by {
         SortUsersBy::Default => ("search_rank", Order::Desc),
@@ -326,6 +313,7 @@ fn sort_users_by_column(sort_by: SortUsersBy) -> (&'static str, Order) {
 fn sort_posts_by_column(sort_by: SortPostsBy) -> (&'static str, Order) {
     match sort_by {
         SortPostsBy::Default => ("search_rank", Order::Desc),
+        SortPostsBy::Top => unimplemented!(),
         SortPostsBy::Latest => ("content_synced_at", Order::Desc),
     }
 }

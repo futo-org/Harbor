@@ -1,12 +1,14 @@
-use crate::data::{Cursor, CursorFilter};
+use crate::data::{Cursor, CursorFilter, Marker};
 use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
+use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
     follow_model as FollowModel, reaction_tally_model2 as ReactionTallyModel,
 };
 use polycentric_common::models::collections;
+use polycentric_common::models::protos_v2::SortPostsBy;
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
@@ -14,6 +16,7 @@ use sea_orm::{
     *,
 };
 use sea_query::{SelectStatement, UnionType};
+use serde::{Deserialize, Serialize};
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
@@ -21,30 +24,197 @@ const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 /// Type used when ordering events by the create at column.
 pub type EventCreatedAt = DateTimeWithTimeZone;
 
-/* TODO: add support for pagination.
-pub type ReactionCount = i64;
-pub type TopFeedPageInfo = data::PageInfo<ReactionCount>;
-pub type TopFeedCursorFilter = data::CursorFilter<ReactionCount>;
-pub type TopFeedCursor = data::Cursor<ReactionCount>;
-pub type TopFeedMarker = data::Marker<ReactionCount>;
-*/
+// This type only exists to work around trying to get additional columns (e.g.
+// the search rank) from SeaORM.
+#[derive(Debug)]
+pub struct ExploreEvent {
+    pub event: EventModel::Model,
+    pub content: ContentModel::Model,
+    /// Will default to zero if not returned.
+    pub reactions: i64,
+}
 
-/// Get the database columns to compare against a cursor.
-fn cursor_columns() -> impl IdentityOf<EventModel::Entity> {
-    (EventModel::Column::CreatedAt, EventModel::Column::Id)
+impl TryGetableMany for ExploreEvent {
+    fn try_get_many(
+        res: &QueryResult,
+        _: &str,
+        _: &[String],
+    ) -> Result<Self, TryGetError> {
+        Self::try_get_many_by_index(res)
+    }
+
+    fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
+        Ok(ExploreEvent {
+            event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
+            content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
+            // This column is only present if we order by top posts.
+            reactions: res.try_get_by(REACTION_COUNT_COLUMN).unwrap_or(0),
+        })
+    }
+}
+
+const REACTION_COUNT_COLUMN: &str = "reaction_count";
+
+/// How to sort the post events.
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum SortedBy {
+    /// By created time.
+    CreatedAt(DateTimeWithTimeZone),
+    /// By the amount of reactions on it.
+    ReactionCount(i64),
+}
+
+impl SortedBy {
+    fn as_db_value(&self) -> Value {
+        match self {
+            SortedBy::CreatedAt(created_at) => Value::from(*created_at),
+            SortedBy::ReactionCount(count) => Value::from(*count),
+        }
+    }
 }
 
 pub struct Query;
 
 impl Query {
-    /// Recent Feed events (with joined content) newest first,
-    /// including those that have been tombstoned.
+    /// List post events for a feed.
+    ///
+    /// If `for_identity` is empty this will return the global feed, otherwise a
+    /// personal feed.
     pub async fn list_feed_events(
         db: &DbConn,
+        for_identity: Option<&str>,
+        sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
-    ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, None, cursor_filter).await
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, DbErr> {
+        let cursor_filter =
+            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
+
+        let mut query = EventModel::Entity::find().select_only();
+        query = select_model_columns(
+            query,
+            EVENT_PREFIX,
+            EventModel::Column::iter(),
+        );
+        query = select_model_columns(
+            query,
+            CONTENT_PREFIX,
+            ContentModel::Column::iter(),
+        );
+        query = query
+            .join(JoinType::InnerJoin, content_join())
+            .filter(EventModel::Column::Collection.eq(collections::FEED));
+
+        if let Some(for_identity) = for_identity {
+            // List of identities the `for_identity` is following and
+            // themselves.
+            let mut following = SelectStatement::new();
+            following
+                .column(FollowModel::Column::Followee)
+                .from(FollowModel::Entity)
+                .and_where(
+                    Expr::col((
+                        FollowModel::Entity,
+                        FollowModel::Column::Follower,
+                    ))
+                    .eq(for_identity),
+                )
+                .union(UnionType::All, {
+                    let mut q = SelectStatement::new();
+                    q.expr(Expr::value(for_identity));
+                    q
+                });
+
+            query = query.filter(
+                Condition::any()
+                    // Created by an identity the `for_identity` is following.
+                    .add(EventModel::Column::Identity.in_subquery(following)),
+            );
+
+            // TODO: improve personal feed. For each user, consider a post if
+            // the user has interacted with the post:
+            //  * [x] created
+            //  * [ ] reacted
+            //  * [ ] reposted
+            //  * [ ] quoted
+            //  * [ ] replied
+            // Probably need to change the following table to be a CTE so it can
+            // reused.
+        }
+
+        match sort_by {
+            SortPostsBy::Default | SortPostsBy::Latest => {}
+            SortPostsBy::Top => {
+                QuerySelect::query(&mut query)
+                    .inner_join(
+                        ReactionTallyModel::Entity,
+                        ReactionTallyModel::Relation::EventModel.def().rev(),
+                    )
+                    // TODO: use negative count for reactions? Maybe `positive - negative`?
+                    // TODO: decay reactions by age.
+                    .expr_as(
+                        Expr::col(
+                            ReactionTallyModel::Column::PositiveCount
+                                .as_column_ref(),
+                        ),
+                        REACTION_COUNT_COLUMN,
+                    );
+            }
+        }
+
+        // NOTE: SeaORM cursor only works with one of the entities used, but we
+        // need to order/filter etc. by the tally, so we can't use it.
+        let (order_column, order) = sort_posts_by_column(sort_by);
+        QueryOrder::query(&mut query)
+            .order_by_expr(order_column.clone(), order)
+            .order_by_expr(
+                Expr::col(EventModel::Column::Id.as_column_ref()),
+                Order::Asc,
+            );
+
+        match cursor_filter {
+            CursorFilter::Forward(cur) => match cur {
+                Cursor::Start => { /* No filtering. */ }
+                Cursor::Mid(Marker {
+                    sorted_by,
+                    event_id,
+                }) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .lt(Expr::tuple([
+                            Expr::from(sorted_by.as_db_value()),
+                            Expr::from(*event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => return Ok(Vec::new()),
+            },
+            CursorFilter::Backward(cur) => match cur {
+                Cursor::Start => return Ok(Vec::new()),
+                Cursor::Mid(Marker {
+                    sorted_by,
+                    event_id,
+                }) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .lt(Expr::tuple([
+                            Expr::from(sorted_by.as_db_value()),
+                            Expr::from(*event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => { /* No filtering. */ }
+            },
+        }
+        query = query.limit(limit + 1); // + 1 for pagination.
+
+        query.into_tuple().all(db).await
     }
 
     /// Same as [`list_feed_events`] restricted to events authored by
@@ -84,7 +254,8 @@ impl Query {
                 query.filter(EventModel::Column::Identity.is_in(identities));
         }
 
-        let mut sea_cursor = query.cursor_by(cursor_columns());
+        let columns = (EventModel::Column::CreatedAt, EventModel::Column::Id);
+        let mut sea_cursor = query.cursor_by(columns);
         sea_cursor.desc();
 
         match cursor_filter {
@@ -112,137 +283,6 @@ impl Query {
         }
 
         sea_cursor.all(db).await
-    }
-
-    /// If `for_identity` is empty this will return the global top feed,
-    /// otherwise a personal feed.
-    pub async fn list_top_feed_events(
-        db: &DbConn,
-        limit: u64,
-        // TODO: add support for pagination.
-        //cursor_filter: &Option<TopFeedCursorFilter>,
-        for_identity: Option<&str>,
-    ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        /* TODO: add support for pagination.
-        let cursor_filter = cursor_filter
-            .as_ref()
-            .unwrap_or(&TopFeedCursorFilter::Forward(data::Cursor::Start));
-        */
-
-        let mut query = EventModel::Entity::find()
-            .join(JoinType::LeftJoin, content_join())
-            .select_also(ContentModel::Entity)
-            .filter(EventModel::Column::Collection.eq(collections::FEED));
-        QuerySelect::query(&mut query).inner_join(
-            ReactionTallyModel::Entity,
-            Expr::col(EventModel::Column::Id.as_column_ref())
-                .equals(ReactionTallyModel::Column::EventId.as_column_ref()),
-        );
-
-        if let Some(for_identity) = for_identity {
-            // List of identities the `for_identity` is following and
-            // themselves.
-            let mut following = SelectStatement::new();
-            following
-                .column(FollowModel::Column::Followee)
-                .from(FollowModel::Entity)
-                .and_where(
-                    Expr::col((
-                        FollowModel::Entity,
-                        FollowModel::Column::Follower,
-                    ))
-                    .eq(for_identity),
-                )
-                .union(UnionType::All, {
-                    let mut q = SelectStatement::new();
-                    q.expr(Expr::value(for_identity));
-                    q
-                });
-
-            query = query.filter(
-                Condition::any()
-                    // Created by an identity the `for_identity` is following.
-                    .add(EventModel::Column::Identity.in_subquery(following)),
-            );
-
-            // TODO: improve personal feed. For each user, consider a post if
-            // the user has interacted with the post:
-            //  * [x] created
-            //  * [ ] reacted
-            //  * [ ] reposted
-            //  * [ ] quoted
-            //  * [ ] replied
-            // Probably need to change the following table to be a CTE so it can
-            // reused.
-        }
-
-        // NOTE: SeaORM cursor only works with one of the entities used, but we
-        // need to order/filter etc. by the tally, so we can't use it.
-        QueryOrder::query(&mut query)
-            // TODO: decay by age.
-            // TODO: use negative count here? Maybe `positive - negative`?
-            .order_by_expr(
-                Expr::col(
-                    ReactionTallyModel::Column::PositiveCount.as_column_ref(),
-                ),
-                Order::Desc,
-            )
-            .order_by_expr(
-                Expr::col(EventModel::Column::Id.as_column_ref()),
-                Order::Asc,
-            );
-
-        /* TODO: add support for pagination.
-        match cursor_filter {
-            TopFeedCursorFilter::Forward(cur) => match cur {
-                TopFeedCursor::Start => { /* No filtering. */ }
-                TopFeedCursor::Mid(data::Marker {
-                    sorted_by: count,
-                    event_id,
-                }) => {
-                    query = query.filter(
-                        Expr::tuple([
-                            Expr::col(
-                                ReactionTallyModel::Column::PositiveCount
-                                    .as_column_ref(),
-                            ),
-                            Expr::col(EventModel::Column::Id.as_column_ref()),
-                        ])
-                        .lt(Expr::tuple([
-                            Expr::from(*count),
-                            Expr::from(*event_id),
-                        ])),
-                    );
-                }
-                TopFeedCursor::End => return Ok(Vec::new()),
-            },
-            TopFeedCursorFilter::Backward(cur) => match cur {
-                TopFeedCursor::Start => return Ok(Vec::new()),
-                TopFeedCursor::Mid(data::Marker {
-                    sorted_by: count,
-                    event_id,
-                }) => {
-                    query = query.filter(
-                        Expr::tuple([
-                            Expr::col(
-                                ReactionTallyModel::Column::PositiveCount
-                                    .as_column_ref(),
-                            ),
-                            Expr::col(EventModel::Column::Id.as_column_ref()),
-                        ])
-                        .lt(Expr::tuple([
-                            Expr::from(*count),
-                            Expr::from(*event_id),
-                        ])),
-                    );
-                }
-                TopFeedCursor::End => { /* No filtering. */ }
-            },
-        }
-        */
-        query = query.limit(limit + 1); // + 1 for pagination.
-
-        query.all(db).await
     }
 
     /// Bulk-fetch events (with joined content) by their EventKey
@@ -658,6 +698,16 @@ pub(crate) fn content_join() -> RelationDef {
                 .into_condition()
         })
         .into()
+}
+
+fn sort_posts_by_column(sort_by: SortPostsBy) -> (Expr, Order) {
+    match sort_by {
+        SortPostsBy::Default | SortPostsBy::Latest => (
+            Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
+            Order::Desc,
+        ),
+        SortPostsBy::Top => (Expr::col(REACTION_COUNT_COLUMN), Order::Desc),
+    }
 }
 
 #[derive(Debug, FromQueryResult)]

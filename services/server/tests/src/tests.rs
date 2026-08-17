@@ -8,7 +8,6 @@ use integration_tests::{
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
-use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::*;
 use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
@@ -2502,12 +2501,13 @@ async fn global_top_feed_exists() {
     client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
     client.submit_events().await;
 
-    let request = GetTopFeedRequest {
+    let request = GetExploreFeedRequest {
         identity: None,
         page_params: None,
         omit_labels: Vec::new(),
+        sort_by: Some(SortPostsBy::Top.into()),
     };
-    let result = feeds.get_top_feed(request).await.unwrap().into_inner();
+    let result = feeds.get_explore_feed(request).await.unwrap().into_inner();
 
     assert!(result.event_bundles.len() >= 2);
     // NOTE: because the global feed contains all posts made it's difficult to
@@ -2545,7 +2545,7 @@ async fn personal_top_feed_ordering() {
 }
 
 #[tokio::test]
-#[ignore = "pagination is currently not implemented"]
+#[ignore = "pagination is currently not working correctly"]
 async fn personal_top_feed_pagination() {
     // Followee 1, post 1.
     let mut client1 = TestClient::new().await;
@@ -2591,8 +2591,7 @@ async fn personal_top_feed_pagination() {
         [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let mut feeds = connect_feeds().await;
-            let request = GetTopFeedRequest {
+            let request = GetExploreFeedRequest {
                 identity: Some(follower.clone()),
                 page_params: Some(PageParams {
                     limit: Some(1),
@@ -2600,9 +2599,10 @@ async fn personal_top_feed_pagination() {
                     forward_token: None,
                 }),
                 omit_labels: Vec::new(),
+                sort_by: Some(SortPostsBy::Top.into()),
             };
             let response =
-                feeds.get_top_feed(request).await.unwrap().into_inner();
+                feeds.get_explore_feed(request).await.unwrap().into_inner();
             page_info = response.page_info.clone();
             response
         };
@@ -2618,7 +2618,7 @@ async fn personal_top_feed_pagination() {
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
-            let request = GetTopFeedRequest {
+            let request = GetExploreFeedRequest {
                 identity: Some(follower.clone()),
                 page_params: Some(PageParams {
                     limit: Some(1),
@@ -2626,9 +2626,10 @@ async fn personal_top_feed_pagination() {
                     forward_token: None,
                 }),
                 omit_labels: Vec::new(),
+                sort_by: Some(SortPostsBy::Top.into()),
             };
             let response =
-                feeds.get_top_feed(request).await.unwrap().into_inner();
+                feeds.get_explore_feed(request).await.unwrap().into_inner();
             page_info = response.page_info.clone();
             response
         };
@@ -2644,12 +2645,13 @@ async fn personal_top_feed(for_identity: &str, expected: &[EventKey]) {
     eprintln!("for_identity: {for_identity:?}");
     let request = async {
         let mut feeds = connect_feeds().await;
-        let request = GetTopFeedRequest {
+        let request = GetExploreFeedRequest {
             identity: Some(for_identity.to_owned()),
             page_params: None,
             omit_labels: Vec::new(),
+            sort_by: Some(SortPostsBy::Top.into()),
         };
-        feeds.get_top_feed(request).await.unwrap().into_inner()
+        feeds.get_explore_feed(request).await.unwrap().into_inner()
     };
     top_feed(request, expected).await
 }
