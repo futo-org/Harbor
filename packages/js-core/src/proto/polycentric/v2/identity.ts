@@ -16,8 +16,9 @@ import { PublicKey } from "./keypair";
  */
 export interface Identity {
     /**
-     * Priority ordered list of the rotation keys (public keys that control the identity and
-     * can issue new keys)
+     * List of the currently-active rotation keys.
+     * These keys can publish events, including identity events with updates made
+     * to the identity document.
      *
      * @generated from protobuf field: repeated polycentric.v2.PublicKey rotation_keys = 1
      */

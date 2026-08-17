@@ -43,9 +43,9 @@ pub struct Model {
     pub event_bytes: Vec<u8>,
 
     // Timestamp the client created the event
-    pub created_at: TimeDateTimeWithTimeZone,
+    pub created_at: DateTimeWithTimeZone,
     // Timestamp the server received the event
-    pub synced_at: TimeDateTimeWithTimeZone,
+    pub synced_at: DateTimeWithTimeZone,
 
     /// Only if this is a follow event.
     #[sea_orm(has_one)] // Really has zero or one.

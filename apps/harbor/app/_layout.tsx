@@ -1,5 +1,6 @@
 import { Toaster } from '@/src/common/components/toast';
 import { AppUpdater } from '@/src/features/core/apk-update';
+import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
@@ -148,6 +149,7 @@ export default function RootLayout() {
                   <RootStack />
                   <PortalHost />
                   <Toaster />
+                  <AuthGateSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

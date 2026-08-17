@@ -15,8 +15,8 @@ use crate::service::{
     },
 };
 use ::entity::{content_model as ContentModel, event_model as EventModel};
+use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
-use log;
 use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -25,7 +25,6 @@ use sea_orm::{
     TransactionTrait,
 };
 use std::{collections::HashSet, time::Duration};
-use time::OffsetDateTime;
 use tonic::Status;
 
 /// Ingest a batch of signed events. Each event is processed in
@@ -44,7 +43,7 @@ pub async fn handle(
             }
 
             Err(status) => {
-                log::debug!(
+                tracing::debug!(
                     "put_events[{idx}] skipped: {} {}",
                     status.code(),
                     status.message()
@@ -184,7 +183,7 @@ async fn process_event(
                 digest_type: Set(digest.r#type),
                 digest_bytes: Set(digest.value.clone()),
                 serialized_bytes: Set(serialized_content.content_bytes.clone()),
-                synced_at: Set(OffsetDateTime::now_utc()),
+                synced_at: Set(Utc::now().fixed_offset()),
             },
         )
         .await
@@ -201,10 +200,8 @@ async fn process_event(
                 &key.identity,
             )
             .await?;
-            Some(content)
-        } else {
-            None
         }
+        Some(content)
     } else {
         None
     };
@@ -227,11 +224,12 @@ async fn process_event(
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
         event_bytes: Set(signed_event.event_bytes),
-        created_at: Set(OffsetDateTime::from_unix_timestamp(
+        created_at: Set(DateTime::from_timestamp_secs(
             (event.created_at / 1000) as i64,
         )
-        .unwrap_or(OffsetDateTime::now_utc())),
-        synced_at: Set(OffsetDateTime::now_utc()),
+        .unwrap_or(Utc::now())
+        .fixed_offset()),
+        synced_at: Set(Utc::now().fixed_offset()),
     };
 
     match EventsRepository::Mutation::add_event(&txn, active_model).await {
@@ -390,10 +388,11 @@ async fn remove_present_blobs(
 mod tests {
     use super::*;
     use crate::service::proto::{Block, EventKey};
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use chrono::DateTime;
+    use sea_orm::prelude::DateTimeWithTimeZone;
 
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    fn now() -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
     }
 
     fn event_row(identity: &str) -> EventModel::Model {

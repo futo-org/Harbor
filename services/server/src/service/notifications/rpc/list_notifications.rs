@@ -341,8 +341,8 @@ mod tests {
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{Content, Labels};
     use ::entity::{content_model, event_model};
+    use chrono::DateTime;
     use prost::Message;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
     use sea_orm::{DbBackend, MockDatabase};
 
     fn notification_row(id: i64, from_identity: &str) -> notification::Model {
@@ -385,7 +385,7 @@ mod tests {
         row: &notification::Model,
         values: &[&str],
     ) -> EventWithContentRow {
-        let ts = TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap();
+        let ts = DateTime::from_timestamp(0, 0).unwrap().fixed_offset();
         let content = Content {
             content_body: Some(ContentBody::Labels(Labels {
                 event_key: Some(to_proto_key(&trigger_key(row))),

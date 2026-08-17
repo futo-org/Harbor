@@ -3,10 +3,12 @@
 A small tool to create and manage a Polycentric identity locally, as a real
 chain of signed events in the IDENTITY collection.
 
-An identity is defined by its **genesis** event — sequence 1, signed by a
-primary rotation key. The identity string is the lowercase hex SHA256 of that
-event's `Identity` document (the same hash `polycentric-core` uses). Every
-change appends a new signed event whose content is the updated document:
+An identity is defined by its **genesis** event — sequence 1, signed by the
+"primary" rotation key. This tool designates the rotation key on the genesis
+event to be the "primary" rotation key and uses it for all operations. The
+identity string is the lowercase hex SHA256 of that event's `Identity` document
+(the same hash `polycentric-core` uses). Every change appends a new signed event
+whose content is the updated document:
 
 - **rotation keys** — control the identity and can issue further keys
 - **signing keys** — may sign events but cannot change the identity

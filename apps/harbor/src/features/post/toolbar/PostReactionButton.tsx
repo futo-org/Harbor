@@ -1,6 +1,7 @@
 import HoverCard, { type TriggerRef } from '@/src/common/components/HoverCard';
 import {
   type PostData,
+  useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
@@ -16,6 +17,7 @@ type PostReactionButtonProps = {
 
 function PostReactionButton({ post }: PostReactionButtonProps) {
   const client = usePolycentric();
+  const { hasIdentity } = useCurrentIdentity();
 
   const triggerRef = useRef<TriggerRef>(null);
 
@@ -46,17 +48,24 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
     setPickerOpen(true);
   };
 
+  const button = (
+    <PostActionButton
+      icon={hasReaction ? 'reaction' : 'reactionOutline'}
+      active={hasReaction}
+      highlighted={open}
+      color={'negative_500'}
+      count={count}
+    />
+  );
+
+  // (Signed out)
+  if (!hasIdentity) return <View>{button}</View>;
+
   return (
     <View style={[]}>
       <HoverCard openDelay={0} onOpenChange={setOpen}>
         <HoverCard.Trigger asChild ref={triggerRef}>
-          <PostActionButton
-            icon={hasReaction ? 'reaction' : 'reactionOutline'}
-            active={hasReaction}
-            highlighted={open}
-            color={'negative_500'}
-            count={count}
-          />
+          {button}
         </HoverCard.Trigger>
         <HoverCard.Content align="start" side="top">
           <EmojiPickerInline

@@ -9,8 +9,6 @@ version      = "0.1.0"
 name = "entity"
 path = "src/lib.rs"
 
-[dependencies.sea-orm]
-workspace = true
-
-[dependencies.chrono]
-workspace = true
+[dependencies]
+sea-orm = { workspace = true, features = ["macros", "with-chrono", "with-json"] }
+chrono.workspace = true

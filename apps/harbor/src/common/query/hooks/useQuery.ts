@@ -71,6 +71,14 @@ export enum RefreshStrategy {
 
 export type QueryKey = string[];
 
+/**
+ * Keys are hierachial: a prefix matches itself and everything under it, so
+ * `['feed']` covers `['feed', 'explore', …]`.
+ */
+export function isUnderQueryKey(key: string, prefix: string): boolean {
+  return key === prefix || key.startsWith(`${prefix}\0`);
+}
+
 type QueryArgs = {
   client: PolycentricClient;
   queryKey: QueryKey;
@@ -313,10 +321,9 @@ export type UseQueryResult = QueryRef & {
 };
 
 /**
- * Invalidate rust-side cache for a key and request new data if
- * there are any subscribers.
- * if `lazy` is true (default), then the existing data will not be
- * removed until new data is available.
+ * Invalidate the rust-side cache for a key partition and refresh every
+ * subscriber under it. If `lazy` is true (default), existing data stays
+ * until new data arrives.
  */
 export function invalidateQuery(
   client: PolycentricClient,
@@ -324,19 +331,17 @@ export function invalidateQuery(
   lazy?: boolean,
 ) {
   lazy = lazy ?? true;
-  const key = queryKey.join('\0');
+  const prefix = queryKey.join('\0');
 
-  // `refresh()` will be a no-op if no subscription is found for `key`.
-  // However, we want to invalidate the rust-side cache even if there is no
-  // subscription.
-  const sub = useQueryStore.getState().subscriptions.get(key);
-  if (!sub) {
-    client.core.invalidateQuery(queryKey);
-  }
+  // Clears the rust-side cache for the whole partition, subscribed or not.
+  client.core.invalidateQuery(queryKey);
 
   const strat = lazy ? RefreshStrategy.Lazy : RefreshStrategy.Eager;
 
-  useQueryStore.getState().refresh(strat, key);
+  const state = useQueryStore.getState();
+  for (const key of [...state.subscriptions.keys()]) {
+    if (isUnderQueryKey(key, prefix)) state.refresh(strat, key);
+  }
 }
 
 /**

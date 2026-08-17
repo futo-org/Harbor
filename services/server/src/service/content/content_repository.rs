@@ -2,6 +2,7 @@ use crate::service::proto::Blob;
 use ::entity::{
     content_blob_model as ContentBlobModel, content_model as ContentModel,
 };
+use chrono::{DateTime, FixedOffset};
 use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -10,7 +11,6 @@ use sea_orm::sea_query::OnConflict;
 use sea_orm::*;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
-use time::OffsetDateTime;
 
 pub struct Query;
 
@@ -95,7 +95,7 @@ impl Mutation {
     pub async fn save_blob<C: ConnectionTrait>(
         db: &C,
         blob: &Blob,
-        synced_at: OffsetDateTime,
+        synced_at: DateTime<FixedOffset>,
     ) -> Result<(), DbErr> {
         // Digest for the actual blob data
         let digest = match &blob.digest {

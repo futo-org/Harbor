@@ -205,16 +205,17 @@ mod tests {
     };
     use ::entity::content_model as ContentModel;
     use ::entity::event_model as EventModel;
+    use chrono::DateTime;
     use prost::Message;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
     const POST_COLLECTION: i16 = 2;
 
-    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(seconds, 0).unwrap().fixed_offset()
     }
 
     fn event_row(id: i64, identity: &str) -> EventModel::Model {

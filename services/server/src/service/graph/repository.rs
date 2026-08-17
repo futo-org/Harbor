@@ -300,7 +300,8 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 mod tests {
     use super::*;
     use crate::service::proto::{Block, Follow};
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use chrono::Utc;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, DbBackend, MockDatabase, MockRow, Value,
     };
@@ -314,8 +315,8 @@ mod tests {
         ServiceContext::new(db, kafka_producer)
     }
 
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    fn now() -> DateTimeWithTimeZone {
+        Utc::now().fixed_offset()
     }
 
     fn event_row(id: i64, identity: &str, sequence: i64) -> EventModel::Model {

@@ -187,6 +187,7 @@ jest.mock('@polycentric/react-native', () => {
     },
     QueryStatus: { Loading: 'loading' },
     UpdateMode: { Merge: 'merge' },
+    ExploreFeedSort: { Default: 'default', Top: 'top', Latest: 'latest' },
   };
 });
 

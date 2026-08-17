@@ -12,8 +12,7 @@ use crate::store::event_store::EventStore;
 ///
 /// Returns `Ok(missing)` with the referenced events from the identity's other
 /// keys that we haven't synced. A missing event does not make the referencing
-/// event invalid — it's just an event to fetch. Building the identity chain
-/// needs `missing` empty; content readers keep the event either way.
+/// event invalid — it's just an event to fetch.
 pub fn verify_vector_clock(
     store: &EventStore,
     vc: &VectorClock,

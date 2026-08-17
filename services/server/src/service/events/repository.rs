@@ -198,7 +198,11 @@ impl Mutation {
         query
             .into_table("reaction_tally")
             .columns(["event_id", "positive_count", "negative_count"])
-            .values([Expr::from(event.id), Expr::from(0), Expr::from(0)])
+            .values([
+                Expr::from(event.id),
+                Expr::Constant(0.into()),
+                Expr::Constant(0.into()),
+            ])
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?;
@@ -495,8 +499,9 @@ fn select_event_id(key: EventKeyParts) -> SelectStatement {
 mod tests {
     use super::*;
     use ::entity::block_model as BlockModelEntity;
+    use chrono::DateTime;
     use polycentric_common::models::protos_v2::{EventKey, PublicKey};
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, DbBackend, MockDatabase, MockExecResult,
     };
@@ -510,8 +515,8 @@ mod tests {
             .collect()
     }
 
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    fn now() -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
     }
 
     fn event_row(identity: &str) -> EventModel::Model {

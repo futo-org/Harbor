@@ -305,7 +305,7 @@ fn compare_successors(previous: &Identity, a: &IdentityEvent, b: &IdentityEvent)
         .cmp(&b.sequence)
         // Ensure that we always prefer a rotation key over a signing key.
         // This prevents a malicious signing key with a high priority as
-        // determined by `order_signers()` from stalling its own revocation by
+        // determined by `compare_signers()` from stalling its own revocation by
         // repeatedly republishing the latest valid identity document that
         // still includes it.
         // More generally, this prevents a rotation from being swallowed by

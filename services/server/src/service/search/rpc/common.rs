@@ -266,7 +266,7 @@ pub async fn hydrate<SortedBy>(
         repository::Query::list_events_by_keys(&ctx.db, &ref_keys)
             .await
             .map_err(|err| {
-                log::warn!("failed to list events: {err}");
+                tracing::warn!("failed to list events: {err}");
                 Status::internal("internal server error")
             })
     };
@@ -278,7 +278,7 @@ pub async fn hydrate<SortedBy>(
         )
         .await
         .map_err(|err| {
-            log::warn!("failed to list labels: {err}");
+            tracing::warn!("failed to list labels: {err}");
             Status::internal("internal server error")
         })
     };
@@ -287,7 +287,7 @@ pub async fn hydrate<SortedBy>(
         gather_stats_for(&ctx.db, &display_keys)
             .await
             .map_err(|err| {
-                log::warn!("failed to gather stats: {err}");
+                tracing::warn!("failed to gather stats: {err}");
                 Status::internal("internal server error")
             })
     };
@@ -505,10 +505,11 @@ pub struct SearchResponseView<SortedBy> {
 mod tests {
     use super::*;
     use crate::service::proto::{Post, PublicKey, Repost};
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use chrono::DateTime;
+    use sea_orm::prelude::DateTimeWithTimeZone;
 
-    fn now() -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(0).unwrap()
+    fn now() -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
     }
 
     fn search_row(id: i64, identity: &str, content: &Content) -> SearchRow {

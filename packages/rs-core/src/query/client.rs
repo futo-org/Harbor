@@ -389,10 +389,13 @@ where
         })
     }
 
-    /// Clear the per-key data cache. No subscribers are notified —
-    /// orchestration of in-flight observables lives outside the core.
-    pub fn invalidate(&self, query_key: &QueryKey) {
-        if let Some(state) = self.queries.lock().unwrap().get(query_key) {
+    /// Clear the data cache of every key under `prefix`, which is a key
+    /// partition: `["feed"]` clears `["feed", "explore", …]` too.
+    pub fn invalidate(&self, prefix: &QueryKey) {
+        for (key, state) in self.queries.lock().unwrap().iter() {
+            if !key.starts_with(prefix) {
+                continue;
+            }
             let mut state = state.lock().unwrap();
 
             // Clear cached server responses
