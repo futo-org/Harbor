@@ -1,37 +1,43 @@
 //! `get_explore_feed`: recent Feed events across all identities.
 //! Ranking is not yet implemented.
 
-use crate::{
-    data::{hydration::HydrationState, pipeline},
-    service::{
-        context::ServiceContext,
-        feeds::{
-            repository::Query as FeedsRepository,
-            rpc::common::{
-                self as feeds_pipeline, GetFeedResponseFilter,
-                GetFeedResponseView,
-            },
-            util::map_db_err,
-        },
-        proto::{GetExploreFeedRequest, GetFeedResponse},
-    },
+use crate::data::hydration::HydrationState;
+use crate::data::{Marker, pipeline};
+use crate::service::context::ServiceContext;
+use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
+use crate::service::feeds::rpc::common::{
+    self as feeds_pipeline, Fetched, GetFeedResponseFilter, GetFeedResponseView,
+};
+use crate::service::proto::{
+    GetExploreFeedRequest, GetFeedResponse, SortPostsBy,
 };
 use tonic::Status;
 
 pub struct Params {
-    pub common: feeds_pipeline::Params,
+    pub common: feeds_pipeline::Params<SortedBy>,
+    pub identity: Option<String>,
+    pub sort_by: SortPostsBy,
 }
 
 pub async fn handle(
     ctx: &ServiceContext,
     req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
-    let common = feeds_pipeline::Params::from_req_params(
-        &req.page_params,
-        req.omit_labels,
-    )?;
+    let sort_by = req.sort_by();
+    let GetExploreFeedRequest {
+        identity,
+        page_params,
+        omit_labels,
+        sort_by: _,
+    } = req;
 
-    let params = Params { common };
+    let common =
+        feeds_pipeline::Params::from_req_params(&page_params, omit_labels)?;
+    let params = Params {
+        common,
+        identity,
+        sort_by,
+    };
 
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
@@ -46,41 +52,62 @@ pub async fn handle(
 async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
-) -> Result<feeds_pipeline::Fetched, Status> {
-    let rows = FeedsRepository::list_feed_events(
+) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
+    let mut rows = FeedsRepository::list_feed_events(
         &ctx.db,
+        params.identity.as_deref(),
+        params.sort_by,
         params.common.limit + 1,
-        &params.common.cursor_filter,
+        params.common.cursor_filter.as_ref(),
     )
-    .await
-    .map_err(map_db_err)?;
+    .await?;
 
-    Ok(feeds_pipeline::finalize_fetch(rows, &params.common))
+    let page_info = pipeline::finalize_fetch(
+        &mut rows,
+        params.common.cursor_filter.as_ref(),
+        params.common.limit as u32,
+        |row| {
+            let sorted_by = match params.sort_by {
+                SortPostsBy::Default | SortPostsBy::Latest => {
+                    SortedBy::CreatedAt(row.event.created_at)
+                }
+                SortPostsBy::Top => SortedBy::ReactionCount(row.reactions),
+            };
+            Marker {
+                sorted_by,
+                event_id: row.event.id,
+            }
+        },
+    );
+    let rows = rows
+        .into_iter()
+        .map(|row| (row.event, Some(row.content)))
+        .collect();
+    Ok(Fetched { rows, page_info })
 }
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
-    fetched: &feeds_pipeline::Fetched,
+    _: &Params,
+    fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
     feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
-    _params: &Params,
-    fetched: feeds_pipeline::Fetched,
+    _: &ServiceContext,
+    params: &Params,
+    fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,
-) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration, &_params.common.omit_labels)
-        .await
+) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
+    feeds_pipeline::filter(fetched, hydration, &params.common.omit_labels).await
 }
 
 async fn view(
     ctx: &ServiceContext,
-    _params: &Params,
-    filtered: GetFeedResponseFilter,
+    _: &Params,
+    filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
-) -> Result<GetFeedResponseView, Status> {
+) -> Result<GetFeedResponseView<SortedBy>, Status> {
     feeds_pipeline::view(ctx, filtered, hydration).await
 }

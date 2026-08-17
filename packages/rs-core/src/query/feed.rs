@@ -293,6 +293,7 @@ pub fn get_explore_feed(
                         forward_token,
                     }),
                     omit_labels,
+                    sort_by: None,
                 })
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?

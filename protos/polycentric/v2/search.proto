@@ -31,10 +31,8 @@ message SearchPostsRequest {
 enum SortPostsBy {
   // Default sorting by relevancy.
   SORT_POSTS_BY_DEFAULT = 0;
-  /* TODO: determine what metric to use for the top post.
   // Top post first.
   SORT_POSTS_BY_TOP = 1;
-  */
   /// Latests post first.
   SORT_POSTS_BY_LATEST = 2;
 }

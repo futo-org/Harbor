@@ -2,6 +2,7 @@ syntax = "proto3";
 package polycentric.v2;
 
 import "polycentric/v2/common.proto";
+import "polycentric/v2/search.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
 
@@ -28,11 +29,12 @@ message GetFollowingFeedRequest {
 }
 
 message GetExploreFeedRequest {
-  // Identity of the caller to return relevant posts fort
+  // Identity of the caller to return relevant posts for
   optional string identity = 1;
   optional PageParams page_params = 2;
   // Label values for which the requester does not want to see content
   repeated string omit_labels = 3;
+  optional SortPostsBy sort_by = 4;
 }
 
 message GetFeedResponse {
