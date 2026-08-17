@@ -18,6 +18,10 @@ pub struct Model {
     /// Also a foreign key to the event (`events` table).
     #[sea_orm(primary_key, auto_increment = false)]
     pub event_id: i64,
+    /// Identity key (sha256 hash of the initial Identity content).
+    ///
+    /// Same as [`events.identity`].
+    pub identity: String,
     /// Id of the event that contains the post this is a reaction to.
     ///
     /// Also a foreign key to the event (`events` table).

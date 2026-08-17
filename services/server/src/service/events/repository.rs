@@ -263,13 +263,18 @@ impl Mutation {
         let mut insert_reaction = InsertStatement::new();
         insert_reaction
             .into_table("reaction")
-            .columns(["event_id", "on_post", "emoji", "positive"])
+            .columns(["event_id", "identity", "on_post", "emoji", "positive"])
             .select_from({
                 post_event_id
                     .clear_selects() // Need to rename.
                     .expr(SelectExpr {
                         expr: Expr::from(event.id),
                         alias: Some("event_id".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(&event.identity),
+                        alias: Some("identity".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
