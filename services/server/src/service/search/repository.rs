@@ -177,7 +177,7 @@ impl Query {
 
         let mut rows: Vec<SearchUsersEvent> =
             query.into_tuple().all(db).await.map_err(|err| {
-                log::warn!("failed to search for users: {err}");
+                tracing::warn!("failed to search for users: {err}");
                 Status::internal("internal server error")
             })?;
 
@@ -297,7 +297,7 @@ impl Query {
         query = query.limit(limit + 1); // + 1 for pagination.
 
         query.into_tuple().all(db).await.map_err(|err| {
-            log::warn!("failed to search for users: {err}");
+            tracing::warn!("failed to search for users: {err}");
             Status::internal("internal server error")
         })
     }
