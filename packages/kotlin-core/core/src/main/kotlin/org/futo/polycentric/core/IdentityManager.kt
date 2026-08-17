@@ -14,7 +14,6 @@ import polycentric.v2.ContentDigestType
 import polycentric.v2.Event
 import polycentric.v2.EventKey
 import polycentric.v2.Identity
-import polycentric.v2.ListEventsResponse
 import polycentric.v2.PublicKey
 import polycentric.v2.ServerList
 import polycentric.v2.SignedEvent
@@ -69,6 +68,13 @@ class IdentityManager(private val client: PolycentricClient) {
      * cross-device conflicts are resolved by sequence numbers on the server.
      */
     private val mutationMutex = Mutex()
+
+    /**
+     * How many identity-collection events to pull when resolving a remote
+     * identity's chain. Identity chains are tiny (genesis + a handful of
+     * key/server updates), so this comfortably covers the full collection.
+     */
+    private val IDENTITY_CHAIN_FETCH_SIZE = 1000
 
     /**
      * Resolves the current identity state by finding the latest Identity
@@ -190,14 +196,13 @@ class IdentityManager(private val client: PolycentricClient) {
     }
 
     /**
-     * Fetches the latest identity state of any identity from one server
-     * (intended for polling while pairing). Checks that the event is
-     * validly signed and that the signer is a rotation key on the
-     * document it carries.
-     *
-     * This does NOT check: content-digest match, vector-clock validity,
-     * whether a more recent state exists, or full-collection validity —
-     * same caveats as js-core.
+     * Fetches and validates the identity state of any identity from one
+     * server (intended for polling while pairing). Hydrates the identity's
+     * full event chain from the server into the core, then resolves it via
+     * the core's rs-common chain logic — which validates content-digest
+     * match, vector-clock/collection integrity, and signer authorization
+     * across the whole chain, rather than trusting a single event
+     * (js-core #200: "always use rs-common for identity chain logic").
      */
     suspend fun fetchIdentityState(
         identityKey: String,
@@ -206,10 +211,13 @@ class IdentityManager(private val client: PolycentricClient) {
         val targetServer = server ?: client.servers.firstOrNull()
             ?: throw PolycentricException("No servers configured")
 
-        val bytes = client.core.awaitQuery(
+        // Hydrate the identity's events from the server into the core's local
+        // store so its chain can be validated as a whole. Identity chains are
+        // small; a generous size fetches the full collection.
+        client.core.awaitQuery(
             Query.ListEvents(
                 ListEventsArgs(
-                    size = 1,
+                    size = IDENTITY_CHAIN_FETCH_SIZE,
                     identity = identityKey,
                     collection = Collections.IDENTITY,
                     signedBy = null,
@@ -219,31 +227,22 @@ class IdentityManager(private val client: PolycentricClient) {
                 ),
             ),
             queryKey = listOf("list_events_for_server", targetServer, identityKey),
-            opts = QueryOpts(fetchMode = null, updateMode = null, servers = listOf(targetServer)),
-        ) ?: ByteArray(0)
+            opts = QueryOpts(fetchMode = null, updateMode = null, servers = listOf(targetServer), emitMode = null, serverTimeoutMs = null),
+        )
 
-        val bundle = ListEventsResponse.ADAPTER.decode(bytes).event_bundles.firstOrNull()
-        val signedEvent = bundle?.signed_event
-        val serializedContent = bundle?.serialized_content
-        if (signedEvent == null || serializedContent == null) {
-            throw IdentityNotFoundException(identityKey)
-        }
+        return resolveIdentity(identityKey)
+            ?: throw IdentityNotFoundException(identityKey)
+    }
 
-        // Verify signature against event.key.signed_by via the core.
-        client.core.verifySignedEvent(SignedEvent.ADAPTER.encode(signedEvent))
-
-        val event = Event.ADAPTER.decode(signedEvent.event_bytes)
-        val signedBy = event.key?.signed_by
-            ?: throw PolycentricException("Identity event missing signed_by")
-
-        val identity = Content.ADAPTER.decode(serializedContent.content_bytes).identity
-            ?: throw PolycentricException("Event content is not an Identity")
-
-        // Basic precaution only — full history validation is the core's job.
-        if (identity.rotation_keys.none { keysEqual(it, signedBy) }) {
-            throw PolycentricException("Identity event not signed by a rotation key")
-        }
-
+    /**
+     * Resolve an identity's latest validated state from the core's LOCAL
+     * store via rs-common chain validation (js-core #200). Returns null when
+     * no valid chain is known locally — callers hydrate the events first
+     * (e.g. [fetchIdentityState] or a sync).
+     */
+    private fun resolveIdentity(identityKey: String): IdentityState? {
+        val bytes = client.core.resolveIdentity(identityKey) ?: return null
+        val identity = Identity.ADAPTER.decode(bytes)
         return IdentityState(
             identityKey = identityKey,
             rotationKeys = identity.rotation_keys,
@@ -261,22 +260,33 @@ class IdentityManager(private val client: PolycentricClient) {
      */
     suspend fun claim(identityKey: String): IdentityState {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
-
-        val state = fetchIdentityState(identityKey)
         val publicKeyProto = keyPair.toPublicKeyProto()
-        val isAuthorized = state.rotationKeys.any { keysEqual(it, publicKeyProto) } ||
-            state.signingKeys.any { keysEqual(it, publicKeyProto) }
-        if (!isAuthorized) {
+
+        // Validate authorization via rs-common chain logic before adopting.
+        val state = fetchIdentityState(identityKey)
+        if (!isAuthorized(state, publicKeyProto)) {
             throw UnauthorizedKeyException()
         }
 
         client.setActiveIdentityKey(identityKey)
         client.sync(SyncStrategy.PARTIAL_PULL)
 
-        publish(identityKey, state.rotationKeys, state.signingKeys, state.servers)
+        // Re-validate after pulling the full history — authorization could have
+        // been revoked between the check and the pull (js-core #200).
+        val pulled = resolveIdentity(identityKey)
+        if (pulled == null || !isAuthorized(pulled, publicKeyProto)) {
+            throw UnauthorizedKeyException()
+        }
 
-        return state
+        publish(identityKey, pulled.rotationKeys, pulled.signingKeys, pulled.servers)
+
+        return pulled
     }
+
+    /** Whether [state] authorizes [myKey] (present as a rotation or signing key). */
+    private fun isAuthorized(state: IdentityState, myKey: PublicKey): Boolean =
+        state.rotationKeys.any { keysEqual(it, myKey) } ||
+            state.signingKeys.any { keysEqual(it, myKey) }
 
     suspend fun isRotationKeyForIdentity(identityKey: String, publicKey: PublicKey): Boolean {
         val state = getCurrent()
