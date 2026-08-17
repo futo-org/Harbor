@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const CONTENT_WIDTH = 600;
 
 /** Flow starts, so there is nothing to go back to. */
-const FLOW_ENTRY_ROUTES = ['/', '/signup', '/login'];
+const FLOW_ENTRY_ROUTES = ['/signup', '/login'];
 
 /** Signup and pairing run without app chrome and share this padding. */
 export default function OnboardingLayout() {
@@ -29,9 +29,8 @@ export default function OnboardingLayout() {
   };
 
   const showScene = width > Breakpoints.md;
-  // The welcome screen is the app's entry and a flow's end offers its own
-  // way onward, so neither takes controls.
-  const isFlowEnd = pathname === '/' || pathname.endsWith('/success');
+  // A flow's end offers its own way onward, so it takes no controls.
+  const isFlowEnd = pathname.endsWith('/success');
   const showBack = !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname);
 
   return (
@@ -49,7 +48,7 @@ export default function OnboardingLayout() {
           showScene ? { width: CONTENT_WIDTH } : Atoms.flex_1,
         ]}
         behavior={isIOS ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top}
+        keyboardVerticalOffset={-insets.bottom}
       >
         <View
           style={[
