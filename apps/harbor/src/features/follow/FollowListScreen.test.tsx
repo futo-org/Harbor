@@ -48,7 +48,7 @@ jest.mock('@/src/common/components/layout/Topbar', () => {
 
 // Renders rows, headers, and footers so list composition is observable.
 type ListProps = {
-  HeaderComponent?: () => unknown;
+  HeaderComponent?: (() => unknown) | unknown;
   ListHeaderComponent?: unknown;
   ListEmptyComponent?: unknown;
   ListFooterComponent?: unknown;
@@ -66,7 +66,10 @@ jest.mock('@/src/common/components/List', () => {
       return react.createElement(
         View,
         null,
-        props.HeaderComponent ? props.HeaderComponent() : null,
+        // Mirrors the real `List`, which takes an element or a component.
+        typeof props.HeaderComponent === 'function'
+          ? props.HeaderComponent()
+          : (props.HeaderComponent ?? null),
         props.ListHeaderComponent,
         props.data.length === 0
           ? props.ListEmptyComponent

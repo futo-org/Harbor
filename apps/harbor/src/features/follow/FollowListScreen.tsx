@@ -50,7 +50,7 @@ export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
     <Screen>
       <Screen.PrimaryColumn>
         <List<FollowEntry>
-          HeaderComponent={() => (
+          HeaderComponent={
             <Topbar
               center={
                 <View style={Atoms.align_center}>
@@ -64,7 +64,7 @@ export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
                 </View>
               }
             />
-          )}
+          }
           ListHeaderComponent={
             <Tabs>
               <Tabs.Tab

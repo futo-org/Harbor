@@ -1,12 +1,7 @@
-import { Atoms } from '@/src/common/theme';
 import React from 'react';
-import {
-  type ScrollViewProps as RNScrollViewProps,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { type ScrollViewProps as RNScrollViewProps, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { HidingHeader, renderNode, useHidingHeader } from './HidingHeader';
+import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
 
 export type ScrollViewProps = RNScrollViewProps & {
   /**
@@ -32,37 +27,25 @@ export const ScrollView = React.forwardRef<
   },
   ref,
 ) {
-  const {
-    onScroll,
-    headerAnimatedStyle,
-    onHeaderLayout,
-    scrollProps,
-    contentPaddingTop,
-  } = useHidingHeader();
+  const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
+    useHidingHeader();
 
   const header = renderNode(HeaderComponent);
 
   return (
-    <View style={Atoms.flex_1}>
-      {header ? (
-        <HidingHeader style={headerAnimatedStyle} onLayout={onHeaderLayout}>
-          {header}
-        </HidingHeader>
-      ) : null}
+    <HidingHeaderStack style={stackStyle}>
+      {header ? <View onLayout={onHeaderLayout}>{header}</View> : null}
 
       <Animated.ScrollView
         ref={ref}
         {...rest}
-        {...scrollProps}
+        style={scrollableStyle}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={StyleSheet.flatten([
-          { paddingTop: contentPaddingTop },
-          contentContainerStyle,
-        ])}
+        contentContainerStyle={contentContainerStyle}
       >
         {children}
       </Animated.ScrollView>
-    </View>
+    </HidingHeaderStack>
   );
 });

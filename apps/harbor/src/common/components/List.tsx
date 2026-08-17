@@ -9,9 +9,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
 import {
-  cloneElement,
   forwardRef,
-  isValidElement,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -22,7 +20,7 @@ import {
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Atoms, useTheme } from '../theme';
-import { HidingHeader, renderNode, useHidingHeader } from './HidingHeader';
+import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
 import { InfoTooltip } from './InfoTooltip';
 import { Text } from './primitives';
 
@@ -107,22 +105,16 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const {
-    onScroll,
-    headerAnimatedStyle,
-    onHeaderLayout,
-    scrollProps,
-    contentPaddingTop,
-    topOffset,
-  } = useHidingHeader(initialHeaderHeight);
+  const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
+    useHidingHeader(initialHeaderHeight);
 
   useImperativeHandle(
     listRef,
     () => ({
       scrollToTop: ({ animated = true } = {}) =>
-        ref.current?.scrollToOffset({ offset: topOffset, animated }),
+        ref.current?.scrollToOffset({ offset: 0, animated }),
     }),
-    [topOffset],
+    [],
   );
 
   const renderedHeader = renderNode(HeaderComponent);
@@ -131,45 +123,31 @@ function NativeList<T>({
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
-      paddingTop: contentPaddingTop,
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentPaddingTop, contentContainerStyle],
+    [contentContainerStyle],
   );
 
-  // Show below the sticky header
-  const adjustedRefreshControl = (
-    isValidElement(refreshControl)
-      ? cloneElement(
-          refreshControl as React.ReactElement<{ progressViewOffset?: number }>,
-          {
-            progressViewOffset: contentPaddingTop,
-          },
-        )
-      : refreshControl
-  ) as FlashListProps<T>['refreshControl'];
-
   return (
-    <View style={[Atoms.flex_1]}>
+    <HidingHeaderStack style={stackStyle}>
       {renderedHeader ? (
-        <HidingHeader style={headerAnimatedStyle} onLayout={onHeaderLayout}>
-          {renderedHeader}
-        </HidingHeader>
+        <View onLayout={onHeaderLayout}>{renderedHeader}</View>
       ) : null}
 
-      <AnimatedFlashList
-        ref={ref as React.Ref<FlashListRef<unknown>>}
-        {...(rest as FlashListProps<unknown>)}
-        {...scrollProps}
-        refreshControl={adjustedRefreshControl}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={mergedContentContainerStyle}
-      />
-    </View>
+      <View style={scrollableStyle}>
+        <AnimatedFlashList
+          ref={ref as React.Ref<FlashListRef<unknown>>}
+          {...(rest as FlashListProps<unknown>)}
+          refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={mergedContentContainerStyle}
+        />
+      </View>
+    </HidingHeaderStack>
   );
 }
 

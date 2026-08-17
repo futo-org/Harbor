@@ -1,34 +1,32 @@
-import { Atoms, ZIndex } from '@/src/common/theme';
-import { isIOS } from '@/src/common/util/platform';
+import { Atoms } from '@/src/common/theme';
 import React, {
   isValidElement,
+  useCallback,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
-import {
-  type LayoutChangeEvent,
-  StyleSheet,
-  type ViewStyle,
-} from 'react-native';
+import { type LayoutChangeEvent, View } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
   type StyleProps,
 } from 'react-native-reanimated';
 
-// Keep the sticky header fully visible until the user has scrolled past
-// this distance; only then does scroll-driven hiding kick in.
+// The header stays put until the user has scrolled this far.
 const HEADER_HIDE_THRESHOLD = 50;
+const HEADER_SETTLE_MS = 180;
 
-/** `initialHeight` avoids a re-layout when the header's height is known:
- *  on Android `onLayout` lands after the list has already measured.
+/** A header that slides away as the scrollable below it scrolls down.
  *
- *  iOS reserves the header space with `contentInset` (UIKit then anchors
- *  the refresh spinner below the header); Android uses content padding.
- *  Consumers spread `scrollProps`, pad content by `contentPaddingTop`,
- *  and treat `topOffset` as the scroll offset of the top. */
+ *  The header sits above the scrollable, not over it, so the scrollable's top
+ *  edge — where both platforms draw the refresh control — stays clear of it.
+ *  `initialHeight` is used until the header reports its own.
+ *
+ *  Put both in a `HidingHeaderStack` with `stackStyle`, `onHeaderLayout` on the
+ *  header, and `scrollableStyle` on the scrollable. */
 export function useHidingHeader(initialHeight = 0) {
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
@@ -37,94 +35,90 @@ export function useHidingHeader(initialHeight = 0) {
   const isMomentum = useSharedValue(false);
   const [headerHeight, setHeaderHeight] = useState(initialHeight);
 
+  // Memoised to keep the scroll handler's closure stable.
+  const settleHeader = useCallback(() => {
+    'worklet';
+    const h = headerHeightShared.value;
+    if (h <= 0) return;
+    headerTranslate.value = withTiming(
+      headerTranslate.value < -h / 2 ? -h : 0,
+      { duration: HEADER_SETTLE_MS },
+    );
+  }, [headerHeightShared, headerTranslate]);
+
   const onScroll = useAnimatedScrollHandler({
-    onBeginDrag: () => {
+    onBeginDrag: (event) => {
       isDragging.value = true;
+      // iOS skips `onMomentumEnd` on interrupted scrolls.
+      isMomentum.value = false;
+      // Measure this gesture from here, not from whatever moved the list last.
+      lastScrollY.value = event.contentOffset.y;
     },
     onEndDrag: () => {
       isDragging.value = false;
+      settleHeader();
     },
     onMomentumBegin: () => {
       isMomentum.value = true;
     },
     onMomentumEnd: () => {
       isMomentum.value = false;
+      settleHeader();
     },
     onScroll: (event) => {
       const h = headerHeightShared.value;
-      // With `contentInset` the offset rests at -headerHeight, not 0.
-      const currentY = event.contentOffset.y + (isIOS ? h : 0);
+      const currentY = event.contentOffset.y;
 
       if (currentY <= HEADER_HIDE_THRESHOLD) {
         headerTranslate.value = 0;
-      } else if (isDragging.value || isMomentum.value) {
-        // Compute delta relative to the threshold so movement past it
-        // starts the hide from translate 0 instead of snapping.
-        const lastEffective = Math.max(
+      } else if (isDragging.value) {
+        // Only a finger moves the header; FlashList rewrites `contentOffset`
+        // itself when rows above the anchor resize.
+        const delta = currentY - lastScrollY.value;
+        headerTranslate.value = Math.min(
           0,
-          lastScrollY.value - HEADER_HIDE_THRESHOLD,
+          Math.max(-h, headerTranslate.value - delta),
         );
-        const currentEffective = currentY - HEADER_HIDE_THRESHOLD;
-        const delta = currentEffective - lastEffective;
-        const next = headerTranslate.value - delta;
-        headerTranslate.value = Math.min(0, Math.max(-h, next));
       }
-      // Always update so the next user-driven event computes the correct
-      // delta — even if we skipped animating this tick.
       lastScrollY.value = currentY;
     },
   });
 
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
+  const stackStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslate.value }],
   }));
 
+  // Hangs below the stack so the scrollable still fills the screen once the
+  // header has slid away.
+  const scrollableStyle = useMemo(
+    () => ({ ...Atoms.flex_1, marginBottom: -headerHeight }),
+    [headerHeight],
+  );
+
   const onHeaderLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.height;
+    // A remounting header measures 0 for a frame.
+    if (!next) return;
     headerHeightShared.value = next;
     if (next !== headerHeight) setHeaderHeight(next);
   };
 
-  const scrollProps = useMemo(
-    () =>
-      isIOS
-        ? {
-            contentInset: { top: headerHeight },
-            contentOffset: { x: 0, y: -headerHeight },
-            scrollIndicatorInsets: { top: headerHeight },
-          }
-        : undefined,
-    [headerHeight],
-  );
-
-  return {
-    onScroll,
-    headerHeight,
-    headerAnimatedStyle,
-    onHeaderLayout,
-    scrollProps,
-    contentPaddingTop: isIOS ? 0 : headerHeight,
-    topOffset: isIOS ? -headerHeight : 0,
-  };
+  return { onScroll, onHeaderLayout, stackStyle, scrollableStyle };
 }
 
-/** The absolutely-positioned, animated wrapper around a sticky header. */
-export function HidingHeader({
+/** Slides a header and the scrollable under it together, clipping the header
+ *  once it leaves the stack. */
+export function HidingHeaderStack({
   children,
   style,
-  onLayout,
 }: {
   children: ReactNode;
   style: StyleProps;
-  onLayout: (event: LayoutChangeEvent) => void;
 }) {
   return (
-    <Animated.View
-      onLayout={onLayout}
-      style={[Atoms.absolute, styles.stickyHeader, style]}
-    >
-      {children}
-    </Animated.View>
+    <View style={[Atoms.flex_1, Atoms.overflow_hidden]}>
+      <Animated.View style={[Atoms.flex_1, style]}>{children}</Animated.View>
+    </View>
   );
 }
 
@@ -141,12 +135,3 @@ export function renderNode(node: ReactNodeOrComponent) {
   const Component = node as React.ComponentType;
   return <Component />;
 }
-
-const styles = StyleSheet.create({
-  stickyHeader: {
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: ZIndex.raised,
-  } satisfies ViewStyle,
-});

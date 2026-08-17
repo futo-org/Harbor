@@ -23,13 +23,13 @@ export default function VerificationsScreen() {
       <Screen.PrimaryColumn>
         <ClaimList
           enabled={enabled}
-          HeaderComponent={() => (
+          HeaderComponent={
             <Topbar
               title="Verifications"
               left={isWeb ? <></> : undefined}
               right={<CreateClaimButton onPress={() => setCreateOpen(true)} />}
             />
-          )}
+          }
           onCreateClaim={() => setCreateOpen(true)}
         />
         <ClaimCreateSheet
