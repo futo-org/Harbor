@@ -3215,7 +3215,6 @@ dependencies = [
  "common-telemetry",
  "ed25519-dalek",
  "hex",
- "log",
  "moderation-entity",
  "moderation-migration",
  "opentelemetry",
