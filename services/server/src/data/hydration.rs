@@ -3,9 +3,6 @@ use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{self as feeds_repository};
-use crate::service::feeds::rpc::common::{
-    to_target_event_key, to_target_event_keys,
-};
 use crate::service::identity::service::{
     collect_identities, list_identity_events, list_profile_events,
 };
@@ -221,4 +218,23 @@ where
         }
     }
     (keys, quote_set, repost_set)
+}
+
+/// Convert proto `EventKey`s into [`TargetEventKey`]s, deduplicated into a set
+/// for the membership tests that split the combined referenced-post result.
+fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
+    keys.iter().filter_map(to_target_event_key).collect()
+}
+
+/// Convert proto `EventKey`s into [`TargetEventKey`] (the shared comparable
+/// EventKey shape).
+fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
+    let signed_by = key.signed_by.as_ref()?;
+    Some(TargetEventKey {
+        collection: key.collection as i16,
+        identity: key.identity.clone(),
+        public_key_type: signed_by.key_type as i16,
+        public_key: signed_by.key.clone(),
+        sequence: key.sequence as i64,
+    })
 }

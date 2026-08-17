@@ -10,9 +10,7 @@ use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
-use crate::service::proto::{
-    Content, EventBundle, EventHint, EventKey, PageParams,
-};
+use crate::service::proto::{Content, EventBundle, EventHint, PageParams};
 use crate::service::stats::service::assemble_bundles;
 use entity::content_model;
 use prost::Message;
@@ -86,24 +84,6 @@ fn create_event_created_at_marker(
         sorted_by: event.created_at,
         event_id: event.id,
     }
-}
-
-/// Convert proto `EventKey`s into [`TargetEventKey`]s (the shared
-/// comparable EventKey shape), deduplicated into a set for the
-/// membership tests that split the combined referenced-post result.
-pub fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
-    keys.iter().filter_map(to_target_event_key).collect()
-}
-
-pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
-    let signed_by = key.signed_by.as_ref()?;
-    Some(TargetEventKey {
-        collection: key.collection as i16,
-        identity: key.identity.clone(),
-        public_key_type: signed_by.key_type as i16,
-        public_key: signed_by.key.clone(),
-        sequence: key.sequence as i64,
-    })
 }
 
 /// Whether a row's content references another event as a quote or repost.
