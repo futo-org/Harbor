@@ -17,7 +17,7 @@ import { SearchBar } from '../search/SearchBar';
 import FeedList from './FeedList';
 import type { ExploreSort } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
-import { Tabs } from '@/src/common/components/Tabs';
+import { TABS_HEIGHT, Tabs } from '@/src/common/components/Tabs';
 
 type ListHeaderProps = {
   sort: ExploreSort;
@@ -63,10 +63,12 @@ export default function ExploreScreen() {
 
   const onSortPress = useCallback(
     (next: ExploreSort) => {
-      listRef.current?.scrollToTop();
-      // Each sort is its own query, so switching already shows the other list.
-      if (next === sort) refresh();
-      else setSort(next);
+      if (next === sort) {
+        listRef.current?.scrollToTop();
+        refresh();
+      } else {
+        setSort(next);
+      }
     },
     [sort, refresh],
   );
@@ -107,10 +109,11 @@ export default function ExploreScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedList
+          key={sort}
           ref={listRef}
           feed={feed}
           HeaderComponent={header}
-          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
+          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT + TABS_HEIGHT}
         />
         {showComposeFab ? (
           <Fab

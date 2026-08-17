@@ -80,7 +80,9 @@ export type ListProps<T> = FlashListProps<T> & {
 };
 
 /** Imperative handle exposed by `List` (and `FeedList`). */
-export type ListRef = { scrollToTop: () => void };
+export type ListRef = {
+  scrollToTop: (options?: { animated?: boolean }) => void;
+};
 
 export const List = forwardRef(function List<T>(
   props: ListProps<T>,
@@ -117,8 +119,8 @@ function NativeList<T>({
   useImperativeHandle(
     listRef,
     () => ({
-      scrollToTop: () =>
-        ref.current?.scrollToOffset({ offset: topOffset, animated: true }),
+      scrollToTop: ({ animated = true } = {}) =>
+        ref.current?.scrollToOffset({ offset: topOffset, animated }),
     }),
     [topOffset],
   );
@@ -213,8 +215,11 @@ function WebFeedViewer<T>({
   useImperativeHandle(
     listRef,
     () => ({
-      scrollToTop: () => {
-        (scrollEl ?? window).scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop: ({ animated = true } = {}) => {
+        (scrollEl ?? window).scrollTo({
+          top: 0,
+          behavior: animated ? 'smooth' : 'auto',
+        });
       },
     }),
     [scrollEl],
