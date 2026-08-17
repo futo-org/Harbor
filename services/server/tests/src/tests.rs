@@ -2493,7 +2493,7 @@ async fn check_followers(
 }
 
 #[tokio::test]
-async fn global_top_feed_exists() {
+async fn explore_feed_exists() {
     let mut feeds = connect_feeds().await;
 
     let mut client = TestClient::new().await;
@@ -2516,17 +2516,17 @@ async fn global_top_feed_exists() {
 }
 
 #[tokio::test]
-async fn personal_top_feed_empty() {
+async fn following_feed_empty() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
     let follower = client.identity();
 
     // Not following anyone and hasn't made any posts themselves, so no results.
-    personal_top_feed(follower, &[]).await;
+    following_feed(follower, &[]).await;
 }
 
 #[tokio::test]
-async fn personal_top_feed_ordering() {
+async fn following_feed_ordering() {
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
     let post1_key = client.get_last_event_key();
@@ -2541,11 +2541,11 @@ async fn personal_top_feed_ordering() {
     client.submit_events().await;
     let follower = client.identity();
 
-    personal_top_feed(follower, &[post2_key, post1_key]).await;
+    following_feed(follower, &[post2_key, post1_key]).await;
 }
 
 #[tokio::test]
-async fn personal_top_feed_pagination() {
+async fn following_feed_pagination() {
     // Followee 1, post 1.
     let mut client1 = TestClient::new().await;
     client1.post_text("Post 1", DEFAULT_CREATED_AT);
@@ -2590,8 +2590,8 @@ async fn personal_top_feed_pagination() {
         [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let request = GetExploreFeedRequest {
-                identity: Some(follower.clone()),
+            let request = GetFollowingFeedRequest {
+                follower_identity: follower.clone(),
                 page_params: Some(PageParams {
                     limit: Some(1),
                     backward_token: None,
@@ -2600,12 +2600,15 @@ async fn personal_top_feed_pagination() {
                 omit_labels: Vec::new(),
                 sort_by: Some(SortPostsBy::Top.into()),
             };
-            let response =
-                feeds.get_explore_feed(request).await.unwrap().into_inner();
+            let response = feeds
+                .get_following_feed(request)
+                .await
+                .unwrap()
+                .into_inner();
             page_info = response.page_info.clone();
             response
         };
-        top_feed(request, &[expected]).await;
+        explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
@@ -2617,8 +2620,8 @@ async fn personal_top_feed_pagination() {
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
-            let request = GetExploreFeedRequest {
-                identity: Some(follower.clone()),
+            let request = GetFollowingFeedRequest {
+                follower_identity: follower.clone(),
                 page_params: Some(PageParams {
                     limit: Some(1),
                     backward_token: page_info.take().map(|i| i.start_cursor),
@@ -2627,12 +2630,15 @@ async fn personal_top_feed_pagination() {
                 omit_labels: Vec::new(),
                 sort_by: Some(SortPostsBy::Top.into()),
             };
-            let response =
-                feeds.get_explore_feed(request).await.unwrap().into_inner();
+            let response = feeds
+                .get_following_feed(request)
+                .await
+                .unwrap()
+                .into_inner();
             page_info = response.page_info.clone();
             response
         };
-        top_feed(request, &[expected]).await;
+        explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
@@ -2640,22 +2646,26 @@ async fn personal_top_feed_pagination() {
     }
 }
 
-async fn personal_top_feed(for_identity: &str, expected: &[EventKey]) {
+async fn following_feed(for_identity: &str, expected: &[EventKey]) {
     eprintln!("for_identity: {for_identity:?}");
     let request = async {
         let mut feeds = connect_feeds().await;
-        let request = GetExploreFeedRequest {
-            identity: Some(for_identity.to_owned()),
+        let request = GetFollowingFeedRequest {
+            follower_identity: for_identity.to_owned(),
             page_params: None,
             omit_labels: Vec::new(),
             sort_by: Some(SortPostsBy::Top.into()),
         };
-        feeds.get_explore_feed(request).await.unwrap().into_inner()
+        feeds
+            .get_following_feed(request)
+            .await
+            .unwrap()
+            .into_inner()
     };
-    top_feed(request, expected).await
+    explore_feed(request, expected).await
 }
 
-async fn top_feed<Fut>(request: Fut, expected: &[EventKey])
+async fn explore_feed<Fut>(request: Fut, expected: &[EventKey])
 where
     Fut: Future<Output = GetFeedResponse>,
 {

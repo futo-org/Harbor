@@ -292,6 +292,7 @@ pub fn get_following_feed(
                         forward_token,
                     }),
                     omit_labels,
+                    sort_by: None,
                 })
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
