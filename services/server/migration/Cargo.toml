@@ -14,8 +14,8 @@ entity = { path = "../entity" }
 polycentric-common.workspace = true
 prost.workspace = true
 serde_json = "1"
-tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies.sea-orm-migration]
 workspace = true
-features = [ "sqlx-postgres", "runtime-tokio" ]
+features = ["cli", "sqlx-postgres", "runtime-tokio" ]

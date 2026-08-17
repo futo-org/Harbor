@@ -11,6 +11,7 @@ path = "src/lib.rs"
 
 [dependencies.sea-orm]
 workspace = true
+features = ["macros", "with-time", "with-json"]
 
 [dependencies.chrono]
 workspace = true

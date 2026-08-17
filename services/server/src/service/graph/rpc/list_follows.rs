@@ -171,9 +171,10 @@ mod tests {
     use crate::service::proto::{Content, Follow, content::ContentBody};
     use ::entity::content_model as ContentModel;
     use ::entity::event_model as EventModel;
+    use chrono::DateTime;
     use polycentric_common::models::collections;
     use prost::Message as _;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockRow};
     use std::sync::Arc;
 
@@ -184,8 +185,10 @@ mod tests {
         ServiceContext::new(db, kafka_producer)
     }
 
-    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp_secs(seconds)
+            .unwrap()
+            .fixed_offset()
     }
 
     fn follow_row(

@@ -19,37 +19,37 @@ resolver = "2"
 polycentric-common = { path = "packages/rs-common" }
 
 # Async runtime / service frameworks
-tokio = { version = "1.50.0" }
-uniffi = { version = "=0.31.0", features = ["tokio"] }
-rdkafka = { version = "0.39" }
-sea-orm = { version = "2.0.1" }
-sea-orm-migration = { version = "2.0.1" }
+tokio = { version = "1.50.0", default-features = false }
+uniffi = { version = "=0.31.0", default-features = false, features = ["tokio"] }
+rdkafka = { version = "0.39", default-features = false }
+sea-orm = { version = "2.0.1", default-features = false }
+sea-orm-migration = { version = "2.0.1", default-features = false }
 
 # Protobuf / gRPC
-prost = "0.14"
-prost-types = "0.14"
-prost-build = "0.14"
+prost = { version = "0.14", default-features = false }
+prost-types = { version = "0.14", default-features = false }
+prost-build = { version = "0.14", default-features = false }
 tonic = { version = "0.14", default-features = false, features = ["codegen"] }
-tonic-prost = "0.14"
+tonic-prost = { version = "0.14", default-features = false }
 
 # Crypto / hashing
-ed25519-dalek = "3.0.0"
-sha2 = "0.11"
-getrandom = "0.4"
-hex = "0.4"
+ed25519-dalek = { version = "3.0.0", default-features = false }
+sha2 = { version = "0.11", default-features = false }
+getrandom = { version = "0.4", default-features = false }
+hex = { version = "0.4", default-features = false }
 
 # Misc shared
-thiserror = "2.0"
-chrono = { version = "0.4", features = ["serde"] }
-log = "0.4"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-opentelemetry = { version = "0.32", features = ["metrics"] }
-opentelemetry_sdk = { version = "0.32", features = ["metrics"] }
-opentelemetry-prometheus = "0.32"
-prometheus = "0.14"
+thiserror = { version = "2.0", default-features = false }
+chrono = { version = "0.4", default-features = false, features = ["serde"] }
+log = { version = "0.4", default-features = false }
+tracing = { version = "0.1", default-features = false, features = ["std", "log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "json"] }
+opentelemetry = { version = "0.32", default-features = false, features = ["metrics"] }
+opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics"] }
+opentelemetry-prometheus = { version = "0.32", default-features = false }
+prometheus = { version = "0.14", default-features = false }
 # Pinned: 0.3.48 adds a `From` impl on an associated-type projection that
 # fails coherence (E0119) in sea-query and aws-smithy-types. Unpin once those
 # crates ship releases that compile against it.
-time = "=0.3.55"
-base64 = "0.22.1"
+time = { version = "=0.3.55", default-features = false }
+base64 = { version = "0.22.1", default-features = false }

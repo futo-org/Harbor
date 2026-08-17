@@ -17,7 +17,7 @@ const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 
 /// Type used when ordering events by the create at column.
-pub type EventCreatedAt = TimeDateTimeWithTimeZone;
+pub type EventCreatedAt = DateTimeWithTimeZone;
 
 /// Get the database columns to compare against a cursor.
 fn cursor_columns() -> impl IdentityOf<EventModel::Entity> {
