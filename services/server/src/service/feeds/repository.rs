@@ -306,8 +306,8 @@ impl Query {
                 .filter(ContentPostAttributedUrlModel::Column::Url.eq(url));
         }
 
-        let mut sea_cursor = query
-            .cursor_by((EventModel::Column::CreatedAt, EventModel::Column::Id));
+        let columns = (EventModel::Column::CreatedAt, EventModel::Column::Id);
+        let mut sea_cursor = query.cursor_by(columns);
         sea_cursor.desc();
 
         match cursor_filter {
