@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,

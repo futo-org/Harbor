@@ -7,6 +7,5 @@ export * from './Fab';
 export * from './FormField';
 export * from '../layout/ScreenHeader';
 export * from './SocialButton';
-export * from '../../../features/core/identity/IdentitySwitcher';
 export * from './IdentityBadge';
 export * from './ListItemGroup';

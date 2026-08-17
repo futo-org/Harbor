@@ -11,6 +11,7 @@ import {
   type PaletteColorToken,
   type Theme,
 } from '@/src/common/theme';
+import { type Href, Link, router } from 'expo-router';
 import {
   Animated,
   Platform,
@@ -34,8 +35,11 @@ type IconRenderFn = (props: {
   style?: object;
 }) => React.ReactNode;
 
-interface ButtonProps extends Omit<PressableProps, 'style'> {
-  onPress: () => void;
+// `href` is redeclared as an expo-router Href; RNW types it as a string.
+interface ButtonProps extends Omit<PressableProps, 'style' | 'href'> {
+  onPress?: () => void;
+  /** Renders the button as a link, so it can be opened in a new tab. */
+  href?: Href;
   title: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -72,6 +76,7 @@ const SIZE_CONFIG: Record<
 export function Button({
   onPress,
   title,
+  href,
   variant = 'primary',
   size = 'md',
   style,
@@ -100,57 +105,67 @@ export function Button({
   const hoverStyle =
     !isDisabled && hovered ? getHoverVariantStyle(theme, variant) : undefined;
 
-  return (
-    <Animated.View style={animatedStyle}>
-      <Pressable
-        onPress={isDisabled ? undefined : onPress}
-        onPressIn={isDisabled ? undefined : onPressIn}
-        onPressOut={isDisabled ? undefined : onPressOut}
-        onHoverIn={isDisabled ? undefined : onHoverIn}
-        onHoverOut={isDisabled ? undefined : onHoverOut}
-        disabled={isDisabled}
-        hitSlop={8}
-        style={(state) => [
-          styles.base,
-          fullWidth && Atoms.w_full,
-          !fullWidth && styles.fitContent,
-          {
-            paddingVertical: sizeConfig.paddingV,
-            paddingHorizontal,
-            borderRadius,
-          },
-          surfaceStyle,
-          hoverStyle,
-          typeof style === 'function' ? style(state) : style,
-        ]}
-        {...props}
-      >
-        <View style={[styles.content]}>
-          {icon &&
-            (typeof icon === 'function' ? (
-              icon({ size: sizeConfig.iconSize, color: iconColor })
-            ) : (
-              <Icon name={icon} size={sizeConfig.iconSize} color={iconColor} />
-            ))}
-          {!iconOnly && (
-            <Text
-              fontSize={size}
-              fontWeight={FONT_WEIGHT}
-              color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
-              style={
-                isDisabled
-                  ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
-                  : undefined
-              }
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
-          )}
-        </View>
-      </Pressable>
-    </Animated.View>
+  // Anchor for new-tab support; the click still routes in-app.
+  const linkHref = href && !isDisabled ? Link.resolveHref(href) : undefined;
+  const handlePress = (event?: { preventDefault?: () => void }) => {
+    onPress?.();
+    if (!href) return;
+    event?.preventDefault?.();
+    router.push(href);
+  };
+
+  const pressable = (
+    <Pressable
+      href={linkHref}
+      onPress={isDisabled ? undefined : handlePress}
+      onPressIn={isDisabled ? undefined : onPressIn}
+      onPressOut={isDisabled ? undefined : onPressOut}
+      onHoverIn={isDisabled ? undefined : onHoverIn}
+      onHoverOut={isDisabled ? undefined : onHoverOut}
+      disabled={isDisabled}
+      hitSlop={8}
+      style={(state) => [
+        styles.base,
+        fullWidth && Atoms.w_full,
+        !fullWidth && styles.fitContent,
+        {
+          paddingVertical: sizeConfig.paddingV,
+          paddingHorizontal,
+          borderRadius,
+        },
+        surfaceStyle,
+        hoverStyle,
+        typeof style === 'function' ? style(state) : style,
+      ]}
+      {...props}
+    >
+      <View style={[styles.content]}>
+        {icon &&
+          (typeof icon === 'function' ? (
+            icon({ size: sizeConfig.iconSize, color: iconColor })
+          ) : (
+            <Icon name={icon} size={sizeConfig.iconSize} color={iconColor} />
+          ))}
+        {!iconOnly && (
+          <Text
+            fontSize={size}
+            fontWeight={FONT_WEIGHT}
+            color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
+            style={
+              isDisabled
+                ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
+                : undefined
+            }
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        )}
+      </View>
+    </Pressable>
   );
+
+  return <Animated.View style={animatedStyle}>{pressable}</Animated.View>;
 }
 
 const BORDER_WIDTH = 1.5;

@@ -1,12 +1,19 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import Icon, { type IconName } from '@/src/common/components/Icon';
+import { withIdentity } from '@/src/common/lib/authGate';
 import {
   Atoms,
   type PaletteColorToken,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { Pressable, type PressableProps, View } from 'react-native';
+import { useCallback } from 'react';
+import {
+  type GestureResponderEvent,
+  Pressable,
+  type PressableProps,
+  View,
+} from 'react-native';
 
 type PostActionButtonProps = {
   icon: IconName;
@@ -24,14 +31,23 @@ export default function PostActionButton({
   highlighted = false,
   color = 'neutral_500',
   size = 18,
+  onPress,
   ...props
 }: PostActionButtonProps) {
   const { theme } = useTheme();
+
+  const handlePress = useCallback(
+    (event: GestureResponderEvent) => {
+      withIdentity(() => onPress?.(event));
+    },
+    [onPress],
+  );
 
   return (
     <View style={[Atoms.flex_row, Atoms.justify_start]}>
       <Pressable
         {...props}
+        onPress={handlePress}
         style={[Atoms.flex_row, Atoms.outline_none, Atoms.items_center]}
         hitSlop={8}
       >

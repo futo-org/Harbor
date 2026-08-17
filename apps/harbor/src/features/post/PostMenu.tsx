@@ -1,6 +1,7 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
+import { withIdentity } from '@/src/common/lib/authGate';
 import {
   type PostData,
   useCurrentIdentity,
@@ -84,7 +85,9 @@ export default function PostMenu({ post }: PostMenuProps) {
           )}
           {/* Report */}
           {!isPostAuthor && (
-            <DropdownMenu.Item onPress={() => setShowReportSheet(true)}>
+            <DropdownMenu.Item
+              onPress={() => withIdentity(() => setShowReportSheet(true))}
+            >
               <Icon name="flag" color="neutral_500" size={16} />
               <Text variant="secondary" fontWeight="bold">
                 Report
