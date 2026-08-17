@@ -3966,7 +3966,6 @@ dependencies = [
  "ed25519-dalek",
  "entity",
  "hex",
- "log",
  "mockito",
  "opentelemetry",
  "polycentric-common",

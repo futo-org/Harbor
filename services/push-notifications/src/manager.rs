@@ -4,13 +4,13 @@ use crate::{
     expo_client::{ExpoClient, ExpoPushData, ExpoPushRequest, ExpoPushResponse, ExpoRichContent},
     render,
 };
-use log::{debug, warn};
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, Event, Notification, NotificationKind, PublicKey,
 };
 use prost::Message;
 use sea_orm::{DbConn, DbErr, EnumIter};
 use std::{error::Error, fmt};
+use tracing::{debug, warn};
 
 #[derive(EnumIter)]
 pub enum PushService {
