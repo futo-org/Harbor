@@ -1,10 +1,9 @@
-import { Button, Screen, Text } from '@/src/common/components';
+import { Button, Text } from '@/src/common/components/primitives';
 import { AppFooter } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants/routes';
 import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, themes, useTheme, ZIndex } from '@/src/common/theme';
 import { PRIVATE_BROWSING_NOTICE } from '@/src/features/core/identity/SignupWidget';
-import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { Image } from 'expo-image';
@@ -76,15 +75,13 @@ export default function OnboardingWelcomeScreen() {
               title="Create new identity"
               variant="primary"
               fullWidth
-              onPress={() =>
-                router.push(Routes.onboarding.signup.setDisplayName)
-              }
+              href={Routes.onboarding.signup.index}
             />
             <Button
               title="Pair existing identity"
               variant="tertiary"
               fullWidth
-              onPress={() => router.push('/(onboarding)/login')}
+              href="/login"
             />
           </>
         ) : (

@@ -334,6 +334,7 @@ export function useCurrentIdentity() {
   return {
     identity: currentIdentity,
     identityKey: activeIdentityKey,
+    hasIdentity: !!activeIdentityKey,
     client,
     isCurrentIdentity,
     switchIdentity,

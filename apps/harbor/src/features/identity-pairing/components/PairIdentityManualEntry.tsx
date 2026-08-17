@@ -1,4 +1,4 @@
-import { Button, Text, TextInput } from '@/src/common/components';
+import { Button, Text, TextInput } from '@/src/common/components/primitives';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 

@@ -1,4 +1,5 @@
-import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
+import { Button, Text } from '@/src/common/components/primitives';
+import { RETURN_TO_PARAM, safeReturnTo } from '@/src/common/constants';
 import {
   publicKeyToString,
   usePolycentric,
@@ -8,7 +9,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { decodePairingCode, type PairingSessionInfo } from '../pairingCode';
@@ -17,6 +18,9 @@ export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
   const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
+  const returnTo = safeReturnTo(
+    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
+  );
 
   // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
   // to mean that the pairing code was invalid and couldn't be parsed and
@@ -39,9 +43,17 @@ export default function PairIdentityClaimerScreen() {
     if (!approved) return;
     void (async () => {
       await refreshCurrentIdentity();
-      router.replace('/(onboarding)/login/success');
+      // Carry the origin route through to the success screen.
+      router.replace(
+        returnTo
+          ? {
+              pathname: '/login/success',
+              params: { [RETURN_TO_PARAM]: returnTo },
+            }
+          : '/login/success',
+      );
     })();
-  }, [approved, refreshCurrentIdentity]);
+  }, [approved, refreshCurrentIdentity, returnTo]);
 
   const renderBody = () => {
     if (sessionInfo === undefined) {
@@ -153,23 +165,16 @@ export default function PairIdentityClaimerScreen() {
   };
 
   return (
-    <Screen>
-      <Screen.PrimaryColumn>
-        <View
-          style={[
-            Atoms.flex_1,
-            Atoms.py_lg,
-            Atoms.px_lg,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
-            ...(!sessionInfo || (sessionInfo && error && !claimInProgress)
-              ? [Atoms.flex_col, Atoms.gap_lg]
-              : []),
-          ]}
-        >
-          <ScreenHeader onBack={() => router.back()} />
-          {renderBody()}
-        </View>
-      </Screen.PrimaryColumn>
-    </Screen>
+    <View
+      style={[
+        Atoms.flex_1,
+        { backgroundColor: theme.atoms.bg.backgroundColor },
+        ...(!sessionInfo || (sessionInfo && error && !claimInProgress)
+          ? [Atoms.flex_col, Atoms.gap_lg]
+          : []),
+      ]}
+    >
+      {renderBody()}
+    </View>
   );
 }

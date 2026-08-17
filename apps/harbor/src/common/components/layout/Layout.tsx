@@ -149,12 +149,8 @@ function Screen({
   const pathname = usePathname();
 
   // Narrow web viewports hide the right sidebar and its signup widget, so
-  // signed-out visitors get a fixed bottom bar instead — except inside the
-  // signup/pairing flow itself, where it would cover the flow's buttons.
-  const inOnboarding =
-    pathname.startsWith('/signup') || pathname.startsWith('/login');
-  const showSignupBar =
-    isWeb && !identity && deviceWidth <= Breakpoints.md && !inOnboarding;
+  // signed-out visitors get a fixed bottom bar instead.
+  const showSignupBar = isWeb && !identity && deviceWidth <= Breakpoints.md;
   // biome-ignore lint/correctness/useExhaustiveDependencies: closes the drawer on every route change
   useEffect(() => {
     setDrawerOpen(false);
