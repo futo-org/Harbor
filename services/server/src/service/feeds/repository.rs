@@ -231,7 +231,7 @@ impl Query {
         query = query.limit(limit + 1); // + 1 for pagination.
 
         query.into_tuple().all(db).await.map_err(|err| {
-            log::warn!("failed to list feed events: {err}");
+            tracing::warn!(error = %err, "failed to list feed events");
             Status::internal("internal server error")
         })
     }
