@@ -6,6 +6,7 @@ import {
   type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
+  isUnderQueryKey,
   type QueryKey,
   useQueryStore,
 } from '@/src/common/query/hooks/useQuery';
@@ -25,10 +26,15 @@ import {
   updatePostEntry,
 } from './overlayOps';
 
+/** Orders the explore feed can be sorted by. */
+export type ExploreSort = 'top' | 'latest';
+
 export const feedQueryKeys = {
   following: (): string[] => ['following_feed'],
   identity: (identity: string): string[] => ['identity_feed', identity],
-  explore: (identity: string): string[] => ['explore_feed', identity],
+  /** Omit `sort` for the partition covering every sort. */
+  explore: (identity: string, sort?: ExploreSort): string[] =>
+    sort ? ['explore_feed', identity, sort] : ['explore_feed', identity],
 };
 
 export function threadQueryKey(parentId: string, limit = 0): string[] {
@@ -651,13 +657,23 @@ export function useFeedPageInfo(
 /**
  * Optimistically prepend a post into a feed
  */
+/** Cached feed keys under `queryKey`, which is a partition of them. */
+function cachedKeysUnder(queryKey: string[]): string[] {
+  const prefix = queryKey.join('\0');
+  return [...useFeedDataStore.getState().feedData.keys()].filter((key) =>
+    isUnderQueryKey(key, prefix),
+  );
+}
+
 export function injectPostIntoFeedCache(
   queryKey: string[],
   newBundle: v2.EventBundle,
 ): void {
   const post = decodePostBundle(newBundle);
   if (!post) return;
-  useFeedDataStore.getState().injectPostToFront(queryKey.join('\0'), post);
+  for (const key of cachedKeysUnder(queryKey)) {
+    useFeedDataStore.getState().injectPostToFront(key, post);
+  }
 }
 
 /**
@@ -685,8 +701,9 @@ export function alterPostReplyCount(
   parentPostId: string,
   amount: number,
 ): void {
-  const key = queryKey.join('\0');
-  useFeedDataStore.getState().alterReplyCount(key, parentPostId, amount);
+  for (const key of cachedKeysUnder(queryKey)) {
+    useFeedDataStore.getState().alterReplyCount(key, parentPostId, amount);
+  }
 }
 
 /**
@@ -704,8 +721,9 @@ export function injectReactionIntoFeedCache(
   next: Reaction | undefined,
   overlayTallies: boolean,
 ): void {
-  const key = queryKey.join('\0');
-  useFeedDataStore
-    .getState()
-    .injectReaction(key, postId, prev, next, overlayTallies);
+  for (const key of cachedKeysUnder(queryKey)) {
+    useFeedDataStore
+      .getState()
+      .injectReaction(key, postId, prev, next, overlayTallies);
+  }
 }

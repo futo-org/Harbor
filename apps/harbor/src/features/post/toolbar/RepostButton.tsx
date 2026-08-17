@@ -8,6 +8,7 @@ import {
 } from '@/src/common/constants';
 import {
   type PostData,
+  useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -21,6 +22,7 @@ type RepostButtonProps = { post: PostData };
 
 export default function RepostButton({ post }: RepostButtonProps) {
   const client = usePolycentric();
+  const { hasIdentity } = useCurrentIdentity();
   const canShare = useCanShare();
   const hasReposted = useReposts((s) => s.hasReposted(post.id));
   const addRepost = useReposts((s) => s.addRepost);
@@ -50,16 +52,21 @@ export default function RepostButton({ post }: RepostButtonProps) {
     void Share.share(isIOS ? { url } : { message: url }).catch(() => {});
   };
 
+  const button = (
+    <PostActionButton
+      icon="repost"
+      active={hasReposted}
+      color={'positive_500'}
+    />
+  );
+
+  // (Signed out)
+  if (!hasIdentity) return <View>{button}</View>;
+
   return (
     <View style={[]}>
       <DropdownMenu>
-        <DropdownMenu.Trigger asChild>
-          <PostActionButton
-            icon="repost"
-            active={hasReposted}
-            color={'positive_500'}
-          />
-        </DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild>{button}</DropdownMenu.Trigger>
         <DropdownMenu.Content align="start" side="top">
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon

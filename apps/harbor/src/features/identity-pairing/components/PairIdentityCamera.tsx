@@ -1,4 +1,4 @@
-import { LinkButton, Text } from '@/src/common/components';
+import { LinkButton, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';

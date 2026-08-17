@@ -102,9 +102,9 @@ fn create_event_created_at_marker(
 ///   identity referenced
 /// - latest profile event (display name / avatar / banner) for every
 ///   identity referenced
-pub async fn hydrate(
+pub async fn hydrate<Sorted>(
     ctx: &ServiceContext,
-    fetched: &Fetched,
+    fetched: &Fetched<Sorted>,
 ) -> Result<HydrationState, Status> {
     let rows = &fetched.rows;
 
@@ -337,11 +337,11 @@ pub fn has_matching_label(
 /// Remove rows that are tombstoned, omit-labeled, or whose indirect
 /// targets (quote/repost) are tombstoned or omit-labeled. Hint rows
 /// (referenced posts) are filtered alongside live rows.
-pub async fn filter(
-    fetched: Fetched,
+pub async fn filter<SortedBy>(
+    fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
-) -> Result<GetFeedResponseFilter, Status> {
+) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
     let Fetched { rows, page_info } = fetched;
     let omit_set: HashSet<&str> =
         omit_labels.iter().map(|s| s.as_str()).collect();
@@ -413,11 +413,11 @@ pub async fn filter(
 
 /// Build bundles from live rows, attach revocation proofs, and merge
 /// identity, profile and tombstone hints.
-pub async fn view(
+pub async fn view<SortedBy>(
     ctx: &ServiceContext,
-    filtered: GetFeedResponseFilter,
+    filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
-) -> Result<GetFeedResponseView, Status> {
+) -> Result<GetFeedResponseView<SortedBy>, Status> {
     let GetFeedResponseFilter {
         live_rows,
         mut tombstone_bundles,
@@ -477,11 +477,14 @@ mod tests {
     };
     use ::entity::content_model as ContentModel;
     use ::entity::event_model as EventModel;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use chrono::DateTime;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
 
-    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp_secs(seconds)
+            .unwrap()
+            .fixed_offset()
     }
 
     fn event_row(

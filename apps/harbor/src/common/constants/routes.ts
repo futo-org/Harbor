@@ -1,5 +1,16 @@
 import { router } from 'expo-router';
+import { withIdentity } from '../lib/authGate';
 import type { PostData } from '../lib/polycentric-hooks';
+
+/** Query param carrying where onboarding should land the user afterwards. */
+export const RETURN_TO_PARAM = 'returnTo';
+
+/** In-app absolute paths only, so `?returnTo=` cannot redirect off-site.
+ *  `/` is excluded: the onboarding welcome screen also serves it. */
+export function safeReturnTo(value: unknown): string | null {
+  if (typeof value !== 'string' || !/^\/(?!\/)/.test(value)) return null;
+  return value === '/' ? null : value;
+}
 
 export type OpenComposeOptions = {
   replyTo?: PostData['id'];
@@ -19,10 +30,12 @@ export function openCompose(options: OpenComposeOptions = {}) {
   }
   if (attachImage) params.set('attach', '1');
   const queryString = params.toString();
-  router.push(
-    queryString
-      ? `${Routes.tabs.feed.compose}?${queryString}`
-      : Routes.tabs.feed.compose,
+  withIdentity(() =>
+    router.push(
+      queryString
+        ? `${Routes.tabs.feed.compose}?${queryString}`
+        : Routes.tabs.feed.compose,
+    ),
   );
 }
 
@@ -78,10 +91,10 @@ export const Routes = {
   onboarding: {
     index: '/',
     signup: {
-      setDisplayName: '/signup/set_display_name',
-      setAbout: '/signup/set_about',
-      setAvatar: '/signup/set_avatar',
-      setModeration: '/signup/set_moderation',
+      index: '/signup',
+      about: '/signup/about',
+      avatar: '/signup/avatar',
+      moderation: '/signup/moderation',
     },
   },
 } as const;

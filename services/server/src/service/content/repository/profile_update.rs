@@ -31,7 +31,7 @@ fn to_json(set: Option<ImageSet>) -> Result<Option<Json>, Status> {
         Some(set) => match serde_json::to_value(set) {
             Ok(value) => Ok(Some(value)),
             Err(err) => {
-                log::warn!(
+                tracing::warn!(
                     "failed to serialise image set for profile update: {err}"
                 );
                 Err(Status::internal("internal server error"))

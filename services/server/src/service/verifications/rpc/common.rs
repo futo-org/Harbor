@@ -290,9 +290,10 @@ pub(crate) mod tests {
     use ::entity::content_verification_target_model as TargetModel;
     use ::entity::content_verification_verify_model as VerifyModel;
     use ::entity::event_model as EventModel;
+    use chrono::DateTime;
     use polycentric_common::models::collections;
     use prost::Message as _;
-    use sea_orm::prelude::TimeDateTimeWithTimeZone;
+    use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, EntityTrait, IdenStatic, IntoMockRow, Iterable,
         MockRow, ModelTrait, SelectA, SelectB, SelectC, Value,
@@ -307,8 +308,10 @@ pub(crate) mod tests {
         ServiceContext::new(db, kafka_producer)
     }
 
-    fn ts(seconds: i64) -> TimeDateTimeWithTimeZone {
-        TimeDateTimeWithTimeZone::from_unix_timestamp(seconds).unwrap()
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp_secs(seconds)
+            .unwrap()
+            .fixed_offset()
     }
 
     /// The claim EventKey every fixture references.

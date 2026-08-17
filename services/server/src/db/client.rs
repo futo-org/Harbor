@@ -1,4 +1,3 @@
-use log;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::time::Duration;
 
@@ -12,7 +11,6 @@ pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
         .idle_timeout(Duration::from_secs(8))
         .max_lifetime(Duration::from_secs(8))
         .sqlx_logging(false)
-        .sqlx_logging_level(log::LevelFilter::Info)
         .set_schema_search_path("public");
 
     let db = Database::connect(opt).await?;

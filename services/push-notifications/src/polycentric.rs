@@ -4,7 +4,6 @@
 //! signing key or chain state — just the set of servers to query and the
 //! one-shot read methods built on `EventSyncService.ListEvents`.
 
-use log::warn;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, Event, GetServerInfoRequest, ImageSet, ListEventsFilters,
@@ -13,6 +12,7 @@ use polycentric_common::models::protos_v2::{
 };
 use polycentric_core::query::channel;
 use prost::Message;
+use tracing::warn;
 
 /// Summary of an identity's latest PROFILE event.
 pub struct ProfileSummary {

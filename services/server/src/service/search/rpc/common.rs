@@ -261,7 +261,7 @@ pub async fn hydrate<SortedBy>(
         repository::Query::list_events_by_keys(&ctx.db, &ref_keys)
             .await
             .map_err(|err| {
-                log::warn!("failed to list events: {err}");
+                tracing::warn!("failed to list events: {err}");
                 Status::internal("internal server error")
             })
     };
@@ -273,7 +273,7 @@ pub async fn hydrate<SortedBy>(
         )
         .await
         .map_err(|err| {
-            log::warn!("failed to list labels: {err}");
+            tracing::warn!("failed to list labels: {err}");
             Status::internal("internal server error")
         })
     };
@@ -282,7 +282,7 @@ pub async fn hydrate<SortedBy>(
         gather_stats_for(&ctx.db, &display_keys)
             .await
             .map_err(|err| {
-                log::warn!("failed to gather stats: {err}");
+                tracing::warn!("failed to gather stats: {err}");
                 Status::internal("internal server error")
             })
     };

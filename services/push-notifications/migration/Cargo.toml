@@ -11,9 +11,6 @@ path = "src/lib.rs"
 
 [dependencies]
 push-notifications-entity = { path = "../entity" }
-sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock"] }
+sea-orm-migration = { workspace = true, features = ["cli", "sqlx-postgres", "runtime-tokio"] }
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
-
-[dependencies.sea-orm-migration]
-workspace = true
-features = [ "sqlx-postgres", "runtime-tokio" ]

@@ -386,8 +386,45 @@ const FfiConverterTypeGetEventArgs = (() => {
     return new FFIConverter();
 })();
 
+/**
+ * Order the explore feed is returned in. `Top` ranks by reaction count,
+ * the others by creation time.
+ */
+export enum ExploreFeedSort {
+    Default,
+    Top,
+    Latest
+}
+
+const FfiConverterTypeExploreFeedSort = (() => {
+    const ordinalConverter = FfiConverterInt32;
+    type TypeName = ExploreFeedSort;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            switch (ordinalConverter.read(from)) {
+                case 1: return ExploreFeedSort.Default;
+                case 2: return ExploreFeedSort.Top;
+                case 3: return ExploreFeedSort.Latest;
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            switch (value) {
+                case ExploreFeedSort.Default: return ordinalConverter.write(1, into);
+                case ExploreFeedSort.Top: return ordinalConverter.write(2, into);
+                case ExploreFeedSort.Latest: return ordinalConverter.write(3, into);
+            }
+        }
+        allocationSize(value: TypeName): number {
+            return ordinalConverter.allocationSize(0);
+        }
+    }
+    return new FFIConverter();
+})();
+
 export type GetExploreFeedArgs = {
     identity?: string,
+    sortBy?: ExploreFeedSort,
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
@@ -416,6 +453,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         read(from: RustBuffer): TypeName {
             return {
                 identity: FfiConverterOptionalString.read(from), 
+                sortBy: FfiConverterOptionalTypeExploreFeedSort.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
@@ -424,6 +462,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         }
         write(value: TypeName, into: RustBuffer): void {
             FfiConverterOptionalString.write(value.identity, into);
+            FfiConverterOptionalTypeExploreFeedSort.write(value.sortBy, into);
             FfiConverterOptionalInt32.write(value.limit, into);
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
@@ -431,6 +470,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalString.allocationSize(value.identity) +
+             FfiConverterOptionalTypeExploreFeedSort.allocationSize(value.sortBy) +
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
@@ -1331,9 +1371,8 @@ const FfiConverterTypeUpdateMode = (() => {
  */
 export enum EmitMode {
     /**
-     * Emit only once every server has responded or timed out, so
-     * results never reorder mid-render. Any cached data is still
-     * emitted up front.
+     * Emit once every server has responded or timed out. Cached data
+     * still emits up front.
      */
     Default,
     /**
@@ -5467,6 +5506,12 @@ const uniffiTypePolycentricCoreObjectFactory: UniffiObjectFactory<PolycentricCor
 }})();
 const FfiConverterTypePolycentricCore = new FfiConverterObject(uniffiTypePolycentricCoreObjectFactory);
 
+// FfiConverter for string | undefined
+const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
+
+// FfiConverter for ExploreFeedSort | undefined
+const FfiConverterOptionalTypeExploreFeedSort = new FfiConverterOptional(FfiConverterTypeExploreFeedSort);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 
@@ -5704,6 +5749,7 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeEmitMode,
     FfiConverterTypeEventKey,
+    FfiConverterTypeExploreFeedSort,
     FfiConverterTypeFetchMode,
     FfiConverterTypeGetAttributionFeedArgs,
     FfiConverterTypeGetEventArgs,

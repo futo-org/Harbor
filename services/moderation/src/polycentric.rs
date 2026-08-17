@@ -2,7 +2,6 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use ed25519_dalek::{Signer, SigningKey};
-use log::{info, warn};
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, KeyType, Labels,
@@ -10,6 +9,7 @@ use polycentric_common::models::protos_v2::{
     SerializedContent, SignedEvent, content::ContentBody,
     event_sync_service_client::EventSyncServiceClient,
 };
+use tracing::{info, warn};
 // rs-core's client manages the local event/content stores and chain math.
 use polycentric_core::client::PolycentricClient as CoreClient;
 use polycentric_core::query::channel;

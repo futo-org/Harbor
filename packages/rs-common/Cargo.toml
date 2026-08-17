@@ -23,7 +23,7 @@ tonic-prost.workspace = true
 ed25519-dalek.workspace = true
 sha2.workspace = true
 base64.workspace = true
-hex.workspace = true
+hex = { workspace = true, features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

@@ -14,7 +14,7 @@ use context::Context;
 use manager::NotificationManager;
 use polycentric::PolycentricClient;
 
-use log::{info, warn};
+use tracing::{info, warn};
 
 use std::collections::HashMap;
 use std::net::SocketAddr;

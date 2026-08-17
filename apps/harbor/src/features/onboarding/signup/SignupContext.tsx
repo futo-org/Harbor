@@ -1,7 +1,8 @@
 import type { Href } from 'expo-router';
-import { router, usePathname } from 'expo-router';
+import { router, useLocalSearchParams, usePathname } from 'expo-router';
+import { useState } from 'react';
 import { create } from 'zustand';
-import { Routes } from '@/src/common/constants';
+import { RETURN_TO_PARAM, Routes, safeReturnTo } from '@/src/common/constants';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
@@ -60,6 +61,11 @@ const useSignupStore = create<SignupStore>((set) => ({
 
 export function useSignup() {
   const pathname = usePathname();
+  const [submitting, setSubmitting] = useState(false);
+  // Where the signup prompt was opened from, carried across the steps.
+  const returnTo = safeReturnTo(
+    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
+  );
   const { client, refreshCurrentIdentity } = usePolycentricContext();
   const { data, setDisplayName, setAbout, setAvatarUri, setModeration, reset } =
     useSignupStore();
@@ -70,7 +76,11 @@ export function useSignup() {
   const goToNextStep = () => {
     const nextStep = getNextStep(currentStep);
     if (nextStep) {
-      router.push(nextStep);
+      router.push(
+        returnTo
+          ? { pathname: nextStep, params: { [RETURN_TO_PARAM]: returnTo } }
+          : nextStep,
+      );
     }
   };
 
@@ -86,6 +96,7 @@ export function useSignup() {
       return;
     }
 
+    setSubmitting(true);
     try {
       await createIdentity(client, DEFAULT_SERVER);
       await publishProfileUpdate(client, {
@@ -96,9 +107,11 @@ export function useSignup() {
       await refreshCurrentIdentity();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       reset();
-      router.replace(Routes.tabs.feed.index as Href);
+      // Back to the screen the signup prompt was opened from, if any.
+      router.replace((returnTo ?? Routes.tabs.feed.index) as Href);
     } catch (error) {
       console.error('Failed to create identity:', error);
+      setSubmitting(false);
     }
   };
 
@@ -113,5 +126,6 @@ export function useSignup() {
     goToNextStep,
     close,
     finish,
+    submitting,
   };
 }

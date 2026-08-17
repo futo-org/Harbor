@@ -29,8 +29,8 @@ servers — if a server is unavailable or hides data, clients read from elsewher
 An **identity** is not a server account. It is a document
 ([`Identity`](./data-model.md#identity)) describing a set of keys:
 
-- **Rotation keys** — a priority-ordered list of public keys that control the
-  identity itself and can authorize new keys.
+- **Rotation keys** — a list of public keys that control the identity itself and
+  can authorize new keys.
 - **Signing keys** — keys allowed to sign events but not to change the identity
   document.
 - **Revocation bounds** — when a key is revoked, the identity records the key's last
@@ -89,9 +89,11 @@ head, and proofs establish which events fall before the revocation point.
 
 ## Vector clocks
 
-An event's [`VectorClock`](./data-model.md#vectorclock) records the sequence
-numbers, in other collections, that the signer was aware of when writing it. This lets
-consumers order events across collections under eventual consistency.
+An event's [`VectorClock`](./data-model.md#vectorclock) records information
+about the event's signer's knowledge of other events in the collection at the
+time of creating the event. More specifically, it records the highest known
+sequence number that each signer in the identity document referenced by the
+event has used in the same collection as the event.
 
 ## Mutable values (CRDTs)
 

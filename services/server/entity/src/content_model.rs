@@ -53,7 +53,7 @@ pub struct Model {
         HasOne<super::content_verification_verify_model::Entity>,
 
     // Timestamp the server received the content
-    pub synced_at: TimeDateTimeWithTimeZone,
+    pub synced_at: DateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -49,7 +49,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
         Atoms.py_md,
         {
           borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '40'),
+          borderBottomColor: theme.palette.neutral_25,
           backgroundColor: theme.palette.neutral_0,
           overflow: 'hidden',
         },

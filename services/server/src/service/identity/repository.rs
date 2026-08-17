@@ -29,8 +29,7 @@ pub struct BanCursor {
 pub struct Query;
 
 impl Query {
-    /// Authorized keys for `identity`'s validated chain head. Walks the IDENTITY-collection events
-    /// from genesis
+    /// Authorized keys for `identity`'s validated chain head.
     pub async fn authorized_keys(
         db: &DbConn,
         identity: &str,

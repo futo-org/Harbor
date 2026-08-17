@@ -1,11 +1,11 @@
-import { Button, Screen, Text } from '@/src/common/components';
+import { Button, Text } from '@/src/common/components/primitives';
 import { AppFooter } from '@/src/common/components/layout';
 import { Routes } from '@/src/common/constants/routes';
 import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, themes, useTheme, ZIndex } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { PRIVATE_BROWSING_NOTICE } from '@/src/features/core/identity/SignupWidget';
-import { router } from 'expo-router';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 import HARBOR_LOGO from '../../common/assets/images/harbor-logo-with-text.png';
@@ -13,6 +13,7 @@ import LOGO_WITH_TEXT from '../../common/assets/images/harbor-scene-splash.svg';
 
 export default function OnboardingWelcomeScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const isStoragePersistent = useIsStoragePersistent();
   return (
     // <Screen showLeftSidebar={false}>
@@ -30,6 +31,7 @@ export default function OnboardingWelcomeScreen() {
           Atoms.items_center,
           // Keeps the logo above the splash image, which renders after it.
           { zIndex: ZIndex.raised },
+          { paddingTop: insets.top + Spacing['2xl'] },
         ]}
       >
         <Image
@@ -67,7 +69,10 @@ export default function OnboardingWelcomeScreen() {
           Atoms.w_full,
           Atoms.mt_auto,
           Atoms.p_lg,
-          { backgroundColor: theme.palette.neutral_0 },
+          {
+            backgroundColor: theme.palette.neutral_0,
+            paddingBottom: insets.bottom + Spacing.lg,
+          },
         ]}
       >
         {isStoragePersistent ? (
@@ -76,15 +81,13 @@ export default function OnboardingWelcomeScreen() {
               title="Create new identity"
               variant="primary"
               fullWidth
-              onPress={() =>
-                router.push(Routes.onboarding.signup.setDisplayName)
-              }
+              href={Routes.onboarding.signup.index}
             />
             <Button
               title="Pair existing identity"
               variant="tertiary"
               fullWidth
-              onPress={() => router.push('/(onboarding)/login')}
+              href="/login"
             />
           </>
         ) : (

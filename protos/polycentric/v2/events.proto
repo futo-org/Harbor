@@ -6,8 +6,10 @@ import "polycentric/v2/content.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/keypair.proto";
 
-// Contains the sequences (of the same event collection) that the current KeyPair is aware of. 
-// The order of the sequences is determined by the the keys listed 
+// Contains the sequences (of the same event collection) that the current KeyPair is aware of.
+// The order of the sequences is determined by the keys listed in the relevant identity document:
+// The rotation keys first and then the signing keys, with duplicates skipped when they appear again.
+// Use `Identity::deduplicated_keys()` to get the keys in this order.
 message VectorClock {
   repeated uint64 sequence = 1;
 }

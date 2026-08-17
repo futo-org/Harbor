@@ -21,7 +21,6 @@ common-telemetry = { path = "../common/telemetry" }
 # 3rd Party
 ed25519-dalek.workspace = true
 hex.workspace = true
-log.workspace = true
 opentelemetry.workspace = true
 tracing.workspace = true
 prost.workspace = true
