@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
   type StyleProps,
 } from 'react-native-reanimated';
 
@@ -26,8 +27,12 @@ const HEADER_SETTLE_MS = 180;
  *  `initialHeight` is used until the header reports its own.
  *
  *  Put both in a `HidingHeaderStack` with `stackStyle`, `onHeaderLayout` on the
- *  header, and `scrollableStyle` on the scrollable. */
-export function useHidingHeader(initialHeight = 0) {
+ *  header, and `scrollableStyle` on the scrollable. `scrollY`, if given, tracks
+ *  the scroll offset. */
+export function useHidingHeader(
+  initialHeight = 0,
+  scrollY?: SharedValue<number>,
+) {
   const lastScrollY = useSharedValue(0);
   const headerTranslate = useSharedValue(0);
   const headerHeightShared = useSharedValue(initialHeight);
@@ -68,6 +73,7 @@ export function useHidingHeader(initialHeight = 0) {
     onScroll: (event) => {
       const h = headerHeightShared.value;
       const currentY = event.contentOffset.y;
+      if (scrollY) scrollY.value = currentY;
 
       if (currentY <= HEADER_HIDE_THRESHOLD) {
         headerTranslate.value = 0;

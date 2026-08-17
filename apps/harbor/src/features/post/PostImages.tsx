@@ -4,6 +4,10 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { useImageViewer } from '@/src/common/components/ImageViewer';
+import {
+  MAX_ASPECT_RATIO,
+  MIN_ASPECT_RATIO,
+} from '@/src/features/composer/utils/attachmentLayout';
 import type { v2 } from '@polycentric/react-native';
 import { memo, useCallback, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
@@ -83,9 +87,9 @@ export const PostImages = memo(function PostImages({
             Atoms.w_full,
             Atoms.rounded_md,
             {
-              aspectRatio: Math.max(
-                0.75,
-                Math.min(sources[0].aspectRatio, 1.8),
+              aspectRatio: Math.min(
+                MAX_ASPECT_RATIO,
+                Math.max(sources[0].aspectRatio, MIN_ASPECT_RATIO),
               ),
               backgroundColor: TILE_BG,
             },

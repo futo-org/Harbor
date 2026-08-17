@@ -4,6 +4,7 @@ import type { FlashListProps } from '@/src/features/post';
 import FeedList from '@/src/features/feed/FeedList';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 type ProfileFeedTab = {
   key: string;
@@ -21,11 +22,13 @@ type ListHeader = FlashListProps<unknown>['ListHeaderComponent'];
 export function ProfileFeedSwitcher({
   tabs,
   activeKey,
-  HeaderComponent,
+  ListHeaderComponent,
+  scrollY,
 }: {
   tabs: ProfileFeedTab[];
   activeKey: string;
-  HeaderComponent?: ListHeader;
+  ListHeaderComponent?: ListHeader;
+  scrollY?: SharedValue<number>;
 }) {
   const active = tabs.find((t) => t.key === activeKey) ?? tabs[0];
   if (!active) return null;
@@ -51,7 +54,8 @@ export function ProfileFeedSwitcher({
     <FeedList
       key={active.key}
       feed={feed}
-      HeaderComponent={HeaderComponent}
+      ListHeaderComponent={ListHeaderComponent}
+      scrollY={scrollY}
       contentContainerStyle={
         bottomPadding ? { paddingBottom: bottomPadding } : undefined
       }

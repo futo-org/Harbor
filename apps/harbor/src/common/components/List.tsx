@@ -18,7 +18,7 @@ import {
   useState,
 } from 'react';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { type SharedValue } from 'react-native-reanimated';
 import { Atoms, useTheme } from '../theme';
 import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
 import { InfoTooltip } from './InfoTooltip';
@@ -75,6 +75,8 @@ export type ListProps<T> = FlashListProps<T> & {
     | undefined;
   /** Known height of `HeaderComponent`, used until it reports its own. */
   initialHeaderHeight?: number;
+  /** Tracks the scroll offset */
+  scrollY?: SharedValue<number>;
 };
 
 /** Imperative handle exposed by `List` (and `FeedList`). */
@@ -102,11 +104,12 @@ function NativeList<T>({
   refreshControl,
   onScroll: _ignoredOnScroll,
   listRef,
+  scrollY,
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
   const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
-    useHidingHeader(initialHeaderHeight);
+    useHidingHeader(initialHeaderHeight, scrollY);
 
   useImperativeHandle(
     listRef,
