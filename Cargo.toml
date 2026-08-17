@@ -41,8 +41,7 @@ hex = { version = "0.4", default-features = false }
 # Misc shared
 thiserror = { version = "2.0", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
-log = { version = "0.4", default-features = false }
-tracing = { version = "0.1", default-features = false, features = ["std", "log"] }
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "json"] }
 opentelemetry = { version = "0.32", default-features = false, features = ["metrics"] }
 opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics"] }
