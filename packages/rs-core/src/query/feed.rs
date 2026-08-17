@@ -364,6 +364,7 @@ mod tests {
     use crate::query::event::merge::event_dedup_key;
 
     use super::*;
+    use polycentric_common::models::collections;
     use polycentric_common::models::protos_v2::{
         Event, EventBundle, EventHint, EventKey, GetFeedResponse, PageInfo, PublicKey, SignedEvent,
     };
@@ -495,6 +496,19 @@ mod tests {
 
         let merged = merge_feed_responses(&[prev, new], &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_hints.len(), 1);
+    }
+
+    #[test]
+    fn merge_keeps_a_label_hint_only_one_server_has() {
+        let post = make_bundle(2, "a", 1, vec![1], 1);
+        let label = make_bundle(collections::LABELS, "moderator", 1, vec![9], 1);
+        let with_label = encode_response(vec![post.clone()], vec![label]);
+        let without_label = encode_response(vec![post], vec![]);
+
+        let merged = merge_feed_responses(&[without_label, with_label], &test_client());
+        let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
+        assert_eq!(decoded.event_bundles.len(), 1);
         assert_eq!(decoded.event_hints.len(), 1);
     }
 

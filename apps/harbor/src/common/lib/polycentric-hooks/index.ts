@@ -54,6 +54,7 @@ export {
 export { truncateText as truncateName } from '../../util/truncateText';
 export type {
   PostData,
+  PostLabel,
   ContentKind,
   ContentBodyOf,
   DecodedBundle,

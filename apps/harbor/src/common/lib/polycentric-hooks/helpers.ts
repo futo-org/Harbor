@@ -235,6 +235,25 @@ export function decodeLabelsBundle(
   }
 }
 
+/**
+ * Index every `Labels` event in `hints` by the id of the post it targets.
+ * Shared by the feed, thread and notification decoders.
+ */
+export function buildLabelMap(hints: v2.EventHint[]): Map<string, PostLabel[]> {
+  const labelMap = new Map<string, PostLabel[]>();
+  for (const hint of hints) {
+    if (!hint.eventBundle) continue;
+    const decoded = decodeLabelsBundle(hint.eventBundle);
+    if (!decoded) continue;
+    const existing = labelMap.get(decoded.targetPostId);
+    labelMap.set(
+      decoded.targetPostId,
+      existing ? [...existing, ...decoded.labels] : decoded.labels,
+    );
+  }
+  return labelMap;
+}
+
 /** A repost event decoded into who reposted, the target post's id, and
  *  the repost event's own id. `null` if the bundle isn't a repost. */
 function decodeRepostBundle(bundle: v2.EventBundle): {
@@ -267,21 +286,12 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  */
 export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
   const hintPosts = new Map<string, PostData>();
-  const labelMap = new Map<string, PostLabel[]>();
   for (const hint of response.eventHints) {
     if (!hint.eventBundle) continue;
     const post = decodePostBundle(hint.eventBundle);
     if (post) hintPosts.set(post.id, post);
-
-    const labels = decodeLabelsBundle(hint.eventBundle);
-    if (labels) {
-      const existing = labelMap.get(labels.targetPostId);
-      labelMap.set(
-        labels.targetPostId,
-        existing ? [...existing, ...labels.labels] : labels.labels,
-      );
-    }
   }
+  const labelMap = buildLabelMap(response.eventHints);
 
   const items: PostData[] = [];
   for (const bundle of response.eventBundles) {

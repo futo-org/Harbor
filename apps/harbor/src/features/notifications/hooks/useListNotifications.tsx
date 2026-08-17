@@ -1,5 +1,6 @@
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
+import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeNotifications, type NotificationData } from '../utils';
@@ -18,10 +19,11 @@ export default function useListNotifications(
 ): UseListNotificationsResult {
   const { client } = usePolycentricContext();
   const identity = client.activeIdentityKey || '';
+  const omitLabels = useOmitLabels();
 
   const query = useQuery(
     ['list_notifications', identity],
-    new Query.ListNotifications({ identity, omitLabels: [] }),
+    new Query.ListNotifications({ identity, omitLabels }),
     undefined,
     enabled && !!identity,
   );

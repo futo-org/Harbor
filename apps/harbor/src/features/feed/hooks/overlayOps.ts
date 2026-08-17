@@ -1,4 +1,4 @@
-import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData, PostLabel } from '@/src/common/lib/polycentric-hooks';
 import {
   type CounterOverlay,
   EMPTY_POST_OVERLAY,
@@ -133,6 +133,48 @@ export function talliesChanged(
   return false;
 }
 
+/** Identity of a label, for comparison. */
+function labelKey(label: PostLabel): string {
+  return `${label.value}\0${label.labeledBy}`;
+}
+
+/**
+ * Check whether two label sets differ, ignoring order. Absent and empty are
+ * treated as equivalent.
+ */
+export function labelsChanged(
+  a: PostLabel[] | undefined,
+  b: PostLabel[] | undefined,
+): boolean {
+  if (a === b) return false;
+  if ((a?.length ?? 0) !== (b?.length ?? 0)) return true;
+  if (!a || !b) return false;
+
+  const keys = new Set(a.map(labelKey));
+  return b.some((label) => !keys.has(labelKey(label)));
+}
+
+/**
+ * Union two label sets, deduplicated.
+ */
+export function mergeLabels(
+  orig: PostLabel[] | undefined,
+  latest: PostLabel[] | undefined,
+): PostLabel[] | undefined {
+  if (!orig?.length) return latest;
+  if (!latest?.length) return orig;
+
+  const merged = [...orig];
+  const keys = new Set(orig.map(labelKey));
+  for (const label of latest) {
+    if (keys.has(labelKey(label))) continue;
+    keys.add(labelKey(label));
+    merged.push(label);
+  }
+
+  return merged;
+}
+
 /**
  * Assume that `orig` and `updated` have the same post id and check whether any
  * metadata has changed.
@@ -144,6 +186,7 @@ export function postChanged(orig: PostData, updated: PostData): boolean {
   if (orig.downvoteCount !== updated.downvoteCount) return true;
   if (talliesChanged(orig.reactionTallies, updated.reactionTallies))
     return true;
+  if (labelsChanged(orig.labels, updated.labels)) return true;
 
   return false;
 }
@@ -157,10 +200,13 @@ export function updatePostEntry(
   orig: PostEntry | undefined,
   latest: PostData,
 ): PostEntry {
+  const labels = mergeLabels(orig?.originalPost.labels, latest.labels);
+  const withLabels = { ...latest, labels };
+
   const originalPost =
-    orig && !postChanged(orig.originalPost, latest)
+    orig && !postChanged(orig.originalPost, withLabels)
       ? orig.originalPost
-      : latest;
+      : withLabels;
 
   const overlay = updatePostOverlay(orig?.overlay, latest);
 

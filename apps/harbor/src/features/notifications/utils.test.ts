@@ -31,6 +31,7 @@ import { decodeNotifications } from './utils';
 
 const ACTOR = 'actoridentity';
 const TARGET_IDENTITY = 'youridentity';
+const MODERATOR = 'moderatoridentity';
 
 const SIGNED_BY = v2.PublicKey.create({
   keyType: 1,
@@ -102,6 +103,18 @@ function reactionContent(eventKey: v2.EventKey, emoji?: string): v2.Content {
   });
 }
 
+function labelsContent(
+  eventKey: v2.EventKey,
+  labelValues: string[],
+): v2.Content {
+  return v2.Content.create({
+    contentBody: {
+      oneofKind: 'labels',
+      labels: v2.Labels.create({ eventKey, labelValues }),
+    },
+  });
+}
+
 function repostContent(post: v2.EventKey): v2.Content {
   return v2.Content.create({
     contentBody: { oneofKind: 'repost', repost: v2.Repost.create({ post }) },
@@ -161,9 +174,10 @@ const targetBundle = makeBundle(
   5,
 );
 
-function decodeOne(notification: v2.Notification) {
+function decodeOne(notification: v2.Notification, hints: v2.EventHint[] = []) {
   const response = v2.ListNotificationsResponse.create({
     notifications: [notification],
+    eventHints: hints,
   });
   return decodeNotifications(response);
 }
@@ -324,6 +338,88 @@ describe('decodeNotifications', () => {
     expect(item.kind).toBe('verificationRequest');
     if (item.kind === 'verificationRequest') {
       expect(item.claimKey).toBeUndefined();
+    }
+  });
+
+  it('labels a reply from the response hints', () => {
+    const replyKey = makeEventKey(ACTOR, 7);
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          postContent('my reply', { reply: TARGET_KEY }),
+          7,
+        ),
+        targetEvent: targetBundle,
+        kind: v2.NotificationKind.REPLY,
+      }),
+      [
+        v2.EventHint.create({
+          eventBundle: makeBundle(
+            MODERATOR,
+            labelsContent(replyKey, ['violence']),
+          ),
+        }),
+      ],
+    );
+    expect(item.kind).toBe('reply');
+    if (item.kind === 'reply') {
+      expect(item.reply.labels).toEqual([
+        { value: 'violence', labeledBy: MODERATOR },
+      ]);
+    }
+  });
+
+  it('labels a quote from the response hints', () => {
+    const quoteKey = makeEventKey(ACTOR, 8);
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          postContent('quoting you', { quote: TARGET_KEY }),
+          8,
+        ),
+        kind: v2.NotificationKind.QUOTE,
+      }),
+      [
+        v2.EventHint.create({
+          eventBundle: makeBundle(
+            MODERATOR,
+            labelsContent(quoteKey, ['nudity', 'violence']),
+          ),
+        }),
+      ],
+    );
+    expect(item.kind).toBe('quote');
+    if (item.kind === 'quote') {
+      expect(item.quote.labels?.map((l) => l.value)).toEqual([
+        'nudity',
+        'violence',
+      ]);
+    }
+  });
+
+  it('leaves posts unlabelled when no hint targets them', () => {
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          postContent('my reply', { reply: TARGET_KEY }),
+        ),
+        kind: v2.NotificationKind.REPLY,
+      }),
+      [
+        v2.EventHint.create({
+          eventBundle: makeBundle(
+            MODERATOR,
+            labelsContent(makeEventKey('someoneelse', 9), ['violence']),
+          ),
+        }),
+      ],
+    );
+    expect(item.kind).toBe('reply');
+    if (item.kind === 'reply') {
+      expect(item.reply.labels).toBeUndefined();
     }
   });
 
