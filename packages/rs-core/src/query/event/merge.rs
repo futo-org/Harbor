@@ -44,6 +44,18 @@ pub fn bundle_created_at(bundle: &EventBundle) -> Option<u64> {
     Some(event.created_at)
 }
 
+/// The positive-reaction count the server reported for the bundle.
+/// Servers omit the count for posts with no reactions, which ranks the
+/// same as zero.
+pub fn bundle_upvote_count(bundle: &EventBundle) -> u64 {
+    bundle
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.upvote_count)
+        .unwrap_or(0)
+        .max(0) as u64
+}
+
 /// Pull bundles out of each `EventHint` and copy them into the local
 /// client stores. Hints are useful side-information the server
 /// provides (e.g. the profile of a post's author).

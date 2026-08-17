@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
     EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams,
+    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
     feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
@@ -18,8 +18,8 @@ use crate::{
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, bundle_created_at, copy_hints, merge_bundle_responses,
-                merge_event_bundles, merge_event_hints,
+                EventBundleResponse, bundle_created_at, bundle_upvote_count, copy_hints,
+                merge_bundle_responses, merge_event_bundles, merge_event_hints,
             },
         },
         pagination::{FakeCursorToken, merge_page_info, pagination_horizon, prepare_page_info},
@@ -45,9 +45,29 @@ pub struct GetFollowingFeedArgs {
     pub omit_labels: Vec<String>,
 }
 
+/// Order the explore feed is returned in. `Top` ranks by reaction count,
+/// the others by creation time.
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum ExploreFeedSort {
+    Default,
+    Top,
+    Latest,
+}
+
+impl From<ExploreFeedSort> for SortPostsBy {
+    fn from(sort: ExploreFeedSort) -> Self {
+        match sort {
+            ExploreFeedSort::Default => SortPostsBy::Default,
+            ExploreFeedSort::Top => SortPostsBy::Top,
+            ExploreFeedSort::Latest => SortPostsBy::Latest,
+        }
+    }
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetExploreFeedArgs {
     pub identity: Option<String>,
+    pub sort_by: Option<ExploreFeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
@@ -60,22 +80,52 @@ pub struct GetPostThreadArgs {
     pub limit: i32,
 }
 
+/// The key servers ordered a feed by. Merging has to order pages by the
+/// same key, or it would rearrange the ranking the server sent. Higher
+/// keys come first.
+#[derive(Clone, Copy)]
+enum FeedOrder {
+    CreatedAt,
+    Upvotes,
+}
+
+impl FeedOrder {
+    fn key(self, bundle: &EventBundle) -> Option<u64> {
+        match self {
+            Self::CreatedAt => bundle_created_at(bundle),
+            Self::Upvotes => Some(bundle_upvote_count(bundle)),
+        }
+    }
+}
+
+impl From<ExploreFeedSort> for FeedOrder {
+    fn from(sort: ExploreFeedSort) -> Self {
+        match sort {
+            ExploreFeedSort::Top => Self::Upvotes,
+            ExploreFeedSort::Default | ExploreFeedSort::Latest => Self::CreatedAt,
+        }
+    }
+}
+
 /// Merge function for every feed-RPC observable
-fn validated_feed_merge(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    do_feed_merge(values, client, true)
+fn validated_feed_merge(
+    order: FeedOrder,
+) -> impl Fn(&[Vec<u8>], &Arc<Mutex<PolycentricClient>>) -> Vec<u8> + Send + Sync + 'static {
+    move |values, client| do_feed_merge(values, client, true, order)
 }
 
 /// TODO: remove.
 /// currently only used in tests.
 #[allow(dead_code)]
 fn merge_feed_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    do_feed_merge(values, client, false)
+    do_feed_merge(values, client, false, FeedOrder::CreatedAt)
 }
 
 fn do_feed_merge(
     values: &[Vec<u8>],
     client: &Arc<Mutex<PolycentricClient>>,
     validate: bool,
+    order: FeedOrder,
 ) -> Vec<u8> {
     let mut response = GetFeedResponse::default();
     let mut oldest_by_server: BTreeMap<String, u64> = BTreeMap::new();
@@ -89,7 +139,7 @@ fn do_feed_merge(
             let oldest = incoming
                 .event_bundles
                 .iter()
-                .filter_map(bundle_created_at)
+                .filter_map(|bundle| order.key(bundle))
                 .min();
             if let (Some(server), Some(oldest)) = (server, oldest) {
                 oldest_by_server
@@ -113,10 +163,11 @@ fn do_feed_merge(
         retain_validated_hints(&c, &mut response.event_hints);
     }
 
-    // Newest first; undecodable events sort last.
+    // Highest key first; keyless events sort last. Stable, so events a
+    // server tied on keep the order it sent them in.
     response
         .event_bundles
-        .sort_by_cached_key(|bundle| Reverse(bundle_created_at(bundle)));
+        .sort_by_cached_key(|bundle| Reverse(order.key(bundle)));
 
     // Hold back items that servers with more data haven't paged past yet,
     // so later pages never insert above already-emitted items.
@@ -127,7 +178,7 @@ fn do_feed_merge(
     if let Some(horizon) = horizon {
         response
             .event_bundles
-            .retain(|b| bundle_created_at(b).is_some_and(|t| t >= horizon));
+            .retain(|b| order.key(b).is_some_and(|k| k >= horizon));
     }
 
     response.encode_to_vec()
@@ -198,7 +249,12 @@ pub fn get_identity_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(FeedOrder::CreatedAt),
+        opts,
+    ))
 }
 
 /// Returns posts an identity is following
@@ -255,7 +311,12 @@ pub fn get_following_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(FeedOrder::CreatedAt),
+        opts,
+    ))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
@@ -267,12 +328,14 @@ pub fn get_explore_feed(
 ) -> Arc<dyn QueryObservable> {
     let GetExploreFeedArgs {
         identity,
+        sort_by,
         limit,
         backward_token,
         forward_token,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
+    let order = sort_by.map_or(FeedOrder::CreatedAt, FeedOrder::from);
 
     let query_fn = move |server_url: String| {
         let identity = identity.clone();
@@ -293,7 +356,7 @@ pub fn get_explore_feed(
                         forward_token,
                     }),
                     omit_labels,
-                    sort_by: None,
+                    sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
                 })
                 .await
                 .map_err(|e| format!("get_explore_feed [{server_url}]: {e}"))?
@@ -313,7 +376,7 @@ pub fn get_explore_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge, opts))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
 }
 
 /// Fetch a parent post and its direct replies. `event_key` identifies
@@ -366,7 +429,8 @@ mod tests {
 
     use super::*;
     use polycentric_common::models::protos_v2::{
-        Event, EventBundle, EventHint, EventKey, GetFeedResponse, PageInfo, PublicKey, SignedEvent,
+        Event, EventBundle, EventHint, EventKey, EventMetadata, GetFeedResponse, PageInfo,
+        PublicKey, SignedEvent,
     };
 
     fn make_bundle(
@@ -547,6 +611,49 @@ mod tests {
             .iter()
             .filter_map(bundle_created_at)
             .collect()
+    }
+
+    fn upvotes(merged: &[u8]) -> Vec<u64> {
+        GetFeedResponse::decode(merged)
+            .unwrap()
+            .event_bundles
+            .iter()
+            .map(bundle_upvote_count)
+            .collect()
+    }
+
+    fn make_bundle_voted(identity: &str, created_at: u64, upvotes: Option<i32>) -> EventBundle {
+        EventBundle {
+            meta: upvotes.map(|upvote_count| EventMetadata {
+                upvote_count: Some(upvote_count),
+                ..Default::default()
+            }),
+            ..make_bundle_at(2, identity, 1, vec![1], 1, created_at)
+        }
+    }
+
+    #[test]
+    fn top_order_ranks_by_upvotes_not_age() {
+        // Ranking and age disagree, so sorting by age would rearrange what
+        // the server sent. The unreacted post has no metadata at all.
+        let bundles = vec![
+            make_bundle_voted("high", 10, Some(9)),
+            make_bundle_voted("mid", 50, Some(4)),
+            make_bundle_voted("none", 99, None),
+        ];
+        let response = encode_response(bundles, vec![]);
+
+        let by_top = do_feed_merge(
+            &[response.clone()],
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+        );
+        assert_eq!(upvotes(&by_top), vec![9, 4, 0]);
+        assert_eq!(created_ats(&by_top), vec![10, 50, 99]);
+
+        let by_age = do_feed_merge(&[response], &test_client(), false, FeedOrder::CreatedAt);
+        assert_eq!(created_ats(&by_age), vec![99, 50, 10]);
     }
 
     #[test]
