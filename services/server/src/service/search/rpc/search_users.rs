@@ -1,5 +1,6 @@
 //! `search_users`: searches users.
 
+use crate::data::Marker;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::{create_pipeline, finalize_fetch};
 use crate::service::context::ServiceContext;
@@ -8,7 +9,7 @@ use crate::service::proto::{
 };
 use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
-    self, Fetched, Marker, SearchResponseFilter, SearchResponseView,
+    self, Fetched, SearchResponseFilter, SearchResponseView,
 };
 use serde::{Deserialize, Serialize};
 use tonic::Status;

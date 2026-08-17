@@ -1,4 +1,5 @@
 use crate::data::hydration::HydrationState;
+use crate::data::{CursorFilter, PageInfo};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone;
@@ -27,8 +28,6 @@ use prost::Message;
 use serde::Deserialize;
 use std::collections::HashSet;
 use tonic::Status;
-
-pub use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
 
 // TODO: dedup with the logic in `src/service/feeds/rpc/common.rs`, a lot of it
 // is the same, but the types are slightly different. We could unify it and move
