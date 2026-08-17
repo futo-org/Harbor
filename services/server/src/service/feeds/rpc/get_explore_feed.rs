@@ -1,5 +1,4 @@
 //! `get_explore_feed`: recent Feed events across all identities.
-//! Ranking is not yet implemented.
 
 use crate::data::hydration::HydrationState;
 use crate::data::{Marker, pipeline};
@@ -15,7 +14,6 @@ use tonic::Status;
 
 pub struct Params {
     pub common: feeds_pipeline::Params<SortedBy>,
-    pub identity: Option<String>,
     pub sort_by: SortPostsBy,
 }
 
@@ -26,7 +24,7 @@ pub async fn handle(
 ) -> Result<GetFeedResponse, Status> {
     let sort_by = req.sort_by();
     let GetExploreFeedRequest {
-        identity,
+        identity: _,
         page_params,
         omit_labels,
         sort_by: _,
@@ -37,11 +35,7 @@ pub async fn handle(
         omit_labels,
         caller.map(str::to_string),
     )?;
-    let params = Params {
-        common,
-        identity,
-        sort_by,
-    };
+    let params = Params { common, sort_by };
 
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
@@ -57,9 +51,8 @@ async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
-    let mut rows = FeedsRepository::list_feed_events(
+    let mut rows = FeedsRepository::explore_feed(
         &ctx.db,
-        params.identity.as_deref(),
         params.sort_by,
         params.common.limit + 1,
         params.common.cursor_filter.as_ref(),
