@@ -1,7 +1,7 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
   extractFeedToken,
-  usePolycentricContext,
+  useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';
@@ -20,9 +20,9 @@ export function useFollowingFeed(options?: {
   limit?: number;
   enabled?: boolean;
 }): FeedHookResult {
-  const { client } = usePolycentricContext();
+  const { identityKey } = useCurrentIdentity();
   const sort = options?.sort ?? 'latest';
-  const followerIdentity = client.activeIdentityKey || '';
+  const followerIdentity = identityKey ?? '';
   const enabled = (options?.enabled ?? true) && !!followerIdentity;
   const queryKey = feedQueryKeys.following(followerIdentity, sort);
   const omitLabels = useOmitLabels();

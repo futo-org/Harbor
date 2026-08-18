@@ -2,12 +2,17 @@ import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import { feedQueryKeys } from './feedCache';
 
-// The following feed is per-identity, and `mockActiveIdentityKey` is empty until
-// the identity store has loaded. A query only re-subscribes when its key or
-// `enabled` changes, so a cold load into /feed used to attach a fan-out with
-// no follower and never retry — no GetFollowingFeed request at all.
+// The following feed is per-identity, and a query only re-subscribes when its
+// key or `enabled` changes. Two ways this went wrong on /feed: a fan-out
+// attached with no follower and never retried, and the follower was read from
+// `client.activeIdentityKey`, which no render subscribes to and which stays
+// null for an identity whose active-key mapping was never stored. Either way
+// no GetFollowingFeed request was made.
 
+/** The non-reactive field on the rs-core client. */
 let mockActiveIdentityKey = '';
+/** What the provider resolved, held as React state. */
+let mockResolvedIdentity = '';
 
 type CapturedCall = {
   queryKey: string[];
@@ -65,6 +70,10 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   usePolycentricContext: () => ({
     client: { activeIdentityKey: mockActiveIdentityKey },
   }),
+  useCurrentIdentity: () => ({
+    identityKey: mockResolvedIdentity || null,
+    hasIdentity: !!mockResolvedIdentity,
+  }),
   decodeV2PostBundle: jest.fn(),
 }));
 
@@ -88,6 +97,7 @@ function renderFollowingFeed() {
 beforeEach(() => {
   mockCaptured = [];
   mockActiveIdentityKey = '';
+  mockResolvedIdentity = '';
 });
 
 describe('feedQueryKeys.following', () => {
@@ -115,20 +125,39 @@ describe('feedQueryKeys.following', () => {
 
 describe('useFollowingFeed', () => {
   it('holds the query until the identity is known', () => {
-    const call = renderFollowingFeed();
-    expect(call.enabled).toBe(false);
+    expect(renderFollowingFeed().enabled).toBe(false);
   });
 
   it('queries once the identity is known', () => {
-    mockActiveIdentityKey = 'id-a';
+    mockResolvedIdentity = 'id-a';
+
+    const call = renderFollowingFeed();
+    expect(call.enabled).toBe(true);
+    expect(call.query.followerIdentity).toBe('id-a');
+    expect(call.queryKey).toEqual(['feed', 'following', 'id-a', 'latest']);
+  });
+
+  it('queries even when the client field was never populated', () => {
+    // What broke on staging: a valid resolved identity, but no stored
+    // active-key mapping, so `client.activeIdentityKey` stays null forever.
+    mockActiveIdentityKey = '';
+    mockResolvedIdentity = 'id-a';
+
     const call = renderFollowingFeed();
     expect(call.enabled).toBe(true);
     expect(call.query.followerIdentity).toBe('id-a');
   });
 
+  it('ignores a stale client field', () => {
+    mockActiveIdentityKey = 'id-stale';
+    mockResolvedIdentity = 'id-current';
+
+    expect(renderFollowingFeed().query.followerIdentity).toBe('id-current');
+  });
+
   it('changes the query key when the identity arrives, so the query re-subscribes', () => {
     const withoutIdentity = renderFollowingFeed().queryKey.join('\0');
-    mockActiveIdentityKey = 'id-a';
+    mockResolvedIdentity = 'id-a';
     const withIdentity = renderFollowingFeed().queryKey.join('\0');
     expect(withIdentity).not.toBe(withoutIdentity);
   });

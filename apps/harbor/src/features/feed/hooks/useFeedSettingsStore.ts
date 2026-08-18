@@ -50,10 +50,13 @@ export function useFeedSettingsHydrated(): boolean {
   );
 
   useEffect(() => {
-    const unsub = useFeedSettingsStore.persist.onFinishHydration(() =>
+    if (useFeedSettingsStore.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    return useFeedSettingsStore.persist.onFinishHydration(() =>
       setHydrated(true),
     );
-    return unsub;
   }, []);
 
   return hydrated;
