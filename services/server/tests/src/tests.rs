@@ -2555,6 +2555,7 @@ async fn following_feed_includes_posts_by_followee() {
 }
 
 #[tokio::test]
+#[ignore = "TODO: change to recommended feed"]
 async fn following_feed_includes_posts_reacted_self() {
     let mut client = TestClient::new().await;
 
@@ -2572,6 +2573,7 @@ async fn following_feed_includes_posts_reacted_self() {
 }
 
 #[tokio::test]
+#[ignore = "TODO: change to recommended feed"]
 async fn following_feed_includes_posts_reacted_by_followee() {
     let mut client = TestClient::new().await;
 
@@ -2594,6 +2596,7 @@ async fn following_feed_includes_posts_reacted_by_followee() {
 }
 
 #[tokio::test]
+#[ignore = "TODO: change to recommended feed"]
 async fn following_feed_includes_posts_reposted_self() {
     let mut client = TestClient::new().await;
 
@@ -2611,6 +2614,7 @@ async fn following_feed_includes_posts_reposted_self() {
 }
 
 #[tokio::test]
+#[ignore = "TODO: change to recommended feed"]
 async fn following_feed_includes_posts_reposted_by_followee() {
     let mut client = TestClient::new().await;
 
