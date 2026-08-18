@@ -49,7 +49,7 @@ function decodeRepost(
 }
 
 function invalidateFeeds(client: PolycentricClient, identity: string) {
-  invalidateQuery(client, feedQueryKeys.following());
+  invalidateQuery(client, feedQueryKeys.following(identity));
   invalidateQuery(client, feedQueryKeys.identity(identity));
   invalidateQuery(client, feedQueryKeys.explore(identity));
 }

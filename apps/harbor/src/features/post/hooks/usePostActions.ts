@@ -59,12 +59,16 @@ export default function usePostActions(post: PostData): PostActions {
   };
 
   const invalidateFeeds = (identity: string, deletionParent?: string) => {
-    invalidateQuery(client, feedQueryKeys.following());
+    invalidateQuery(client, feedQueryKeys.following(identity));
     invalidateQuery(client, feedQueryKeys.identity(identity));
     invalidateQuery(client, feedQueryKeys.explore(identity));
 
     if (deletionParent) {
-      alterPostReplyCount(feedQueryKeys.following(), deletionParent, -1);
+      alterPostReplyCount(
+        feedQueryKeys.following(identity),
+        deletionParent,
+        -1,
+      );
       alterPostReplyCount(feedQueryKeys.identity(identity), deletionParent, -1);
       alterPostReplyCount(feedQueryKeys.explore(identity), deletionParent, -1);
     }

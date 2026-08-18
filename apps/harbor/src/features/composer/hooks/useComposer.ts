@@ -310,12 +310,12 @@ export function useComposer({
       if (isReply && replyTo) {
         injectReplyIntoThreadCache(newBundle);
         alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.following(), replyTo.id, 1);
+        alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
         alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
         alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
       }
 
-      injectPostIntoFeedCache(feedQueryKeys.following(), newBundle);
+      injectPostIntoFeedCache(feedQueryKeys.following(identity), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
       injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
 
@@ -331,7 +331,7 @@ export function useComposer({
         .sync()
         .then(() => {
           // Invalidate all the caches now the post has been successfully submitted
-          invalidateQuery(client, feedQueryKeys.following());
+          invalidateQuery(client, feedQueryKeys.following(identity));
           invalidateQuery(client, feedQueryKeys.identity(identity));
           invalidateQuery(client, feedQueryKeys.explore(identity));
         })

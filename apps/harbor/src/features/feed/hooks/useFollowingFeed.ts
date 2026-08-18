@@ -21,10 +21,10 @@ export function useFollowingFeed(options?: {
   enabled?: boolean;
 }): FeedHookResult {
   const { client } = usePolycentricContext();
-  const enabled = options?.enabled ?? true;
   const sort = options?.sort ?? 'latest';
   const followerIdentity = client.activeIdentityKey || '';
-  const queryKey = feedQueryKeys.following(sort);
+  const enabled = (options?.enabled ?? true) && !!followerIdentity;
+  const queryKey = feedQueryKeys.following(followerIdentity, sort);
   const omitLabels = useOmitLabels();
 
   const query = useQuery(

@@ -33,14 +33,17 @@ export function feedSortBy(sort: FeedSortOption): FeedSort {
   return sort === 'top' ? FeedSort.Top : FeedSort.Latest;
 }
 
+/** Every feed lives under the `feed` prefix, so `['feed']` covers them all. */
 export const feedQueryKeys = {
   /** Omit `sort` for the partition covering every sort. */
-  following: (sort?: FeedSortOption): string[] =>
-    sort ? ['following_feed', sort] : ['following_feed'],
-  identity: (identity: string): string[] => ['identity_feed', identity],
+  following: (identity: string, sort?: FeedSortOption): string[] =>
+    sort
+      ? ['feed', 'following', identity, sort]
+      : ['feed', 'following', identity],
+  identity: (identity: string): string[] => ['feed', 'identity', identity],
   /** Omit `sort` for the partition covering every sort. */
   explore: (identity: string, sort?: FeedSortOption): string[] =>
-    sort ? ['explore_feed', identity, sort] : ['explore_feed', identity],
+    sort ? ['feed', 'explore', identity, sort] : ['feed', 'explore', identity],
 };
 
 export function threadQueryKey(parentId: string, limit = 0): string[] {
