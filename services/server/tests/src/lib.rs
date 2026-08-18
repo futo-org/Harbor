@@ -292,6 +292,22 @@ impl TestClient {
         self.post(post, created_at)
     }
 
+    pub fn quote(
+        &mut self,
+        post: EventKey,
+        text: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: Some(post),
+            links: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
     pub fn label(&mut self, labels: Labels, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Labels(labels), created_at)
     }
