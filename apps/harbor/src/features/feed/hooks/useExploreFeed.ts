@@ -33,8 +33,7 @@ export function useExploreFeed(options?: {
       const forwardToken = extractFeedToken(status, data);
 
       return new Query.GetExploreFeed({
-        //identity: identity === '' ? undefined : identity,
-        identity: undefined, // tmp, remove once algo working right
+        identity: identity === '' ? undefined : identity,
         sortBy: feedSortBy(sort),
         limit: options?.perServerLimit,
         forwardToken,
