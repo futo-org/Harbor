@@ -36,38 +36,39 @@ pub struct GetIdentityFeedArgs {
     pub omit_labels: Vec<String>,
 }
 
+/// Order a sortable feed is returned in. `Top` ranks by reaction count,
+/// the others by creation time.
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum FeedSort {
+    Default,
+    Top,
+    Latest,
+}
+
+impl From<FeedSort> for SortPostsBy {
+    fn from(sort: FeedSort) -> Self {
+        match sort {
+            FeedSort::Default => SortPostsBy::Default,
+            FeedSort::Top => SortPostsBy::Top,
+            FeedSort::Latest => SortPostsBy::Latest,
+        }
+    }
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetFollowingFeedArgs {
     pub follower_identity: String,
+    pub sort_by: Option<FeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
 }
 
-/// Order the explore feed is returned in. `Top` ranks by reaction count,
-/// the others by creation time.
-#[derive(Clone, Copy, Debug, uniffi::Enum)]
-pub enum ExploreFeedSort {
-    Default,
-    Top,
-    Latest,
-}
-
-impl From<ExploreFeedSort> for SortPostsBy {
-    fn from(sort: ExploreFeedSort) -> Self {
-        match sort {
-            ExploreFeedSort::Default => SortPostsBy::Default,
-            ExploreFeedSort::Top => SortPostsBy::Top,
-            ExploreFeedSort::Latest => SortPostsBy::Latest,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetExploreFeedArgs {
     pub identity: Option<String>,
-    pub sort_by: Option<ExploreFeedSort>,
+    pub sort_by: Option<FeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
@@ -98,11 +99,11 @@ impl FeedOrder {
     }
 }
 
-impl From<ExploreFeedSort> for FeedOrder {
-    fn from(sort: ExploreFeedSort) -> Self {
+impl From<FeedSort> for FeedOrder {
+    fn from(sort: FeedSort) -> Self {
         match sort {
-            ExploreFeedSort::Top => Self::Upvotes,
-            ExploreFeedSort::Default | ExploreFeedSort::Latest => Self::CreatedAt,
+            FeedSort::Top => Self::Upvotes,
+            FeedSort::Default | FeedSort::Latest => Self::CreatedAt,
         }
     }
 }
@@ -266,12 +267,14 @@ pub fn get_following_feed(
 ) -> Arc<dyn QueryObservable> {
     let GetFollowingFeedArgs {
         follower_identity,
+        sort_by,
         limit,
         backward_token,
         forward_token,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
+    let order = sort_by.map_or(FeedOrder::CreatedAt, FeedOrder::from);
 
     let query_fn = move |server_url: String| {
         let follower_identity = follower_identity.clone();
@@ -292,7 +295,7 @@ pub fn get_following_feed(
                         forward_token,
                     }),
                     omit_labels,
-                    sort_by: None,
+                    sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
                 })
                 .await
                 .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
@@ -312,12 +315,7 @@ pub fn get_following_feed(
         }
     };
 
-    Arc::new(query_client.fetch(
-        query_key,
-        query_fn,
-        validated_feed_merge(FeedOrder::CreatedAt),
-        opts,
-    ))
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.

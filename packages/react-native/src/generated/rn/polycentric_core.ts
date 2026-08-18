@@ -327,32 +327,32 @@ const FfiConverterTypeGetEventArgs = (() => {
 })();
 
 /**
- * Order the explore feed is returned in. `Top` ranks by reaction count,
+ * Order a sortable feed is returned in. `Top` ranks by reaction count,
  * the others by creation time.
  */
-export enum ExploreFeedSort {
+export enum FeedSort {
     Default,
     Top,
     Latest
 }
 
-const FfiConverterTypeExploreFeedSort = (() => {
+const FfiConverterTypeFeedSort = (() => {
     const ordinalConverter = FfiConverterInt32;
-    type TypeName = ExploreFeedSort;
+    type TypeName = FeedSort;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
         read(from: RustBuffer): TypeName {
             switch (ordinalConverter.read(from)) {
-                case 1: return ExploreFeedSort.Default;
-                case 2: return ExploreFeedSort.Top;
-                case 3: return ExploreFeedSort.Latest;
+                case 1: return FeedSort.Default;
+                case 2: return FeedSort.Top;
+                case 3: return FeedSort.Latest;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
         write(value: TypeName, into: RustBuffer): void {
             switch (value) {
-                case ExploreFeedSort.Default: return ordinalConverter.write(1, into);
-                case ExploreFeedSort.Top: return ordinalConverter.write(2, into);
-                case ExploreFeedSort.Latest: return ordinalConverter.write(3, into);
+                case FeedSort.Default: return ordinalConverter.write(1, into);
+                case FeedSort.Top: return ordinalConverter.write(2, into);
+                case FeedSort.Latest: return ordinalConverter.write(3, into);
             }
         }
         allocationSize(value: TypeName): number {
@@ -364,7 +364,7 @@ const FfiConverterTypeExploreFeedSort = (() => {
 
 export type GetExploreFeedArgs = {
     identity?: string,
-    sortBy?: ExploreFeedSort,
+    sortBy?: FeedSort,
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
@@ -393,7 +393,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         read(from: RustBuffer): TypeName {
             return {
                 identity: FfiConverterOptionalString.read(from), 
-                sortBy: FfiConverterOptionalTypeExploreFeedSort.read(from), 
+                sortBy: FfiConverterOptionalTypeFeedSort.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
@@ -402,7 +402,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         }
         write(value: TypeName, into: RustBuffer): void {
             FfiConverterOptionalString.write(value.identity, into);
-            FfiConverterOptionalTypeExploreFeedSort.write(value.sortBy, into);
+            FfiConverterOptionalTypeFeedSort.write(value.sortBy, into);
             FfiConverterOptionalInt32.write(value.limit, into);
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
@@ -410,7 +410,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalString.allocationSize(value.identity) +
-             FfiConverterOptionalTypeExploreFeedSort.allocationSize(value.sortBy) +
+             FfiConverterOptionalTypeFeedSort.allocationSize(value.sortBy) +
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
@@ -423,6 +423,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
 
 export type GetFollowingFeedArgs = {
     followerIdentity: string,
+    sortBy?: FeedSort,
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
@@ -451,6 +452,7 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
         read(from: RustBuffer): TypeName {
             return {
                 followerIdentity: FfiConverterString.read(from), 
+                sortBy: FfiConverterOptionalTypeFeedSort.read(from), 
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
@@ -459,6 +461,7 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
         }
         write(value: TypeName, into: RustBuffer): void {
             FfiConverterString.write(value.followerIdentity, into);
+            FfiConverterOptionalTypeFeedSort.write(value.sortBy, into);
             FfiConverterOptionalInt32.write(value.limit, into);
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
@@ -466,6 +469,7 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.followerIdentity) +
+             FfiConverterOptionalTypeFeedSort.allocationSize(value.sortBy) +
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
@@ -5244,8 +5248,8 @@ const FfiConverterTypePolycentricCore = new FfiConverterObject(uniffiTypePolycen
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
-// FfiConverter for ExploreFeedSort | undefined
-const FfiConverterOptionalTypeExploreFeedSort = new FfiConverterOptional(FfiConverterTypeExploreFeedSort);
+// FfiConverter for FeedSort | undefined
+const FfiConverterOptionalTypeFeedSort = new FfiConverterOptional(FfiConverterTypeFeedSort);
 
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
@@ -5475,7 +5479,7 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeEmitMode,
     FfiConverterTypeEventKey,
-    FfiConverterTypeExploreFeedSort,
+    FfiConverterTypeFeedSort,
     FfiConverterTypeFetchMode,
     FfiConverterTypeGetEventArgs,
     FfiConverterTypeGetExploreFeedArgs,

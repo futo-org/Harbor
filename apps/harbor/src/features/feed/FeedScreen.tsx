@@ -10,31 +10,48 @@ import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh
 import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
-import { useCallback, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { View } from 'react-native';
 import type { ListRef } from '@/src/common/components/List';
+import { TABS_HEIGHT } from '@/src/common/components/Tabs';
 import FeedList from './FeedList';
+import { FeedSortTabs } from './FeedSortTabs';
+import type { FeedSortOption } from './hooks/feedCache';
+import { useFeedSort, useFeedSortPress } from './hooks/useFeedSort';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 
-const ListHeader = () => {
+type ListHeaderProps = {
+  sort: FeedSortOption;
+  onSortPress: (sort: FeedSortOption) => void;
+};
+
+const ListHeader = memo(function ListHeader({
+  sort,
+  onSortPress,
+}: ListHeaderProps) {
   return (
     <>
       {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
+
+      <FeedSortTabs sort={sort} onSortPress={onSortPress} />
+
       {isWeb && <ComposerInput />}
     </>
   );
-};
+});
 
 export default function FeedScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
 
   const enabled = useEagerLoad();
-  const feed = useFollowingFeed({ enabled });
   const listRef = useRef<ListRef>(null);
-
-  // Re-tapping the active tab scrolls to the top and refreshes.
+  const { sort, hydrated } = useFeedSort('following');
+  const feed = useFollowingFeed({ sort, enabled: enabled && hydrated });
   const { refresh } = feed;
+  const onSortPress = useFeedSortPress('following', listRef, refresh);
+
+  // Re-tapping the active navigation tab scrolls to the top and refreshes.
   useFocusedRefresh(
     useCallback(() => {
       listRef.current?.scrollToTop();
@@ -65,10 +82,11 @@ export default function FeedScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedList
+          key={sort}
           ref={listRef}
           feed={feed}
-          HeaderComponent={ListHeader}
-          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
+          HeaderComponent={<ListHeader sort={sort} onSortPress={onSortPress} />}
+          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT + TABS_HEIGHT}
         />
         {showComposeFab ? (
           <Fab

@@ -17,7 +17,7 @@ import {
   type PostEntry,
   type PostOverlay,
 } from './overlayTypes';
-import { v2 } from '@polycentric/react-native';
+import { FeedSort, v2 } from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import {
@@ -26,14 +26,20 @@ import {
   updatePostEntry,
 } from './overlayOps';
 
-/** Orders the explore feed can be sorted by. */
-export type ExploreSort = 'top' | 'latest';
+/** Orders a sortable feed can be sorted by. */
+export type FeedSortOption = 'top' | 'latest';
+
+export function feedSortBy(sort: FeedSortOption): FeedSort {
+  return sort === 'top' ? FeedSort.Top : FeedSort.Latest;
+}
 
 export const feedQueryKeys = {
-  following: (): string[] => ['following_feed'],
+  /** Omit `sort` for the partition covering every sort. */
+  following: (sort?: FeedSortOption): string[] =>
+    sort ? ['following_feed', sort] : ['following_feed'],
   identity: (identity: string): string[] => ['identity_feed', identity],
   /** Omit `sort` for the partition covering every sort. */
-  explore: (identity: string, sort?: ExploreSort): string[] =>
+  explore: (identity: string, sort?: FeedSortOption): string[] =>
     sort ? ['explore_feed', identity, sort] : ['explore_feed', identity],
 };
 

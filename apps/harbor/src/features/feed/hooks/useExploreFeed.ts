@@ -1,9 +1,4 @@
-import {
-  ExploreFeedSort,
-  Query,
-  QueryStatus,
-  UpdateMode,
-} from '@polycentric/react-native';
+import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
   extractFeedToken,
   usePolycentricContext,
@@ -13,19 +8,15 @@ import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
-  type ExploreSort,
+  type FeedSortOption,
   feedQueryKeys,
+  feedSortBy,
   useFeedPageInfo,
   useFeedWithOverlays,
 } from './feedCache';
 
-const SORT_BY: Record<ExploreSort, ExploreFeedSort> = {
-  top: ExploreFeedSort.Top,
-  latest: ExploreFeedSort.Latest,
-};
-
 export function useExploreFeed(options?: {
-  sort?: ExploreSort;
+  sort?: FeedSortOption;
   perServerLimit?: number;
   enabled?: boolean;
 }): FeedHookResult {
@@ -44,7 +35,7 @@ export function useExploreFeed(options?: {
       return new Query.GetExploreFeed({
         //identity: identity === '' ? undefined : identity,
         identity: undefined, // tmp, remove once algo working right
-        sortBy: SORT_BY[sort],
+        sortBy: feedSortBy(sort),
         limit: options?.perServerLimit,
         forwardToken,
         omitLabels,
