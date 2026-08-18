@@ -7,7 +7,8 @@ use ::entity::{
     content_reaction_model as ContentReactionModel, event_model as EventModel,
     follow_model as FollowModel, quote_model as QuoteModel,
     reaction_model as ReactionModel,
-    reaction_tally_model2 as ReactionTallyModel, repost_model as RepostModel,
+    reaction_tally_model2 as ReactionTallyModel, reply_model as ReplyModel,
+    repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
@@ -261,20 +262,21 @@ impl Query {
                                 .from(QuoteModel::Entity)
                                 .and_where(
                                     QuoteModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Replied to by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(ReplyModel::Column::Post)
+                                .from(ReplyModel::Entity)
+                                .and_where(
+                                    ReplyModel::Column::Identity
                                         .in_subquery(select_followee),
                                 );
                             q
                         }))
-
-                    // TODO: improve personal feed. For each user, consider a post if
-                    // the user has interacted with the post:
-                    //  * [x] created
-                    //  * [x] reacted
-                    //  * [x] reposted
-                    //  * [x] quoted
-                    //  * [ ] replied
-                    // Probably need to change the following table to be a CTE so it can
-                    // reused.
                 }
             });
         }

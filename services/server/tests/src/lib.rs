@@ -7,8 +7,8 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
     EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Repost,
-    RevocationBound, SearchResult, SerializedContent,
+    Labels, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
+    Reaction, Repost, RevocationBound, SearchResult, SerializedContent,
     SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
     VerificationSchema, content,
 };
@@ -303,6 +303,25 @@ impl TestClient {
             reply: None,
             images: Vec::new(),
             quote: Some(post),
+            links: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
+    pub fn reply(
+        &mut self,
+        post: EventKey,
+        text: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: Some(PostReply {
+                root: None,
+                parent: Some(post),
+            }),
+            images: Vec::new(),
+            quote: None,
             links: Vec::new(),
         };
         self.post(post, created_at)
