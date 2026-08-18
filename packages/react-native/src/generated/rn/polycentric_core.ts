@@ -2008,6 +2008,7 @@ export enum Query_Tags {
     GetPostThread = "GetPostThread",
     GetIdentityFeed = "GetIdentityFeed",
     GetFollowingFeed = "GetFollowingFeed",
+    GetRecommendedFeed = "GetRecommendedFeed",
     GetExploreFeed = "GetExploreFeed",
     ListNotifications = "ListNotifications",
     ListEvents = "ListEvents",
@@ -2193,6 +2194,42 @@ Readonly<
 
         static instanceOf(obj: any): obj is GetFollowingFeed_ {
             return obj.tag === Query_Tags.GetFollowingFeed;
+        }
+
+    }
+
+    type GetRecommendedFeed__interface = {
+        tag: Query_Tags.GetRecommendedFeed;
+        inner: 
+Readonly<
+[GetFollowingFeedArgs
+]>
+    };
+    /**
+     * Takes the same args as the following feed.
+     */
+    class GetRecommendedFeed_ extends UniffiEnum implements GetRecommendedFeed__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.GetRecommendedFeed;
+        readonly inner: 
+Readonly<
+[GetFollowingFeedArgs
+]>;
+        constructor(v0: GetFollowingFeedArgs) {
+            super("Query", "GetRecommendedFeed");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: GetFollowingFeedArgs): GetRecommendedFeed_ {
+            return new GetRecommendedFeed_(v0);
+        }
+
+        static instanceOf(obj: any): obj is GetRecommendedFeed_ {
+            return obj.tag === Query_Tags.GetRecommendedFeed;
         }
 
     }
@@ -2703,6 +2740,7 @@ Readonly<
   GetPostThread: GetPostThread_, 
   GetIdentityFeed: GetIdentityFeed_, 
   GetFollowingFeed: GetFollowingFeed_, 
+  GetRecommendedFeed: GetRecommendedFeed_, 
   GetExploreFeed: GetExploreFeed_, 
   ListNotifications: ListNotifications_, 
   ListEvents: ListEvents_, 
@@ -2728,7 +2766,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ListFollowing' | 'ListFollowers' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -2743,21 +2781,22 @@ const FfiConverterTypeQuery = (() => {
                 case 3: return new Query.GetPostThread(FfiConverterTypeGetPostThreadArgs.read(from));
                 case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.read(from));
                 case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
-                case 6: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.read(from));
-                case 7: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
-                case 8: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
-                case 9: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
-                case 10: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
-                case 11: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
-                case 12: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
-                case 13: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
-                case 14: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
-                case 15: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
-                case 16: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
-                case 17: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
-                case 18: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
-                case 19: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
-                case 20: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
+                case 6: return new Query.GetRecommendedFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
+                case 7: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.read(from));
+                case 8: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
+                case 9: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
+                case 10: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
+                case 11: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
+                case 12: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
+                case 13: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
+                case 14: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
+                case 15: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
+                case 16: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
+                case 17: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
+                case 18: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
+                case 19: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
+                case 20: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
+                case 21: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -2793,92 +2832,98 @@ const FfiConverterTypeQuery = (() => {
                     FfiConverterTypeGetFollowingFeedArgs.write(inner[0], into);
                     return;
                 }
-                case Query_Tags.GetExploreFeed: {
+                case Query_Tags.GetRecommendedFeed: {
                     ordinalConverter.write(6, into);
+                    const inner = value.inner;
+                    FfiConverterTypeGetFollowingFeedArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.GetExploreFeed: {
+                    ordinalConverter.write(7, into);
                     const inner = value.inner;
                     FfiConverterTypeGetExploreFeedArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListNotifications: {
-                    ordinalConverter.write(7, into);
+                    ordinalConverter.write(8, into);
                     const inner = value.inner;
                     FfiConverterTypeListNotificationsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListEvents: {
-                    ordinalConverter.write(8, into);
+                    ordinalConverter.write(9, into);
                     const inner = value.inner;
                     FfiConverterTypeListEventsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationClaims: {
-                    ordinalConverter.write(9, into);
+                    ordinalConverter.write(10, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationClaimsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationTargets: {
-                    ordinalConverter.write(10, into);
+                    ordinalConverter.write(11, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationTargetsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListVerificationVerifies: {
-                    ordinalConverter.write(11, into);
+                    ordinalConverter.write(12, into);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationVerifiesArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
-                    ordinalConverter.write(12, into);
+                    ordinalConverter.write(13, into);
                     const inner = value.inner;
                     FfiConverterTypeListTargetedVerificationClaimsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListFollowing: {
-                    ordinalConverter.write(13, into);
+                    ordinalConverter.write(14, into);
                     const inner = value.inner;
                     FfiConverterTypeListFollowingArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListFollowers: {
-                    ordinalConverter.write(14, into);
+                    ordinalConverter.write(15, into);
                     const inner = value.inner;
                     FfiConverterTypeListFollowersArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.SearchPosts: {
-                    ordinalConverter.write(15, into);
+                    ordinalConverter.write(16, into);
                     const inner = value.inner;
                     FfiConverterTypeSearchPostsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.SearchUsers: {
-                    ordinalConverter.write(16, into);
+                    ordinalConverter.write(17, into);
                     const inner = value.inner;
                     FfiConverterTypeSearchUsersArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsModerator: {
-                    ordinalConverter.write(17, into);
+                    ordinalConverter.write(18, into);
                     const inner = value.inner;
                     FfiConverterTypeIsModeratorArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsBanned: {
-                    ordinalConverter.write(18, into);
+                    ordinalConverter.write(19, into);
                     const inner = value.inner;
                     FfiConverterTypeIsBannedArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListBans: {
-                    ordinalConverter.write(19, into);
+                    ordinalConverter.write(20, into);
                     const inner = value.inner;
                     FfiConverterTypeListBansArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.GetReactions: {
-                    ordinalConverter.write(20, into);
+                    ordinalConverter.write(21, into);
                     const inner = value.inner;
                     FfiConverterTypeGetReactionsArgs.write(inner[0], into);
                     return;
@@ -2920,93 +2965,99 @@ const FfiConverterTypeQuery = (() => {
                     size += FfiConverterTypeGetFollowingFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
-                case Query_Tags.GetExploreFeed: {
+                case Query_Tags.GetRecommendedFeed: {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(6);
+                    size += FfiConverterTypeGetFollowingFeedArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.GetExploreFeed: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(7);
                     size += FfiConverterTypeGetExploreFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListNotifications: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(7);
+                    let size = ordinalConverter.allocationSize(8);
                     size += FfiConverterTypeListNotificationsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListEvents: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(8);
+                    let size = ordinalConverter.allocationSize(9);
                     size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(9);
+                    let size = ordinalConverter.allocationSize(10);
                     size += FfiConverterTypeListVerificationClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationTargets: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(10);
+                    let size = ordinalConverter.allocationSize(11);
                     size += FfiConverterTypeListVerificationTargetsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationVerifies: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(11);
+                    let size = ordinalConverter.allocationSize(12);
                     size += FfiConverterTypeListVerificationVerifiesArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(12);
+                    let size = ordinalConverter.allocationSize(13);
                     size += FfiConverterTypeListTargetedVerificationClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowing: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(13);
+                    let size = ordinalConverter.allocationSize(14);
                     size += FfiConverterTypeListFollowingArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(14);
+                    let size = ordinalConverter.allocationSize(15);
                     size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SearchPosts: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(15);
+                    let size = ordinalConverter.allocationSize(16);
                     size += FfiConverterTypeSearchPostsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SearchUsers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(16);
+                    let size = ordinalConverter.allocationSize(17);
                     size += FfiConverterTypeSearchUsersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsModerator: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(17);
+                    let size = ordinalConverter.allocationSize(18);
                     size += FfiConverterTypeIsModeratorArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsBanned: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(18);
+                    let size = ordinalConverter.allocationSize(19);
                     size += FfiConverterTypeIsBannedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListBans: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(19);
+                    let size = ordinalConverter.allocationSize(20);
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetReactions: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(20);
+                    let size = ordinalConverter.allocationSize(21);
                     size += FfiConverterTypeGetReactionsArgs.allocationSize(inner[0]);
                     return size;
                 }

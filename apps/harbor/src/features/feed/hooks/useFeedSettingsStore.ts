@@ -2,14 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { FeedSortOption } from './feedCache';
+import type { FeedTab } from './feedCache';
 
 /** Feeds that carry their own settings. */
 export type FeedName = 'following' | 'explore';
 
 /** Per-feed view settings, remembered across restarts. */
 export interface FeedSettings {
-  sort: FeedSortOption;
+  tab: FeedTab;
 }
 
 interface FeedSettingsStore {
@@ -21,8 +21,8 @@ export const useFeedSettingsStore = create<FeedSettingsStore>()(
   persist(
     (set) => ({
       feeds: {
-        following: { sort: 'latest' },
-        explore: { sort: 'top' },
+        following: { tab: 'latest' },
+        explore: { tab: 'top' },
       },
 
       setFeedSettings: (feed, settings) =>
