@@ -5,7 +5,8 @@ use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
-    follow_model as FollowModel, reaction_tally_model2 as ReactionTallyModel,
+    follow_model as FollowModel, reaction_model as ReactionModel,
+    reaction_tally_model2 as ReactionTallyModel,
 };
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
@@ -15,6 +16,7 @@ use sea_orm::{
     sea_query::{Expr, IntoCondition, PostgresQueryBuilder, Query as SeaQuery},
     *,
 };
+use sea_query::query::{CommonTableExpression, WithClause};
 use sea_query::{SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
@@ -165,16 +167,44 @@ impl Query {
                     q
                 });
 
+            const FOLLOWING_TABLE: &str = "following";
+            QuerySelect::query(&mut query).with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name(FOLLOWING_TABLE).query(following);
+                c.recursive(false).cte(cte);
+                c
+            });
+
+            let mut select_followee = SelectStatement::new();
+            select_followee
+                .column(FollowModel::Column::Followee)
+                .from(FOLLOWING_TABLE);
+
             query = query.filter(
                 Condition::any()
                     // Created by an identity the `for_identity` is following.
-                    .add(EventModel::Column::Identity.in_subquery(following)),
+                    .add(
+                        EventModel::Column::Identity
+                            .in_subquery(select_followee.clone()),
+                    )
+                    // Reacted on by an identity the `for_identity` is following.
+                    .add(EventModel::Column::Id.in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column(ReactionModel::Column::OnPost)
+                            .from(ReactionModel::Entity)
+                            .and_where(
+                                ReactionModel::Column::Identity
+                                    .in_subquery(select_followee),
+                            );
+                        q
+                    })),
             );
 
             // TODO: improve personal feed. For each user, consider a post if
             // the user has interacted with the post:
             //  * [x] created
-            //  * [ ] reacted
+            //  * [x] reacted
             //  * [ ] reposted
             //  * [ ] quoted
             //  * [ ] replied
