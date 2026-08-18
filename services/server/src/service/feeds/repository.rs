@@ -6,7 +6,7 @@ use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
     follow_model as FollowModel, reaction_model as ReactionModel,
-    reaction_tally_model2 as ReactionTallyModel,
+    reaction_tally_model2 as ReactionTallyModel, repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
@@ -195,6 +195,17 @@ impl Query {
                             .from(ReactionModel::Entity)
                             .and_where(
                                 ReactionModel::Column::Identity
+                                    .in_subquery(select_followee.clone()),
+                            );
+                        q
+                    }))
+                    // Reposted by an identity the `for_identity` is following.
+                    .add(EventModel::Column::Id.in_subquery({
+                        let mut q = SelectStatement::new();
+                        q.column(RepostModel::Column::Post)
+                            .from(RepostModel::Entity)
+                            .and_where(
+                                RepostModel::Column::Identity
                                     .in_subquery(select_followee),
                             );
                         q
@@ -205,7 +216,7 @@ impl Query {
             // the user has interacted with the post:
             //  * [x] created
             //  * [x] reacted
-            //  * [ ] reposted
+            //  * [x] reposted
             //  * [ ] quoted
             //  * [ ] replied
             // Probably need to change the following table to be a CTE so it can

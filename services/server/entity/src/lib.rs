@@ -46,6 +46,7 @@
 //!    following which.
 //!  * [`reaction`](reaction_model) and [`reaction_tally`](reaction_tally_model2)
 //!    contains the reaction made on posts.
+//!  * [`repost`](repost_model) contains the reposts of posts made.
 //!
 //! The cache tables represent the current state, meaning that a delete event
 //! will remove it from the cache table, but the original event remains in the
@@ -82,5 +83,6 @@ pub mod reaction_summary_model;
 pub mod reaction_tally_model;
 pub mod reaction_tally_model2;
 pub mod reply_count_model;
+pub mod repost_model;
 pub mod url_info_cache_model;
 pub mod verification_schema_model;

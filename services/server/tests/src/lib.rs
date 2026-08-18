@@ -7,7 +7,7 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::{
     Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
     EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction,
+    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Repost,
     RevocationBound, SearchResult, SerializedContent,
     SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
     VerificationSchema, content,
@@ -332,6 +332,21 @@ impl TestClient {
             },
             created_at,
         )
+    }
+
+    pub fn repost(&mut self, repost: Repost, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Repost(repost), created_at)
+    }
+
+    pub fn repost_key(
+        &mut self,
+        event_key: EventKey,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let repost = Repost {
+            post: Some(event_key),
+        };
+        self.repost(repost, created_at)
     }
 
     pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {

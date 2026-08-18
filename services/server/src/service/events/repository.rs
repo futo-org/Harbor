@@ -3,10 +3,11 @@ use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
+use ::entity::repost_model as RepostModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, Delete, EventKey, Follow, Post, Reaction,
+    Content, Delete, EventKey, Follow, Post, Reaction, Repost,
 };
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
@@ -180,6 +181,9 @@ impl Mutation {
             ContentBody::Reaction(reaction) => {
                 Mutation::reaction(db, event, reaction).await
             }
+            ContentBody::Repost(repost) => {
+                Mutation::repost(db, event, repost).await
+            }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
@@ -229,36 +233,7 @@ impl Mutation {
     ) -> Result<(), DbErr> {
         let key = split_event_key(reaction.event_key.clone(), "reaction")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
-        let mut post_event_id = select_event_id(key);
-        // Make sure the post is not deleted.
-        post_event_id.and_where(Expr::not_exists({
-            let mut q = SelectStatement::new();
-            q.expr(Expr::Constant(true.into()))
-                .from(ContentDeleteModel::Entity)
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyCollection)
-                        .eq(Expr::col(EventModel::Column::Collection)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyIdentity)
-                        .eq(Expr::col(EventModel::Column::Identity)),
-                )
-                .and_where(
-                    Expr::col(
-                        ContentDeleteModel::Column::EventKeyPublicKeyType,
-                    )
-                    .eq(Expr::col(EventModel::Column::PublicKeyType)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyPublicKey)
-                        .eq(Expr::col(EventModel::Column::PublicKey)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeySequence)
-                        .eq(Expr::col(EventModel::Column::Sequence)),
-                );
-            q
-        }));
+        let mut post_event_id = select_not_deleted_event_id(key);
 
         let mut insert_reaction = InsertStatement::new();
         insert_reaction
@@ -333,6 +308,51 @@ impl Mutation {
                 Expr::Column(("reaction_tally", "event_id").into())
                     .eq(Expr::Column(("inserted_reaction", "on_post").into())),
             );
+
+        db.execute(&query).await?;
+        Ok(())
+    }
+
+    async fn repost<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        repost: &Repost,
+    ) -> Result<(), DbErr> {
+        let key = split_event_key(repost.post.clone(), "repost")
+            .map_err(|err| DbErr::Custom(err.message().into()))?;
+        let mut post_event_id = select_not_deleted_event_id(key);
+
+        let mut query = InsertStatement::new();
+        query
+            .into_table(RepostModel::Entity)
+            .columns([
+                RepostModel::Column::EventId,
+                RepostModel::Column::Identity,
+                RepostModel::Column::Post,
+            ])
+            .select_from({
+                post_event_id
+                    .clear_selects() // Need to rename.
+                    .expr(SelectExpr {
+                        expr: Expr::from(event.id),
+                        alias: Some(RepostModel::Column::EventId.into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(&event.identity),
+                        alias: Some(RepostModel::Column::Identity.into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::col(EventModel::Column::Id.as_column_ref()),
+                        alias: Some(RepostModel::Column::Post.into()),
+                        window: None,
+                    });
+                post_event_id
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
 
         db.execute(&query).await?;
         Ok(())
@@ -466,5 +486,54 @@ fn select_event_id(key: EventKeyParts) -> SelectStatement {
         .and_where(EventModel::Column::PublicKeyType.eq(key.public_key_type))
         .and_where(EventModel::Column::PublicKey.eq(key.public_key))
         .and_where(EventModel::Column::Sequence.eq(key.sequence));
+    query
+}
+
+fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
+    let mut query = select_event_id(key);
+    // Make sure the post is not deleted.
+    query.and_where(Expr::not_exists({
+        let mut q = SelectStatement::new();
+        q.expr(Expr::Constant(true.into()))
+            .from(ContentDeleteModel::Entity)
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyCollection
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Collection.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyIdentity
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Identity.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyPublicKeyType
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(
+                    EventModel::Column::PublicKeyType.as_column_ref(),
+                )),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyPublicKey
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::PublicKey.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeySequence
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Sequence.as_column_ref())),
+            );
+        q
+    }));
     query
 }

@@ -2594,6 +2594,45 @@ async fn following_feed_includes_posts_reacted_by_followee() {
 }
 
 #[tokio::test]
+async fn following_feed_includes_posts_reposted_self() {
+    let mut client = TestClient::new().await;
+
+    // NOTE: not following this identity.
+    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    let post1_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let mut client = TestClient::new().await;
+    client.repost_key(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+    let follower = client.identity();
+
+    following_feed(follower, &[post1_key]).await;
+}
+
+#[tokio::test]
+async fn following_feed_includes_posts_reposted_by_followee() {
+    let mut client = TestClient::new().await;
+
+    // NOTE: not following this identity.
+    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    let post1_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let mut client = TestClient::new().await;
+    client.repost_key(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+    let followee = client.identity();
+
+    let mut client = TestClient::new().await;
+    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+    let follower = client.identity();
+
+    following_feed(follower, &[post1_key]).await;
+}
+
+#[tokio::test]
 async fn following_feed_ordering() {
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
