@@ -89,6 +89,7 @@ impl SortedBy {
 pub struct Query;
 
 const CREATED_POSTS_ONLY: bool = true;
+const ALL_INTERACTIONS: bool = false;
 
 impl Query {
     /// Returns posts for the global Explore feed.
@@ -121,6 +122,25 @@ impl Query {
             db,
             Some(for_identity),
             CREATED_POSTS_ONLY,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// Returns posts for the Recommended / For You feed.
+    pub async fn recommended_feed(
+        db: &DbConn,
+        for_identity: &str,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            Some(for_identity),
+            ALL_INTERACTIONS,
             sort_by,
             limit,
             cursor_filter,

@@ -6,6 +6,7 @@ pub mod get_explore_feed;
 pub mod get_following_feed;
 pub mod get_identity_feed;
 pub mod get_post_thread;
+pub mod get_recommended_feed;
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::feeds_service_server::{
@@ -39,6 +40,16 @@ impl FeedsService for FeedsServiceImpl {
     ) -> Result<Response<GetFeedResponse>, Status> {
         Ok(Response::new(
             get_following_feed::handle(&self.ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_recommended_feed(
+        &self,
+        request: Request<GetFollowingFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        Ok(Response::new(
+            get_recommended_feed::handle(&self.ctx, request.into_inner())
+                .await?,
         ))
     }
 
