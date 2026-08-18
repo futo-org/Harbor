@@ -3,7 +3,6 @@ use polycentric_common::{
     error::CoreError,
     models::{protos_v2 as Proto, protos_v2::SignedEvent},
 };
-use prost::Message;
 use std::{
     collections::{BTreeMap, HashSet},
     ops::Bound,
@@ -21,18 +20,14 @@ impl EventStore {
     }
 
     pub fn insert(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
-        let event = Proto::Event::decode(signed_event.event_bytes.as_slice())
-            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
-
-        let event_key = EventKey::from_event(event)?;
-
-        if self.events.contains_key(&event_key) {
-            return Ok(());
-        }
-
-        self.events.insert(event_key, signed_event);
-
+        let event_key = EventKey::from_signed_event(&signed_event)?;
+        self.insert_at(signed_event, event_key);
         Ok(())
+    }
+
+    /// Insert an event using the event key provided instead of deriving it.
+    pub fn insert_at(&mut self, signed_event: SignedEvent, event_key: EventKey) {
+        self.events.entry(event_key).or_insert(signed_event);
     }
 
     /// Point lookup by EventKey.

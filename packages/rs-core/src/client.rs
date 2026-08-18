@@ -10,14 +10,13 @@ use polycentric_common::{
     },
 };
 
-use crate::identity::resolve_identity_chain;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
-    keys::EventKey, meta_store::MetaStore,
+    identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
 };
 use prost::Message;
 use std::collections::HashSet;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 fn hex_short(bytes: &[u8]) -> String {
     hex::encode(&bytes[..bytes.len().min(4)])
@@ -30,6 +29,7 @@ pub struct PolycentricClient {
     event_proofs_store: EventProofsStore,
     content_store: ContentStore,
     meta_store: MetaStore,
+    identity_store: IdentityStore,
 }
 
 impl PolycentricClient {
@@ -49,7 +49,15 @@ impl PolycentricClient {
 
     /// Copy a signed event into the event store.
     pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
-        self.event_store.insert(signed_event)
+        let event_key = EventKey::from_signed_event(&signed_event)?;
+
+        if event_key.collection == collections::IDENTITY {
+            self.identity_store.invalidate(&event_key.identity);
+        }
+
+        self.event_store.insert_at(signed_event, event_key);
+
+        Ok(())
     }
 
     /// Copy content bytes into the content store, keyed by digest, after
@@ -66,7 +74,20 @@ impl PolycentricClient {
                 "content does not match digest {digest_hex}"
             )));
         }
+
+        // Adding this content may make an identity chain resolve differently if
+        // it's an identity document.
+        let is_identity = Content::decode(content_bytes.as_slice())
+            .ok()
+            .map(|content| matches!(content.content_body, Some(ContentBody::Identity(_))))
+            .unwrap_or(false);
+
         self.content_store.insert(digest, content_bytes);
+
+        if is_identity {
+            self.identity_store.invalidate_all();
+        }
+
         Ok(())
     }
 
@@ -379,9 +400,11 @@ impl PolycentricClient {
             .collect())
     }
 
-    /// Resolve the identity chain for `identity` using the local event and content stores.
-    pub fn identity_chain(&self, identity: &str) -> Result<IdentityChain, CoreError> {
-        resolve_identity_chain(identity, &self.event_store, &self.content_store)
+    /// Return the  identity chain for `identity`, resolved from the local event and
+    /// content stores.
+    pub fn identity_chain(&self, identity: &str) -> Result<Arc<IdentityChain>, CoreError> {
+        self.identity_store
+            .get_chain(identity, &self.event_store, &self.content_store)
     }
 
     /// Validate an event against its identity chain, identity content,
