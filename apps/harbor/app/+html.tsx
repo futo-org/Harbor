@@ -1,6 +1,8 @@
 import { APP_NAME } from '@/src/common/constants';
-import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
+
+const ROOT_STYLE =
+  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}';
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -20,7 +22,11 @@ export default function Root({ children }: PropsWithChildren) {
             __html: 'globalThis.__POLYCENTRIC_ENV__ = "__RUNTIME_ENV__";',
           }}
         />
-        <ScrollViewStyleReset />
+        <style
+          id="polycentric-root-reset"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
+          dangerouslySetInnerHTML={{ __html: ROOT_STYLE }}
+        />
       </head>
       <body>{children}</body>
     </html>

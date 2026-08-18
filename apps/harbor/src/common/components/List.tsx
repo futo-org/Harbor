@@ -6,7 +6,7 @@ import {
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import type React from 'react';
 import {
   cloneElement,
@@ -187,40 +187,25 @@ function WebFeedViewer<T>({
   const containerRef = useRef<HTMLDivElement>(null);
   const items = (data as readonly T[] | null | undefined) ?? [];
   const isEmpty = items.length === 0;
-  // The app shell scrolls in an inner `overflow-y: auto` div (body is
-  // overflow hidden), so virtualize against the nearest scrollable ancestor
-  // rather than the window. The container only exists once the list has
-  // rows, so rediscover when `isEmpty` flips.
-  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
+  // The document is the scroll port on web, so virtualize against the window.
+  // `scrollMargin` is the page offset of the rows, i.e. everything rendered
+  // above them. The container only exists once the list has rows, so
+  // remeasure when `isEmpty` flips.
   const [scrollMargin, setScrollMargin] = useState(0);
   useLayoutEffect(() => {
-    if (isEmpty) return;
-    let el: HTMLElement | null = containerRef.current?.parentElement ?? null;
-    while (el) {
-      const { overflowY } = getComputedStyle(el);
-      if (overflowY === 'auto' || overflowY === 'scroll') break;
-      el = el.parentElement;
-    }
-    setScrollEl(el);
-    if (el && containerRef.current) {
-      setScrollMargin(
-        containerRef.current.getBoundingClientRect().top -
-          el.getBoundingClientRect().top +
-          el.scrollTop,
-      );
-    }
+    if (isEmpty || !containerRef.current) return;
+    setScrollMargin(
+      containerRef.current.getBoundingClientRect().top + window.scrollY,
+    );
   }, [isEmpty]);
   useImperativeHandle(
     listRef,
     () => ({
       scrollToTop: ({ animated = true } = {}) => {
-        (scrollEl ?? window).scrollTo({
-          top: 0,
-          behavior: animated ? 'smooth' : 'auto',
-        });
+        window.scrollTo({ top: 0, behavior: animated ? 'smooth' : 'auto' });
       },
     }),
-    [scrollEl],
+    [],
   );
 
   // Keep parity with native `FlashList` by calling `onLoad`.
@@ -233,9 +218,8 @@ function WebFeedViewer<T>({
 
   // Row heights vary, so each rendered row is measured via `measureElement`;
   // scrollMargin accounts for the headers rendered above the rows.
-  const virtualizer = useVirtualizer({
+  const virtualizer = useWindowVirtualizer({
     count: items.length,
-    getScrollElement: () => scrollEl,
     estimateSize: () => WEB_ESTIMATED_ITEM_HEIGHT,
     overscan: 8,
     scrollMargin,
