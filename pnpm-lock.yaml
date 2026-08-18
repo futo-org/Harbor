@@ -712,7 +712,7 @@ importers:
         version: 2.3.0
       bson:
         specifier: ^7.3.1
-        version: 7.3.1
+        version: 7.3.2
       cors:
         specifier: ^2.8.6
         version: 2.8.6
@@ -5692,8 +5692,8 @@ packages:
   bser@2.1.1:
     resolution: {integrity: sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==}
 
-  bson@7.3.1:
-    resolution: {integrity: sha512-h/C0qe6857pQhcSJHLfsR1uYGj98Ge3wKAD3Ed9KqH3wcVh+BM4Jq4xISD7vs9OPuT07n+q3QQVjslJ286j6ag==}
+  bson@7.3.2:
+    resolution: {integrity: sha512-1w0ra+ho1cuE+w8jzwgzTFIimFtCfZeCoOsvIPQg6uyFCsp8M29U7bNNf5GrFh88TXbYg1g3TyKUGpd6O7q6zA==}
     engines: {node: '>=20.19.0'}
 
   buffer-from@1.1.2:
@@ -18976,7 +18976,7 @@ snapshots:
     dependencies:
       node-int64: 0.4.0
 
-  bson@7.3.1: {}
+  bson@7.3.2: {}
 
   buffer-from@1.1.2: {}
 
