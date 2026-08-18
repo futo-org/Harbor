@@ -3,7 +3,7 @@ import { act, createRef } from 'react';
 import TestRenderer from 'react-test-renderer';
 import type { ListRef } from '@/src/common/components/List';
 import { useFeedSettingsStore } from './useFeedSettingsStore';
-import { useFeedSort, useFeedSortPress } from './useFeedSort';
+import { useFeedTab, useFeedTabPress } from './useFeedTabs';
 
 const STORE_KEY = 'polycentric:feed-settings';
 
@@ -26,7 +26,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   act(() => {
     useFeedSettingsStore.setState({
-      feeds: { following: { sort: 'latest' }, explore: { sort: 'top' } },
+      feeds: { following: { tab: 'latest' }, explore: { tab: 'top' } },
     });
   });
 });
@@ -37,15 +37,15 @@ afterEach(() => {
   });
 });
 
-describe('useFeedSort', () => {
-  it('defaults the following feed to latest and explore to top', async () => {
+describe('useFeedTab', () => {
+  it('defaults the home feed to latest and explore to top', async () => {
     await useFeedSettingsStore.persist.rehydrate();
 
-    const following = await renderHook(() => useFeedSort('following'));
-    const explore = await renderHook(() => useFeedSort('explore'));
+    const following = await renderHook(() => useFeedTab('following'));
+    const explore = await renderHook(() => useFeedTab('explore'));
 
-    expect(following.current.sort).toBe('latest');
-    expect(explore.current.sort).toBe('top');
+    expect(following.current.tab).toBe('latest');
+    expect(explore.current.tab).toBe('top');
   });
 
   it('hydrates the stored selection', async () => {
@@ -53,14 +53,14 @@ describe('useFeedSort', () => {
       STORE_KEY,
       JSON.stringify({
         state: {
-          feeds: { following: { sort: 'top' }, explore: { sort: 'top' } },
+          feeds: { following: { tab: 'for-you' }, explore: { tab: 'top' } },
         },
       }),
     );
     await useFeedSettingsStore.persist.rehydrate();
 
-    const result = await renderHook(() => useFeedSort('following'));
-    expect(result.current.sort).toBe('top');
+    const result = await renderHook(() => useFeedTab('following'));
+    expect(result.current.tab).toBe('for-you');
     expect(result.current.hydrated).toBe(true);
   });
 
@@ -69,51 +69,51 @@ describe('useFeedSort', () => {
 
     act(() => {
       useFeedSettingsStore.getState().setFeedSettings('following', {
-        sort: 'top',
+        tab: 'for-you',
       });
     });
 
     const stored = await AsyncStorage.getItem(STORE_KEY);
     expect(JSON.parse(stored ?? '{}').state.feeds).toEqual({
-      following: { sort: 'top' },
-      explore: { sort: 'top' },
+      following: { tab: 'for-you' },
+      explore: { tab: 'top' },
     });
   });
 });
 
-describe('useFeedSortPress', () => {
-  it('selects a different sort', async () => {
+describe('useFeedTabPress', () => {
+  it('selects a different tab', async () => {
     await useFeedSettingsStore.persist.rehydrate();
     const listRef = createRef<ListRef>();
     const refresh = jest.fn();
 
-    const onSortPress = await renderHook(() =>
-      useFeedSortPress('following', listRef, refresh),
+    const onTabPress = await renderHook(() =>
+      useFeedTabPress('following', listRef, refresh),
     );
     act(() => {
-      onSortPress.current('top');
+      onTabPress.current('for-you');
     });
 
-    expect(useFeedSettingsStore.getState().feeds.following.sort).toBe('top');
+    expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('for-you');
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('scrolls to the top and refreshes when the active sort is re-tapped', async () => {
+  it('scrolls to the top and refreshes when the active tab is re-tapped', async () => {
     await useFeedSettingsStore.persist.rehydrate();
     const scrollToTop = jest.fn();
     const listRef = createRef<ListRef>();
     listRef.current = { scrollToTop } as unknown as ListRef;
     const refresh = jest.fn();
 
-    const onSortPress = await renderHook(() =>
-      useFeedSortPress('following', listRef, refresh),
+    const onTabPress = await renderHook(() =>
+      useFeedTabPress('following', listRef, refresh),
     );
     act(() => {
-      onSortPress.current('latest');
+      onTabPress.current('latest');
     });
 
     expect(scrollToTop).toHaveBeenCalled();
     expect(refresh).toHaveBeenCalled();
-    expect(useFeedSettingsStore.getState().feeds.following.sort).toBe('latest');
+    expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('latest');
   });
 });

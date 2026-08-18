@@ -15,6 +15,7 @@ import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { FeedError } from './FeedError';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
 import { PostSkeletonList } from '../post/PostSkeleton';
@@ -81,12 +82,14 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
 
   const emptyComponent = useMemo(
     () =>
-      feed.isLoading ? (
+      feed.error ? (
+        <FeedError onRetry={feed.refresh} />
+      ) : feed.isLoading ? (
         <PostSkeletonList />
       ) : (
         <ListEmpty>{emptyMessage}</ListEmpty>
       ),
-    [feed.isLoading, emptyMessage],
+    [feed.error, feed.isLoading, feed.refresh, emptyMessage],
   );
 
   const showLoadingMore = feed.hasMore && feed.items.length > 0;

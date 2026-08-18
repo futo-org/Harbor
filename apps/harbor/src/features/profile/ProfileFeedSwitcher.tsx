@@ -1,9 +1,6 @@
-import { Text } from '@/src/common/components/primitives';
 import type { FeedHookResult } from '@/src/features/feed/hooks/types';
 import type { FlashListProps } from '@/src/features/post';
 import FeedList from '@/src/features/feed/FeedList';
-import { Atoms } from '@/src/common/theme';
-import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 type ProfileFeedTab = {
@@ -34,21 +31,6 @@ export function ProfileFeedSwitcher({
   if (!active) return null;
 
   const { feed, bottomPadding } = active;
-
-  if (feed.error) {
-    return (
-      <View
-        style={[
-          Atoms.flex_1,
-          Atoms.items_center,
-          Atoms.justify_center,
-          Atoms.p_lg,
-        ]}
-      >
-        <Text color="neutral_500">Failed to load feed</Text>
-      </View>
-    );
-  }
 
   return (
     <FeedList

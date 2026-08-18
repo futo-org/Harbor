@@ -29,6 +29,13 @@ import {
 /** Orders a sortable feed can be sorted by. */
 export type FeedSortOption = 'top' | 'latest';
 
+/**
+ * A tab in a feed screen's tab row. Home mixes the recommended feed in with
+ * the following feed's sorts, so `'for-you'` selects a different feed rather
+ * than a different order.
+ */
+export type FeedTab = FeedSortOption | 'for-you';
+
 export function feedSortBy(sort: FeedSortOption): FeedSort {
   return sort === 'top' ? FeedSort.Top : FeedSort.Latest;
 }
@@ -40,6 +47,12 @@ export const feedQueryKeys = {
     sort
       ? ['feed', 'following', identity, sort]
       : ['feed', 'following', identity],
+  /** The recommended ("For you") feed is always ranked by reactions. */
+  recommended: (identity: string): string[] => [
+    'feed',
+    'recommended',
+    identity,
+  ],
   identity: (identity: string): string[] => ['feed', 'identity', identity],
   /** Omit `sort` for the partition covering every sort. */
   explore: (identity: string, sort?: FeedSortOption): string[] =>
