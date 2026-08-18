@@ -40,6 +40,7 @@ mod m20260817_000001_reaction_identity;
 mod m20260817_000002_repost_table;
 mod m20260818_000001_qoute_table;
 mod m20260818_000002_reply_table;
+mod m20260818_000003_reaction_count_decay;
 
 pub struct Migrator;
 
@@ -110,6 +111,9 @@ impl MigratorTrait for Migrator {
             ),
             Box::new(
                 m20260818_000002_reply_table::Migration,
+            ),
+            Box::new(
+                m20260818_000003_reaction_count_decay::Migration,
             ),
         ]
     }
