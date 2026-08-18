@@ -101,7 +101,6 @@ export default function ExploreScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedList
-          key={sort}
           ref={listRef}
           feed={feed}
           HeaderComponent={<ListHeader sort={sort} onSortPress={onSortPress} />}

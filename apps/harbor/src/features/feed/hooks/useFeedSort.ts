@@ -41,6 +41,7 @@ export function useFeedSortPress(
         refreshRef.current();
       } else {
         store.setFeedSettings(feed, { sort: next });
+        listRef.current?.scrollToTop({ animated: false });
       }
     },
     [feed, listRef],

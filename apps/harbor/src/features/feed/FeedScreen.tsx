@@ -82,7 +82,6 @@ export default function FeedScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <FeedList
-          key={sort}
           ref={listRef}
           feed={feed}
           HeaderComponent={<ListHeader sort={sort} onSortPress={onSortPress} />}
