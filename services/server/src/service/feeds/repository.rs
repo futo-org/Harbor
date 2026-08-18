@@ -5,7 +5,8 @@ use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
-    follow_model as FollowModel, reaction_model as ReactionModel,
+    follow_model as FollowModel, quote_model as QuoteModel,
+    reaction_model as ReactionModel,
     reaction_tally_model2 as ReactionTallyModel, repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
@@ -249,6 +250,17 @@ impl Query {
                                 .from(RepostModel::Entity)
                                 .and_where(
                                     RepostModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Quoted by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(QuoteModel::Column::Post)
+                                .from(QuoteModel::Entity)
+                                .and_where(
+                                    QuoteModel::Column::Identity
                                         .in_subquery(select_followee),
                                 );
                             q
@@ -259,7 +271,7 @@ impl Query {
                     //  * [x] created
                     //  * [x] reacted
                     //  * [x] reposted
-                    //  * [ ] quoted
+                    //  * [x] quoted
                     //  * [ ] replied
                     // Probably need to change the following table to be a CTE so it can
                     // reused.

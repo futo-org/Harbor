@@ -59,6 +59,9 @@ pub struct Model {
     /// Only if this is a repost event.
     #[sea_orm(has_one)] // Really has zero or one.
     pub repost: HasOne<super::repost_model::Entity>,
+    /// Only if this a post event that quotes another post.
+    #[sea_orm(has_one)] // Really has zero or one.
+    pub quote: HasOne<super::quote_model::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
