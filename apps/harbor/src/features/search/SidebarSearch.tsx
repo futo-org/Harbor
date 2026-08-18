@@ -25,7 +25,13 @@ export function SidebarSearch() {
   const debounced = useDebouncedValue(phrase);
   const users = useSearchUsers(debounced, { limit: 8 });
 
-  if (pathname === Routes.tabs.explore.search) return null;
+  // Explore and search carry their own search field.
+  if (
+    pathname === Routes.tabs.explore.index ||
+    pathname === Routes.tabs.explore.search
+  ) {
+    return null;
+  }
 
   const submit = () => {
     if (!phrase) return;
