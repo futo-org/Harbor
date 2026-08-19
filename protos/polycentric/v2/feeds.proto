@@ -3,6 +3,7 @@ package polycentric.v2;
 
 import "polycentric/v2/common.proto";
 import "polycentric/v2/search.proto";
+import "polycentric/v2/content.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
 
@@ -57,6 +58,16 @@ message GetPostThreadRequest {
   repeated string omit_labels = 3;
 }
 
+message GetAttributionFeedRequest {
+  // Attribution to match posts against. A post is included when any of
+  // its `attributed_to` entries is similar to this one — for a link,
+  // similar means the same URL, ignoring other Link metadata.
+  AttributedTo attributed_to = 1;
+  optional PageParams page_params = 2;
+  // Label values for which the requester does not want to see content
+  repeated string omit_labels = 3;
+}
+
 /**
  * Curated feeds provided by servers
  */
@@ -73,4 +84,6 @@ service FeedsService {
   rpc GetExploreFeed(GetExploreFeedRequest) returns (GetFeedResponse);
   // Replies to a post
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
+  // Posts attributed to the same target (e.g. all posts about a URL)
+  rpc GetAttributionFeed(GetAttributionFeedRequest) returns (GetFeedResponse);
 }

@@ -5,9 +5,9 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
-    feeds_service_client::FeedsServiceClient,
+    AttributedTo, EventBundle, EventHint, GetAttributionFeedRequest, GetExploreFeedRequest,
+    GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse, PageParams, SortPostsBy, feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
@@ -79,6 +79,19 @@ pub struct GetExploreFeedArgs {
 pub struct GetPostThreadArgs {
     pub event_key: EventKey,
     pub limit: i32,
+    pub omit_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetAttributionFeedArgs {
+    /// Serialized `AttributedTo` proto to match posts against. Passed as
+    /// bytes so the whole (future-extensible) message crosses the FFI
+    /// intact; decoded server-side by URL for the link case.
+    pub attributed_to: Vec<u8>,
+    pub limit: Option<i32>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 /// The key servers ordered a feed by. Merging has to order pages by the
@@ -234,6 +247,71 @@ pub fn get_identity_feed(
                 })
                 .await
                 .map_err(|e| format!("get_identity_feed [{server_url}]: {e}"))?
+                .into_inner();
+
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
+            let bytes = response.encode_to_vec();
+
+            copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
+            Ok(bytes)
+        }
+    };
+
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(FeedOrder::CreatedAt),
+        opts,
+    ))
+}
+
+/// Returns posts attributed to the same target (e.g. all posts about a URL).
+pub fn get_attribution_feed(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetAttributionFeedArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetAttributionFeedArgs {
+        attributed_to,
+        limit,
+        backward_token,
+        forward_token,
+        omit_labels,
+    } = args;
+    let client = query_client.client().clone();
+
+    let query_fn = move |server_url: String| {
+        let attributed_to = attributed_to.clone();
+        let omit_labels = omit_labels.clone();
+        let client = client.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
+        async move {
+            let attributed_to = AttributedTo::decode(&attributed_to[..])
+                .map_err(|e| format!("decode AttributedTo: {e}"))?;
+
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
+                .get_attribution_feed(GetAttributionFeedRequest {
+                    attributed_to: Some(attributed_to),
+                    page_params: Some(PageParams {
+                        limit,
+                        backward_token,
+                        forward_token,
+                    }),
+                    omit_labels,
+                })
+                .await
+                .map_err(|e| format!("get_attribution_feed [{server_url}]: {e}"))?
                 .into_inner();
 
             prepare_page_info(
@@ -451,11 +529,15 @@ pub fn get_post_thread(
     args: GetPostThreadArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let GetPostThreadArgs { event_key, limit } = args;
+    let GetPostThreadArgs {
+        event_key,
+        limit,
+        omit_labels,
+    } = args;
     let request = GetPostThreadRequest {
         event_key: Some(event_key.into()),
         limit,
-        omit_labels: vec![],
+        omit_labels,
     };
 
     let client = query_client.client().clone();

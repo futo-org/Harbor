@@ -8,7 +8,8 @@ use std::sync::Arc;
 use common_kafka::{BorrowedMessage, Message};
 use polycentric_common::models::protos_v2::Post;
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, EventKey, content::ContentBody,
+    AttributedToReaction, Content, Event, EventBundle, EventKey,
+    attributed_to::To, content::ContentBody,
 };
 use prost::Message as _;
 use sea_orm::DbConn;
@@ -138,13 +139,45 @@ impl StatsWorker {
                             .await?;
                         }
                     }
+
+                    // Remove the deleted URL reaction from the URL counters
+                    ContentBody::AttributedToReaction(reaction) => {
+                        if let Some(url) = attributed_reaction_url(&reaction) {
+                            Mutation::remove_attributed_reaction_for(
+                                &self.ctx.db,
+                                url,
+                                reaction.positive,
+                            )
+                            .await?;
+                        }
+                    }
                     _ => {}
+                }
+            }
+
+            // Count an out-of-network (URL) reaction — e.g. a video like.
+            ContentBody::AttributedToReaction(reaction) => {
+                if let Some(url) = attributed_reaction_url(&reaction) {
+                    Mutation::count_attributed_reaction_for(
+                        &self.ctx.db,
+                        url,
+                        reaction.positive,
+                    )
+                    .await?;
                 }
             }
             _ => {}
         }
 
         Ok(())
+    }
+}
+
+/// Extract the attributed URL (`Link.url`) from an out-of-network reaction.
+fn attributed_reaction_url(reaction: &AttributedToReaction) -> Option<String> {
+    match reaction.attributed_to.as_ref().and_then(|a| a.to.as_ref()) {
+        Some(To::Link(link)) => Some(link.url.clone()),
+        _ => None,
     }
 }
 

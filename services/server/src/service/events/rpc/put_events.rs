@@ -320,6 +320,7 @@ pub fn event_is_authorised(
         | ContentBody::Follow(_)
         | ContentBody::Block(_)
         | ContentBody::Reaction(_)
+        | ContentBody::AttributedToReaction(_)
         | ContentBody::ProfileUpdate(_)
         | ContentBody::Identity(_)
         | ContentBody::Repost(_)

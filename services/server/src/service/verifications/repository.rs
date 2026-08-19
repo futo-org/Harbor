@@ -4,7 +4,8 @@ use ::entity::content_verification_target_model as TargetModel;
 use ::entity::content_verification_verify_model as VerifyModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
-use sea_orm::sea_query::Expr;
+use sea_orm::sea_query::extension::postgres::PgBinOper;
+use sea_orm::sea_query::{Alias, Expr, Query as SeaQuery};
 use sea_orm::*;
 use std::collections::HashSet;
 
@@ -108,6 +109,53 @@ impl Query {
             .filter(EventModel::Column::Collection.eq(VERIFICATIONS_COLLECTION))
             .filter(EventModel::Column::Identity.eq(identity))
             .order_by_desc(EventModel::Column::Sequence)
+            .limit(MAX_ROWS)
+            .all(db)
+            .await
+    }
+
+    /// VerificationClaim events whose decoded `fields` contain every pair in
+    /// `match_fields` (JSONB containment), optionally restricted to a schema
+    /// by its digest, AND that a `verified_by` identity has verified.
+    /// Tombstones NOT yet filtered.
+    ///
+    /// The trust requirement is a correlated `EXISTS` applied BEFORE the row
+    /// limit: publishing a claim needs no authorization, so without it an
+    /// attacker could publish `MAX_ROWS` junk claims carrying a target's
+    /// field values and push the genuinely-verified claim out of the window,
+    /// denying its resolution. Bounding the scan to claims a trusted identity
+    /// actually verified — a set the attacker cannot inflate — closes that.
+    /// (A claim admitted via a since-revoked verify is dropped later, when
+    /// tombstones are validated.)
+    pub async fn list_claim_events_by_fields(
+        db: &DbConn,
+        schema_digest: Option<(i32, Vec<u8>)>,
+        match_fields: serde_json::Value,
+        verified_by: &HashSet<String>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        let mut select = EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(JoinType::InnerJoin, claim_join())
+            .filter(EventModel::Column::Collection.eq(VERIFICATIONS_COLLECTION))
+            .filter(
+                Expr::col((ClaimModel::Entity, ClaimModel::Column::Fields))
+                    .binary(
+                        PgBinOper::Contains,
+                        Expr::val(match_fields).cast_as(Alias::new("jsonb")),
+                    ),
+            )
+            .filter(Expr::exists(verified_by_trusted_subquery(verified_by)));
+        if let Some((digest_type, digest_bytes)) = schema_digest {
+            select = select
+                .filter(ClaimModel::Column::SchemaDigestType.eq(digest_type))
+                .filter(ClaimModel::Column::SchemaDigestBytes.eq(digest_bytes));
+        }
+        select
+            .order_by_desc(EventModel::Column::Sequence)
+            // Deterministic tiebreaker: `sequence` is a per-identity counter,
+            // so it does not totally order rows across identities.
+            .order_by_desc(EventModel::Column::Id)
             .limit(MAX_ROWS)
             .all(db)
             .await
@@ -319,4 +367,122 @@ fn claim_join() -> RelationDef {
         .from(ContentModel::Column::Id)
         .to(ClaimModel::Column::ContentId)
         .into()
+}
+
+/// Correlated sub-select for `EXISTS`: a VerificationVerify authored by one
+/// of `verified_by` that references the OUTER claim event. Walks
+/// `content_verification_verify → content → events` (the verify event) to
+/// reach the attesting signer's identity; the verify event and its content
+/// are aliased (`ve`/`vc`) so the outer query's own `events`/`content` stay
+/// referenceable for the claim-key correlation. Tombstone validity is not a
+/// pure SQL predicate and is enforced later in the pipeline.
+fn verified_by_trusted_subquery(
+    verified_by: &HashSet<String>,
+) -> sea_query::SelectStatement {
+    let ve = Alias::new("ve");
+    let vc = Alias::new("vc");
+    let mut sub = SeaQuery::select();
+    sub.expr(Expr::val(1))
+        .from(VerifyModel::Entity)
+        .join_as(
+            JoinType::InnerJoin,
+            ContentModel::Entity,
+            vc.clone(),
+            Expr::col((vc.clone(), ContentModel::Column::Id))
+                .equals((VerifyModel::Entity, VerifyModel::Column::ContentId)),
+        )
+        .join_as(
+            JoinType::InnerJoin,
+            EventModel::Entity,
+            ve.clone(),
+            Expr::col((ve.clone(), EventModel::Column::ContentDigestType))
+                .equals((vc.clone(), ContentModel::Column::DigestType))
+                .and(
+                    Expr::col((
+                        ve.clone(),
+                        EventModel::Column::ContentDigestBytes,
+                    ))
+                    .equals((vc.clone(), ContentModel::Column::DigestBytes)),
+                ),
+        )
+        .and_where(
+            Expr::col((ve.clone(), EventModel::Column::Collection))
+                .eq(VERIFICATIONS_COLLECTION),
+        )
+        .and_where(
+            Expr::col((ve.clone(), EventModel::Column::Identity))
+                .is_in(verified_by.iter().cloned()),
+        )
+        // Correlate the verify row to the outer (unaliased) claim event.
+        .and_where(
+            Expr::col((
+                VerifyModel::Entity,
+                VerifyModel::Column::ClaimEventKeyCollection,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Collection)),
+        )
+        .and_where(
+            Expr::col((
+                VerifyModel::Entity,
+                VerifyModel::Column::ClaimEventKeyIdentity,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Identity)),
+        )
+        .and_where(
+            Expr::col((
+                VerifyModel::Entity,
+                VerifyModel::Column::ClaimEventKeyPublicKeyType,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::PublicKeyType)),
+        )
+        .and_where(
+            Expr::col((
+                VerifyModel::Entity,
+                VerifyModel::Column::ClaimEventKeyPublicKey,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::PublicKey)),
+        )
+        .and_where(
+            Expr::col((
+                VerifyModel::Entity,
+                VerifyModel::Column::ClaimEventKeySequence,
+            ))
+            .equals((EventModel::Entity, EventModel::Column::Sequence)),
+        );
+    sub
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_orm::sea_query::PostgresQueryBuilder;
+
+    /// The trust `EXISTS` must (a) filter the verify EVENT's identity, and
+    /// (b) correlate the verify row's claim key to the OUTER (unaliased)
+    /// `events` — not the aliased inner verify event — or every claim would
+    /// wrongly pass. Guards against an alias/correlation regression the mock
+    /// test harness cannot catch (it never executes SQL).
+    #[test]
+    fn trusted_subquery_correlates_to_outer_claim_event() {
+        let trusted: HashSet<String> =
+            ["FUTO".to_string()].into_iter().collect();
+        let sql = verified_by_trusted_subquery(&trusted)
+            .to_string(PostgresQueryBuilder);
+
+        // Verifier identity is checked on the aliased inner verify event.
+        assert!(sql.contains(r#""ve"."identity" IN ('FUTO')"#), "sql: {sql}");
+        // Claim-key correlation targets the outer, unaliased events table.
+        assert!(
+            sql.contains(
+                r#""content_verification_verify"."claim_event_key_identity" = "events"."identity""#
+            ),
+            "sql: {sql}"
+        );
+        assert!(
+            sql.contains(
+                r#""content_verification_verify"."claim_event_key_sequence" = "events"."sequence""#
+            ),
+            "sql: {sql}"
+        );
+    }
 }

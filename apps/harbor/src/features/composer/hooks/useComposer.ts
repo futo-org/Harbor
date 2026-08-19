@@ -276,6 +276,10 @@ export function useComposer({
         text: text.trim(),
         images: imageSets,
         links: link ? [link] : [],
+        // Tag posts authored in Harbor with the client label (Post.labels).
+        labels: ['harbor'],
+        // Regular posts aren't attributed to an external URL.
+        attributedTo: [],
       };
 
       if (isReply) {
