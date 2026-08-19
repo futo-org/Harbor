@@ -55,7 +55,12 @@ export function useProfileSuggestions(
   opts?: { exclude?: readonly string[] },
 ): ProfileSuggestionsResult {
   const { identityKey } = useCurrentIdentity();
-  const following = useFollowList('following', identityKey, FOLLOWING_LIMIT);
+  const following = useFollowList(
+    'following',
+    identityKey,
+    true,
+    FOLLOWING_LIMIT,
+  );
 
   const followedIdentities = useMemo(
     () => following.entries.map((entry) => entry.identity),

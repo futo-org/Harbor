@@ -6,7 +6,10 @@ use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
     content_post_attributed_url_model as ContentPostAttributedUrlModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
-    follow_model as FollowModel, reaction_tally_model2 as ReactionTallyModel,
+    follow_model as FollowModel, quote_model as QuoteModel,
+    reaction_model as ReactionModel,
+    reaction_tally_model2 as ReactionTallyModel, reply_model as ReplyModel,
+    repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
@@ -16,6 +19,7 @@ use sea_orm::{
     sea_query::{Expr, IntoCondition, PostgresQueryBuilder, Query as SeaQuery},
     *,
 };
+use sea_query::query::{CommonTableExpression, WithClause};
 use sea_query::{SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
@@ -87,14 +91,78 @@ impl SortedBy {
 
 pub struct Query;
 
+const CREATED_POSTS_ONLY: bool = true;
+const ALL_INTERACTIONS: bool = false;
+
 impl Query {
-    /// List post events for a feed.
+    /// Returns posts for the global Explore feed.
+    pub async fn explore_feed(
+        db: &DbConn,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            None,
+            CREATED_POSTS_ONLY,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// Returns posts for the Following feed.
+    pub async fn following_feed(
+        db: &DbConn,
+        for_identity: &str,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            Some(for_identity),
+            CREATED_POSTS_ONLY,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// Returns posts for the Recommended / For You feed.
+    pub async fn recommended_feed(
+        db: &DbConn,
+        for_identity: &str,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            Some(for_identity),
+            ALL_INTERACTIONS,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// List post events for an explore feed.
     ///
-    /// If `for_identity` is empty this will return the global feed, otherwise a
-    /// personal feed.
-    pub async fn list_feed_events(
+    /// If `for_identity` is empty this will return the global Explore feed,
+    /// otherwise a personal Following feed.
+    ///
+    /// If `posts_created_only` is true only posts created by an identity
+    /// `for_identity` is following will be shown. If it's false any interaction
+    /// (reaction, repost, etc.) by a followee will include the post.
+    async fn explore_posts(
         db: &DbConn,
         for_identity: Option<&str>,
+        posts_created_only: bool,
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: Option<&CursorFilter<SortedBy>>,
@@ -138,21 +206,80 @@ impl Query {
                     q
                 });
 
-            query = query.filter(
-                Condition::any()
-                    // Created by an identity the `for_identity` is following.
-                    .add(EventModel::Column::Identity.in_subquery(following)),
-            );
+            const FOLLOWING_TABLE: &str = "following";
+            QuerySelect::query(&mut query).with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name(FOLLOWING_TABLE).query(following);
+                c.recursive(false).cte(cte);
+                c
+            });
 
-            // TODO: improve personal feed. For each user, consider a post if
-            // the user has interacted with the post:
-            //  * [x] created
-            //  * [ ] reacted
-            //  * [ ] reposted
-            //  * [ ] quoted
-            //  * [ ] replied
-            // Probably need to change the following table to be a CTE so it can
-            // reused.
+            let mut select_followee = SelectStatement::new();
+            select_followee
+                .column(FollowModel::Column::Followee)
+                .from(FOLLOWING_TABLE);
+
+            query = query.filter({
+                let condition = Condition::any()
+                    // Created by an identity the `for_identity` is following.
+                    .add(
+                        EventModel::Column::Identity
+                            .in_subquery(select_followee.clone()),
+                    );
+
+                if posts_created_only {
+                    // Only include posts created by someone `for_identity` is following.
+                    condition
+                } else {
+                    // Include additional interactions.
+                    condition
+                        // Reacted on by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(ReactionModel::Column::OnPost)
+                                .from(ReactionModel::Entity)
+                                .and_where(
+                                    ReactionModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Reposted by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(RepostModel::Column::Post)
+                                .from(RepostModel::Entity)
+                                .and_where(
+                                    RepostModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Quoted by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(QuoteModel::Column::Post)
+                                .from(QuoteModel::Entity)
+                                .and_where(
+                                    QuoteModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Replied to by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(ReplyModel::Column::Post)
+                                .from(ReplyModel::Entity)
+                                .and_where(
+                                    ReplyModel::Column::Identity
+                                        .in_subquery(select_followee),
+                                );
+                            q
+                        }))
+                }
+            });
         }
 
         match sort_by {

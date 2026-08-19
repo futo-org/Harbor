@@ -33,8 +33,18 @@ describe('singleImageAspectRatio', () => {
     expect(singleImageAspectRatio({ width: 16, height: 9 })).toBe(
       MAX_ASPECT_RATIO,
     );
-    expect(singleImageAspectRatio({ width: 3, height: 4 })).toBe(
+    expect(singleImageAspectRatio({ width: 9, height: 16 })).toBe(
       MIN_ASPECT_RATIO,
+    );
+  });
+
+  it('leaves phone portrait photos at their natural ratio', () => {
+    // 3:4 from a camera, 9:16 from a screenshot.
+    expect(singleImageAspectRatio({ width: 3024, height: 4032 })).toBeCloseTo(
+      0.75,
+    );
+    expect(singleImageAspectRatio({ width: 1080, height: 1920 })).toBeCloseTo(
+      0.5625,
     );
   });
 

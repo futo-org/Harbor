@@ -14,8 +14,9 @@ import {
   useState,
 } from 'react';
 
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
+import { Text } from '@/src/common/components/primitives';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
 import { flattenHref } from '@/src/utils/router';
 
@@ -83,11 +84,6 @@ export function NavItem({
     backgroundColor: theme.palette.neutral_25,
   };
   const hoverItemStyle = { backgroundColor: theme.palette.neutral_50 };
-  const labelStyle = [
-    Atoms.font_semibold,
-    Atoms.text_2xl,
-    { color: theme.palette.neutral_900 },
-  ];
 
   return (
     <Link
@@ -96,7 +92,16 @@ export function NavItem({
       href={href!}
       onPress={(e) => {
         e.preventDefault();
-        if (isActive) emitFocusedRefresh();
+        // Re-tapping the current route only refreshes; navigating again
+        // would remount the screen.
+        if (pathname === flatHref) {
+          emitFocusedRefresh();
+          return;
+        }
+        // MH HACK!
+        // Switching destination, not going deeper. Web keeps pushed screens
+        // mounted and subscribed, so drop what is stacked over the tabs.
+        if (router.canDismiss()) router.dismissAll();
         router.navigate(href!);
       }}
       style={[
@@ -112,7 +117,15 @@ export function NavItem({
       {...props}
     >
       {renderIcon(icon)}
-      {labelVisible && <Text style={labelStyle}>{label}</Text>}
+      {labelVisible && (
+        <Text
+          fontSize="lg"
+          lineHeight={24}
+          fontWeight={isActive ? 'bold' : 'regular'}
+        >
+          {label}
+        </Text>
+      )}
     </Link>
   );
 }

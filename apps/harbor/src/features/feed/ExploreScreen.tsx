@@ -1,117 +1,104 @@
 import { Fab } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
-import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
-import { Text } from '@/src/common/components/primitives';
+import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { Atoms } from '@/src/common/theme';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { useCallback, useRef, useState } from 'react';
 import { View } from 'react-native';
-import type { ListRef } from '@/src/common/components/List';
-import { ComposerInput } from '../composer';
+import type { SharedValue } from 'react-native-reanimated';
 import { SearchBar } from '../search/SearchBar';
-import FeedList from './FeedList';
-import type { ExploreSort } from './hooks/feedCache';
+import { FeedPage } from './FeedPage';
+import { FeedTabs, SORT_TABS, SORT_TAB_VALUES } from './FeedTabs';
+import type { FeedSortOption } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
-import { Tabs } from '@/src/common/components/Tabs';
+import { useFeedTabs } from './hooks/useFeedTabs';
 
-type ListHeaderProps = {
-  sort: ExploreSort;
-  onSortPress: (sort: ExploreSort) => void;
-};
-
-const ListHeader = ({ sort, onSortPress }: ListHeaderProps) => {
-  return (
-    <>
-      {!isWeb ? (
-        <Screen.Topbar
-          center={<SearchBar />}
-          right={<TopbarSettingsButton />}
-        />
-      ) : null}
-
-      <Tabs>
-        <Tabs.Tab active={sort === 'top'} onPress={() => onSortPress('top')}>
-          Top
-        </Tabs.Tab>
-        <Tabs.Tab
-          active={sort === 'latest'}
-          onPress={() => onSortPress('latest')}
-        >
-          Latest
-        </Tabs.Tab>
-      </Tabs>
-
-      {isWeb && <ComposerInput />}
-    </>
-  );
-};
+function ExplorePage({
+  sort,
+  active,
+  ready,
+}: {
+  sort: FeedSortOption;
+  /** True for the page being shown; only that page loads. */
+  active: boolean;
+  /** False until the screen may fetch at all. */
+  ready: boolean;
+}) {
+  const feed = useExploreFeed({ sort, enabled: ready && active });
+  return <FeedPage feed={feed} active={active} />;
+}
 
 export default function ExploreScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
+  const { theme } = useTheme();
 
-  const enabled = useEagerLoad();
-  const [sort, setSort] = useState<ExploreSort>('top');
-  const feed = useExploreFeed({ sort, enabled });
-  const listRef = useRef<ListRef>(null);
-  const { refresh } = feed;
+  usePageTitle('Explore');
 
-  const onSortPress = useCallback(
-    (next: ExploreSort) => {
-      listRef.current?.scrollToTop();
-      // Each sort is its own query, so switching already shows the other list.
-      if (next === sort) refresh();
-      else setSort(next);
-    },
-    [sort, refresh],
+  const ready = useEagerLoad();
+  const { tab, hydrated, onTabPress } = useFeedTabs('explore');
+
+  const renderTabBar = ({
+    dragProgress,
+  }: {
+    dragProgress: SharedValue<number>;
+  }) => (
+    <>
+      {isWeb ? (
+        // Web has no topbar here, so explore carries its own search entry
+        // rather than the right sidebar's.
+        <View
+          style={[
+            Atoms.px_lg,
+            Atoms.py_md,
+            {
+              borderBottomWidth: 1,
+              borderBottomColor: theme.palette.neutral_25,
+              backgroundColor: theme.palette.neutral_0,
+            },
+          ]}
+        >
+          <SearchBar />
+        </View>
+      ) : (
+        <Screen.Topbar
+          center={<SearchBar />}
+          right={<TopbarSettingsButton />}
+        />
+      )}
+      <FeedTabs
+        tabs={SORT_TABS}
+        active={tab}
+        onPress={onTabPress}
+        progress={dragProgress}
+      />
+    </>
   );
-
-  const header = useCallback(
-    () => <ListHeader sort={sort} onSortPress={onSortPress} />,
-    [sort, onSortPress],
-  );
-
-  // Re-tapping the active navigation tab scrolls to the top and refreshes.
-  useFocusedRefresh(
-    useCallback(() => {
-      listRef.current?.scrollToTop();
-      refresh();
-    }, [refresh]),
-  );
-
-  if (feed.error) {
-    return (
-      <Screen>
-        <Screen.PrimaryColumn>
-          <View
-            style={[
-              Atoms.flex_1,
-              Atoms.items_center,
-              Atoms.justify_center,
-              Atoms.p_lg,
-            ]}
-          >
-            <Text color="neutral_500">Failed to load feed</Text>
-          </View>
-        </Screen.PrimaryColumn>
-      </Screen>
-    );
-  }
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList
-          ref={listRef}
-          feed={feed}
-          HeaderComponent={header}
-          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
-        />
+        {/* Held back so the pager does not open on the default tab first. */}
+        {hydrated ? (
+          <PagerView
+            values={SORT_TAB_VALUES}
+            active={tab}
+            onChange={onTabPress}
+            renderTabBar={renderTabBar}
+          >
+            <ExplorePage sort="top" active={tab === 'top'} ready={ready} />
+            <ExplorePage
+              sort="latest"
+              active={tab === 'latest'}
+              ready={ready}
+            />
+          </PagerView>
+        ) : null}
+
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

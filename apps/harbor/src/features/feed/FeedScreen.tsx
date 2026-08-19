@@ -1,75 +1,95 @@
 import { Fab } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
-import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
-import { Text } from '@/src/common/components/primitives';
+import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { Atoms } from '@/src/common/theme';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
-import { useCallback, useRef } from 'react';
-import { View } from 'react-native';
-import type { ListRef } from '@/src/common/components/List';
-import FeedList from './FeedList';
+import type { SharedValue } from 'react-native-reanimated';
+import { FeedPage } from './FeedPage';
+import { FeedTabs, HOME_TABS, HOME_TAB_VALUES } from './FeedTabs';
+import type { FeedSortOption } from './hooks/feedCache';
+import { useFeedTabs } from './hooks/useFeedTabs';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
+import { useRecommendedFeed } from './hooks/useRecommendedFeed';
 
-const ListHeader = () => {
-  return (
-    <>
-      {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
-      {isWeb && <ComposerInput />}
-    </>
-  );
+type PageProps = {
+  /** True for the page being shown; only that page loads. */
+  active: boolean;
+  /** False until the screen may fetch at all. */
+  ready: boolean;
 };
+
+// Web tops each page with the composer, so it scrolls under the pinned tabs.
+const PageHeader = isWeb ? ComposerInput : undefined;
+
+function ForYouPage({ active, ready }: PageProps) {
+  const feed = useRecommendedFeed({ enabled: ready && active });
+  return (
+    <FeedPage feed={feed} active={active} ListHeaderComponent={PageHeader} />
+  );
+}
+
+function FollowingPage({
+  sort,
+  active,
+  ready,
+}: PageProps & { sort: FeedSortOption }) {
+  const feed = useFollowingFeed({ sort, enabled: ready && active });
+  return (
+    <FeedPage feed={feed} active={active} ListHeaderComponent={PageHeader} />
+  );
+}
 
 export default function FeedScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
 
-  const enabled = useEagerLoad();
-  const feed = useFollowingFeed({ enabled });
-  const listRef = useRef<ListRef>(null);
+  usePageTitle('Home');
 
-  // Re-tapping the active tab scrolls to the top and refreshes.
-  const { refresh } = feed;
-  useFocusedRefresh(
-    useCallback(() => {
-      listRef.current?.scrollToTop();
-      refresh();
-    }, [refresh]),
+  const ready = useEagerLoad();
+  const { tab, hydrated, onTabPress } = useFeedTabs('following');
+
+  const renderTabBar = ({
+    dragProgress,
+  }: {
+    dragProgress: SharedValue<number>;
+  }) => (
+    <>
+      {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
+      <FeedTabs
+        tabs={HOME_TABS}
+        active={tab}
+        onPress={onTabPress}
+        progress={dragProgress}
+      />
+    </>
   );
-
-  if (feed.error) {
-    return (
-      <Screen>
-        <Screen.PrimaryColumn>
-          <View
-            style={[
-              Atoms.flex_1,
-              Atoms.items_center,
-              Atoms.justify_center,
-              Atoms.p_lg,
-            ]}
-          >
-            <Text color="neutral_500">Failed to load feed</Text>
-          </View>
-        </Screen.PrimaryColumn>
-      </Screen>
-    );
-  }
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FeedList
-          ref={listRef}
-          feed={feed}
-          HeaderComponent={ListHeader}
-          initialHeaderHeight={isWeb ? 0 : TOPBAR_HEIGHT}
-        />
+        {/* Held back so the pager does not open on the default tab first. */}
+        {hydrated ? (
+          <PagerView
+            values={HOME_TAB_VALUES}
+            active={tab}
+            onChange={onTabPress}
+            renderTabBar={renderTabBar}
+          >
+            <ForYouPage active={tab === 'for-you'} ready={ready} />
+            <FollowingPage sort="top" active={tab === 'top'} ready={ready} />
+            <FollowingPage
+              sort="latest"
+              active={tab === 'latest'}
+              ready={ready}
+            />
+          </PagerView>
+        ) : null}
+
         {showComposeFab ? (
           <Fab
             onPress={openCompose}

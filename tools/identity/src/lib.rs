@@ -8,7 +8,7 @@ pub mod store;
 
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{Error, Result};
 
 pub use key::{KeyKind, KeyPair};
 pub use store::{AddedKey, ChainEntry, ExportedEvent, IdentityStore};
@@ -18,6 +18,7 @@ pub const DIR_NAME: &str = ".polycentric";
 
 /// Default storage directory: `~/.polycentric`.
 pub fn default_dir() -> Result<PathBuf> {
-    let home = std::env::var_os("HOME").context("HOME environment variable is not set")?;
-    Ok(PathBuf::from(home).join(DIR_NAME))
+    let home =
+        std::env::home_dir().ok_or_else(|| Error::msg("unable to determine home directory"))?;
+    Ok(home.join(DIR_NAME))
 }

@@ -27,6 +27,11 @@ const sidebars: SidebarsConfig = {
         'verifiers/creating-a-verifier',
       ],
     },
+    {
+      type: 'category',
+      label: 'Development',
+      items: ['development/setup', 'development/project-structure'],
+    },
     'contributing',
     'support',
     'privacy-policy',
