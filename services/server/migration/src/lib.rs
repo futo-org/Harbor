@@ -37,6 +37,10 @@ mod m20260812_000002_fill_follow_table;
 mod m20260812_000003_reaction_table;
 mod m20260812_000004_backfill_reaction_tally_table;
 mod m20260813_000001_block_table;
+mod m20260817_000001_reaction_identity;
+mod m20260817_000002_repost_table;
+mod m20260818_000001_qoute_table;
+mod m20260818_000002_reply_table;
 
 pub struct Migrator;
 
@@ -98,6 +102,18 @@ impl MigratorTrait for Migrator {
             ),
             Box::new(
                 m20260813_000001_block_table::Migration,
+            ),
+            Box::new(
+                m20260817_000001_reaction_identity::Migration,
+            ),
+            Box::new(
+                m20260817_000002_repost_table::Migration,
+            ),
+            Box::new(
+                m20260818_000001_qoute_table::Migration,
+            ),
+            Box::new(
+                m20260818_000002_reply_table::Migration,
             ),
         ]
     }

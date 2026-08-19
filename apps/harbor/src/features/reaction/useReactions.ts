@@ -68,7 +68,7 @@ function injectReactionOverlays(
   const activeIdentity = client.activeIdentityKey ?? '';
 
   const feedKeys = [
-    feedQueryKeys.following(),
+    feedQueryKeys.following(activeIdentity),
     feedQueryKeys.identity(post.identity),
     feedQueryKeys.explore(activeIdentity),
   ];

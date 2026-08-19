@@ -18,7 +18,7 @@ import {
   type PostEntry,
   type PostOverlay,
 } from './overlayTypes';
-import { v2 } from '@polycentric/react-native';
+import { FeedSort, v2 } from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import {
@@ -27,15 +27,37 @@ import {
   updatePostEntry,
 } from './overlayOps';
 
-/** Orders the explore feed can be sorted by. */
-export type ExploreSort = 'top' | 'latest';
+/** Orders a sortable feed can be sorted by. */
+export type FeedSortOption = 'top' | 'latest';
 
+/**
+ * A tab in a feed screen's tab row. Home mixes the recommended feed in with
+ * the following feed's sorts, so `'for-you'` selects a different feed rather
+ * than a different order.
+ */
+export type FeedTab = FeedSortOption | 'for-you';
+
+export function feedSortBy(sort: FeedSortOption): FeedSort {
+  return sort === 'top' ? FeedSort.Top : FeedSort.Latest;
+}
+
+/** Every feed lives under the `feed` prefix, so `['feed']` covers them all. */
 export const feedQueryKeys = {
-  following: (): string[] => ['following_feed'],
-  identity: (identity: string): string[] => ['identity_feed', identity],
   /** Omit `sort` for the partition covering every sort. */
-  explore: (identity: string, sort?: ExploreSort): string[] =>
-    sort ? ['explore_feed', identity, sort] : ['explore_feed', identity],
+  following: (identity: string, sort?: FeedSortOption): string[] =>
+    sort
+      ? ['feed', 'following', identity, sort]
+      : ['feed', 'following', identity],
+  /** The recommended ("For you") feed is always ranked by reactions. */
+  recommended: (identity: string): string[] => [
+    'feed',
+    'recommended',
+    identity,
+  ],
+  identity: (identity: string): string[] => ['feed', 'identity', identity],
+  /** Omit `sort` for the partition covering every sort. */
+  explore: (identity: string, sort?: FeedSortOption): string[] =>
+    sort ? ['feed', 'explore', identity, sort] : ['feed', 'explore', identity],
 };
 
 export function threadQueryKey(parentId: string, limit = 0): string[] {

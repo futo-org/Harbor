@@ -1,7 +1,10 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
+import { PagerViewWithHeader } from '@/src/common/components/PagerView';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+import { FeedPage } from '@/src/features/feed/FeedPage';
 import { EMPTY_FEED } from '@/src/features/feed/hooks/types';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
@@ -17,11 +20,12 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, type LayoutChangeEvent, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import { ActivityIndicator, View } from 'react-native';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
+import { ProfileTabs } from './ProfileTabs';
 import { useProfile } from './hooks/useProfile';
 import {
   getVerifiedAlias,
@@ -33,9 +37,17 @@ import {
   ProfileProvider,
   useProfileContext,
 } from './ProfileContext';
-import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { truncateText } from '@/src/common/util/truncateText';
+
+/** Page order behind the profile's tab bar. */
+const PROFILE_TABS: readonly ActiveFeed[] = ['posts', 'verifications'];
+
+/** Clears the tab bar at the bottom of the screen. */
+const FEED_PADDING = { paddingBottom: 40 };
 
 const BLOCKED_PROFILE_MESSAGE =
   'You blocked this profile. Unblock to see their posts.';
@@ -131,7 +143,14 @@ function IdentityProfile({
 
 function ProfileScreenContent() {
   const { theme } = useTheme();
-  const { identityKey, activeFeed } = useProfileContext();
+  const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
+
+  // Reads the profile query the header already shares.
+  const profile = useProfile(identityKey);
+  const shortId = shortenIdentityId(identityKey ?? undefined);
+  usePageTitle(
+    profile.name ? `${truncateText(profile.name, 30)} (${shortId})` : shortId,
+  );
 
   const isFocused = useIsFocused();
 
@@ -148,7 +167,7 @@ function ProfileScreenContent() {
   const isBlocked = useBlocks((s) => s.isBlocked(identityKey ?? ''));
 
   const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
-    enabled: isFocused && !isBlocked,
+    enabled: isFocused && activeFeed === 'posts' && !isBlocked,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -170,58 +189,50 @@ function ProfileScreenContent() {
     ],
     [theme.palette.background_secondary, theme.palette.background_primary],
   );
-  // The full header scrolls with the feed; the compact one takes over once its
-  // measured height has passed.
+  // Drive the compact header's take-over once the full header has passed.
   const scrollY = useSharedValue(0);
   const [headerHeight, setHeaderHeight] = useState(0);
-  const onHeaderLayout = useCallback((event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.height;
-    if (next) setHeaderHeight(next);
-  }, []);
 
-  const profileHeader = useMemo(
-    () => (
-      <View onLayout={onHeaderLayout}>
-        <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />
-      </View>
-    ),
-    [bannerColors, handleBack, onHeaderLayout],
+  const renderHeader = useCallback(
+    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
+    [bannerColors, handleBack],
   );
 
-  const tabs = useMemo(
-    () => [
-      {
-        key: 'posts',
-        feed: isBlocked ? EMPTY_FEED : identityFeed,
-        bottomPadding: 40,
-        emptyMessage: isBlocked ? BLOCKED_PROFILE_MESSAGE : undefined,
-      },
-    ],
-    [identityFeed, isBlocked],
+  const renderTabBar = useCallback(
+    ({ dragProgress }: { dragProgress: SharedValue<number> }) => (
+      <ProfileTabs progress={dragProgress} />
+    ),
+    [],
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        {activeFeed === 'verifications' ? (
-          <ProfileVerificationsList
-            ListHeaderComponent={profileHeader}
-            scrollY={scrollY}
-          />
-        ) : (
-          <ProfileFeedSwitcher
-            tabs={tabs}
-            activeKey={activeFeed}
-            ListHeaderComponent={profileHeader}
-            scrollY={scrollY}
-          />
-        )}
-
-        <ProfileCompactHeader
+        <PagerViewWithHeader
+          values={PROFILE_TABS}
+          active={activeFeed}
+          onChange={setActiveFeed}
+          renderHeader={renderHeader}
+          renderTabBar={renderTabBar}
           scrollY={scrollY}
-          headerHeight={headerHeight}
-          onBack={handleBack}
-        />
+          onHeaderHeightChange={setHeaderHeight}
+        >
+          <FeedPage
+            feed={isBlocked ? EMPTY_FEED : identityFeed}
+            active={activeFeed === 'posts'}
+            emptyMessage={isBlocked ? BLOCKED_PROFILE_MESSAGE : undefined}
+            contentContainerStyle={FEED_PADDING}
+          />
+          <ProfileVerificationsList active={activeFeed === 'verifications'} />
+        </PagerViewWithHeader>
+
+        {!isWeb ? (
+          <ProfileCompactHeader
+            scrollY={scrollY}
+            headerHeight={headerHeight}
+            onBack={handleBack}
+          />
+        ) : null}
       </Screen.PrimaryColumn>
     </Screen>
   );

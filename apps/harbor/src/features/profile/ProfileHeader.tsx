@@ -23,7 +23,6 @@ import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
-import { ProfileTabs } from './ProfileTabs';
 
 const BANNER_HEIGHT = 150;
 
@@ -167,8 +166,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           )}
         </View>
       </View>
-
-      <ProfileTabs />
     </View>
   );
 }

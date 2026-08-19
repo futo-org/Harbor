@@ -7,6 +7,10 @@ jest.mock('@/src/common/theme', () => ({
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
+  // The pager renders a post skeleton for pages it has not shown yet.
+  withHexOpacity: (color: string) => color,
+  typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
+  ZIndex: { raised: 10 },
 }));
 
 jest.mock('@/src/common/components/Icon', () => ({
@@ -146,7 +150,8 @@ type FeedStub = {
   hasMore: boolean;
   refresh: () => void;
 };
-let capturedFeed: FeedStub | null = null;
+// Every page of the pager is mounted, so each feed it renders is collected.
+let mockCapturedFeeds: FeedStub[] = [];
 jest.mock('../feed/FeedList', () => {
   const react = require('react');
   const { Text } = require('react-native');
@@ -159,7 +164,7 @@ jest.mock('../feed/FeedList', () => {
       feed: FeedStub;
       HeaderComponent?: unknown;
     }) => {
-      capturedFeed = feed;
+      mockCapturedFeeds.push(feed);
       return react.createElement(
         react.Fragment,
         null,
@@ -221,7 +226,7 @@ async function renderResults(
 
 beforeEach(() => {
   jest.clearAllMocks();
-  capturedFeed = null;
+  mockCapturedFeeds = [];
   mockUserEntries = [];
 });
 
@@ -260,17 +265,21 @@ describe('SearchResults typeahead', () => {
 });
 
 describe('SearchResults full search', () => {
-  it('shows the tabs and the top feed by default', async () => {
+  it('shows the tabs', async () => {
     const { screen } = await renderResults({ submitted: true });
     expect(screen.getByText('Top')).toBeTruthy();
     expect(screen.getByText('Latest')).toBeTruthy();
     expect(screen.getByText('People')).toBeTruthy();
-    expect(capturedFeed?.__sort).toBe('top');
   });
 
-  it('passes the latest feed to the latest tab', async () => {
-    await renderResults({ submitted: true, tab: 'latest' });
-    expect(capturedFeed?.__sort).toBe('latest');
+  it('orders the pages to match the tabs', async () => {
+    // The pager pairs each page with the tab at the same index, so a page in
+    // the wrong place would swipe to the wrong results.
+    await renderResults({ submitted: true });
+    expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual([
+      'top',
+      'latest',
+    ]);
   });
 
   it('reports tab changes', async () => {

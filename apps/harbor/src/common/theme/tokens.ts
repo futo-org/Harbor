@@ -98,6 +98,9 @@ const atomStyles = {
   fixed: {
     position: 'fixed',
   } as unknown as ViewStyle,
+  sticky: {
+    position: 'sticky',
+  } as unknown as ViewStyle,
 
   inset_0: {
     top: 0,

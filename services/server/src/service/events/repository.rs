@@ -4,10 +4,13 @@ use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
+use ::entity::quote_model as QuoteModel;
+use ::entity::reply_model as ReplyModel;
+use ::entity::repost_model as RepostModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Block, Content, Delete, EventKey, Follow, Post, Reaction,
+    Block, Content, Delete, EventKey, Follow, Post, Reaction, Repost,
 };
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
@@ -184,6 +187,9 @@ impl Mutation {
             ContentBody::Reaction(reaction) => {
                 Mutation::reaction(db, event, reaction).await
             }
+            ContentBody::Repost(repost) => {
+                Mutation::repost(db, event, repost).await
+            }
             ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
             _ => Ok(()),
         }
@@ -192,7 +198,7 @@ impl Mutation {
     async fn post<C: ConnectionTrait>(
         db: &C,
         event: &EventModel::Model,
-        _: &Post,
+        post: &Post,
     ) -> Result<(), DbErr> {
         let mut query = InsertStatement::new();
         query
@@ -206,6 +212,104 @@ impl Mutation {
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?;
+
+        if let Some(quote) = post.quote.as_ref() {
+            let key = split_event_key(Some(quote.clone()), "quote")
+                .map_err(|err| DbErr::Custom(err.message().into()))?;
+            let mut post_event_id = select_not_deleted_event_id(key);
+
+            let mut insert_quote = InsertStatement::new();
+            insert_quote
+                .into_table(QuoteModel::Entity)
+                .columns([
+                    QuoteModel::Column::EventId,
+                    QuoteModel::Column::Identity,
+                    QuoteModel::Column::Post,
+                ])
+                .select_from({
+                    post_event_id
+                        .clear_selects() // Need to rename.
+                        .expr(SelectExpr {
+                            expr: Expr::from(event.id),
+                            alias: Some(QuoteModel::Column::EventId.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::from(&event.identity),
+                            alias: Some(QuoteModel::Column::Identity.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::Column(
+                                EventModel::Column::Id.into_column_ref(),
+                            ),
+                            alias: Some(QuoteModel::Column::Post.into()),
+                            window: None,
+                        });
+                    post_event_id
+                })
+                .map_err(|err| {
+                    DbErr::Custom(format!("incorrect amount of values: {err}"))
+                })?;
+
+            query.with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_quote").query(insert_quote);
+                c.recursive(false).cte(cte);
+                c
+            });
+        }
+
+        if let Some(reply) = post.reply.as_ref() {
+            // NOTE: only adding a reply to the parent, not for the root.
+            let key = split_event_key(reply.parent.clone(), "reply")
+                .map_err(|err| DbErr::Custom(err.message().into()))?;
+            let mut post_event_id = select_not_deleted_event_id(key);
+
+            let mut insert_reply = InsertStatement::new();
+            insert_reply
+                .into_table(ReplyModel::Entity)
+                .columns([
+                    ReplyModel::Column::EventId,
+                    ReplyModel::Column::Identity,
+                    ReplyModel::Column::Post,
+                ])
+                .select_from({
+                    post_event_id
+                        .clear_selects()
+                        .expr(SelectExpr {
+                            expr: Expr::from(event.id),
+                            alias: Some(ReplyModel::Column::EventId.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::from(&event.identity),
+                            alias: Some(ReplyModel::Column::Identity.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::Column(
+                                EventModel::Column::Id.into_column_ref(),
+                            ),
+                            alias: Some(ReplyModel::Column::Post.into()),
+                            window: None,
+                        });
+                    post_event_id
+                })
+                .map_err(|err| {
+                    DbErr::Custom(format!("incorrect amount of values: {err}"))
+                })?;
+
+            query.with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_reply").query(insert_reply);
+                c.recursive(false).cte(cte);
+                c
+            });
+        }
+
         db.execute(&query).await?;
         Ok(())
     }
@@ -248,47 +352,23 @@ impl Mutation {
     ) -> Result<(), DbErr> {
         let key = split_event_key(reaction.event_key.clone(), "reaction")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
-        let mut post_event_id = select_event_id(key);
-        // Make sure the post is not deleted.
-        post_event_id.and_where(Expr::not_exists({
-            let mut q = SelectStatement::new();
-            q.expr(Expr::Constant(true.into()))
-                .from(ContentDeleteModel::Entity)
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyCollection)
-                        .eq(Expr::col(EventModel::Column::Collection)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyIdentity)
-                        .eq(Expr::col(EventModel::Column::Identity)),
-                )
-                .and_where(
-                    Expr::col(
-                        ContentDeleteModel::Column::EventKeyPublicKeyType,
-                    )
-                    .eq(Expr::col(EventModel::Column::PublicKeyType)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeyPublicKey)
-                        .eq(Expr::col(EventModel::Column::PublicKey)),
-                )
-                .and_where(
-                    Expr::col(ContentDeleteModel::Column::EventKeySequence)
-                        .eq(Expr::col(EventModel::Column::Sequence)),
-                );
-            q
-        }));
+        let mut post_event_id = select_not_deleted_event_id(key);
 
         let mut insert_reaction = InsertStatement::new();
         insert_reaction
             .into_table("reaction")
-            .columns(["event_id", "on_post", "emoji", "positive"])
+            .columns(["event_id", "identity", "on_post", "emoji", "positive"])
             .select_from({
                 post_event_id
                     .clear_selects() // Need to rename.
                     .expr(SelectExpr {
                         expr: Expr::from(event.id),
                         alias: Some("event_id".into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(&event.identity),
+                        alias: Some("identity".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
@@ -352,6 +432,51 @@ impl Mutation {
         Ok(())
     }
 
+    async fn repost<C: ConnectionTrait>(
+        db: &C,
+        event: &EventModel::Model,
+        repost: &Repost,
+    ) -> Result<(), DbErr> {
+        let key = split_event_key(repost.post.clone(), "repost")
+            .map_err(|err| DbErr::Custom(err.message().into()))?;
+        let mut post_event_id = select_not_deleted_event_id(key);
+
+        let mut query = InsertStatement::new();
+        query
+            .into_table(RepostModel::Entity)
+            .columns([
+                RepostModel::Column::EventId,
+                RepostModel::Column::Identity,
+                RepostModel::Column::Post,
+            ])
+            .select_from({
+                post_event_id
+                    .clear_selects() // Need to rename.
+                    .expr(SelectExpr {
+                        expr: Expr::from(event.id),
+                        alias: Some(RepostModel::Column::EventId.into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::from(&event.identity),
+                        alias: Some(RepostModel::Column::Identity.into()),
+                        window: None,
+                    })
+                    .expr(SelectExpr {
+                        expr: Expr::col(EventModel::Column::Id.as_column_ref()),
+                        alias: Some(RepostModel::Column::Post.into()),
+                        window: None,
+                    });
+                post_event_id
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+
+        db.execute(&query).await?;
+        Ok(())
+    }
+
     async fn delete<C: ConnectionTrait>(
         db: &C,
         delete: &Delete,
@@ -364,6 +489,11 @@ impl Mutation {
         match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
+                let mut with = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("event_id").query(event_id);
+                with.recursive(false).cte(cte);
+
                 // Delete the tally for the post.
                 let mut delete_reaction_tally = DeleteStatement::new();
                 delete_reaction_tally
@@ -373,14 +503,66 @@ impl Mutation {
                         q.column("id").from("event_id");
                         q
                     }));
-
-                let mut with = WithClause::new();
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("event_id").query(event_id);
-                let mut cte2 = CommonTableExpression::new();
-                cte2.table_name("deleted_reaction_tally")
+                cte.table_name("deleted_reaction_tally")
                     .query(delete_reaction_tally);
-                with.recursive(false).cte(cte).cte(cte2);
+                with.cte(cte);
+
+                // Delete quotes from the posts itself and quoting the deleted
+                // post.
+                let mut delete_quotes = DeleteStatement::new();
+                delete_quotes.from_table(QuoteModel::Entity).cond_where(
+                    Condition::any()
+                        // The now deleted post qouting another post.
+                        .add(
+                            Expr::col(QuoteModel::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from("event_id");
+                                    q
+                                },
+                            ),
+                        )
+                        // The now deleted post being qouted.
+                        .add(Expr::col(QuoteModel::Column::Post).in_subquery(
+                            {
+                                let mut q = SelectStatement::new();
+                                q.column("id").from("event_id");
+                                q
+                            },
+                        )),
+                );
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("deleted_quotes").query(delete_quotes);
+                with.cte(cte);
+
+                // Delete replies from the posts itself and replying to the
+                // deleted post.
+                let mut delete_replies = DeleteStatement::new();
+                delete_replies.from_table(ReplyModel::Entity).cond_where(
+                    Condition::any()
+                        // The now deleted post replying to another post.
+                        .add(
+                            Expr::col(ReplyModel::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from("event_id");
+                                    q
+                                },
+                            ),
+                        )
+                        // The now deleted post being replied to.
+                        .add(Expr::col(ReplyModel::Column::Post).in_subquery(
+                            {
+                                let mut q = SelectStatement::new();
+                                q.column("id").from("event_id");
+                                q
+                            },
+                        )),
+                );
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("deleted_replies").query(delete_replies);
+                with.cte(cte);
 
                 // Delete all reactions to the post.
                 let mut query = DeleteStatement::new();
@@ -492,6 +674,55 @@ fn select_event_id(key: EventKeyParts) -> SelectStatement {
         .and_where(EventModel::Column::PublicKeyType.eq(key.public_key_type))
         .and_where(EventModel::Column::PublicKey.eq(key.public_key))
         .and_where(EventModel::Column::Sequence.eq(key.sequence));
+    query
+}
+
+fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
+    let mut query = select_event_id(key);
+    // Make sure the post is not deleted.
+    query.and_where(Expr::not_exists({
+        let mut q = SelectStatement::new();
+        q.expr(Expr::Constant(true.into()))
+            .from(ContentDeleteModel::Entity)
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyCollection
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Collection.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyIdentity
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Identity.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyPublicKeyType
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(
+                    EventModel::Column::PublicKeyType.as_column_ref(),
+                )),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeyPublicKey
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::PublicKey.as_column_ref())),
+            )
+            .and_where(
+                Expr::col(
+                    ContentDeleteModel::Column::EventKeySequence
+                        .as_column_ref(),
+                )
+                .eq(Expr::col(EventModel::Column::Sequence.as_column_ref())),
+            );
+        q
+    }));
     query
 }
 

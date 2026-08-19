@@ -1,6 +1,7 @@
 import Icon from '@/src/common/components/Icon';
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { PagerView } from '@/src/common/components/PagerView';
 import { Tabs } from '@/src/common/components/Tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
@@ -19,12 +20,55 @@ import {
   RefreshControl,
   View,
 } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import FeedList from '../feed/FeedList';
+import { FeedPage } from '../feed/FeedPage';
+import { PostSkeletonList } from '../post/PostSkeleton';
 import { useSearchPosts } from './hooks/useSearchPosts';
 import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
 export type SearchTab = 'top' | 'latest' | 'people';
+
+/** Page order behind the tab bar. */
+const SEARCH_TABS: readonly SearchTab[] = ['top', 'latest', 'people'];
+const SEARCH_TAB_LABELS: Record<SearchTab, string> = {
+  top: 'Top',
+  latest: 'Latest',
+  people: 'People',
+};
+
+function PostResultsPage({
+  query,
+  sort,
+  active,
+}: {
+  query: string;
+  sort: 'top' | 'latest';
+  /** True for the page being shown; only that page queries. */
+  active: boolean;
+}) {
+  const feed = useSearchPosts(query, { sort, enabled: active });
+  return (
+    <FeedPage
+      feed={feed}
+      active={active}
+      emptyMessage="No posts found."
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    />
+  );
+}
+
+function PeopleResultsPage({
+  query,
+  active,
+}: {
+  query: string;
+  active: boolean;
+}) {
+  const users = useSearchUsers(query, { enabled: active });
+  return <UserResults users={users} refreshable showEmpty={active} />;
+}
 
 export function SearchResults({
   phrase,
@@ -44,22 +88,14 @@ export function SearchResults({
   tab: SearchTab;
   onTabChange: (tab: SearchTab) => void;
   onSubmitQuery: () => void;
-  /** Rendered inside each list's hiding header so it hides on scroll. */
+  /** Rendered inside the pager's hiding header so it hides on scroll. */
   topbar?: ReactElement;
 }) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const top = useSearchPosts(query, {
-    sort: 'top',
-    enabled: submitted && tab === 'top',
-  });
-  const latest = useSearchPosts(query, {
-    sort: 'latest',
-    enabled: submitted && tab === 'latest',
-  });
-  const users = useSearchUsers(query, {
-    enabled: !submitted || tab === 'people',
-  });
+  // Result pages own their queries; this one backs the typeahead shown while
+  // the phrase is still being typed.
+  const users = useSearchUsers(query, { enabled: !submitted });
 
   if (!phrase) {
     return (
@@ -101,41 +137,38 @@ export function SearchResults({
     );
   }
 
-  const header = (
+  const renderTabBar = ({
+    dragProgress,
+  }: {
+    dragProgress: SharedValue<number>;
+  }) => (
     <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       {topbar}
-      <Tabs>
-        <Tabs.Tab active={tab === 'top'} onPress={() => onTabChange('top')}>
-          Top
-        </Tabs.Tab>
-        <Tabs.Tab
-          active={tab === 'latest'}
-          onPress={() => onTabChange('latest')}
-        >
-          Latest
-        </Tabs.Tab>
-        <Tabs.Tab
-          active={tab === 'people'}
-          onPress={() => onTabChange('people')}
-        >
-          People
-        </Tabs.Tab>
+      <Tabs progress={dragProgress}>
+        {SEARCH_TABS.map((value) => (
+          <Tabs.Tab
+            key={value}
+            active={tab === value}
+            onPress={() => onTabChange(value)}
+          >
+            {SEARCH_TAB_LABELS[value]}
+          </Tabs.Tab>
+        ))}
       </Tabs>
     </View>
   );
 
-  if (tab === 'people') {
-    return <UserResults users={users} topbar={header} refreshable />;
-  }
-
   return (
-    <FeedList
-      feed={tab === 'top' ? top : latest}
-      emptyMessage="No posts found."
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      HeaderComponent={header}
-    />
+    <PagerView
+      values={SEARCH_TABS}
+      active={tab}
+      onChange={onTabChange}
+      renderTabBar={renderTabBar}
+    >
+      <PostResultsPage query={query} sort="top" active={tab === 'top'} />
+      <PostResultsPage query={query} sort="latest" active={tab === 'latest'} />
+      <PeopleResultsPage query={query} active={tab === 'people'} />
+    </PagerView>
   );
 }
 
@@ -173,13 +206,11 @@ export function SearchPhraseRow({
 
 function UserResults({
   users,
-  topbar,
   header,
   showEmpty = true,
   refreshable = false,
 }: {
   users: ReturnType<typeof useSearchUsers>;
-  topbar?: ReactElement;
   header?: ReactElement;
   showEmpty?: boolean;
   refreshable?: boolean;
@@ -191,7 +222,6 @@ function UserResults({
       data={users.entries}
       keyExtractor={(entry) => entry.identity}
       renderItem={({ item }) => <UserRow identity={item.identity} />}
-      HeaderComponent={topbar}
       ListHeaderComponent={header}
       refreshControl={
         refreshable && !isWeb ? (

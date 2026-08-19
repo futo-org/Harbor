@@ -47,7 +47,11 @@ const useFollows = create<FollowsState>((set, get) => ({
     try {
       await client.commitEvent(signedEvent, content);
       await client.sync();
-      invalidateQuery(client, feedQueryKeys.following());
+      // `identity` is the followee; the feed belongs to the follower.
+      invalidateQuery(
+        client,
+        feedQueryKeys.following(client.activeIdentityKey ?? ''),
+      );
     } catch (err) {
       console.error(err);
       // revert the change
@@ -105,7 +109,10 @@ const useFollows = create<FollowsState>((set, get) => ({
 
     if (targets.length > 0) {
       await client.sync();
-      invalidateQuery(client, feedQueryKeys.following());
+      invalidateQuery(
+        client,
+        feedQueryKeys.following(client.activeIdentityKey ?? ''),
+      );
     }
   },
   /**

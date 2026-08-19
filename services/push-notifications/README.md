@@ -19,7 +19,5 @@ All service variables are read and validated once at startup by
 | `POLYCENTRIC_NOTIFICATIONS_GRPC_ADDR` | `0.0.0.0:3001` | Address the gRPC `NotificationService` listens on. |
 | `EXPO_ACCESS_TOKEN` | _(unset)_ | Expo access token; blank is treated as unset. Only needed for projects with enhanced push security. |
 
-The shared `services/common` crates additionally read the `POLYCENTRIC_KAFKA_*`
-(broker/SASL/SSL) and `RUST_LOG`/`LOG_FORMAT`/`METRICS_PORT` (telemetry)
-variables — see the table in
-[`services/server/README.md`](../server/README.md#environment-variables).
+Additionally various shared variables are read, see the table in
+[`services/server/README.md`](../server/README.md#common-environment-variables).

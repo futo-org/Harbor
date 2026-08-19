@@ -1,3 +1,4 @@
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { hexToBytes } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
@@ -7,6 +8,8 @@ import { useCallback } from 'react';
 import { ComposeSheet } from './ComposeSheet';
 
 export default function ComposeScreen() {
+  usePageTitle('Compose');
+
   const params = useLocalSearchParams<{
     replyTo?: string;
     quote?: string;

@@ -7,6 +7,10 @@ import {
   type FontSizeToken,
   type LineHeightToken,
 } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+
+const WEB_FONT_STACK =
+  'NotoSans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
@@ -32,10 +36,13 @@ export function Text({
   const { theme } = useTheme();
 
   const config = VARIANT_CONFIG[variant];
-  const fontFamily =
-    italic && variant !== 'title' && variant !== 'subtitle'
-      ? 'Inter-Italic'
-      : 'Inter';
+  const wantsItalic = italic && variant !== 'title' && variant !== 'subtitle';
+
+  const fontFamily = isWeb
+    ? WEB_FONT_STACK
+    : wantsItalic
+      ? 'NotoSans-Italic'
+      : 'NotoSans';
 
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
@@ -62,6 +69,7 @@ export function Text({
           fontSize: resolvedFontSize,
           fontWeight: resolvedFontWeight,
           lineHeight: resolvedLineHeight,
+          ...(isWeb && wantsItalic ? { fontStyle: 'italic' as const } : {}),
         },
         style,
       ]}

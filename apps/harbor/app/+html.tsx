@@ -1,6 +1,16 @@
 import { APP_NAME } from '@/src/common/constants';
-import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
+
+const ROOT_STYLE =
+  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}';
+
+// Declared here rather than through expo-font, whose injected @font-face has
+// no font-weight range: browsers then clamp the variable font to 400 and
+// synthesise bold, which Safari renders badly.
+const FONT_STYLE = `
+@font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
+`;
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -20,7 +30,23 @@ export default function Root({ children }: PropsWithChildren) {
             __html: 'globalThis.__POLYCENTRIC_ENV__ = "__RUNTIME_ENV__";',
           }}
         />
-        <ScrollViewStyleReset />
+        <style
+          id="polycentric-root-reset"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
+          dangerouslySetInnerHTML={{ __html: ROOT_STYLE }}
+        />
+        <link
+          rel="preload"
+          href="/fonts/NotoSans.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <style
+          id="polycentric-fonts"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
+          dangerouslySetInnerHTML={{ __html: FONT_STYLE }}
+        />
       </head>
       <body>{children}</body>
     </html>

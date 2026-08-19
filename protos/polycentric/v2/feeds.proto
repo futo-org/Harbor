@@ -63,9 +63,13 @@ message GetPostThreadRequest {
 service FeedsService {
   // Posts that belong to an identity
   rpc GetIdentityFeed(GetIdentityFeedRequest) returns (GetFeedResponse);
-  //
+  // Get posts created by the identity themselves and all identities they
+  // follow.
   rpc GetFollowingFeed(GetFollowingFeedRequest) returns (GetFeedResponse);
-  //
+  // Get posts created by, reacted to, reposted by, quoted or replied to by the
+  // identity themselves and all identities they follow.
+  rpc GetRecommendedFeed(GetFollowingFeedRequest) returns (GetFeedResponse);
+  // Get posts by any identity.
   rpc GetExploreFeed(GetExploreFeedRequest) returns (GetFeedResponse);
   // Replies to a post
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);

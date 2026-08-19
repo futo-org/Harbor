@@ -47,7 +47,11 @@ function RootStack() {
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
-          contentStyle: [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
+          // Web scrolls the document, so the scene grows with its content
+          // instead of becoming a scroll port of its own.
+          contentStyle: isWeb
+            ? [theme.atoms.bg, Atoms.flex_grow_1]
+            : [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
           ...(isWeb
             ? { animation: 'none' as const }
             : { orientation: 'portrait_up' }),
@@ -59,6 +63,9 @@ function RootStack() {
         <Stack.Protected guard={isWeb || accountGuard}>
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
         </Stack.Protected>
+
+        {/* Launch route: it hands off to the tabs, so the handoff is silent. */}
+        <Stack.Screen name="index" options={{ animation: 'none' }} />
 
         <Stack.Screen name="(onboarding)" options={{ animation: 'none' }} />
 

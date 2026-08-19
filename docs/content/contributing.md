@@ -17,16 +17,21 @@ change, as we may decline contributions that do not fit the current direction.
 The source is hosted on GitLab:
 [gitlab.futo.org/polycentric/polycentric](https://gitlab.futo.org/polycentric/polycentric).
 
-## Documentation in the repository
+## Working on the code
 
-Setup and development details are kept with the code:
+- [Development setup](./development/setup.md) — prerequisites and the commands to
+  build the monorepo and run the app against a local server.
+- [Project structure](./development/project-structure.md) — what lives in each
+  app, package, and service.
+- [Running a Server](./running-a-server.md) — configuration, migrations, and
+  running the server from source.
 
-- [Repository README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/README.md)
-  — prerequisites, project structure, and the commands to build and run everything.
+Details that belong next to the code stay in the repository:
+
 - [Server README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
-  — running the server from source.
+  — the server's environment variables and integration tests.
 - [Migrations README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/migration/README.md)
-  — applying and managing database migrations.
+  — writing and managing database migrations.
 
 ## Project management
 

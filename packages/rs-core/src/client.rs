@@ -13,7 +13,7 @@ use polycentric_common::{
 use crate::identity::resolve_identity_chain;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
-    keys::EventKey, meta_store::MetaStore,
+    identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -43,6 +43,7 @@ pub struct PolycentricClient {
     event_proofs_store: EventProofsStore,
     content_store: ContentStore,
     meta_store: MetaStore,
+    identity_store: IdentityStore,
 }
 
 impl PolycentricClient {
@@ -134,6 +135,7 @@ impl PolycentricClient {
         if self.affects_blocked_identities(&signed_event) {
             self.blocked_identities.lock().unwrap().take();
         }
+        self.identity_store.clear();
         self.event_store.insert(signed_event)
     }
 
@@ -151,6 +153,7 @@ impl PolycentricClient {
                 "content does not match digest {digest_hex}"
             )));
         }
+        self.identity_store.clear();
         self.content_store.insert(digest, content_bytes);
         Ok(())
     }
@@ -464,9 +467,22 @@ impl PolycentricClient {
             .collect())
     }
 
-    /// Resolve the identity chain for `identity` using the local event and content stores.
-    pub fn identity_chain(&self, identity: &str) -> Result<IdentityChain, CoreError> {
-        resolve_identity_chain(identity, &self.event_store, &self.content_store)
+    /// Resolve the identity chain for `identity` using the local event and
+    /// content stores. Memoized: resolving verifies a signature per identity
+    /// event, and every `validate_event` needs a chain.
+    pub fn identity_chain(&self, identity: &str) -> Result<Arc<IdentityChain>, CoreError> {
+        if let Some(chain) = self.identity_store.get_chain(identity) {
+            return Ok(chain);
+        }
+
+        let chain = Arc::new(resolve_identity_chain(
+            identity,
+            &self.event_store,
+            &self.content_store,
+        )?);
+        self.identity_store
+            .insert_chain(identity, Arc::clone(&chain));
+        Ok(chain)
     }
 
     /// Validate an event against its identity chain, identity content,

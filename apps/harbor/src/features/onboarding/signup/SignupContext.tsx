@@ -108,7 +108,7 @@ export function useSignup() {
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       reset();
       // Back to the screen the signup prompt was opened from, if any.
-      router.replace((returnTo ?? Routes.tabs.feed.index) as Href);
+      router.dismissTo((returnTo ?? Routes.tabs.feed.index) as Href);
     } catch (error) {
       console.error('Failed to create identity:', error);
       setSubmitting(false);

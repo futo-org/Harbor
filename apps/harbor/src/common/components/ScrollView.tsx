@@ -1,5 +1,8 @@
 import React from 'react';
-import { type ScrollViewProps as RNScrollViewProps, View } from 'react-native';
+import {
+  type ScrollViewProps as RNScrollViewProps,
+  StyleSheet,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
 
@@ -27,22 +30,32 @@ export const ScrollView = React.forwardRef<
   },
   ref,
 ) {
-  const { onScroll, onHeaderLayout, stackStyle, scrollableStyle } =
-    useHidingHeader();
+  const {
+    onScroll,
+    onHeaderLayout,
+    translateStyle,
+    headerHeight,
+    contentPaddingTop,
+  } = useHidingHeader();
 
   const header = renderNode(HeaderComponent);
 
   return (
-    <HidingHeaderStack style={stackStyle}>
-      {header ? <View onLayout={onHeaderLayout}>{header}</View> : null}
-
+    <HidingHeaderStack
+      header={header}
+      headerHeight={headerHeight}
+      onHeaderLayout={onHeaderLayout}
+      style={translateStyle}
+    >
       <Animated.ScrollView
         ref={ref}
         {...rest}
-        style={scrollableStyle}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={contentContainerStyle}
+        contentContainerStyle={StyleSheet.flatten([
+          { paddingTop: contentPaddingTop },
+          contentContainerStyle,
+        ])}
       >
         {children}
       </Animated.ScrollView>

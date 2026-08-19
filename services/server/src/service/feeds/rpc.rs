@@ -6,6 +6,7 @@ pub mod get_explore_feed;
 pub mod get_following_feed;
 pub mod get_identity_feed;
 pub mod get_post_thread;
+pub mod get_recommended_feed;
 
 use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
@@ -47,6 +48,21 @@ impl FeedsService for FeedsServiceImpl {
         let caller = authenticated_identity(&request);
         Ok(Response::new(
             get_following_feed::handle(
+                &self.ctx,
+                request.into_inner(),
+                caller.as_deref(),
+            )
+            .await?,
+        ))
+    }
+
+    async fn get_recommended_feed(
+        &self,
+        request: Request<GetFollowingFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        let caller = authenticated_identity(&request);
+        Ok(Response::new(
+            get_recommended_feed::handle(
                 &self.ctx,
                 request.into_inner(),
                 caller.as_deref(),

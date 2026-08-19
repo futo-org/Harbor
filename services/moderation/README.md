@@ -16,18 +16,15 @@ All service variables are read and validated once at startup by
 | `POLYCENTRIC_MODERATION_SIGNING_KEY` | _(required)_ | Hex-encoded 32-byte ed25519 seed labels events are signed with. |
 | `POLYCENTRIC_MODERATION_IDENTITY` | _(required)_ | Hex identity string this service publishes under. |
 | `POLYCENTRIC_MODERATION_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to bootstrap from and publish to. |
-| `POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT` | _(unset)_ | Azure AI Content Safety resource endpoint. Unset disables content scoring; must be set together with the following variable. |
 | `POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY` | _(unset)_ | Azure AI Content Safety API key. Unset disables content scoring; must be set together with the previous variable. |
+| `POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT` | _(unset)_ | Azure AI Content Safety resource endpoint. Unset disables content scoring; must be set together with the following variable. |
 | `POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION` | `2024-09-01` | api-version for the text/image endpoints. |
 | `POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION` | `2024-09-15-preview` | api-version for the multimodal (`imageWithText`) endpoint. |
 | `POLYCENTRIC_PHOTODNA_KEY` | _(unset)_ | PhotoDNA subscription key. Unset disables CSAM scanning and the service moderates with Azure alone. |
 | `POLYCENTRIC_PHOTODNA_ENDPOINT` | `https://api.microsoftmoderator.com/photodna/v1.0` | PhotoDNA endpoint. |
 
-The shared `services/common` crates additionally read the `POLYCENTRIC_KAFKA_*`
-(broker/SASL/SSL), `CONTENT_BLOB_OS_*` (blob store; needs delete permission to
-purge blobs on a confirmed CSAM match), and `RUST_LOG`/`LOG_FORMAT`/`METRICS_PORT`
-(telemetry) variables — see the table in
-[`services/server/README.md`](../server/README.md#environment-variables).
+Additionally various shared variables are read, see the table in
+[`services/server/README.md`](../server/README.md#common-environment-variables).
 
 ## Moderator reports
 

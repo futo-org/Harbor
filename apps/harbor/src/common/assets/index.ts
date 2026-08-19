@@ -1,4 +1,6 @@
+// The fonts live in `public/` so the web build also serves them statically
+// for `+html.tsx`'s @font-face rules.
 export const Fonts = {
-  Inter: require('./fonts/Inter.ttf'),
-  'Inter-Italic': require('./fonts/Inter-Italic.ttf'),
+  NotoSans: require('../../../public/fonts/NotoSans.ttf'),
+  'NotoSans-Italic': require('../../../public/fonts/NotoSans-Italic.ttf'),
 } as const;

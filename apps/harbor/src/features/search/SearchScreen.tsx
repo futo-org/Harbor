@@ -2,6 +2,7 @@ import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text, TextInput } from '@/src/common/components/primitives';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -70,6 +71,7 @@ function SearchTopbar({ children }: { children: ReactNode }) {
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string; f?: string }>();
   const paramQuery = typeof params.q === 'string' ? params.q.trim() : '';
+  usePageTitle(paramQuery ? `${paramQuery} - Search` : 'Search');
   const tab: SearchTab =
     params.f === 'latest' || params.f === 'people' ? params.f : 'top';
 
