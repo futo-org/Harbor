@@ -509,6 +509,7 @@ mod tests {
     use crate::service::proto::{Post, PublicKey, Repost};
     use chrono::DateTime;
     use sea_orm::prelude::DateTimeWithTimeZone;
+    use std::sync::Arc;
 
     fn now() -> DateTimeWithTimeZone {
         DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
@@ -577,8 +578,13 @@ mod tests {
         }
     }
 
-    fn blocked_set(identities: &[&str]) -> HashSet<String> {
-        identities.iter().map(|s| s.to_string()).collect()
+    fn blocking(identities: &[&str]) -> HydrationState {
+        HydrationState {
+            blocked_identities: Arc::new(
+                identities.iter().map(|s| s.to_string()).collect(),
+            ),
+            ..Default::default()
+        }
     }
 
     #[tokio::test]
@@ -587,11 +593,8 @@ mod tests {
             search_row(1, "bob", &post_content()),
             search_row(2, "alice", &post_content()),
         ];
-        let hydration = HydrationState::default();
-        let result =
-            filter(fetched(rows), &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched(rows), &hydration, &[]).await.unwrap();
         let identities: Vec<&str> = result
             .live_rows
             .iter()
@@ -603,11 +606,8 @@ mod tests {
     #[tokio::test]
     async fn filter_repost_of_blocked_author_dropped() {
         let rows = vec![search_row(1, "alice", &repost_content("bob", 1))];
-        let hydration = HydrationState::default();
-        let result =
-            filter(fetched(rows), &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched(rows), &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
     }
 
@@ -619,12 +619,9 @@ mod tests {
         );
         let hydration = HydrationState {
             repost_events: vec![hint],
-            ..Default::default()
+            ..blocking(&["bob"])
         };
-        let result =
-            filter(fetched(vec![]), &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let result = filter(fetched(vec![]), &hydration, &[]).await.unwrap();
         assert!(result.event_hints.is_empty());
     }
 
@@ -635,9 +632,7 @@ mod tests {
             search_row(2, "alice", &post_content()),
         ];
         let hydration = HydrationState::default();
-        let result = filter(fetched(rows), &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched(rows), &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 2);
     }
 }

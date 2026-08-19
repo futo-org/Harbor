@@ -537,6 +537,7 @@ mod tests {
     use chrono::DateTime;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     fn ts(seconds: i64) -> DateTimeWithTimeZone {
         DateTime::from_timestamp_secs(seconds)
@@ -661,8 +662,13 @@ mod tests {
         }
     }
 
-    fn blocked_set(identities: &[&str]) -> HashSet<String> {
-        identities.iter().map(|s| s.to_string()).collect()
+    fn blocking(identities: &[&str]) -> HydrationState {
+        HydrationState {
+            blocked_identities: Arc::new(
+                identities.iter().map(|s| s.to_string()).collect(),
+            ),
+            ..Default::default()
+        }
     }
 
     fn live_identities(result: &GetFeedResponseFilter) -> Vec<String> {
@@ -778,9 +784,7 @@ mod tests {
         let row = ewc(1, "alice", 2, 1, &default_post_content());
         let fetched = make_fetched(vec![row]);
         let hydration = HydrationState::default();
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -794,9 +798,7 @@ mod tests {
             .deletes_by_target
             .insert(target, vec![EventBundle::default()]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
         assert_eq!(result.tombstone_bundles.len(), 1);
     }
@@ -811,10 +813,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![row]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert!(result.live_rows.is_empty());
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -829,10 +830,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![row]);
-        let result =
-            filter(fetched, &hydration, &["hate".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["hate".to_string()])
+            .await
+            .unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -847,9 +847,7 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -863,9 +861,7 @@ mod tests {
             .deletes_by_target
             .insert(target, vec![EventBundle::default()]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -880,10 +876,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![row]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert!(result.live_rows.is_empty());
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -894,10 +889,9 @@ mod tests {
         let row = ewc(1, "alice", 2, 1, &repost_content(&target));
         let hydration = HydrationState::default();
         let fetched = make_fetched(vec![row]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -911,9 +905,7 @@ mod tests {
             .deletes_by_target
             .insert(target, vec![EventBundle::default()]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert_eq!(result.tombstone_bundles.len(), 1);
     }
@@ -928,10 +920,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![row]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -950,10 +941,9 @@ mod tests {
             vec![make_label_event(&make_key("charlie", 3), &["spam"])];
 
         let fetched = make_fetched(vec![clean, tombstoned, labeled]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert_eq!(result.live_rows.len(), 1);
         assert_eq!(
             TargetEventKey::of(&result.live_rows[0].0),
@@ -972,9 +962,7 @@ mod tests {
             .insert(target, vec![EventBundle::default()]);
         hydration.repost_events = vec![hint];
         let fetched = make_fetched(vec![]);
-        let result = filter(fetched, &hydration, &[], &HashSet::new())
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.event_hints.is_empty());
     }
 
@@ -988,10 +976,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert!(result.event_hints.is_empty());
     }
 
@@ -1003,10 +990,9 @@ mod tests {
             ..Default::default()
         };
         let fetched = make_fetched(vec![]);
-        let result =
-            filter(fetched, &hydration, &["spam".to_string()], &HashSet::new())
-                .await
-                .unwrap();
+        let result = filter(fetched, &hydration, &["spam".to_string()])
+            .await
+            .unwrap();
         assert_eq!(result.event_hints.len(), 1);
     }
 
@@ -1027,10 +1013,8 @@ mod tests {
     async fn filter_blocked_author_dropped() {
         let row = ewc(1, "bob", 2, 1, &default_post_content());
         let fetched = make_fetched(vec![row]);
-        let hydration = HydrationState::default();
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -1039,10 +1023,8 @@ mod tests {
     async fn filter_unblocked_author_kept() {
         let row = ewc(1, "alice", 2, 1, &default_post_content());
         let fetched = make_fetched(vec![row]);
-        let hydration = HydrationState::default();
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 1);
     }
 
@@ -1050,14 +1032,12 @@ mod tests {
     async fn filter_blocked_author_brings_no_tombstone_hint() {
         let target = make_key("bob", 1);
         let row = ewc(1, "bob", 2, 1, &default_post_content());
-        let mut hydration = HydrationState::default();
+        let mut hydration = blocking(&["bob"]);
         hydration
             .deletes_by_target
             .insert(target, vec![EventBundle::default()]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
         assert!(result.tombstone_bundles.is_empty());
     }
@@ -1066,11 +1046,9 @@ mod tests {
     async fn filter_repost_of_blocked_author_dropped() {
         let target = make_key("bob", 1);
         let row = ewc(1, "alice", 2, 1, &repost_content(&target));
-        let hydration = HydrationState::default();
+        let hydration = blocking(&["bob"]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
     }
 
@@ -1078,11 +1056,9 @@ mod tests {
     async fn filter_quote_of_blocked_author_kept() {
         let target = make_key("bob", 1);
         let row = ewc(1, "alice", 2, 1, &quote_content(&target));
-        let hydration = HydrationState::default();
+        let hydration = blocking(&["bob"]);
         let fetched = make_fetched(vec![row]);
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(result.live_rows.len(), 1);
     }
 
@@ -1091,12 +1067,10 @@ mod tests {
         let hint = ewc(10, "bob", 2, 1, &default_post_content());
         let hydration = HydrationState {
             repost_events: vec![hint],
-            ..Default::default()
+            ..blocking(&["bob"])
         };
         let fetched = make_fetched(vec![]);
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert!(result.event_hints.is_empty());
     }
 
@@ -1116,11 +1090,8 @@ mod tests {
             charlie_reply,
             dave_reply,
         ]);
-        let hydration = HydrationState::default();
-        let result =
-            filter_thread(fetched, &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(live_identities(&result), vec!["alice".to_string()]);
     }
 
@@ -1131,10 +1102,8 @@ mod tests {
             ewc(2, "charlie", 2, 2, &reply_content(&make_key("bob", 1)));
 
         let fetched = make_fetched(vec![bob_post, charlie_reply]);
-        let hydration = HydrationState::default();
-        let result = filter(fetched, &hydration, &[], &blocked_set(&["bob"]))
-            .await
-            .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
     }
 
@@ -1147,11 +1116,8 @@ mod tests {
             ewc(3, "erin", 2, 3, &reply_content(&make_key("alice", 1)));
 
         let fetched = make_fetched(vec![alice_root, bob_reply, erin_reply]);
-        let hydration = HydrationState::default();
-        let result =
-            filter_thread(fetched, &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(
             live_identities(&result),
             vec!["alice".to_string(), "erin".to_string()]
@@ -1168,11 +1134,8 @@ mod tests {
 
         let fetched =
             make_fetched(vec![bob_root, alice_subject, charlie_reply]);
-        let hydration = HydrationState::default();
-        let result =
-            filter_thread(fetched, &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
         assert!(result.live_rows.is_empty());
     }
 
@@ -1184,11 +1147,8 @@ mod tests {
             ewc(2, "bob", 2, 2, &reply_content(&make_key("alice", 1)));
 
         let fetched = make_fetched(vec![charlie_reply, bob_reply]);
-        let hydration = HydrationState::default();
-        let result =
-            filter_thread(fetched, &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
     }
 
@@ -1198,16 +1158,13 @@ mod tests {
         let charlie_reply =
             ewc(2, "charlie", 2, 2, &reply_content(&make_key("alice", 1)));
 
-        let mut hydration = HydrationState::default();
+        let mut hydration = blocking(&["bob"]);
         hydration
             .deletes_by_target
             .insert(make_key("alice", 1), vec![EventBundle::default()]);
 
         let fetched = make_fetched(vec![alice_root, charlie_reply]);
-        let result =
-            filter_thread(fetched, &hydration, &[], &blocked_set(&["bob"]))
-                .await
-                .unwrap();
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
         assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
     }
 }
