@@ -106,27 +106,29 @@ export default function VerificationsScreen() {
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <Tabs progress={dragProgress}>
-      {CLAIMS_TABS.map((value) => (
-        <Tabs.Tab
-          key={value}
-          active={tab === value}
-          onPress={() => setTab(value)}
-        >
-          {CLAIMS_TAB_LABELS[value]}
-        </Tabs.Tab>
-      ))}
-    </Tabs>
+    <>
+      <Topbar
+        title="Verifications"
+        left={isWeb ? <></> : undefined}
+        right={<CreateClaimButton onPress={() => setCreateOpen(true)} />}
+      />
+      <Tabs progress={dragProgress}>
+        {CLAIMS_TABS.map((value) => (
+          <Tabs.Tab
+            key={value}
+            active={tab === value}
+            onPress={() => setTab(value)}
+          >
+            {CLAIMS_TAB_LABELS[value]}
+          </Tabs.Tab>
+        ))}
+      </Tabs>
+    </>
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <Topbar
-          title="Verifications"
-          left={isWeb ? <></> : undefined}
-          right={<CreateClaimButton onPress={() => setCreateOpen(true)} />}
-        />
         <PagerView
           values={CLAIMS_TABS}
           active={tab}

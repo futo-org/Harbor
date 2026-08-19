@@ -1,8 +1,9 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
-import { PagerView } from '@/src/common/components/PagerView';
+import { PagerViewWithHeader } from '@/src/common/components/PagerView';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { FeedPage } from '@/src/features/feed/FeedPage';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
@@ -19,8 +20,10 @@ import {
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
+import { ProfileTabs } from './ProfileTabs';
 import { useProfile } from './hooks/useProfile';
 import {
   getVerifiedAlias,
@@ -169,27 +172,33 @@ function ProfileScreenContent() {
     ],
     [theme.palette.background_secondary, theme.palette.background_primary],
   );
-  // The header and its tabs sit above the pages, so a swipe moves the pages
-  // under them.
+  // Drive the compact header's take-over once the full header has passed.
+  const scrollY = useSharedValue(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  const renderHeader = useCallback(
+    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
+    [bannerColors, handleBack],
+  );
+
   const renderTabBar = useCallback(
     ({ dragProgress }: { dragProgress: SharedValue<number> }) => (
-      <ProfileHeader
-        bannerColors={bannerColors}
-        onBack={handleBack}
-        tabProgress={dragProgress}
-      />
+      <ProfileTabs progress={dragProgress} />
     ),
-    [bannerColors, handleBack],
+    [],
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <PagerView
+        <PagerViewWithHeader
           values={PROFILE_TABS}
           active={activeFeed}
           onChange={setActiveFeed}
+          renderHeader={renderHeader}
           renderTabBar={renderTabBar}
+          scrollY={scrollY}
+          onHeaderHeightChange={setHeaderHeight}
         >
           <FeedPage
             feed={identityFeed}
@@ -197,7 +206,15 @@ function ProfileScreenContent() {
             contentContainerStyle={FEED_PADDING}
           />
           <ProfileVerificationsList active={activeFeed === 'verifications'} />
-        </PagerView>
+        </PagerViewWithHeader>
+
+        {!isWeb ? (
+          <ProfileCompactHeader
+            scrollY={scrollY}
+            headerHeight={headerHeight}
+            onBack={handleBack}
+          />
+        ) : null}
       </Screen.PrimaryColumn>
     </Screen>
   );

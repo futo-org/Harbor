@@ -108,12 +108,18 @@ export function useHidingHeader(
     if (next !== headerHeight) setHeaderHeight(next);
   };
 
+  /** Bring a hidden header back, e.g. when the page under it changes. */
+  const reveal = useCallback(() => {
+    headerTranslate.value = withTiming(0, { duration: HEADER_SETTLE_MS });
+  }, [headerTranslate]);
+
   return {
     onScroll,
     onHeaderLayout,
     translateStyle,
     headerHeight,
     contentPaddingTop: SLIDES_TOGETHER ? 0 : headerHeight,
+    reveal,
   };
 }
 

@@ -38,23 +38,25 @@ export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <Tabs progress={dragProgress}>
-      {FOLLOW_TABS.map((value) => (
-        <Tabs.Tab
-          key={value}
-          active={tab === value}
-          onPress={() => selectTab(value)}
-        >
-          {FOLLOW_TAB_LABELS[value]}
-        </Tabs.Tab>
-      ))}
-    </Tabs>
+    <>
+      <FollowListTopbar identityId={identityId} />
+      <Tabs progress={dragProgress}>
+        {FOLLOW_TABS.map((value) => (
+          <Tabs.Tab
+            key={value}
+            active={tab === value}
+            onPress={() => selectTab(value)}
+          >
+            {FOLLOW_TAB_LABELS[value]}
+          </Tabs.Tab>
+        ))}
+      </Tabs>
+    </>
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <FollowListTopbar identityId={identityId} />
         <PagerView
           values={FOLLOW_TABS}
           active={tab}

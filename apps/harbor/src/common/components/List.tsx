@@ -16,6 +16,7 @@ import {
   cloneElement,
   forwardRef,
   isValidElement,
+  useContext,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -27,6 +28,7 @@ import { View } from 'react-native';
 import Animated, { type SharedValue } from 'react-native-reanimated';
 import { Atoms, useTheme } from '../theme';
 import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
+import { useForwardedScroll } from './ScrollForwarder';
 import { InfoTooltip } from './InfoTooltip';
 import { Text } from './primitives';
 
@@ -114,13 +116,15 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const {
-    onScroll,
-    onHeaderLayout,
-    translateStyle,
-    headerHeight,
-    contentPaddingTop,
-  } = useHidingHeader(initialHeaderHeight, scrollY);
+  // A `ScrollForwarder` above owns the header; without one the list hides
+  // its own.
+  const forwarded = useForwardedScroll();
+  const hiding = useHidingHeader(initialHeaderHeight, scrollY);
+  const { onHeaderLayout, translateStyle, headerHeight } = hiding;
+  const onScroll = forwarded ? forwarded.onScroll : hiding.onScroll;
+  const contentPaddingTop = forwarded
+    ? forwarded.contentPaddingTop
+    : hiding.contentPaddingTop;
 
   useImperativeHandle(
     listRef,
@@ -131,19 +135,32 @@ function NativeList<T>({
     [],
   );
 
+  // Lets the header's owner align this list's offset with it.
+  const register = forwarded?.register;
+  useEffect(() => {
+    if (!register) return;
+    register({
+      scrollToOffset: (offset) =>
+        ref.current?.scrollToOffset({ offset, animated: false }),
+    });
+    return () => register(null);
+  }, [register]);
+
   const renderedHeader = renderNode(HeaderComponent);
 
+  const minContentHeight = forwarded?.minContentHeight;
   // A new style object each render invalidates FlashList's layout cache.
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
       paddingTop: contentPaddingTop,
+      ...(minContentHeight != null ? { minHeight: minContentHeight } : {}),
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentPaddingTop, contentContainerStyle],
+    [contentPaddingTop, minContentHeight, contentContainerStyle],
   );
 
   // Positions Android's refresh spinner; iOS ignores it.
@@ -156,6 +173,19 @@ function NativeList<T>({
       : refreshControl
   ) as FlashListProps<T>['refreshControl'];
 
+  const list = (
+    <AnimatedFlashList
+      ref={ref as React.Ref<FlashListRef<unknown>>}
+      {...(rest as FlashListProps<unknown>)}
+      refreshControl={adjustedRefreshControl}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={mergedContentContainerStyle}
+    />
+  );
+
+  if (forwarded) return <View style={Atoms.flex_1}>{list}</View>;
+
   return (
     <HidingHeaderStack
       header={renderedHeader}
@@ -163,14 +193,7 @@ function NativeList<T>({
       onHeaderLayout={onHeaderLayout}
       style={translateStyle}
     >
-      <AnimatedFlashList
-        ref={ref as React.Ref<FlashListRef<unknown>>}
-        {...(rest as FlashListProps<unknown>)}
-        refreshControl={adjustedRefreshControl}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={mergedContentContainerStyle}
-      />
+      {list}
     </HidingHeaderStack>
   );
 }

@@ -6,12 +6,12 @@ import { Pressable, View } from 'react-native';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
+import { TOPBAR_HEIGHT } from '../metrics';
 import { ProfileAvatar, Text } from '../primitives';
 
 const SIDE_WIDTH = 32;
 
-/** Exported so callers (e.g. sheet scrollable body) can reserve space. */
-export const TOPBAR_HEIGHT = 60;
+export { TOPBAR_HEIGHT };
 
 type TopbarProps = {
   title?: string;

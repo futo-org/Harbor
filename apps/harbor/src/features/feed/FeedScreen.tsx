@@ -56,6 +56,7 @@ export default function FeedScreen() {
     dragProgress: SharedValue<number>;
   }) => (
     <>
+      {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
       <FeedTabs
         tabs={HOME_TABS}
         active={tab}
@@ -69,8 +70,6 @@ export default function FeedScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        {!isWeb ? <Screen.Topbar right={<TopbarSettingsButton />} /> : null}
-
         {/* Held back so the pager does not open on the default tab first. */}
         {hydrated ? (
           <PagerView

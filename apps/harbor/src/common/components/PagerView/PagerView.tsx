@@ -1,18 +1,18 @@
-import { Atoms } from '@/src/common/theme';
-import ExpoPagerView, {
-  type PagerViewOnPageScrollEvent,
-  type PagerViewOnPageSelectedEvent,
-  type PagerViewRef,
-} from '@expo/ui/community/pager-view';
-import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import {
+  HidingHeaderStack,
+  useHidingHeader,
+} from '@/src/common/components/HidingHeader';
+import { TABS_HEIGHT, TOPBAR_HEIGHT } from '@/src/common/components/metrics';
+import { ScrollForwarder } from '@/src/common/components/ScrollForwarder';
+import { useCallback, type ReactNode } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
+import { PagerViewCore } from './PagerViewCore';
 import type { PagerViewProps } from './types';
 
 /**
  * A tab bar and the pages behind it, one child per value in the same order.
- * Tapping a tab animates to its page, swiping selects the tab it lands on, and
- * `dragProgress` follows the swipe for the tab bar's indicator.
+ * Tapping a tab animates to its page, swiping selects the tab it lands on,
+ * and the bar hides as the showing page scrolls down.
  *
  * Which pages may load is the screen's business: it knows the active tab, so it
  * tells each page whether it is the one showing.
@@ -25,52 +25,49 @@ export function PagerView<T extends string>({
   children,
 }: PagerViewProps<T>) {
   const activeIndex = Math.max(0, values.indexOf(active));
-  const pagerRef = useRef<PagerViewRef>(null);
-  // `initialPage` is only read on mount.
-  const initialIndex = useRef(activeIndex).current;
-
   const dragProgress = useSharedValue(activeIndex);
 
-  // The page the pager is on. Tab taps drive the pager, swipes drive `active`,
-  // and this keeps the two from fighting each other.
-  const indexRef = useRef(activeIndex);
+  // Seeded with the usual topbar + tabs height until the first layout lands.
+  const {
+    onScroll,
+    onHeaderLayout,
+    translateStyle,
+    headerHeight,
+    contentPaddingTop,
+    reveal,
+  } = useHidingHeader(TOPBAR_HEIGHT + TABS_HEIGHT);
 
-  useEffect(() => {
-    if (indexRef.current === activeIndex) return;
-    indexRef.current = activeIndex;
-    pagerRef.current?.setPage(activeIndex);
-  }, [activeIndex]);
-
-  const hasScrollEvents = useRef(false);
-
-  const onPageScroll = (event: PagerViewOnPageScrollEvent) => {
-    hasScrollEvents.current = true;
-    const { position, offset } = event.nativeEvent;
-    dragProgress.value = position + offset;
-  };
-
-  const onPageSelected = (event: PagerViewOnPageSelectedEvent) => {
-    const index = event.nativeEvent.position;
-    if (!hasScrollEvents.current) dragProgress.value = index;
-    if (index === indexRef.current) return;
-    indexRef.current = index;
-    const next = values[index];
-    if (next !== undefined) onChange(next);
-  };
+  const wrapPage = useCallback(
+    (child: ReactNode, index: number) => (
+      <ScrollForwarder
+        // Only the showing page's scroll moves the bar.
+        onScroll={index === activeIndex ? onScroll : undefined}
+        contentPaddingTop={contentPaddingTop}
+      >
+        {child}
+      </ScrollForwarder>
+    ),
+    [activeIndex, onScroll, contentPaddingTop],
+  );
 
   return (
-    <View style={Atoms.flex_1}>
-      {renderTabBar({ dragProgress })}
-
-      <ExpoPagerView
-        ref={pagerRef}
-        style={Atoms.flex_1}
-        initialPage={initialIndex}
-        onPageScroll={onPageScroll}
-        onPageSelected={onPageSelected}
+    <HidingHeaderStack
+      header={renderTabBar({ dragProgress })}
+      headerHeight={headerHeight}
+      onHeaderLayout={onHeaderLayout}
+      style={translateStyle}
+    >
+      <PagerViewCore
+        values={values}
+        active={active}
+        onChange={onChange}
+        dragProgress={dragProgress}
+        // A swipe landing on another page brings a hidden tab bar back.
+        onSwipeSettled={reveal}
+        wrapPage={wrapPage}
       >
         {children}
-      </ExpoPagerView>
-    </View>
+      </PagerViewCore>
+    </HidingHeaderStack>
   );
 }

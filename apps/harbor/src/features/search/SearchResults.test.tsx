@@ -9,6 +9,8 @@ jest.mock('@/src/common/theme', () => ({
   Spacing: new Proxy({}, { get: () => 8 }),
   // The pager renders a post skeleton for pages it has not shown yet.
   withHexOpacity: (color: string) => color,
+  typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
+  ZIndex: { raised: 10 },
 }));
 
 jest.mock('@/src/common/components/Icon', () => ({

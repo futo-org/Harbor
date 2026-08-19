@@ -7,6 +7,8 @@ jest.mock('@/src/common/theme', () => ({
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
+  typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
+  ZIndex: { raised: 10 },
 }));
 
 jest.mock('@/src/common/components', () => {

@@ -1,2 +1,7 @@
 export { PagerView } from './PagerView';
-export type { PagerViewProps } from './types';
+export { PagerViewWithHeader } from './PagerViewWithHeader';
+export type {
+  PagerViewHeaderState,
+  PagerViewProps,
+  PagerViewWithHeaderProps,
+} from './types';

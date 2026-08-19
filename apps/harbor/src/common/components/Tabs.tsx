@@ -1,4 +1,4 @@
-import { Atoms, Spacing, typography, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import {
   Children,
   createContext,
@@ -14,13 +14,13 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { TABS_HEIGHT } from './metrics';
 import { HorizontalScrollGroup, Text } from './primitives';
 
 /** See `expand` in `TabsProps`. */
 const ExpandContext = createContext(true);
 
-/** Exported so a sticky header containing tabs can reserve their space. */
-export const TABS_HEIGHT = Spacing.md * 2 + typography.lineHeight.md + 1;
+export { TABS_HEIGHT };
 
 const INDICATOR_HEIGHT = 4;
 

@@ -88,7 +88,7 @@ export function SearchResults({
   tab: SearchTab;
   onTabChange: (tab: SearchTab) => void;
   onSubmitQuery: () => void;
-  /** Rendered inside each list's hiding header so it hides on scroll. */
+  /** Rendered inside the pager's hiding header so it hides on scroll. */
   topbar?: ReactElement;
 }) {
   const { theme } = useTheme();
@@ -206,13 +206,11 @@ export function SearchPhraseRow({
 
 function UserResults({
   users,
-  topbar,
   header,
   showEmpty = true,
   refreshable = false,
 }: {
   users: ReturnType<typeof useSearchUsers>;
-  topbar?: ReactElement;
   header?: ReactElement;
   showEmpty?: boolean;
   refreshable?: boolean;
@@ -224,7 +222,6 @@ function UserResults({
       data={users.entries}
       keyExtractor={(entry) => entry.identity}
       renderItem={({ item }) => <UserRow identity={item.identity} />}
-      HeaderComponent={topbar}
       ListHeaderComponent={header}
       refreshControl={
         refreshable && !isWeb ? (

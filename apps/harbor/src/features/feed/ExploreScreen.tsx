@@ -51,40 +51,41 @@ export default function ExploreScreen() {
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <FeedTabs
-      tabs={SORT_TABS}
-      active={tab}
-      onPress={onTabPress}
-      progress={dragProgress}
-    />
+    <>
+      {isWeb ? (
+        // Web has no topbar here, so explore carries its own search entry
+        // rather than the right sidebar's.
+        <View
+          style={[
+            Atoms.px_lg,
+            Atoms.py_md,
+            {
+              borderBottomWidth: 1,
+              borderBottomColor: theme.palette.neutral_25,
+              backgroundColor: theme.palette.neutral_0,
+            },
+          ]}
+        >
+          <SearchBar />
+        </View>
+      ) : (
+        <Screen.Topbar
+          center={<SearchBar />}
+          right={<TopbarSettingsButton />}
+        />
+      )}
+      <FeedTabs
+        tabs={SORT_TABS}
+        active={tab}
+        onPress={onTabPress}
+        progress={dragProgress}
+      />
+    </>
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        {isWeb ? (
-          // Web has no topbar here, so explore carries its own search entry
-          // rather than the right sidebar's.
-          <View
-            style={[
-              Atoms.px_lg,
-              Atoms.py_md,
-              {
-                borderBottomWidth: 1,
-                borderBottomColor: theme.palette.neutral_25,
-                backgroundColor: theme.palette.neutral_0,
-              },
-            ]}
-          >
-            <SearchBar />
-          </View>
-        ) : (
-          <Screen.Topbar
-            center={<SearchBar />}
-            right={<TopbarSettingsButton />}
-          />
-        )}
-
         {/* Held back so the pager does not open on the default tab first. */}
         {hydrated ? (
           <PagerView

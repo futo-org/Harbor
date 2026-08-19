@@ -20,26 +20,18 @@ import { FetchMode } from '@polycentric/react-native';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
-import { ProfileTabs } from './ProfileTabs';
 
 const BANNER_HEIGHT = 150;
 
 export interface ProfileHeaderProps {
   bannerColors: [string, string];
   onBack: () => void;
-  /** The pager's swipe position, so the tab indicator tracks the drag. */
-  tabProgress?: SharedValue<number>;
 }
 
-function ProfileHeaderInner({
-  bannerColors,
-  onBack,
-  tabProgress,
-}: ProfileHeaderProps) {
+function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const { identityKey, isSelf, alias } = useProfileContext();
 
@@ -174,8 +166,6 @@ function ProfileHeaderInner({
           )}
         </View>
       </View>
-
-      <ProfileTabs progress={tabProgress} />
     </View>
   );
 }
