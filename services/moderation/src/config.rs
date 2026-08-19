@@ -54,9 +54,7 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// Read and validate the environment into the process-wide [`Config`].
 /// Called once at startup, after dotenv load.
 pub fn init() -> Result<&'static Config, String> {
-    let identity = required("HARBOR_MODERATION_IDENTITY")?
-        .trim()
-        .to_string();
+    let identity = required("HARBOR_MODERATION_IDENTITY")?.trim().to_string();
     if identity.is_empty() {
         return Err("HARBOR_MODERATION_IDENTITY is empty".to_string());
     }

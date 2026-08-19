@@ -102,8 +102,7 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
           code: data.code,
           grant_type: 'authorization_code',
           client_id: process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID,
-          client_secret:
-            process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET,
+          client_secret: process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET,
           redirect_uri: callbackUrl,
         }),
         {

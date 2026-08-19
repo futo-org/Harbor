@@ -1,11 +1,7 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
-import {
-  openCompose,
-  HARBOR_APP_URL,
-  Routes,
-} from '@/src/common/constants';
+import { openCompose, HARBOR_APP_URL, Routes } from '@/src/common/constants';
 import {
   type PostData,
   useCurrentIdentity,

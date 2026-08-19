@@ -39,8 +39,7 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
   ): Promise<Result<TokenResponse>> {
     if (
       process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ===
-        undefined ||
+      process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET === undefined ||
       process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');

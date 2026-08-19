@@ -9,8 +9,7 @@ use rdkafka::config::ClientConfig;
 /// only set when their corresponding environment variables are explicitly
 /// configured.
 pub(crate) fn set_defaults(config: &mut ClientConfig) {
-    let brokers =
-        env::var("HARBOR_KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
+    let brokers = env::var("HARBOR_KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
     config.set("bootstrap.servers", brokers).set(
         "security.protocol",
         env::var("HARBOR_KAFKA_SECURITY_PROTOCOL").unwrap_or_else(|_| "PLAINTEXT".to_string()),

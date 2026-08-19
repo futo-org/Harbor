@@ -94,8 +94,7 @@ function retrieveOAuthRedirect(key: string | undefined): string | undefined {
 async function loadClient(): Promise<PolycentricClient> {
   // Comma-delimited list of servers.
   const servers = (
-    process.env.HARBOR_VERIFIER_BOT_SERVERS ||
-    'https://east.polycentric.dev'
+    process.env.HARBOR_VERIFIER_BOT_SERVERS || 'https://east.polycentric.dev'
   )
     .split(',')
     .map((s) => s.trim())

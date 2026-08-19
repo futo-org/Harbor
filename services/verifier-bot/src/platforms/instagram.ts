@@ -36,8 +36,7 @@ class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
   ): Promise<Result<TokenResponse>> {
     if (
       process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_ID === undefined ||
-      process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET ===
-        undefined ||
+      process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET === undefined ||
       process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');

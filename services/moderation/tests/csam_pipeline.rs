@@ -172,10 +172,7 @@ fn spawn_moderation_service(
         // the group after the post is produced still sees it, rather than
         // racing partition assignment against the test's fixed startup delay.
         .env("HARBOR_KAFKA_AUTO_OFFSET_RESET", "earliest")
-        .env(
-            "HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT",
-            "http://127.0.0.1:9",
-        )
+        .env("HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT", "http://127.0.0.1:9")
         .env("HARBOR_AZURE_CONTENT_SAFETY_KEY", "unused")
         .env("HARBOR_PHOTODNA_KEY", "mock-key")
         .env("HARBOR_PHOTODNA_ENDPOINT", photodna_url)
