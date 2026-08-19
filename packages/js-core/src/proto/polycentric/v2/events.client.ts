@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { EventSyncService } from "./events";
+import type { GetAttributedToReactionCountsResponse } from "./events";
+import type { GetAttributedToReactionCountsRequest } from "./events";
 import type { GetReactionsResponse } from "./events";
 import type { GetReactionsRequest } from "./events";
 import type { ListHeadsResponse } from "./events";
@@ -46,6 +48,12 @@ export interface IEventSyncServiceClient {
      * @generated from protobuf rpc: GetReactions
      */
     getReactions(input: GetReactionsRequest, options?: RpcOptions): UnaryCall<GetReactionsRequest, GetReactionsResponse>;
+    /**
+     * Get the reaction counts for an out-of-network target (e.g. a video URL).
+     *
+     * @generated from protobuf rpc: GetAttributedToReactionCounts
+     */
+    getAttributedToReactionCounts(input: GetAttributedToReactionCountsRequest, options?: RpcOptions): UnaryCall<GetAttributedToReactionCountsRequest, GetAttributedToReactionCountsResponse>;
 }
 /**
  * Sync between clients and servers
@@ -94,5 +102,14 @@ export class EventSyncServiceClient implements IEventSyncServiceClient, ServiceI
     getReactions(input: GetReactionsRequest, options?: RpcOptions): UnaryCall<GetReactionsRequest, GetReactionsResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetReactionsRequest, GetReactionsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Get the reaction counts for an out-of-network target (e.g. a video URL).
+     *
+     * @generated from protobuf rpc: GetAttributedToReactionCounts
+     */
+    getAttributedToReactionCounts(input: GetAttributedToReactionCountsRequest, options?: RpcOptions): UnaryCall<GetAttributedToReactionCountsRequest, GetAttributedToReactionCountsResponse> {
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetAttributedToReactionCountsRequest, GetAttributedToReactionCountsResponse>("unary", this._transport, method, opt, input);
     }
 }

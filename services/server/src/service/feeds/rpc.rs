@@ -2,6 +2,7 @@
 //! handler module under `feeds/rpc/`.
 
 pub mod common;
+pub mod get_attribution_feed;
 pub mod get_explore_feed;
 pub mod get_following_feed;
 pub mod get_identity_feed;
@@ -14,8 +15,9 @@ use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
-    GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse,
+    GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse,
+    GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -78,6 +80,17 @@ impl FeedsService for FeedsServiceImpl {
         let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
             get_post_thread::handle(&ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_attribution_feed(
+        &self,
+        request: Request<GetAttributionFeedRequest>,
+    ) -> Result<Response<GetFeedResponse>, Status> {
+        let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        Ok(Response::new(
+            get_attribution_feed::handle(&ctx, request.into_inner()).await?,
         ))
     }
 }

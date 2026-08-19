@@ -295,6 +295,8 @@ fn make_post(key: &SigningKey, identity: &str, sequence: u64) -> (EventKey, Even
         images: vec![],
         quote: None,
         links: vec![],
+        labels: vec![],
+        attributed_to: vec![],
     };
     let bundle = signed_bundle(
         identity,

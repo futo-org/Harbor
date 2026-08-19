@@ -57,6 +57,12 @@ export interface Content {
          */
         reaction: Reaction;
     } | {
+        oneofKind: "attributedToReaction";
+        /**
+         * @generated from protobuf field: polycentric.v2.AttributedToReaction attributed_to_reaction = 15
+         */
+        attributedToReaction: AttributedToReaction;
+    } | {
         oneofKind: "profileUpdate";
         /**
          * @generated from protobuf field: polycentric.v2.ProfileUpdate profile_update = 7
@@ -151,6 +157,37 @@ export interface Post {
      * @generated from protobuf field: repeated polycentric.v2.Link links = 5
      */
     links: Link[];
+    /**
+     * Labels the creator / client applies themselves
+     *
+     * @generated from protobuf field: repeated string labels = 6
+     */
+    labels: string[];
+    /**
+     * If any, where the post is attributed to.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.AttributedTo attributed_to = 7
+     */
+    attributedTo: AttributedTo[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.AttributedTo
+ */
+export interface AttributedTo {
+    /**
+     * @generated from protobuf oneof: to
+     */
+    to: {
+        oneofKind: "link";
+        /**
+         * Remote resource
+         *
+         * @generated from protobuf field: polycentric.v2.Link link = 1
+         */
+        link: Link;
+    } | {
+        oneofKind: undefined;
+    };
 }
 /**
  * @generated from protobuf message polycentric.v2.PostReply
@@ -243,6 +280,32 @@ export interface Reaction {
      * @generated from protobuf field: polycentric.v2.EventKey event_key = 1
      */
     eventKey?: EventKey;
+    /**
+     * Optional emoji
+     *
+     * @generated from protobuf field: optional string emoji = 2
+     */
+    emoji?: string;
+    /**
+     * Upvote = true. Downvote = false.
+     *
+     * @generated from protobuf field: bool positive = 3
+     */
+    positive: boolean;
+}
+/**
+ * A reaction targeting something that is not an in-network event — e.g. a URL
+ * (reacting to a video). The out-of-network counterpart of `Reaction`.
+ *
+ * @generated from protobuf message polycentric.v2.AttributedToReaction
+ */
+export interface AttributedToReaction {
+    /**
+     * What the reaction is attributed to (e.g. a link/URL).
+     *
+     * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
+     */
+    attributedTo?: AttributedTo;
     /**
      * Optional emoji
      *
@@ -511,6 +574,7 @@ class Content$Type extends MessageType<Content> {
             { no: 4, name: "follow", kind: "message", oneof: "contentBody", T: () => Follow },
             { no: 5, name: "block", kind: "message", oneof: "contentBody", T: () => Block },
             { no: 6, name: "reaction", kind: "message", oneof: "contentBody", T: () => Reaction },
+            { no: 15, name: "attributed_to_reaction", kind: "message", oneof: "contentBody", T: () => AttributedToReaction },
             { no: 7, name: "profile_update", kind: "message", oneof: "contentBody", T: () => ProfileUpdate },
             { no: 8, name: "identity", kind: "message", oneof: "contentBody", T: () => Identity },
             { no: 9, name: "repost", kind: "message", oneof: "contentBody", T: () => Repost },
@@ -561,6 +625,12 @@ class Content$Type extends MessageType<Content> {
                     message.contentBody = {
                         oneofKind: "reaction",
                         reaction: Reaction.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).reaction)
+                    };
+                    break;
+                case /* polycentric.v2.AttributedToReaction attributed_to_reaction */ 15:
+                    message.contentBody = {
+                        oneofKind: "attributedToReaction",
+                        attributedToReaction: AttributedToReaction.internalBinaryRead(reader, reader.uint32(), options, (message.contentBody as any).attributedToReaction)
                     };
                     break;
                 case /* polycentric.v2.ProfileUpdate profile_update */ 7:
@@ -662,6 +732,9 @@ class Content$Type extends MessageType<Content> {
         /* polycentric.v2.VerificationTarget verification_target = 14; */
         if (message.contentBody.oneofKind === "verificationTarget")
             VerificationTarget.internalBinaryWrite(message.contentBody.verificationTarget, writer.tag(14, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.AttributedToReaction attributed_to_reaction = 15; */
+        if (message.contentBody.oneofKind === "attributedToReaction")
+            AttributedToReaction.internalBinaryWrite(message.contentBody.attributedToReaction, writer.tag(15, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -727,7 +800,9 @@ class Post$Type extends MessageType<Post> {
             { no: 2, name: "reply", kind: "message", T: () => PostReply },
             { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet },
             { no: 4, name: "quote", kind: "message", T: () => EventKey },
-            { no: 5, name: "links", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Link }
+            { no: 5, name: "links", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Link },
+            { no: 6, name: "labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "attributed_to", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => AttributedTo }
         ]);
     }
     create(value?: PartialMessage<Post>): Post {
@@ -735,6 +810,8 @@ class Post$Type extends MessageType<Post> {
         message.text = "";
         message.images = [];
         message.links = [];
+        message.labels = [];
+        message.attributedTo = [];
         if (value !== undefined)
             reflectionMergePartial<Post>(this, message, value);
         return message;
@@ -758,6 +835,12 @@ class Post$Type extends MessageType<Post> {
                     break;
                 case /* repeated polycentric.v2.Link links */ 5:
                     message.links.push(Link.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated string labels */ 6:
+                    message.labels.push(reader.string());
+                    break;
+                case /* repeated polycentric.v2.AttributedTo attributed_to */ 7:
+                    message.attributedTo.push(AttributedTo.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -786,6 +869,12 @@ class Post$Type extends MessageType<Post> {
         /* repeated polycentric.v2.Link links = 5; */
         for (let i = 0; i < message.links.length; i++)
             Link.internalBinaryWrite(message.links[i], writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string labels = 6; */
+        for (let i = 0; i < message.labels.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.labels[i]);
+        /* repeated polycentric.v2.AttributedTo attributed_to = 7; */
+        for (let i = 0; i < message.attributedTo.length; i++)
+            AttributedTo.internalBinaryWrite(message.attributedTo[i], writer.tag(7, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -796,6 +885,56 @@ class Post$Type extends MessageType<Post> {
  * @generated MessageType for protobuf message polycentric.v2.Post
  */
 export const Post = new Post$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AttributedTo$Type extends MessageType<AttributedTo> {
+    constructor() {
+        super("polycentric.v2.AttributedTo", [
+            { no: 1, name: "link", kind: "message", oneof: "to", T: () => Link }
+        ]);
+    }
+    create(value?: PartialMessage<AttributedTo>): AttributedTo {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.to = { oneofKind: undefined };
+        if (value !== undefined)
+            reflectionMergePartial<AttributedTo>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AttributedTo): AttributedTo {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.Link link */ 1:
+                    message.to = {
+                        oneofKind: "link",
+                        link: Link.internalBinaryRead(reader, reader.uint32(), options, (message.to as any).link)
+                    };
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AttributedTo, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.Link link = 1; */
+        if (message.to.oneofKind === "link")
+            Link.internalBinaryWrite(message.to.link, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.AttributedTo
+ */
+export const AttributedTo = new AttributedTo$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class PostReply$Type extends MessageType<PostReply> {
     constructor() {
@@ -1167,6 +1306,67 @@ class Reaction$Type extends MessageType<Reaction> {
  * @generated MessageType for protobuf message polycentric.v2.Reaction
  */
 export const Reaction = new Reaction$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AttributedToReaction$Type extends MessageType<AttributedToReaction> {
+    constructor() {
+        super("polycentric.v2.AttributedToReaction", [
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo },
+            { no: 2, name: "emoji", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "positive", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<AttributedToReaction>): AttributedToReaction {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.positive = false;
+        if (value !== undefined)
+            reflectionMergePartial<AttributedToReaction>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AttributedToReaction): AttributedToReaction {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.AttributedTo attributed_to */ 1:
+                    message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
+                    break;
+                case /* optional string emoji */ 2:
+                    message.emoji = reader.string();
+                    break;
+                case /* bool positive */ 3:
+                    message.positive = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AttributedToReaction, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.AttributedTo attributed_to = 1; */
+        if (message.attributedTo)
+            AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* optional string emoji = 2; */
+        if (message.emoji !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.emoji);
+        /* bool positive = 3; */
+        if (message.positive !== false)
+            writer.tag(3, WireType.Varint).bool(message.positive);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.AttributedToReaction
+ */
+export const AttributedToReaction = new AttributedToReaction$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
     constructor() {

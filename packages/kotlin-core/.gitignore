@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin
+.kotlin/
+
+# Android build outputs
+core/build/
+core/.cxx/
+
+# Native libraries cross-compiled from rs-core by cargo-ndk
+# (build artifacts — regenerate with `./gradlew :core:cargoNdkBuild`)
+core/src/main/jniLibs/
+
+# Generated UniFFI Kotlin bindings (emitted into core/build/, already
+# covered above; listed for clarity)
+# core/build/generated/uniffi/
+
+# Local / IDE
+local.properties
+.idea/
+*.iml
+.DS_Store
+
+# Captures
+captures/

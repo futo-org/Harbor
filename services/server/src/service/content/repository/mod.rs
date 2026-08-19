@@ -2,6 +2,7 @@
 //! `Mutation::save_content_child` dispatches each `ContentBody` variant
 //! to its own submodule, which owns that table's insert logic.
 
+mod attributed_to_reaction;
 mod block;
 mod delete;
 mod follow;
@@ -40,6 +41,9 @@ impl Mutation {
             Some(ContentBody::Follow(x)) => follow::add(db, &ctx, x).await,
             Some(ContentBody::Block(x)) => block::add(db, &ctx, x).await,
             Some(ContentBody::Reaction(x)) => reaction::add(db, &ctx, x).await,
+            Some(ContentBody::AttributedToReaction(x)) => {
+                attributed_to_reaction::add(db, &ctx, x).await
+            }
             Some(ContentBody::ProfileUpdate(x)) => {
                 profile_update::add(db, &ctx, x).await
             }
