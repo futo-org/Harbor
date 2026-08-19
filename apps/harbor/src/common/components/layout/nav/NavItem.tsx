@@ -92,7 +92,12 @@ export function NavItem({
       href={href!}
       onPress={(e) => {
         e.preventDefault();
-        if (isActive) emitFocusedRefresh();
+        // Re-tapping the current route only refreshes; navigating again
+        // would remount the screen.
+        if (pathname === flatHref) {
+          emitFocusedRefresh();
+          return;
+        }
         // MH HACK!
         // Switching destination, not going deeper. Web keeps pushed screens
         // mounted and subscribed, so drop what is stacked over the tabs.
