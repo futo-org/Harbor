@@ -39,10 +39,9 @@ pub struct ExploreEvent {
     /// `reaction_count_decay` SQL function).
     /// Will default to zero if not returned.
     ///
-    /// NOTE: This is actually a `f64`, but floating point number suck and so,
-    /// of course, nothing works when you actually use them :) Instead we use a
-    /// string, created and parsing by Postgres (this is important), so that we
-    /// shouldn't lose any precision.
+    /// NOTE: This is actually a `f64`, but floating point numbers lose
+    /// precision, so we let Postgres encode and decode the numeric number to a
+    /// string to avoid a loss of precision.
     pub reactions: String,
 }
 
@@ -316,9 +315,13 @@ impl Query {
                         ),
                         Condition::all(), // Always join.
                     )
-                    // We can't decode numerics, so we have to use floats, but
-                    // those suck, so use a string instead.
-                    .expr_as(Expr::cust(format!("{REACTION_COUNT_COLUMN}::TEXT")), REACTION_COUNT_COLUMN);
+                    // We can't decode numerics as we don't have a type for it,
+                    // so we have to use floats, but those lose precision, so
+                    // use a string instead.
+                    .expr_as(
+                        Expr::cust(format!("{REACTION_COUNT_COLUMN}::TEXT")),
+                        REACTION_COUNT_COLUMN,
+                    );
             }
         }
 
