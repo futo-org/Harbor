@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 
-/// This table contains a row for each block, based on block (and associated
-/// deletion events in the `events` table. The table is used as a cache for
+/// This table contains a row for each block, based on block events (and associated
+/// deletion events) in the `events` table. The table is used as a cache for
 /// feed request pipelines.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
