@@ -65,7 +65,12 @@ jest.mock('./ProfileHeader', () => ({ ProfileHeader: () => null }));
 jest.mock('./ProfileCompactHeader', () => ({
   ProfileCompactHeader: () => null,
 }));
-jest.mock('./ProfileFeedSwitcher', () => ({ ProfileFeedSwitcher: () => null }));
+jest.mock('./ProfileTabs', () => ({ ProfileTabs: () => null }));
+// FlashList ships untranspiled ESM, so the pages' list stays out of this test.
+jest.mock('@/src/features/feed/FeedList', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('./ProfileVerificationsList', () => ({
   ProfileVerificationsList: () => null,
 }));
@@ -78,6 +83,9 @@ jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({ theme: { palette: { primary_500: '#000' } } }),
   Atoms: new Proxy({}, { get: () => ({}) }),
+  Spacing: new Proxy({}, { get: () => 8 }),
+  typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
+  ZIndex: { raised: 10 },
 }));
 jest.mock('@/src/common/components', () => {
   const react = require('react');

@@ -11,14 +11,8 @@ import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimBy
 import { useClaimsList } from '@/src/features/verifications/hooks/useClaimsList';
 import { useVerificationRequestsTo } from '@/src/features/verifications/hooks/useVerificationRequestsTo';
 import { useVerifiedClaims } from '@/src/features/verifications/hooks/useVerifiedClaims';
-import {
-  type ComponentType,
-  type ReactElement,
-  useMemo,
-  useState,
-} from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfile } from './hooks/useProfile';
 import { useProfileContext } from './ProfileContext';
@@ -73,16 +67,14 @@ function sectionRows(
 // The profile's Verifications tab: claims the identity has requested, and
 // claims it has verified.
 export function ProfileVerificationsList({
-  ListHeaderComponent,
-  scrollY,
+  active = true,
 }: {
-  // The profile header; scrolls with the list.
-  ListHeaderComponent?: ComponentType<unknown> | ReactElement | null;
-  scrollY?: SharedValue<number>;
+  /** True for the page being shown; only that page loads. */
+  active?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
-  const requested = useClaimsList(identityKey ?? undefined);
+  const requested = useClaimsList(identityKey ?? undefined, active);
   const verified = useVerifiedClaims(identityKey ?? undefined);
   // Verification requests the current identity has made to this profile.
   const pending = useVerificationRequestsTo(
@@ -158,8 +150,6 @@ export function ProfileVerificationsList({
   return (
     <>
       <List<Row>
-        ListHeaderComponent={ListHeaderComponent}
-        scrollY={scrollY}
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={(row) => row.kind}

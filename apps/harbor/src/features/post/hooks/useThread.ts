@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { COLLECTION, Query, type EventKey } from '@polycentric/react-native';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { type FeedHookResult, NOOP } from '../../feed/hooks/types';
 import {
@@ -37,12 +38,13 @@ export function useThread(
   }, [post]);
 
   const limit = options?.limit ?? 0;
+  const omitLabels = useOmitLabels();
 
   const queryKey = threadQueryKey(post?.id ?? '', limit);
 
   const query = useQuery(
     queryKey,
-    new Query.GetPostThread({ eventKey, limit }),
+    new Query.GetPostThread({ eventKey, limit, omitLabels }),
     undefined,
     !!post,
   );

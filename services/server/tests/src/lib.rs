@@ -5,12 +5,12 @@ use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceCli
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
-    EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, ProfileUpdate, PublicKey, PutEventsRequest, Reaction,
-    RevocationBound, SearchResult, SerializedContent,
-    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
-    VerificationSchema, content,
+    AttributedTo, Content, ContentDigest, ContentDigestType, Delete, Event,
+    EventBundle, EventKey, EventProofTarget, FieldDef, FieldKind, Follow,
+    Identity, KeyType, Labels, Link, Post, PostReply, ProfileUpdate, PublicKey,
+    PutEventsRequest, Reaction, Repost, RevocationBound, SearchResult,
+    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
+    VerificationClaim, VerificationSchema, attributed_to, content,
 };
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -290,6 +290,47 @@ impl TestClient {
             images: Vec::new(),
             quote: None,
             links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
+    pub fn quote(
+        &mut self,
+        post: EventKey,
+        text: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: Some(post),
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        };
+        self.post(post, created_at)
+    }
+
+    pub fn reply(
+        &mut self,
+        post: EventKey,
+        text: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let post = Post {
+            text: text.to_owned(),
+            reply: Some(PostReply {
+                root: None,
+                parent: Some(post),
+            }),
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
         };
         self.post(post, created_at)
     }
@@ -336,6 +377,21 @@ impl TestClient {
         )
     }
 
+    pub fn repost(&mut self, repost: Repost, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Repost(repost), created_at)
+    }
+
+    pub fn repost_key(
+        &mut self,
+        event_key: EventKey,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let repost = Repost {
+            post: Some(event_key),
+        };
+        self.repost(repost, created_at)
+    }
+
     pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Delete(delete), created_at)
     }
@@ -368,7 +424,9 @@ impl TestClient {
             ContentBody::Follow(_) | ContentBody::Block(_) => {
                 COLLECTION_SOCIAL_GRAPH
             }
-            ContentBody::Reaction(_) => COLLECTION_INTERACTIONS,
+            ContentBody::Reaction(_) | ContentBody::AttributedToReaction(_) => {
+                COLLECTION_INTERACTIONS
+            }
             ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
             ContentBody::Identity(_) => COLLECTION_IDENTITY,
             ContentBody::Repost(_) => COLLECTION_FEED,
@@ -557,8 +615,18 @@ pub fn make_post_bundle(
     vector_clock: Vec<u64>,
     previous_root: Vec<u8>,
     text: &str,
+    attributed_urls: &[&str],
     created_at: u64,
 ) -> EventBundle {
+    let attributed_to = attributed_urls
+        .iter()
+        .map(|url| AttributedTo {
+            to: Some(attributed_to::To::Link(Link {
+                url: url.to_string(),
+                ..Default::default()
+            })),
+        })
+        .collect();
     let content = Content {
         content_body: Some(content::ContentBody::Post(Post {
             text: text.to_string(),
@@ -566,6 +634,8 @@ pub fn make_post_bundle(
             images: vec![],
             quote: None,
             links: vec![],
+            labels: vec![],
+            attributed_to,
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);

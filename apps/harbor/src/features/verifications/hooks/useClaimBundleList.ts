@@ -23,6 +23,7 @@ export function useClaimBundleList(
 ): {
   claims: ClaimWithStatus[];
   isLoading: boolean;
+  isRefreshing: boolean;
   refresh: () => void;
 } {
   const query = useQuery(queryKey, querySource, undefined, enabled);
@@ -42,6 +43,7 @@ export function useClaimBundleList(
   return {
     claims,
     isLoading: query.isLoading,
+    isRefreshing: query.hasPendingRefresh,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }

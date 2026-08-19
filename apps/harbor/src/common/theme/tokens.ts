@@ -41,6 +41,7 @@ export const typography = {
   } as const,
   fontWeight: {
     regular: '400',
+    medium: '500',
     semibold: '600',
     bold: '700',
   } as const,
@@ -97,6 +98,9 @@ const atomStyles = {
   },
   fixed: {
     position: 'fixed',
+  } as unknown as ViewStyle,
+  sticky: {
+    position: 'sticky',
   } as unknown as ViewStyle,
 
   inset_0: {

@@ -10,6 +10,7 @@ import {
 import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import {
   REPORT_BUG_URL,
   Routes,
@@ -76,6 +77,8 @@ function LinkPreviewSettingRow() {
 }
 
 export default function SettingsTabScreen() {
+  usePageTitle('Settings');
+
   const { identityKey } = useCurrentIdentity();
 
   return (

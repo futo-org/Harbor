@@ -46,6 +46,9 @@
 //!    following which.
 //!  * [`reaction`](reaction_model) and [`reaction_tally`](reaction_tally_model2)
 //!    contains the reaction made on posts.
+//!  * [`repost`](repost_model) contains the reposts of posts made.
+//!  * [`quote`](quote_model) contains the posts that are quoted by another post.
+//!  * [`reply`](reply_model) contains the posts that are replied by another post.
 //!
 //! The cache tables represent the current state, meaning that a delete event
 //! will remove it from the cache table, but the original event remains in the
@@ -54,7 +57,9 @@
 //! [`events`]: event_model
 //! [`content`]: content_model
 
+pub mod attributed_to_reaction_summary_model;
 pub mod ban_model;
+pub mod content_attributed_to_reaction_model;
 pub mod content_blob_model;
 pub mod content_block_model;
 pub mod content_delete_model;
@@ -63,6 +68,7 @@ pub mod content_identity_model;
 pub mod content_image_model;
 pub mod content_label_model;
 pub mod content_model;
+pub mod content_post_attributed_url_model;
 pub mod content_post_model;
 pub mod content_profile_update_model;
 pub mod content_reaction_model;
@@ -77,10 +83,13 @@ pub mod moderator_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
 pub mod pairing_session_model;
+pub mod quote_model;
 pub mod reaction_model;
 pub mod reaction_summary_model;
 pub mod reaction_tally_model;
 pub mod reaction_tally_model2;
 pub mod reply_count_model;
+pub mod reply_model;
+pub mod repost_model;
 pub mod url_info_cache_model;
 pub mod verification_schema_model;

@@ -144,10 +144,15 @@ export const Post = memo(function Post({
                     variant="secondary"
                     color="neutral_500"
                     fontWeight="bold"
+                    style={Atoms.flex_shrink_0}
                   >
                     ·
                   </Text>
-                  <Text variant="secondary" color="neutral_500">
+                  <Text
+                    variant="secondary"
+                    color="neutral_500"
+                    style={Atoms.flex_shrink_0}
+                  >
                     {time}
                   </Text>
                 </>

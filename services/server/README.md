@@ -52,7 +52,23 @@ All service variables are read and validated once at startup by
 | `POLYCENTRIC_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
 | `POLYCENTRIC_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
 
-The shared `services/common` crates read their own variables:
+## Common Environment Variables
+
+The shared `services/common` crates read their own variables.
+
+### Object Store Client
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONTENT_BLOB_OS_BUCKET` | _(required)_ | S3 bucket holding uploaded blob bodies. |
+| `CONTENT_BLOB_OS_REGION` | `us-east-1` | Bucket region. |
+| `CONTENT_BLOB_OS_ENDPOINT` | _(unset)_ | Custom endpoint for S3-compatible stores; leave unset for AWS S3. |
+| `CONTENT_BLOB_OS_FORCE_PATH_STYLE` | `false` | Set `true` for path-style addressing (required by RustFS). |
+| `CONTENT_BLOB_OS_ACCESS_KEY` | _(unset)_ | Static credentials; unset uses the AWS SDK default chain. |
+| `CONTENT_BLOB_OS_SECRET_KEY` | _(unset)_ | See above. |
+
+
+### Kafka Client
 
 | Variable | Default | Description |
 |---|---|---|
@@ -67,12 +83,11 @@ The shared `services/common` crates read their own variables:
 | `POLYCENTRIC_KAFKA_SSL_KEY` | _(unset)_ | Kafka client key, inline PEM. |
 | `POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY` | `any` | Kafka `broker.address.family`. |
 | `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET` | `latest` | Consumer `auto.offset.reset` (used by the workers). |
-| `CONTENT_BLOB_OS_BUCKET` | _(required)_ | S3 bucket holding uploaded blob bodies. |
-| `CONTENT_BLOB_OS_REGION` | `us-east-1` | Bucket region. |
-| `CONTENT_BLOB_OS_ENDPOINT` | _(unset)_ | Custom endpoint for S3-compatible stores; leave unset for AWS S3. |
-| `CONTENT_BLOB_OS_FORCE_PATH_STYLE` | `false` | Set `true` for path-style addressing (required by RustFS). |
-| `CONTENT_BLOB_OS_ACCESS_KEY` | _(unset)_ | Static credentials; unset uses the AWS SDK default chain. |
-| `CONTENT_BLOB_OS_SECRET_KEY` | _(unset)_ | See above. |
+
+### Telemetry
+
+| Variable | Default | Description |
+|---|---|---|
 | `RUST_LOG` | `info` | Log filter. |
 | `LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
 | `METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |

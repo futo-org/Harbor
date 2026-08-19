@@ -6,7 +6,7 @@ import 'fast-text-encoding';
 export {
   uniffiInitAsync,
   EmitMode,
-  ExploreFeedSort,
+  FeedSort,
   FetchMode,
   PolycentricCore,
   Query,

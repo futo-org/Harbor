@@ -1,26 +1,30 @@
 import { Query, QueryStatus, UpdateMode } from '@polycentric/react-native';
 import {
   extractFeedToken,
-  usePolycentricContext,
+  useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useChainedExtend } from './useChainedExtend';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
+  type FeedSortOption,
   feedQueryKeys,
+  feedSortBy,
   useFeedPageInfo,
   useFeedWithOverlays,
 } from './feedCache';
 
 export function useFollowingFeed(options?: {
+  sort?: FeedSortOption;
   limit?: number;
   enabled?: boolean;
 }): FeedHookResult {
-  const { client } = usePolycentricContext();
-  const enabled = options?.enabled ?? true;
-  const followerIdentity = client.activeIdentityKey || '';
-  const queryKey = feedQueryKeys.following();
+  const { identityKey } = useCurrentIdentity();
+  const sort = options?.sort ?? 'latest';
+  const followerIdentity = identityKey ?? '';
+  const enabled = (options?.enabled ?? true) && !!followerIdentity;
+  const queryKey = feedQueryKeys.following(followerIdentity, sort);
   const omitLabels = useOmitLabels();
 
   const query = useQuery(
@@ -30,6 +34,7 @@ export function useFollowingFeed(options?: {
 
       return new Query.GetFollowingFeed({
         followerIdentity,
+        sortBy: feedSortBy(sort),
         limit: options?.limit,
         forwardToken,
         omitLabels,
