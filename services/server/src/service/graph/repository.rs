@@ -12,7 +12,7 @@ use std::sync::Arc;
 use tonic::Status;
 
 use crate::data::{Cursor, CursorFilter};
-use crate::service::context::ServiceContext;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
@@ -77,11 +77,10 @@ impl Query {
     /// request arrived unauthenticated, as there is then no caller whose
     /// blocks could apply.
     pub async fn blocked_set_for_caller(
-        ctx: &ServiceContext,
-        caller: Option<&str>,
+        ctx: &RequestContext<'_>,
     ) -> Result<Arc<HashSet<String>>, Status> {
-        match caller {
-            Some(caller) => Self::blocked_set(ctx, caller).await,
+        match ctx.caller {
+            Some(caller) => Self::blocked_set(ctx.service, caller).await,
             None => Ok(Arc::new(HashSet::new())),
         }
     }
@@ -478,7 +477,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let ctx = ctx(db).await;
 
-        let blocked = Query::blocked_set_for_caller(&ctx, None).await.unwrap();
+        let ctx = RequestContext::new(&ctx, None);
+        let blocked = Query::blocked_set_for_caller(&ctx).await.unwrap();
         assert!(blocked.is_empty());
     }
 

@@ -1,7 +1,7 @@
 use crate::{
     data::pipeline,
     service::{
-        context::ServiceContext,
+        context::RequestContext,
         events::{TargetEventKey, tombstone::EventWithContentRow},
         feeds::{
             repository::Query as FeedsRepository,
@@ -32,8 +32,6 @@ struct Params {
     limit: u64,
     after_id: Option<i64>,
     omit_labels: Vec<String>,
-    /// The authenticated caller--`None` for anonymous requests
-    caller: Option<String>,
 }
 
 pub struct Fetched {
@@ -52,9 +50,8 @@ struct Hydrated {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: ListNotificationsRequest,
-    caller: Option<&str>,
 ) -> Result<ListNotificationsResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
@@ -78,18 +75,17 @@ pub async fn handle(
         limit,
         after_id,
         omit_labels: req.omit_labels,
-        caller: caller.map(str::to_string),
     };
 
     pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view).await
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<Fetched, Status> {
     let raw = NotificationRepository::list_for_identity(
-        &ctx.db,
+        &ctx.service.db,
         &params.identity,
         params.limit + 1, // over-fetch for pagination
         params.after_id,
@@ -109,8 +105,8 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    params: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &Fetched,
 ) -> Result<Hydrated, Status> {
     let rows = &fetched.rows;
@@ -133,19 +129,20 @@ async fn hydrate(
     // Bulk-fetch the referenced events, build bundles with proofs, and index
     // them by their comparable key for the view stage.
     let proto_keys: Vec<EventKey> = cmp_keys.iter().map(to_proto_key).collect();
-    let fetched = FeedsRepository::list_events_by_keys(&ctx.db, &proto_keys)
-        .await
-        .map_err(map_db_err)?;
+    let fetched =
+        FeedsRepository::list_events_by_keys(&ctx.service.db, &proto_keys)
+            .await
+            .map_err(map_db_err)?;
     let fetched_keys: Vec<TargetEventKey> =
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
     let mut fetched_bundles = rows_to_bundles(fetched);
-    attach_proofs(ctx, &mut fetched_bundles).await?;
+    attach_proofs(ctx.service, &mut fetched_bundles).await?;
 
     let mut bundles: HashMap<TargetEventKey, EventBundle> =
         fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
     let stats_fut = async {
-        gather_stats_for(&ctx.db, &fetched_keys)
+        gather_stats_for(&ctx.service.db, &fetched_keys)
             .await
             .map_err(map_db_err)
     };
@@ -154,9 +151,9 @@ async fn hydrate(
     // author and does not object to their own posts.
     let label_fut = async {
         FeedsRepository::list_labels_for_event_keys(
-            &ctx.db,
+            &ctx.service.db,
             &trigger_keys,
-            ctx.trusted_moderator.as_deref(),
+            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(map_db_err)
@@ -165,7 +162,7 @@ async fn hydrate(
     // Add moderation service identity to every request, such that clients can verify label events.
     // This ships the identity events more times than the client needs, and even when labels aren't
     // present in the feed page--can be optimized later.
-    if let Some(moderator) = &ctx.trusted_moderator
+    if let Some(moderator) = &ctx.service.trusted_moderator
         && !identities.is_empty()
     {
         identities.insert(moderator.clone());
@@ -173,20 +170,19 @@ async fn hydrate(
 
     let identities: Vec<String> = identities.into_iter().collect();
 
-    let blocked_fut =
-        GraphRepository::blocked_set_for_caller(ctx, params.caller.as_deref());
+    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
 
     // Author identity, profile, and moderation label events all ship as hints.
     let (identity_events, profile_events, label_rows, stats, blocked) = tokio::try_join!(
-        list_identity_events(ctx, identities.clone()),
-        list_profile_events(ctx, identities),
+        list_identity_events(ctx.service, identities.clone()),
+        list_profile_events(ctx.service, identities),
         label_fut,
         stats_fut,
         blocked_fut,
     )?;
 
     let mut label_bundles = rows_to_bundles(label_rows.clone());
-    attach_proofs(ctx, &mut label_bundles).await?;
+    attach_proofs(ctx.service, &mut label_bundles).await?;
 
     let mut event_hints: Vec<EventHint> = rows_to_bundles(
         identity_events.into_iter().chain(profile_events).collect(),
@@ -213,7 +209,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     params: &Params,
     fetched: Fetched,
     hydrated: &Hydrated,
@@ -249,7 +245,7 @@ async fn filter(
 }
 
 async fn view(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     _params: &Params,
     fetched: Fetched,
     hydrated: Hydrated,
@@ -338,6 +334,7 @@ fn to_proto_key(key: &TargetEventKey) -> EventKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::context::ServiceContext;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{Content, Labels};
     use ::entity::{content_model, event_model};
@@ -377,7 +374,6 @@ mod tests {
             limit: 50,
             after_id: None,
             omit_labels: omit_labels.iter().map(|s| s.to_string()).collect(),
-            caller: Some("recipient".to_string()),
         }
     }
 
@@ -443,7 +439,7 @@ mod tests {
         }
     }
 
-    async fn ctx() -> Arc<ServiceContext> {
+    async fn service() -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
             .await
             .expect("failed to build Kafka producer");
@@ -455,7 +451,8 @@ mod tests {
 
     #[tokio::test]
     async fn notifications_from_blocked_identities_are_dropped() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, Some("recipient"));
         let fetched = Fetched {
             rows: vec![
                 notification_row(1, "bob"),
@@ -481,7 +478,8 @@ mod tests {
 
     #[tokio::test]
     async fn a_page_of_only_blocked_notifications_comes_back_empty() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, Some("recipient"));
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: true,
@@ -499,7 +497,8 @@ mod tests {
 
     #[tokio::test]
     async fn an_anonymous_caller_sees_every_notification() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, None);
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: false,
@@ -514,7 +513,8 @@ mod tests {
 
     #[tokio::test]
     async fn notifications_with_an_omitted_trigger_label_are_dropped() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, Some("recipient"));
         let labeled = notification_row(1, "bob");
         let clean = notification_row(2, "alice");
         let hydrated =
@@ -540,7 +540,8 @@ mod tests {
 
     #[tokio::test]
     async fn a_label_outside_the_omit_set_keeps_the_notification() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, Some("recipient"));
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);
@@ -560,7 +561,8 @@ mod tests {
 
     #[tokio::test]
     async fn labels_are_ignored_without_an_omit_set() {
-        let ctx = ctx().await;
+        let service = service().await;
+        let ctx = RequestContext::new(&service, Some("recipient"));
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);

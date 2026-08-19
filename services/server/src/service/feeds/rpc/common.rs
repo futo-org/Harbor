@@ -3,7 +3,7 @@
 
 use crate::data::hydration::HydrationState;
 use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
-use crate::service::context::ServiceContext;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
     self as tombstone, EventWithContentRow,
@@ -34,8 +34,6 @@ pub struct Params<SortedBy = EventCreatedAt> {
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter<SortedBy>>,
     pub omit_labels: Vec<String>,
-    /// The authenticated caller--`None` with anonymous requests
-    pub caller: Option<String>,
 }
 
 impl<SortedBy> Params<SortedBy> {
@@ -43,7 +41,6 @@ impl<SortedBy> Params<SortedBy> {
     pub fn from_req_params(
         params: &Option<PageParams>,
         omit_labels: Vec<String>,
-        caller: Option<String>,
     ) -> Result<Params<SortedBy>, Status>
     where
         SortedBy: for<'a> Deserialize<'a>,
@@ -56,7 +53,6 @@ impl<SortedBy> Params<SortedBy> {
             limit: limit.into(),
             cursor_filter,
             omit_labels,
-            caller,
         })
     }
 }
@@ -110,8 +106,7 @@ pub fn create_event_created_at_marker(
 /// - latest profile event (display name / avatar / banner) for every
 ///   identity referenced
 pub async fn hydrate<Sorted>(
-    ctx: &ServiceContext,
-    caller: Option<&str>,
+    ctx: &RequestContext<'_>,
     fetched: &Fetched<Sorted>,
 ) -> Result<HydrationState, Status> {
     let rows = &fetched.rows;
@@ -126,7 +121,7 @@ pub async fn hydrate<Sorted>(
     // Add moderation service identity to every request, such that clients can verify label events.
     // This ships the identity events more times than the client needs, and even when labels aren't
     // present in the feed page--can be optimized later.
-    if let Some(moderator) = &ctx.trusted_moderator
+    if let Some(moderator) = &ctx.service.trusted_moderator
         && !identities.is_empty()
     {
         identities.push(moderator.clone())
@@ -145,33 +140,36 @@ pub async fn hydrate<Sorted>(
         set.into_iter().collect()
     };
 
-    let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
-    let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities.clone());
+    let tombstones_fut =
+        tombstone::validated_tombstones(ctx.service, &display_keys);
+    let identity_events_fut =
+        list_identity_events(ctx.service, identities.clone());
+    let profile_events_fut =
+        list_profile_events(ctx.service, identities.clone());
     let referenced_fut = async {
         let all_keys: Vec<EventKey> =
             quote_keys.iter().chain(&repost_keys).cloned().collect();
-        FeedsRepository::list_events_by_keys(&ctx.db, &all_keys)
+        FeedsRepository::list_events_by_keys(&ctx.service.db, &all_keys)
             .await
             .map_err(map_db_err)
     };
     let labels_fut = async {
         FeedsRepository::list_labels_for_event_keys(
-            &ctx.db,
+            &ctx.service.db,
             &display_keys,
-            ctx.trusted_moderator.as_deref(),
+            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(map_db_err)
     };
 
     let stats_fut = async {
-        gather_stats_for(&ctx.db, &display_keys)
+        gather_stats_for(&ctx.service.db, &display_keys)
             .await
             .map_err(map_db_err)
     };
 
-    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx, caller);
+    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
 
     let (
         deletes_by_target,

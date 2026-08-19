@@ -3,7 +3,7 @@
 
 use crate::data::hydration::HydrationState;
 use crate::data::{Cursor, PageInfo, pipeline};
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::Query as FeedsRepository;
@@ -29,14 +29,11 @@ pub struct Params {
     pub sequence: i64,
     pub descendants_limit: u64,
     pub omit_labels: Vec<String>,
-    /// The authenticated caller--`None` for anonymous requests
-    pub caller: Option<String>,
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: GetPostThreadRequest,
-    caller: Option<&str>,
 ) -> Result<GetPostThreadResponse, Status> {
     let descendants_limit = if req.limit <= 0 {
         200
@@ -54,7 +51,6 @@ pub async fn handle(
         sequence: event_key.sequence,
         descendants_limit,
         omit_labels: req.omit_labels,
-        caller: caller.map(str::to_string),
     };
 
     let result =
@@ -67,11 +63,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
-        &ctx.db,
+        &ctx.service.db,
         params.collection,
         &params.identity,
         params.public_key_type,
@@ -84,7 +80,7 @@ async fn fetch(
     let subject_id = subject_row.0.id;
 
     let ancestor_refs = FeedsRepository::list_ancestor_refs(
-        &ctx.db,
+        &ctx.service.db,
         subject_id,
         PARENT_HEIGHT_LIMIT,
     )
@@ -92,7 +88,7 @@ async fn fetch(
     .map_err(map_db_err)?;
 
     let descendant_refs = FeedsRepository::list_descendant_refs(
-        &ctx.db,
+        &ctx.service.db,
         subject_id,
         DESCENDANT_DEPTH_LIMIT,
         params.descendants_limit,
@@ -132,7 +128,7 @@ async fn fetch(
     all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
     all_ids.extend(descendant_order.iter().copied());
     let mut by_id: HashMap<i64, EventWithContentRow> =
-        FeedsRepository::list_events_by_ids(&ctx.db, all_ids)
+        FeedsRepository::list_events_by_ids(&ctx.service.db, all_ids)
             .await
             .map_err(map_db_err)?
             .into_iter()
@@ -164,15 +160,15 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    params: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, params.caller.as_deref(), fetched).await
+    feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -181,18 +177,19 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx, filtered, hydration).await
+    feeds_pipeline::view(ctx.service, filtered, hydration).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::data::hydration::HydrationState;
+    use crate::service::context::ServiceContext;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
         Content, EventKey, Post, PostReply, PublicKey,
@@ -310,7 +307,6 @@ mod tests {
             sequence: 10,
             descendants_limit: 200,
             omit_labels: Vec::new(),
-            caller: Some("caller".to_string()),
         }
     }
 
@@ -343,6 +339,8 @@ mod tests {
             ]])
             .into_connection();
         let ctx = ctx(db).await;
+
+        let ctx = RequestContext::new(&ctx, Some("caller"));
 
         let fetched = fetch(&ctx, &params()).await.unwrap();
         let fetched_identities: Vec<&str> = fetched

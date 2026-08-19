@@ -1,6 +1,6 @@
 use crate::data::PaginationParams;
 use crate::data::hydration::HydrationState;
-use crate::service::context::ServiceContext;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone;
 use crate::service::feeds::repository::{self, EventWithContentRow};
@@ -40,15 +40,12 @@ pub struct Params<SortedBy> {
     pub query: String,
     pub limit: u64,
     pub cursor_filter: Option<CursorFilter<SortedBy>>,
-    /// The authenticated caller--`None` for anonymous requests
-    pub caller: Option<String>,
 }
 
 impl<SortedBy> Params<SortedBy> {
     pub fn from_req_params(
         query: String,
         params: &Option<PageParams>,
-        caller: Option<String>,
     ) -> Result<Params<SortedBy>, Status>
     where
         SortedBy: for<'a> Deserialize<'a>,
@@ -63,7 +60,6 @@ impl<SortedBy> Params<SortedBy> {
             query,
             limit: limit.into(),
             cursor_filter,
-            caller,
         })
     }
 }
@@ -240,8 +236,7 @@ pub struct SearchResponseFilter<SortedBy> {
 }
 
 pub async fn hydrate<SortedBy>(
-    ctx: &ServiceContext,
-    caller: Option<&str>,
+    ctx: &RequestContext<'_>,
     fetched: &Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
     let rows = &fetched.rows;
@@ -262,11 +257,13 @@ pub async fn hydrate<SortedBy>(
         target_event_keys.into_iter().collect()
     };
 
-    let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
-    let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities);
+    let tombstones_fut =
+        tombstone::validated_tombstones(ctx.service, &display_keys);
+    let identity_events_fut =
+        list_identity_events(ctx.service, identities.clone());
+    let profile_events_fut = list_profile_events(ctx.service, identities);
     let referenced_fut = async {
-        repository::Query::list_events_by_keys(&ctx.db, &ref_keys)
+        repository::Query::list_events_by_keys(&ctx.service.db, &ref_keys)
             .await
             .map_err(|err| {
                 tracing::warn!("failed to list events: {err}");
@@ -275,9 +272,9 @@ pub async fn hydrate<SortedBy>(
     };
     let labels_fut = async {
         repository::Query::list_labels_for_event_keys(
-            &ctx.db,
+            &ctx.service.db,
             &display_keys,
-            ctx.trusted_moderator.as_deref(),
+            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(|err| {
@@ -287,7 +284,7 @@ pub async fn hydrate<SortedBy>(
     };
 
     let stats_fut = async {
-        gather_stats_for(&ctx.db, &display_keys)
+        gather_stats_for(&ctx.service.db, &display_keys)
             .await
             .map_err(|err| {
                 tracing::warn!("failed to gather stats: {err}");
@@ -295,7 +292,7 @@ pub async fn hydrate<SortedBy>(
             })
     };
 
-    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx, caller);
+    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
 
     let (
         deletes_by_target,

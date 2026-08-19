@@ -9,7 +9,7 @@ pub mod get_post_thread;
 pub mod get_recommended_feed;
 
 use crate::service::auth::authenticated_identity;
-use crate::service::context::ServiceContext;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
@@ -31,13 +31,9 @@ impl FeedsService for FeedsServiceImpl {
         request: Request<GetIdentityFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
         let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            get_identity_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_identity_feed::handle(&ctx, request.into_inner()).await?,
         ))
     }
 
@@ -46,13 +42,9 @@ impl FeedsService for FeedsServiceImpl {
         request: Request<GetFollowingFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
         let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            get_following_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_following_feed::handle(&ctx, request.into_inner()).await?,
         ))
     }
 
@@ -61,13 +53,9 @@ impl FeedsService for FeedsServiceImpl {
         request: Request<GetFollowingFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
         let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            get_recommended_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_recommended_feed::handle(&ctx, request.into_inner()).await?,
         ))
     }
 
@@ -76,13 +64,9 @@ impl FeedsService for FeedsServiceImpl {
         request: Request<GetExploreFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
         let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            get_explore_feed::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_explore_feed::handle(&ctx, request.into_inner()).await?,
         ))
     }
 
@@ -91,13 +75,9 @@ impl FeedsService for FeedsServiceImpl {
         request: Request<GetPostThreadRequest>,
     ) -> Result<Response<GetPostThreadResponse>, Status> {
         let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            get_post_thread::handle(
-                &self.ctx,
-                request.into_inner(),
-                caller.as_deref(),
-            )
-            .await?,
+            get_post_thread::handle(&ctx, request.into_inner()).await?,
         ))
     }
 }

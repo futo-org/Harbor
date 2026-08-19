@@ -4,7 +4,7 @@
 use crate::{
     data::{Cursor, PageInfo, hydration::HydrationState, pipeline},
     service::{
-        context::ServiceContext,
+        context::RequestContext,
         feeds::{
             repository::{EventCreatedAt, Query as FeedsRepository},
             rpc::common::{
@@ -25,22 +25,20 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: GetIdentityFeedRequest,
-    caller: Option<&str>,
 ) -> Result<GetFeedResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    if caller_blocks_subject(ctx, caller, &req.identity).await? {
+    if caller_blocks_subject(ctx, &req.identity).await? {
         return blocked_identity_response();
     }
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
         req.omit_labels,
-        caller.map(str::to_string),
     )?;
     let params = Params {
         common,
@@ -60,14 +58,13 @@ pub async fn handle(
 /// Whether the caller blocks the identity whose feed was requested. A caller
 /// never blocks their own feed.
 async fn caller_blocks_subject(
-    ctx: &ServiceContext,
-    caller: Option<&str>,
+    ctx: &RequestContext<'_>,
     subject: &str,
 ) -> Result<bool, Status> {
-    let Some(caller) = caller.filter(|caller| *caller != subject) else {
+    let Some(caller) = ctx.caller.filter(|caller| *caller != subject) else {
         return Ok(false);
     };
-    GraphRepository::blocks_identity(ctx, caller, subject).await
+    GraphRepository::blocks_identity(ctx.service, caller, subject).await
 }
 
 /// Produce a terminal empty page (`has_next_page: false`) for profile feeds
@@ -87,11 +84,11 @@ fn blocked_identity_response() -> Result<GetFeedResponse, Status> {
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_identities(
-        &ctx.db,
+        &ctx.service.db,
         vec![params.identity.clone()],
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
@@ -102,15 +99,15 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    params: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, params.common.caller.as_deref(), fetched).await
+    feeds_pipeline::hydrate(ctx, fetched).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     _params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -120,17 +117,18 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx, filtered, hydration).await
+    feeds_pipeline::view(ctx.service, filtered, hydration).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::context::ServiceContext;
     use ::entity::block_model as BlockModel;
     use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
@@ -153,13 +151,14 @@ mod tests {
     async fn a_blocked_identity_feed_is_empty_and_terminal() {
         let ctx = ctx_where_alice_blocks_bob().await;
 
+        let ctx = RequestContext::new(&ctx, Some("alice"));
+
         let response = handle(
             &ctx,
             GetIdentityFeedRequest {
                 identity: "bob".to_string(),
                 ..Default::default()
             },
-            Some("alice"),
         )
         .await
         .unwrap();
@@ -184,9 +183,9 @@ mod tests {
     async fn an_empty_identity_is_rejected() {
         let ctx = ctx_where_alice_blocks_bob().await;
 
-        let result =
-            handle(&ctx, GetIdentityFeedRequest::default(), Some("alice"))
-                .await;
+        let ctx = RequestContext::new(&ctx, Some("alice"));
+
+        let result = handle(&ctx, GetIdentityFeedRequest::default()).await;
 
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
