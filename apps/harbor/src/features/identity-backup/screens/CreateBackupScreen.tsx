@@ -34,6 +34,15 @@ type NewBackupState =
  * Rotate the identity's recovery key and prepare a backup for export.
  */
 async function createNewBackup(client: PolycentricClient) {
+  const identity = client.activeIdentityKey;
+  const myPublicKey = client.currentKeyPair?.publicKey;
+  if (!identity || !myPublicKey)
+    throw new Error('Must be signed in to create a backup');
+
+  if (!client.identityManager.isRotationKeyForIdentity(identity, myPublicKey)) {
+    throw new Error('Non-rotation keys cannot create backups');
+  }
+
   const privateKey = await client.identityManager.rotateRecoveryKey();
   const backup = assembleIdentityBackup(client, privateKey);
 
