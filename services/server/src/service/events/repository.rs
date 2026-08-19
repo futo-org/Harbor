@@ -4,6 +4,7 @@ use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use ::entity::quote_model as QuoteModel;
+use ::entity::reply_model as ReplyModel;
 use ::entity::repost_model as RepostModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
@@ -256,6 +257,55 @@ impl Mutation {
             });
         }
 
+        if let Some(reply) = post.reply.as_ref() {
+            // NOTE: only adding a reply to the parent, not for the root.
+            let key = split_event_key(reply.parent.clone(), "reply")
+                .map_err(|err| DbErr::Custom(err.message().into()))?;
+            let mut post_event_id = select_not_deleted_event_id(key);
+
+            let mut insert_reply = InsertStatement::new();
+            insert_reply
+                .into_table(ReplyModel::Entity)
+                .columns([
+                    ReplyModel::Column::EventId,
+                    ReplyModel::Column::Identity,
+                    ReplyModel::Column::Post,
+                ])
+                .select_from({
+                    post_event_id
+                        .clear_selects()
+                        .expr(SelectExpr {
+                            expr: Expr::from(event.id),
+                            alias: Some(ReplyModel::Column::EventId.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::from(&event.identity),
+                            alias: Some(ReplyModel::Column::Identity.into()),
+                            window: None,
+                        })
+                        .expr(SelectExpr {
+                            expr: Expr::Column(
+                                EventModel::Column::Id.into_column_ref(),
+                            ),
+                            alias: Some(ReplyModel::Column::Post.into()),
+                            window: None,
+                        });
+                    post_event_id
+                })
+                .map_err(|err| {
+                    DbErr::Custom(format!("incorrect amount of values: {err}"))
+                })?;
+
+            query.with_cte({
+                let mut c = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_reply").query(insert_reply);
+                c.recursive(false).cte(cte);
+                c
+            });
+        }
+
         db.execute(&query).await?;
         Ok(())
     }
@@ -466,6 +516,34 @@ impl Mutation {
                 );
                 let mut cte = CommonTableExpression::new();
                 cte.table_name("deleted_quotes").query(delete_quotes);
+                with.cte(cte);
+
+                // Delete replies from the posts itself and replying to the
+                // deleted post.
+                let mut delete_replies = DeleteStatement::new();
+                delete_replies.from_table(ReplyModel::Entity).cond_where(
+                    Condition::any()
+                        // The now deleted post replying to another post.
+                        .add(
+                            Expr::col(ReplyModel::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from("event_id");
+                                    q
+                                },
+                            ),
+                        )
+                        // The now deleted post being replied to.
+                        .add(Expr::col(ReplyModel::Column::Post).in_subquery(
+                            {
+                                let mut q = SelectStatement::new();
+                                q.column("id").from("event_id");
+                                q
+                            },
+                        )),
+                );
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("deleted_replies").query(delete_replies);
                 with.cte(cte);
 
                 // Delete all reactions to the post.
