@@ -320,7 +320,7 @@ mod tests {
             ]])
             .into_connection();
 
-        let rows = Query::list_followers_events(&db, "target", 10, &None)
+        let rows = Query::list_followers_events(&db, "target", 10, None)
             .await
             .unwrap();
         let identities: Vec<&str> =
@@ -337,7 +337,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Forward(Cursor::End)),
+            Some(&CursorFilter::Forward(Cursor::End)),
         )
         .await
         .unwrap();
@@ -352,7 +352,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Backward(Cursor::Start)),
+            Some(&CursorFilter::Backward(Cursor::Start)),
         )
         .await
         .unwrap();

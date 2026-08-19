@@ -261,7 +261,7 @@ mod tests {
         let response = handle(
             &ctx,
             "target".to_string(),
-            &Some(PageParams {
+            Some(&PageParams {
                 limit: Some(2),
                 backward_token: None,
                 forward_token: None,
@@ -291,7 +291,7 @@ mod tests {
         let response = handle(
             &ctx,
             "target".to_string(),
-            &Some(PageParams {
+            Some(&PageParams {
                 limit: Some(2),
                 backward_token: None,
                 forward_token: None,
@@ -316,7 +316,7 @@ mod tests {
         let ctx = ctx(db).await;
 
         let response =
-            handle(&ctx, "target".to_string(), &None, Direction::Followers)
+            handle(&ctx, "target".to_string(), None, Direction::Followers)
                 .await
                 .unwrap();
 
@@ -345,7 +345,7 @@ mod tests {
         let ctx = ctx(db).await;
 
         let result =
-            handle(&ctx, String::new(), &None, Direction::Followers).await;
+            handle(&ctx, String::new(), None, Direction::Followers).await;
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }

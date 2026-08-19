@@ -95,11 +95,9 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={() => router.push(Routes.tabs.settings.identity)}
                 >
-                  <>
-                    {identityKey && (
-                      <CurrentIdentityBadge identityKey={identityKey} />
-                    )}
-                  </>
+                  {identityKey && (
+                    <CurrentIdentityBadge identityKey={identityKey} />
+                  )}
                 </ListItemWrapper>
               </ListItemGroup>
 

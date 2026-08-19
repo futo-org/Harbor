@@ -1179,6 +1179,8 @@ async fn attribution_feed_returns_only_matching_posts() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let other_key = generate_signing_key();
@@ -1187,6 +1189,8 @@ async fn attribution_feed_returns_only_matching_posts() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
 
@@ -1262,6 +1266,8 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     }
     .derive_hex_key();
     let mod_key = test_moderator_key();

@@ -35,7 +35,6 @@ impl IdentityStore {
 
         // Derive new chain
         let chain = resolve_identity_chain(identity, event_store, content_store)?;
-
         let chain = Arc::new(chain);
 
         // Store and return derived chain
