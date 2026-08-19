@@ -40,15 +40,26 @@ impl HydrationState {
     }
 }
 
-/// Return relevant content such as:
-/// * Tombstones for the queried rows.
-/// * Latest identity events (rotation/signing chain) for every identity
-///   referenced.
-/// * Latest profile event (display name / avatar / banner) for every identity
-///   referenced.
+/// Configuration for [`hydrate`]
+///
+/// Each boolean indicate whether or not the events relevant for the
+/// [`ContentBody`] enum variant should be included.
+#[derive(Default)]
+pub struct HydrateConfig {
+    post: bool,
+    delete: bool,
+    reaction: bool,
+    repost: bool,
+    report: bool,
+    labels: bool,
+    verification_verify: bool,
+    verification_target: bool,
+}
+
 pub async fn hydrate<Row>(
     ctx: &ServiceContext,
     rows: &[Row],
+    config: &HydrateConfig,
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
@@ -59,7 +70,8 @@ where
         .collect();
     let mut identities =
         collect_identities(rows.iter().map(Row::as_event_with_content));
-    let (ref_keys, quote_set, repost_set) = collect_referenced_keys(rows);
+    let (ref_keys, quote_set, repost_set) =
+        collect_referenced_keys(rows, config);
     let mut target_event_keys = to_target_event_keys(&ref_keys);
 
     // Add moderation service identity to every request, such that clients can
@@ -148,10 +160,37 @@ where
     })
 }
 
+/// [`hydrate`] variant specifically for posts.
+///
+/// Return relevant content such as:
+/// * Tombstones for the queried rows.
+/// * Latest identity events (rotation/signing chain) for every identity
+/// referenced.
+/// * Latest profile event (display name / avatar / banner) for every identity
+///   referenced.
+pub async fn post_hydrate<Row>(
+    ctx: &ServiceContext,
+    rows: &[Row],
+) -> Result<HydrationState, Status>
+where
+    Row: EventRow,
+{
+    let config = HydrateConfig {
+        post: true,
+        delete: true,
+        repost: true,
+        // TODO: currently this matches the old version (and the docs), but what
+        // about reaction, reports and labels? Do we want to include those?
+        ..Default::default()
+    };
+    hydrate(ctx, rows, &config).await
+}
+
 /// Returns all event keys references in `rows`, as well as a set for the
 /// quoutes and reposts.
 fn collect_referenced_keys<Row>(
     rows: &[Row],
+    config: &HydrateConfig,
 ) -> (
     Vec<EventKey>,
     HashSet<TargetEventKey>, // Quotes.
@@ -175,6 +214,10 @@ where
         };
         match decoded.content_body {
             Some(ContentBody::Post(post)) => {
+                if !config.post {
+                    continue;
+                }
+
                 if let Some(key) = post.quote.as_ref()
                     && let Some(key) = to_target_event_key(key)
                 {
@@ -183,12 +226,24 @@ where
                 push_key(post.quote);
             }
             Some(ContentBody::Delete(delete)) => {
+                if !config.delete {
+                    continue;
+                }
+
                 push_key(delete.event_key);
             }
             Some(ContentBody::Reaction(reaction)) => {
+                if !config.reaction {
+                    continue;
+                }
+
                 push_key(reaction.event_key);
             }
             Some(ContentBody::Repost(repost)) => {
+                if !config.repost {
+                    continue;
+                }
+
                 if let Some(key) = repost.post.as_ref()
                     && let Some(key) = to_target_event_key(key)
                 {
@@ -197,15 +252,31 @@ where
                 push_key(repost.post);
             }
             Some(ContentBody::Report(report)) => {
+                if !config.report {
+                    continue;
+                }
+
                 push_key(report.event_key);
             }
             Some(ContentBody::Labels(labels)) => {
+                if !config.labels {
+                    continue;
+                }
+
                 push_key(labels.event_key);
             }
             Some(ContentBody::VerificationVerify(verify)) => {
+                if !config.verification_verify {
+                    continue;
+                }
+
                 push_key(verify.claim_event_key);
             }
             Some(ContentBody::VerificationTarget(target)) => {
+                if !config.verification_target {
+                    continue;
+                }
+
                 push_key(target.claim_event_key);
             }
             // Don't have event keys.

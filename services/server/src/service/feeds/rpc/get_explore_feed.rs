@@ -1,6 +1,6 @@
 //! `get_explore_feed`: recent Feed events across all identities.
 
-use crate::data::hydration::{self, HydrationState};
+use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Marker, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
@@ -84,7 +84,7 @@ async fn hydrate(
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
-    hydration::hydrate(ctx, &fetched.rows).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(

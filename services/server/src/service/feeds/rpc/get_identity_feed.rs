@@ -1,7 +1,7 @@
 //! `get_identity_feed`: posts authored by a specific identity,
 //! newest first.
 
-use crate::data::hydration::{self, HydrationState};
+use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline;
 use crate::service::{
     context::ServiceContext,
@@ -68,7 +68,7 @@ async fn hydrate(
     _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    hydration::hydrate(ctx, &fetched.rows).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(

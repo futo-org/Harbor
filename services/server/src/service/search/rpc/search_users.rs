@@ -1,7 +1,7 @@
 //! `search_users`: searches users.
 
 use crate::data::Marker;
-use crate::data::hydration::{self, HydrationState};
+use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
 use crate::service::context::ServiceContext;
 use crate::service::proto::{
@@ -89,7 +89,7 @@ async fn hydrate(
     _: &Params,
     fetched: &Fetched<SearchRow, SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
-    hydration::hydrate(ctx, &fetched.rows).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
