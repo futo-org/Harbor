@@ -29,14 +29,8 @@ export const Context = createContext<ThemeContextValue | undefined>(undefined);
 Context.displayName = 'PolycentricThemeContext';
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [fontsLoaded, fontError] = useFonts(
-    isWeb
-      ? {}
-      : {
-          NotoSans: Fonts.NotoSans,
-          'NotoSans-Italic': Fonts['NotoSans-Italic'],
-        },
-  );
+  // Web declares its own @font-face in `+html.tsx`.
+  const [fontsLoaded, fontError] = useFonts(isWeb ? {} : Fonts);
 
   const colorScheme = useColorScheme();
   const storedTheme = useSettings((s) => s.theme);
