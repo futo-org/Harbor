@@ -5,12 +5,12 @@ use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceCli
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
-    EventKey, EventProofTarget, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
-    Reaction, Repost, RevocationBound, SearchResult, SerializedContent,
-    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
-    VerificationSchema, content,
+    AttributedTo, Content, ContentDigest, ContentDigestType, Delete, Event,
+    EventBundle, EventKey, EventProofTarget, FieldDef, FieldKind, Follow,
+    Identity, KeyType, Labels, Link, Post, PostReply, ProfileUpdate, PublicKey,
+    PutEventsRequest, Reaction, Repost, RevocationBound, SearchResult,
+    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
+    VerificationClaim, VerificationSchema, attributed_to, content,
 };
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -288,6 +288,8 @@ impl TestClient {
             images: Vec::new(),
             quote: None,
             links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
         };
         self.post(post, created_at)
     }
@@ -304,6 +306,8 @@ impl TestClient {
             images: Vec::new(),
             quote: Some(post),
             links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
         };
         self.post(post, created_at)
     }
@@ -323,6 +327,8 @@ impl TestClient {
             images: Vec::new(),
             quote: None,
             links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
         };
         self.post(post, created_at)
     }
