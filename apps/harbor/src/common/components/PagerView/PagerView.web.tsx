@@ -1,12 +1,18 @@
-import { Atoms } from '@/src/common/theme';
+import { Atoms, ZIndex } from '@/src/common/theme';
 import { Children, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 import type { PagerViewProps } from './types';
 
+// Web scrolls the document, so the pager's header pins to the window.
+export const stickyHeaderStyle: ViewStyle[] = [
+  Atoms.sticky,
+  { top: 0, zIndex: ZIndex.raised },
+];
+
 /**
  * `@expo/ui`'s pager is native-only, and web has no swipe anyway: pages switch
- * instantly.
+ * instantly. The tab bar pins to the window instead of hiding on scroll.
  */
 export function PagerView<T extends string>({
   values,
@@ -26,7 +32,7 @@ export function PagerView<T extends string>({
 
   return (
     <>
-      {renderTabBar({ dragProgress })}
+      <View style={stickyHeaderStyle}>{renderTabBar({ dragProgress })}</View>
 
       <View style={Atoms.flex_1}>{pages[activeIndex]}</View>
     </>

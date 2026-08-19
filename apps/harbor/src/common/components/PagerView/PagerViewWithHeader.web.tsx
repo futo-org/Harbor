@@ -2,11 +2,12 @@ import { Atoms } from '@/src/common/theme';
 import { Children, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { stickyHeaderStyle } from './PagerView.web';
 import type { PagerViewWithHeaderProps } from './types';
 
 /**
- * Web pages scroll the document, taking the header and tab bar with them, so
- * both just sit in flow above the selected page.
+ * Web pages scroll the document: the header scrolls away with them, like the
+ * native collapse, and the tab bar pins to the window below it.
  */
 export function PagerViewWithHeader<T extends string>({
   values,
@@ -28,7 +29,7 @@ export function PagerViewWithHeader<T extends string>({
   return (
     <>
       {renderHeader({ dragProgress })}
-      {renderTabBar({ dragProgress })}
+      <View style={stickyHeaderStyle}>{renderTabBar({ dragProgress })}</View>
 
       <View style={Atoms.flex_1}>{pages[activeIndex]}</View>
     </>

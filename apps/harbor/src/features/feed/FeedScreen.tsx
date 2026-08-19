@@ -24,9 +24,19 @@ type PageProps = {
   controlRef: FeedPageControlRef;
 };
 
+// Web tops each page with the composer, so it scrolls under the pinned tabs.
+const PageHeader = isWeb ? ComposerInput : undefined;
+
 function ForYouPage({ active, ready, controlRef }: PageProps) {
   const feed = useRecommendedFeed({ enabled: ready && active });
-  return <FeedPage feed={feed} active={active} controlRef={controlRef} />;
+  return (
+    <FeedPage
+      feed={feed}
+      active={active}
+      controlRef={controlRef}
+      ListHeaderComponent={PageHeader}
+    />
+  );
 }
 
 function FollowingPage({
@@ -36,7 +46,14 @@ function FollowingPage({
   controlRef,
 }: PageProps & { sort: FeedSortOption }) {
   const feed = useFollowingFeed({ sort, enabled: ready && active });
-  return <FeedPage feed={feed} active={active} controlRef={controlRef} />;
+  return (
+    <FeedPage
+      feed={feed}
+      active={active}
+      controlRef={controlRef}
+      ListHeaderComponent={PageHeader}
+    />
+  );
 }
 
 export default function FeedScreen() {
@@ -63,7 +80,6 @@ export default function FeedScreen() {
         onPress={onTabPress}
         progress={dragProgress}
       />
-      {isWeb && <ComposerInput />}
     </>
   );
 
