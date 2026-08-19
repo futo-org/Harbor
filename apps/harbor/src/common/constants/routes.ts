@@ -71,6 +71,8 @@ export const Routes = {
       index: '/settings',
       identity: '/settings/identity',
       pairIdentity: '/settings/pair-identity',
+      createBackup: '/settings/create-backup',
+      checkBackup: '/settings/check-backup',
       servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
@@ -90,6 +92,8 @@ export const Routes = {
   },
   onboarding: {
     index: '/',
+    login: '/login',
+    recover: '/recover',
     signup: {
       index: '/signup',
       about: '/signup/about',

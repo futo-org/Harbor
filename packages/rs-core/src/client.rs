@@ -134,6 +134,35 @@ impl PolycentricClient {
         self.meta_store.get(event_key)
     }
 
+    /// Assemble the stored bundle for an event already located in the store.
+    pub(crate) fn bundle_for(
+        &self,
+        key: &EventKey,
+        signed_event: &SignedEvent,
+        include_proofs: bool,
+    ) -> Result<EventBundle, CoreError> {
+        let event = Event::decode(signed_event.event_bytes.as_slice())
+            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
+
+        let serialized_content = event
+            .content_digest
+            .as_ref()
+            .and_then(|digest| self.find_content_from_digest(digest));
+
+        let event_proofs = if include_proofs {
+            self.event_proofs_store.get(key).to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(EventBundle {
+            signed_event: Some(signed_event.clone()),
+            serialized_content,
+            event_proofs,
+            meta: self.meta_store.get(key).cloned(),
+        })
+    }
+
     /// Sig-check and insert each bundle. Identity events go first (by
     /// sequence) so downstream validation can find the genesis. Any
     /// `event_proofs` travelling with a bundle are persisted in the
@@ -358,16 +387,12 @@ impl PolycentricClient {
             if self.validate_event(signed_event, proofs).is_err() {
                 continue;
             }
-            let event = Event::decode(signed_event.event_bytes.as_slice())
-                .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
+            let bundle = self.bundle_for(event_key, signed_event, true)?;
 
-            let content_bytes = event
-                .content_digest
+            if let Some(bytes) = bundle
+                .serialized_content
                 .as_ref()
-                .and_then(|d| self.content_store.get(d))
-                .map(|b| b.to_vec());
-
-            if let Some(bytes) = content_bytes.as_deref()
+                .map(|c| c.content_bytes.as_slice())
                 && let Ok(content) = Content::decode(bytes)
                 && let Some(ContentBody::Delete(d)) = content.content_body
                 && let Some(target) = d.event_key
@@ -382,14 +407,6 @@ impl PolycentricClient {
                 });
             }
 
-            let meta = self.meta_store.get(event_key).cloned();
-
-            let bundle = EventBundle {
-                signed_event: Some(signed_event.clone()),
-                serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
-                event_proofs: proofs.to_vec(),
-                meta,
-            };
             bundles.push((event_key.clone(), bundle));
         }
 
@@ -400,11 +417,38 @@ impl PolycentricClient {
             .collect())
     }
 
-    /// Return the  identity chain for `identity`, resolved from the local event and
+    /// Return the identity chain for `identity`, resolved from the local event and
     /// content stores.
     pub fn identity_chain(&self, identity: &str) -> Result<Arc<IdentityChain>, CoreError> {
         self.identity_store
             .get_chain(identity, &self.event_store, &self.content_store)
+    }
+
+    /// The canonical identity chain for `identity` as bundles.
+    pub fn identity_chain_bundles(&self, identity: &str) -> Result<Vec<EventBundle>, CoreError> {
+        let chain = self.identity_chain(identity)?;
+
+        chain
+            .iter()
+            .map(|identity_event| {
+                let key = EventKey {
+                    identity: identity.to_owned(),
+                    collection: collections::IDENTITY,
+                    signed_by_key_type: identity_event.signer.key_type,
+                    signed_by_key: identity_event.signer.key.clone(),
+                    sequence: identity_event.sequence,
+                };
+
+                let signed_event = self.event_store.get(&key).ok_or_else(|| {
+                    CoreError::InvalidEvent(format!(
+                        "identity chain event at sequence {} for {} is not in the event store",
+                        identity_event.sequence, identity
+                    ))
+                })?;
+
+                self.bundle_for(&key, signed_event, true)
+            })
+            .collect()
     }
 
     /// Validate an event against its identity chain, identity content,

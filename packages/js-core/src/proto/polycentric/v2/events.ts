@@ -20,7 +20,9 @@ import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
 /**
  * Contains the sequences (of the same event collection) that the current KeyPair is aware of.
- * The order of the sequences is determined by the the keys listed
+ * The order of the sequences is determined by the keys listed in the relevant identity document:
+ * The rotation keys first and then the signing keys, with duplicates skipped when they appear again.
+ * Use `Identity::deduplicated_keys()` to get the keys in this order.
  *
  * @generated from protobuf message polycentric.v2.VectorClock
  */

@@ -31,7 +31,7 @@ export interface Identity {
     signingKeys: PublicKey[];
     /**
      * In order to retain valid events from a revoked keypair, we store their last known
-     * signature.
+     * signature for each collection the key participated in.
      *
      * @generated from protobuf field: repeated polycentric.v2.RevocationBound revocation_bounds = 3
      */

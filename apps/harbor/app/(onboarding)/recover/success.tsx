@@ -1,10 +1,10 @@
 import LoginSuccessScreen from '@/src/features/onboarding/LoginSuccessScreen';
 
-export default function LoginSuccessRoute() {
+export default function RecoverSuccessRoute() {
   return (
     <LoginSuccessScreen
-      title="Pair Successful!"
-      subtitle="Your device has been paired"
+      title="Recovery Successful!"
+      subtitle="Your device is now logged in"
     />
   );
 }

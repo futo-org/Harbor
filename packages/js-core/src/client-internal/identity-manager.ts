@@ -1,7 +1,8 @@
+import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { COLLECTION, SyncStrategy } from '../constants';
+import { COLLECTION, KEY_TYPE, SyncStrategy } from '../constants';
 import { ServerAlreadyAddedError } from '../errors';
-import type { PolycentricClient } from '../polycentric-client';
+import type { PolycentricClient, PrivateKey } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
 import { bytesToHex } from '../utils/hex';
@@ -29,11 +30,6 @@ export interface IdentityState {
    * sessions. Its only use is for producing recovery signatures.
    */
   recoveryKey: Proto.PublicKey | null;
-  /**
-   * Signature from the recovery key of the preceding identity document,
-   * present when this document was published as a recovery.
-   */
-  recoverySignature: Uint8Array | null;
 }
 
 /**
@@ -48,6 +44,12 @@ export interface PublishArgs {
   revocationBounds?: Proto.RevocationBound[];
   recoveryKey?: Proto.PublicKey | null;
   recoverySignature?: Uint8Array | null;
+}
+
+/** Information about a published identity event. */
+export interface IdentityUpdate {
+  identityKey: string;
+  signedEvent: Proto.SignedEvent;
 }
 
 /**
@@ -67,7 +69,7 @@ export class IdentityManager {
    * Returns `null` if there is no identity to check or no valid chain can
    * be found locally for the given identity.
    */
-  async resolveIdentity(identityKey?: string): Promise<IdentityState | null> {
+  resolveIdentity(identityKey?: string): IdentityState | null {
     const key = identityKey ?? this.client.activeIdentityKey;
     if (!key) return null;
 
@@ -83,7 +85,6 @@ export class IdentityManager {
       revocationBounds: identity.revocationBounds,
       servers: identity.servers ? identity.servers.urls : null,
       recoveryKey: identity.recoveryKey ?? null,
-      recoverySignature: identity.recoverySignature ?? null,
     };
   }
 
@@ -93,9 +94,7 @@ export class IdentityManager {
    * The identity key is the hex-encoded sha256 of the initial Identity content.
    * For a new identity, omit the identity key to let it be derived.
    */
-  async publish(
-    args: PublishArgs,
-  ): Promise<{ identityKey: string; signedEvent: Proto.SignedEvent }> {
+  async publish(args: PublishArgs): Promise<IdentityUpdate> {
     const {
       identityKey,
       rotationKeys,
@@ -172,8 +171,8 @@ export class IdentityManager {
 
     // The identity document is the source of truth for the server list, so
     // adopt it before syncing — a newly added server receives the push.
-    if (servers) {
-      this.client.servers = [...servers];
+    if (identity.servers) {
+      this.client.servers = [...identity.servers.urls];
       this.client.core.setServers(this.client.servers);
     }
 
@@ -237,7 +236,7 @@ export class IdentityManager {
     });
 
     // Check that we are authorized
-    let state = await this.resolveIdentity(identityKey);
+    let state = this.resolveIdentity(identityKey);
     if (!state || !this.checkAuthorized(state, publicKey)) return null;
 
     // Adopt the identity and pull in its events
@@ -245,7 +244,7 @@ export class IdentityManager {
     await this.client.sync(SyncStrategy.PARTIAL_PULL);
 
     // Ensure we are still authorized after pulling
-    state = await this.resolveIdentity(identityKey);
+    state = this.resolveIdentity(identityKey);
     if (!state || !this.checkAuthorized(state, publicKey)) {
       throw new Error('Lost authorization');
     }
@@ -255,6 +254,147 @@ export class IdentityManager {
     await this.publish({ ...state });
 
     return state;
+  }
+
+  /**
+   * Copy a backup's identity chain into rs-core, so that resolving the identity
+   * accounts for what the backup knows.
+   * The identity chain is not persisted to local storage but will remain cached
+   * by rs-core.
+   */
+  copyBackupEvents(backup: Proto.IdentityBackup): void {
+    const events: ArrayBuffer[] = [];
+    const contents: { digestBytes: ArrayBuffer; contentBytes: ArrayBuffer }[] =
+      [];
+
+    for (const bundle of backup.identityChain) {
+      const { signedEvent, serializedContent } = bundle;
+      if (!signedEvent) continue;
+
+      events.push(
+        Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
+      );
+
+      if (!serializedContent) continue;
+
+      let digest: Proto.ContentDigest;
+      try {
+        const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+        if (!event.contentDigest) continue;
+        digest = event.contentDigest;
+      } catch {
+        continue;
+      }
+
+      const digestBytes = Proto.ContentDigest.toBinary(digest)
+        .buffer as ArrayBuffer;
+      const contentBytes = serializedContent.contentBytes.slice()
+        .buffer as ArrayBuffer;
+      contents.push({ digestBytes, contentBytes });
+    }
+
+    try {
+      this.client.core.copyContents(contents);
+      this.client.core.copyEvents(events);
+    } catch (e) {
+      console.warn(`Backup data failed to copy: ${e}`);
+    }
+  }
+
+  /**
+   * Use the backup to authorize the current key pair and log in.
+   *
+   * TODO: make identity handling less stateful so that we don't
+   * have to rollback changes on failure. Also make this more robust
+   * against obscure cases like all servers dropping our events.
+   */
+  async recoverIdentity(backup: Proto.IdentityBackup): Promise<void> {
+    if (!this.client.currentKeyPair) throw new Error('No active key pair');
+    const publicKey = this.client.currentKeyPair.publicKey;
+
+    const identityKey = backup.identityKey;
+    const recoveryKey = backup.recoveryKey;
+    if (!recoveryKey) throw new Error('Backup has no recovery key');
+
+    // Store these in case we need to roll back
+    const previousIdentityKey = this.client.activeIdentityKey;
+    const previousServers = [...this.client.servers];
+
+    try {
+      // Copy backup events to rs-core so we can easily read off the identity head
+      this.copyBackupEvents(backup);
+
+      const backupState = this.resolveIdentity(identityKey);
+      if (!backupState) throw new Error('Backup has no valid identity chain');
+
+      if (backupState.servers?.length) {
+        this.client.servers = [...backupState.servers];
+        this.client.core.setServers(this.client.servers);
+      }
+
+      // Include server knowledge of the identity chain
+      await this.client.listEvents({
+        identity: identityKey,
+        collection: COLLECTION.IDENTITY,
+      });
+
+      // This is the identity head that we will work from
+      const state = this.resolveIdentity(identityKey);
+      if (!state) throw new Error('No valid identity chain to recover');
+
+      if (state.servers?.length) {
+        this.client.servers = [...state.servers];
+        this.client.core.setServers(this.client.servers);
+      }
+
+      // Confirm that our recovery will be accepted
+      if (!this.checkRecoveryKey(recoveryKey, identityKey)) {
+        throw new Error('Unable to recover this identity with this backup');
+      }
+
+      const payload = new Uint8Array(
+        this.client.core.assembleRecoveryPayload(
+          identityKey,
+          Proto.PublicKey.toBinary(publicKey).buffer as ArrayBuffer,
+        ),
+      );
+
+      const recoverySignature = await this.client.crypto.sign(
+        recoveryKey.key,
+        payload,
+        recoveryKey.keyType,
+      );
+
+      // Only add our key if it's not there already
+      const alreadyListed = state.rotationKeys.some((key) =>
+        IdentityManager.keysEqual(key, publicKey),
+      );
+
+      const rotationKeys = alreadyListed
+        ? state.rotationKeys
+        : [...state.rotationKeys, publicKey];
+
+      await this.publish({
+        ...state,
+        rotationKeys,
+        recoverySignature,
+      });
+    } catch (err: unknown) {
+      // Roll back changes as best we can
+      await this.client.setActiveIdentityKey(previousIdentityKey);
+      this.client.servers = previousServers;
+      this.client.core.setServers(this.client.servers);
+      throw err;
+    }
+
+    // Best effort sync.
+    // We have already published the new identity event, so we won't bail out
+    // on failure.
+    try {
+      await this.client.sync(SyncStrategy.PARTIAL_PULL);
+    } catch (err: unknown) {
+      console.warn('Pull failed after identity recovery:', err);
+    }
   }
 
   /**
@@ -271,11 +411,11 @@ export class IdentityManager {
     );
   }
 
-  async isRotationKeyForIdentity(
+  isRotationKeyForIdentity(
     identityKey: string,
     publicKey: Proto.PublicKey,
-  ): Promise<boolean> {
-    const state = await this.resolveIdentity(identityKey);
+  ): boolean {
+    const state = this.resolveIdentity(identityKey);
     if (!state) return false;
     return state.rotationKeys.some((k) =>
       IdentityManager.keysEqual(k, publicKey),
@@ -286,7 +426,7 @@ export class IdentityManager {
    * Adds a signing key to the current identity and publishes the updated document.
    */
   async addSigningKey(publicKey: Proto.PublicKey): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     const signingKeys = [...state.signingKeys, publicKey];
@@ -300,7 +440,7 @@ export class IdentityManager {
   async removeSigningKey(
     publicKey: Proto.PublicKey,
   ): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     const signingKeys = state.signingKeys.filter(
@@ -314,7 +454,7 @@ export class IdentityManager {
    * Adds a rotation key to the current identity and publishes the updated document.
    */
   async addRotationKey(publicKey: Proto.PublicKey): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     const keyExists = state.rotationKeys.some((k) =>
@@ -335,7 +475,7 @@ export class IdentityManager {
   async removeRotationKey(
     publicKey: Proto.PublicKey,
   ): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     const rotationKeys = state.rotationKeys.filter(
@@ -350,7 +490,7 @@ export class IdentityManager {
    * Calls the server's `GetInfo` first — an unreachable server is not added.
    */
   async addServer(url: string): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     // An identity that has never configured its list starts from the
@@ -374,7 +514,7 @@ export class IdentityManager {
    * update.
    */
   async removeServer(url: string): Promise<Proto.SignedEvent> {
-    const state = await this.resolveIdentity();
+    const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
     const current = state.servers ?? this.client.servers;
@@ -385,5 +525,50 @@ export class IdentityManager {
 
     const { signedEvent } = await this.publish({ ...state, servers });
     return signedEvent;
+  }
+
+  /**
+   * Generate a new recovery keypair for the active identity and publish
+   * a new identity event with it.
+   * Returns the private key so it can be saved.
+   */
+  async rotateRecoveryKey(): Promise<PrivateKey> {
+    const state = this.resolveIdentity();
+    if (!state) throw new Error('No active identity');
+
+    const keyType = KEY_TYPE.ED25519;
+
+    // Generate new key pair for recovery
+    const { privateKey, publicKey } =
+      await this.client.crypto.generateKeyPair(keyType);
+
+    // Try persisting a identity new event locally and publishing it to servers
+    await this.publish({
+      ...state,
+      recoveryKey: { keyType, key: publicKey },
+    });
+
+    return { keyType, key: privateKey };
+  }
+
+  /**
+   * Returns whether `privateKey` is the corresponding private key to the
+   * recovery public key stored on `identityKey`, defaulting to the active
+   * identity.
+   */
+  checkRecoveryKey(privateKey: PrivateKey, identityKey?: string): boolean {
+    if (privateKey.keyType !== KEY_TYPE.ED25519) return false;
+
+    const recoveryKey = this.resolveIdentity(identityKey)?.recoveryKey;
+    if (!recoveryKey || recoveryKey.keyType !== KEY_TYPE.ED25519) return false;
+
+    let derived: Uint8Array;
+    try {
+      derived = ed25519.getPublicKey(privateKey.key);
+    } catch {
+      return false;
+    }
+
+    return bytesEqual(derived, recoveryKey.key);
   }
 }

@@ -141,13 +141,15 @@ export enum SortPostsBy {
     /**
      * Default sorting by relevancy.
      *
-     * TODO: determine what metric to use for the top post.
-     * // Top post first.
-     * SORT_POSTS_BY_TOP = 1;
-     *
      * @generated from protobuf enum value: SORT_POSTS_BY_DEFAULT = 0;
      */
     DEFAULT = 0,
+    /**
+     * Top post first.
+     *
+     * @generated from protobuf enum value: SORT_POSTS_BY_TOP = 1;
+     */
+    TOP = 1,
     /**
      * / Latests post first.
      *

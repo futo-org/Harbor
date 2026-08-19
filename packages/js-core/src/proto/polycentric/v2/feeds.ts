@@ -15,6 +15,7 @@ import { EventKey } from "./event_key";
 import { PageInfo } from "./common";
 import { EventHint } from "./events";
 import { EventBundle } from "./events";
+import { SortPostsBy } from "./search";
 import { PageParams } from "./common";
 /**
  * @generated from protobuf message polycentric.v2.GetIdentityFeedRequest
@@ -57,13 +58,17 @@ export interface GetFollowingFeedRequest {
      * @generated from protobuf field: repeated string omit_labels = 3
      */
     omitLabels: string[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     */
+    sortBy?: SortPostsBy;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetExploreFeedRequest
  */
 export interface GetExploreFeedRequest {
     /**
-     * Identity of the caller to return relevant posts fort
+     * Identity of the caller to return relevant posts for
      *
      * @generated from protobuf field: optional string identity = 1
      */
@@ -78,6 +83,10 @@ export interface GetExploreFeedRequest {
      * @generated from protobuf field: repeated string omit_labels = 3
      */
     omitLabels: string[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     */
+    sortBy?: SortPostsBy;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFeedResponse
@@ -215,7 +224,8 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         super("polycentric.v2.GetFollowingFeedRequest", [
             { no: 1, name: "follower_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => PageParams },
-            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] }
         ]);
     }
     create(value?: PartialMessage<GetFollowingFeedRequest>): GetFollowingFeedRequest {
@@ -240,6 +250,9 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
                 case /* repeated string omit_labels */ 3:
                     message.omitLabels.push(reader.string());
                     break;
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                    message.sortBy = reader.int32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -261,6 +274,9 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         /* repeated string omit_labels = 3; */
         for (let i = 0; i < message.omitLabels.length; i++)
             writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        if (message.sortBy !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.sortBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -277,7 +293,8 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
         super("polycentric.v2.GetExploreFeedRequest", [
             { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => PageParams },
-            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] }
         ]);
     }
     create(value?: PartialMessage<GetExploreFeedRequest>): GetExploreFeedRequest {
@@ -301,6 +318,9 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
                 case /* repeated string omit_labels */ 3:
                     message.omitLabels.push(reader.string());
                     break;
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                    message.sortBy = reader.int32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -322,6 +342,9 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
         /* repeated string omit_labels = 3; */
         for (let i = 0; i < message.omitLabels.length; i++)
             writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        if (message.sortBy !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.sortBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
