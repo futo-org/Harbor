@@ -4,6 +4,8 @@ use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use polycentric_common::models::collections;
 use prost::Message;
+use sea_orm::sea_query::Expr;
+use sea_orm::sea_query::extension::postgres::PgFunc;
 use sea_orm::*;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -82,6 +84,42 @@ impl Query {
             Some(caller) => Self::blocked_set(ctx, caller).await,
             None => Ok(Arc::new(HashSet::new())),
         }
+    }
+
+    /// The subset of `potential_blockers` that block the `blocked` identity.
+    ///
+    /// TODO: passing `potential_blockers` is required because the only index
+    /// on the blocked cache is `(blocker, blocked)`. Eventually, we should
+    /// add index such that we can efficiently query only the blocked identity
+    /// and get all blockers.
+    pub async fn identities_blocking<'a, I>(
+        ctx: &ServiceContext,
+        potential_blockers: I,
+        blocked: &str,
+    ) -> Result<HashSet<String>, Status>
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        let potential_blockers: Vec<String> =
+            potential_blockers.into_iter().map(str::to_owned).collect();
+        if potential_blockers.is_empty() {
+            return Ok(HashSet::new());
+        }
+
+        BlockModel::Entity::find()
+            .select_only()
+            .column(BlockModel::Column::Blocker)
+            .distinct()
+            .filter(BlockModel::Column::Blocked.eq(blocked))
+            .filter(
+                Expr::col((BlockModel::Entity, BlockModel::Column::Blocker))
+                    .eq(PgFunc::any(potential_blockers)),
+            )
+            .into_tuple::<String>()
+            .all(&ctx.db)
+            .await
+            .map(HashSet::from_iter)
+            .map_err(map_db_err)
     }
 
     pub async fn blocks_identity(

@@ -116,19 +116,20 @@ impl NotificationWorker {
         notifications: &'a [PendingNotification],
         author: &str,
     ) -> Result<Vec<&'a String>, WorkerError> {
-        let mut recipients = Vec::with_capacity(notifications.len());
-        for notification in notifications {
-            let blocks = GraphRepository::blocks_identity(
-                &self.ctx,
-                &notification.to_identity,
-                author,
-            )
-            .await?;
-            if !blocks {
-                recipients.push(&notification.to_identity);
-            }
-        }
-        Ok(recipients)
+        // TODO: the query called in `identites_blocking` could be more
+        // efficient. See the method's doc comment.
+        let blockers = GraphRepository::identities_blocking(
+            &self.ctx,
+            notifications.iter().map(|n| n.to_identity.as_str()),
+            author,
+        )
+        .await?;
+
+        Ok(notifications
+            .iter()
+            .map(|notification| &notification.to_identity)
+            .filter(|to_identity| !blockers.contains(*to_identity))
+            .collect())
     }
 
     // Emit a Notification event to Kafka, that can be consumed by the
@@ -478,12 +479,12 @@ impl From<&EventKey> for KeyColumns {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::entity::block_model as BlockModel;
     use polycentric_common::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
         VerificationTarget, VerificationVerify,
     };
-    use sea_orm::{DatabaseConnection, DbBackend, DbErr, MockDatabase};
+    use sea_orm::{DatabaseConnection, DbBackend, DbErr, MockDatabase, Value};
+    use std::collections::BTreeMap;
 
     /// A fully-populated `EventKey` for `identity`.
     fn event_key(identity: &str) -> EventKey {
@@ -712,23 +713,14 @@ mod tests {
         }
     }
 
-    fn block_row(blocker: &str, blocked: &str) -> BlockModel::Model {
-        BlockModel::Model {
-            event_id: 1,
-            blocker: blocker.to_string(),
-            blocked: blocked.to_string(),
-        }
-    }
-
-    fn no_block_rows() -> Vec<BlockModel::Model> {
-        Vec::new()
+    fn blocker_row(blocker: &str) -> BTreeMap<String, Value> {
+        BTreeMap::from([("blocker".to_string(), Value::from(blocker))])
     }
 
     #[tokio::test]
     async fn recipients_blocking_the_author_are_dropped() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![block_row("bob", "alice")]])
-            .append_query_results([no_block_rows()])
+            .append_query_results([vec![blocker_row("bob")]])
             .into_connection();
         let worker = worker(db).await;
         let notifications = vec![pending("bob"), pending("carol")];
@@ -743,8 +735,7 @@ mod tests {
     #[tokio::test]
     async fn recipients_are_kept_when_none_block_the_author() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([no_block_rows()])
-            .append_query_results([no_block_rows()])
+            .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
         let worker = worker(db).await;
         let notifications = vec![pending("bob"), pending("carol")];
@@ -769,6 +760,19 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn an_empty_batch_skips_the_block_lookup() {
+        // No `append_query_results`, so the mock errors if a query runs.
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let worker = worker(db).await;
+
+        let recipients = worker
+            .unblocked_recipients(&[], "alice")
+            .await
+            .expect("no lookup should be attempted");
+        assert!(recipients.is_empty());
     }
 
     #[test]
