@@ -41,16 +41,17 @@ export function PagerView<T extends string>({
     pagerRef.current?.setPage(activeIndex);
   }, [activeIndex]);
 
+  const hasScrollEvents = useRef(false);
+
   const onPageScroll = (event: PagerViewOnPageScrollEvent) => {
+    hasScrollEvents.current = true;
     const { position, offset } = event.nativeEvent;
     dragProgress.value = position + offset;
   };
 
   const onPageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const index = event.nativeEvent.position;
-    // Lands the indicator exactly, and is all it gets on iOS below 18, which
-    // reports no scroll events.
-    dragProgress.value = index;
+    if (!hasScrollEvents.current) dragProgress.value = index;
     if (index === indexRef.current) return;
     indexRef.current = index;
     const next = values[index];
