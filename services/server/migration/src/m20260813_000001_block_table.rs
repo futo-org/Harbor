@@ -122,7 +122,8 @@ fn backfill() -> Result<InsertStatement, DbErr> {
     Ok(insert)
 }
 
-/// The deletion events that tombstone the graph event of the outer query.
+/// Subquery: the deletion events that tombstone the graph event of the outer
+/// query.
 fn deletions_of_the_event() -> SelectStatement {
     let mut deletions = SelectStatement::new();
     deletions
@@ -201,7 +202,7 @@ fn deletions_of_the_event() -> SelectStatement {
     deletions
 }
 
-/// Joins an event to the content it carries, on the content digest.
+/// Subquery: joins an event to the content it carries, on the content digest.
 fn content_join() -> Condition {
     Into::<RelationDef>::into(
         event_model::Entity::belongs_to(content_model::Entity)
