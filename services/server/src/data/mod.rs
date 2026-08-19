@@ -7,6 +7,8 @@ use tonic::Status;
 pub mod hydration;
 pub mod pipeline;
 
+const DEFAULT_LIMIT: u32 = 50;
+
 /// Parameters for pagination.
 ///
 /// For example used by [`pipeline::finalize_fetch`].
@@ -99,50 +101,6 @@ impl<SortedBy> PageInfo<SortedBy> {
 pub enum CursorFilter<SortedBy> {
     Forward(Cursor<SortedBy>),
     Backward(Cursor<SortedBy>),
-}
-
-const DEFAULT_LIMIT: u32 = 50;
-
-impl<SortedBy> CursorFilter<SortedBy> {
-    /// Decode the cursor filter from the request parameters.
-    ///
-    /// Returns the cursor filter and limit.
-    ///
-    /// If `params` is empty it returns a forward cursor starting at the start
-    /// with a default limit.
-    pub fn from_page_params(
-        params: Option<&proto::PageParams>,
-    ) -> Result<(Option<CursorFilter<SortedBy>>, u32), Status>
-    where
-        SortedBy: for<'a> Deserialize<'a>,
-    {
-        let Some(params) = params else {
-            return Ok((None, DEFAULT_LIMIT));
-        };
-
-        let limit = match params.limit {
-            Some(limit) => limit.clamp(1, 200).cast_unsigned(),
-            None => DEFAULT_LIMIT,
-        };
-
-        let cursor_filter =
-            match (&params.backward_token, &params.forward_token) {
-                (Some(_), Some(_)) => {
-                    return Err(Status::invalid_argument(
-                        "Only one cursor is allowed",
-                    ));
-                }
-                (Some(token), None) => {
-                    Some(CursorFilter::Backward(Cursor::decode(token)?))
-                }
-                (None, Some(token)) => {
-                    Some(CursorFilter::Forward(Cursor::decode(token)?))
-                }
-                (None, None) => None,
-            };
-
-        Ok((cursor_filter, limit))
-    }
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]

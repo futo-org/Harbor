@@ -2,7 +2,7 @@
 //! Mostly pipeline related
 
 use crate::data::hydration::HydrationState;
-use crate::data::{CursorFilter, Marker, PageInfo, pipeline};
+use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{
@@ -44,8 +44,10 @@ impl<SortedBy> Params<SortedBy> {
     where
         SortedBy: for<'a> Deserialize<'a>,
     {
-        let (cursor_filter, limit) =
-            CursorFilter::from_page_params(params.as_ref())?;
+        let PaginationParams {
+            cursor_filter,
+            limit,
+        } = PaginationParams::from_req_params(params.as_ref())?;
         Ok(Params {
             limit: limit.into(),
             cursor_filter,
