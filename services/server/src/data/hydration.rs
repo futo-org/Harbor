@@ -224,6 +224,10 @@ where
                     quote_set.insert(key);
                 }
                 push_key(post.quote);
+                if let Some(reply) = post.reply {
+                    push_key(reply.root);
+                    push_key(reply.parent);
+                }
             }
             Some(ContentBody::Delete(delete)) => {
                 if !config.delete {
