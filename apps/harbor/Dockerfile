@@ -27,8 +27,7 @@ COPY packages packages
 COPY tools tools
 # --ignore-scripts: the only dependency allowed to run install scripts is
 # better-sqlite3 (see onlyBuiltDependencies), and it reaches this image only
-# through @polycentric/js-node, which the web bundle never loads. Building it
-# means fetching a prebuilt binary over the network
+# through @polycentric/js-node, which polycentric-app does not depend on.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
 # Non symlinked packages and node_modules
