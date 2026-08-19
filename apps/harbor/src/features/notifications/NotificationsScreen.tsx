@@ -3,6 +3,7 @@ import { List } from '@/src/common/components/List';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Atoms } from '@/src/common/theme';
 import { RefreshControl, View } from 'react-native';
@@ -12,6 +13,8 @@ import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
+  usePageTitle('Notifications');
+
   const enabled = useEagerLoad();
   const { items, isLoading, isRefreshing, refresh } =
     useListNotifications(enabled);

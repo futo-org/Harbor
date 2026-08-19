@@ -37,6 +37,9 @@ import {
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { truncateText } from '@/src/common/util/truncateText';
 
 /** Page order behind the profile's tab bar. */
 const PROFILE_TABS: readonly ActiveFeed[] = ['posts', 'verifications'];
@@ -136,6 +139,13 @@ function IdentityProfile({
 function ProfileScreenContent() {
   const { theme } = useTheme();
   const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
+
+  // Reads the profile query the header already shares.
+  const profile = useProfile(identityKey);
+  const shortId = shortenIdentityId(identityKey ?? undefined);
+  usePageTitle(
+    profile.name ? `${truncateText(profile.name, 30)} (${shortId})` : shortId,
+  );
 
   const isFocused = useIsFocused();
 

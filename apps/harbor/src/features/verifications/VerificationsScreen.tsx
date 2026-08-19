@@ -5,6 +5,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
 import { Tabs } from '@/src/common/components/Tabs';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
@@ -92,6 +93,8 @@ function OutboxPage({
 }
 
 export default function VerificationsScreen() {
+  usePageTitle('Verifications');
+
   const [createOpen, setCreateOpen] = useState(false);
   const [tab, setTab] = useState<ClaimsTab>('outbox');
 

@@ -131,6 +131,7 @@ jest.mock('expo-router', () => ({
     replace: (...args: unknown[]) => mockReplace(...args),
   },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
+  useFocusEffect: () => undefined,
 }));
 
 jest.mock('react-native-safe-area-context', () => ({

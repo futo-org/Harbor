@@ -6,6 +6,7 @@ import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { ComposerInput } from '@/src/features/composer';
 import type { SharedValue } from 'react-native-reanimated';
@@ -59,6 +60,8 @@ function FollowingPage({
 export default function FeedScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
+
+  usePageTitle('Home');
 
   const ready = useEagerLoad();
   const { tab, hydrated, control, onTabPress, refreshActive } =

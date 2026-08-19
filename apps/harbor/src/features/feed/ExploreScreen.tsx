@@ -6,6 +6,7 @@ import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
@@ -38,6 +39,8 @@ export default function ExploreScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
   const { theme } = useTheme();
+
+  usePageTitle('Explore');
 
   const ready = useEagerLoad();
   const { tab, hydrated, control, onTabPress, refreshActive } =
