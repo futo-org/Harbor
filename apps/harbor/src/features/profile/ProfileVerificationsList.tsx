@@ -75,14 +75,17 @@ function sectionRows(
 export function ProfileVerificationsList({
   ListHeaderComponent,
   scrollY,
+  active = true,
 }: {
   // The profile header; scrolls with the list.
   ListHeaderComponent?: ComponentType<unknown> | ReactElement | null;
   scrollY?: SharedValue<number>;
+  /** True for the page being shown; only that page loads. */
+  active?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
-  const requested = useClaimsList(identityKey ?? undefined);
+  const requested = useClaimsList(identityKey ?? undefined, active);
   const verified = useVerifiedClaims(identityKey ?? undefined);
   // Verification requests the current identity has made to this profile.
   const pending = useVerificationRequestsTo(

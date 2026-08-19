@@ -1,7 +1,9 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
+import { PagerView } from '@/src/common/components/PagerView';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { FeedPage } from '@/src/features/feed/FeedPage';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
   FetchMode,
@@ -16,9 +18,8 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, type LayoutChangeEvent, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
-import { ProfileCompactHeader } from './ProfileCompactHeader';
+import { ActivityIndicator, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { ProfileHeader } from './ProfileHeader';
 import { useProfile } from './hooks/useProfile';
 import {
@@ -31,9 +32,14 @@ import {
   ProfileProvider,
   useProfileContext,
 } from './ProfileContext';
-import { ProfileFeedSwitcher } from './ProfileFeedSwitcher';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+
+/** Page order behind the profile's tab bar. */
+const PROFILE_TABS: readonly ActiveFeed[] = ['posts', 'verifications'];
+
+/** Clears the tab bar at the bottom of the screen. */
+const FEED_PADDING = { paddingBottom: 40 };
 
 export default function ProfileScreen({
   tab = 'posts',
@@ -126,7 +132,7 @@ function IdentityProfile({
 
 function ProfileScreenContent() {
   const { theme } = useTheme();
-  const { identityKey, activeFeed } = useProfileContext();
+  const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
 
   const isFocused = useIsFocused();
 
@@ -141,7 +147,7 @@ function ProfileScreenContent() {
   );
 
   const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
-    enabled: isFocused,
+    enabled: isFocused && activeFeed === 'posts',
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -163,51 +169,35 @@ function ProfileScreenContent() {
     ],
     [theme.palette.background_secondary, theme.palette.background_primary],
   );
-  // The full header scrolls with the feed; the compact one takes over once its
-  // measured height has passed.
-  const scrollY = useSharedValue(0);
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const onHeaderLayout = useCallback((event: LayoutChangeEvent) => {
-    const next = event.nativeEvent.layout.height;
-    if (next) setHeaderHeight(next);
-  }, []);
-
-  const profileHeader = useMemo(
-    () => (
-      <View onLayout={onHeaderLayout}>
-        <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />
-      </View>
+  // The header and its tabs sit above the pages, so a swipe moves the pages
+  // under them.
+  const renderTabBar = useCallback(
+    ({ dragProgress }: { dragProgress: SharedValue<number> }) => (
+      <ProfileHeader
+        bannerColors={bannerColors}
+        onBack={handleBack}
+        tabProgress={dragProgress}
+      />
     ),
-    [bannerColors, handleBack, onHeaderLayout],
-  );
-
-  const tabs = useMemo(
-    () => [{ key: 'posts', feed: identityFeed, bottomPadding: 40 }],
-    [identityFeed],
+    [bannerColors, handleBack],
   );
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        {activeFeed === 'verifications' ? (
-          <ProfileVerificationsList
-            ListHeaderComponent={profileHeader}
-            scrollY={scrollY}
+        <PagerView
+          values={PROFILE_TABS}
+          active={activeFeed}
+          onChange={setActiveFeed}
+          renderTabBar={renderTabBar}
+        >
+          <FeedPage
+            feed={identityFeed}
+            active={activeFeed === 'posts'}
+            contentContainerStyle={FEED_PADDING}
           />
-        ) : (
-          <ProfileFeedSwitcher
-            tabs={tabs}
-            activeKey={activeFeed}
-            ListHeaderComponent={profileHeader}
-            scrollY={scrollY}
-          />
-        )}
-
-        <ProfileCompactHeader
-          scrollY={scrollY}
-          headerHeight={headerHeight}
-          onBack={handleBack}
-        />
+          <ProfileVerificationsList active={activeFeed === 'verifications'} />
+        </PagerView>
       </Screen.PrimaryColumn>
     </Screen>
   );

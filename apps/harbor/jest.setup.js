@@ -30,6 +30,32 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedScrollHandler: () => () => undefined,
     useAnimatedReaction: () => undefined,
     withTiming: (toValue) => toValue,
+    withRepeat: (animation) => animation,
+    cancelAnimation: () => undefined,
+    Easing: new Proxy({}, { get: () => (value) => value }),
     runOnJS: (fn) => fn,
+  };
+});
+
+// Same story as reanimated: importing it reaches for the native module.
+jest.mock('react-native-worklets', () => ({
+  scheduleOnRN: (fn, ...args) => fn(...args),
+  runOnJS: (fn) => fn,
+}));
+
+// Renders pages as plain children under test, and stubs the page controls.
+jest.mock('@expo/ui/community/pager-view', () => {
+  const react = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: react.forwardRef((props, ref) => {
+      react.useImperativeHandle(ref, () => ({
+        setPage: () => {},
+        setPageWithoutAnimation: () => {},
+        setScrollEnabled: () => {},
+      }));
+      return react.createElement(View, props);
+    }),
   };
 });

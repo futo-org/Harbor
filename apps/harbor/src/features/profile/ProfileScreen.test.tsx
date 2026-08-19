@@ -62,10 +62,11 @@ jest.mock('./ProfileContext', () => {
 
 // Inert stubs for the module-level imports the screen pulls in.
 jest.mock('./ProfileHeader', () => ({ ProfileHeader: () => null }));
-jest.mock('./ProfileCompactHeader', () => ({
-  ProfileCompactHeader: () => null,
+// FlashList ships untranspiled ESM, so the pages' list stays out of this test.
+jest.mock('@/src/features/feed/FeedList', () => ({
+  __esModule: true,
+  default: () => null,
 }));
-jest.mock('./ProfileFeedSwitcher', () => ({ ProfileFeedSwitcher: () => null }));
 jest.mock('./ProfileVerificationsList', () => ({
   ProfileVerificationsList: () => null,
 }));

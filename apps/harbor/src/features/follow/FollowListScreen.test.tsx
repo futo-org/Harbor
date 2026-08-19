@@ -160,12 +160,14 @@ jest.mock('./FollowButton', () => {
 const mockLoadMore = jest.fn();
 let mockEntries: { identity: string; createdAt: bigint }[] = [];
 let mockHasMore = false;
+// Both pages are mounted, so only the active one reports entries.
 jest.mock('./hooks/useFollowList', () => ({
-  useFollowList: () => ({
-    entries: mockEntries,
+  useFollowList: (_mode: string, _identityId: unknown, active = true) => ({
+    entries: active ? mockEntries : [],
     isLoading: false,
+    isRefreshing: false,
     error: null,
-    hasMore: mockHasMore,
+    hasMore: active && mockHasMore,
     loadMore: mockLoadMore,
     refresh: jest.fn(),
   }),
@@ -204,17 +206,19 @@ describe('FollowListScreen header', () => {
 });
 
 describe('FollowListScreen tabs', () => {
-  it('switches to the sibling route', async () => {
+  it('switches pages in place instead of navigating', async () => {
     const screen = await render(<FollowListScreen mode="following" />);
 
     await fireEvent.press(screen.getByText('Followers'));
-    expect(mockReplace).toHaveBeenCalledWith('/profile-id/followers');
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByText('No followers yet.')).toBeTruthy();
   });
 
-  it('does not navigate for the active tab', async () => {
+  it('opens on the page the route asked for', async () => {
     const screen = await render(<FollowListScreen mode="followers" />);
 
-    await fireEvent.press(screen.getByText('Followers'));
+    expect(screen.getByText('No followers yet.')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

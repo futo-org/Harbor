@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, createRef } from 'react';
+import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
-import type { ListRef } from '@/src/common/components/List';
 import { useFeedSettingsStore } from './useFeedSettingsStore';
-import { useFeedTab, useFeedTabPress } from './useFeedTabs';
+import { useFeedTabs } from './useFeedTabs';
 
 const STORE_KEY = 'polycentric:feed-settings';
 
@@ -22,6 +21,9 @@ async function renderHook<T>(hook: () => T): Promise<{ current: T }> {
   return result;
 }
 
+const renderTabs = (feed: 'following' | 'explore' = 'following') =>
+  renderHook(() => useFeedTabs(feed));
+
 beforeEach(async () => {
   await AsyncStorage.clear();
   act(() => {
@@ -37,12 +39,12 @@ afterEach(() => {
   });
 });
 
-describe('useFeedTab', () => {
+describe('useFeedTabs selection', () => {
   it('defaults the home feed to latest and explore to top', async () => {
     await useFeedSettingsStore.persist.rehydrate();
 
-    const following = await renderHook(() => useFeedTab('following'));
-    const explore = await renderHook(() => useFeedTab('explore'));
+    const following = await renderTabs('following');
+    const explore = await renderTabs('explore');
 
     expect(following.current.tab).toBe('latest');
     expect(explore.current.tab).toBe('top');
@@ -59,18 +61,17 @@ describe('useFeedTab', () => {
     );
     await useFeedSettingsStore.persist.rehydrate();
 
-    const result = await renderHook(() => useFeedTab('following'));
+    const result = await renderTabs();
     expect(result.current.tab).toBe('for-you');
     expect(result.current.hydrated).toBe(true);
   });
 
   it('persists a tab change', async () => {
     await useFeedSettingsStore.persist.rehydrate();
+    const tabs = await renderTabs();
 
     act(() => {
-      useFeedSettingsStore.getState().setFeedSettings('following', {
-        tab: 'for-you',
-      });
+      tabs.current.onTabPress('for-you');
     });
 
     const stored = await AsyncStorage.getItem(STORE_KEY);
@@ -81,39 +82,58 @@ describe('useFeedTab', () => {
   });
 });
 
-describe('useFeedTabPress', () => {
-  it('selects a different tab', async () => {
-    await useFeedSettingsStore.persist.rehydrate();
-    const listRef = createRef<ListRef>();
-    const refresh = jest.fn();
+describe('useFeedTabs page control', () => {
+  /** Stands in for the showing page registering itself. */
+  function registerPage(tabs: Awaited<ReturnType<typeof renderTabs>>) {
+    const page = { scrollToTop: jest.fn(), refresh: jest.fn() };
+    tabs.current.control.current = page;
+    return page;
+  }
 
-    const onTabPress = await renderHook(() =>
-      useFeedTabPress('following', listRef, refresh),
-    );
+  it('leaves the page alone when another tab is selected', async () => {
+    await useFeedSettingsStore.persist.rehydrate();
+    const tabs = await renderTabs();
+    const page = registerPage(tabs);
+
     act(() => {
-      onTabPress.current('for-you');
+      tabs.current.onTabPress('for-you');
     });
 
     expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('for-you');
-    expect(refresh).not.toHaveBeenCalled();
+    expect(page.refresh).not.toHaveBeenCalled();
+    expect(page.scrollToTop).not.toHaveBeenCalled();
   });
 
   it('scrolls to the top and refreshes when the active tab is re-tapped', async () => {
     await useFeedSettingsStore.persist.rehydrate();
-    const scrollToTop = jest.fn();
-    const listRef = createRef<ListRef>();
-    listRef.current = { scrollToTop } as unknown as ListRef;
-    const refresh = jest.fn();
+    const tabs = await renderTabs();
+    const page = registerPage(tabs);
 
-    const onTabPress = await renderHook(() =>
-      useFeedTabPress('following', listRef, refresh),
-    );
     act(() => {
-      onTabPress.current('latest');
+      tabs.current.onTabPress('latest');
     });
 
-    expect(scrollToTop).toHaveBeenCalled();
-    expect(refresh).toHaveBeenCalled();
+    expect(page.scrollToTop).toHaveBeenCalled();
+    expect(page.refresh).toHaveBeenCalled();
     expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('latest');
+  });
+
+  it('refreshes the registered page', async () => {
+    await useFeedSettingsStore.persist.rehydrate();
+    const tabs = await renderTabs();
+    const page = registerPage(tabs);
+
+    act(() => {
+      tabs.current.refreshActive();
+    });
+
+    expect(page.scrollToTop).toHaveBeenCalled();
+    expect(page.refresh).toHaveBeenCalled();
+  });
+
+  it('does nothing when no page has registered', async () => {
+    const tabs = await renderTabs();
+
+    expect(() => tabs.current.refreshActive()).not.toThrow();
   });
 });

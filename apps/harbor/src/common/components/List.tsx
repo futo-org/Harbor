@@ -6,7 +6,11 @@ import {
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import {
+  measureElement,
+  useWindowVirtualizer,
+  type Virtualizer,
+} from '@tanstack/react-virtual';
 import type React from 'react';
 import {
   cloneElement,
@@ -171,6 +175,21 @@ function NativeList<T>({
   );
 }
 
+// A screen the router keeps mounted but hides reports every row as zero-high.
+// Storing that collapses the list, so every row lands at the same offset and
+// the text stacks on itself for a frame when the screen comes back. Hold the
+// last real height instead, and let the next resize correct it.
+function measureVisibleRow(
+  element: Element,
+  entry: ResizeObserverEntry | undefined,
+  instance: Virtualizer<Window, Element>,
+) {
+  const size = measureElement(element, entry, instance);
+  if (size > 0) return size;
+  const key = instance.options.getItemKey(instance.indexFromElement(element));
+  return instance.itemSizeCache.get(key) ?? WEB_ESTIMATED_ITEM_HEIGHT;
+}
+
 function WebFeedViewer<T>({
   data,
   renderItem,
@@ -223,6 +242,11 @@ function WebFeedViewer<T>({
     estimateSize: () => WEB_ESTIMATED_ITEM_HEIGHT,
     overscan: 8,
     scrollMargin,
+    // Rows measure during commit, where the default `flushSync` render costs a
+    // list render per row and React warns. Measure outside commit instead.
+    useFlushSync: false,
+    useAnimationFrameWithResizeObserver: true,
+    measureElement: measureVisibleRow,
     getItemKey: (index) =>
       typeof keyExtractor === 'function'
         ? keyExtractor(items[index], index)
