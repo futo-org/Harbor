@@ -6,7 +6,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import org.futo.polycentric.ffi.PolycentricCore
 import org.futo.polycentric.ffi.Query
 import org.futo.polycentric.ffi.QueryObserver
@@ -79,7 +79,7 @@ suspend fun PolycentricCore.awaitQuery(
     opts: QueryOpts? = null,
 ): ByteArray? {
     var latest: ByteArray? = null
-    queryFlow(query, queryKey, opts).first { result ->
+    queryFlow(query, queryKey, opts).firstOrNull { result ->
         result.data?.let { latest = it }
         when (result.status) {
             QueryStatus.SUCCESS -> true
