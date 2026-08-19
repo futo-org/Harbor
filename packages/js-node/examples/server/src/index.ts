@@ -9,8 +9,8 @@ import {
 import path from 'node:path';
 import { Readable } from 'node:stream';
 
-const DB_PATH = path.resolve(process.cwd(), 'polycentric.db');
-const BLOB_DIR = path.resolve(process.cwd(), 'polycentric-blobs');
+const DB_PATH = path.resolve(process.cwd(), 'harbor.db');
+const BLOB_DIR = path.resolve(process.cwd(), 'harbor-blobs');
 const PORT = 3001;
 const VIEWS = path.resolve(import.meta.dirname, '../views');
 const SEED_SERVERS = (
