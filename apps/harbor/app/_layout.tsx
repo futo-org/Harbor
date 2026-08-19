@@ -64,6 +64,9 @@ function RootStack() {
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
         </Stack.Protected>
 
+        {/* Launch route: it hands off to the tabs, so the handoff is silent. */}
+        <Stack.Screen name="index" options={{ animation: 'none' }} />
+
         <Stack.Screen name="(onboarding)" options={{ animation: 'none' }} />
 
         {/* Account-only on every platform. Routes are auto-registered from

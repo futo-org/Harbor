@@ -1,10 +1,12 @@
+import { Routes } from '@/src/common/constants';
+import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useNavigation } from 'expo-router';
 import {
   createContext,
   useCallback,
   useContext,
   useMemo,
+  useState,
   type ReactNode,
 } from 'react';
 
@@ -25,43 +27,46 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 export function ProfileProvider({
   identityKey,
   alias = null,
-  activeFeed = 'posts',
+  activeFeed: initialFeed = 'posts',
   children,
 }: {
   identityKey: string | null;
   alias?: string | null;
-  // Which tab's route rendered this profile.
+  // Which tab's route rendered this profile; the page it opens on.
   activeFeed?: ActiveFeed;
   children: ReactNode;
 }) {
   const { identity: selfIdentity } = useCurrentIdentity();
   const isSelf = !!identityKey && selfIdentity?.identityKey === identityKey;
 
-  const navigation = useNavigation();
+  // The tabs are pages of one `PagerView`, so the profile stays mounted across
+  // them. The route only picks which one opens.
+  const [activeFeed, setActiveFeed] = useState<ActiveFeed>(initialFeed);
 
-  // Tabs are sibling routes inside the profile's hidden tab navigator
-  // (`app/[identityId]/(profile)`). Jump between them directly — going
-  // through `router.replace(href)` resolves at the stack level, which
-  // remounts the whole profile with a push transition instead of
-  // switching tabs in place. Expo-router keeps the URL in sync with the
-  // resulting navigation state.
-  const setActiveFeed = useCallback(
+  const selectFeed = useCallback(
     (tab: ActiveFeed) => {
-      if (tab === activeFeed) return;
-      navigation.dispatch({
-        type: 'JUMP_TO',
-        payload: {
-          name: tab === 'verifications' ? 'verifications' : 'index',
-          params: { identityId: alias ?? identityKey },
-        },
-      });
+      setActiveFeed(tab);
+
+      const target = alias ?? identityKey;
+      if (!target) return;
+      replacePath(
+        tab === 'verifications'
+          ? Routes.tabs.profileVerifications(target)
+          : Routes.tabs.profile(target),
+      );
     },
-    [activeFeed, alias, identityKey, navigation],
+    [alias, identityKey],
   );
 
   const value = useMemo<ProfileContextValue>(
-    () => ({ identityKey, isSelf, activeFeed, setActiveFeed, alias }),
-    [identityKey, isSelf, activeFeed, setActiveFeed, alias],
+    () => ({
+      identityKey,
+      isSelf,
+      activeFeed,
+      setActiveFeed: selectFeed,
+      alias,
+    }),
+    [identityKey, isSelf, activeFeed, selectFeed, alias],
   );
 
   return (

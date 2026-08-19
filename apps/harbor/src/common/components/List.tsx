@@ -6,12 +6,17 @@ import {
   type ListRenderItem,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import {
+  measureElement,
+  useWindowVirtualizer,
+  type Virtualizer,
+} from '@tanstack/react-virtual';
 import type React from 'react';
 import {
   cloneElement,
   forwardRef,
   isValidElement,
+  useContext,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -23,6 +28,7 @@ import { View } from 'react-native';
 import Animated, { type SharedValue } from 'react-native-reanimated';
 import { Atoms, useTheme } from '../theme';
 import { HidingHeaderStack, renderNode, useHidingHeader } from './HidingHeader';
+import { useForwardedScroll } from './ScrollForwarder';
 import { InfoTooltip } from './InfoTooltip';
 import { Text } from './primitives';
 
@@ -110,13 +116,15 @@ function NativeList<T>({
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
-  const {
-    onScroll,
-    onHeaderLayout,
-    translateStyle,
-    headerHeight,
-    contentPaddingTop,
-  } = useHidingHeader(initialHeaderHeight, scrollY);
+  // A `ScrollForwarder` above owns the header; without one the list hides
+  // its own.
+  const forwarded = useForwardedScroll();
+  const hiding = useHidingHeader(initialHeaderHeight, scrollY);
+  const { onHeaderLayout, translateStyle, headerHeight } = hiding;
+  const onScroll = forwarded ? forwarded.onScroll : hiding.onScroll;
+  const contentPaddingTop = forwarded
+    ? forwarded.contentPaddingTop
+    : hiding.contentPaddingTop;
 
   useImperativeHandle(
     listRef,
@@ -127,19 +135,32 @@ function NativeList<T>({
     [],
   );
 
+  // Lets the header's owner align this list's offset with it.
+  const register = forwarded?.register;
+  useEffect(() => {
+    if (!register) return;
+    register({
+      scrollToOffset: (offset) =>
+        ref.current?.scrollToOffset({ offset, animated: false }),
+    });
+    return () => register(null);
+  }, [register]);
+
   const renderedHeader = renderNode(HeaderComponent);
 
+  const minContentHeight = forwarded?.minContentHeight;
   // A new style object each render invalidates FlashList's layout cache.
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
       paddingTop: contentPaddingTop,
+      ...(minContentHeight != null ? { minHeight: minContentHeight } : {}),
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentPaddingTop, contentContainerStyle],
+    [contentPaddingTop, minContentHeight, contentContainerStyle],
   );
 
   // Positions Android's refresh spinner; iOS ignores it.
@@ -152,6 +173,19 @@ function NativeList<T>({
       : refreshControl
   ) as FlashListProps<T>['refreshControl'];
 
+  const list = (
+    <AnimatedFlashList
+      ref={ref as React.Ref<FlashListRef<unknown>>}
+      {...(rest as FlashListProps<unknown>)}
+      refreshControl={adjustedRefreshControl}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={mergedContentContainerStyle}
+    />
+  );
+
+  if (forwarded) return <View style={Atoms.flex_1}>{list}</View>;
+
   return (
     <HidingHeaderStack
       header={renderedHeader}
@@ -159,16 +193,24 @@ function NativeList<T>({
       onHeaderLayout={onHeaderLayout}
       style={translateStyle}
     >
-      <AnimatedFlashList
-        ref={ref as React.Ref<FlashListRef<unknown>>}
-        {...(rest as FlashListProps<unknown>)}
-        refreshControl={adjustedRefreshControl}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={mergedContentContainerStyle}
-      />
+      {list}
     </HidingHeaderStack>
   );
+}
+
+// A screen the router keeps mounted but hides reports every row as zero-high.
+// Storing that collapses the list, so every row lands at the same offset and
+// the text stacks on itself for a frame when the screen comes back. Hold the
+// last real height instead, and let the next resize correct it.
+function measureVisibleRow(
+  element: Element,
+  entry: ResizeObserverEntry | undefined,
+  instance: Virtualizer<Window, Element>,
+) {
+  const size = measureElement(element, entry, instance);
+  if (size > 0) return size;
+  const key = instance.options.getItemKey(instance.indexFromElement(element));
+  return instance.itemSizeCache.get(key) ?? WEB_ESTIMATED_ITEM_HEIGHT;
 }
 
 function WebFeedViewer<T>({
@@ -223,6 +265,11 @@ function WebFeedViewer<T>({
     estimateSize: () => WEB_ESTIMATED_ITEM_HEIGHT,
     overscan: 8,
     scrollMargin,
+    // Rows measure during commit, where the default `flushSync` render costs a
+    // list render per row and React warns. Measure outside commit instead.
+    useFlushSync: false,
+    useAnimationFrameWithResizeObserver: true,
+    measureElement: measureVisibleRow,
     getItemKey: (index) =>
       typeof keyExtractor === 'function'
         ? keyExtractor(items[index], index)

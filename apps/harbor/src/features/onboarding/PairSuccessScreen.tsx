@@ -59,7 +59,7 @@ export default function PairSuccessScreen() {
           variant="primary"
           fullWidth
           onPress={() =>
-            router.replace((returnTo ?? Routes.tabs.feed.index) as Href)
+            router.dismissTo((returnTo ?? Routes.tabs.feed.index) as Href)
           }
         />
       </View>

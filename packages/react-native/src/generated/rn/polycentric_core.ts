@@ -2205,9 +2205,6 @@ Readonly<
 [GetFollowingFeedArgs
 ]>
     };
-    /**
-     * Takes the same args as the following feed.
-     */
     class GetRecommendedFeed_ extends UniffiEnum implements GetRecommendedFeed__interface {
         /**
          * @private

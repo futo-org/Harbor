@@ -97,6 +97,10 @@ export function NavItem({
       onPress={(e) => {
         e.preventDefault();
         if (isActive) emitFocusedRefresh();
+        // MH HACK!
+        // Switching destination, not going deeper. Web keeps pushed screens
+        // mounted and subscribed, so drop what is stacked over the tabs.
+        if (router.canDismiss()) router.dismissAll();
         router.navigate(href!);
       }}
       style={[

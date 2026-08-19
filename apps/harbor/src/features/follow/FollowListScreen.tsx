@@ -1,139 +1,72 @@
-import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
-import Topbar from '@/src/common/components/layout/Topbar';
-import { List } from '@/src/common/components/List';
-import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { PagerView } from '@/src/common/components/PagerView';
 import { Tabs } from '@/src/common/components/Tabs';
 import { Routes } from '@/src/common/constants';
-import {
-  shortenIdentityId,
-  truncateName,
-  useCurrentIdentity,
-  useUsername,
-} from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import FollowButton from './FollowButton';
-import {
-  type FollowEntry,
-  type FollowListMode,
-  useFollowList,
-} from './hooks/useFollowList';
+import { replacePath } from '@/src/common/lib/navigation/replacePath';
+import { useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import type { SharedValue } from 'react-native-reanimated';
+import FollowList from './FollowList';
+import { FollowListTopbar } from './FollowListTopbar';
+import type { FollowListMode } from './hooks/useFollowList';
 
+/** Page order behind the tab bar. */
+const FOLLOW_TABS: readonly FollowListMode[] = ['following', 'followers'];
+const FOLLOW_TAB_LABELS: Record<FollowListMode, string> = {
+  following: 'Following',
+  followers: 'Followers',
+};
+
+/** Following and Followers as swipeable pages. Both `/[id]/following` and
+ *  `/[id]/followers` land here; `mode` picks which one opens. */
 export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
-  const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
-  const list = useFollowList(mode, identityId);
+  const [tab, setTab] = useState<FollowListMode>(mode);
 
-  // Whose follow lists these are.
-  const fallbackUsername = useUsername(identityId ?? null);
-  const profile = useProfile(identityId ?? null);
-  const username = truncateName(profile.name ?? fallbackUsername, 24);
-
-  // The tabs are routes; switching swaps the sibling page.
-  const setMode = (next: FollowListMode) => {
-    if (next === mode || !identityId) return;
-    router.replace(
+  const selectTab = (next: FollowListMode) => {
+    setTab(next);
+    if (!identityId) return;
+    replacePath(
       next === 'following'
         ? Routes.tabs.profileFollowing(identityId)
         : Routes.tabs.profileFollowers(identityId),
     );
   };
 
+  const renderTabBar = ({
+    dragProgress,
+  }: {
+    dragProgress: SharedValue<number>;
+  }) => (
+    <>
+      <FollowListTopbar identityId={identityId} />
+      <Tabs progress={dragProgress}>
+        {FOLLOW_TABS.map((value) => (
+          <Tabs.Tab
+            key={value}
+            active={tab === value}
+            onPress={() => selectTab(value)}
+          >
+            {FOLLOW_TAB_LABELS[value]}
+          </Tabs.Tab>
+        ))}
+      </Tabs>
+    </>
+  );
+
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <List<FollowEntry>
-          HeaderComponent={
-            <Topbar
-              center={
-                <View style={Atoms.align_center}>
-                  <Text variant="title" numberOfLines={1}>
-                    {username}
-                  </Text>
-                  <Text variant="small" color="neutral_500" numberOfLines={1}>
-                    {identityId ? shortenIdentityId(identityId) : ''}
-                    {profile.alias ? ` · ${profile.alias}` : ''}
-                  </Text>
-                </View>
-              }
-            />
-          }
-          ListHeaderComponent={
-            <Tabs>
-              <Tabs.Tab
-                active={mode === 'following'}
-                onPress={() => setMode('following')}
-              >
-                Following
-              </Tabs.Tab>
-              <Tabs.Tab
-                active={mode === 'followers'}
-                onPress={() => setMode('followers')}
-              >
-                Followers
-              </Tabs.Tab>
-            </Tabs>
-          }
-          data={list.entries}
-          keyExtractor={(entry) => entry.identity}
-          renderItem={({ item }) => <IdentityRow identity={item.identity} />}
-          ListEmptyComponent={
-            list.isLoading ? null : (
-              <ListEmpty>
-                {mode === 'following'
-                  ? 'Not following anyone yet.'
-                  : 'No followers yet.'}
-              </ListEmpty>
-            )
-          }
-          ListFooterComponent={
-            list.hasMore && list.entries.length > 0 ? (
-              <View style={[Atoms.items_center, Atoms.p_lg]}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.neutral_500}
-                  accessibilityLabel="Loading more"
-                />
-              </View>
-            ) : null
-          }
-          onEndReached={list.hasMore ? list.loadMore : undefined}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
-          refreshControl={
-            isWeb ? undefined : (
-              <RefreshControl
-                refreshing={list.isLoading}
-                onRefresh={list.refresh}
-              />
-            )
-          }
-          showsVerticalScrollIndicator={false}
-        />
+        <PagerView
+          values={FOLLOW_TABS}
+          active={tab}
+          onChange={selectTab}
+          renderTabBar={renderTabBar}
+        >
+          <FollowList mode="following" active={tab === 'following'} />
+          <FollowList mode="followers" active={tab === 'followers'} />
+        </PagerView>
       </Screen.PrimaryColumn>
     </Screen>
-  );
-}
-
-// Avatar + name row linking to the identity's profile.
-function IdentityRow({ identity }: { identity: string }) {
-  const { theme } = useTheme();
-  const { identityKey } = useCurrentIdentity();
-  const isSelf = identityKey === identity;
-
-  return (
-    <ProfileRow
-      identity={identity}
-      onPress={() => router.push(Routes.tabs.profile(identity))}
-      style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
-      trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
-    />
   );
 }
