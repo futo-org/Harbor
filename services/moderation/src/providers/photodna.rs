@@ -179,8 +179,8 @@ mod tests {
     use std::{env, path::Path};
     use tokio::time::{Duration, sleep};
 
-    const KEY_ENV: &str = "POLYCENTRIC_PHOTODNA_KEY";
-    const TEST_IMAGES_ENV: &str = "POLYCENTRIC_PHOTODNA_TEST_IMAGES";
+    const KEY_ENV: &str = "HARBOR_PHOTODNA_KEY";
+    const TEST_IMAGES_ENV: &str = "HARBOR_PHOTODNA_TEST_IMAGES";
     const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp"];
 
     /// Recursively collect paths of files whose extension is in
@@ -210,14 +210,14 @@ mod tests {
     /// at least one matches (`IsMatch` is true). Point the directory at known
     /// PhotoDNA test images so that a match is expected.
     ///
-    /// Point to the directory with the `POLYCENTRIC_PHOTODNA_TEST_IMAGES`
+    /// Point to the directory with the `HARBOR_PHOTODNA_TEST_IMAGES`
     /// environment variable (a directory path, not a file path).
-    /// `POLYCENTRIC_PHOTODNA_KEY` must also be set.
+    /// `HARBOR_PHOTODNA_KEY` must also be set.
     ///
     /// Ignored by default because it requires valid PhotoDNA credentials and
     /// the PhotoDNA test images.
     #[tokio::test]
-    #[ignore = "Requires POLYCENTRIC_PHOTODNA_KEY + POLYCENTRIC_PHOTODNA_TEST_IMAGES (directory)"]
+    #[ignore = "Requires HARBOR_PHOTODNA_KEY + HARBOR_PHOTODNA_TEST_IMAGES (directory)"]
     async fn photodna_real_api_reports_match() {
         let (Ok(image_dir_str), Ok(key)) = (env::var(TEST_IMAGES_ENV), env::var(KEY_ENV)) else {
             eprintln!("skipping: set {KEY_ENV} + {TEST_IMAGES_ENV} to run");
@@ -227,7 +227,7 @@ mod tests {
         let image_dir = Path::new(&image_dir_str);
         assert!(
             image_dir.is_dir(),
-            "POLYCENTRIC_PHOTODNA_TEST_IMAGE must be a directory, got {image_dir_str}"
+            "HARBOR_PHOTODNA_TEST_IMAGE must be a directory, got {image_dir_str}"
         );
 
         let images = collect_images(image_dir);

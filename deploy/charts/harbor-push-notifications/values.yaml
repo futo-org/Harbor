@@ -23,12 +23,12 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# DATABASE_URL, EXPO_ACCESS_TOKEN, POLYCENTRIC_MAIN_SERVER, … — put secrets
+# DATABASE_URL, EXPO_ACCESS_TOKEN, HARBOR_MAIN_SERVER, … — put secrets
 # in a Secret referenced via envFrom.
 env: []
 envFrom: []
 
-# gRPC bind (POLYCENTRIC_NOTIFICATIONS_GRPC_ADDR defaults to 0.0.0.0:3001).
+# gRPC bind (HARBOR_NOTIFICATIONS_GRPC_ADDR defaults to 0.0.0.0:3001).
 containerPort: 3001
 
 # Run the migration binary shipped in the image as a pre-install/pre-upgrade

@@ -14,7 +14,7 @@ const BLOB_DIR = path.resolve(process.cwd(), 'polycentric-blobs');
 const PORT = 3001;
 const VIEWS = path.resolve(import.meta.dirname, '../views');
 const SEED_SERVERS = (
-  process.env.POLYCENTRIC_SEED_SERVERS ?? 'http://localhost:3000'
+  process.env.HARBOR_SEED_SERVERS ?? 'http://localhost:3000'
 )
   .split(',')
   .map((s) => s.trim())

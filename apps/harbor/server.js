@@ -15,11 +15,11 @@ for (const [key, value] of Object.entries(process.env)) {
   if (key.startsWith('EXPO_PUBLIC_')) runtimeEnv[key] = value;
 }
 // SSR reads the same global.
-globalThis.__POLYCENTRIC_ENV__ = runtimeEnv;
+globalThis.__HARBOR_ENV__ = runtimeEnv;
 
 // Base URL for the exported bundle (e.g. the static CDN). CI uploads the
 // same /_expo and /assets tree under it and rewrites the js/css to match.
-const assetsBaseUrl = (process.env.POLYCENTRIC_STATIC_ASSETS_URL || '').replace(
+const assetsBaseUrl = (process.env.HARBOR_STATIC_ASSETS_URL || '').replace(
   /\/$/,
   '',
 );
@@ -35,8 +35,8 @@ for (const entry of fs.readdirSync(DIST_DIR, {
   const file = path.join(entry.parentPath, entry.name);
   const html = fs.readFileSync(file, 'utf8');
   let patched = html.replace(
-    /globalThis\.__POLYCENTRIC_ENV__ = [^<]*/,
-    () => `globalThis.__POLYCENTRIC_ENV__ = ${JSON.stringify(runtimeEnv)};`,
+    /globalThis\.__HARBOR_ENV__ = [^<]*/,
+    () => `globalThis.__HARBOR_ENV__ = ${JSON.stringify(runtimeEnv)};`,
   );
   if (assetsBaseUrl) {
     patched = patched.replace(

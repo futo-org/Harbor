@@ -10,8 +10,8 @@ WORKDIR /app
 
 # EXPO_PUBLIC_* env vars are inlined into the bundle at build time, so
 # they must be present during `expo export`. Passed in via build-arg.
-ARG EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
-ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
+ARG EXPO_PUBLIC_HARBOR_SEED_SERVERS
+ENV EXPO_PUBLIC_HARBOR_SEED_SERVERS=$EXPO_PUBLIC_HARBOR_SEED_SERVERS
 
 # CI populates packages/js-*/dist, packages/react-native/lib, and
 # packages/rs-core-wasm-browser from upstream artifacts and sets this

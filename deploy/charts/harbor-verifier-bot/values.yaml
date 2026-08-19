@@ -23,7 +23,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# POLYCENTRIC_VERIFIER_BOT_* (servers, database URL, OAuth client secrets) —
+# HARBOR_VERIFIER_BOT_* (servers, database URL, OAuth client secrets) —
 # put secrets in a Secret referenced via envFrom.
 env: []
 envFrom: []

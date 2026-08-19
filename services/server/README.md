@@ -46,11 +46,11 @@ All service variables are read and validated once at startup by
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
-| `POLYCENTRIC_SERVER_NAME` | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on produced Kafka events. |
-| `POLYCENTRIC_ALLOW_HOSTS` | `POLYCENTRIC_SERVER_NAME` | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
+| `HARBOR_SERVER_NAME` | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on produced Kafka events. |
+| `HARBOR_ALLOW_HOSTS` | `HARBOR_SERVER_NAME` | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
 | `CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
-| `POLYCENTRIC_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
-| `POLYCENTRIC_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
+| `HARBOR_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
+| `HARBOR_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
 
 ## Common Environment Variables
 
@@ -72,17 +72,17 @@ The shared `services/common` crates read their own variables.
 
 | Variable | Default | Description |
 |---|---|---|
-| `POLYCENTRIC_KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers. |
-| `POLYCENTRIC_KAFKA_CLUSTER_ID` | _(unset)_ | Prefix applied to topics and consumer group ids (`{id}.{name}`), so clusters can share a broker. |
-| `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Kafka `security.protocol`. |
-| `POLYCENTRIC_KAFKA_SASL_MECHANISM` | _(unset)_ | Kafka SASL mechanism, e.g. `SCRAM-SHA-256`. |
-| `POLYCENTRIC_KAFKA_SASL_USERNAME` | _(unset)_ | Kafka SASL username. |
-| `POLYCENTRIC_KAFKA_SASL_PASSWORD` | _(unset)_ | Kafka SASL password. |
-| `POLYCENTRIC_KAFKA_SSL_CA` | _(unset)_ | Kafka CA certificate, inline PEM. |
-| `POLYCENTRIC_KAFKA_SSL_CERTIFICATE` | _(unset)_ | Kafka client certificate, inline PEM. |
-| `POLYCENTRIC_KAFKA_SSL_KEY` | _(unset)_ | Kafka client key, inline PEM. |
-| `POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY` | `any` | Kafka `broker.address.family`. |
-| `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET` | `latest` | Consumer `auto.offset.reset` (used by the workers). |
+| `HARBOR_KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers. |
+| `HARBOR_KAFKA_CLUSTER_ID` | _(unset)_ | Prefix applied to topics and consumer group ids (`{id}.{name}`), so clusters can share a broker. |
+| `HARBOR_KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Kafka `security.protocol`. |
+| `HARBOR_KAFKA_SASL_MECHANISM` | _(unset)_ | Kafka SASL mechanism, e.g. `SCRAM-SHA-256`. |
+| `HARBOR_KAFKA_SASL_USERNAME` | _(unset)_ | Kafka SASL username. |
+| `HARBOR_KAFKA_SASL_PASSWORD` | _(unset)_ | Kafka SASL password. |
+| `HARBOR_KAFKA_SSL_CA` | _(unset)_ | Kafka CA certificate, inline PEM. |
+| `HARBOR_KAFKA_SSL_CERTIFICATE` | _(unset)_ | Kafka client certificate, inline PEM. |
+| `HARBOR_KAFKA_SSL_KEY` | _(unset)_ | Kafka client key, inline PEM. |
+| `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY` | `any` | Kafka `broker.address.family`. |
+| `HARBOR_KAFKA_AUTO_OFFSET_RESET` | `latest` | Consumer `auto.offset.reset` (used by the workers). |
 
 ### Telemetry
 
@@ -99,7 +99,7 @@ The integration tests run against a live server, so the server must be running f
 Ensure that your environment uses the expected trusted moderator:
 
 ```
-POLYCENTRIC_MODERATION_IDENTITY=020225a394cac01413ff43527f1644b1772d78d2cea873de1e8ae2f9c3c9f47b
+HARBOR_MODERATION_IDENTITY=020225a394cac01413ff43527f1644b1772d78d2cea873de1e8ae2f9c3c9f47b
 ```
 
 ```sh

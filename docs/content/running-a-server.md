@@ -36,7 +36,7 @@ docker compose exec -T server /app/migration fresh
 
 The bundled `compose.yml` starts PostgreSQL, RustFS (with its `polycentric-blobs`
 bucket created automatically), and the server. By default the server is published on
-host port `3000`; override it with `POLYCENTRIC_SERVER_PORT`.
+host port `3000`; override it with `HARBOR_SERVER_PORT`.
 
 Confirm it is up:
 
@@ -74,13 +74,13 @@ loads a `.env` file from the working directory if one is present.
 
 ### Server
 
-| Variable                          | Default                    | Description                                                                              |
-| --------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
-| `POLYCENTRIC_SERVER_NAME`         | `http://localhost:3000`    | Canonical URL of this server. Stamped as the source on the events it produces.           |
-| `POLYCENTRIC_ALLOW_HOSTS`         | `POLYCENTRIC_SERVER_NAME`  | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
-| `CDN_URL`                         | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
-| `POLYCENTRIC_SCRAPER_URL`         | `http://localhost:8855`    | Base URL of the internal scraper service (link-preview metadata and image proxy).        |
-| `POLYCENTRIC_MODERATION_IDENTITY` | _(unset)_                  | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
+| Variable                     | Default                    | Description                                                                              |
+| ---------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
+| `HARBOR_SERVER_NAME`         | `http://localhost:3000`    | Canonical URL of this server. Stamped as the source on the events it produces.           |
+| `HARBOR_ALLOW_HOSTS`         | `HARBOR_SERVER_NAME`  | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
+| `CDN_URL`                    | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
+| `HARBOR_SCRAPER_URL`         | `http://localhost:8855`    | Base URL of the internal scraper service (link-preview metadata and image proxy).        |
+| `HARBOR_MODERATION_IDENTITY` | _(unset)_                  | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
 
 ### Database
 
@@ -109,19 +109,19 @@ you run against AWS S3 without putting credentials in the environment directly.
 
 The server produces events to Kafka, and its background workers consume them.
 
-| Variable                                   | Default          | Description                                     |
-| ------------------------------------------ | ---------------- | ------------------------------------------------ |
-| `POLYCENTRIC_KAFKA_BROKERS`                | `localhost:9092` | Bootstrap servers.                               |
-| `POLYCENTRIC_KAFKA_CLUSTER_ID`             | _(unset)_        | Prefix for topics and group ids (`{id}.{name}`). |
-| `POLYCENTRIC_KAFKA_SECURITY_PROTOCOL`      | `PLAINTEXT`      | Kafka `security.protocol`.                       |
-| `POLYCENTRIC_KAFKA_SASL_MECHANISM`         | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
-| `POLYCENTRIC_KAFKA_SASL_USERNAME`          | _(unset)_        | SASL username.                                   |
-| `POLYCENTRIC_KAFKA_SASL_PASSWORD`          | _(unset)_        | SASL password.                                   |
-| `POLYCENTRIC_KAFKA_SSL_CA`                 | _(unset)_        | CA certificate, inline PEM.                      |
-| `POLYCENTRIC_KAFKA_SSL_CERTIFICATE`        | _(unset)_        | Client certificate, inline PEM.                  |
-| `POLYCENTRIC_KAFKA_SSL_KEY`                | _(unset)_        | Client key, inline PEM.                          |
-| `POLYCENTRIC_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
-| `POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
+| Variable                              | Default          | Description                                     |
+| ------------------------------------- | ---------------- | ------------------------------------------------ |
+| `HARBOR_KAFKA_BROKERS`                | `localhost:9092` | Bootstrap servers.                               |
+| `HARBOR_KAFKA_CLUSTER_ID`             | _(unset)_        | Prefix for topics and group ids (`{id}.{name}`). |
+| `HARBOR_KAFKA_SECURITY_PROTOCOL`      | `PLAINTEXT`      | Kafka `security.protocol`.                       |
+| `HARBOR_KAFKA_SASL_MECHANISM`         | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
+| `HARBOR_KAFKA_SASL_USERNAME`          | _(unset)_        | SASL username.                                   |
+| `HARBOR_KAFKA_SASL_PASSWORD`          | _(unset)_        | SASL password.                                   |
+| `HARBOR_KAFKA_SSL_CA`                 | _(unset)_        | CA certificate, inline PEM.                      |
+| `HARBOR_KAFKA_SSL_CERTIFICATE`        | _(unset)_        | Client certificate, inline PEM.                  |
+| `HARBOR_KAFKA_SSL_KEY`                | _(unset)_        | Client key, inline PEM.                          |
+| `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
+| `HARBOR_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
 
 ### Logging and metrics
 
@@ -135,7 +135,7 @@ The companion services (moderation, push notifications, scraper) are configured 
 same way; their variables are listed in each service's README under
 [`services/`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/services).
 
-`POLYCENTRIC_SERVER_PORT` is read by `compose.yml` to choose the published host port;
+`HARBOR_SERVER_PORT` is read by `compose.yml` to choose the published host port;
 the server process itself always binds `3000` inside the container.
 
 ## Database migrations
@@ -197,7 +197,7 @@ service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and 
 
 #### Trusting a moderation service
 Set the **single** moderation service the server trusts via an environment
-variable `POLYCENTRIC_MODERATION_IDENTITY`. It should be equal to the hex
+variable `HARBOR_MODERATION_IDENTITY`. It should be equal to the hex
 identity string of the trusted moderation service. Until the identity is
 set, clients will not be served label events alongside the feed events
 such that they can filter locally, nor will the labels they wish to omit
@@ -280,7 +280,7 @@ between explicit/suggestive.
 #### Changing the trusted service
 Any identity can sign label events for any content, even if the server only
 trusts one identity. The server stores all such label events. Thus, setting a
-new `POLYCENTRIC_MODERATION_IDENTITY` will instantly update the moderation
+new `HARBOR_MODERATION_IDENTITY` will instantly update the moderation
 labels served. Following requests will only serve the labels the server has
 stored that match the trusted identity.
 

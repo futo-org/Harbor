@@ -1,5 +1,5 @@
 import { toast } from '@/src/common/components/toast';
-import { POLYCENTRIC_STATIC_URL } from '@/src/common/constants';
+import { HARBOR_STATIC_URL } from '@/src/common/constants';
 import { isAndroid } from '@/src/common/util/platform';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -18,7 +18,7 @@ export function canSelfUpdate(): boolean {
 export function updateManifestUrl(): string {
   const variant = Constants.expoConfig?.extra?.variant;
   const channel = variant === 'staging' ? 'staging' : 'production';
-  return `${POLYCENTRIC_STATIC_URL}/apk/${channel}/latest.json`;
+  return `${HARBOR_STATIC_URL}/apk/${channel}/latest.json`;
 }
 
 function parseManifest(data: unknown): UpdateInfo | null {

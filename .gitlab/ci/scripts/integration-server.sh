@@ -144,7 +144,7 @@ if [ "$CI_MODE" = true ]; then
   docker network connect "$NETWORK" "$(self_container)"
 
   echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
@@ -158,11 +158,11 @@ if [ "$CI_MODE" = true ]; then
   SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
-    export POLYCENTRIC_TEST_SERVER="http://${SERVER_IP}:3000"
+    export HARBOR_TEST_SERVER="http://${SERVER_IP}:3000"
     echo "    server IP: ${SERVER_IP}"
   else
-    export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
-    echo "    (no server IP found; using ${POLYCENTRIC_TEST_SERVER})"
+    export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
+    echo "    (no server IP found; using ${HARBOR_TEST_SERVER})"
   fi
 
   echo "    waiting for server (port ${SERVER_HOST}:3000)…"
@@ -192,7 +192,7 @@ else
   echo "    migrations applied"
 
   echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
   export DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
   export CONTENT_BLOB_OS_BUCKET="${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
@@ -201,9 +201,9 @@ else
   export CONTENT_BLOB_OS_ACCESS_KEY="${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
   export CONTENT_BLOB_OS_SECRET_KEY="${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
-  export POLYCENTRIC_KAFKA_BROKERS="${POLYCENTRIC_KAFKA_BROKERS:-localhost:9092}"
+  export HARBOR_KAFKA_BROKERS="${HARBOR_KAFKA_BROKERS:-localhost:9092}"
   # The test crate reads this to know where to reach the server.
-  export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
+  export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
 
   cargo run -p server &
   SERVER_PID=$!

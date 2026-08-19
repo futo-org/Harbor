@@ -27,8 +27,8 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     } else {
@@ -38,7 +38,7 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
 
       return Result.ok(
         `https://discord.com/api/oauth2/authorize?client_id=${
-          process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID
+          process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID
         }&redirect_uri=${redirectUri}&response_type=code&scope=identify&state=${encodeURIComponent(
           JSON.stringify({ harborSecret }),
         )}`,
@@ -50,10 +50,10 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
     data: DiscordTokenRequest,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET ===
+      process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_SECRET ===
         undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -76,9 +76,9 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
         const resp = await client.post(
           'https://discord.com/api/oauth2/token',
           new URLSearchParams({
-            client_id: process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID,
+            client_id: process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID,
             client_secret:
-              process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET,
+              process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_SECRET,
             grant_type: 'authorization_code',
             redirect_uri: redirectUri,
             code: data.code,

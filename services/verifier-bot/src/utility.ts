@@ -123,7 +123,7 @@ export function slug(schemaName: string): string {
 }
 
 export function getCallbackForPlatform(schemaName: string, uriEncode = false) {
-  const url = `${process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN}/platforms/${slug(
+  const url = `${process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN}/platforms/${slug(
     schemaName,
   )}/oauth/callback`;
   return uriEncode ? encodeURIComponent(url) : url;

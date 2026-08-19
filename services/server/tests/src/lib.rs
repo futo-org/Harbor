@@ -19,9 +19,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::mem::take;
 
-/// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
+/// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
-    std::env::var("POLYCENTRIC_TEST_SERVER")
+    std::env::var("HARBOR_TEST_SERVER")
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
@@ -742,7 +742,7 @@ pub fn bundle_signature(b: &EventBundle) -> Vec<u8> {
 }
 
 /// Deterministic signing key for the test moderator. The server must be
-/// started with `POLYCENTRIC_MODERATION_IDENTITY` set to
+/// started with `HARBOR_MODERATION_IDENTITY` set to
 /// [`test_moderator_identity()`] for these tests to pass.
 pub fn test_moderator_key() -> SigningKey {
     let seed = sha256(b"polycentric-test-moderator-seed-2026");
@@ -752,7 +752,7 @@ pub fn test_moderator_key() -> SigningKey {
 }
 
 /// Identity string of the test moderator — the value that must be set as
-/// `POLYCENTRIC_MODERATION_IDENTITY` when starting the server.
+/// `HARBOR_MODERATION_IDENTITY` when starting the server.
 pub fn test_moderator_identity() -> String {
     let key = test_moderator_key();
     let initial = Identity {

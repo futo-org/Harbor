@@ -365,7 +365,7 @@ verifier-bot-tests:
       artifacts: true
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'
-    POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends chromium python3 make g++ && rm -rf /var/lib/apt/lists/*
     - npm install -g pnpm@10

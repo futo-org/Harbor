@@ -25,7 +25,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# DATABASE_URL, POLYCENTRIC_KAFKA_*, CONTENT_BLOB_OS_*, PhotoDNA config, … —
+# DATABASE_URL, HARBOR_KAFKA_*, CONTENT_BLOB_OS_*, PhotoDNA config, … —
 # put secrets in a Secret referenced via envFrom.
 env: []
 envFrom: []

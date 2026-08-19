@@ -38,7 +38,7 @@ class KickTextVerifier extends TextVerifier {
     this.puppeteerBrowser = await puppeteer.launch({
       headless: true,
       executablePath:
-        process.env.POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH,
+        process.env.HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
   }

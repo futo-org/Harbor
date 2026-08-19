@@ -35,8 +35,8 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -53,7 +53,7 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
       url.searchParams.append('response_type', 'code');
       url.searchParams.append(
         'client_id',
-        process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID,
+        process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID,
       );
       url.searchParams.append('redirect_uri', callbackUrl);
 
@@ -75,8 +75,8 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
     data: PatreonOAuthCallbackData,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -101,9 +101,9 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
         new URLSearchParams({
           code: data.code,
           grant_type: 'authorization_code',
-          client_id: process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID,
+          client_id: process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID,
           client_secret:
-            process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_SECRET,
+            process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET,
           redirect_uri: callbackUrl,
         }),
         {
@@ -181,8 +181,8 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
     claimFields: ClaimField[],
   ): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -298,8 +298,8 @@ class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
 
   public async healthCheck(): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg(
         'Verifier not configured: Missing Patreon credentials',

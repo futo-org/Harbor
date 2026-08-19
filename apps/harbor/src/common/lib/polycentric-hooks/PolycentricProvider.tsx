@@ -43,15 +43,15 @@ const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
 /**
  * Comma-separated list of gRPC-web server URLs the client seeds
- * `client.servers` with. Read from `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`
+ * `client.servers` with. Read from `EXPO_PUBLIC_HARBOR_SEED_SERVERS`
  * (the runtime value from server.js wins over the build-time one); falls
  * back to `http://<host>:3000` for local dev.
  */
 export const DEFAULT_SEED_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
-      'EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS',
-      process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS,
+      'EXPO_PUBLIC_HARBOR_SEED_SERVERS',
+      process.env.EXPO_PUBLIC_HARBOR_SEED_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -67,15 +67,15 @@ export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
 /**
  * Comma-separated list of gRPC-web URLs for the notification service the
  * client registers push tokens with. Read from
- * `EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS`; falls back to
+ * `EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS`; falls back to
  * `http://<host>:3001` for local dev (the notifications service's default
  * gRPC port).
  */
 export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
-      'EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS',
-      process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS,
+      'EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS',
+      process.env.EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -88,14 +88,14 @@ export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
 /**
  * Comma-separated list of verifier-bot base URLs that 'Platform' claims
  * request verification from. Read from
- * `EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS`; falls back to
+ * `EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS`; falls back to
  * `http://<host>:3002` for local dev (the verifier bot's default port).
  */
 export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
-      'EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS',
-      process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS,
+      'EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS',
+      process.env.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw

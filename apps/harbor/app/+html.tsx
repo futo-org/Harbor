@@ -19,7 +19,7 @@ export default function Root({ children }: PropsWithChildren) {
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input
           dangerouslySetInnerHTML={{
-            __html: 'globalThis.__POLYCENTRIC_ENV__ = "__RUNTIME_ENV__";',
+            __html: 'globalThis.__HARBOR_ENV__ = "__RUNTIME_ENV__";',
           }}
         />
         <style

@@ -12,23 +12,23 @@ export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 
 /**
  * Public web base URL for this app, used to build shareable links (e.g. to a
- * verification claim). Override with EXPO_PUBLIC_POLYCENTRIC_APP_URL; trailing
+ * verification claim). Override with EXPO_PUBLIC_HARBOR_APP_URL; trailing
  * slashes are stripped so callers can append paths directly.
  */
-export const POLYCENTRIC_APP_URL = (
+export const HARBOR_APP_URL = (
   publicEnv(
-    'EXPO_PUBLIC_POLYCENTRIC_APP_URL',
-    process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
+    'EXPO_PUBLIC_HARBOR_APP_URL',
+    process.env.EXPO_PUBLIC_HARBOR_APP_URL,
   ) ?? 'https://harbor.social'
 ).replace(/\/+$/, '');
 
 /**
  * Public base URL of the static-assets bucket. APK update feeds live under
- * `apk/<channel>/`. Override with EXPO_PUBLIC_POLYCENTRIC_STATIC_URL.
+ * `apk/<channel>/`. Override with EXPO_PUBLIC_HARBOR_STATIC_URL.
  */
-export const POLYCENTRIC_STATIC_URL = (
+export const HARBOR_STATIC_URL = (
   publicEnv(
-    'EXPO_PUBLIC_POLYCENTRIC_STATIC_URL',
-    process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
+    'EXPO_PUBLIC_HARBOR_STATIC_URL',
+    process.env.EXPO_PUBLIC_HARBOR_STATIC_URL,
   ) ?? 'https://static.harbor.social'
 ).replace(/\/+$/, '');

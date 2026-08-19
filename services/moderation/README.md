@@ -12,16 +12,16 @@ All service variables are read and validated once at startup by
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
-| `POLYCENTRIC_MODERATION_DATABASE_SCHEMA` | `moderation` | Postgres schema owning this service's tables. |
-| `POLYCENTRIC_MODERATION_SIGNING_KEY` | _(required)_ | Hex-encoded 32-byte ed25519 seed labels events are signed with. |
-| `POLYCENTRIC_MODERATION_IDENTITY` | _(required)_ | Hex identity string this service publishes under. |
-| `POLYCENTRIC_MODERATION_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to bootstrap from and publish to. |
-| `POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY` | _(unset)_ | Azure AI Content Safety API key. Unset disables content scoring; must be set together with the previous variable. |
-| `POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT` | _(unset)_ | Azure AI Content Safety resource endpoint. Unset disables content scoring; must be set together with the following variable. |
-| `POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION` | `2024-09-01` | api-version for the text/image endpoints. |
-| `POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION` | `2024-09-15-preview` | api-version for the multimodal (`imageWithText`) endpoint. |
-| `POLYCENTRIC_PHOTODNA_KEY` | _(unset)_ | PhotoDNA subscription key. Unset disables CSAM scanning and the service moderates with Azure alone. |
-| `POLYCENTRIC_PHOTODNA_ENDPOINT` | `https://api.microsoftmoderator.com/photodna/v1.0` | PhotoDNA endpoint. |
+| `HARBOR_MODERATION_DATABASE_SCHEMA` | `moderation` | Postgres schema owning this service's tables. |
+| `HARBOR_MODERATION_SIGNING_KEY` | _(required)_ | Hex-encoded 32-byte ed25519 seed labels events are signed with. |
+| `HARBOR_MODERATION_IDENTITY` | _(required)_ | Hex identity string this service publishes under. |
+| `HARBOR_MODERATION_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to bootstrap from and publish to. |
+| `HARBOR_AZURE_CONTENT_SAFETY_KEY` | _(unset)_ | Azure AI Content Safety API key. Unset disables content scoring; must be set together with the previous variable. |
+| `HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT` | _(unset)_ | Azure AI Content Safety resource endpoint. Unset disables content scoring; must be set together with the following variable. |
+| `HARBOR_AZURE_CONTENT_SAFETY_API_VERSION` | `2024-09-01` | api-version for the text/image endpoints. |
+| `HARBOR_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION` | `2024-09-15-preview` | api-version for the multimodal (`imageWithText`) endpoint. |
+| `HARBOR_PHOTODNA_KEY` | _(unset)_ | PhotoDNA subscription key. Unset disables CSAM scanning and the service moderates with Azure alone. |
+| `HARBOR_PHOTODNA_ENDPOINT` | `https://api.microsoftmoderator.com/photodna/v1.0` | PhotoDNA endpoint. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).
@@ -68,12 +68,12 @@ follows:
 ```sh
 docker compose up -d --build server
 ./services/moderation/create-local-identity.sh
-docker compose up -d --build server   # picks up POLYCENTRIC_MODERATION_IDENTITY
+docker compose up -d --build server   # picks up HARBOR_MODERATION_IDENTITY
 docker compose --profile moderation up -d --build moderation
 ```
 
-The script writes `POLYCENTRIC_MODERATION_IDENTITY` and
-`POLYCENTRIC_MODERATION_SIGNING_KEY` into the repository-root `.env`, which
+The script writes `HARBOR_MODERATION_IDENTITY` and
+`HARBOR_MODERATION_SIGNING_KEY` into the repository-root `.env`, which
 `compose.yml` reads. The server restart is required to read the newly created
 identity.
 
@@ -97,7 +97,7 @@ nothing.
 
 `tests/csam_pipeline.rs` publishes a post with an image to the server which
 is consumed by an instance of the moderation service, and flagged by a mock
-PhotoDNA server connected via `POLYCENTRIC_PHOTODNA_ENDPOINT`. It asserts the
+PhotoDNA server connected via `HARBOR_PHOTODNA_ENDPOINT`. It asserts the
 match purges the image and publishes a `CHILD_SAFETY` report.
 
 ### PhotoDNA real-API match
@@ -107,8 +107,8 @@ PhotoDNA-provided test image to the real `Match` endpoint and asserts a match.
 Supply the key and image via the environment.
 
 ```sh
-POLYCENTRIC_PHOTODNA_KEY=<subscription key> \
-POLYCENTRIC_PHOTODNA_TEST_IMAGES=/absolute/path/to/image/directory \
+HARBOR_PHOTODNA_KEY=<subscription key> \
+HARBOR_PHOTODNA_TEST_IMAGES=/absolute/path/to/image/directory \
   cargo test -p moderation-service photodna_real_api_reports_match -- --ignored --nocapture
 ```
 

@@ -23,7 +23,7 @@ import { slug } from './utility.js';
 import { TextVerifier } from './verifier.js';
 
 const TEST_SERVER = (
-  process.env.POLYCENTRIC_VERIFIER_BOT_SERVERS || 'https://east.polycentric.dev'
+  process.env.HARBOR_VERIFIER_BOT_SERVERS || 'https://east.polycentric.dev'
 )
   .split(',')[0]
   .trim();

@@ -682,7 +682,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
 }
 
 // Following are moderation / label integration tests: The server must
-// be started with `POLYCENTRIC_MODERATION_IDENTITY` set to the value
+// be started with `HARBOR_MODERATION_IDENTITY` set to the value
 // returned by `test_moderator_identity()`.
 
 /// Ensures the moderator's genesis identity event is published exactly once

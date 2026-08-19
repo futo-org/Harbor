@@ -8,7 +8,7 @@ export function publicEnv(
   buildTimeValue?: string,
 ): string | undefined {
   const runtime = (
-    globalThis as { __POLYCENTRIC_ENV__?: Record<string, string | undefined> }
-  ).__POLYCENTRIC_ENV__;
+    globalThis as { __HARBOR_ENV__?: Record<string, string | undefined> }
+  ).__HARBOR_ENV__;
   return runtime?.[key] ?? buildTimeValue;
 }

@@ -47,17 +47,17 @@ const HOUR: u64 = 3_600_000;
 const UNTRUSTED_REPORT_GRACE: Duration = Duration::from_secs(10);
 
 fn server_endpoint() -> String {
-    var("POLYCENTRIC_TEST_SERVER").unwrap_or("http://localhost:3000".to_string())
+    var("HARBOR_TEST_SERVER").unwrap_or("http://localhost:3000".to_string())
 }
 fn database_endpoint() -> String {
-    var("POLYCENTRIC_TEST_DATABASE_URL")
+    var("HARBOR_TEST_DATABASE_URL")
         .unwrap_or("postgres://postgres:testing@localhost:5432".to_string())
 }
 fn os_endpoint() -> String {
-    var("POLYCENTRIC_TEST_OS_ENDPOINT").unwrap_or("http://localhost:9000".to_string())
+    var("HARBOR_TEST_OS_ENDPOINT").unwrap_or("http://localhost:9000".to_string())
 }
 fn kafka_endpoint() -> String {
-    var("POLYCENTRIC_TEST_KAFKA_BROKERS").unwrap_or("localhost:9092".to_string())
+    var("HARBOR_TEST_KAFKA_BROKERS").unwrap_or("localhost:9092".to_string())
 }
 
 #[tokio::test]
@@ -157,11 +157,11 @@ fn spawn_moderation_service(
         .env("CONTENT_BLOB_OS_FORCE_PATH_STYLE", "true")
         .env("CONTENT_BLOB_OS_ACCESS_KEY", "rustfsadmin")
         .env("CONTENT_BLOB_OS_SECRET_KEY", "rustfsadmin")
-        .env("POLYCENTRIC_KAFKA_BROKERS", kafka_endpoint())
-        .env("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET", "earliest")
-        .env("POLYCENTRIC_MODERATION_SIGNING_KEY", service_seed_hex)
-        .env("POLYCENTRIC_MODERATION_IDENTITY", service_identity)
-        .env("POLYCENTRIC_MODERATION_SERVERS", server_endpoint())
+        .env("HARBOR_KAFKA_BROKERS", kafka_endpoint())
+        .env("HARBOR_KAFKA_AUTO_OFFSET_RESET", "earliest")
+        .env("HARBOR_MODERATION_SIGNING_KEY", service_seed_hex)
+        .env("HARBOR_MODERATION_IDENTITY", service_identity)
+        .env("HARBOR_MODERATION_SERVERS", server_endpoint())
         .env("RUST_LOG", "info")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

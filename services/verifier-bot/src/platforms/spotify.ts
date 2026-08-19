@@ -20,8 +20,8 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -29,7 +29,7 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
     const redirectUri = getCallbackForPlatform(this.platform, true);
     return Result.ok(
       `https://accounts.spotify.com/authorize?response_type=code&client_id=${encodeURIComponent(
-        process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID,
+        process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID,
       )}&redirect_uri=${redirectUri}`,
     );
   }
@@ -38,10 +38,10 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
     data: SpotifyTokenRequest,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ===
+      process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ===
         undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -59,9 +59,9 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
       data: qs.stringify(fdata),
       headers: {
         Authorization: `Basic ${Buffer.from(
-          process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID +
+          process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID +
             ':' +
-            process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET,
+            process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET,
         ).toString('base64')}`,
         'content-type': 'application/x-www-form-urlencoded',
       },

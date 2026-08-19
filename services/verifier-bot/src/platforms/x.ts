@@ -35,17 +35,17 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
 
   public async getOAuthURL(): Promise<Result<XOAuthURLResult>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      process.env.HARBOR_VERIFIER_BOT_X_API_KEY === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_X_API_SECRET === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
 
     try {
       const client = new TwitterApi({
-        appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY,
-        appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET,
+        appKey: process.env.HARBOR_VERIFIER_BOT_X_API_KEY,
+        appSecret: process.env.HARBOR_VERIFIER_BOT_X_API_SECRET,
       });
 
       const callbackUrl = getCallbackForPlatform(this.platform);
@@ -82,8 +82,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
     data: XOAuthCallbackData,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined
+      process.env.HARBOR_VERIFIER_BOT_X_API_KEY === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_X_API_SECRET === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -97,8 +97,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
 
     try {
       const client = new TwitterApi({
-        appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY!,
-        appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET!,
+        appKey: process.env.HARBOR_VERIFIER_BOT_X_API_KEY!,
+        appSecret: process.env.HARBOR_VERIFIER_BOT_X_API_SECRET!,
         accessToken: data.oauth_token,
         accessSecret: data.secret,
       });
@@ -134,8 +134,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
     claimFields: ClaimField[],
   ): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined
+      process.env.HARBOR_VERIFIER_BOT_X_API_KEY === undefined ||
+      process.env.HARBOR_VERIFIER_BOT_X_API_SECRET === undefined
     ) {
       return Result.errMsg('Verifier not configured: Missing X credentials');
     }
@@ -168,8 +168,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
     const id = claimFields[0].value;
 
     const client = new TwitterApi({
-      appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY!,
-      appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET!,
+      appKey: process.env.HARBOR_VERIFIER_BOT_X_API_KEY!,
+      appSecret: process.env.HARBOR_VERIFIER_BOT_X_API_SECRET!,
       accessToken: payload.token,
       accessSecret: payload.secret,
     });
