@@ -178,10 +178,12 @@ where
     let config = HydrateConfig {
         post: true,
         delete: true,
+        reaction: true,
         repost: true,
-        // TODO: currently this matches the old version (and the docs), but what
-        // about reaction, reports and labels? Do we want to include those?
-        ..Default::default()
+        report: false,
+        labels: true,
+        verification_verify: false,
+        verification_target: false,
     };
     hydrate(ctx, rows, &config).await
 }
