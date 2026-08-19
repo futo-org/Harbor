@@ -1,4 +1,5 @@
 import { Fonts } from '@/src/common/assets';
+import { isWeb } from '@/src/common/util/platform';
 import { useFonts } from 'expo-font';
 import {
   DefaultTheme,
@@ -28,10 +29,14 @@ export const Context = createContext<ThemeContextValue | undefined>(undefined);
 Context.displayName = 'PolycentricThemeContext';
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [fontsLoaded, fontError] = useFonts({
-    NotoSans: Fonts.NotoSans,
-    'NotoSans-Italic': Fonts['NotoSans-Italic'],
-  });
+  const [fontsLoaded, fontError] = useFonts(
+    isWeb
+      ? {}
+      : {
+          NotoSans: Fonts.NotoSans,
+          'NotoSans-Italic': Fonts['NotoSans-Italic'],
+        },
+  );
 
   const colorScheme = useColorScheme();
   const storedTheme = useSettings((s) => s.theme);
