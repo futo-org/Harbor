@@ -89,7 +89,7 @@ pub fn finalize_fetch(
     Fetched { rows, page_info }
 }
 
-fn create_event_created_at_marker(
+pub fn create_event_created_at_marker(
     (event, _): &EventWithContentRow,
 ) -> Marker<EventCreatedAt> {
     Marker {
