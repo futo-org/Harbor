@@ -29,8 +29,8 @@ Context.displayName = 'PolycentricThemeContext';
 
 export function ThemeProvider({ children }: PropsWithChildren) {
   const [fontsLoaded, fontError] = useFonts({
-    Inter: Fonts.Inter,
-    'Inter-Italic': Fonts['Inter-Italic'],
+    NotoSans: Fonts.NotoSans,
+    'NotoSans-Italic': Fonts['NotoSans-Italic'],
   });
 
   const colorScheme = useColorScheme();

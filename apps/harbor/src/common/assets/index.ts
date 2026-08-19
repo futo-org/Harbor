@@ -1,4 +1,4 @@
 export const Fonts = {
-  Inter: require('./fonts/Inter.ttf'),
-  'Inter-Italic': require('./fonts/Inter-Italic.ttf'),
+  NotoSans: require('./fonts/NotoSans.ttf'),
+  'NotoSans-Italic': require('./fonts/NotoSans-Italic.ttf'),
 } as const;
