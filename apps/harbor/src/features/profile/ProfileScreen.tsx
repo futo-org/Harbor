@@ -36,7 +36,6 @@ import {
   useProfileContext,
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { truncateText } from '@/src/common/util/truncateText';
@@ -167,11 +166,6 @@ function ProfileScreenContent() {
   const handleBack = useCallback(() => {
     router.back();
   }, []);
-
-  const refresh = useCallback(() => {
-    identityFeed.refresh();
-  }, [identityFeed.refresh]);
-  useFocusedRefresh(refresh);
 
   // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
   // array reference on every render defeats the memoisation.

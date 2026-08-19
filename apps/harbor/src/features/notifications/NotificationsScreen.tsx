@@ -1,12 +1,14 @@
 import { Text } from '@/src/common/components';
-import { List } from '@/src/common/components/List';
+import { List, type ListRef } from '@/src/common/components/List';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
+import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms } from '@/src/common/theme';
-import { RefreshControl, View } from 'react-native';
+import { useRef } from 'react';
+import { View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
 import type { NotificationData } from './utils';
@@ -18,16 +20,25 @@ export default function NotificationsScreen() {
   const enabled = useEagerLoad();
   const { items, isLoading, isRefreshing, refresh } =
     useListNotifications(enabled);
-  useFocusedRefresh(refresh);
+  const listRef = useRef<ListRef>(null);
+  // A nav re-tap scrolls back to the top and refreshes.
+  useFocusedRefresh(() => {
+    listRef.current?.scrollToTop();
+    refresh();
+  });
 
   return (
     <Screen>
       <Screen.PrimaryColumn>
         <List<NotificationData>
+          ref={listRef}
           data={items}
           refreshControl={
             isWeb ? undefined : (
-              <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
+              <PullRefreshControl
+                refreshing={isRefreshing}
+                onRefresh={refresh}
+              />
             )
           }
           keyExtractor={(notification) => notification.id}
