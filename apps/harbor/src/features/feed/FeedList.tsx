@@ -1,10 +1,5 @@
 import { forwardRef, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  InteractionManager,
-  RefreshControl,
-  View,
-} from 'react-native';
+import { ActivityIndicator, InteractionManager, View } from 'react-native';
 import {
   List,
   type ListProps,
@@ -15,6 +10,7 @@ import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { FeedError } from './FeedError';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
@@ -127,7 +123,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       drawDistance={500}
       refreshControl={
         !isWeb ? (
-          <RefreshControl
+          <PullRefreshControl
             refreshing={feed.isRefreshing}
             onRefresh={feed.refresh}
           />

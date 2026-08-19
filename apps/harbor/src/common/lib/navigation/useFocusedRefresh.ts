@@ -17,9 +17,10 @@ export function emitFocusedRefresh(): void {
 }
 
 /**
- * If the component is focused and a refresh is emitted, the hook is called
+ * If the component is focused and a refresh is emitted, the hook is called.
+ * Pager pages pass `enabled` to claim the slot only while shown.
  */
-export function useFocusedRefresh(refresh: () => void): void {
+export function useFocusedRefresh(refresh: () => void, enabled = true): void {
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
 
@@ -27,12 +28,13 @@ export function useFocusedRefresh(refresh: () => void): void {
   // guarantees this aligns with the screen's actual focus state.
   useFocusEffect(
     useCallback(() => {
+      if (!enabled) return;
       const fn = () => refreshRef.current();
       currentRefresh = fn;
       return () => {
         if (currentRefresh === fn) currentRefresh = null;
       };
-    }, []),
+    }, [enabled]),
   );
 
   const navigation = useNavigation();
@@ -41,10 +43,10 @@ export function useFocusedRefresh(refresh: () => void): void {
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isWeb || !enabled) return;
       return navigationRef.current.addListener('tabPress' as never, () => {
         if (navigationRef.current.isFocused()) emitFocusedRefresh();
       });
-    }, []),
+    }, [enabled]),
   );
 }

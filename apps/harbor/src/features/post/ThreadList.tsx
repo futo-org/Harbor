@@ -36,6 +36,8 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
     <List
       {...rest}
       data={items}
+      // Keeps the subject anchored while parents load in above it.
+      maintainVisibleContentPosition={{ disabled: false }}
       initialScrollIndex={subjectIndex > 0 ? subjectIndex : undefined}
       onLoad={() => setIsFirstLayoutComplete(true)}
       keyExtractor={(p) => p.id}

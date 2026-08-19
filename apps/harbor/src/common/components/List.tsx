@@ -42,6 +42,10 @@ const WEB_END_REACHED_BUFFER = 12;
 
 export type { FlashListProps, ListRenderItem, ListRenderItemInfo };
 
+// FlashList re-anchors to the old first row when items are prepended;
+// disabled so a refresh at the top shows the new content.
+const MAINTAIN_VISIBLE_CONTENT_POSITION_DISABLED = { disabled: true };
+
 // A list section header row, with an optional explanatory tooltip.
 export function SectionHeader({
   title,
@@ -113,6 +117,7 @@ function NativeList<T>({
   onScroll: _ignoredOnScroll,
   listRef,
   scrollY,
+  maintainVisibleContentPosition = MAINTAIN_VISIBLE_CONTENT_POSITION_DISABLED,
   ...rest
 }: ListProps<T> & { listRef?: React.Ref<ListRef> }) {
   const ref = useRef<FlashListRef<T>>(null);
@@ -177,6 +182,7 @@ function NativeList<T>({
     <AnimatedFlashList
       ref={ref as React.Ref<FlashListRef<unknown>>}
       {...(rest as FlashListProps<unknown>)}
+      maintainVisibleContentPosition={maintainVisibleContentPosition}
       refreshControl={adjustedRefreshControl}
       onScroll={onScroll}
       scrollEventThrottle={16}

@@ -2,7 +2,7 @@
 //! Follow events, tombstone-filtered, newest first.
 
 use crate::data::hydration::HydrationState;
-use crate::data::{CursorFilter, pipeline};
+use crate::data::{CursorFilter, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
@@ -24,7 +24,7 @@ pub enum Direction {
 }
 
 struct Params {
-    common: feeds_pipeline::Params,
+    pagination: PaginationParams<EventCreatedAt>,
     identity: String,
     direction: Direction,
 }
@@ -37,7 +37,7 @@ struct Filtered {
 pub async fn handle(
     ctx: &ServiceContext,
     identity: String,
-    page_params: &Option<PageParams>,
+    page_params: Option<&PageParams>,
     direction: Direction,
 ) -> Result<ListFollowsResponse, Status> {
     if identity.is_empty() {
@@ -45,11 +45,7 @@ pub async fn handle(
     }
 
     let params = Params {
-        common: feeds_pipeline::Params::from_req_params(
-            page_params,
-            vec![],
-            None,
-        )?,
+        pagination: PaginationParams::from_req_params(page_params)?,
         identity,
         direction,
     };
@@ -60,8 +56,8 @@ pub async fn handle(
 async fn list_page(
     db: &DbConn,
     params: &Params,
-    limit: u64,
-    cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+    limit: u32,
+    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
 ) -> Result<Vec<EventWithContentRow>, sea_orm::DbErr> {
     match params.direction {
         Direction::Following => {
@@ -89,16 +85,22 @@ async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
-    let rows = list_page(
+    let mut rows = list_page(
         &ctx.db,
         params,
-        params.common.limit + 1, // Check for next page
-        &params.common.cursor_filter,
+        params.pagination.limit + 1, // Check for next page
+        params.pagination.cursor_filter.as_ref(),
     )
     .await
     .map_err(map_db_err)?;
 
-    Ok(feeds_pipeline::finalize_fetch(rows, &params.common))
+    let page_info = pipeline::finalize_fetch(
+        &mut rows,
+        params.pagination.cursor_filter.as_ref(),
+        params.pagination.limit,
+        feeds_pipeline::create_event_created_at_marker,
+    );
+    Ok(feeds_pipeline::Fetched { rows, page_info })
 }
 
 async fn hydrate(
@@ -259,7 +261,7 @@ mod tests {
         let response = handle(
             &ctx,
             "target".to_string(),
-            &Some(PageParams {
+            Some(&PageParams {
                 limit: Some(2),
                 backward_token: None,
                 forward_token: None,
@@ -289,7 +291,7 @@ mod tests {
         let response = handle(
             &ctx,
             "target".to_string(),
-            &Some(PageParams {
+            Some(&PageParams {
                 limit: Some(2),
                 backward_token: None,
                 forward_token: None,
@@ -314,7 +316,7 @@ mod tests {
         let ctx = ctx(db).await;
 
         let response =
-            handle(&ctx, "target".to_string(), &None, Direction::Followers)
+            handle(&ctx, "target".to_string(), None, Direction::Followers)
                 .await
                 .unwrap();
 
@@ -343,7 +345,7 @@ mod tests {
         let ctx = ctx(db).await;
 
         let result =
-            handle(&ctx, String::new(), &None, Direction::Followers).await;
+            handle(&ctx, String::new(), None, Direction::Followers).await;
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }

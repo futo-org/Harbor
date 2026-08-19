@@ -98,53 +98,7 @@ impl Query {
 
         Ok(row.is_some())
     }
-}
 
-/// Obtains the targets of graph events authored by `caller`. The `extract`
-/// function filters for specific types of graph events.
-async fn list_graph_targets(
-    ctx: &ServiceContext,
-    caller: &str,
-    extract: fn(&ContentModel::Model) -> Option<String>,
-) -> Result<Vec<String>, Status> {
-    let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
-        .select_also(ContentModel::Entity)
-        .join(JoinType::InnerJoin, content_join())
-        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
-        .filter(EventModel::Column::Identity.eq(caller))
-        .all(&ctx.db)
-        .await
-        .map_err(map_db_err)?;
-
-    let keys: Vec<TargetEventKey> = rows
-        .iter()
-        .map(|(event, _)| TargetEventKey::of(event))
-        .collect();
-    let raw_tombstones =
-        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
-            .await
-            .map_err(map_db_err)?;
-    let valid_tombstones =
-        tombstone::validate_tombstones(ctx, raw_tombstones).await?;
-
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut result: Vec<String> = Vec::new();
-    for (event, content) in rows {
-        let key = TargetEventKey::of(&event);
-        if valid_tombstones.contains_key(&key) {
-            continue;
-        }
-        let Some(content) = content else { continue };
-        if let Some(identity) = extract(&content)
-            && seen.insert(identity.clone())
-        {
-            result.push(identity);
-        }
-    }
-    Ok(result)
-}
-
-impl Query {
     /// Count of distinct identities `identity` follows (tombstone-aware).
     ///
     /// TODO: same inefficiency as `list_followed_identities` — a
@@ -194,8 +148,8 @@ impl Query {
     pub async fn list_following_events(
         db: &DbConn,
         identity: &str,
-        limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        limit: u32,
+        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(EventModel::Column::Identity.eq(identity));
@@ -207,13 +161,57 @@ impl Query {
     pub async fn list_followers_events(
         db: &DbConn,
         identity: &str,
-        limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        limit: u32,
+        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(ContentFollowModel::Column::IdentityId.eq(identity));
         page_follow_events(db, query, limit, cursor_filter).await
     }
+}
+
+/// Obtains the targets of graph events authored by `caller`. The `extract`
+/// function filters for specific types of graph events.
+async fn list_graph_targets(
+    ctx: &ServiceContext,
+    caller: &str,
+    extract: fn(&ContentModel::Model) -> Option<String>,
+) -> Result<Vec<String>, Status> {
+    let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
+        .select_also(ContentModel::Entity)
+        .join(JoinType::InnerJoin, content_join())
+        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Identity.eq(caller))
+        .all(&ctx.db)
+        .await
+        .map_err(map_db_err)?;
+
+    let keys: Vec<TargetEventKey> = rows
+        .iter()
+        .map(|(event, _)| TargetEventKey::of(event))
+        .collect();
+    let raw_tombstones =
+        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
+            .await
+            .map_err(map_db_err)?;
+    let valid_tombstones =
+        tombstone::validate_tombstones(ctx, raw_tombstones).await?;
+
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut result: Vec<String> = Vec::new();
+    for (event, content) in rows {
+        let key = TargetEventKey::of(&event);
+        if valid_tombstones.contains_key(&key) {
+            continue;
+        }
+        let Some(content) = content else { continue };
+        if let Some(identity) = extract(&content)
+            && seen.insert(identity.clone())
+        {
+            result.push(identity);
+        }
+    }
+    Ok(result)
 }
 
 /// Graph events joined to their Follow content. The inner joins keep
@@ -240,12 +238,11 @@ fn follow_join() -> RelationDef {
 async fn page_follow_events(
     db: &DbConn,
     query: SelectTwo<EventModel::Entity, ContentModel::Entity>,
-    limit: u64,
-    cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+    limit: u32,
+    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
 ) -> Result<Vec<EventWithContentRow>, DbErr> {
-    let cursor_filter = cursor_filter
-        .as_ref()
-        .unwrap_or(&CursorFilter::Forward(Cursor::Start));
+    let cursor_filter =
+        cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
     let mut sea_cursor = query
         .cursor_by((EventModel::Column::CreatedAt, EventModel::Column::Id));
@@ -260,7 +257,7 @@ async fn page_follow_events(
                 }
                 Cursor::End => return Ok(vec![]),
             }
-            sea_cursor.first(limit);
+            sea_cursor.first(limit.into());
         }
         CursorFilter::Backward(cur) => {
             match cur {
@@ -270,7 +267,7 @@ async fn page_follow_events(
                 }
                 Cursor::End => {}
             }
-            sea_cursor.last(limit);
+            sea_cursor.last(limit.into());
         }
     }
 
@@ -495,7 +492,7 @@ mod tests {
             ]])
             .into_connection();
 
-        let rows = Query::list_followers_events(&db, "target", 10, &None)
+        let rows = Query::list_followers_events(&db, "target", 10, None)
             .await
             .unwrap();
         let identities: Vec<&str> =
@@ -512,7 +509,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Forward(Cursor::End)),
+            Some(&CursorFilter::Forward(Cursor::End)),
         )
         .await
         .unwrap();
@@ -527,7 +524,7 @@ mod tests {
             &db,
             "alice",
             10,
-            &Some(CursorFilter::Backward(Cursor::Start)),
+            Some(&CursorFilter::Backward(Cursor::Start)),
         )
         .await
         .unwrap();
