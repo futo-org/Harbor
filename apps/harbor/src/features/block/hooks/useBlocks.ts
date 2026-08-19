@@ -13,12 +13,6 @@ import { create } from 'zustand';
 type BlocksState = {
   blocks: Map<string, boolean>;
 
-  /**
-   * Bumped every time the blocked set changes, so that derived state can
-   * check if it is stale.
-   */
-  version: number;
-
   isBlocked: (identity: string) => boolean;
   addBlock: (client: PolycentricClient, identity: string) => Promise<void>;
   removeBlock: (client: PolycentricClient, identity: string) => Promise<void>;
@@ -42,12 +36,10 @@ function hasSameIdentities(
  * react native components related to managing that block state.
  */
 const useBlocks = create<BlocksState>((set, get) => {
-  const setBlocks = (blocks: Map<string, boolean>) =>
-    set((state) => ({ blocks, version: state.version + 1 }));
+  const setBlocks = (blocks: Map<string, boolean>) => set({ blocks });
 
   return {
     blocks: new Map(),
-    version: 0,
 
     isBlocked(identity) {
       return !!get().blocks.get(identity);

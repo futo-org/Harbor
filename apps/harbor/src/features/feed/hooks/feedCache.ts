@@ -10,7 +10,6 @@ import {
   type QueryKey,
   useQueryStore,
 } from '@/src/common/query/hooks/useQuery';
-import useBlocks from '@/src/features/block/hooks/useBlocks';
 import {
   CounterOverlay,
   type Reaction,
@@ -89,13 +88,6 @@ type FeedEntry = {
 
   /** Cached output array. */
   output: PostData[] | undefined;
-
-  /**
-   * `useBlocks` version this entry was derived at. A block or unblock
-   * invalidates every query, so an entry from an earlier version must be
-   * re-derived instead of served from cache.
-   */
-  blocksVersion: number;
 
   /** Maps post ids to `PostEntry` objects. */
   posts: Map<string, PostEntry>;
@@ -396,7 +388,6 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       replyInjections,
       output,
       posts,
-      blocksVersion: useBlocks.getState().version,
     };
   };
 
@@ -478,24 +469,15 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
     getFeedEntry: (queryKey, queryData, decode) => {
       if (!queryData) return undefined;
 
-      const blocksVersion = useBlocks.getState().version;
-      const matchesBlocks = (entry: FeedEntry) =>
-        entry.blocksVersion === blocksVersion;
-
       // Check store
       const stored = get().feedData.get(queryKey);
-      if (
-        stored &&
-        stored.queryData === queryData &&
-        stored.output &&
-        matchesBlocks(stored)
-      ) {
+      if (stored && stored.queryData === queryData && stored.output) {
         return stored;
       }
 
       // Check cache map
       const cached = derivedFeedCache.get(queryData);
-      if (cached && matchesBlocks(cached)) {
+      if (cached) {
         return cached;
       }
 
@@ -547,7 +529,6 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
           replyInjections: existing.replyInjections,
           posts,
           queryData,
-          blocksVersion: existing.blocksVersion,
         };
 
         feedData.set(queryKey, next);
@@ -588,7 +569,6 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
           replyInjections,
           posts,
           queryData,
-          blocksVersion: existing.blocksVersion,
         };
 
         feedData.set(queryKey, entry);
@@ -625,14 +605,6 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
 });
 
 /**
- * Subscribe to the blocked set so that a block or unblock re-renders the
- * caller once the invalidated queries come back.
- */
-export function useBlocksVersion(): number {
-  return useBlocks((s) => s.version);
-}
-
-/**
  * Return any cached list of posts for the given args if present or derive a new
  * list.
  * Valid for any query that returns a `GetFeedResponse`.
@@ -644,7 +616,6 @@ export function useFeedWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
-  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeFeedResponse)?.output ?? EMPTY_FEED,
@@ -653,7 +624,7 @@ export function useFeedWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output, blocksVersion]);
+  }, [key, queryData, output]);
 
   return output;
 }
@@ -670,7 +641,6 @@ export function useThreadWithOverlays(
   queryData: ArrayBuffer | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
-  const blocksVersion = useBlocksVersion();
   const output = useFeedDataStore(
     (s) =>
       s.getFeedEntry(key, queryData, decodeThreadResponse)?.output ??
@@ -680,7 +650,7 @@ export function useThreadWithOverlays(
   // biome-ignore lint/correctness/useExhaustiveDependencies: output's value is a dependency within pullCachedFeed()
   useEffect(() => {
     if (queryData) useFeedDataStore.getState().pullCachedFeed(key, queryData);
-  }, [key, queryData, output, blocksVersion]);
+  }, [key, queryData, output]);
 
   return output;
 }
