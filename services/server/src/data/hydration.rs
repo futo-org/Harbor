@@ -165,7 +165,7 @@ where
 /// Return relevant content such as:
 /// * Tombstones for the queried rows.
 /// * Latest identity events (rotation/signing chain) for every identity
-/// referenced.
+///   referenced.
 /// * Latest profile event (display name / avatar / banner) for every identity
 ///   referenced.
 pub async fn post_hydrate<Row>(
