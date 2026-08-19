@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
@@ -309,6 +310,9 @@ impl Query {
                                 Expr::col(
                                     EventModel::Column::CreatedAt
                                         .as_column_ref(),
+                                ),
+                                Expr::Constant(
+                                    config::get().feeds_gravity.into(),
                                 ),
                             ]),
                             REACTION_COUNT_COLUMN.into(),

@@ -11,7 +11,7 @@ impl MigrationTrait for Migration {
 
         let create_function = Statement::from_string(
             DatabaseBackend::Postgres,
-            "CREATE OR REPLACE FUNCTION reaction_count_decay(count BIGINT, created_at TIMESTAMPTZ) RETURNS NUMERIC
+            "CREATE OR REPLACE FUNCTION reaction_count_decay(count BIGINT, created_at TIMESTAMPTZ, gravity NUMERIC) RETURNS NUMERIC
               LANGUAGE sql IMMUTABLE PARALLEL SAFE
             RETURN (
               count::NUMERIC / power(
@@ -19,7 +19,7 @@ impl MigrationTrait for Migration {
                 (EXTRACT(epoch FROM (CURRENT_TIMESTAMP - created_at))::NUMERIC
                   / 3600::NUMERIC) -- Turned into number of hours.
                   + 2::NUMERIC,
-                1.8::NUMERIC -- Gravity.
+                gravity
               )
             )::NUMERIC(20, 11);"
         );

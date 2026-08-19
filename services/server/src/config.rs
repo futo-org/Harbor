@@ -18,6 +18,10 @@ pub struct Config {
     /// Hex identity string of the trusted moderation service
     /// (`POLYCENTRIC_MODERATION_IDENTITY`). `None` means no content labels.
     pub trusted_moderator: Option<String>,
+    /// Gravity constant used in the reaction_count_decay function.
+    ///
+    /// Essentially the higher the number the larger the impact of the decay.
+    pub feeds_gravity: f64,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -49,6 +53,10 @@ pub fn init() -> &'static Config {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
+            feeds_gravity: std::env::var("POLYCENTRIC_FEEDS_GRAVITY")
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(1.8),
             server_name,
         }
     })
