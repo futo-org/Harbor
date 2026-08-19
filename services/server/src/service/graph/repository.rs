@@ -70,9 +70,7 @@ impl Query {
         }
         Ok(result)
     }
-}
 
-impl Query {
     /// Count of distinct identities `identity` follows (tombstone-aware).
     ///
     /// TODO: same inefficiency as `list_followed_identities` — a
@@ -122,8 +120,8 @@ impl Query {
     pub async fn list_following_events(
         db: &DbConn,
         identity: &str,
-        limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        limit: u32,
+        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(EventModel::Column::Identity.eq(identity));
@@ -135,8 +133,8 @@ impl Query {
     pub async fn list_followers_events(
         db: &DbConn,
         identity: &str,
-        limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        limit: u32,
+        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(ContentFollowModel::Column::IdentityId.eq(identity));
@@ -168,12 +166,11 @@ fn follow_join() -> RelationDef {
 async fn page_follow_events(
     db: &DbConn,
     query: SelectTwo<EventModel::Entity, ContentModel::Entity>,
-    limit: u64,
-    cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+    limit: u32,
+    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
 ) -> Result<Vec<EventWithContentRow>, DbErr> {
-    let cursor_filter = cursor_filter
-        .as_ref()
-        .unwrap_or(&CursorFilter::Forward(Cursor::Start));
+    let cursor_filter =
+        cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
     let mut sea_cursor = query
         .cursor_by((EventModel::Column::CreatedAt, EventModel::Column::Id));
@@ -188,7 +185,7 @@ async fn page_follow_events(
                 }
                 Cursor::End => return Ok(vec![]),
             }
-            sea_cursor.first(limit);
+            sea_cursor.first(limit.into());
         }
         CursorFilter::Backward(cur) => {
             match cur {
@@ -198,7 +195,7 @@ async fn page_follow_events(
                 }
                 Cursor::End => {}
             }
-            sea_cursor.last(limit);
+            sea_cursor.last(limit.into());
         }
     }
 
