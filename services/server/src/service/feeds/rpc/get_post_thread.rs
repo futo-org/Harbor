@@ -177,13 +177,7 @@ async fn filter(
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter_thread(
-        fetched,
-        hydration,
-        &params.omit_labels,
-        &hydration.blocked_identities,
-    )
-    .await
+    feeds_pipeline::filter_thread(fetched, hydration, &params.omit_labels).await
 }
 
 async fn view(
@@ -359,14 +353,9 @@ mod tests {
         assert_eq!(fetched_identities, ["alice", "bob", "charlie"]);
 
         let hydration = hydration_blocking(&["bob"]);
-        let filtered = feeds_pipeline::filter_thread(
-            fetched,
-            &hydration,
-            &[],
-            &hydration.blocked_identities,
-        )
-        .await
-        .unwrap();
+        let filtered = feeds_pipeline::filter_thread(fetched, &hydration, &[])
+            .await
+            .unwrap();
         let live_identities: Vec<&str> = filtered
             .live_rows
             .iter()

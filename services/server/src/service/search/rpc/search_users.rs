@@ -103,13 +103,7 @@ async fn filter(
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
     let omit_labels = &[];
-    rpc::filter(
-        fetched,
-        hydration,
-        omit_labels,
-        &hydration.blocked_identities,
-    )
-    .await
+    rpc::filter(fetched, hydration, omit_labels).await
 }
 
 async fn view(

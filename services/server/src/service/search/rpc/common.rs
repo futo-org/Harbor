@@ -345,14 +345,13 @@ pub async fn filter<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
-    blocked: &HashSet<String>,
 ) -> Result<SearchResponseFilter<SortedBy>, Status> {
     let Fetched { rows, page_info } = fetched;
     let omit_set: HashSet<&str> =
         omit_labels.iter().map(|s| s.as_str()).collect();
 
     let is_omitted = |key: &TargetEventKey| -> bool {
-        blocked.contains(&key.identity)
+        hydration.blocked_identities.contains(&key.identity)
             || hydration.deletes_by_target.contains_key(key)
             || (!omit_set.is_empty()
                 && has_matching_label(&hydration.label_events, key, &omit_set))
@@ -365,7 +364,7 @@ pub async fn filter<SortedBy>(
     for row in rows {
         let key = TargetEventKey::of(&row.0);
 
-        if blocked.contains(&row.0.identity) {
+        if hydration.blocked_identities.contains(&row.0.identity) {
             continue;
         }
 

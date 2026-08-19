@@ -367,9 +367,8 @@ pub async fn filter<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
-    blocked: &HashSet<String>,
 ) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
-    filter_rows(fetched, hydration, omit_labels, blocked, false).await
+    filter_rows(fetched, hydration, omit_labels, false).await
 }
 
 /// Drop blocked posts in a thread, along with all replies to those blocked posts.
@@ -377,16 +376,14 @@ pub async fn filter_thread<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
-    blocked: &HashSet<String>,
 ) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
-    filter_rows(fetched, hydration, omit_labels, blocked, true).await
+    filter_rows(fetched, hydration, omit_labels, true).await
 }
 
 async fn filter_rows<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
-    blocked: &HashSet<String>,
     cascade_blocked_replies: bool,
 ) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
     let Fetched { rows, page_info } = fetched;
@@ -394,7 +391,7 @@ async fn filter_rows<SortedBy>(
         omit_labels.iter().map(|s| s.as_str()).collect();
 
     let is_omitted = |key: &TargetEventKey| -> bool {
-        blocked.contains(&key.identity)
+        hydration.blocked_identities.contains(&key.identity)
             || hydration.deletes_by_target.contains_key(key)
             || (!omit_set.is_empty()
                 && has_matching_label(&hydration.label_events, key, &omit_set))
@@ -412,7 +409,9 @@ async fn filter_rows<SortedBy>(
         let cascades_from_dropped_parent = cascade_blocked_replies
             && reply_parent(&row)
                 .is_some_and(|parent| dropped_for_block.contains(&parent));
-        if blocked.contains(&row.0.identity) || cascades_from_dropped_parent {
+        if hydration.blocked_identities.contains(&row.0.identity)
+            || cascades_from_dropped_parent
+        {
             dropped_for_block.insert(key);
             continue;
         }
