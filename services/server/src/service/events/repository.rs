@@ -580,8 +580,26 @@ impl Mutation {
             // Deletion of a following or of a block. The event key does not
             // say which, so clear both caches.
             COLLECTION_SOCIAL => {
-                delete_cached_rows(db, FollowModel::Entity, &event_id).await?;
-                delete_cached_rows(db, BlockModel::Entity, &event_id).await?;
+                let mut with = WithClause::new();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("event_id").query(event_id);
+                with.recursive(false).cte(cte);
+
+                for (name, table) in [
+                    ("deleted_follows", FollowModel::Entity.into_table_ref()),
+                    ("deleted_blocks", BlockModel::Entity.into_table_ref()),
+                ] {
+                    let mut cte = CommonTableExpression::new();
+                    cte.table_name(name).query(delete_cached_rows(table));
+                    with.cte(cte);
+                }
+
+                // The CTE's have modified the tables, but we still need
+                // a main query, so we run a no-op.
+                let mut nothing = SelectStatement::new();
+                nothing.expr(Expr::Constant(1.into()));
+
+                db.execute(&with.query(nothing)).await?;
                 Ok(())
             }
             // Deletion of a reaction and updating the tally.
@@ -649,18 +667,18 @@ impl Mutation {
     }
 }
 
-/// Drop the rows `table` caches for the event selected by `event_id`.
-async fn delete_cached_rows<C: ConnectionTrait, T: IntoTableRef>(
-    db: &C,
-    table: T,
-    event_id: &SelectStatement,
-) -> Result<(), DbErr> {
+/// Helper that returns a delete statement that deletes rows present in
+/// an expected outer `event_id` table.
+fn delete_cached_rows<T: IntoTableRef>(table: T) -> DeleteStatement {
     let mut query = DeleteStatement::new();
     query
         .from_table(table)
-        .cond_where(Expr::col("event_id").in_subquery(event_id.clone()));
-    db.execute(&query).await?;
-    Ok(())
+        .cond_where(Expr::col("event_id").in_subquery({
+            let mut q = SelectStatement::new();
+            q.column("id").from("event_id");
+            q
+        }));
+    query
 }
 
 /// Returns a select statement to get the event id from `key`.
@@ -819,10 +837,7 @@ mod tests {
     #[tokio::test]
     async fn deleting_a_graph_event_clears_both_graph_caches() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_exec_results([
-                MockExecResult::default(),
-                MockExecResult::default(),
-            ])
+            .append_exec_results([MockExecResult::default()])
             .into_connection();
 
         Mutation::update_cache(
@@ -833,9 +848,22 @@ mod tests {
         .await
         .unwrap();
 
+        // One statement, with the two cache deletes as identically-shaped
+        // CTEs hanging off a single `event_id` lookup.
         let statements = statements(db);
-        assert_eq!(statements.len(), 2);
-        assert!(statements[0].contains("DELETE FROM \"follow\""));
-        assert!(statements[1].contains("DELETE FROM \"block\""));
+        assert_eq!(statements.len(), 1);
+        assert!(statements[0].contains("WITH \"event_id\" AS (SELECT \"id\""));
+        for (cte, table) in
+            [("deleted_follows", "follow"), ("deleted_blocks", "block")]
+        {
+            assert!(
+                statements[0].contains(&format!(
+                    "\"{cte}\" AS (DELETE FROM \"{table}\" \
+                     WHERE \"event_id\" IN (SELECT \"id\" FROM \"event_id\"))"
+                )),
+                "missing {cte} CTE in: {}",
+                statements[0]
+            );
+        }
     }
 }
