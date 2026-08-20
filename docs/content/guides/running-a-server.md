@@ -1,7 +1,7 @@
 ---
 title: Running Your Own Server
-sidebar_label: Running a Server
-sidebar_position: 2
+sidebar_label: Host a Server
+sidebar_position: 1
 ---
 
 # Running Your Own Server
@@ -166,7 +166,7 @@ Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 | `GET /blob/{digest}` | Download a blob body by content digest (`{type}_{hex}`, e.g. `1_<sha256 hex>`). |
 | `GET /docs`          | Live API browser generated from gRPC reflection.                     |
 
-See [Protocol → gRPC](./protocol/grpc.md) for the gRPC services.
+See [Protocol → gRPC](../protocol/grpc.md) for the gRPC services.
 
 ## Content moderation & removal
 
@@ -175,7 +175,7 @@ curates its own discovery feeds, while signed content stays reachable from other
 servers.
 
 The server stores blob bodies (images and other media) in the object store, and
-never truly deletes them. A [`Delete`](./protocol/data-model.md#delete) event
+never truly deletes them. A [`Delete`](../protocol/data-model.md#delete) event
 acts as a *tombstone*: clients stop showing the content, but the blob bytes
 remain in the object store.
 
@@ -184,14 +184,14 @@ one, and you can
 [run your own](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/moderation/README.md).
 It scans images (for example, matching against PhotoDNA to detect known CSAM),
 deletes matching blobs directly from the object store, and publishes a
-[`Report`](./protocol/data-model.md#report) event recording the violation. Because it
+[`Report`](../protocol/data-model.md#report) event recording the violation. Because it
 deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
 delete permission on the bucket, while the server's own credentials do not.
 
 ### Moderation labels
 Beyond blob deletion and `Report` events, the moderation service can also
 **label** content by publishing a `Labels` event (collection 7, defined in
-[protocol → Labels](./protocol/data-model.md#labels)). A label is a string
+[protocol → Labels](../protocol/data-model.md#labels)). A label is a string
 identifying the kind of violation detected — the vocabulary used by FUTO's
 service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and `violence`.
 
@@ -234,7 +234,7 @@ target any media or blob linked to that event.
 #### Labels from moderator reports
 
 Labels are also published in response to
-[`Report`](./protocol/data-model.md#report) events, but only when the report was
+[`Report`](../protocol/data-model.md#report) events, but only when the report was
 signed by an identity the moderation service recognises as a moderator. Those
 identities live in the `moderator` table in the moderation service's own
 Postgres schema (`moderation` by default), so each service decides who it

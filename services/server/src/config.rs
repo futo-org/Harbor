@@ -18,6 +18,27 @@ pub struct Config {
     /// Hex identity string of the trusted moderation service
     /// (`POLYCENTRIC_MODERATION_IDENTITY`). `None` means no content labels.
     pub trusted_moderator: Option<String>,
+    /// Gravity constant used in the reaction_count_decay function.
+    ///
+    /// Essentially the higher the number the larger the impact of the decay.
+    ///
+    /// If this is set it overwrite the usage of dynamic gravity. If this is not
+    /// set the dynamic gravity is used, see
+    /// `dynamic_feeds_gravity_per_reaction`.
+    pub feeds_gravity: Option<f64>,
+    /// Dynamic gravity per reaction.
+    ///
+    /// This is used in computing the dynamic gravity value, using the formula:
+    /// `G = #R * feeds_gravity_per_reaction`. Where G is the computed gravity
+    /// value and #R is the number of reactions made in the last
+    /// `dynamic_feeds_gravity_hours` hours.
+    ///
+    /// If `feeds_gravity` is set dynamic gravity is ignored (including this
+    /// setting).
+    pub dynamic_feeds_gravity_per_reaction: f64,
+    /// The number of hours in which to consider the reactions to compute the
+    /// dynamic gravity value. See `dynamic_feeds_gravity_per_reaction`.
+    pub dynamic_feeds_gravity_hours: usize,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -49,6 +70,21 @@ pub fn init() -> &'static Config {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
+            feeds_gravity: std::env::var("POLYCENTRIC_FEEDS_GRAVITY")
+                .ok()
+                .and_then(|s| s.trim().parse().ok()),
+            dynamic_feeds_gravity_per_reaction: std::env::var(
+                "POLYCENTRIC_FEEDS_GRAVITY_PER_REACTION",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0.0005),
+            dynamic_feeds_gravity_hours: std::env::var(
+                "POLYCENTRIC_FEEDS_GRAVITY_HOURS",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(24),
             server_name,
         }
     })

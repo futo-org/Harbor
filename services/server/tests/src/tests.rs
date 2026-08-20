@@ -2240,7 +2240,7 @@ async fn expect_searched_users2<F, Fut>(
     eprintln!("query: {:#?}", request.query);
     let results = get_results(request).await;
     eprintln!("expected: {expected:#?}");
-    eprintln!("results: {:#?}", fmt_search_results(&results));
+    eprintln!("results: {results:#?}");
 
     assert_eq!(
         results.len(),
@@ -2630,7 +2630,7 @@ async fn expect_searched_posts2<F, Fut>(
     eprintln!("query: {:#?}", request.query);
     let results = get_results(request).await;
     eprintln!("expected: {expected:#?}");
-    eprintln!("results: {:#?}", fmt_search_results(&results));
+    eprintln!("results: {results:#?}");
 
     assert_eq!(
         results.len(),
@@ -2852,14 +2852,14 @@ async fn following_feed_pagination() {
 
     // Followee 2, post 2.
     let mut client2 = TestClient::new().await;
-    client2.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client2.post_text("Post 2", DEFAULT_CREATED_AT);
     let post2_key = client2.get_last_event_key();
     client2.submit_events().await;
     let followee2 = client2.identity().to_owned();
 
     // Follower, post 3.
     let mut client3 = TestClient::new().await;
-    client3.post_text("Post 3", DEFAULT_CREATED_AT + 2);
+    client3.post_text("Post 3", DEFAULT_CREATED_AT);
     let post3_key = client3.get_last_event_key();
     client3.follow_identity(followee1, DEFAULT_CREATED_AT);
     client3.follow_identity(followee2, DEFAULT_CREATED_AT);
@@ -3181,14 +3181,14 @@ async fn recommended_feed_pagination() {
 
     // Followee 2, post 2.
     let mut client2 = TestClient::new().await;
-    client2.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client2.post_text("Post 2", DEFAULT_CREATED_AT);
     let post2_key = client2.get_last_event_key();
     client2.submit_events().await;
     let followee2 = client2.identity().to_owned();
 
     // Follower, post 3.
     let mut client3 = TestClient::new().await;
-    client3.post_text("Post 3", DEFAULT_CREATED_AT + 2);
+    client3.post_text("Post 3", DEFAULT_CREATED_AT);
     let post3_key = client3.get_last_event_key();
     client3.follow_identity(followee1, DEFAULT_CREATED_AT);
     client3.follow_identity(followee2, DEFAULT_CREATED_AT);

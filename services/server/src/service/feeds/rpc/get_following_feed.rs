@@ -1,7 +1,7 @@
 //! `get_following_feed`: posts from identities the caller follows
 //! (plus the caller's own posts).
 
-use crate::data::hydration::HydrationState;
+use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Marker, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
@@ -70,7 +70,9 @@ async fn fetch(
                 SortPostsBy::Default | SortPostsBy::Latest => {
                     SortedBy::CreatedAt(row.event.created_at)
                 }
-                SortPostsBy::Top => SortedBy::ReactionCount(row.reactions),
+                SortPostsBy::Top => {
+                    SortedBy::ReactionCount(row.reactions.clone())
+                }
             };
             Marker {
                 sorted_by,
@@ -90,7 +92,7 @@ async fn hydrate(
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(

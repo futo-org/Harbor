@@ -1,7 +1,7 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
@@ -18,8 +18,9 @@ use crate::{
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, bundle_created_at, bundle_upvote_count, copy_hints,
-                merge_bundle_responses, merge_event_bundles, merge_event_hints,
+                EventBundleResponse, EventDedupKey, bundle_created_at, bundle_upvote_count,
+                copy_hints, event_dedup_key, merge_bundle_responses, merge_event_bundles,
+                merge_event_hints,
             },
         },
         pagination::{FakeCursorToken, merge_page_info, pagination_horizon, prepare_page_info},
@@ -168,8 +169,33 @@ fn do_feed_merge(
         }
     }
 
+    // Freeze ranked ordering keys at the first-seen count so rows don't
+    // move when a later page carries a newer count. Re-encoded into the
+    // blob, so it sticks until the next refresh.
+    let mut frozen: HashMap<EventDedupKey, Option<i32>> = HashMap::new();
+    if matches!(order, FeedOrder::Upvotes) {
+        for bundle in &response.event_bundles {
+            if let Some(key) = event_dedup_key(bundle) {
+                frozen
+                    .entry(key)
+                    .or_insert_with(|| bundle.meta.as_ref().and_then(|m| m.upvote_count));
+            }
+        }
+    }
+
     merge_event_bundles(&mut response.event_bundles);
     merge_event_hints(&mut response.event_hints);
+
+    if !frozen.is_empty() {
+        for bundle in &mut response.event_bundles {
+            let Some(count) = event_dedup_key(bundle).and_then(|k| frozen.get(&k).copied()) else {
+                continue;
+            };
+            if let Some(meta) = bundle.meta.as_mut() {
+                meta.upvote_count = count;
+            }
+        }
+    }
 
     if validate {
         let c = client.lock().unwrap();
@@ -177,11 +203,15 @@ fn do_feed_merge(
         retain_validated_hints(&c, &mut response.event_hints);
     }
 
-    // Highest key first; keyless events sort last. Stable, so events a
-    // server tied on keep the order it sent them in.
-    response
-        .event_bundles
-        .sort_by_cached_key(|bundle| Reverse(order.key(bundle)));
+    // Highest key first; keyless events sort last. created_at and the
+    // event key break ties so input order can't affect the result.
+    response.event_bundles.sort_by_cached_key(|bundle| {
+        (
+            Reverse(order.key(bundle)),
+            Reverse(bundle_created_at(bundle)),
+            event_dedup_key(bundle),
+        )
+    });
 
     // Hold back items that servers with more data haven't paged past yet,
     // so later pages never insert above already-emitted items.
@@ -196,6 +226,18 @@ fn do_feed_merge(
     }
 
     response.encode_to_vec()
+}
+
+/// A server missing from the token missed the fan-out it came from;
+/// paging it from its top now would insert rows above ones already
+/// shown, so it sits out until the next fresh load.
+fn server_sits_out(
+    backward_token: &Option<String>,
+    forward_token: &Option<String>,
+    server_url: &str,
+) -> bool {
+    FakeCursorToken::excludes(backward_token, server_url)
+        || FakeCursorToken::excludes(forward_token, server_url)
 }
 
 /// Thread responses follow the shape of events + hints, except the events
@@ -230,11 +272,16 @@ pub fn get_identity_feed(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
+        let sits_out = server_sits_out(&backward_token, &forward_token, &server_url);
         let (backward_token, backward_offset) =
             FakeCursorToken::extract(&backward_token, &server_url);
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            if sits_out {
+                return Ok(GetFeedResponse::default().encode_to_vec());
+            }
+
             let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_identity_feed(GetIdentityFeedRequest {
                     identity,
@@ -292,11 +339,16 @@ pub fn get_attribution_feed(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
+        let sits_out = server_sits_out(&backward_token, &forward_token, &server_url);
         let (backward_token, backward_offset) =
             FakeCursorToken::extract(&backward_token, &server_url);
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            if sits_out {
+                return Ok(GetFeedResponse::default().encode_to_vec());
+            }
+
             let attributed_to = AttributedTo::decode(&attributed_to[..])
                 .map_err(|e| format!("decode AttributedTo: {e}"))?;
 
@@ -359,11 +411,16 @@ pub fn get_following_feed(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
+        let sits_out = server_sits_out(&backward_token, &forward_token, &server_url);
         let (backward_token, backward_offset) =
             FakeCursorToken::extract(&backward_token, &server_url);
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            if sits_out {
+                return Ok(GetFeedResponse::default().encode_to_vec());
+            }
+
             let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_following_feed(GetFollowingFeedRequest {
                     follower_identity,
@@ -421,11 +478,16 @@ pub fn get_recommended_feed(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
+        let sits_out = server_sits_out(&backward_token, &forward_token, &server_url);
         let (backward_token, backward_offset) =
             FakeCursorToken::extract(&backward_token, &server_url);
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            if sits_out {
+                return Ok(GetFeedResponse::default().encode_to_vec());
+            }
+
             let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_recommended_feed(GetFollowingFeedRequest {
                     follower_identity,
@@ -481,11 +543,16 @@ pub fn get_explore_feed(
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
+        let sits_out = server_sits_out(&backward_token, &forward_token, &server_url);
         let (backward_token, backward_offset) =
             FakeCursorToken::extract(&backward_token, &server_url);
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            if sits_out {
+                return Ok(GetFeedResponse::default().encode_to_vec());
+            }
+
             let mut response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_explore_feed(GetExploreFeedRequest {
                     identity: identity.clone(),
@@ -797,6 +864,50 @@ mod tests {
 
         let by_age = do_feed_merge(&[response], &test_client(), false, FeedOrder::CreatedAt);
         assert_eq!(created_ats(&by_age), vec![99, 50, 10]);
+    }
+
+    #[test]
+    fn top_order_freezes_a_reserved_posts_count() {
+        // A later page re-serves Y with a higher count; the frozen key
+        // keeps it below X.
+        let page1 = encode_response(
+            vec![
+                make_bundle_voted("x", 10, Some(5)),
+                make_bundle_voted("y", 20, Some(4)),
+            ],
+            vec![],
+        );
+        let page2 = encode_response(vec![make_bundle_voted("y", 20, Some(9))], vec![]);
+
+        let merged = do_feed_merge(&[page1, page2], &test_client(), false, FeedOrder::Upvotes);
+        assert_eq!(upvotes(&merged), vec![5, 4]);
+        assert_eq!(created_ats(&merged), vec![10, 20]);
+    }
+
+    #[test]
+    fn merged_order_does_not_depend_on_input_order() {
+        // created_at breaks count ties regardless of input order.
+        let a = encode_response(vec![make_bundle_voted("a", 10, Some(3))], vec![]);
+        let b = encode_response(vec![make_bundle_voted("b", 20, Some(3))], vec![]);
+
+        let ab = do_feed_merge(
+            &[a.clone(), b.clone()],
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+        );
+        let ba = do_feed_merge(&[b, a], &test_client(), false, FeedOrder::Upvotes);
+        assert_eq!(ab, ba);
+        assert_eq!(created_ats(&ab), vec![20, 10]);
+    }
+
+    #[test]
+    fn servers_absent_from_a_token_sit_out() {
+        let token = FakeCursorToken::encode_new("server-a", "t", 1, true).unwrap();
+        assert!(server_sits_out(&None, &Some(token.clone()), "server-b"));
+        assert!(!server_sits_out(&None, &Some(token), "server-a"));
+        // Fresh loads have no tokens; every server participates.
+        assert!(!server_sits_out(&None, &None, "server-b"));
     }
 
     #[test]

@@ -45,11 +45,11 @@ scripts fan out across them.
 
 | Service                       | Description                                                                                     |
 | ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `services/server`             | The Polycentric server: ingests events, serves feeds, search, and blobs. See [Running a Server](../running-a-server.md). |
+| `services/server`             | The Polycentric server: ingests events, serves feeds, search, and blobs. See [Running a Server](../guides/running-a-server.md). |
 | `services/moderation`         | Labels content pushed to FUTO-run servers and publishes a labelling feed other servers can poll. |
 | `services/push-notifications` | Consumes the server's `notifications` Kafka topic, delivers Expo push notifications, and serves the gRPC `NotificationService` clients register device tokens with. |
 | `services/scraper`            | Fetches link metadata for link previews.                                                        |
-| `services/verifier-bot`       | Verifies platform claims. See [Verifiers](../verifiers/overview.md).                             |
+| `services/verifier-bot`       | Verifies platform claims. See [Verifiers](../protocol/verifiers.md).                             |
 | `services/common`             | Shared Rust crates for the services — `dotenv`, `kafka`, `object-store`, and `telemetry`.       |
 
 ## Generated code
