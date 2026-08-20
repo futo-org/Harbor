@@ -20,7 +20,7 @@ This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
 
 ```sh
 cd migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 ```
 
 ### 3. Setup .env file
@@ -45,7 +45,7 @@ All service variables are read and validated once at startup by
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
 | `HARBOR_SERVER_NAME` | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on produced Kafka events. |
 | `HARBOR_ALLOW_HOSTS` | `HARBOR_SERVER_NAME` | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
 | `CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |

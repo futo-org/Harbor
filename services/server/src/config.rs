@@ -9,7 +9,7 @@ pub struct Config {
     /// Accepted auth token audiences (`HARBOR_ALLOW_HOSTS`, comma
     /// delimited). Defaults to [`Config::server_name`].
     pub allow_hosts: Vec<String>,
-    /// Postgres connection URL (`DATABASE_URL`).
+    /// Postgres connection URL (`HARBOR_DATABASE_URL`).
     pub database_url: String,
     /// Public URL clients use to fetch blob bodies (`CDN_URL`).
     pub cdn_url: String,
@@ -38,9 +38,9 @@ pub fn init() -> &'static Config {
                     .collect(),
                 Err(_) => vec![server_name.clone()],
             },
-            database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:testing@localhost:5432".to_string()
-            }),
+            database_url: std::env::var("HARBOR_DATABASE_URL").unwrap_or_else(
+                |_| "postgres://postgres:testing@localhost:5432".to_string(),
+            ),
             cdn_url: std::env::var("CDN_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             scraper_url: std::env::var("HARBOR_SCRAPER_URL")
