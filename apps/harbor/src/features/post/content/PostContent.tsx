@@ -24,11 +24,14 @@ export const PostContent = memo(function PostContent({
   hideReplyingTo,
   compactLinkPreview,
   authorIdentity,
+  focusedView = false,
 }: {
   post: PostData;
   hideReplyingTo: boolean;
   compactLinkPreview: boolean;
   authorIdentity: string | null;
+  /** Focused-post rendering: larger, selectable text. */
+  focusedView?: boolean;
 }) {
   return (
     <View style={[Atoms.gap_2xs]}>
@@ -40,7 +43,17 @@ export const PostContent = memo(function PostContent({
         <PostLabels labels={post.labels} authorIdentity={authorIdentity} />
       ) : null}
 
-      {post.content ? <ExpandablePostText content={post.content} /> : null}
+      {post.content ? (
+        focusedView ? (
+          <PostText
+            content={post.content.slice(0, MAX_DISPLAY_LIMIT)}
+            large
+            selectable
+          />
+        ) : (
+          <ExpandablePostText content={post.content} />
+        )
+      ) : null}
       {/* Render only the first link preview. A post may carry multiple
         `links` (e.g. from another client), but we cap the UI at one. */}
       {post.links?.[0] ? (

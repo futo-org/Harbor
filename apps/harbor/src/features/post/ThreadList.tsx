@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
+import { useOrderedThread } from './hooks/useOrderedThread';
 import { useThread } from './hooks/useThread';
 import { Atoms } from '@/src/common/theme';
 import { ComposerInput } from '../composer';
@@ -25,10 +26,9 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
   // cold vs warm caches at the call site.
   const [isFirstLayoutComplete, setIsFirstLayoutComplete] = useState(false);
 
-  const items = useMemo(() => {
-    if (!isFirstLayoutComplete) return [post];
-    return thread.items.length > 0 ? thread.items : [post];
-  }, [isFirstLayoutComplete, thread.items, post]);
+  const subjectOnly = useMemo(() => [post], [post]);
+  const orderedItems = useOrderedThread(post, thread.items);
+  const items = isFirstLayoutComplete ? orderedItems : subjectOnly;
 
   const subjectIndex = items.findIndex((p) => p.id === post.id);
 
@@ -48,17 +48,19 @@ export function ThreadList({ post, ...rest }: ThreadListProps) {
           !!above && item.reply?.parentId === above.id && above.id !== post.id;
         const lineBelow = !!below && below.reply?.parentId === item.id;
 
+        const isSubject = item.id === post.id;
         return (
           <View style={[Atoms.w_full]}>
             <Post
               post={item}
               hideReplyingTo={true}
-              disablePress={item.id === post.id}
+              focusedView={isSubject}
+              disablePress={isSubject}
               showThreadLineAbove={lineAbove}
-              showThreadLineBelow={lineBelow}
-              hideBottomBorder={lineBelow}
+              showThreadLineBelow={lineBelow && !isSubject}
+              hideBottomBorder={lineBelow && !isSubject}
             />
-            {item.id === post.id ? <ComposerInput replyTo={post.id} /> : null}
+            {isSubject ? <ComposerInput replyTo={post.id} /> : null}
           </View>
         );
       }}

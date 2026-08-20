@@ -1,4 +1,5 @@
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { UITextView } from '@bsky.app/react-native-uitextview';
+import type { TextProps as RNTextProps } from 'react-native';
 import {
   useTheme,
   typography,
@@ -73,7 +74,10 @@ export function Text({
     : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
 
   return (
-    <RNText
+    <UITextView
+      // iOS `selectable` Text only offers the copy callout; UITextView gives
+      // real range selection. Everywhere else this renders the base Text.
+      uiTextView={!!props.selectable}
       style={[
         {
           fontFamily,

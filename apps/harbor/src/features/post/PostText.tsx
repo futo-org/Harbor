@@ -7,13 +7,15 @@ import { router } from 'expo-router';
 import { memo, useMemo } from 'react';
 import { Linking } from 'react-native';
 
+type PostTextSize = { fontSize?: 'lg'; lineHeight?: 'lg' };
+
 /**
  * Render one parsed segment: plain text, a hyperlink (URLs/bare domains,
  * opened in the browser), or a mention — an alias (`@user@domain.com`) or
  * identity (`@<64-hex>`) — that navigates to that profile in-app. The tap is
  * stopped from also triggering the surrounding post-card press.
  */
-function renderSegment(segment: TextSegment, key: number) {
+function renderSegment(segment: TextSegment, key: number, size: PostTextSize) {
   if (segment.type === 'text') {
     return segment.value;
   }
@@ -24,6 +26,7 @@ function renderSegment(segment: TextSegment, key: number) {
       variant="secondary"
       color="primary_500"
       fontWeight="bold"
+      {...size}
       onPress={(e) => {
         e.stopPropagation?.();
         if (segment.type === 'link') {
@@ -48,15 +51,21 @@ function renderSegment(segment: TextSegment, key: number) {
 export const PostText = memo(function PostText({
   content,
   suffix,
+  large = false,
+  selectable = false,
 }: {
   content: string;
   suffix?: string;
+  /** Detail-view sizing for a focused post. */
+  large?: boolean;
+  selectable?: boolean;
 }) {
   const segments = useMemo(() => parseTextLinks(content), [content]);
+  const size: PostTextSize = large ? { fontSize: 'lg', lineHeight: 'lg' } : {};
 
   return (
-    <Text variant="secondary">
-      {segments.map(renderSegment)}
+    <Text variant="secondary" selectable={selectable} {...size}>
+      {segments.map((segment, key) => renderSegment(segment, key, size))}
       {suffix}
     </Text>
   );
