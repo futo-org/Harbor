@@ -53,8 +53,10 @@ export const Routes = {
     claims: '/claims',
     identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,
-    profileVerifications: (identityId: string) =>
-      `/${identityId}/verifications` as const,
+    profileVerificationClaims: (identityId: string) =>
+      `/${identityId}/verifications/claims` as const,
+    profileVerificationVerifies: (identityId: string) =>
+      `/${identityId}/verifications/verifies` as const,
     profileFollowing: (identityId: string) =>
       `/${identityId}/following` as const,
     profileFollowers: (identityId: string) =>

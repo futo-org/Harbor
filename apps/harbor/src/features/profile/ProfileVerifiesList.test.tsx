@@ -9,20 +9,6 @@ jest.mock('@/src/common/theme', () => ({
   Spacing: new Proxy({}, { get: () => 8 }),
 }));
 
-jest.mock('@/src/common/components', () => {
-  const react = require('react');
-  const { Text } = require('react-native');
-  return {
-    Text: ({ children }: { children?: unknown }) =>
-      react.createElement(Text, null, children),
-  };
-});
-
-jest.mock('@/src/common/components/Icon', () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 // Renders the header, rows, and empty state so composition is observable.
 jest.mock('@/src/common/components/List', () => {
   const react = require('react');
@@ -34,7 +20,7 @@ jest.mock('@/src/common/components/List', () => {
       ListHeaderComponent,
       ListEmptyComponent,
     }: {
-      data: { key: string }[];
+      data: unknown[];
       renderItem: (info: { item: unknown; index: number }) => unknown;
       ListHeaderComponent?: unknown;
       ListEmptyComponent?: unknown;
@@ -48,13 +34,29 @@ jest.mock('@/src/common/components/List', () => {
           : data.map((item, index) =>
               react.createElement(
                 View,
-                { key: item.key },
+                { key: String(index) },
                 renderItem({ item, index }),
               ),
             ),
       ),
   };
 });
+
+jest.mock('@/src/features/verifications/claims/ClaimActionRow', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    ClaimActionRow: ({ title }: { title: string }) =>
+      react.createElement(Text, { testID: 'request-row' }, title),
+  };
+});
+
+jest.mock(
+  '@/src/features/verifications/claims/create/ClaimCreateSheet',
+  () => ({
+    ClaimCreateSheet: () => null,
+  }),
+);
 
 jest.mock('@/src/common/components/ListEmpty', () => {
   const react = require('react');
@@ -75,30 +77,44 @@ jest.mock('./ProfileContext', () => ({
 }));
 
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
+import type { ClaimWithStatus } from '@/src/features/verifications/utils/claim-status';
 
-function claim(sequence: number, identity = 'profile-id'): DecodedClaim {
+function claim(
+  sequence: number,
+  verifiers: { identity: string; verified: boolean }[],
+): ClaimWithStatus {
   return {
     id: `id-${sequence}`,
     schemaName: 'Freeform',
     fields: [],
-    identity,
+    identity: 'owner',
     keyFingerprint: 'fp',
     sequence: BigInt(sequence),
     createdAt: 0n,
+    status: {
+      verifiers,
+      verifiedCount: verifiers.filter((row) => row.verified).length,
+      totalCount: verifiers.length,
+    },
   };
 }
 
-let mockClaims: DecodedClaim[] = [];
-let mockLoading = false;
-
-jest.mock('@/src/features/verifications/hooks/useClaimsList', () => ({
-  useClaimsList: () => ({
-    claims: mockClaims,
-    isLoading: mockLoading,
-    isRefreshing: false,
-    refresh: jest.fn(),
+let mockRequested: ClaimWithStatus[] = [];
+let mockRequestedEnabled: boolean | undefined;
+jest.mock(
+  '@/src/features/verifications/hooks/useRequestedVerifications',
+  () => ({
+    useRequestedVerifications: (_identity: string, enabled: boolean) => {
+      mockRequestedEnabled = enabled;
+      return {
+        claims: enabled ? mockRequested : [],
+        isLoading: false,
+        isRefreshing: false,
+        refresh: jest.fn(),
+      };
+    },
   }),
-}));
+);
 
 jest.mock('@/src/features/verifications/claims/ClaimListItem', () => {
   const react = require('react');
@@ -123,34 +139,53 @@ jest.mock('@/src/features/verifications/claims/ClaimSkeleton', () => {
 });
 
 import { render } from '@testing-library/react-native';
-import { ProfileVerificationsList } from './ProfileVerificationsList';
+import { ProfileVerifiesList } from './ProfileVerifiesList';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsSelf = false;
-  mockClaims = [];
-  mockLoading = false;
+  mockRequested = [];
+  mockRequestedEnabled = undefined;
 });
 
-describe('ProfileVerificationsList', () => {
-  it('shows a skeleton while loading', async () => {
-    mockLoading = true;
-    const screen = await render(<ProfileVerificationsList />);
+describe('ProfileVerifiesList', () => {
+  it('lists the requested claims the profile verified', async () => {
+    mockRequested = [
+      claim(1, [{ identity: 'profile-id', verified: true }]),
+      claim(2, [{ identity: 'profile-id', verified: false }]),
+      claim(3, [{ identity: 'someone-else', verified: true }]),
+    ];
 
-    expect(screen.getByTestId('claim-skeleton')).toBeTruthy();
-    expect(screen.queryByText('No claims yet.')).toBeNull();
+    const screen = await render(<ProfileVerifiesList />);
+
+    expect(screen.getAllByTestId(/^claim-/)).toHaveLength(1);
+    expect(screen.getByTestId('claim-1')).toBeTruthy();
   });
 
-  it('lists every claim', async () => {
-    mockClaims = [claim(1), claim(2), claim(3), claim(4), claim(5)];
-    const screen = await render(<ProfileVerificationsList />);
+  it('only loads when active', async () => {
+    await render(<ProfileVerifiesList active={false} />);
 
-    expect(screen.getAllByTestId(/^claim-/)).toHaveLength(5);
+    expect(mockRequestedEnabled).toBe(false);
   });
 
   it('shows the empty state once loaded', async () => {
-    const screen = await render(<ProfileVerificationsList />);
+    const screen = await render(<ProfileVerifiesList />);
 
-    expect(screen.getByText('No claims yet.')).toBeTruthy();
+    expect(screen.getByText('No vouches yet.')).toBeTruthy();
+  });
+
+  it('leads with the request row on another profile', async () => {
+    const screen = await render(<ProfileVerifiesList />);
+
+    expect(screen.getByTestId('request-row')).toHaveTextContent(
+      /Request a verification/,
+    );
+  });
+
+  it('has no request row on the own profile', async () => {
+    mockIsSelf = true;
+    const screen = await render(<ProfileVerifiesList />);
+
+    expect(screen.queryByTestId('request-row')).toBeNull();
   });
 });

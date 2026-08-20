@@ -10,7 +10,10 @@ import {
   type ReactNode,
 } from 'react';
 
-export type ActiveFeed = 'posts' | 'verifications';
+export type ActiveFeed =
+  | 'posts'
+  | 'verification-claims'
+  | 'verification-verifies';
 
 interface ProfileContextValue {
   identityKey: string | null;
@@ -50,9 +53,11 @@ export function ProfileProvider({
       const target = alias ?? identityKey;
       if (!target) return;
       replacePath(
-        tab === 'verifications'
-          ? Routes.tabs.profileVerifications(target)
-          : Routes.tabs.profile(target),
+        tab === 'verification-claims'
+          ? Routes.tabs.profileVerificationClaims(target)
+          : tab === 'verification-verifies'
+            ? Routes.tabs.profileVerificationVerifies(target)
+            : Routes.tabs.profile(target),
       );
     },
     [alias, identityKey],

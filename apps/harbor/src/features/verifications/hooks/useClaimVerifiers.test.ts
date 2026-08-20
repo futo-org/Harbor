@@ -34,6 +34,11 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
+let mockVerifierBots: Set<string> | undefined;
+jest.mock('./useVerifierIdentities', () => ({
+  useVerifierIdentities: () => mockVerifierBots,
+}));
+
 import { v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
@@ -101,10 +106,13 @@ function respond(targets: v2.EventBundle[], verifies: v2.EventBundle[] = []) {
 
 type HookResult = ReturnType<typeof useClaimVerifiers>;
 
-function renderHook(claimId: string | undefined): { current: HookResult } {
+function renderHook(
+  claimId: string | undefined,
+  schemaName?: string,
+): { current: HookResult } {
   const result: { current: HookResult } = { current: null as never };
   function Probe() {
-    result.current = useClaimVerifiers(claimId);
+    result.current = useClaimVerifiers(claimId, schemaName);
     return null;
   }
   act(() => {
@@ -115,6 +123,7 @@ function renderHook(claimId: string | undefined): { current: HookResult } {
 
 beforeEach(() => {
   mockQueryData = {};
+  mockVerifierBots = undefined;
 });
 
 describe('useClaimVerifiers', () => {
@@ -143,15 +152,46 @@ describe('useClaimVerifiers', () => {
     ]);
   });
 
-  it('includes verify authors who were never asked', () => {
+  it('ignores unasked verify authors', () => {
     respond([targetBundle(['bob'])], [verifyBundle('dave')]);
 
     const result = renderHook(CLAIM_ID);
     expect(result.current.verifiers).toEqual([
       { identity: 'bob', verified: false },
-      { identity: 'dave', verified: true },
+    ]);
+    expect(result.current.verifiedCount).toBe(0);
+  });
+
+  it('only counts verifier bots on a platform claim', () => {
+    mockVerifierBots = new Set(['bot']);
+    respond([targetBundle(['bot', 'bob'])], [verifyBundle('bob')]);
+
+    const result = renderHook(CLAIM_ID, 'Platform');
+    expect(result.current.verifiers).toEqual([
+      { identity: 'bot', verified: false },
+    ]);
+    expect(result.current.verifiedCount).toBe(0);
+  });
+
+  it('counts an unasked verifier bot on a platform claim', () => {
+    mockVerifierBots = new Set(['bot']);
+    respond([], [verifyBundle('bot')]);
+
+    const result = renderHook(CLAIM_ID, 'Platform');
+    expect(result.current.verifiers).toEqual([
+      { identity: 'bot', verified: true },
     ]);
     expect(result.current.verifiedCount).toBe(1);
+  });
+
+  it('counts any requested verifier on a non-platform claim', () => {
+    mockVerifierBots = new Set(['bot']);
+    respond([targetBundle(['bob'])], [verifyBundle('bob')]);
+
+    const result = renderHook(CLAIM_ID, 'Freeform');
+    expect(result.current.verifiers).toEqual([
+      { identity: 'bob', verified: true },
+    ]);
   });
 
   it('returns nothing without a claim id', () => {
