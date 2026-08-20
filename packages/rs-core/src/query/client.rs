@@ -261,7 +261,13 @@ fn compute_merged<T: Clone>(
         return None;
     }
 
-    let values: Vec<T> = data.values().map(|info| info.response.clone()).collect();
+    // Merge in a fixed server order; HashMap iteration order is arbitrary.
+    let mut entries: Vec<(&String, &QueryResponseInfo<T>)> = data.iter().collect();
+    entries.sort_unstable_by_key(|(a, _)| *a);
+    let values: Vec<T> = entries
+        .into_iter()
+        .map(|(_, info)| info.response.clone())
+        .collect();
 
     Some(merge_fn(&values, client))
 }

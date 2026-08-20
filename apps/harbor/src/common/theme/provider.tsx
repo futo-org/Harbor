@@ -57,8 +57,11 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 
   // Keep the native window background in sync with the theme so the
   // moments where no surface has painted (splash dismissal, stack
-  // transitions) don't flash the default white window.
+  // transitions) don't flash the default white window. The interface style
+  // drives system chrome (liquid glass tab bars, sheets, keyboard), which
+  // follows the OS scheme unless overridden.
   useEffect(() => {
+    if (!isWeb) Appearance.setColorScheme(theme.scheme);
     void SystemUI.setBackgroundColorAsync(theme.palette.neutral_0);
   }, [theme]);
 

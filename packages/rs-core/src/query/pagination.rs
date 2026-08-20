@@ -91,6 +91,15 @@ impl FakeCursorToken {
             .unwrap_or((None, 0))
     }
 
+    /// True when the token names other servers but not `server`, meaning
+    /// it missed the fan-out the token came from.
+    pub fn excludes(fake_token: &Option<String>, server: &str) -> bool {
+        fake_token
+            .as_ref()
+            .and_then(|t| Self::decode(t).ok())
+            .is_some_and(|fake| !fake.map.is_empty() && !fake.map.contains_key(server))
+    }
+
     /// The server this token belongs to, when it holds exactly one.
     pub fn sole_server(&self) -> Option<&str> {
         if self.map.len() == 1 {
