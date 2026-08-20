@@ -1,11 +1,30 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2 as proto;
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
 pub mod hydration;
 pub mod pipeline;
+
+/// Row that contains an event.
+pub trait EventRow {
+    /// Returns the event model and optionally content for the row.
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>);
+
+    /// Returns the event model for the row.
+    fn as_event(&self) -> &event_model::Model {
+        self.as_event_with_content().0
+    }
+
+    /// Returns the content of the event, if any.
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.as_event_with_content().1
+    }
+}
 
 const DEFAULT_LIMIT: u32 = 50;
 

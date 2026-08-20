@@ -2240,7 +2240,7 @@ async fn expect_searched_users2<F, Fut>(
     eprintln!("query: {:#?}", request.query);
     let results = get_results(request).await;
     eprintln!("expected: {expected:#?}");
-    eprintln!("results: {:#?}", fmt_search_results(&results));
+    eprintln!("results: {results:#?}");
 
     assert_eq!(
         results.len(),
@@ -2630,7 +2630,7 @@ async fn expect_searched_posts2<F, Fut>(
     eprintln!("query: {:#?}", request.query);
     let results = get_results(request).await;
     eprintln!("expected: {expected:#?}");
-    eprintln!("results: {:#?}", fmt_search_results(&results));
+    eprintln!("results: {results:#?}");
 
     assert_eq!(
         results.len(),

@@ -3,7 +3,10 @@
 //! exact URL match, ignoring the other Link metadata.
 
 use crate::{
-    data::{hydration::HydrationState, pipeline},
+    data::{
+        hydration::{HydrationState, post_hydrate},
+        pipeline,
+    },
     service::{
         context::RequestContext,
         feeds::{
@@ -79,7 +82,7 @@ async fn hydrate(
     _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(

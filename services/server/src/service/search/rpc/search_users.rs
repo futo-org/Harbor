@@ -1,14 +1,15 @@
 //! `search_users`: searches users.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline::{create_pipeline, finalize_fetch};
+use crate::data::Marker;
+use crate::data::hydration::{HydrationState, post_hydrate};
+use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
 use crate::service::context::RequestContext;
 use crate::service::proto::{
     SearchUsersRequest, SearchUsersResponse, SortUsersBy,
 };
 use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
-    self, Fetched, Marker, SearchResponseFilter, SearchResponseView,
+    self, SearchResponseFilter, SearchResponseView, SearchRow,
 };
 use serde::{Deserialize, Serialize};
 use tonic::Status;
@@ -37,7 +38,7 @@ pub async fn handle(
 async fn fetch(
     ctx: &RequestContext<'_>,
     params: &Params,
-) -> Result<Fetched<SortedUsersBy>, Status> {
+) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
         &ctx.service.db,
         &params.common.query,
@@ -86,15 +87,15 @@ impl SortedUsersBy {
 async fn hydrate(
     ctx: &RequestContext<'_>,
     _params: &Params,
-    fetched: &Fetched<SortedUsersBy>,
+    fetched: &Fetched<SearchRow, SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
-    rpc::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
     _: &RequestContext<'_>,
     _params: &Params,
-    fetched: Fetched<SortedUsersBy>,
+    fetched: Fetched<SearchRow, SortedUsersBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
     let omit_labels = &[];

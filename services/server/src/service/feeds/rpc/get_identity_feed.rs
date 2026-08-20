@@ -1,21 +1,19 @@
 //! `get_identity_feed`: posts authored by a specific identity,
 //! newest first.
 
-use crate::{
-    data::{Cursor, PageInfo, hydration::HydrationState, pipeline},
-    service::{
-        context::RequestContext,
-        feeds::{
-            repository::{EventCreatedAt, Query as FeedsRepository},
-            rpc::common::{
-                self as feeds_pipeline, GetFeedResponseFilter,
-                GetFeedResponseView,
-            },
-            util::map_db_err,
+use crate::data::hydration::{HydrationState, post_hydrate};
+use crate::data::{Cursor, PageInfo, pipeline};
+use crate::service::{
+    context::RequestContext,
+    feeds::{
+        repository::{EventCreatedAt, Query as FeedsRepository},
+        rpc::common::{
+            self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
         },
-        graph::repository::Query as GraphRepository,
-        proto::{GetFeedResponse, GetIdentityFeedRequest},
+        util::map_db_err,
     },
+    graph::repository::Query as GraphRepository,
+    proto::{GetFeedResponse, GetIdentityFeedRequest},
 };
 use tonic::Status;
 
@@ -103,7 +101,7 @@ async fn hydrate(
     _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
