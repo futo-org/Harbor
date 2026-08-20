@@ -78,7 +78,7 @@ loads a `.env` file from the working directory if one is present.
 | ---------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
 | `HARBOR_SERVER_NAME`         | `http://localhost:3000`    | Canonical URL of this server. Stamped as the source on the events it produces.           |
 | `HARBOR_ALLOW_HOSTS`         | `HARBOR_SERVER_NAME`  | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
-| `CDN_URL`                    | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
+| `HARBOR_CDN_URL`             | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
 | `HARBOR_SCRAPER_URL`         | `http://localhost:8855`    | Base URL of the internal scraper service (link-preview metadata and image proxy).        |
 | `HARBOR_MODERATION_IDENTITY` | _(unset)_                  | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
 
@@ -291,5 +291,5 @@ deployment, terminate TLS at a reverse proxy in front of port `3000` and forward
 the server. The server already sends permissive CORS headers and enables gRPC-Web, so
 browser clients can connect once TLS is in place.
 
-Set `CDN_URL` to the public HTTPS URL of the server so clients fetch blobs over the
+Set `HARBOR_CDN_URL` to the public HTTPS URL of the server so clients fetch blobs over the
 proxy.

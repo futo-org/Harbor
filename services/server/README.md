@@ -48,7 +48,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
 | `HARBOR_SERVER_NAME` | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on produced Kafka events. |
 | `HARBOR_ALLOW_HOSTS` | `HARBOR_SERVER_NAME` | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
-| `CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
+| `HARBOR_CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
 | `HARBOR_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
 | `HARBOR_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
 

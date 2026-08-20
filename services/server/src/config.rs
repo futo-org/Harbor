@@ -11,7 +11,7 @@ pub struct Config {
     pub allow_hosts: Vec<String>,
     /// Postgres connection URL (`HARBOR_DATABASE_URL`).
     pub database_url: String,
-    /// Public URL clients use to fetch blob bodies (`CDN_URL`).
+    /// Public URL clients use to fetch blob bodies (`HARBOR_CDN_URL`).
     pub cdn_url: String,
     /// Base URL of the internal scraper service (`HARBOR_SCRAPER_URL`).
     pub scraper_url: String,
@@ -41,7 +41,7 @@ pub fn init() -> &'static Config {
             database_url: std::env::var("HARBOR_DATABASE_URL").unwrap_or_else(
                 |_| "postgres://postgres:testing@localhost:5432".to_string(),
             ),
-            cdn_url: std::env::var("CDN_URL")
+            cdn_url: std::env::var("HARBOR_CDN_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             scraper_url: std::env::var("HARBOR_SCRAPER_URL")
                 .unwrap_or_else(|_| "http://localhost:8855".to_string()),

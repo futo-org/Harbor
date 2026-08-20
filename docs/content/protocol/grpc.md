@@ -217,7 +217,7 @@ message ServerInfo {
 }
 ```
 
-`cdn_url` reflects the server's `CDN_URL` configuration.
+`cdn_url` reflects the server's `HARBOR_CDN_URL` configuration.
 
 ## SignedMessage
 
