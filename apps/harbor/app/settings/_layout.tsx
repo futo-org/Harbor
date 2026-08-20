@@ -16,6 +16,8 @@ export default function SettingsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="identity" options={sheetScreenOptions} />
       <Stack.Screen name="pair-identity" />
+      <Stack.Screen name="create-backup" />
+      <Stack.Screen name="check-backup" />
       <Stack.Screen name="servers" options={sheetScreenOptions} />
       <Stack.Screen name="moderation-settings" options={sheetScreenOptions} />
     </Stack>

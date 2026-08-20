@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
-import Icon from '@/src/common/components/Icon';
+import Icon, { type IconName } from '@/src/common/components/Icon';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
@@ -12,7 +12,15 @@ import useClaimActions from '../hooks/useClaimActions';
 
 // Overflow menu for a claim: the author can delete it, everyone else can
 // report it.
-export function ClaimMenu({ claim }: { claim: DecodedClaim }) {
+export function ClaimMenu({
+  claim,
+  icon = 'dotsVertical',
+  iconSize = 20,
+}: {
+  claim: DecodedClaim;
+  icon?: IconName;
+  iconSize?: number;
+}) {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const isAuthor = identityKey === claim.identity;
@@ -48,7 +56,7 @@ export function ClaimMenu({ claim }: { claim: DecodedClaim }) {
                 },
               ]}
             >
-              <Icon name="dotsVertical" color="neutral_500" size={20} />
+              <Icon name={icon} color="neutral_500" size={iconSize} />
             </View>
           )}
         </DropdownMenu.Trigger>

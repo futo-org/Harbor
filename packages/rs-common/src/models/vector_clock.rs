@@ -78,6 +78,8 @@ mod tests {
             signing_keys: signing,
             revocation_bounds: Vec::new(),
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         }
     }
 

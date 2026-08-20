@@ -21,6 +21,14 @@ message Identity {
   // Absent means the identity has not configured a server list yet and
   // clients fall back to their defaults; present-but-empty is intentional.
   ServerList servers = 4;
+
+  // Backup key for recovering an account with no active sessions.
+  // Its only use is for producing recovery signatures.
+  optional PublicKey recovery_key = 5;
+
+  // Signature from the recovery key in the preceding identity document.
+  // The content signed should be (identity_string, new_rotation_key).
+  optional bytes recovery_signature = 6;
 }
 
 message ServerList {

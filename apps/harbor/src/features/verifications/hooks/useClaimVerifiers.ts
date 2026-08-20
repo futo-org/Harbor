@@ -9,6 +9,8 @@ import {
   decodeTargetIdentities,
   statusOf,
 } from '../utils/claim-status';
+import { PLATFORM_SCHEMA_NAME } from '../utils/platforms';
+import { useVerifierIdentities } from './useVerifierIdentities';
 
 export type ClaimVerifiersResult = ClaimVerificationStatus & {
   isLoading: boolean;
@@ -51,9 +53,12 @@ function decodeClaimEventKey(claimId: string | undefined): EventKey | null {
  */
 export function useClaimVerifiers(
   claimId: string | undefined,
+  schemaName?: string,
 ): ClaimVerifiersResult {
   const claimEventKey = useMemo(() => decodeClaimEventKey(claimId), [claimId]);
   const enabled = !!claimEventKey;
+  const verifierBots = useVerifierIdentities();
+  const isPlatform = schemaName === PLATFORM_SCHEMA_NAME;
 
   const targets = useQuery(
     ['verification-targets', claimId ?? ''],
@@ -99,8 +104,15 @@ export function useClaimVerifiers(
   }, [enabled, verifies.data]);
 
   const status = useMemo(
-    () => statusOf(combineVerifiers(requested, verifiedBy)),
-    [requested, verifiedBy],
+    () =>
+      statusOf(
+        combineVerifiers(
+          requested,
+          verifiedBy,
+          isPlatform ? verifierBots : undefined,
+        ),
+      ),
+    [requested, verifiedBy, isPlatform, verifierBots],
   );
 
   return {

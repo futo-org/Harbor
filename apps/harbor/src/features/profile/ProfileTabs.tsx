@@ -20,10 +20,16 @@ export function ProfileTabs({
         Posts
       </Tabs.Tab>
       <Tabs.Tab
-        active={activeFeed === 'verifications'}
-        onPress={() => setActiveFeed('verifications')}
+        active={activeFeed === 'verification-claims'}
+        onPress={() => setActiveFeed('verification-claims')}
       >
-        Verifications
+        Verifications Claimed
+      </Tabs.Tab>
+      <Tabs.Tab
+        active={activeFeed === 'verification-verifies'}
+        onPress={() => setActiveFeed('verification-verifies')}
+      >
+        Verifications Vouched
       </Tabs.Tab>
     </Tabs>
   );

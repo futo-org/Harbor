@@ -1,10 +1,10 @@
 ---
-title: Creating a verifier
-sidebar_label: Creating a verifier
-sidebar_position: 4
+title: Add a Platform Verifier
+sidebar_label: Add a Platform Verifier
+sidebar_position: 3
 ---
 
-# Creating a verifier
+# Add a Platform Verifier
 
 A verifier is a class that extends one of the two base classes in
 `services/verifier-bot/src/verifier.ts` and is exported as part of a `Platform`.

@@ -121,11 +121,10 @@ async function loadClient(): Promise<PolycentricClient> {
       throw new Error('Client has no key pair after initialization.');
     }
     console.log('Publishing new bot identity');
-    await client.identityManager.publish(
-      null,
-      [client.currentKeyPair.publicKey],
-      [],
-    );
+    await client.identityManager.publish({
+      rotationKeys: [client.currentKeyPair.publicKey],
+      signingKeys: [],
+    });
   }
 
   try {

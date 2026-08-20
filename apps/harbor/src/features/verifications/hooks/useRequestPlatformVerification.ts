@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Platform } from '../utils/platforms';
 import { verifierApi } from '../utils/verifier-api';
 import { oauthSignIn } from './useOAuthVerifyPlatformClaim';
+import { publishVerifierBotTargets } from './useRequestVerification';
 
 /**
  * (Re-)verify an existing platform claim. Text platforms re-check the
@@ -30,6 +31,7 @@ export default function useRequestPlatformVerification() {
         const types = (await verifierApi.platformVerifiers()).get(
           platform.slug,
         );
+        await publishVerifierBotTargets(client, claimId);
         if (types?.has('text')) {
           await verifierApi.requestTextVerify(platform.slug, claimId);
         } else if (types?.has('oauth')) {

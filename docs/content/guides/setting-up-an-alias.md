@@ -1,7 +1,7 @@
 ---
 title: Setting Up an Alias
 sidebar_label: Set Up an Alias
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Setting Up an Alias

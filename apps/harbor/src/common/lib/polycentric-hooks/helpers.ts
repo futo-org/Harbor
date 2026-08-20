@@ -197,10 +197,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       upvoteCount: bundle.meta?.upvoteCount,
       downvoteCount: bundle.meta?.downvoteCount,
       reactionTallies: bundle.meta?.emojiReactions,
-      signedEvent: v2.SignedEvent.create({
-        eventBytes: signedEvent.eventBytes,
-        signature: signedEvent.signature,
-      }),
+      signedEvent,
     };
   } catch (e) {
     console.warn('[decodePostBundle] drop: decode threw', e);

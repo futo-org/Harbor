@@ -36,18 +36,18 @@ impl MigrationTrait for Migration {
 
         //  Create a table that holds a single value, the "dynamic gravity".
         let mut create_table = TableCreateStatement::new();
-        create_table
-            .table(GRAVITY_TABLE_NAME)
-            .col({
-                let mut def = ColumnDef::new("value");
-                def.decimal_len(20, 11).not_null();
-                def
-            });
+        create_table.table(GRAVITY_TABLE_NAME).col({
+            let mut def = ColumnDef::new("value");
+            def.decimal_len(20, 11).not_null();
+            def
+        });
         tx.execute(&create_table).await?;
 
         let comment = Statement::from_string(
             DatabaseBackend::Postgres,
-            format!("COMMENT ON TABLE {GRAVITY_TABLE_NAME} IS 'Table to hold the dynamic gravity value.';"),
+            format!(
+                "COMMENT ON TABLE {GRAVITY_TABLE_NAME} IS 'Table to hold the dynamic gravity value.';"
+            ),
         );
         tx.execute_raw(comment).await.unwrap();
 
@@ -60,10 +60,11 @@ impl MigrationTrait for Migration {
 
         let default_value = Statement::from_string(
             DatabaseBackend::Postgres,
-            format!("CREATE UNIQUE INDEX one_gravity_value ON {GRAVITY_TABLE_NAME} ( ( true ) );"),
+            format!(
+                "CREATE UNIQUE INDEX one_gravity_value ON {GRAVITY_TABLE_NAME} ( ( true ) );"
+            ),
         );
         tx.execute_raw(default_value).await.unwrap();
-
 
         // A version that uses the dynamic gravity value.
         let create_function = Statement::from_string(

@@ -10,7 +10,6 @@ use polycentric_common::{
     },
 };
 
-use crate::identity::resolve_identity_chain;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
     identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
@@ -50,8 +49,19 @@ impl PolycentricClient {
 
     /// Copy a signed event into the event store.
     pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
-        self.identity_store.clear();
-        self.event_store.insert(signed_event)
+        let event_key = EventKey::from_signed_event(&signed_event)?;
+        let identity =
+            (event_key.collection == collections::IDENTITY).then(|| event_key.identity.clone());
+
+        // Do the insertion
+        let inserted = self.event_store.insert_at(signed_event, event_key);
+
+        // If we inserted an identity event, invalidate the relevant identity chain
+        if inserted && let Some(identity) = identity {
+            self.identity_store.invalidate(&identity);
+        }
+
+        Ok(())
     }
 
     /// Copy content bytes into the content store, keyed by digest, after
@@ -68,8 +78,23 @@ impl PolycentricClient {
                 "content does not match digest {digest_hex}"
             )));
         }
-        self.identity_store.clear();
-        self.content_store.insert(digest, content_bytes);
+
+        if !self.content_store.insert(digest, content_bytes) {
+            return Ok(());
+        }
+
+        // Adding this content may make an identity chain resolve differently if
+        // it's an identity document.
+        let is_identity = self
+            .content_store
+            .get_decoded(digest)
+            .and_then(|content| content.content_body)
+            .is_some_and(|body| matches!(body, ContentBody::Identity(_)));
+
+        if is_identity {
+            self.identity_store.invalidate_all();
+        }
+
         Ok(())
     }
 
@@ -114,6 +139,35 @@ impl PolycentricClient {
     /// Find the event metadata corresponding to `event_key`.
     pub fn find_event_meta(&self, event_key: &EventKey) -> Option<&EventMetadata> {
         self.meta_store.get(event_key)
+    }
+
+    /// Assemble the stored bundle for an event already located in the store.
+    pub(crate) fn bundle_for(
+        &self,
+        key: &EventKey,
+        signed_event: &SignedEvent,
+        include_proofs: bool,
+    ) -> Result<EventBundle, CoreError> {
+        let event = Event::decode(signed_event.event_bytes.as_slice())
+            .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
+
+        let serialized_content = event
+            .content_digest
+            .as_ref()
+            .and_then(|digest| self.find_content_from_digest(digest));
+
+        let event_proofs = if include_proofs {
+            self.event_proofs_store.get(key).to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(EventBundle {
+            signed_event: Some(signed_event.clone()),
+            serialized_content,
+            event_proofs,
+            meta: self.meta_store.get(key).cloned(),
+        })
     }
 
     /// Sig-check and insert each bundle. Identity events go first (by
@@ -340,16 +394,12 @@ impl PolycentricClient {
             if self.validate_event(signed_event, proofs).is_err() {
                 continue;
             }
-            let event = Event::decode(signed_event.event_bytes.as_slice())
-                .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
+            let bundle = self.bundle_for(event_key, signed_event, true)?;
 
-            let content_bytes = event
-                .content_digest
+            if let Some(bytes) = bundle
+                .serialized_content
                 .as_ref()
-                .and_then(|d| self.content_store.get(d))
-                .map(|b| b.to_vec());
-
-            if let Some(bytes) = content_bytes.as_deref()
+                .map(|c| c.content_bytes.as_slice())
                 && let Ok(content) = Content::decode(bytes)
                 && let Some(ContentBody::Delete(d)) = content.content_body
                 && let Some(target) = d.event_key
@@ -364,14 +414,6 @@ impl PolycentricClient {
                 });
             }
 
-            let meta = self.meta_store.get(event_key).cloned();
-
-            let bundle = EventBundle {
-                signed_event: Some(signed_event.clone()),
-                serialized_content: content_bytes.map(|c| SerializedContent { content_bytes: c }),
-                event_proofs: proofs.to_vec(),
-                meta,
-            };
             bundles.push((event_key.clone(), bundle));
         }
 
@@ -382,22 +424,38 @@ impl PolycentricClient {
             .collect())
     }
 
-    /// Resolve the identity chain for `identity` using the local event and
-    /// content stores. Memoized: resolving verifies a signature per identity
-    /// event, and every `validate_event` needs a chain.
+    /// Return the identity chain for `identity`, resolved from the local event and
+    /// content stores.
     pub fn identity_chain(&self, identity: &str) -> Result<Arc<IdentityChain>, CoreError> {
-        if let Some(chain) = self.identity_store.get_chain(identity) {
-            return Ok(chain);
-        }
-
-        let chain = Arc::new(resolve_identity_chain(
-            identity,
-            &self.event_store,
-            &self.content_store,
-        )?);
         self.identity_store
-            .insert_chain(identity, Arc::clone(&chain));
-        Ok(chain)
+            .get_chain(identity, &self.event_store, &self.content_store)
+    }
+
+    /// The canonical identity chain for `identity` as bundles.
+    pub fn identity_chain_bundles(&self, identity: &str) -> Result<Vec<EventBundle>, CoreError> {
+        let chain = self.identity_chain(identity)?;
+
+        chain
+            .iter()
+            .map(|identity_event| {
+                let key = EventKey {
+                    identity: identity.to_owned(),
+                    collection: collections::IDENTITY,
+                    signed_by_key_type: identity_event.signer.key_type,
+                    signed_by_key: identity_event.signer.key.clone(),
+                    sequence: identity_event.sequence,
+                };
+
+                let signed_event = self.event_store.get(&key).ok_or_else(|| {
+                    CoreError::InvalidEvent(format!(
+                        "identity chain event at sequence {} for {} is not in the event store",
+                        identity_event.sequence, identity
+                    ))
+                })?;
+
+                self.bundle_for(&key, signed_event, true)
+            })
+            .collect()
     }
 
     /// Validate an event against its identity chain, identity content,
@@ -563,6 +621,8 @@ mod tests {
                 signing_keys: signing,
                 revocation_bounds,
                 servers: None,
+                recovery_key: None,
+                recovery_signature: None,
             })),
         };
         let bytes = content.encode_to_vec();
@@ -647,6 +707,8 @@ mod tests {
             signing_keys: signing.clone(),
             revocation_bounds: Vec::new(),
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
         let id_string = identity
             .map(|s| s.to_string())
@@ -751,6 +813,8 @@ mod tests {
             signing_keys: signing,
             revocation_bounds,
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
 
         let dedup = signer_identity_content.deduplicated_keys();
@@ -821,6 +885,8 @@ mod tests {
             signing_keys: vec![],
             revocation_bounds: Vec::new(),
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         }
         .derive_hex_key();
         let genesis = sign_event(
@@ -1290,6 +1356,8 @@ mod tests {
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
         let identity = add_identity_event(
             &mut client,

@@ -8,7 +8,7 @@ sidebar_position: 1
 
 This page covers building the monorepo and running the app against a local
 server. To run a server for real use rather than for development, see
-[Running a Server](../running-a-server.md).
+[Running a Server](../guides/running-a-server.md).
 
 :::warning[Early stage]
 Harbor is under active development. The setup below works, but expect rough
@@ -80,7 +80,7 @@ docker compose exec -T server /app/migration fresh
 
 The server listens on `localhost:3000` by default, which is what the app's
 default seed server list points at. See
-[Running a Server](../running-a-server.md) for configuration, migration
+[Running a Server](../guides/running-a-server.md) for configuration, migration
 commands, and how to run the server from source instead of in Docker; the
 [server README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
 covers its environment variables and integration tests.

@@ -1,0 +1,12 @@
+[
+  {
+    "url": "https://srv.harbor.social",
+    "operator": "FUTO",
+    "description": "The default Harbor server."
+  },
+  {
+    "url": "https://srv.polycentric.io",
+    "operator": "FUTO",
+    "description": "An alternative Harbor server."
+  }
+]

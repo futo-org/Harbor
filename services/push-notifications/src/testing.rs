@@ -66,6 +66,8 @@ impl EventSyncService for MockEventSync {
                             signing_keys: self.identity_keys.clone(),
                             revocation_bounds: vec![],
                             servers: None,
+                            recovery_key: None,
+                            recovery_signature: None,
                         })),
                     })]
                 }

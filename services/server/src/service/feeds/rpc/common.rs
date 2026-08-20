@@ -5,23 +5,13 @@ use crate::data::hydration::HydrationState;
 use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{
-    self as tombstone, EventWithContentRow,
-};
-use crate::service::feeds::repository::{
-    EventCreatedAt, Query as FeedsRepository,
-};
-use crate::service::feeds::util::map_db_err;
-use crate::service::identity::service::{
-    bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, rows_to_bundles,
-};
+use crate::service::events::tombstone::EventWithContentRow;
+use crate::service::feeds::repository::EventCreatedAt;
+use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
-use crate::service::proto::{
-    Content, EventBundle, EventHint, EventKey, PageParams,
-};
-use crate::service::stats::service::{assemble_bundles, gather_stats_for};
+use crate::service::proto::{Content, EventBundle, EventHint, PageParams};
+use crate::service::stats::service::assemble_bundles;
 use entity::content_model;
 use prost::Message;
 use serde::Deserialize;
@@ -96,160 +86,6 @@ pub fn create_event_created_at_marker(
         sorted_by: event.created_at,
         event_id: event.id,
     }
-}
-
-/// Return relevant content such as:
-/// - tombstones for the queried rows
-/// - latest identity events (rotation/signing chain) for every
-///   identity referenced
-/// - latest profile event (display name / avatar / banner) for every
-///   identity referenced
-pub async fn hydrate<Sorted>(
-    ctx: &ServiceContext,
-    fetched: &Fetched<Sorted>,
-) -> Result<HydrationState, Status> {
-    let rows = &fetched.rows;
-
-    let keys: Vec<TargetEventKey> =
-        rows.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let mut identities = collect_identities(
-        rows.iter()
-            .map(|(event, content)| (event, content.as_ref())),
-    );
-
-    // Add moderation service identity to every request, such that clients can verify label events.
-    // This ships the identity events more times than the client needs, and even when labels aren't
-    // present in the feed page--can be optimized later.
-    if let Some(moderator) = &ctx.trusted_moderator
-        && !identities.is_empty()
-    {
-        identities.push(moderator.clone())
-    }
-
-    let (quote_keys, repost_keys) = collect_referenced_keys(rows);
-    let quote_set = to_target_event_keys(&quote_keys);
-    let repost_set = to_target_event_keys(&repost_keys);
-
-    // Event keys for all referenced post events that may be displayed by the client.
-    // Fetch labels and additional metadata for these.
-    let display_keys: Vec<TargetEventKey> = {
-        let mut set: HashSet<TargetEventKey> = keys.iter().cloned().collect();
-        set.extend(quote_set.iter().cloned());
-        set.extend(repost_set.iter().cloned());
-        set.into_iter().collect()
-    };
-
-    let tombstones_fut = tombstone::validated_tombstones(ctx, &display_keys);
-    let identity_events_fut = list_identity_events(ctx, identities.clone());
-    let profile_events_fut = list_profile_events(ctx, identities.clone());
-    let referenced_fut = async {
-        let all_keys: Vec<EventKey> =
-            quote_keys.iter().chain(&repost_keys).cloned().collect();
-        FeedsRepository::list_events_by_keys(&ctx.db, &all_keys)
-            .await
-            .map_err(map_db_err)
-    };
-    let labels_fut = async {
-        FeedsRepository::list_labels_for_event_keys(
-            &ctx.db,
-            &display_keys,
-            ctx.trusted_moderator.as_deref(),
-        )
-        .await
-        .map_err(map_db_err)
-    };
-
-    let stats_fut = async {
-        gather_stats_for(&ctx.db, &display_keys)
-            .await
-            .map_err(map_db_err)
-    };
-
-    let (
-        deletes_by_target,
-        identity_events,
-        profile_events,
-        referenced,
-        label_events,
-        stats,
-    ) = tokio::try_join!(
-        tombstones_fut,
-        identity_events_fut,
-        profile_events_fut,
-        referenced_fut,
-        labels_fut,
-        stats_fut,
-    )?;
-
-    let mut quote_post_events = Vec::new();
-    let mut repost_events = Vec::new();
-    for row in referenced {
-        let key = TargetEventKey::of(&row.0);
-        if quote_set.contains(&key) {
-            quote_post_events.push(row);
-        } else if repost_set.contains(&key) {
-            repost_events.push(row);
-        }
-    }
-
-    Ok(HydrationState {
-        deletes_by_target,
-        identity_events,
-        profile_events,
-        quote_post_events,
-        repost_events,
-        label_events,
-        stats,
-    })
-}
-
-/// Collect every EventKey referenced by feed rows (quotes and repost targets).
-fn collect_referenced_keys(
-    rows: &[EventWithContentRow],
-) -> (Vec<EventKey>, Vec<EventKey>) {
-    let mut quote_keys = Vec::new();
-    let mut repost_keys = Vec::new();
-    for (_event, content) in rows {
-        let Some(content) = content else {
-            continue;
-        };
-        let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
-        else {
-            continue;
-        };
-        match decoded.content_body {
-            Some(ContentBody::Post(post)) => {
-                if let Some(quote) = post.quote {
-                    quote_keys.push(quote);
-                }
-            }
-            Some(ContentBody::Repost(repost)) => {
-                if let Some(target) = repost.post {
-                    repost_keys.push(target);
-                }
-            }
-            _ => {}
-        }
-    }
-    (quote_keys, repost_keys)
-}
-
-/// Convert proto `EventKey`s into [`TargetEventKey`]s (the shared
-/// comparable EventKey shape), deduplicated into a set for the
-/// membership tests that split the combined referenced-post result.
-pub fn to_target_event_keys(keys: &[EventKey]) -> HashSet<TargetEventKey> {
-    keys.iter().filter_map(to_target_event_key).collect()
-}
-
-pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
-    let signed_by = key.signed_by.as_ref()?;
-    Some(TargetEventKey {
-        collection: key.collection as i16,
-        identity: key.identity.clone(),
-        public_key_type: signed_by.key_type as i16,
-        public_key: signed_by.key.clone(),
-        sequence: key.sequence as i64,
-    })
 }
 
 /// Whether a row's content references another event as a quote or repost.

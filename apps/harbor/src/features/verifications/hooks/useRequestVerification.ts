@@ -6,24 +6,25 @@ import {
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
+import { verifierApi } from '../utils/verifier-api';
 
 type Client = ReturnType<typeof usePolycentric>;
 
 /**
- * Publish a VerificationTarget aiming a claim at an identity. Committed
+ * Publish a VerificationTarget aiming a claim at identities. Committed
  * locally — the caller owns syncing.
  */
 export async function publishVerificationTarget(
   client: Client,
   claimEventKey: v2.EventKey,
-  targetIdentity: string,
+  targetIdentities: string[],
 ): Promise<void> {
   const content = v2.Content.create({
     contentBody: {
       oneofKind: 'verificationTarget',
       verificationTarget: {
         claimEventKey,
-        targetIdentities: [targetIdentity],
+        targetIdentities,
       },
     },
   });
@@ -36,6 +37,22 @@ export async function publishVerificationTarget(
   } catch (err) {
     console.error(err);
   }
+}
+
+/**
+ * Publish a VerificationTarget aiming a claim at the configured verifier
+ * bots, so a bot verify is preceded by a request like any other
+ * verification. `claimId` is the hex event key (`DecodedClaim.id`).
+ */
+export async function publishVerifierBotTargets(
+  client: Client,
+  claimId: string,
+): Promise<void> {
+  const bots = await verifierApi.verifierIdentities();
+  if (bots.size === 0) return;
+  const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
+  await publishVerificationTarget(client, claimEventKey, [...bots]);
+  invalidateQuery(client, ['verification-targets', claimId]);
 }
 
 // Request verification of an existing claim from a specific identity.
@@ -61,7 +78,7 @@ export default function useRequestVerification() {
       setPending(true);
       try {
         const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
-        await publishVerificationTarget(client, claimEventKey, identity);
+        await publishVerificationTarget(client, claimEventKey, [identity]);
 
         // Delivery to servers is best-effort — the target is already saved
         // locally and will be pushed on the next sync if this fails.

@@ -23,7 +23,7 @@ export {
 export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 
 export type * from './platform-interfaces';
-export { bytesToHex, toDigestKey } from './utils/hex';
+export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
 
 export { StorageHandle } from './datastore';
 export type { Repositories } from './datastore';
@@ -38,6 +38,8 @@ export type {
   KeyPair,
   PrivateKey,
   IdentityState,
+  PublishArgs,
+  IdentityUpdate,
 } from './polycentric-client';
 
 export * from './errors';

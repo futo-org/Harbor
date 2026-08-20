@@ -51,20 +51,12 @@ function InboxPage({ active, ready }: PageProps) {
       isLoading={inbox.isLoading || (!active && inbox.claims.length === 0)}
       isRefreshing={inbox.isRefreshing}
       onRefresh={inbox.refresh}
-      showOwner
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
             <Text variant="body" color="neutral_500" style={Atoms.text_center}>
               When someone asks you to verify a claim, it will show up here.
             </Text>
-            <Button
-              title="Verify a claim"
-              variant="primary"
-              icon="verify"
-              // TODO: start the claim verification flow once it exists.
-              onPress={() => {}}
-            />
           </View>
         </ListEmpty>
       }
@@ -86,8 +78,22 @@ function OutboxPage({
       isLoading={outbox.isLoading}
       isRefreshing={outbox.isRefreshing}
       onRefresh={outbox.refresh}
-      showOwner={false}
       onCreateClaim={onCreateClaim}
+      empty={
+        <ListEmpty>
+          <View style={[Atoms.items_center, Atoms.gap_lg]}>
+            <Text variant="body" color="neutral_500" style={Atoms.text_center}>
+              You haven't made any claims yet
+            </Text>
+            <Button
+              title="Create a claim"
+              variant="primary"
+              icon="verify"
+              onPress={onCreateClaim}
+            />
+          </View>
+        </ListEmpty>
+      }
     />
   );
 }
