@@ -161,7 +161,7 @@ fn spawn_moderation_service(
     mod_identity: &str,
 ) -> tokio::process::Child {
     tokio::process::Command::new(env!("CARGO_BIN_EXE_moderation-service"))
-        .env("DATABASE_URL", database_endpoint())
+        .env("HARBOR_DATABASE_URL", database_endpoint())
         .env("CONTENT_BLOB_OS_BUCKET", "polycentric-blobs")
         .env("CONTENT_BLOB_OS_ENDPOINT", os_endpoint())
         .env("CONTENT_BLOB_OS_FORCE_PATH_STYLE", "true")

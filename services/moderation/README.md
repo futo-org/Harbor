@@ -11,7 +11,7 @@ All service variables are read and validated once at startup by
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
 | `HARBOR_MODERATION_DATABASE_SCHEMA` | `moderation` | Postgres schema owning this service's tables. |
 | `HARBOR_MODERATION_SIGNING_KEY` | _(required)_ | Hex-encoded 32-byte ed25519 seed labels events are signed with. |
 | `HARBOR_MODERATION_IDENTITY` | _(required)_ | Hex identity string this service publishes under. |

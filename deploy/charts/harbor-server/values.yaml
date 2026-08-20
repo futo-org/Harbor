@@ -27,7 +27,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# Runtime configuration: DATABASE_URL, CONTENT_BLOB_OS_* (bucket, endpoint,
+# Runtime configuration: HARBOR_DATABASE_URL, CONTENT_BLOB_OS_* (bucket, endpoint,
 # keys), HARBOR_KAFKA_BROKERS, HARBOR_SERVER_NAME,
 # HARBOR_ALLOW_HOSTS, HARBOR_MODERATION_IDENTITY, … (see
 # compose.yml for the full set). Put credential-bearing values in a Secret

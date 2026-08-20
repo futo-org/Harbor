@@ -105,8 +105,8 @@ async function loadClient(): Promise<PolycentricClient> {
 
   // Reusing the same storage keeps a stable bot identity across restarts:
   // the key pair (and its published Identity) are restored on boot. Set
-  // DATABASE_URL (postgres://, optionally ?schema=<name>) to use postgres
-  // instead of the local sqlite file.
+  // HARBOR_DATABASE_URL (postgres://, optionally ?schema=<name>) to use
+  // postgres instead of the local sqlite file.
   const client = await createPolycentricNodeClient({
     databaseUrl: process.env.HARBOR_VERIFIER_BOT_DATABASE_URL,
     databasePath: './state/polycentric.db',

@@ -58,9 +58,9 @@ docker compose up -d postgres rustfs rustfs-init
 
 # Apply the schema, pointing at the local database.
 cd services/server/migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 
-# Run the server (reads the CONTENT_BLOB_OS_* and DATABASE_URL variables).
+# Run the server (reads the CONTENT_BLOB_OS_* and HARBOR_DATABASE_URL variables).
 cargo run -p server
 ```
 
@@ -84,9 +84,9 @@ loads a `.env` file from the working directory if one is present.
 
 ### Database
 
-| Variable       | Default                                          | Description                  |
-| -------------- | ------------------------------------------------ | ---------------------------- |
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
+| Variable              | Default                                          | Description                  |
+| --------------------- | ------------------------------------------------ | ---------------------------- |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
 
 ### Object storage (blobs)
 

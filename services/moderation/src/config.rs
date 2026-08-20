@@ -25,7 +25,7 @@ pub struct AzureConfig {
 }
 
 pub struct Config {
-    /// Postgres connection URL (`DATABASE_URL`).
+    /// Postgres connection URL (`HARBOR_DATABASE_URL`).
     pub database_url: String,
     /// Schema owning this service's tables
     /// (`HARBOR_MODERATION_DATABASE_SCHEMA`).
@@ -60,7 +60,7 @@ pub fn init() -> Result<&'static Config, String> {
     }
 
     let config = Config {
-        database_url: std::env::var("DATABASE_URL")
+        database_url: std::env::var("HARBOR_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
         database_schema: std::env::var("HARBOR_MODERATION_DATABASE_SCHEMA")
             .unwrap_or_else(|_| "moderation".to_string()),

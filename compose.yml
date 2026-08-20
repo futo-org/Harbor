@@ -22,7 +22,7 @@ services:
       - ${HARBOR_SERVER_PORT:-3000}:3000
     environment:
       - RUST_LOG=debug
-      - DATABASE_URL=postgres://postgres:testing@postgres:5432
+      - HARBOR_DATABASE_URL=postgres://postgres:testing@postgres:5432
       - CONTENT_BLOB_OS_BUCKET=polycentric-blobs
       - CONTENT_BLOB_OS_ENDPOINT=http://rustfs:9000
       - CONTENT_BLOB_OS_FORCE_PATH_STYLE=true
@@ -169,7 +169,7 @@ services:
       dockerfile: services/moderation/Dockerfile
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgres://postgres:testing@postgres:5432
+      - HARBOR_DATABASE_URL=postgres://postgres:testing@postgres:5432
       - HARBOR_KAFKA_BROKERS=kafka:19092
       - HARBOR_MODERATION_IDENTITY=${HARBOR_MODERATION_IDENTITY:-}
       - HARBOR_MODERATION_SIGNING_KEY=${HARBOR_MODERATION_SIGNING_KEY:-}

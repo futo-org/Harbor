@@ -12,7 +12,7 @@ All service variables are read and validated once at startup by
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
 | `HARBOR_NOTIFICATIONS_DATABASE_SCHEMA` | `notifications` | Postgres schema owning this service's tables. |
 | `HARBOR_MAIN_SERVER` | _(required)_ | The server events must originate from for this service to fire notifications (prevents duplicates). |
 | `HARBOR_QUERY_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to fetch identity/profile data from. |
