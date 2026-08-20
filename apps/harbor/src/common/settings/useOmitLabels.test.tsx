@@ -175,6 +175,21 @@ jest.mock('@polycentric/react-native', () => {
 
   return {
     v2: actual,
+    moderationLabels: () => [
+      'hate',
+      'self-harm',
+      'sexually-suggestive',
+      'sexually-explicit',
+      'violence',
+    ],
+    isModerationLabel: (v: string) =>
+      [
+        'hate',
+        'self-harm',
+        'sexually-suggestive',
+        'sexually-explicit',
+        'violence',
+      ].includes(v),
     // The real Query enum is uniffi-generated and needs native init, which
     // can't run under jest. This stub keeps the args it was constructed with so
     // the tests can assert on what the hook passed in.

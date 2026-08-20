@@ -1,58 +1,35 @@
+import {
+  moderationLabels,
+  moderationLabelEntries,
+  isModerationLabel,
+} from '@polycentric/react-native';
+import type { ModerationLabelEntry } from '@polycentric/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-export type ModerationLevel = 'hide' | 'warn' | 'show';
+export type { ModerationLabelEntry };
 
-export const MODERATION_LABELS = [
-  'hate',
-  'self-harm',
-  'sexually-suggestive',
-  'sexually-explicit',
-  'violence',
-] as const;
+export const MODERATION_LABELS: readonly string[] = moderationLabels();
 
 export type ModerationLabel = (typeof MODERATION_LABELS)[number];
 
-export type ModerationPreferences = Record<ModerationLabel, ModerationLevel>;
+export function moderationLabelFromValue(
+  value: string,
+): ModerationLabel | undefined {
+  return isModerationLabel(value) ? (value as ModerationLabel) : undefined;
+}
 
-export type ModerationLabelEntry = {
-  key: ModerationLabel;
-  name: string;
-  description: string;
-};
-
-export const MODERATION_LABEL_ENTRIES: ModerationLabelEntry[] = [
-  {
-    key: 'hate',
-    name: 'Hate',
-    description: 'Hate speech or incitement against groups',
-  },
-  {
-    key: 'self-harm',
-    name: 'Self-Harm',
-    description: 'Self-harm, eating disorders, suicide',
-  },
-  {
-    key: 'sexually-suggestive',
-    name: 'Sexually Suggestive',
-    description: 'Innuendo or implied sexual acts',
-  },
-  {
-    key: 'sexually-explicit',
-    name: 'Sexually Explicit',
-    description: 'Pornography or explicit sexual acts',
-  },
-  {
-    key: 'violence',
-    name: 'Violence',
-    description: 'Violent acts, gore, injury, or terrorism',
-  },
-];
+export const MODERATION_LABEL_ENTRIES: ModerationLabelEntry[] =
+  moderationLabelEntries();
 
 export function moderationLabelName(label: string): string {
   return MODERATION_LABEL_ENTRIES.find((e) => e.key === label)?.name ?? label;
 }
+
+export type ModerationLevel = 'hide' | 'warn' | 'show';
+
+export type ModerationPreferences = Record<ModerationLabel, ModerationLevel>;
 
 export interface SettingsState {
   theme: 'light' | 'dark';
