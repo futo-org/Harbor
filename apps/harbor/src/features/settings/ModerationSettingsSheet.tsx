@@ -1,12 +1,11 @@
 import { Text } from '@/src/common/components';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { Sheet } from '@/src/common/components/sheet';
+import { type ModerationLevel, useSettings } from '@/src/common/settings';
 import {
-  MODERATION_LABEL_ENTRIES,
+  getModerationLabelEntries,
   type ModerationLabelEntry,
-  type ModerationLevel,
-  useSettings,
-} from '@/src/common/settings';
+} from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -75,6 +74,8 @@ function ModerationLabelRow({
 }
 
 export default function ModerationSettingsSheet() {
+  const entries = getModerationLabelEntries();
+
   return (
     <Sheet detents={[0.5, 1]} dismissible>
       <Sheet.Header
@@ -82,11 +83,11 @@ export default function ModerationSettingsSheet() {
         onClose={() => router.canGoBack() && router.back()}
       />
       <Sheet.Content style={[Atoms.p_0]}>
-        {MODERATION_LABEL_ENTRIES.map((entry, index) => (
+        {entries.map((entry, index) => (
           <ModerationLabelRow
             key={entry.key}
             entry={entry}
-            isLast={index === MODERATION_LABEL_ENTRIES.length - 1}
+            isLast={index === entries.length - 1}
           />
         ))}
       </Sheet.Content>

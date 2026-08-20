@@ -1,35 +1,18 @@
-import {
-  moderationLabels,
-  moderationLabelEntries,
-  isModerationLabel,
-} from '@polycentric/react-native';
-import type { ModerationLabelEntry } from '@polycentric/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { ModerationLabel } from './moderationLabels';
 
-export type { ModerationLabelEntry };
-
-export const MODERATION_LABELS: readonly string[] = moderationLabels();
-
-export type ModerationLabel = (typeof MODERATION_LABELS)[number];
-
-export function moderationLabelFromValue(
-  value: string,
-): ModerationLabel | undefined {
-  return isModerationLabel(value) ? (value as ModerationLabel) : undefined;
-}
-
-export const MODERATION_LABEL_ENTRIES: ModerationLabelEntry[] =
-  moderationLabelEntries();
-
-export function moderationLabelName(label: string): string {
-  return MODERATION_LABEL_ENTRIES.find((e) => e.key === label)?.name ?? label;
-}
+export type {
+  ModerationLabel,
+  ModerationLabelEntry,
+} from './moderationLabels';
 
 export type ModerationLevel = 'hide' | 'warn' | 'show';
 
-export type ModerationPreferences = Record<ModerationLabel, ModerationLevel>;
+export type ModerationPreferences = Partial<
+  Record<ModerationLabel, ModerationLevel>
+>;
 
 export interface SettingsState {
   theme: 'light' | 'dark';

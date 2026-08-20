@@ -4,7 +4,10 @@ import { memo } from 'react';
 import { Text } from '@/src/common/components/primitives';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
-import { MODERATION_LABELS, moderationLabelName } from '@/src/common/settings';
+import {
+  isModerationLabel,
+  moderationLabelName,
+} from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Pressable, View } from 'react-native';
@@ -42,11 +45,9 @@ function LabelChip({
 }) {
   const { theme } = useTheme();
 
-  const isModerationLabel = (MODERATION_LABELS as readonly string[]).includes(
-    label.value,
-  );
-  const bg = isModerationLabel ? theme.palette.warning_25 : undefined;
-  const textColor = isModerationLabel
+  const isModeration = isModerationLabel(label.value);
+  const bg = isModeration ? theme.palette.warning_25 : undefined;
+  const textColor = isModeration
     ? theme.palette.warning_700
     : theme.palette.neutral_600;
 

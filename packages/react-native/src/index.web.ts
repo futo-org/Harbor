@@ -8,6 +8,9 @@ export {
   EmitMode,
   FeedSort,
   FetchMode,
+  isModerationLabel,
+  moderationLabelEntries,
+  moderationLabels,
   PolycentricCore,
   Query,
   QueryStatus,
@@ -17,6 +20,7 @@ export {
 } from '@polycentric/rs-core-uniffi-web';
 export type {
   EventKey,
+  ModerationLabelEntry,
   QueryResultFfi,
   QueryOpts,
 } from '@polycentric/rs-core-uniffi-web';

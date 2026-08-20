@@ -2,7 +2,7 @@ import { Button, Text } from '@/src/common/components/primitives';
 import Icon from '@/src/common/components/Icon';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
-import { moderationLabelName } from '@/src/common/settings';
+import { moderationLabelName } from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { View } from 'react-native';

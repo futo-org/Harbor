@@ -7,6 +7,11 @@
 
 /// Label values defined to be relevant for moderation, for use with
 /// content warnings and filtering.
+///
+/// The uniffi bindings expose these as strings, so the harbor client mirrors
+/// the vocabulary as a TypeScript union in
+/// `apps/harbor/src/common/settings/moderationLabels.ts`. Update it when
+/// adding or removing a label here.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ModerationLabel {
     Hate,
