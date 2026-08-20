@@ -84,7 +84,7 @@ export default function useCreateClaim() {
 
         // The same sync below delivers both events.
         if (requestFrom && event.key) {
-          await publishVerificationTarget(client, event.key, requestFrom);
+          await publishVerificationTarget(client, event.key, [requestFrom]);
         }
 
         // Delivery to servers is best-effort — the claim is already saved

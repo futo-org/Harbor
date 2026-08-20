@@ -1,4 +1,5 @@
 import { Fonts } from '@/src/common/assets';
+import { isWeb } from '@/src/common/util/platform';
 import { useFonts } from 'expo-font';
 import {
   DefaultTheme,
@@ -28,10 +29,8 @@ export const Context = createContext<ThemeContextValue | undefined>(undefined);
 Context.displayName = 'PolycentricThemeContext';
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter: Fonts.Inter,
-    'Inter-Italic': Fonts['Inter-Italic'],
-  });
+  // Web declares its own @font-face in `+html.tsx`.
+  const [fontsLoaded, fontError] = useFonts(isWeb ? {} : Fonts);
 
   const colorScheme = useColorScheme();
   const storedTheme = useSettings((s) => s.theme);

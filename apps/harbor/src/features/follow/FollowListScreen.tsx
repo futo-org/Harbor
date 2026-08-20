@@ -3,6 +3,7 @@ import { PagerView } from '@/src/common/components/PagerView';
 import { Tabs } from '@/src/common/components/Tabs';
 import { Routes } from '@/src/common/constants';
 import { replacePath } from '@/src/common/lib/navigation/replacePath';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
@@ -22,6 +23,7 @@ const FOLLOW_TAB_LABELS: Record<FollowListMode, string> = {
 export default function FollowListScreen({ mode }: { mode: FollowListMode }) {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
   const [tab, setTab] = useState<FollowListMode>(mode);
+  usePageTitle(tab === 'following' ? 'Following' : 'Followers');
 
   const selectTab = (next: FollowListMode) => {
     setTab(next);

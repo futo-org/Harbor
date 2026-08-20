@@ -1,4 +1,5 @@
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { UITextView } from '@bsky.app/react-native-uitextview';
+import type { TextProps as RNTextProps } from 'react-native';
 import {
   useTheme,
   typography,
@@ -7,6 +8,24 @@ import {
   type FontSizeToken,
   type LineHeightToken,
 } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
+
+const WEB_FONT_STACK =
+  'NotoSans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+// Native font APIs can't select a variable font's weights, so each face is
+// its own family (see `src/common/assets`). Keyed by every weight the theme
+// can produce, so adding a token without a face fails to compile.
+type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
+const NATIVE_FONTS: Record<
+  FontWeightValue,
+  { normal: string; italic: string }
+> = {
+  '400': { normal: 'NotoSans-Regular', italic: 'NotoSans-Italic' },
+  '500': { normal: 'NotoSans-Medium', italic: 'NotoSans-MediumItalic' },
+  '600': { normal: 'NotoSans-SemiBold', italic: 'NotoSans-SemiBoldItalic' },
+  '700': { normal: 'NotoSans-Bold', italic: 'NotoSans-BoldItalic' },
+};
 
 export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
@@ -32,10 +51,7 @@ export function Text({
   const { theme } = useTheme();
 
   const config = VARIANT_CONFIG[variant];
-  const fontFamily =
-    italic && variant !== 'title' && variant !== 'subtitle'
-      ? 'Inter-Italic'
-      : 'Inter';
+  const wantsItalic = italic && variant !== 'title' && variant !== 'subtitle';
 
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
@@ -53,15 +69,27 @@ export function Text({
     ? typography.fontWeight[fontWeight]
     : typography.fontWeight[config.defaultWeight];
 
+  const fontFamily = isWeb
+    ? WEB_FONT_STACK
+    : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
+
   return (
-    <RNText
+    <UITextView
+      // iOS `selectable` Text only offers the copy callout; UITextView gives
+      // real range selection. Everywhere else this renders the base Text.
+      uiTextView={!!props.selectable}
       style={[
         {
           fontFamily,
           color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
-          fontWeight: resolvedFontWeight,
           lineHeight: resolvedLineHeight,
+          ...(isWeb
+            ? {
+                fontWeight: resolvedFontWeight,
+                ...(wantsItalic ? { fontStyle: 'italic' as const } : {}),
+              }
+            : {}),
         },
         style,
       ]}

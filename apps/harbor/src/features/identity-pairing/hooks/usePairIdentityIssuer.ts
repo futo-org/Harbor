@@ -25,7 +25,7 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
   // Update the list of already-authorized keys from *local* state.
   const refreshAuthorizedClaimers = useCallback(async () => {
     if (!identityKey) return;
-    const state = await client.identityManager.resolveIdentity(identityKey);
+    const state = client.identityManager.resolveIdentity(identityKey);
     if (!state) return;
 
     const next = new Set<string>();
@@ -117,11 +117,10 @@ export function usePairIdentityIssuer(identityKey: string | null | undefined) {
       await client.sync(SyncStrategy.PARTIAL_PULL);
       await refreshAuthorizedClaimers();
 
-      const isRotationKey =
-        await client.identityManager.isRotationKeyForIdentity(
-          identityKey,
-          currentKey,
-        );
+      const isRotationKey = client.identityManager.isRotationKeyForIdentity(
+        identityKey,
+        currentKey,
+      );
       if (!isRotationKey) {
         throw new Error(
           'Only rotation key holders can create pairing sessions',

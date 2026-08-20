@@ -14,3 +14,11 @@ message PublicKey {
   // Value of the key
   bytes key = 2;
 }
+
+// The private key corresponding to a public key.
+message PrivateKey {
+  // Type of key used. Defaults to ED25519.
+  KeyType key_type = 1;
+  // Value of the key
+  bytes key = 2;
+}

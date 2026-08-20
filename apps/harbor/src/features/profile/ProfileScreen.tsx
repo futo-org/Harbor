@@ -4,6 +4,7 @@ import { PagerViewWithHeader } from '@/src/common/components/PagerView';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { FeedPage } from '@/src/features/feed/FeedPage';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
@@ -36,10 +37,17 @@ import {
   useProfileContext,
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { ProfileVerifiesList } from './ProfileVerifiesList';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { truncateText } from '@/src/common/util/truncateText';
 
 /** Page order behind the profile's tab bar. */
-const PROFILE_TABS: readonly ActiveFeed[] = ['posts', 'verifications'];
+const PROFILE_TABS: readonly ActiveFeed[] = [
+  'posts',
+  'verification-claims',
+  'verification-verifies',
+];
 
 /** Clears the tab bar at the bottom of the screen. */
 const FEED_PADDING = { paddingBottom: 40 };
@@ -79,55 +87,54 @@ function IdentityProfile({
 }) {
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
 
-  // Redirect at most once per identity, even though the shared profile query
-  // may briefly re-enter its loading state and re-run this effect.
-  const redirectedRef = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `identityKey` is the reset trigger, not a capture
+  const [verifiedAlias, setVerifiedAlias] = useState<string | null>(() =>
+    identityKey ? getVerifiedAlias(identityKey) : null,
+  );
   useEffect(() => {
-    redirectedRef.current = false;
+    setVerifiedAlias(identityKey ? getVerifiedAlias(identityKey) : null);
   }, [identityKey]);
 
   useEffect(() => {
-    // Redirecting to the canonical alias URL keeps the current tab.
-    const aliasPath = (alias: string) =>
-      tab === 'verifications'
-        ? Routes.tabs.profileVerifications(alias)
-        : Routes.tabs.profile(alias);
-
-    if (!identityKey || redirectedRef.current) return;
-
-    // Fast path: a relationship verified earlier this session redirects
-    // without waiting for the profile to load or hitting the network.
-    const cachedAlias = getVerifiedAlias(identityKey);
-    if (cachedAlias) {
-      redirectedRef.current = true;
-      router.replace(aliasPath(cachedAlias));
-      return;
-    }
-
+    if (!identityKey || verifiedAlias) return;
     if (profile.isLoading) return;
     const alias = profile.alias;
     if (!alias) return;
 
     let cancelled = false;
     void resolveAlias(alias).then((resolved) => {
-      if (cancelled || redirectedRef.current || !resolved) return;
-      // Only redirect when the alias points back to THIS identity.
+      if (cancelled || !resolved) return;
+      // Only accept an alias that points back to THIS identity.
       if (resolved.toLowerCase() === identityKey.toLowerCase()) {
         const canonical = normalizeAlias(alias);
         if (!canonical) return;
         recordVerifiedAlias(alias, identityKey);
-        redirectedRef.current = true;
-        router.replace(aliasPath(canonical));
+        setVerifiedAlias(canonical);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [identityKey, profile.isLoading, profile.alias, tab]);
+  }, [identityKey, verifiedAlias, profile.isLoading, profile.alias]);
+
+  // The address bar shows the canonical alias URL. Rewritten in place —
+  // navigating would remount the profile as `AliasProfile`, a visible flash.
+  useEffect(() => {
+    if (!verifiedAlias) return;
+    replacePath(
+      tab === 'verification-claims'
+        ? Routes.tabs.profileVerificationClaims(verifiedAlias)
+        : tab === 'verification-verifies'
+          ? Routes.tabs.profileVerificationVerifies(verifiedAlias)
+          : Routes.tabs.profile(verifiedAlias),
+    );
+  }, [verifiedAlias, tab]);
 
   return (
-    <ProfileProvider identityKey={identityKey} activeFeed={tab}>
+    <ProfileProvider
+      identityKey={identityKey}
+      alias={verifiedAlias}
+      activeFeed={tab}
+    >
       <ProfileScreenContent />
     </ProfileProvider>
   );
@@ -136,6 +143,13 @@ function IdentityProfile({
 function ProfileScreenContent() {
   const { theme } = useTheme();
   const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
+
+  // Reads the profile query the header already shares.
+  const profile = useProfile(identityKey);
+  const shortId = shortenIdentityId(identityKey ?? undefined);
+  usePageTitle(
+    profile.name ? `${truncateText(profile.name, 30)} (${shortId})` : shortId,
+  );
 
   const isFocused = useIsFocused();
 
@@ -157,11 +171,6 @@ function ProfileScreenContent() {
   const handleBack = useCallback(() => {
     router.back();
   }, []);
-
-  const refresh = useCallback(() => {
-    identityFeed.refresh();
-  }, [identityFeed.refresh]);
-  useFocusedRefresh(refresh);
 
   // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
   // array reference on every render defeats the memoisation.
@@ -205,7 +214,12 @@ function ProfileScreenContent() {
             active={activeFeed === 'posts'}
             contentContainerStyle={FEED_PADDING}
           />
-          <ProfileVerificationsList active={activeFeed === 'verifications'} />
+          <ProfileVerificationsList
+            active={activeFeed === 'verification-claims'}
+          />
+          <ProfileVerifiesList
+            active={activeFeed === 'verification-verifies'}
+          />
         </PagerViewWithHeader>
 
         {!isWeb ? (

@@ -83,5 +83,9 @@ export async function createIdentity(
   if (!client.servers.includes(server)) {
     client.servers.push(server);
   }
-  await client.identityManager.publish(null, [currentKey], [], client.servers);
+  await client.identityManager.publish({
+    rotationKeys: [currentKey],
+    signingKeys: [],
+    servers: client.servers,
+  });
 }

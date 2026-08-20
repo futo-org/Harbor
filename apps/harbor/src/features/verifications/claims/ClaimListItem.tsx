@@ -8,22 +8,17 @@ import type { ClaimVerificationStatus } from '../utils/claim-status';
 import { CLAIM_TYPES } from '../utils/forms';
 import { getPlatformFromClaim } from '../utils/platforms';
 import { resolveClaimTitle } from '../utils/render';
+import { ClaimAuthorLine } from './ClaimAuthorLine';
+import { ClaimMenu } from './ClaimMenu';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
-import { IdentityChip } from './toolbar/IdentityChip';
 import { StatusChip } from './toolbar/StatusChip';
-import { TimeChip } from './toolbar/TimeChip';
 
-// A single claim in the list: title plus the type and time chips. Links to
-// the claim's view unless `onPress` overrides it (e.g. a picker).
 export function ClaimListItem({
   claim,
   onPress,
-  showOwner = false,
 }: {
   claim: DecodedClaim & { status?: ClaimVerificationStatus };
   onPress?: () => void;
-  // Show who made the claim — for lists that aren't the viewer's own.
-  showOwner?: boolean;
 }) {
   const { theme } = useTheme();
   const { title } = resolveClaimTitle(claim.schemaName, claim.fields);
@@ -52,23 +47,22 @@ export function ClaimListItem({
     >
       <View
         style={[
-          // Atoms.flex_row,
-          // Atoms.flex_wrap,
           Atoms.gap_sm,
-          Atoms.pl_lg,
-          Atoms.pr_lg,
-          Atoms.pt_md,
-          Atoms.pb_md,
-          Atoms.rounded_md,
+          Atoms.px_lg,
+          Atoms.py_md,
           { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
         ]}
       >
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          style={theme.atoms.text}
-          selectable={false}
-        >
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
+          <View style={Atoms.flex_1}>
+            <ClaimAuthorLine
+              identity={claim.identity}
+              createdAt={claim.createdAt}
+            />
+          </View>
+          <ClaimMenu claim={claim} icon="more" iconSize={16} />
+        </View>
+        <Text variant="body" style={theme.atoms.text} selectable={false}>
           {title}
         </Text>
         <View
@@ -79,14 +73,12 @@ export function ClaimListItem({
             Atoms.flex_wrap,
           ]}
         >
-          {showOwner && <IdentityChip identity={claim.identity} />}
           <ClaimTypeChip
             name={platform?.name ?? claim.schemaName}
             icon={claimType?.icon ?? 'verify'}
             logo={platform?.logo}
             color={platform?.color ?? claimType?.color}
           />
-          <TimeChip createdAt={claim.createdAt} />
           <StatusChip
             verifiedCount={claim.status?.verifiedCount}
             totalCount={claim.status?.totalCount}

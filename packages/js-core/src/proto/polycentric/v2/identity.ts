@@ -31,7 +31,7 @@ export interface Identity {
     signingKeys: PublicKey[];
     /**
      * In order to retain valid events from a revoked keypair, we store their last known
-     * signature.
+     * signature for each collection the key participated in.
      *
      * @generated from protobuf field: repeated polycentric.v2.RevocationBound revocation_bounds = 3
      */
@@ -44,6 +44,20 @@ export interface Identity {
      * @generated from protobuf field: polycentric.v2.ServerList servers = 4
      */
     servers?: ServerList;
+    /**
+     * Backup key for recovering an account with no active sessions.
+     * Its only use is for producing recovery signatures.
+     *
+     * @generated from protobuf field: optional polycentric.v2.PublicKey recovery_key = 5
+     */
+    recoveryKey?: PublicKey;
+    /**
+     * Signature from the recovery key in the preceding identity document.
+     * The content signed should be (identity_string, new_rotation_key).
+     *
+     * @generated from protobuf field: optional bytes recovery_signature = 6
+     */
+    recoverySignature?: Uint8Array;
 }
 /**
  * @generated from protobuf message polycentric.v2.ServerList
@@ -109,7 +123,9 @@ class Identity$Type extends MessageType<Identity> {
             { no: 1, name: "rotation_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
             { no: 2, name: "signing_keys", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PublicKey },
             { no: 3, name: "revocation_bounds", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => RevocationBound },
-            { no: 4, name: "servers", kind: "message", T: () => ServerList }
+            { no: 4, name: "servers", kind: "message", T: () => ServerList },
+            { no: 5, name: "recovery_key", kind: "message", T: () => PublicKey },
+            { no: 6, name: "recovery_signature", kind: "scalar", opt: true, T: 12 /*ScalarType.BYTES*/ }
         ]);
     }
     create(value?: PartialMessage<Identity>): Identity {
@@ -138,6 +154,12 @@ class Identity$Type extends MessageType<Identity> {
                 case /* polycentric.v2.ServerList servers */ 4:
                     message.servers = ServerList.internalBinaryRead(reader, reader.uint32(), options, message.servers);
                     break;
+                case /* optional polycentric.v2.PublicKey recovery_key */ 5:
+                    message.recoveryKey = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.recoveryKey);
+                    break;
+                case /* optional bytes recovery_signature */ 6:
+                    message.recoverySignature = reader.bytes();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -162,6 +184,12 @@ class Identity$Type extends MessageType<Identity> {
         /* polycentric.v2.ServerList servers = 4; */
         if (message.servers)
             ServerList.internalBinaryWrite(message.servers, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PublicKey recovery_key = 5; */
+        if (message.recoveryKey)
+            PublicKey.internalBinaryWrite(message.recoveryKey, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* optional bytes recovery_signature = 6; */
+        if (message.recoverySignature !== undefined)
+            writer.tag(6, WireType.LengthDelimited).bytes(message.recoverySignature);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

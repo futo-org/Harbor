@@ -1,11 +1,88 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2 as proto;
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
 pub mod hydration;
 pub mod pipeline;
+
+/// Row that contains an event.
+pub trait EventRow {
+    /// Returns the event model and optionally content for the row.
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>);
+
+    /// Returns the event model for the row.
+    fn as_event(&self) -> &event_model::Model {
+        self.as_event_with_content().0
+    }
+
+    /// Returns the content of the event, if any.
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.as_event_with_content().1
+    }
+}
+
+const DEFAULT_LIMIT: u32 = 50;
+
+/// Parameters for pagination.
+///
+/// For example used by [`pipeline::finalize_fetch`].
+pub struct PaginationParams<SortedBy> {
+    pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    pub limit: u32,
+}
+
+impl<SortedBy> PaginationParams<SortedBy> {
+    /// Decode the cursor filter from the request parameters.
+    ///
+    /// Returns the cursor filter and limit.
+    ///
+    /// If `params` is empty it returns a forward cursor starting at the start
+    /// with a default limit.
+    pub fn from_req_params(
+        params: Option<&proto::PageParams>,
+    ) -> Result<PaginationParams<SortedBy>, Status>
+    where
+        SortedBy: for<'a> Deserialize<'a>,
+    {
+        let Some(params) = params else {
+            return Ok(PaginationParams {
+                cursor_filter: None,
+                limit: DEFAULT_LIMIT,
+            });
+        };
+
+        let limit = match params.limit {
+            Some(limit) => limit.clamp(1, 200).cast_unsigned(),
+            None => DEFAULT_LIMIT,
+        };
+
+        let cursor_filter =
+            match (&params.backward_token, &params.forward_token) {
+                (Some(_), Some(_)) => {
+                    return Err(Status::invalid_argument(
+                        "Only one cursor is allowed",
+                    ));
+                }
+                (Some(token), None) => {
+                    Some(CursorFilter::Backward(Cursor::decode(token)?))
+                }
+                (None, Some(token)) => {
+                    Some(CursorFilter::Forward(Cursor::decode(token)?))
+                }
+                (None, None) => None,
+            };
+
+        Ok(PaginationParams {
+            cursor_filter,
+            limit,
+        })
+    }
+}
 
 /// [`PageInfo`] to return to the client, except with our types instead of
 /// opaque cursor strings.
@@ -43,50 +120,6 @@ impl<SortedBy> PageInfo<SortedBy> {
 pub enum CursorFilter<SortedBy> {
     Forward(Cursor<SortedBy>),
     Backward(Cursor<SortedBy>),
-}
-
-const DEFAULT_LIMIT: u32 = 50;
-
-impl<SortedBy> CursorFilter<SortedBy> {
-    /// Decode the cursor filter from the request parameters.
-    ///
-    /// Returns the cursor filter and limit.
-    ///
-    /// If `params` is empty it returns a forward cursor starting at the start
-    /// with a default limit.
-    pub fn from_page_params(
-        params: Option<&proto::PageParams>,
-    ) -> Result<(Option<CursorFilter<SortedBy>>, u32), Status>
-    where
-        SortedBy: for<'a> Deserialize<'a>,
-    {
-        let Some(params) = params else {
-            return Ok((None, DEFAULT_LIMIT));
-        };
-
-        let limit = match params.limit {
-            Some(limit) => limit.clamp(1, 200).cast_unsigned(),
-            None => DEFAULT_LIMIT,
-        };
-
-        let cursor_filter =
-            match (&params.backward_token, &params.forward_token) {
-                (Some(_), Some(_)) => {
-                    return Err(Status::invalid_argument(
-                        "Only one cursor is allowed",
-                    ));
-                }
-                (Some(token), None) => {
-                    Some(CursorFilter::Backward(Cursor::decode(token)?))
-                }
-                (None, Some(token)) => {
-                    Some(CursorFilter::Forward(Cursor::decode(token)?))
-                }
-                (None, None) => None,
-            };
-
-        Ok((cursor_filter, limit))
-    }
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]

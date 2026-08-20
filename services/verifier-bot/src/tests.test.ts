@@ -168,11 +168,10 @@ async function makeClient(): Promise<PolycentricClient> {
     seedServers: [TEST_SERVER],
   });
   if (!client.activeIdentityKey && client.currentKeyPair) {
-    await client.identityManager.publish(
-      null,
-      [client.currentKeyPair.publicKey],
-      [],
-    );
+    await client.identityManager.publish({
+      rotationKeys: [client.currentKeyPair.publicKey],
+      signingKeys: [],
+    });
   }
   return client;
 }

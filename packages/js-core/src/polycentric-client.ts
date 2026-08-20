@@ -38,7 +38,11 @@ import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
 
 type CoreType = PolycentricCoreLike;
 
-export type { IdentityState } from './client-internal/identity-manager';
+export type {
+  IdentityState,
+  PublishArgs,
+  IdentityUpdate,
+} from './client-internal/identity-manager';
 
 /** Private key — same shape as PublicKey, holds the secret key bytes. */
 export interface PrivateKey {
@@ -570,6 +574,15 @@ export class PolycentricClient {
   }
 
   /**
+   * The canonical identity chain for `identity` as bundles.
+   */
+  resolveIdentityChain(identity: string): Proto.EventBundle[] {
+    const bytes = this.core.resolveIdentityChain(identity);
+    const response = Proto.ListEventsResponse.fromBinary(new Uint8Array(bytes));
+    return response.eventBundles;
+  }
+
+  /**
    * Decode an image, resize into `width` x `height` per `mode`, and
    * encode as JPEG via the core. Returns the JPEG bytes plus the
    * actual output dimensions.
@@ -944,7 +957,7 @@ export class PolycentricClient {
    */
   public async refreshServers(): Promise<void> {
     if (this.activeIdentityKey) {
-      const state = await this.identityManager.resolveIdentity();
+      const state = this.identityManager.resolveIdentity();
       if (state?.servers) {
         this.servers = [...state.servers];
       }

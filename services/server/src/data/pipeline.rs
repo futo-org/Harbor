@@ -129,6 +129,11 @@ where
     }
 }
 
+pub struct Fetched<Row, SortedBy> {
+    pub rows: Vec<Row>,
+    pub page_info: PageInfo<SortedBy>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

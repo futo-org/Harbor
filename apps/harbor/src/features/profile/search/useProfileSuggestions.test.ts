@@ -33,6 +33,24 @@ jest.mock('@/src/features/profile/hooks/useProfiles', () => ({
   useProfiles: () => mockProfiles,
 }));
 
+let mockSearchEntries: { identity: string }[] = [];
+let mockSearchLoading = false;
+let lastSearchQuery: string | null = null;
+jest.mock('@/src/features/search/hooks/useSearchUsers', () => ({
+  useSearchUsers: (query: string) => {
+    lastSearchQuery = query;
+    return {
+      entries: query ? mockSearchEntries : [],
+      isLoading: mockSearchLoading,
+      isRefreshing: false,
+      error: null,
+      hasMore: false,
+      loadMore: jest.fn(),
+      refresh: jest.fn(),
+    };
+  },
+}));
+
 import { resolveAlias } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
@@ -81,6 +99,9 @@ beforeEach(() => {
   mockResolve.mockReset();
   mockEntries = [];
   mockIsLoading = false;
+  mockSearchEntries = [];
+  mockSearchLoading = false;
+  lastSearchQuery = null;
   mockProfiles = new Map([
     [ALICE, { name: 'Alice', alias: 'alice@example.com' }],
     [BOB, { name: 'Bob', alias: null }],
@@ -107,32 +128,40 @@ describe('useProfileSuggestions', () => {
     ]);
   });
 
-  it('matches followed profiles by name, case-insensitively', () => {
-    follows(ALICE, BOB);
+  it('returns user search results for a query', () => {
+    follows(ALICE);
+    mockSearchEntries = [{ identity: BOB }];
 
-    const { result } = renderSuggestions('aLi');
-    expect(result.current.suggestions.map((s) => s.identity)).toEqual([ALICE]);
-  });
-
-  it('matches on alias substring and identity prefix', () => {
-    follows(ALICE, BOB);
-
-    const byAlias = renderSuggestions('example.com');
-    expect(byAlias.result.current.suggestions.map((s) => s.identity)).toEqual([
-      ALICE,
-    ]);
-
-    const byPrefix = renderSuggestions('bb22');
-    expect(byPrefix.result.current.suggestions.map((s) => s.identity)).toEqual([
-      BOB,
+    const { result } = renderSuggestions('bob');
+    expect(lastSearchQuery).toBe('bob');
+    expect(result.current.suggestions).toEqual([
+      { identity: BOB, name: null, alias: null, source: 'search' },
     ]);
   });
 
-  it('ignores a leading @ when matching names', () => {
-    follows(ALICE, BOB);
+  it('waits for a typing pause before searching a changed query', async () => {
+    const { setQuery } = renderSuggestions('bo');
 
-    const { result } = renderSuggestions('@alice');
-    expect(result.current.suggestions.map((s) => s.identity)).toEqual([ALICE]);
+    setQuery('bob');
+    expect(lastSearchQuery).toBe('bo');
+
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(lastSearchQuery).toBe('bob');
+  });
+
+  it('reports searching while the pause or request is pending', async () => {
+    const { result, setQuery } = renderSuggestions('bo');
+    expect(result.current.isSearching).toBe(false);
+
+    setQuery('bob');
+    expect(result.current.isSearching).toBe(true);
+
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(result.current.isSearching).toBe(false);
   });
 
   it('omits excluded identities', () => {
@@ -140,6 +169,12 @@ describe('useProfileSuggestions', () => {
 
     const { result } = renderSuggestions('', { exclude: [ALICE] });
     expect(result.current.suggestions.map((s) => s.identity)).toEqual([BOB]);
+
+    mockSearchEntries = [{ identity: ALICE }, { identity: BOB }];
+    const searched = renderSuggestions('b', { exclude: [ALICE] });
+    expect(searched.result.current.suggestions.map((s) => s.identity)).toEqual([
+      BOB,
+    ]);
   });
 
   it('offers a pasted identity id directly, deduped against follows', () => {

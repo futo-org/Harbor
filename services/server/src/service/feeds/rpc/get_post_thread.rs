@@ -1,7 +1,7 @@
 //! `get_post_thread`: ancestors (root → direct parent), the subject
 //! itself, then descendants (one branch deep for now).
 
-use crate::data::hydration::HydrationState;
+use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
@@ -161,10 +161,10 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &ServiceContext,
-    _params: &Params,
+    _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
-    feeds_pipeline::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(

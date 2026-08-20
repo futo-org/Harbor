@@ -1,11 +1,12 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
 use crate::sync;
+use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    ContentDigest, CreatePairingSessionRequest, Event, GetPairingSessionRequest,
-    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
-    PutEventsRequest, SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest,
-    UrlInfoRequest, content_service_client::ContentServiceClient,
+    ContentDigest, CreatePairingSessionRequest, Event, GetAttributedToReactionCountsRequest,
+    GetPairingSessionRequest, GetServerInfoRequest, Identity, JoinPairingSessionRequest,
+    ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest, SignedEvent,
+    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -78,12 +79,14 @@ pub enum Query {
     GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
     GetRecommendedFeed(crate::query::feed::GetFollowingFeedArgs),
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
+    GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
     ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
     ListVerificationVerifies(crate::query::verifications::ListVerificationVerifiesArgs),
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
+    ResolveVerifiedClaims(crate::query::verifications::ResolveVerifiedClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
     SearchPosts(crate::query::search::SearchPostsArgs),
@@ -177,6 +180,24 @@ impl PolycentricCore {
         chain
             .latest_state()
             .map(|document| document.encode_to_vec())
+    }
+
+    /// Returns the canonical identity chain for `identity` as a serialized
+    /// `ListEventsResponse`.
+    pub fn resolve_identity_chain(&self, identity: String) -> Result<Vec<u8>, CoreError> {
+        let event_bundles = self
+            .client
+            .lock()
+            .unwrap()
+            .identity_chain_bundles(&identity)
+            .map_err(|e| CoreError::Store(format!("resolve_identity_chain: {e}")))?;
+
+        let response = ListEventsResponse {
+            event_bundles,
+            event_hints: Vec::new(),
+        };
+
+        Ok(response.encode_to_vec())
     }
 
     /// Merkle root over the canonically-ordered signatures in
@@ -373,6 +394,9 @@ impl PolycentricCore {
             Query::GetExploreFeed(args) => {
                 crate::query::feed::get_explore_feed(&self.query_client, query_key, args, opts)
             }
+            Query::GetAttributionFeed(args) => {
+                crate::query::feed::get_attribution_feed(&self.query_client, query_key, args, opts)
+            }
             Query::ListNotifications(args) => crate::query::notification::list_notifications(
                 &self.query_client,
                 query_key,
@@ -408,6 +432,14 @@ impl PolycentricCore {
             }
             Query::ListTargetedVerificationClaims(args) => {
                 crate::query::verifications::list_targeted_verification_claims(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
+            Query::ResolveVerifiedClaims(args) => {
+                crate::query::verifications::resolve_verified_claims(
                     &self.query_client,
                     query_key,
                     args,
@@ -530,6 +562,30 @@ impl PolycentricCore {
             .get_info(GetServerInfoRequest {})
             .await
             .map_err(|e| CoreError::Network(format!("get_server_info: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the maintained upvote/downvote counts for an out-of-network
+    /// target. `request_bytes` is a serialized
+    /// `GetAttributedToReactionCountsRequest` (carrying the AttributedTo, e.g.
+    /// a link to a video URL); returns serialized
+    /// `GetAttributedToReactionCountsResponse` proto bytes.
+    pub async fn get_attributed_to_reaction_counts(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = GetAttributedToReactionCountsRequest::decode(request_bytes.as_slice())
+            .map_err(|e| {
+                CoreError::Decode(format!(
+                    "Failed to decode GetAttributedToReactionCountsRequest: {e}"
+                ))
+            })?;
+        let mut client = EventSyncServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .get_attributed_to_reaction_counts(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("get_attributed_to_reaction_counts: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 
@@ -665,5 +721,19 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
         Ok(())
+    }
+
+    /// Derive the bytes that should be signed by the recovery key in order to
+    /// authorize `public_key` as a new rotation key for the identity.
+    /// `public_key` should be a serialized `PublicKey` protobuf.
+    pub fn assemble_recovery_payload(
+        &self,
+        identity: String,
+        public_key: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let public_key = PublicKey::decode(public_key.as_slice())
+            .map_err(|e| CoreError::Decode(format!("assemble_recovery_payload: {e}")))?;
+
+        Ok(assemble_recovery_payload(&identity, &public_key))
     }
 }

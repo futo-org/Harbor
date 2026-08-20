@@ -3,7 +3,10 @@ pub mod protos {
     include!(concat!(env!("OUT_DIR"), "/polycentric_ffi.rs"));
 }
 
-#[allow(dead_code, unused_attributes)]
+// `large_enum_variant`: generated prost oneofs (e.g. Content.ContentBody) hold
+// their largest message variant inline; boxing would change the generated API
+// at every call site for no real benefit on deserialized-once messages.
+#[allow(dead_code, unused_attributes, clippy::large_enum_variant)]
 pub mod protos_v2 {
     tonic::include_proto!("polycentric.v2");
 

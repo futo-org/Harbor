@@ -1,16 +1,15 @@
 use polycentric_common::models::{
     collections,
-    protos_v2::{PutEventsRequest, PutEventsResponse, SignedEvent},
+    protos_v2::{PutEventsRequest, PutEventsResponse},
 };
-use prost::Message;
 use std::collections::HashMap;
 
 use polycentric_common::models::protos_v2::{
-    Event, EventBundle, EventKey, ListHeadsRequest, PublicKey,
+    EventBundle, EventKey, ListHeadsRequest, PublicKey,
     event_sync_service_client::EventSyncServiceClient,
 };
 
-use crate::{api::CoreError, client::PolycentricClient, query::channel, store::keys};
+use crate::{api::CoreError, client::PolycentricClient, query::channel};
 
 /// Wrapper for executing a list_heads RPC
 pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>, CoreError> {
@@ -71,7 +70,9 @@ pub fn bundle_unsent_events(
                 client.get_sync_events(identity, col, signer.key_type, &signer.key, server_latest);
 
             for (event_key, signed_event) in unsent_events {
-                let bundle = bundle_from_signed_event(client, event_key, signed_event.clone())?;
+                let bundle = client
+                    .bundle_for(event_key, signed_event, false)
+                    .map_err(|e| CoreError::Decode(format!("decode local event: {e}")))?;
                 bundles.push(bundle);
             }
         }
@@ -89,34 +90,13 @@ pub fn bundle_local_events(
 
     let mut bundles = vec![];
     for (event_key, signed_event) in local_events {
-        let bundle = bundle_from_signed_event(client, event_key, signed_event.clone())?;
+        let bundle = client
+            .bundle_for(event_key, signed_event, false)
+            .map_err(|e| CoreError::Decode(format!("decode local event: {e}")))?;
         bundles.push(bundle);
     }
 
     Ok(bundles)
-}
-
-fn bundle_from_signed_event(
-    client: &PolycentricClient,
-    event_key: &keys::EventKey,
-    signed_event: SignedEvent,
-) -> Result<EventBundle, CoreError> {
-    let event_bytes = &signed_event.event_bytes;
-    let event = Event::decode(event_bytes.as_slice())
-        .map_err(|e| CoreError::Decode(format!("decode local event: {e}")))?;
-
-    let serialized_content = event
-        .content_digest
-        .and_then(|digest| client.find_content_from_digest(&digest));
-
-    let meta = client.find_event_meta(event_key).cloned();
-
-    Ok(EventBundle {
-        signed_event: Some(signed_event),
-        serialized_content,
-        event_proofs: vec![],
-        meta,
-    })
 }
 
 /// Send event bundles to server

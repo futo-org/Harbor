@@ -141,6 +141,8 @@ mod tests {
                 images: vec![],
                 links: vec![],
                 quote: None,
+                labels: vec![],
+                attributed_to: vec![],
             })),
         }
     }

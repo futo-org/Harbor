@@ -5,7 +5,7 @@ import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/Sett
 import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
-import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
@@ -15,23 +15,21 @@ import { FeedPage } from './FeedPage';
 import { FeedTabs, SORT_TABS, SORT_TAB_VALUES } from './FeedTabs';
 import type { FeedSortOption } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
-import { type FeedPageControlRef, useFeedTabs } from './hooks/useFeedTabs';
+import { useFeedTabs } from './hooks/useFeedTabs';
 
 function ExplorePage({
   sort,
   active,
   ready,
-  controlRef,
 }: {
   sort: FeedSortOption;
   /** True for the page being shown; only that page loads. */
   active: boolean;
   /** False until the screen may fetch at all. */
   ready: boolean;
-  controlRef: FeedPageControlRef;
 }) {
   const feed = useExploreFeed({ sort, enabled: ready && active });
-  return <FeedPage feed={feed} active={active} controlRef={controlRef} />;
+  return <FeedPage feed={feed} active={active} />;
 }
 
 export default function ExploreScreen() {
@@ -39,12 +37,10 @@ export default function ExploreScreen() {
   const showComposeFab = !isWeb && !isIOS;
   const { theme } = useTheme();
 
-  const ready = useEagerLoad();
-  const { tab, hydrated, control, onTabPress, refreshActive } =
-    useFeedTabs('explore');
+  usePageTitle('Explore');
 
-  // Re-tapping the navigation tab scrolls to the top and refreshes.
-  useFocusedRefresh(refreshActive);
+  const ready = useEagerLoad();
+  const { tab, hydrated, onTabPress } = useFeedTabs('explore');
 
   const renderTabBar = ({
     dragProgress,
@@ -94,17 +90,11 @@ export default function ExploreScreen() {
             onChange={onTabPress}
             renderTabBar={renderTabBar}
           >
-            <ExplorePage
-              sort="top"
-              active={tab === 'top'}
-              ready={ready}
-              controlRef={control}
-            />
+            <ExplorePage sort="top" active={tab === 'top'} ready={ready} />
             <ExplorePage
               sort="latest"
               active={tab === 'latest'}
               ready={ready}
-              controlRef={control}
             />
           </PagerView>
         ) : null}

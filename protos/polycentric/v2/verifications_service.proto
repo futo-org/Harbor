@@ -1,6 +1,7 @@
 syntax = "proto3";
 package polycentric.v2;
 
+import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
 
@@ -62,6 +63,35 @@ message ListTargetedVerificationClaimsResponse {
   repeated EventHint event_hints = 2;
 }
 
+// Reverse lookup: find the identities that claim something, starting from the
+// claim's field values rather than from an identity. Answers "who claims this
+// (e.g. this platform channel, this occupation), verified by a trusted party?"
+// — the inverse of the identity-keyed queries above. Works for any claim type.
+message ResolveVerifiedClaimsRequest {
+  // Optional type scope: restrict to claims of exactly this schema, by the
+  // schema's content digest. Unset (or empty value) = any schema. This is the
+  // schema's content-addressed identifier; it only groups cross-client when
+  // claimants pin identical canonical schema bytes.
+  ContentDigest schema_digest = 1;
+  // Field key/value pairs a claim's (STRING) fields must contain, matched by
+  // JSONB containment. A claim matches only when it contains every supplied
+  // pair (AND); it may carry additional fields. A claim missing any supplied
+  // field does not match. May be empty when `schema_digest` scopes the query.
+  map<string, string> fields = 2;
+  // Only return claims that carry a VerificationVerify authored by one of
+  // these identities (the trust roots). Required and non-empty — this is what
+  // makes a match "verified" rather than merely "claimed".
+  repeated string verified_by_identities = 3;
+}
+
+message ResolveVerifiedClaimsResponse {
+  // Matching claims, each wrapped with its targets and verifies (the verifies
+  // include at least one authored by a trusted identity).
+  repeated VerificationClaimBundle claim_bundles = 1;
+  // Additional events that may be helpful, like relevant identity and profiles
+  repeated EventHint event_hints = 2;
+}
+
 service VerificationsService {
   // VerificationClaim events published by an identity, with each claim's
   // targets and verifies.
@@ -73,4 +103,7 @@ service VerificationsService {
   // Claims whose owner asked `target_identity` for verification, with each
   // claim's targets and verifies.
   rpc ListTargetedVerificationClaims(ListTargetedVerificationClaimsRequest) returns (ListTargetedVerificationClaimsResponse);
+  // Reverse lookup: claims matching the given schema + field values that are
+  // verified by a trusted identity, with each claim's targets and verifies.
+  rpc ResolveVerifiedClaims(ResolveVerifiedClaimsRequest) returns (ResolveVerifiedClaimsResponse);
 }
