@@ -44,6 +44,14 @@ export interface PublishArgs {
   revocationBounds?: Proto.RevocationBound[];
   recoveryKey?: Proto.PublicKey | null;
   recoverySignature?: Uint8Array | null;
+
+  /**
+   * Publishing a login event like a signing key republish or identity recovery
+   * allows special behavior.
+   * However, other identity events must be published by a rotation key.
+   * Setting this to true disables rotation authorization checking.
+   */
+  isLogin?: boolean;
 }
 
 /** Information about a published identity event. */
@@ -89,7 +97,7 @@ export class IdentityManager {
   }
 
   /**
-   * Publishes a new Identity document with the given rotation and signing keys.
+   * Publishes a new Identity document with the specified identity information.
    *
    * The identity key is the hex-encoded sha256 of the initial Identity content.
    * For a new identity, omit the identity key to let it be derived.
@@ -103,9 +111,11 @@ export class IdentityManager {
       revocationBounds = [],
       recoveryKey = null,
       recoverySignature = null,
+      isLogin = false,
     } = args;
 
-    if (!this.client.currentKeyPair) {
+    const signer = this.client.currentKeyPair?.publicKey;
+    if (!signer) {
       throw new Error('No active key pair');
     }
 
@@ -122,21 +132,30 @@ export class IdentityManager {
     });
 
     const isBootstrap = !identityKey;
+
     if (isBootstrap) {
       if (
         rotationKeys.length !== 1 ||
         signingKeys.length !== 0 ||
         revocationBounds.length !== 0 ||
-        !IdentityManager.keysEqual(
-          rotationKeys[0],
-          this.client.currentKeyPair.publicKey,
-        )
+        !IdentityManager.keysEqual(rotationKeys[0], signer)
       ) {
         throw new Error(
           'Initial identity must have exactly one rotation key (the current key), no signing keys and no revocation bounds',
         );
       }
+    } else if (!isLogin) {
+      const oldHead = this.resolveIdentity(identityKey);
+      if (!oldHead) throw new Error('No existing identity chain to extend');
+
+      const isAuthorized = oldHead.rotationKeys.some((key) =>
+        IdentityManager.keysEqual(key, signer),
+      );
+
+      if (!isAuthorized)
+        throw new Error('Identity rotation is not authorized for this key');
     }
+
     const resolvedIdentityKey: string = isBootstrap
       ? bytesToHex(sha256(Proto.Identity.toBinary(identity)), 32)
       : identityKey;
@@ -153,7 +172,7 @@ export class IdentityManager {
         key: Proto.EventKey.create({
           collection: COLLECTION.IDENTITY,
           identity: resolvedIdentityKey,
-          signedBy: this.client.currentKeyPair.publicKey,
+          signedBy: signer,
           sequence: 1n,
         }),
         identitySequence: 1n,
@@ -251,7 +270,7 @@ export class IdentityManager {
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.
-    await this.publish({ ...state });
+    await this.publish({ ...state, isLogin: true });
 
     return state;
   }
@@ -376,6 +395,7 @@ export class IdentityManager {
 
       await this.publish({
         ...state,
+        isLogin: true,
         rotationKeys,
         recoverySignature,
       });
