@@ -1,4 +1,5 @@
 mod config;
+mod cron;
 mod data;
 mod db;
 mod grpc;
@@ -83,6 +84,8 @@ async fn run_server() {
     let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
+    let cron = cron::start_jobs(db.clone());
+
     let grpc_router = build_grpc_router(
         db.clone(),
         kafka_producer,
@@ -100,7 +103,11 @@ async fn run_server() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!(addr = "0.0.0.0:3000", "server listening");
-    axum::serve(listener, app).await.unwrap();
+    if let Err(err) = axum::serve(listener, app).await {
+        tracing::error!(error = %err, "error serving");
+    }
+
+    cron.wait().await;
 }
 
 /// Run background workers concurrently in one process — all of them, or
