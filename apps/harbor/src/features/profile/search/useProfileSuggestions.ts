@@ -1,10 +1,16 @@
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useFollowList } from '@/src/features/follow/hooks/useFollowList';
 import { useProfiles } from '@/src/features/profile/hooks/useProfiles';
+import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
+import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
 import { normalizeAlias, resolveAlias } from '@polycentric/react-native';
 import { useEffect, useMemo, useState } from 'react';
 
-export type ProfileSuggestionSource = 'following' | 'alias' | 'identity';
+export type ProfileSuggestionSource =
+  | 'following'
+  | 'search'
+  | 'alias'
+  | 'identity';
 
 export interface ProfileSuggestion {
   identity: string;
@@ -19,14 +25,17 @@ export interface ProfileSuggestionsResult {
   isLoading: boolean;
   /** True while an alias-shaped query is waiting on network resolution. */
   isResolvingAlias: boolean;
+  /** True while the user search is waiting on the typing pause or network. */
+  isSearching: boolean;
 }
 
 /** Wait for a typing pause before hitting the alias domain's well-known. */
 const ALIAS_DEBOUNCE_MS = 300;
 
-// How many follow edges to search over. Aliases and pasted identity ids
-// resolve regardless; only name-matching is bounded by this window.
+// How many follow edges to list when the query is empty.
 const FOLLOWING_LIMIT = 100;
+
+const SEARCH_LIMIT = 10;
 
 // Long enough to be an intentionally pasted identity id rather than a hex-ish
 // name fragment (full ids are 64 hex chars).
@@ -38,17 +47,11 @@ function isHex(s: string): boolean {
 
 /**
  * Suggests identities for a partially-typed profile query:
- * - people the current user follows, matched on profile name, alias, or
- *   identity-id prefix (everyone followed when the query is empty),
+ * - people the current user follows, when the query is empty,
+ * - user search results from the network, like the main search screen,
  * - the identity behind a `user@domain` or bare-domain alias, resolved over
  *   the network,
  * - the query itself when it's a pasted identity id.
- *
- * TODO: matching runs client-side over the first FOLLOWING_LIMIT follow
- * edges, with names read from whatever profiles happen to be cached. Clean
- * this up with a local store / sync of followed identities' profiles (and
- * eventually a server-side profile search) so matching covers the whole
- * graph with fresh names.
  */
 export function useProfileSuggestions(
   query: string,
@@ -70,6 +73,13 @@ export function useProfileSuggestions(
 
   const trimmed = query.trim();
   const aliasQuery = normalizeAlias(trimmed);
+
+  const debounced = useDebouncedValue(trimmed);
+  const search = useSearchUsers(trimmed ? debounced : '', {
+    limit: SEARCH_LIMIT,
+  });
+  const isSearching =
+    trimmed.length > 0 && (debounced !== trimmed || search.isLoading);
 
   // Debounced alias → identity resolution; the result remembers which alias
   // it answered so a stale response never surfaces for a newer query.
@@ -138,23 +148,25 @@ export function useProfileSuggestions(
       });
     }
 
-    // Strip a leading '@' so "@alice" matches names and aliases alike.
-    const q = trimmed.toLowerCase().replace(/^@/, '');
-    for (const entry of following.entries) {
-      const profile = profiles.get(entry.identity) ?? null;
-      if (q) {
-        const matches =
-          entry.identity.toLowerCase().startsWith(q) ||
-          (profile?.name?.toLowerCase().includes(q) ?? false) ||
-          (profile?.alias?.toLowerCase().includes(q) ?? false);
-        if (!matches) continue;
+    if (trimmed) {
+      for (const entry of search.entries) {
+        push({
+          identity: entry.identity,
+          name: null,
+          alias: null,
+          source: 'search',
+        });
       }
-      push({
-        identity: entry.identity,
-        name: profile?.name ?? null,
-        alias: profile?.alias ?? null,
-        source: 'following',
-      });
+    } else {
+      for (const entry of following.entries) {
+        const profile = profiles.get(entry.identity) ?? null;
+        push({
+          identity: entry.identity,
+          name: profile?.name ?? null,
+          alias: profile?.alias ?? null,
+          source: 'following',
+        });
+      }
     }
 
     return out;
@@ -162,6 +174,7 @@ export function useProfileSuggestions(
     aliasQuery,
     resolved,
     trimmed,
+    search.entries,
     following.entries,
     profiles,
     excludeJoined,
@@ -171,5 +184,6 @@ export function useProfileSuggestions(
     suggestions,
     isLoading: following.isLoading,
     isResolvingAlias,
+    isSearching,
   };
 }

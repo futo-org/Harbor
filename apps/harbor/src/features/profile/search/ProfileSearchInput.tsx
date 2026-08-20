@@ -32,15 +32,14 @@ export function ProfileSearchInput({
 }) {
   const { theme } = useTheme();
   const [query, setQuery] = useState('');
-  const { suggestions, isLoading, isResolvingAlias } = useProfileSuggestions(
-    query,
-    { exclude },
-  );
+  const { suggestions, isLoading, isResolvingAlias, isSearching } =
+    useProfileSuggestions(query, { exclude });
 
   const trimmed = query.trim();
   const showFollowingLabel =
     !trimmed && suggestions.some((s) => s.source === 'following');
-  const showEmpty = suggestions.length === 0 && !isLoading && !isResolvingAlias;
+  const showEmpty =
+    suggestions.length === 0 && !isLoading && !isResolvingAlias && !isSearching;
 
   return (
     <View style={Atoms.gap_sm}>
@@ -75,6 +74,16 @@ export function ProfileSearchInput({
           <Text variant="small" color="neutral_500">
             Looking up {trimmed}…
           </Text>
+        </View>
+      )}
+
+      {isSearching && suggestions.length === 0 && !isResolvingAlias && (
+        <View style={[Atoms.align_center, Atoms.p_md]}>
+          <ActivityIndicator
+            size="small"
+            color={theme.palette.neutral_500}
+            accessibilityLabel="Searching"
+          />
         </View>
       )}
 
