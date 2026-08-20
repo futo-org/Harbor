@@ -33,9 +33,7 @@ export function ProfileVerificationsList({
         keyExtractor={(claim) =>
           `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
         }
-        renderItem={({ item }) => (
-          <ClaimListItem claim={item} showOwner={!isSelf} />
-        )}
+        renderItem={({ item }) => <ClaimListItem claim={item} />}
         // Requesting a verification is meaningless on your own profile.
         ListHeaderComponent={
           !isSelf && identityKey ? (
