@@ -2,9 +2,12 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import {
   Children,
   createContext,
+  isValidElement,
   useCallback,
   useContext,
+  useEffect,
   useRef,
+  useState,
   type ComponentProps,
   type ReactElement,
 } from 'react';
@@ -15,10 +18,19 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { TABS_HEIGHT } from './metrics';
-import { HorizontalScrollGroup, Text } from './primitives';
+import {
+  HorizontalScrollGroup,
+  type HorizontalScrollGroupRef,
+  Text,
+} from './primitives';
 
 /** See `expand` in `TabsProps`. */
 const ExpandContext = createContext(true);
+
+/** Lets the active tab scroll itself into view when the bar overflows. */
+const RevealContext = createContext<(x: number, width: number) => void>(
+  () => {},
+);
 
 export { TABS_HEIGHT };
 
@@ -75,35 +87,39 @@ export function Tabs({
     borderBottomColor: theme.palette.neutral_25,
   };
 
-  // Reported in two parts — the tab's slot, then its label — so merge per tab.
-  const metrics = useSharedValue<TabMetrics[]>([]);
-  const measured = useRef<TabMetrics[]>([]);
-  const report = useCallback(
-    (index: number, patch: Partial<TabMetrics>) => {
-      // Zero widths come from a layout pass mid-measure; storing one would
-      // leave the indicator with nothing to sit on.
-      if (patch.width === 0 || patch.contentWidth === 0) return;
+  const groupRef = useRef<HorizontalScrollGroupRef>(null);
+  const reveal = useCallback((x: number, width: number) => {
+    groupRef.current?.reveal(x, width);
+  }, []);
 
-      const prev = measured.current[index] ?? {
-        x: 0,
-        width: 0,
-        contentWidth: 0,
-      };
+  // Reported in two parts — the tab's slot, then its label — so merge per
+  // tab. Held as state so measurements landing re-commits the resting frame.
+  const [measured, setMeasured] = useState<TabMetrics[]>([]);
+  const report = useCallback((index: number, patch: Partial<TabMetrics>) => {
+    // Zero widths come from a layout pass mid-measure; storing one would
+    // leave the indicator with nothing to sit on.
+    if (patch.width === 0 || patch.contentWidth === 0) return;
+
+    setMeasured((current) => {
+      const prev = current[index] ?? { x: 0, width: 0, contentWidth: 0 };
       const next = { ...prev, ...patch };
       if (
         prev.x === next.x &&
         prev.width === next.width &&
         prev.contentWidth === next.contentWidth
       ) {
-        return;
+        return current;
       }
-      const updated = [...measured.current];
+      const updated = [...current];
       updated[index] = next;
-      measured.current = updated;
-      metrics.value = updated;
-    },
-    [metrics],
-  );
+      return updated;
+    });
+  }, []);
+
+  const metrics = useSharedValue<TabMetrics[]>([]);
+  useEffect(() => {
+    metrics.value = measured;
+  }, [metrics, measured]);
 
   const indicatorStyle = useAnimatedStyle(() => {
     const tabs = metrics.value;
@@ -131,7 +147,28 @@ export function Tabs({
     };
   });
 
-  const indexedChildren = Children.toArray(children).map((child, index) => (
+  // Android can lose the worklet's UI-thread style apply (reanimated #6298).
+  const childArray = Children.toArray(children);
+  const activeTab =
+    measured[
+      childArray.findIndex(
+        (child) => isValidElement<TabProps>(child) && child.props.active,
+      )
+    ];
+  const restingStyle = activeTab?.contentWidth
+    ? {
+        opacity: 1,
+        width: activeTab.contentWidth,
+        transform: [
+          {
+            translateX:
+              activeTab.x + (activeTab.width - activeTab.contentWidth) / 2,
+          },
+        ],
+      }
+    : { opacity: 0, width: 0 };
+
+  const indexedChildren = childArray.map((child, index) => (
     // biome-ignore lint/suspicious/noArrayIndexKey: a tab's position is its identity
     <TabIndexContext.Provider key={index} value={index}>
       {child}
@@ -140,15 +177,16 @@ export function Tabs({
 
   return (
     <ExpandContext.Provider value={expand}>
-      <SlidingIndicatorContext.Provider value={progress ? report : null}>
-        {expand ? (
-          <View
-            style={[
-              Atoms.flex_row,
-              Atoms.align_center,
-              surface,
+      <RevealContext.Provider value={reveal}>
+        <SlidingIndicatorContext.Provider value={progress ? report : null}>
+          <HorizontalScrollGroup
+            ref={groupRef}
+            style={[Atoms.flex_grow_0, surface, style]}
+            // Tabs never shrink below their label, so an overflowing bar
+            // scrolls instead of wrapping.
+            contentContainerStyle={[
+              expand ? Atoms.flex_grow_1 : Atoms.px_lg,
               { minHeight: TABS_HEIGHT },
-              style,
             ]}
             {...props}
           >
@@ -165,20 +203,13 @@ export function Tabs({
                     backgroundColor: theme.palette.primary_500,
                   },
                   indicatorStyle,
+                  restingStyle,
                 ]}
               />
             ) : null}
-          </View>
-        ) : (
-          <HorizontalScrollGroup
-            style={[Atoms.flex_grow_0, surface, style]}
-            contentContainerStyle={Atoms.px_lg}
-            {...props}
-          >
-            {indexedChildren}
           </HorizontalScrollGroup>
-        )}
-      </SlidingIndicatorContext.Provider>
+        </SlidingIndicatorContext.Provider>
+      </RevealContext.Provider>
     </ExpandContext.Provider>
   );
 }
@@ -193,13 +224,23 @@ function Tab({ children, active = false, ...props }: TabProps) {
   const expand = useContext(ExpandContext);
   const index = useContext(TabIndexContext);
   const report = useContext(SlidingIndicatorContext);
+  const reveal = useContext(RevealContext);
 
-  const onSlotLayout = report
-    ? (event: LayoutChangeEvent) => {
-        const { x, width } = event.nativeEvent.layout;
-        report(index, { x, width });
-      }
-    : undefined;
+  // Scroll into view when becoming active, and again if layout lands after
+  // the tab was already active (deep links).
+  const slot = useRef({ x: 0, width: 0 });
+  useEffect(() => {
+    if (active && slot.current.width) {
+      reveal(slot.current.x, slot.current.width);
+    }
+  }, [active, reveal]);
+
+  const onSlotLayout = (event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    slot.current = { x, width };
+    if (active) reveal(x, width);
+    report?.(index, { x, width });
+  };
 
   const onLabelLayout = report
     ? (event: LayoutChangeEvent) => {
@@ -213,7 +254,7 @@ function Tab({ children, active = false, ...props }: TabProps) {
       accessibilityState={{ selected: active }}
       onLayout={onSlotLayout}
       style={({ hovered, pressed }) => [
-        expand && Atoms.flex_1,
+        expand && Atoms.flex_grow_1,
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.justify_center,
