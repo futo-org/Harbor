@@ -100,6 +100,8 @@ jest.mock('expo-router', () => ({
   router: {
     push: (...args: unknown[]) => mockPush(...args),
   },
+  useFocusEffect: () => undefined,
+  useNavigation: () => ({ addListener: () => () => {} }),
 }));
 
 jest.mock('react-native-safe-area-context', () => ({

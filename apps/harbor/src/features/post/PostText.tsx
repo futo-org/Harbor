@@ -23,7 +23,7 @@ function renderSegment(segment: TextSegment, key: number) {
       key={key}
       variant="secondary"
       color="primary_500"
-      style={{ fontWeight: 'bold' }}
+      fontWeight="bold"
       onPress={(e) => {
         e.stopPropagation?.();
         if (segment.type === 'link') {

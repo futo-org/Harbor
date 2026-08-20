@@ -14,6 +14,7 @@ message Content {
     Follow follow = 4;
     Block block = 5;
     Reaction reaction = 6;
+    AttributedToReaction attributed_to_reaction = 15;
     ProfileUpdate profile_update = 7;
     Identity identity = 8;
     Repost repost = 9;
@@ -40,6 +41,17 @@ message Post {
   optional EventKey quote = 4;
   // Link previews for URLs in the post text
   repeated Link links = 5;
+  // Labels the creator / client applies themselves
+  repeated string labels = 6;
+  // If any, where the post is attributed to.
+  repeated AttributedTo attributed_to = 7;
+}
+
+message AttributedTo {
+  oneof to {
+    // Remote resource
+    Link link = 1;
+  }
 }
 
 message PostReply {
@@ -80,6 +92,17 @@ message Block {
 message Reaction {
   // Key of the event being reacted to
   EventKey event_key = 1;
+  // Optional emoji
+  optional string emoji = 2;
+  // Upvote = true. Downvote = false.
+  bool positive = 3;
+}
+
+// A reaction targeting something that is not an in-network event — e.g. a URL
+// (reacting to a video). The out-of-network counterpart of `Reaction`.
+message AttributedToReaction {
+  // What the reaction is attributed to (e.g. a link/URL).
+  AttributedTo attributed_to = 1;
   // Optional emoji
   optional string emoji = 2;
   // Upvote = true. Downvote = false.

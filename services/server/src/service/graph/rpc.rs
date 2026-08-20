@@ -28,7 +28,7 @@ impl GraphService for GraphServiceImpl {
             list_follows::handle(
                 &self.ctx,
                 req.identity,
-                &req.page_params,
+                req.page_params.as_ref(),
                 Direction::Following,
             )
             .await?,
@@ -44,7 +44,7 @@ impl GraphService for GraphServiceImpl {
             list_follows::handle(
                 &self.ctx,
                 req.identity,
-                &req.page_params,
+                req.page_params.as_ref(),
                 Direction::Followers,
             )
             .await?,

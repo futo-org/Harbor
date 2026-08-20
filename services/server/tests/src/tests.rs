@@ -81,6 +81,7 @@ async fn invalid_signature_rejected() {
         vec![1],
         vec![],
         "tampered",
+        &[],
         DEFAULT_CREATED_AT,
     );
     if let Some(ref mut signed) = bundle.signed_event {
@@ -150,6 +151,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         vec![0, 1],
         vec![],
         "first post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     );
     let sig_1 = bundle_signature(&post_1);
@@ -171,6 +173,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         vec![0, 2],
         root_after_1.clone(),
         "second post",
+        &[],
         DEFAULT_CREATED_AT + 2 * HOUR,
     );
     let sig_2 = bundle_signature(&post_2);
@@ -325,6 +328,7 @@ async fn post_revocation_event_returns_without_proof() {
         vec![0, 1],
         vec![],
         "first post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     );
     let sig_1 = bundle_signature(&post_1);
@@ -344,6 +348,7 @@ async fn post_revocation_event_returns_without_proof() {
         vec![0, 2],
         root_after_1.clone(),
         "second post",
+        &[],
         DEFAULT_CREATED_AT + 2 * HOUR,
     );
     let sig_2 = bundle_signature(&post_2);
@@ -393,6 +398,7 @@ async fn post_revocation_event_returns_without_proof() {
         vec![0, 3],
         node_hash(&leaf_hash(&sig_1), &leaf_hash(&sig_2)),
         "forged post",
+        &[],
         DEFAULT_CREATED_AT + 4 * HOUR,
     );
     let sig_3 = bundle_signature(&post_3);
@@ -482,6 +488,7 @@ async fn rewritten_event_invalidates_proofs() {
         vec![0, 1],
         vec![],
         "first post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     );
     let sig_1 = bundle_signature(&post_1);
@@ -496,6 +503,7 @@ async fn rewritten_event_invalidates_proofs() {
         vec![0, 2],
         leaf_hash(&sig_1),
         "ORIGINAL second post",
+        &[],
         DEFAULT_CREATED_AT + 2 * HOUR,
     );
     let sig_2_original = bundle_signature(&post_2_original);
@@ -512,6 +520,7 @@ async fn rewritten_event_invalidates_proofs() {
         vec![0, 3],
         root_after_2_original.clone(),
         "third post",
+        &[],
         DEFAULT_CREATED_AT + 3 * HOUR,
     );
     let sig_3 = bundle_signature(&post_3);
@@ -526,6 +535,7 @@ async fn rewritten_event_invalidates_proofs() {
         vec![0, 2],
         leaf_hash(&sig_1),
         "REWRITTEN second post",
+        &[],
         DEFAULT_CREATED_AT + 2 * HOUR,
     );
 
@@ -603,6 +613,7 @@ async fn rewritten_event_invalidates_proofs() {
             vec![0, 2],
             leaf_hash(&sig_1),
             "REWRITTEN second post",
+            &[],
             DEFAULT_CREATED_AT + 2 * HOUR,
         ))),
     );
@@ -759,6 +770,7 @@ async fn publish_post(
     identity: &str,
     key: &SigningKey,
     text: &str,
+    attributed_urls: &[&str],
     created_at: u64,
 ) -> Vec<u8> {
     let bundle = make_post_bundle(
@@ -769,6 +781,7 @@ async fn publish_post(
         vec![1],
         vec![],
         text,
+        attributed_urls,
         created_at,
     );
     let sig = bundle_signature(&bundle);
@@ -880,6 +893,7 @@ async fn trusted_labels_served_in_feed_response() {
         &author_identity,
         &author_key,
         "hello label world",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -988,6 +1002,7 @@ async fn labeler_identity_served_with_feed_response() {
         &author_identity,
         &author_key,
         "post labeled by a stranger",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1066,6 +1081,7 @@ async fn omit_labels_hides_labeled_post() {
         &author_identity,
         &author_key,
         "hide-me post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1095,6 +1111,192 @@ async fn omit_labels_hides_labeled_post() {
         .expect("get_identity_feed failed")
         .into_inner();
 
+    assert!(
+        !resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be hidden when omit_labels contains 'sexually-suggestive'",
+    );
+}
+
+/// Build a `GetAttributionFeedRequest` for posts attributed to `url`.
+fn attribution_feed_request(
+    url: &str,
+    omit_labels: Vec<String>,
+) -> GetAttributionFeedRequest {
+    GetAttributionFeedRequest {
+        attributed_to: Some(AttributedTo {
+            to: Some(attributed_to::To::Link(Link {
+                url: url.to_string(),
+                ..Default::default()
+            })),
+        }),
+        page_params: Some(PageParams {
+            limit: Some(10),
+            ..Default::default()
+        }),
+        omit_labels,
+    }
+}
+
+#[tokio::test]
+async fn attribution_feed_returns_only_matching_posts() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let url = format!("https://example.com/{}", random_string());
+    let other_url = format!("https://example.com/{}", random_string());
+
+    let author_key = generate_signing_key();
+    let author_identity = Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    }
+    .derive_hex_key();
+    let other_key = generate_signing_key();
+    let other_identity = Identity {
+        rotation_keys: vec![public_key_of(&other_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    }
+    .derive_hex_key();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    publish_genesis(
+        &mut event,
+        &other_identity,
+        &other_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+
+    let matching_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "post about the url",
+        &[&url],
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+    let other_sig = publish_post(
+        &mut event,
+        &other_identity,
+        &other_key,
+        "post about a different url",
+        &[&other_url],
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let resp = feed
+        .get_attribution_feed(attribution_feed_request(&url, vec![]))
+        .await
+        .expect("get_attribution_feed failed")
+        .into_inner();
+
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == matching_sig)
+            .unwrap_or(false)),
+        "post attributed to the queried url should be returned",
+    );
+    assert!(
+        !resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == other_sig)
+            .unwrap_or(false)),
+        "post attributed to a different url should not be returned",
+    );
+}
+
+#[tokio::test]
+#[ignore] // Currently failing, to be fixed in #201.
+async fn attribution_feed_omit_labels_hides_labeled_post() {
+    let mut event = connect_event_sync().await;
+    let mut feed = connect_feeds().await;
+
+    let url = format!("https://example.com/{}", random_string());
+
+    let author_key = generate_signing_key();
+    let author_identity = Identity {
+        rotation_keys: vec![public_key_of(&author_key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+    }
+    .derive_hex_key();
+    let mod_key = test_moderator_key();
+    let mod_identity = test_moderator_identity();
+
+    publish_genesis(
+        &mut event,
+        &author_identity,
+        &author_key,
+        DEFAULT_CREATED_AT,
+    )
+    .await;
+    ensure_moderator_setup().await;
+
+    let post_sig = publish_post(
+        &mut event,
+        &author_identity,
+        &author_key,
+        "labeled post about the url",
+        &[&url],
+        DEFAULT_CREATED_AT + HOUR,
+    )
+    .await;
+
+    let target_key = get_post_event_key(&author_identity, &author_key);
+    publish_labels(
+        &mut event,
+        &mod_identity,
+        &mod_key,
+        target_key,
+        vec!["sexually-suggestive".to_string()],
+        DEFAULT_CREATED_AT + 2 * HOUR,
+    )
+    .await;
+
+    // Without omit_labels the post is served.
+    let resp = feed
+        .get_attribution_feed(attribution_feed_request(&url, vec![]))
+        .await
+        .expect("get_attribution_feed failed")
+        .into_inner();
+    assert!(
+        resp.event_bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_sig)
+            .unwrap_or(false)),
+        "post should be returned when no omit_labels",
+    );
+
+    // With a matching omit_labels the post is hidden.
+    let resp = feed
+        .get_attribution_feed(attribution_feed_request(
+            &url,
+            vec!["sexually-suggestive".to_string()],
+        ))
+        .await
+        .expect("get_attribution_feed failed")
+        .into_inner();
     assert!(
         !resp.event_bundles.iter().any(|b| b
             .signed_event
@@ -1136,6 +1338,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &author_identity,
         &author_key,
         "warn-label post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1242,6 +1445,7 @@ async fn untrusted_labels_not_indexed() {
         &author_identity,
         &author_key,
         "test unmoderated",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1341,6 +1545,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &author_identity,
         &author_key,
         "impostor-labeled post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1409,6 +1614,7 @@ async fn thread_no_labels_returns_post() {
         &author_identity,
         &author_key,
         "thread test post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1484,6 +1690,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &author_identity,
         &author_key,
         "hide-me thread post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -1574,6 +1781,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &author_identity,
         &author_key,
         "warn thread post",
+        &[],
         DEFAULT_CREATED_AT + HOUR,
     )
     .await;
@@ -2047,6 +2255,8 @@ async fn search_posts_match_text() {
             images: vec![],
             quote: None,
             links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
         }],
     )
     .await;
@@ -2077,6 +2287,8 @@ async fn search_posts_order_by_rank() {
                 images: vec![],
                 quote: None,
                 links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
             },
             Post {
                 text: post_text1,
@@ -2084,6 +2296,8 @@ async fn search_posts_order_by_rank() {
                 images: vec![],
                 quote: None,
                 links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
             },
         ],
     )
@@ -2115,6 +2329,8 @@ async fn search_posts_order_by_latest() {
                 images: vec![],
                 quote: None,
                 links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
             },
             Post {
                 text: post_text1,
@@ -2122,6 +2338,8 @@ async fn search_posts_order_by_latest() {
                 images: vec![],
                 quote: None,
                 links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
             },
         ],
     )
@@ -2177,6 +2395,8 @@ async fn search_posts_pagination_order_by_rank() {
             images: vec![],
             quote: None,
             links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
         });
     }
     expected.reverse();
@@ -2266,6 +2486,8 @@ async fn search_posts_pagination_order_by_latest() {
             images: vec![],
             quote: None,
             links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
         });
     }
     expected.reverse();

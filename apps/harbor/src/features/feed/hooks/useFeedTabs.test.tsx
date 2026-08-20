@@ -1,8 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { useFeedSettingsStore } from './useFeedSettingsStore';
 import { useFeedTabs } from './useFeedTabs';
+
+jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
+  emitFocusedRefresh: jest.fn(),
+}));
 
 const STORE_KEY = 'polycentric:feed-settings';
 
@@ -25,6 +30,7 @@ const renderTabs = (feed: 'following' | 'explore' = 'following') =>
   renderHook(() => useFeedTabs(feed));
 
 beforeEach(async () => {
+  jest.clearAllMocks();
   await AsyncStorage.clear();
   act(() => {
     useFeedSettingsStore.setState({
@@ -82,58 +88,28 @@ describe('useFeedTabs selection', () => {
   });
 });
 
-describe('useFeedTabs page control', () => {
-  /** Stands in for the showing page registering itself. */
-  function registerPage(tabs: Awaited<ReturnType<typeof renderTabs>>) {
-    const page = { scrollToTop: jest.fn(), refresh: jest.fn() };
-    tabs.current.control.current = page;
-    return page;
-  }
-
-  it('leaves the page alone when another tab is selected', async () => {
+describe('useFeedTabs re-tap', () => {
+  it('does not emit when another tab is selected', async () => {
     await useFeedSettingsStore.persist.rehydrate();
     const tabs = await renderTabs();
-    const page = registerPage(tabs);
 
     act(() => {
       tabs.current.onTabPress('for-you');
     });
 
     expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('for-you');
-    expect(page.refresh).not.toHaveBeenCalled();
-    expect(page.scrollToTop).not.toHaveBeenCalled();
+    expect(emitFocusedRefresh).not.toHaveBeenCalled();
   });
 
-  it('scrolls to the top and refreshes when the active tab is re-tapped', async () => {
+  it('emits a focused refresh when the active tab is selected again', async () => {
     await useFeedSettingsStore.persist.rehydrate();
     const tabs = await renderTabs();
-    const page = registerPage(tabs);
 
     act(() => {
       tabs.current.onTabPress('latest');
     });
 
-    expect(page.scrollToTop).toHaveBeenCalled();
-    expect(page.refresh).toHaveBeenCalled();
+    expect(emitFocusedRefresh).toHaveBeenCalled();
     expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('latest');
-  });
-
-  it('refreshes the registered page', async () => {
-    await useFeedSettingsStore.persist.rehydrate();
-    const tabs = await renderTabs();
-    const page = registerPage(tabs);
-
-    act(() => {
-      tabs.current.refreshActive();
-    });
-
-    expect(page.scrollToTop).toHaveBeenCalled();
-    expect(page.refresh).toHaveBeenCalled();
-  });
-
-  it('does nothing when no page has registered', async () => {
-    const tabs = await renderTabs();
-
-    expect(() => tabs.current.refreshActive()).not.toThrow();
   });
 });
