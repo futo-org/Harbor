@@ -6,8 +6,8 @@ import { Pressable, View } from 'react-native';
 
 interface ServerRowProps {
   server: string;
-  action: 'add' | 'remove';
-  onAction: () => void;
+  status: 'active' | 'suggested';
+  onAction?: () => void;
   // Extra content shown before the action button (e.g. a moderation
   // dashboard link). ServerRow stays agnostic about what it is.
   trailing?: ReactNode;
@@ -15,35 +15,38 @@ interface ServerRowProps {
 
 export function ServerRow({
   server,
-  action,
+  status,
   onAction,
   trailing,
 }: ServerRowProps) {
   const { theme } = useTheme();
-  const isAdd = action === 'add';
 
   const content = (
     <>
       <Text
         variant="secondary"
-        style={{ fontFamily: 'monospace', flex: 1 }}
+        style={[{ fontFamily: 'monospace', flex: 1 }, Atoms.py_sm]}
         numberOfLines={1}
       >
         {server}
       </Text>
+
       {trailing}
-      <IconButton
-        variant="ghost"
-        compact
-        icon={() => (
-          <Icon
-            name={isAdd ? 'addOutline' : 'remove'}
-            size={22}
-            color={isAdd ? 'primary_500' : 'negative_500'}
-          />
-        )}
-        onPress={onAction}
-      />
+
+      {onAction ? (
+        <IconButton
+          variant="ghost"
+          compact
+          icon={() => (
+            <Icon
+              name={status === 'suggested' ? 'addOutline' : 'remove'}
+              size={22}
+              color={status === 'suggested' ? 'primary_500' : 'negative_500'}
+            />
+          )}
+          onPress={onAction}
+        />
+      ) : null}
     </>
   );
 
@@ -54,7 +57,7 @@ export function ServerRow({
     Atoms.py_sm,
     Atoms.pl_lg,
     Atoms.rounded_lg,
-    isAdd
+    status === 'suggested'
       ? {
           borderWidth: 1,
           borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
@@ -64,7 +67,7 @@ export function ServerRow({
         },
   ];
 
-  return isAdd ? (
+  return status === 'suggested' && onAction ? (
     <Pressable onPress={onAction} style={style}>
       {content}
     </Pressable>

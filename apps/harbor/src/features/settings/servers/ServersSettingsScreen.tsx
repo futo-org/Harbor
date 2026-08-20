@@ -9,6 +9,8 @@ import { View } from 'react-native';
 import { AddServerForm } from './AddServerForm';
 import { ServerRow } from './ServerRow';
 import { useServerSettings } from './useServerSettings';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import { useState } from 'react';
 
 export function ServersSettingsSheet() {
   const {
@@ -20,6 +22,15 @@ export function ServersSettingsSheet() {
     removeServer,
   } = useServerSettings();
   const { moderatedServers } = useModerationStatus();
+
+  const client = usePolycentric();
+
+  const [canRotate] = useState(() => {
+    const myIdentity = client.activeIdentityKey;
+    const myKey = client.currentKeyPair?.publicKey;
+    if (!myIdentity || !myKey) return false;
+    return client.identityManager.isRotationKeyForIdentity(myIdentity, myKey);
+  });
 
   // The dashboard is a route outside this sheet's stack, so close the
   // sheet before pushing it.
@@ -54,8 +65,8 @@ export function ServersSettingsSheet() {
               <ServerRow
                 key={server}
                 server={server}
-                action="remove"
-                onAction={() => removeServer(server)}
+                status="active"
+                onAction={canRotate ? () => removeServer(server) : undefined}
                 trailing={
                   moderatedServers.includes(server) ? (
                     <IconButton
@@ -86,14 +97,20 @@ export function ServersSettingsSheet() {
               <ServerRow
                 key={server}
                 server={server}
-                action="add"
-                onAction={() => addServer(server)}
+                status="suggested"
+                onAction={canRotate ? () => addServer(server) : undefined}
               />
             ))}
           </View>
         )}
 
-        <AddServerForm isBusy={isBusy} error={addError} onSubmit={addServer} />
+        {canRotate ? (
+          <AddServerForm
+            isBusy={isBusy}
+            error={addError}
+            onSubmit={addServer}
+          />
+        ) : null}
       </Sheet.Content>
     </Sheet>
   );
