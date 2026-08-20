@@ -94,13 +94,15 @@ function ExpandablePostText({ content }: { content: string }) {
           onHoverOut={onHoverOut}
           style={[Atoms.self_start]}
         >
-          <Text
-            variant="small"
-            color="primary_500"
-            style={hovered ? { textDecorationLine: 'underline' } : undefined}
-          >
-            {expanded ? 'Show less' : 'Show more'}
-          </Text>
+          {!expanded && (
+            <Text
+              variant="body"
+              color="primary_500"
+              style={hovered ? { textDecorationLine: 'underline' } : undefined}
+            >
+              Show more
+            </Text>
+          )}
         </Pressable>
       )}
     </>
