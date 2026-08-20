@@ -22,6 +22,8 @@ import { usePostModeration } from './hooks/usePostModeration';
 interface PostProps {
   post: PostData;
   hideReplyingTo?: boolean;
+  /** Used on full view pages */
+  focusedView?: boolean;
   /** When true, tapping the card root is a no-op (e.g. the focused post in a conversation). */
   disablePress?: boolean;
   /** Draw a vertical line above the avatar — connects up to the previous post. */
@@ -37,6 +39,7 @@ interface PostProps {
 export const Post = memo(function Post({
   post,
   hideReplyingTo = false,
+  focusedView = false,
   disablePress = false,
   showThreadLineAbove = false,
   showThreadLineBelow = false,
@@ -63,10 +66,85 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const time = useMemo(() => timeAgo(Number(post.createdAt)), [post.createdAt]);
+  const fullTimestamp = useMemo(() => {
+    if (!post.createdAt) return '';
+    const date = new Date(Number(post.createdAt));
+    const timePart = date.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    const datePart = date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return `${timePart} · ${datePart}`;
+  }, [post.createdAt]);
 
   const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
+
+  const avatar = authorIdentity ? (
+    <ProfileAvatar
+      identityKey={authorIdentity}
+      size="md"
+      onPress={handleAuthorPress}
+    />
+  ) : null;
+
+  const authorRow = (
+    <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
+      <View
+        style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
+      >
+        <PostAuthorName
+          name={authorName || '...'}
+          onPress={handleAuthorPress}
+        />
+        {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
+
+        {time ? (
+          <>
+            <Text
+              variant="secondary"
+              color="neutral_500"
+              fontWeight="bold"
+              style={Atoms.flex_shrink_0}
+            >
+              ·
+            </Text>
+            <Text
+              variant="secondary"
+              color="neutral_500"
+              style={Atoms.flex_shrink_0}
+            >
+              {time}
+            </Text>
+          </>
+        ) : null}
+      </View>
+
+      <PostMenu post={post} />
+    </View>
+  );
+
+  const body =
+    hasWarnContent && !warnDismissed ? (
+      <PostWarnOverlay
+        labels={warnLabels}
+        authorIdentity={authorIdentity}
+        onDismiss={handleWarnDismiss}
+      />
+    ) : (
+      <PostContent
+        post={post}
+        hideReplyingTo={hideReplyingTo}
+        compactLinkPreview={compactLinkPreview}
+        authorIdentity={authorIdentity}
+        focusedView={focusedView}
+      />
+    );
 
   return (
     <Pressable
@@ -90,96 +168,60 @@ export const Post = memo(function Post({
         showThreadLineAbove={showThreadLineAbove}
       />
 
-      {/* Main post body */}
-      <View style={[Atoms.flex_row, Atoms.gap_md]}>
-        {/* Left side (avatar and thread line) */}
-        <View style={[Atoms.align_center]}>
-          {authorIdentity ? (
-            <ProfileAvatar
-              identityKey={authorIdentity}
-              size="md"
-              onPress={handleAuthorPress}
-            />
-          ) : null}
-          {showThreadLineBelow ? (
-            <View
-              style={[
-                Atoms.flex_1,
-                Atoms.mt_xs,
-                {
-                  width: 2,
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '30',
-                  ),
-                },
-              ]}
-            />
-          ) : null}
-        </View>
-
-        {/* Main post content */}
-        <View style={[Atoms.flex_1, Atoms.pb_xs, Atoms.gap_2xs]}>
-          {/* Author name and other topbar items */}
-          <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
-            <View
-              style={[
-                Atoms.flex_1,
-                Atoms.flex_row,
-                Atoms.gap_xs,
-                Atoms.align_center,
-              ]}
-            >
+      {focusedView ? (
+        <View style={[Atoms.pb_xs, Atoms.gap_sm]}>
+          <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+            {avatar}
+            <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
               <PostAuthorName
                 name={authorName || '...'}
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <IdentityTag identity={authorIdentity} />
-              ) : null}
-
-              {time ? (
-                <>
-                  <Text
-                    variant="secondary"
-                    color="neutral_500"
-                    fontWeight="bold"
-                    style={Atoms.flex_shrink_0}
-                  >
-                    ·
-                  </Text>
-                  <Text
-                    variant="secondary"
-                    color="neutral_500"
-                    style={Atoms.flex_shrink_0}
-                  >
-                    {time}
-                  </Text>
-                </>
+                <View style={Atoms.self_start}>
+                  <IdentityTag identity={authorIdentity} />
+                </View>
               ) : null}
             </View>
-
-            {/* Menu */}
             <PostMenu post={post} />
           </View>
-
-          {hasWarnContent && !warnDismissed ? (
-            <PostWarnOverlay
-              labels={warnLabels}
-              authorIdentity={authorIdentity}
-              onDismiss={handleWarnDismiss}
-            />
-          ) : (
-            <PostContent
-              post={post}
-              hideReplyingTo={hideReplyingTo}
-              compactLinkPreview={compactLinkPreview}
-              authorIdentity={authorIdentity}
-            />
-          )}
+          <View style={Atoms.gap_2xs}>{body}</View>
+          {fullTimestamp ? (
+            <Text variant="secondary" color="neutral_500">
+              {fullTimestamp}
+            </Text>
+          ) : null}
           <PostToolbar post={post} />
         </View>
-      </View>
+      ) : (
+        <View style={[Atoms.flex_row, Atoms.gap_md]}>
+          {/* Left side (avatar and thread line) */}
+          <View style={[Atoms.align_center]}>
+            {avatar}
+            {showThreadLineBelow ? (
+              <View
+                style={[
+                  Atoms.flex_1,
+                  Atoms.mt_xs,
+                  {
+                    width: 2,
+                    backgroundColor: withHexOpacity(
+                      theme.palette.neutral_500,
+                      '30',
+                    ),
+                  },
+                ]}
+              />
+            ) : null}
+          </View>
+
+          <View style={[Atoms.flex_1, Atoms.pb_xs, Atoms.gap_2xs]}>
+            {authorRow}
+            {body}
+            <PostToolbar post={post} />
+          </View>
+        </View>
+      )}
     </Pressable>
   );
 });
