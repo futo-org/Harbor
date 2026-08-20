@@ -64,7 +64,9 @@ async fn fetch(
                 SortPostsBy::Default | SortPostsBy::Latest => {
                     SortedBy::CreatedAt(row.event.created_at)
                 }
-                SortPostsBy::Top => SortedBy::ReactionCount(row.reactions),
+                SortPostsBy::Top => {
+                    SortedBy::ReactionCount(row.reactions.clone())
+                }
             };
             Marker {
                 sorted_by,

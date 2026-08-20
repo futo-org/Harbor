@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
 pub use crate::service::events::tombstone::EventWithContentRow;
@@ -20,7 +21,7 @@ use sea_orm::{
     *,
 };
 use sea_query::query::{CommonTableExpression, WithClause};
-use sea_query::{SelectStatement, UnionType};
+use sea_query::{Func, SelectStatement, TableRef, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -36,8 +37,14 @@ pub type EventCreatedAt = DateTimeWithTimeZone;
 pub struct ExploreEvent {
     pub event: EventModel::Model,
     pub content: ContentModel::Model,
+    /// Number of positive reactions decayed over time (see the
+    /// `reaction_count_decay` SQL function).
     /// Will default to zero if not returned.
-    pub reactions: i64,
+    ///
+    /// NOTE: This is actually a `f64`, but floating point numbers lose
+    /// precision, so we let Postgres encode and decode the numeric number to a
+    /// string to avoid a loss of precision.
+    pub reactions: String,
 }
 
 impl TryGetableMany for ExploreEvent {
@@ -54,7 +61,9 @@ impl TryGetableMany for ExploreEvent {
             event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             // This column is only present if we order by top posts.
-            reactions: res.try_get_by(REACTION_COUNT_COLUMN).unwrap_or(0),
+            reactions: res
+                .try_get_by(REACTION_COUNT_COLUMN)
+                .unwrap_or_else(|_| "0.0".to_owned()),
         })
     }
 }
@@ -62,12 +71,12 @@ impl TryGetableMany for ExploreEvent {
 const REACTION_COUNT_COLUMN: &str = "reaction_count";
 
 /// How to sort the post events.
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SortedBy {
     /// By created time.
     CreatedAt(DateTimeWithTimeZone),
     /// By the amount of reactions on it.
-    ReactionCount(i64),
+    ReactionCount(String),
 }
 
 impl SortedBy {
@@ -81,10 +90,12 @@ impl SortedBy {
         }
     }
 
-    fn as_db_value(&self) -> Value {
+    fn as_db_value(&self) -> Expr {
         match self {
-            SortedBy::CreatedAt(created_at) => Value::from(*created_at),
-            SortedBy::ReactionCount(count) => Value::from(*count),
+            SortedBy::CreatedAt(created_at) => Expr::from(*created_at),
+            SortedBy::ReactionCount(count) => {
+                Expr::cust_with_values("($1)::NUMERIC", [count])
+            }
         }
     }
 }
@@ -290,13 +301,39 @@ impl Query {
                         ReactionTallyModel::Entity,
                         ReactionTallyModel::Relation::EventModel.def().rev(),
                     )
-                    // TODO: decay reactions by age.
-                    // NOTE: keep in sync with `sort_posts_by_column`.
-                    .expr_as(
-                        Expr::col(
-                            ReactionTallyModel::Column::PositiveCount
-                                .as_column_ref(),
+                    .inner_join(
+                        TableRef::FunctionCall(
+                            {
+                                let func = Func::cust("reaction_count_decay");
+                                let positive_count = Expr::col(
+                                    ReactionTallyModel::Column::PositiveCount
+                                        .as_column_ref(),
+                                );
+                                let created_at = Expr::col(
+                                    EventModel::Column::CreatedAt
+                                        .as_column_ref(),
+                                );
+                                if let Some(gravity) =
+                                    config::get().feeds_gravity
+                                {
+                                    func.args([
+                                        positive_count,
+                                        created_at,
+                                        Expr::Constant(gravity.into()),
+                                    ])
+                                } else {
+                                    func.args([positive_count, created_at])
+                                }
+                            },
+                            REACTION_COUNT_COLUMN.into(),
                         ),
+                        Condition::all(), // Always join.
+                    )
+                    // We can't decode numerics as we don't have a type for it,
+                    // so we have to use floats, but those lose precision, so
+                    // use a string instead.
+                    .expr_as(
+                        Expr::cust(format!("{REACTION_COUNT_COLUMN}::TEXT")),
                         REACTION_COUNT_COLUMN,
                     );
             }
@@ -327,7 +364,7 @@ impl Query {
                             Expr::col(EventModel::Column::Id.as_column_ref()),
                         ])
                         .lt(Expr::tuple([
-                            Expr::from(marker.sorted_by.as_db_value()),
+                            marker.sorted_by.as_db_value(),
                             Expr::from(marker.event_id),
                         ])),
                     );
@@ -348,7 +385,7 @@ impl Query {
                             Expr::col(EventModel::Column::Id.as_column_ref()),
                         ])
                         .gt(Expr::tuple([
-                            Expr::from(marker.sorted_by.as_db_value()),
+                            marker.sorted_by.as_db_value(),
                             Expr::from(marker.event_id),
                         ])),
                     );
@@ -894,12 +931,7 @@ fn sort_posts_by_column(sort_by: SortPostsBy) -> (Expr, Order) {
             Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
             Order::Desc,
         ),
-        SortPostsBy::Top => (
-            Expr::col(
-                ReactionTallyModel::Column::PositiveCount.as_column_ref(),
-            ),
-            Order::Desc,
-        ),
+        SortPostsBy::Top => (Expr::col(REACTION_COUNT_COLUMN), Order::Desc),
     }
 }
 
