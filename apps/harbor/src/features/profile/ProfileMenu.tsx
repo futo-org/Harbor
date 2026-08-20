@@ -1,9 +1,11 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useState } from 'react';
 import { View } from 'react-native';
+import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
 import { useProfileContext } from './ProfileContext';
@@ -22,8 +24,12 @@ type MenuItem = {
  */
 export default function ProfileMenu() {
   const { theme } = useTheme();
+  const client = usePolycentric();
   const { identityKey, isSelf } = useProfileContext();
   const { isModerator } = useModerationStatus();
+  const isBlocked = useBlocks((s) => s.isBlocked(identityKey ?? ''));
+  const addBlock = useBlocks((s) => s.addBlock);
+  const removeBlock = useBlocks((s) => s.removeBlock);
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
 
@@ -35,6 +41,17 @@ export default function ProfileMenu() {
       label: 'Ban user',
       destructive: true,
       onPress: () => setShowBanSheet(true),
+    });
+  }
+  if (!isSelf && identityKey) {
+    items.push({
+      key: 'block',
+      icon: isBlocked ? 'personAdd' : 'personRemove',
+      label: isBlocked ? 'Unblock user' : 'Block user',
+      onPress: () => {
+        if (isBlocked) void removeBlock(client, identityKey);
+        else void addBlock(client, identityKey);
+      },
     });
   }
 

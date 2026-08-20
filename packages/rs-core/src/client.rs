@@ -22,9 +22,20 @@ fn hex_short(bytes: &[u8]) -> String {
     hex::encode(&bytes[..bytes.len().min(4)])
 }
 
+/// Identity named by a `Block` bundle, if the bundle is one.
+fn block_target(bundle: &EventBundle) -> Option<String> {
+    let bytes = &bundle.serialized_content.as_ref()?.content_bytes;
+    match Content::decode(bytes.as_slice()).ok()?.content_body? {
+        ContentBody::Block(block) => Some(block.identity),
+        _ => None,
+    }
+}
+
 #[derive(Default)]
 pub struct PolycentricClient {
     servers: Mutex<Vec<String>>,
+    active_identity: Mutex<Option<String>>,
+    blocked_identities: Mutex<Option<Arc<HashSet<String>>>>,
     event_store: EventStore,
     event_proofs_store: EventProofsStore,
     content_store: ContentStore,
@@ -47,8 +58,48 @@ impl PolycentricClient {
         self.servers.lock().unwrap().clone()
     }
 
+    /// Set the identity whose local state the client reads for viewer-specific
+    /// rules, such as blocking posts from the user's blocked list
+    pub fn set_active_identity(&self, identity: Option<String>) {
+        *self.active_identity.lock().unwrap() = identity;
+        self.blocked_identities.lock().unwrap().take();
+    }
+
+    pub fn active_identity(&self) -> Option<String> {
+        self.active_identity.lock().unwrap().clone()
+    }
+
+    /// Identities the active identity blocks, derived from its non-tombstoned
+    /// social graph events. Empty when there is no active identity. Memoized
+    /// until a copy into the event or content store invalidates it.
+    pub fn blocked_identities(&self) -> Arc<HashSet<String>> {
+        if let Some(cached) = self.blocked_identities.lock().unwrap().clone() {
+            return cached;
+        }
+
+        let blocked = Arc::new(match self.active_identity() {
+            None => HashSet::new(),
+            Some(active) => match self.list_valid_events(&active, collections::SOCIAL_GRAPH) {
+                Ok(bundles) => bundles.iter().filter_map(block_target).collect(),
+                Err(e) => {
+                    crate::logging::log_warn(|| format!("blocked identities unavailable: {e:?}"));
+                    HashSet::new()
+                }
+            },
+        });
+
+        *self.blocked_identities.lock().unwrap() = Some(Arc::clone(&blocked));
+        blocked
+    }
+
+    pub fn is_blocked(&self, identity: &str) -> bool {
+        self.blocked_identities().contains(identity)
+    }
+
     /// Copy a signed event into the event store.
     pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
+        self.blocked_identities.lock().unwrap().take();
+
         let event_key = EventKey::from_signed_event(&signed_event)?;
         let identity =
             (event_key.collection == collections::IDENTITY).then(|| event_key.identity.clone());
@@ -78,6 +129,8 @@ impl PolycentricClient {
                 "content does not match digest {digest_hex}"
             )));
         }
+
+        self.blocked_identities.lock().unwrap().take();
 
         if !self.content_store.insert(digest, content_bytes) {
             return Ok(());
@@ -1426,5 +1479,102 @@ mod tests {
             "unsupported digest types must be rejected"
         );
         assert!(client.find_content_from_digest(&digest).is_none());
+    }
+
+    #[test]
+    fn blocked_identities_follow_block_and_unblock_events() {
+        use polycentric_common::models::protos_v2::{Block, Delete, SerializedContent};
+
+        fn graph_bundle(
+            signer: &Keypair,
+            identity: &str,
+            sequence: u64,
+            body: Body,
+        ) -> EventBundle {
+            let content_bytes = Content {
+                content_body: Some(body),
+            }
+            .encode_to_vec();
+            let signed_event = sign_event(
+                signer,
+                identity,
+                collections::SOCIAL_GRAPH,
+                sequence,
+                1,
+                vec![sequence],
+                sha256_digest(&content_bytes),
+            );
+            EventBundle {
+                signed_event: Some(signed_event),
+                serialized_content: Some(SerializedContent { content_bytes }),
+                event_proofs: Vec::new(),
+                meta: None,
+            }
+        }
+
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+        client.set_active_identity(Some(identity.clone()));
+        assert!(client.blocked_identities().is_empty());
+
+        let block = Block {
+            identity: "spammer".to_string(),
+        };
+        client.copy_bundles(vec![graph_bundle(&a, &identity, 1, Body::Block(block))]);
+        assert!(client.is_blocked("spammer"));
+
+        let unblock = Delete {
+            event_key: Some(ProtoEventKey {
+                collection: collections::SOCIAL_GRAPH,
+                identity: identity.clone(),
+                signed_by: Some(a.public.clone()),
+                sequence: 1,
+            }),
+        };
+        client.copy_bundles(vec![graph_bundle(&a, &identity, 2, Body::Delete(unblock))]);
+        assert!(!client.is_blocked("spammer"));
+    }
+
+    #[test]
+    fn blocked_identities_pick_up_content_copied_after_its_event() {
+        use polycentric_common::models::protos_v2::Block;
+
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+        client.set_active_identity(Some(identity.clone()));
+
+        let content_bytes = Content {
+            content_body: Some(Body::Block(Block {
+                identity: "spammer".to_string(),
+            })),
+        }
+        .encode_to_vec();
+        let digest = sha256_digest(&content_bytes);
+
+        client
+            .copy_event(sign_event(
+                &a,
+                &identity,
+                collections::SOCIAL_GRAPH,
+                1,
+                1,
+                vec![1],
+                digest.clone(),
+            ))
+            .expect("graph event should insert");
+        assert!(!client.is_blocked("spammer"));
+
+        client
+            .copy_content(&digest, content_bytes)
+            .expect("content should insert");
+        assert!(client.is_blocked("spammer"));
+    }
+
+    #[test]
+    fn blocked_identities_are_empty_without_an_active_identity() {
+        let client = PolycentricClient::new();
+        assert!(client.blocked_identities().is_empty());
     }
 }

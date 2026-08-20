@@ -3,7 +3,7 @@
 use crate::data::Marker;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 use crate::service::proto::{
     SearchUsersRequest, SearchUsersResponse, SortUsersBy,
 };
@@ -20,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: SearchUsersRequest,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
@@ -36,11 +36,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
-        &ctx.db,
+        &ctx.service.db,
         &params.common.query,
         params.sort_by,
         params.common.limit,
@@ -85,16 +85,16 @@ impl SortedUsersBy {
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    _: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &Fetched<SearchRow, SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
     post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
-    _: &ServiceContext,
-    _: &Params,
+    _: &RequestContext<'_>,
+    _params: &Params,
     fetched: Fetched<SearchRow, SortedUsersBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
@@ -103,10 +103,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _: &Params,
     filtered: SearchResponseFilter<SortedUsersBy>,
     hydration: HydrationState,
 ) -> Result<SearchResponseView<SortedUsersBy>, Status> {
-    rpc::view(ctx, filtered, hydration).await
+    rpc::view(ctx.service, filtered, hydration).await
 }

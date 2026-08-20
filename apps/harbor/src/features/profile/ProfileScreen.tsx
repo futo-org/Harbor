@@ -6,6 +6,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { FeedPage } from '@/src/features/feed/FeedPage';
+import { EMPTY_FEED } from '@/src/features/feed/hooks/types';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
 import {
   FetchMode,
@@ -22,6 +23,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
+import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileTabs } from './ProfileTabs';
@@ -51,6 +53,9 @@ const PROFILE_TABS: readonly ActiveFeed[] = [
 
 /** Clears the tab bar at the bottom of the screen. */
 const FEED_PADDING = { paddingBottom: 40 };
+
+const BLOCKED_PROFILE_MESSAGE =
+  'You blocked this profile. Unblock to see their posts.';
 
 export default function ProfileScreen({
   tab = 'posts',
@@ -163,8 +168,10 @@ function ProfileScreenContent() {
     }, []),
   );
 
+  const isBlocked = useBlocks((s) => s.isBlocked(identityKey ?? ''));
+
   const identityFeed = useIdentityFeed(identityKey ?? undefined, undefined, {
-    enabled: isFocused && activeFeed === 'posts',
+    enabled: isFocused && activeFeed === 'posts' && !isBlocked,
     getIsAborted: () => isAbortedRef.current,
   });
 
@@ -210,8 +217,9 @@ function ProfileScreenContent() {
           onHeaderHeightChange={setHeaderHeight}
         >
           <FeedPage
-            feed={identityFeed}
+            feed={isBlocked ? EMPTY_FEED : identityFeed}
             active={activeFeed === 'posts'}
+            emptyMessage={isBlocked ? BLOCKED_PROFILE_MESSAGE : undefined}
             contentContainerStyle={FEED_PADDING}
           />
           <ProfileVerificationsList

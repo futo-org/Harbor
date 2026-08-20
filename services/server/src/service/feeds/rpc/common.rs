@@ -1,7 +1,7 @@
 //! Common functions for feed rpc requests
 //! Mostly pipeline related
 
-use crate::data::hydration::HydrationState;
+use crate::data::hydration::{HydrationState, to_target_event_key};
 use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
@@ -85,6 +85,19 @@ pub fn create_event_created_at_marker(
     Marker {
         sorted_by: event.created_at,
         event_id: event.id,
+    }
+}
+
+pub fn reply_parent(
+    (_, content): &EventWithContentRow,
+) -> Option<TargetEventKey> {
+    let content = content.as_ref()?;
+    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
+    match decoded.content_body {
+        Some(ContentBody::Post(post)) => {
+            to_target_event_key(post.reply?.parent.as_ref()?)
+        }
+        _ => None,
     }
 }
 
@@ -172,20 +185,39 @@ pub fn has_matching_label(
     false
 }
 
-/// Remove rows that are tombstoned, omit-labeled, or whose indirect
-/// targets (quote/repost) are tombstoned or omit-labeled. Hint rows
-/// (referenced posts) are filtered alongside live rows.
+/// Remove rows that are blocked, tombstoned or omit-labeled, directly or
+/// through their quote/repost target. Hint rows (referenced posts) are
+/// filtered alongside live rows.
 pub async fn filter<SortedBy>(
     fetched: Fetched<SortedBy>,
     hydration: &HydrationState,
     omit_labels: &[String],
+) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
+    filter_rows(fetched, hydration, omit_labels, false).await
+}
+
+/// Drop blocked posts in a thread, along with all replies to those blocked posts.
+pub async fn filter_thread<SortedBy>(
+    fetched: Fetched<SortedBy>,
+    hydration: &HydrationState,
+    omit_labels: &[String],
+) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
+    filter_rows(fetched, hydration, omit_labels, true).await
+}
+
+async fn filter_rows<SortedBy>(
+    fetched: Fetched<SortedBy>,
+    hydration: &HydrationState,
+    omit_labels: &[String],
+    cascade_blocked_replies: bool,
 ) -> Result<GetFeedResponseFilter<SortedBy>, Status> {
     let Fetched { rows, page_info } = fetched;
     let omit_set: HashSet<&str> =
         omit_labels.iter().map(|s| s.as_str()).collect();
 
     let is_omitted = |key: &TargetEventKey| -> bool {
-        hydration.deletes_by_target.contains_key(key)
+        hydration.blocked_identities.contains(&key.identity)
+            || hydration.deletes_by_target.contains_key(key)
             || (!omit_set.is_empty()
                 && has_matching_label(&hydration.label_events, key, &omit_set))
     };
@@ -193,10 +225,21 @@ pub async fn filter<SortedBy>(
     let mut live_rows: Vec<EventWithContentRow> =
         Vec::with_capacity(rows.len());
     let mut tombstone_bundles: Vec<EventBundle> = Vec::new();
+    let mut dropped_for_block: HashSet<TargetEventKey> = HashSet::new();
 
     // Filter live rows
     for row in rows {
         let key = TargetEventKey::of(&row.0);
+
+        let cascades_from_dropped_parent = cascade_blocked_replies
+            && reply_parent(&row)
+                .is_some_and(|parent| dropped_for_block.contains(&parent));
+        if hydration.blocked_identities.contains(&row.0.identity)
+            || cascades_from_dropped_parent
+        {
+            dropped_for_block.insert(key);
+            continue;
+        }
 
         // If tombstoned, drop but add a hint
         if let Some(bundles) = hydration.deletes_by_target.get(&key) {
@@ -311,13 +354,15 @@ mod tests {
     use crate::data::Cursor;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
-        Content, EventBundle, EventKey, Labels, Post, PublicKey, Repost,
+        Content, EventBundle, EventKey, Labels, Post, PostReply, PublicKey,
+        Repost,
     };
     use ::entity::content_model as ContentModel;
     use ::entity::event_model as EventModel;
     use chrono::DateTime;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     fn ts(seconds: i64) -> DateTimeWithTimeZone {
         DateTime::from_timestamp_secs(seconds)
@@ -428,6 +473,35 @@ mod tests {
                 post: Some(to_event_key(target)),
             })),
         }
+    }
+
+    fn reply_content(parent: &TargetEventKey) -> Content {
+        Content {
+            content_body: Some(ContentBody::Post(Post {
+                reply: Some(PostReply {
+                    root: Some(to_event_key(parent)),
+                    parent: Some(to_event_key(parent)),
+                }),
+                ..Default::default()
+            })),
+        }
+    }
+
+    fn blocking(identities: &[&str]) -> HydrationState {
+        HydrationState {
+            blocked_identities: Arc::new(
+                identities.iter().map(|s| s.to_string()).collect(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    fn live_identities(result: &GetFeedResponseFilter) -> Vec<String> {
+        result
+            .live_rows
+            .iter()
+            .map(|(event, _)| event.identity.clone())
+            .collect()
     }
 
     fn make_fetched(rows: Vec<EventWithContentRow>) -> Fetched {
@@ -745,5 +819,177 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.event_hints.len(), 1);
+    }
+
+    #[test]
+    fn reply_parent_of_non_reply_post() {
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        assert!(reply_parent(&row).is_none());
+    }
+
+    #[test]
+    fn reply_parent_of_reply() {
+        let parent = make_key("bob", 1);
+        let row = ewc(2, "alice", 2, 2, &reply_content(&parent));
+        assert_eq!(reply_parent(&row), Some(parent));
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_author_dropped() {
+        let row = ewc(1, "bob", 2, 1, &default_post_content());
+        let fetched = make_fetched(vec![row]);
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_unblocked_author_kept() {
+        let row = ewc(1, "alice", 2, 1, &default_post_content());
+        let fetched = make_fetched(vec![row]);
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_author_brings_no_tombstone_hint() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "bob", 2, 1, &default_post_content());
+        let mut hydration = blocking(&["bob"]);
+        hydration
+            .deletes_by_target
+            .insert(target, vec![EventBundle::default()]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+        assert!(result.tombstone_bundles.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_repost_of_blocked_author_dropped() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &repost_content(&target));
+        let hydration = blocking(&["bob"]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_quote_of_blocked_author_kept() {
+        let target = make_key("bob", 1);
+        let row = ewc(1, "alice", 2, 1, &quote_content(&target));
+        let hydration = blocking(&["bob"]);
+        let fetched = make_fetched(vec![row]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(result.live_rows.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn filter_hint_by_blocked_author_excluded() {
+        let hint = ewc(10, "bob", 2, 1, &default_post_content());
+        let hydration = HydrationState {
+            repost_events: vec![hint],
+            ..blocking(&["bob"])
+        };
+        let fetched = make_fetched(vec![]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.event_hints.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_reply_cascades_to_unblocked_descendants() {
+        let alice_root = ewc(1, "alice", 2, 1, &default_post_content());
+        let bob_reply =
+            ewc(2, "bob", 2, 2, &reply_content(&make_key("alice", 1)));
+        let charlie_reply =
+            ewc(3, "charlie", 2, 3, &reply_content(&make_key("bob", 2)));
+        let dave_reply =
+            ewc(4, "dave", 2, 4, &reply_content(&make_key("charlie", 3)));
+
+        let fetched = make_fetched(vec![
+            alice_root,
+            bob_reply,
+            charlie_reply,
+            dave_reply,
+        ]);
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(live_identities(&result), vec!["alice".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn filter_does_not_cascade_outside_threads() {
+        let bob_post = ewc(1, "bob", 2, 1, &default_post_content());
+        let charlie_reply =
+            ewc(2, "charlie", 2, 2, &reply_content(&make_key("bob", 1)));
+
+        let fetched = make_fetched(vec![bob_post, charlie_reply]);
+        let hydration = blocking(&["bob"]);
+        let result = filter(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_reply_leaves_sibling_branch_intact() {
+        let alice_root = ewc(1, "alice", 2, 1, &default_post_content());
+        let bob_reply =
+            ewc(2, "bob", 2, 2, &reply_content(&make_key("alice", 1)));
+        let erin_reply =
+            ewc(3, "erin", 2, 3, &reply_content(&make_key("alice", 1)));
+
+        let fetched = make_fetched(vec![alice_root, bob_reply, erin_reply]);
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(
+            live_identities(&result),
+            vec!["alice".to_string(), "erin".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn filter_blocked_ancestor_empties_thread() {
+        let bob_root = ewc(1, "bob", 2, 1, &default_post_content());
+        let alice_subject =
+            ewc(2, "alice", 2, 2, &reply_content(&make_key("bob", 1)));
+        let charlie_reply =
+            ewc(3, "charlie", 2, 3, &reply_content(&make_key("alice", 2)));
+
+        let fetched =
+            make_fetched(vec![bob_root, alice_subject, charlie_reply]);
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
+        assert!(result.live_rows.is_empty());
+    }
+
+    #[tokio::test]
+    async fn filter_block_cascade_requires_parent_before_child() {
+        let charlie_reply =
+            ewc(3, "charlie", 2, 3, &reply_content(&make_key("bob", 2)));
+        let bob_reply =
+            ewc(2, "bob", 2, 2, &reply_content(&make_key("alice", 1)));
+
+        let fetched = make_fetched(vec![charlie_reply, bob_reply]);
+        let hydration = blocking(&["bob"]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn filter_cascade_does_not_extend_to_tombstoned_parents() {
+        let alice_root = ewc(1, "alice", 2, 1, &default_post_content());
+        let charlie_reply =
+            ewc(2, "charlie", 2, 2, &reply_content(&make_key("alice", 1)));
+
+        let mut hydration = blocking(&["bob"]);
+        hydration
+            .deletes_by_target
+            .insert(make_key("alice", 1), vec![EventBundle::default()]);
+
+        let fetched = make_fetched(vec![alice_root, charlie_reply]);
+        let result = filter_thread(fetched, &hydration, &[]).await.unwrap();
+        assert_eq!(live_identities(&result), vec!["charlie".to_string()]);
     }
 }

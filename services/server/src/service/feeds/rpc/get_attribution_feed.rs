@@ -8,7 +8,7 @@ use crate::{
         pipeline,
     },
     service::{
-        context::ServiceContext,
+        context::RequestContext,
         feeds::{
             repository::Query as FeedsRepository,
             rpc::common::{
@@ -30,7 +30,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: GetAttributionFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     // Only link attribution is queryable today; extract its URL.
@@ -63,11 +63,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_attributed_url(
-        &ctx.db,
+        &ctx.service.db,
         params.url.clone(),
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
@@ -78,15 +78,15 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    _: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
     post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -95,10 +95,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx, filtered, hydration).await
+    feeds_pipeline::view(ctx.service, filtered, hydration).await
 }

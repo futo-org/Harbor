@@ -3,7 +3,7 @@
 
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Marker, pipeline};
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, Fetched, GetFeedResponseFilter, GetFeedResponseView,
@@ -20,7 +20,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: GetFollowingFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     if req.follower_identity.is_empty() {
@@ -49,11 +49,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::recommended_feed(
-        &ctx.db,
+        &ctx.service.db,
         &params.identity,
         params.sort_by,
         params.common.limit + 1,
@@ -88,7 +88,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
@@ -96,7 +96,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &ServiceContext,
+    _: &RequestContext<'_>,
     params: &Params,
     fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,
@@ -105,10 +105,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _: &Params,
     filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView<SortedBy>, Status> {
-    feeds_pipeline::view(ctx, filtered, hydration).await
+    feeds_pipeline::view(ctx.service, filtered, hydration).await
 }

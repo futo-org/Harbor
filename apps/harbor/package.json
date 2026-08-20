@@ -39,7 +39,6 @@
     "@shopify/flash-list": "^2.3.2",
     "@tanstack/react-virtual": "^3.14.9",
     "@types/react-native-web": "^0.19.2",
-    "better-sqlite3": "^12.10.0",
     "expo": "^57.0.14",
     "expo-application": "~57.0.2",
     "expo-blur": "~57.0.2",

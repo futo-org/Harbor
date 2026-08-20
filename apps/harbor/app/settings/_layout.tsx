@@ -20,6 +20,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="check-backup" />
       <Stack.Screen name="servers" options={sheetScreenOptions} />
       <Stack.Screen name="moderation-settings" options={sheetScreenOptions} />
+      <Stack.Screen name="blocked-users" options={sheetScreenOptions} />
     </Stack>
   );
 }

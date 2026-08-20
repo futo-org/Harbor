@@ -562,7 +562,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
         const newReplies: string[] = [postId(post), ...existingReplies];
         replyInjections.set(parentId, newReplies);
 
-        const entry = {
+        const entry: FeedEntry = {
           output: undefined,
           pageInfo: existing.pageInfo,
           frontInjections: existing.frontInjections,

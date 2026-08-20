@@ -3,7 +3,7 @@
 
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::Query as FeedsRepository;
@@ -32,7 +32,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     req: GetPostThreadRequest,
 ) -> Result<GetPostThreadResponse, Status> {
     let descendants_limit = if req.limit <= 0 {
@@ -63,11 +63,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
-        &ctx.db,
+        &ctx.service.db,
         params.collection,
         &params.identity,
         params.public_key_type,
@@ -80,7 +80,7 @@ async fn fetch(
     let subject_id = subject_row.0.id;
 
     let ancestor_refs = FeedsRepository::list_ancestor_refs(
-        &ctx.db,
+        &ctx.service.db,
         subject_id,
         PARENT_HEIGHT_LIMIT,
     )
@@ -88,7 +88,7 @@ async fn fetch(
     .map_err(map_db_err)?;
 
     let descendant_refs = FeedsRepository::list_descendant_refs(
-        &ctx.db,
+        &ctx.service.db,
         subject_id,
         DESCENDANT_DEPTH_LIMIT,
         params.descendants_limit,
@@ -128,7 +128,7 @@ async fn fetch(
     all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
     all_ids.extend(descendant_order.iter().copied());
     let mut by_id: HashMap<i64, EventWithContentRow> =
-        FeedsRepository::list_events_by_ids(&ctx.db, all_ids)
+        FeedsRepository::list_events_by_ids(&ctx.service.db, all_ids)
             .await
             .map_err(map_db_err)?
             .into_iter()
@@ -160,27 +160,205 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
-    _: &Params,
+    ctx: &RequestContext<'_>,
+    _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
     post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _ctx: &RequestContext<'_>,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
 ) -> Result<GetFeedResponseFilter, Status> {
-    feeds_pipeline::filter(fetched, hydration, &params.omit_labels).await
+    feeds_pipeline::filter_thread(fetched, hydration, &params.omit_labels).await
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &RequestContext<'_>,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx, filtered, hydration).await
+    feeds_pipeline::view(ctx.service, filtered, hydration).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::hydration::HydrationState;
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{
+        Content, EventKey, Post, PostReply, PublicKey,
+    };
+    use ::entity::content_model as ContentModel;
+    use ::entity::event_model as EventModel;
+    use chrono::DateTime;
+    use prost::Message;
+    use sea_orm::prelude::DateTimeWithTimeZone;
+    use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    const POST_COLLECTION: i16 = 2;
+
+    fn ts(seconds: i64) -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(seconds, 0).unwrap().fixed_offset()
+    }
+
+    fn event_row(id: i64, identity: &str) -> EventModel::Model {
+        EventModel::Model {
+            id,
+            collection: POST_COLLECTION,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence: id,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![id as u8]),
+            signature: vec![id as u8],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![id as u8],
+            created_at: ts(id),
+            synced_at: ts(id),
+        }
+    }
+
+    fn event_key_of(row: &EventModel::Model) -> EventKey {
+        EventKey {
+            collection: row.collection as i32,
+            identity: row.identity.clone(),
+            signed_by: Some(PublicKey {
+                key_type: row.public_key_type as i32,
+                key: row.public_key.clone(),
+            }),
+            sequence: row.sequence as u64,
+        }
+    }
+
+    fn content_row(id: i64, content: &Content) -> ContentModel::Model {
+        ContentModel::Model {
+            id,
+            digest_type: 1,
+            digest_bytes: vec![id as u8],
+            serialized_bytes: content.encode_to_vec(),
+            synced_at: ts(id),
+        }
+    }
+
+    fn post_row(
+        id: i64,
+        identity: &str,
+    ) -> (EventModel::Model, ContentModel::Model) {
+        let content = Content {
+            content_body: Some(ContentBody::Post(Post::default())),
+        };
+        (event_row(id, identity), content_row(id, &content))
+    }
+
+    fn reply_row(
+        id: i64,
+        identity: &str,
+        parent: &EventModel::Model,
+    ) -> (EventModel::Model, ContentModel::Model) {
+        let parent_key = event_key_of(parent);
+        let content = Content {
+            content_body: Some(ContentBody::Post(Post {
+                reply: Some(PostReply {
+                    root: Some(parent_key.clone()),
+                    parent: Some(parent_key),
+                }),
+                ..Default::default()
+            })),
+        };
+        (event_row(id, identity), content_row(id, &content))
+    }
+
+    fn descendant_ref_row(
+        event_id: i64,
+        parent_event_id: i64,
+    ) -> BTreeMap<String, Value> {
+        BTreeMap::from([
+            ("event_id".to_owned(), Value::BigInt(Some(event_id))),
+            (
+                "parent_event_id".to_owned(),
+                Value::BigInt(Some(parent_event_id)),
+            ),
+        ])
+    }
+
+    async fn ctx(db: sea_orm::DatabaseConnection) -> Arc<ServiceContext> {
+        let kafka_producer = common_kafka::build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        ServiceContext::new(db, kafka_producer)
+    }
+
+    fn params() -> Params {
+        Params {
+            collection: POST_COLLECTION,
+            identity: "alice".to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence: 10,
+            descendants_limit: 200,
+            omit_labels: Vec::new(),
+        }
+    }
+
+    /// Hydration whose caller blocks `blocked`.
+    fn hydration_blocking(blocked: &[&str]) -> HydrationState {
+        HydrationState {
+            blocked_identities: Arc::new(
+                blocked.iter().map(|s| s.to_string()).collect(),
+            ),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn a_blocked_reply_takes_its_descendants_with_it() {
+        let alice_subject = post_row(10, "alice");
+        let bob_reply = reply_row(11, "bob", &alice_subject.0);
+        let charlie_reply = reply_row(12, "charlie", &bob_reply.0);
+
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([vec![alice_subject.clone()]])
+            .append_query_results([Vec::<MockRow>::new()])
+            .append_query_results([vec![
+                descendant_ref_row(11, 10),
+                descendant_ref_row(12, 11),
+            ]])
+            .append_query_results([vec![
+                bob_reply.clone(),
+                charlie_reply.clone(),
+            ]])
+            .into_connection();
+        let ctx = ctx(db).await;
+
+        let ctx = RequestContext::new(&ctx, Some("caller"));
+
+        let fetched = fetch(&ctx, &params()).await.unwrap();
+        let fetched_identities: Vec<&str> = fetched
+            .rows
+            .iter()
+            .map(|(event, _)| event.identity.as_str())
+            .collect();
+        assert_eq!(fetched_identities, ["alice", "bob", "charlie"]);
+
+        let hydration = hydration_blocking(&["bob"]);
+        let filtered = feeds_pipeline::filter_thread(fetched, &hydration, &[])
+            .await
+            .unwrap();
+        let live_identities: Vec<&str> = filtered
+            .live_rows
+            .iter()
+            .map(|(event, _)| event.identity.as_str())
+            .collect();
+        assert_eq!(live_identities, ["alice"]);
+    }
 }

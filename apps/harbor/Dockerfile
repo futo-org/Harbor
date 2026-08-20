@@ -2,7 +2,8 @@
 FROM node:24-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+# Keep in sync with "packageManager" in the root package.json
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 
 # Stage 2: Dependencies + Build
 FROM base AS build
@@ -24,7 +25,10 @@ COPY patches patches
 COPY apps apps
 COPY packages packages
 COPY tools tools
-RUN pnpm install --frozen-lockfile
+# --ignore-scripts: the only dependency allowed to run install scripts is
+# better-sqlite3 (see onlyBuiltDependencies), and it reaches this image only
+# through @polycentric/js-node, which polycentric-app does not depend on.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
 # Non symlinked packages and node_modules
 RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy

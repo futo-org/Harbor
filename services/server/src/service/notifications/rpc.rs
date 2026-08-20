@@ -5,7 +5,8 @@ pub mod list_notifications;
 
 use std::sync::Arc;
 
-use crate::service::context::ServiceContext;
+use crate::service::auth::authenticated_identity;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
@@ -26,8 +27,10 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<ListNotificationsRequest>,
     ) -> Result<Response<ListNotificationsResponse>, Status> {
+        let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
         Ok(Response::new(
-            list_notifications::handle(&self.ctx, request.into_inner()).await?,
+            list_notifications::handle(&ctx, request.into_inner()).await?,
         ))
     }
     async fn register_push_notifications(

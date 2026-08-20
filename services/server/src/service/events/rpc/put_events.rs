@@ -384,3 +384,89 @@ async fn remove_present_blobs(
 
     Ok(missing_blobs)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::service::proto::{Block, EventKey};
+    use chrono::DateTime;
+    use sea_orm::prelude::DateTimeWithTimeZone;
+
+    fn now() -> DateTimeWithTimeZone {
+        DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
+    }
+
+    fn event_row(identity: &str) -> EventModel::Model {
+        EventModel::Model {
+            id: 1,
+            collection: collections::SOCIAL_GRAPH as i16,
+            identity: identity.to_string(),
+            public_key_type: 1,
+            public_key: vec![0xaa],
+            sequence: 1,
+            content_digest_type: Some(1),
+            content_digest_bytes: Some(vec![1]),
+            signature: vec![],
+            previous_signature: vec![],
+            previous_root: vec![],
+            event_bytes: vec![1],
+            created_at: now(),
+            synced_at: now(),
+        }
+    }
+
+    fn delete_content(target_identity: &str) -> Content {
+        Content {
+            content_body: Some(ContentBody::Delete(Delete {
+                event_key: Some(EventKey {
+                    collection: collections::SOCIAL_GRAPH,
+                    identity: target_identity.to_string(),
+                    signed_by: Some(PublicKey {
+                        key_type: 1,
+                        key: vec![0xaa],
+                    }),
+                    sequence: 1,
+                }),
+            })),
+        }
+    }
+
+    #[test]
+    fn a_delete_of_your_own_event_is_authorised() {
+        assert!(event_is_authorised(
+            &event_row("alice"),
+            Some(&delete_content("alice")),
+        ));
+    }
+
+    #[test]
+    fn a_delete_of_another_identitys_event_is_not_authorised() {
+        assert!(!event_is_authorised(
+            &event_row("mallory"),
+            Some(&delete_content("alice")),
+        ));
+    }
+
+    #[test]
+    fn a_delete_without_an_event_key_is_not_authorised() {
+        let content = Content {
+            content_body: Some(ContentBody::Delete(Delete { event_key: None })),
+        };
+        assert!(!event_is_authorised(&event_row("alice"), Some(&content)));
+    }
+
+    #[test]
+    fn an_event_without_content_is_not_authorised() {
+        assert!(!event_is_authorised(&event_row("alice"), None));
+    }
+
+    #[test]
+    fn a_block_of_another_identity_is_authorised() {
+        let content = Content {
+            content_body: Some(ContentBody::Block(Block {
+                identity: "bob".to_string(),
+            })),
+        };
+        assert!(event_is_authorised(&event_row("alice"), Some(&content)));
+    }
+}

@@ -10,7 +10,9 @@ pub struct ServiceContext {
     pub db: DatabaseConnection,
     pub proof_cache: Arc<ProofCache>,
     pub kafka_producer: FutureProducer,
-    pub trusted_moderator: Option<String>, // `None` means no content labels
+    /// Only labels from this moderator identity are considered.
+    /// `None` means no labels.
+    pub trusted_moderator: Option<String>,
 }
 
 impl ServiceContext {
@@ -24,5 +26,20 @@ impl ServiceContext {
             kafka_producer,
             trusted_moderator: crate::config::get().trusted_moderator.clone(),
         })
+    }
+}
+
+pub struct RequestContext<'a> {
+    pub service: &'a ServiceContext,
+    /// The authenticated caller--`None` for anonymous requests.
+    pub caller: Option<&'a str>,
+}
+
+impl<'a> RequestContext<'a> {
+    pub fn new(
+        service: &'a ServiceContext,
+        caller: Option<&'a str>,
+    ) -> RequestContext<'a> {
+        RequestContext { service, caller }
     }
 }

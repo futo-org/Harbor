@@ -149,6 +149,28 @@ impl PolycentricCore {
         self.client.lock().unwrap().servers()
     }
 
+    /// Set the user's identity for user-specific state (i.e. the set of identities
+    /// a user blocks).
+    pub fn set_active_identity(&self, identity: Option<String>) {
+        self.client.lock().unwrap().set_active_identity(identity);
+    }
+
+    /// Identities the active identity blocks, derived from its non-tombstoned
+    /// social graph events.
+    pub fn blocked_identities(&self) -> Vec<String> {
+        self.client
+            .lock()
+            .unwrap()
+            .blocked_identities()
+            .iter()
+            .cloned()
+            .collect()
+    }
+
+    pub fn is_blocked(&self, identity: String) -> bool {
+        self.client.lock().unwrap().is_blocked(&identity)
+    }
+
     pub fn next_sequence(&self, identity: String, collection: i32) -> u64 {
         self.client
             .lock()

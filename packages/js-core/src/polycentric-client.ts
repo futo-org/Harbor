@@ -574,6 +574,13 @@ export class PolycentricClient {
   }
 
   /**
+   * Identities the active identity blocks, derived from local block events.
+   */
+  blockedIdentities(): string[] {
+    return this.core.blockedIdentities();
+  }
+
+  /**
    * The canonical identity chain for `identity` as bundles.
    */
   resolveIdentityChain(identity: string): Proto.EventBundle[] {
@@ -945,6 +952,7 @@ export class PolycentricClient {
     this.activeIdentityKey = await this.storageDriver.loadActiveIdentityKey(
       keyPair.publicKey.key,
     );
+    this.core.setActiveIdentity(this.activeIdentityKey ?? undefined);
     if (this.storageHandle) {
       await this.refreshServers();
     }
@@ -970,6 +978,7 @@ export class PolycentricClient {
    */
   public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
     this.activeIdentityKey = identityKey;
+    this.core.setActiveIdentity(identityKey ?? undefined);
     // Tokens minted for the previous identity must not be reused.
     this.core.clearAuthTokens();
     if (!this.currentKeyPair) return;
