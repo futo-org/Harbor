@@ -3,6 +3,7 @@ import { useTheme, withHexOpacity } from '@/src/common/theme';
 import { Fragment, type ReactNode, useEffect } from 'react';
 import { View } from 'react-native';
 import {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -22,6 +23,7 @@ export function useShimmerOpacity() {
       -1,
       true,
     );
+    return () => cancelAnimation(opacity);
   }, [opacity]);
   return useAnimatedStyle(() => ({ opacity: opacity.value }));
 }

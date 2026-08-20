@@ -4,9 +4,12 @@ pub use crate::service::events::tombstone::EventWithContentRow;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,
+    content_post_attributed_url_model as ContentPostAttributedUrlModel,
     content_reaction_model as ContentReactionModel, event_model as EventModel,
-    follow_model as FollowModel, reaction_model as ReactionModel,
-    reaction_tally_model2 as ReactionTallyModel,
+    follow_model as FollowModel, quote_model as QuoteModel,
+    reaction_model as ReactionModel,
+    reaction_tally_model2 as ReactionTallyModel, reply_model as ReplyModel,
+    repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
@@ -88,6 +91,9 @@ impl SortedBy {
 
 pub struct Query;
 
+const CREATED_POSTS_ONLY: bool = true;
+const ALL_INTERACTIONS: bool = false;
+
 impl Query {
     /// Returns posts for the global Explore feed.
     pub async fn explore_feed(
@@ -96,7 +102,15 @@ impl Query {
         limit: u64,
         cursor_filter: Option<&CursorFilter<SortedBy>>,
     ) -> Result<Vec<ExploreEvent>, Status> {
-        Query::explore_posts(db, None, sort_by, limit, cursor_filter).await
+        Query::explore_posts(
+            db,
+            None,
+            CREATED_POSTS_ONLY,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
     }
 
     /// Returns posts for the Following feed.
@@ -110,6 +124,26 @@ impl Query {
         Query::explore_posts(
             db,
             Some(for_identity),
+            CREATED_POSTS_ONLY,
+            sort_by,
+            limit,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// Returns posts for the Recommended / For You feed.
+    pub async fn recommended_feed(
+        db: &DbConn,
+        for_identity: &str,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: Option<&CursorFilter<SortedBy>>,
+    ) -> Result<Vec<ExploreEvent>, Status> {
+        Query::explore_posts(
+            db,
+            Some(for_identity),
+            ALL_INTERACTIONS,
             sort_by,
             limit,
             cursor_filter,
@@ -121,9 +155,14 @@ impl Query {
     ///
     /// If `for_identity` is empty this will return the global Explore feed,
     /// otherwise a personal Following feed.
+    ///
+    /// If `posts_created_only` is true only posts created by an identity
+    /// `for_identity` is following will be shown. If it's false any interaction
+    /// (reaction, repost, etc.) by a followee will include the post.
     async fn explore_posts(
         db: &DbConn,
         for_identity: Option<&str>,
+        posts_created_only: bool,
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: Option<&CursorFilter<SortedBy>>,
@@ -181,35 +220,66 @@ impl Query {
                 .column(FollowModel::Column::Followee)
                 .from(FOLLOWING_TABLE);
 
-            query = query.filter(
-                Condition::any()
+            query = query.filter({
+                let condition = Condition::any()
                     // Created by an identity the `for_identity` is following.
                     .add(
                         EventModel::Column::Identity
                             .in_subquery(select_followee.clone()),
-                    )
-                    // Reacted on by an identity the `for_identity` is following.
-                    .add(EventModel::Column::Id.in_subquery({
-                        let mut q = SelectStatement::new();
-                        q.column(ReactionModel::Column::OnPost)
-                            .from(ReactionModel::Entity)
-                            .and_where(
-                                ReactionModel::Column::Identity
-                                    .in_subquery(select_followee),
-                            );
-                        q
-                    })),
-            );
+                    );
 
-            // TODO: improve personal feed. For each user, consider a post if
-            // the user has interacted with the post:
-            //  * [x] created
-            //  * [x] reacted
-            //  * [ ] reposted
-            //  * [ ] quoted
-            //  * [ ] replied
-            // Probably need to change the following table to be a CTE so it can
-            // reused.
+                if posts_created_only {
+                    // Only include posts created by someone `for_identity` is following.
+                    condition
+                } else {
+                    // Include additional interactions.
+                    condition
+                        // Reacted on by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(ReactionModel::Column::OnPost)
+                                .from(ReactionModel::Entity)
+                                .and_where(
+                                    ReactionModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Reposted by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(RepostModel::Column::Post)
+                                .from(RepostModel::Entity)
+                                .and_where(
+                                    RepostModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Quoted by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(QuoteModel::Column::Post)
+                                .from(QuoteModel::Entity)
+                                .and_where(
+                                    QuoteModel::Column::Identity
+                                        .in_subquery(select_followee.clone()),
+                                );
+                            q
+                        }))
+                        // Replied to by an identity the `for_identity` is following.
+                        .add(EventModel::Column::Id.in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column(ReplyModel::Column::Post)
+                                .from(ReplyModel::Entity)
+                                .and_where(
+                                    ReplyModel::Column::Identity
+                                        .in_subquery(select_followee),
+                                );
+                            q
+                        }))
+                }
+            });
         }
 
         match sort_by {
@@ -303,7 +373,30 @@ impl Query {
         limit: u64,
         cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        Self::do_list_feed_events(db, limit, Some(identities), cursor_filter)
+        Self::do_list_feed_events(
+            db,
+            limit,
+            Some(identities),
+            None,
+            cursor_filter,
+        )
+        .await
+    }
+
+    /// Same as [`list_feed_events`] restricted to Feed posts attributed
+    /// to `url` (via `Post.attributed_to[].link`). "Attributed to a URL"
+    /// means an exact URL match, ignoring the other Link metadata.
+    /// Short-circuits with an empty Vec when `url` is empty.
+    pub async fn list_feed_events_by_attributed_url(
+        db: &DbConn,
+        url: String,
+        limit: u64,
+        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        if url.is_empty() {
+            return Ok(Vec::new());
+        }
+        Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
             .await
     }
 
@@ -311,6 +404,7 @@ impl Query {
         db: &DbConn,
         limit: u64,
         only_identities: Option<Vec<String>>,
+        only_attributed_url: Option<String>,
         cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let cursor_filter = cursor_filter
@@ -329,6 +423,14 @@ impl Query {
 
             query =
                 query.filter(EventModel::Column::Identity.is_in(identities));
+        }
+
+        if let Some(url) = only_attributed_url {
+            // Join content → content_post_attributed_url on content.id and
+            // keep only events whose content is attributed to `url`.
+            query = query
+                .join(JoinType::InnerJoin, attributed_url_join())
+                .filter(ContentPostAttributedUrlModel::Column::Url.eq(url));
         }
 
         let columns = (EventModel::Column::CreatedAt, EventModel::Column::Id);
@@ -762,6 +864,15 @@ impl Query {
 
         query.limit(limit).all(db).await
     }
+}
+
+/// Relation joining a content row to its attributed-URL rows on content.id.
+/// Used to filter feed events down to those attributed to a given URL.
+pub(crate) fn attributed_url_join() -> RelationDef {
+    ContentModel::Entity::has_many(ContentPostAttributedUrlModel::Entity)
+        .from(ContentModel::Column::Id)
+        .to(ContentPostAttributedUrlModel::Column::ContentId)
+        .into()
 }
 
 /// Relation joining an event to its content row on (digest_type, digest_bytes).

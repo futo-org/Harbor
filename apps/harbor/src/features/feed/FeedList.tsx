@@ -1,10 +1,5 @@
 import { forwardRef, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  InteractionManager,
-  RefreshControl,
-  View,
-} from 'react-native';
+import { ActivityIndicator, InteractionManager, View } from 'react-native';
 import {
   List,
   type ListProps,
@@ -15,6 +10,8 @@ import type { FeedHookResult } from './hooks/types';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { isWeb } from '@/src/common/util/platform';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
+import { FeedError } from './FeedError';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '../post/Post';
 import { PostSkeletonList } from '../post/PostSkeleton';
@@ -81,12 +78,14 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
 
   const emptyComponent = useMemo(
     () =>
-      feed.isLoading ? (
+      feed.error ? (
+        <FeedError onRetry={feed.refresh} />
+      ) : feed.isLoading ? (
         <PostSkeletonList />
       ) : (
         <ListEmpty>{emptyMessage}</ListEmpty>
       ),
-    [feed.isLoading, emptyMessage],
+    [feed.error, feed.isLoading, feed.refresh, emptyMessage],
   );
 
   const showLoadingMore = feed.hasMore && feed.items.length > 0;
@@ -124,7 +123,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       drawDistance={500}
       refreshControl={
         !isWeb ? (
-          <RefreshControl
+          <PullRefreshControl
             refreshing={feed.isRefreshing}
             onRefresh={feed.refresh}
           />

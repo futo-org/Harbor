@@ -4,8 +4,19 @@ import { isWeb } from '@/src/common/util/platform';
 import ExploreScreen from '@/src/features/feed/ExploreScreen';
 import OnboardingWelcomeScreen from '@/src/features/onboarding/OnboardingWelcomeScreen';
 import type { Href } from 'expo-router';
-import { Redirect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+
+function DismissRedirect({ href }: { href: Href }) {
+  const router = useRouter();
+  useFocusEffect(
+    useCallback(() => {
+      router.dismissTo(href);
+    }, [href, router]),
+  );
+  return null;
+}
 
 export default function IndexScreen() {
   const { client, currentIdentity, isLoading, isReady } =
@@ -27,5 +38,5 @@ export default function IndexScreen() {
     return <OnboardingWelcomeScreen />;
   }
 
-  return <Redirect href={Routes.tabs.feed.index as Href} />;
+  return <DismissRedirect href={Routes.tabs.feed.index as Href} />;
 }

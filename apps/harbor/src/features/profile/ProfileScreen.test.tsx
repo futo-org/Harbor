@@ -65,9 +65,17 @@ jest.mock('./ProfileHeader', () => ({ ProfileHeader: () => null }));
 jest.mock('./ProfileCompactHeader', () => ({
   ProfileCompactHeader: () => null,
 }));
-jest.mock('./ProfileFeedSwitcher', () => ({ ProfileFeedSwitcher: () => null }));
+jest.mock('./ProfileTabs', () => ({ ProfileTabs: () => null }));
+// FlashList ships untranspiled ESM, so the pages' list stays out of this test.
+jest.mock('@/src/features/feed/FeedList', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('./ProfileVerificationsList', () => ({
   ProfileVerificationsList: () => null,
+}));
+jest.mock('./ProfileVerifiesList', () => ({
+  ProfileVerifiesList: () => null,
 }));
 jest.mock('@/src/features/feed/hooks/useIdentityFeed', () => ({
   useIdentityFeed: () => ({ refresh: () => undefined }),
@@ -75,9 +83,15 @@ jest.mock('@/src/features/feed/hooks/useIdentityFeed', () => ({
 jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
 }));
+jest.mock('@/src/common/lib/navigation/replacePath', () => ({
+  replacePath: jest.fn(),
+}));
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({ theme: { palette: { primary_500: '#000' } } }),
   Atoms: new Proxy({}, { get: () => ({}) }),
+  Spacing: new Proxy({}, { get: () => 8 }),
+  typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
+  ZIndex: { raised: 10 },
 }));
 jest.mock('@/src/common/components', () => {
   const react = require('react');
@@ -97,8 +111,9 @@ jest.mock('@/src/common/components/layout', () => {
 });
 
 import ProfileScreen from './ProfileScreen';
+import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { resolveAlias } from '@polycentric/react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useProfile } from './hooks/useProfile';
 import {
   getVerifiedAlias,
@@ -109,7 +124,7 @@ import {
 const mockResolve = resolveAlias as jest.Mock;
 const mockUseProfile = useProfile as jest.Mock;
 const mockParams = useLocalSearchParams as jest.Mock;
-const mockReplace = router.replace as jest.Mock;
+const mockReplacePath = replacePath as jest.Mock;
 const mockGetVerifiedIdentity = getVerifiedIdentity as jest.Mock;
 const mockGetVerifiedAlias = getVerifiedAlias as jest.Mock;
 const mockRecord = recordVerifiedAlias as jest.Mock;
@@ -198,7 +213,9 @@ describe('IdentityProfile (identity path)', () => {
 
     await render(<ProfileScreen />);
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(`/${ALIAS}`));
+    await waitFor(() =>
+      expect(mockReplacePath).toHaveBeenCalledWith(`/${ALIAS}`),
+    );
     expect(mockRecord).toHaveBeenCalledWith(ALIAS, IDENTITY);
   });
 
@@ -209,7 +226,7 @@ describe('IdentityProfile (identity path)', () => {
     await render(<ProfileScreen />);
 
     await waitFor(() => expect(mockResolve).toHaveBeenCalled());
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockReplacePath).not.toHaveBeenCalled();
   });
 
   it('uses the cache fast-path to redirect without a network call', async () => {
@@ -217,7 +234,9 @@ describe('IdentityProfile (identity path)', () => {
 
     await render(<ProfileScreen />);
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith(`/${ALIAS}`));
+    await waitFor(() =>
+      expect(mockReplacePath).toHaveBeenCalledWith(`/${ALIAS}`),
+    );
     expect(mockResolve).not.toHaveBeenCalled();
   });
 
@@ -226,7 +245,7 @@ describe('IdentityProfile (identity path)', () => {
     await render(<ProfileScreen />);
     // Give effects a chance to run.
     await waitFor(() => expect(mockUseProfile).toHaveBeenCalled());
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockReplacePath).not.toHaveBeenCalled();
     expect(mockResolve).not.toHaveBeenCalled();
   });
 });

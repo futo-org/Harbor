@@ -358,6 +358,8 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = content.derive_hex_key();
     let bundle = signed_bundle(
@@ -386,6 +388,8 @@ fn make_image_post(key: &SigningKey, identity: &str, blob: &Blob) -> (EventKey, 
         }],
         quote: None,
         links: vec![],
+        labels: vec![],
+        attributed_to: vec![],
     };
     let bundle = signed_bundle(
         identity,

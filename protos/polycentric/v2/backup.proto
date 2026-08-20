@@ -1,0 +1,18 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/keypair.proto";
+import "polycentric/v2/identity.proto";
+import "polycentric/v2/events.proto";
+
+// Message to hex-encode and store securely for account recovery.
+message IdentityBackup {
+  // The hex string of the identity.
+  string identity_key = 1;
+  // The signed events for the canonical identity chain at the time of creating
+  // this backup.
+  repeated EventBundle identity_chain = 2;
+  // The private key corresponding to the recovery public key in the latest
+  // identity document.
+  PrivateKey recovery_key = 3;
+}

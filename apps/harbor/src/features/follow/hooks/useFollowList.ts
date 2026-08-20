@@ -66,6 +66,8 @@ function decodeEntries(
 export function useFollowList(
   mode: FollowListMode,
   identityId: string | null | undefined,
+  /** Set false to hold the query, e.g. for a tab page that is off screen. */
+  enabled = true,
   limit?: number,
 ) {
   const identity = identityId ?? '';
@@ -79,7 +81,7 @@ export function useFollowList(
         : new Query.ListFollowers(args);
     },
     { updateMode: UpdateMode.Merge },
-    !!identityId,
+    enabled && !!identityId,
   );
 
   const [entries, hasNext] = useMemo(
@@ -90,6 +92,8 @@ export function useFollowList(
   return {
     entries,
     isLoading: query.status === QueryStatus.Loading,
+    /** True only for a pull-to-refresh, not the first load. */
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
     hasMore: hasNext,
     loadMore: () => {

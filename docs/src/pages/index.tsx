@@ -58,7 +58,7 @@ const FEATURES = [
   {
     title: 'No silos',
     body: 'You post to the world, not to a server. Every post goes to all the servers you use. If one shuts down or bans you, your audience can still reach you through the rest.',
-    cta: { label: 'Run your own server', to: '/docs/running-a-server' },
+    cta: { label: 'Run your own server', to: '/docs/guides/running-a-server' },
     icon: (
       <>
         {/* The world */}
@@ -123,7 +123,7 @@ const FEATURES = [
     body: 'No single company decides what you see. Each server sets its own policy, and you pick the servers whose moderation you trust. You can change your mind at any time without losing anything.',
     cta: {
       label: 'How moderation works',
-      to: '/docs/running-a-server#content-moderation--removal',
+      to: '/docs/guides/running-a-server#content-moderation--removal',
     },
     icon: (
       <>
@@ -306,7 +306,7 @@ export default function Home() {
             . Run your own server, build your own client, or{' '}
             <Link
               className="font-semibold text-primary-300 hover:text-primary-400"
-              to="/docs/verifiers/overview"
+              to="/docs/protocol/verifiers"
             >
               verify identities
             </Link>{' '}

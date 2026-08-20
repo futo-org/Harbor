@@ -122,7 +122,7 @@ const config: Config = {
           title: 'Docs',
           items: [
             { label: 'Introduction', to: '/docs' },
-            { label: 'Running a Server', to: '/docs/running-a-server' },
+            { label: 'Host a Server', to: '/docs/guides/running-a-server' },
             { label: 'Protocol', to: '/docs/protocol/overview' },
           ],
         },

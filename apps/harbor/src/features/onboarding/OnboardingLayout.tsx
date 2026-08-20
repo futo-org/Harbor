@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const CONTENT_WIDTH = 600;
 
 /** Flow starts, so there is nothing to go back to. */
-const FLOW_ENTRY_ROUTES = ['/signup', '/login'];
+const FLOW_ENTRY_ROUTES = ['/signup', '/login', '/recover'];
 
 /** Signup and pairing run without app chrome and share this padding. */
 export default function OnboardingLayout() {
@@ -25,7 +25,7 @@ export default function OnboardingLayout() {
 
   const close = () => {
     if (router.canGoBack()) router.dismissAll();
-    else router.replace(Routes.tabs.feed.index);
+    else router.dismissTo(Routes.tabs.feed.index);
   };
 
   const showScene = width > Breakpoints.md;

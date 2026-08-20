@@ -10,6 +10,7 @@ import {
 import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import {
   REPORT_BUG_URL,
   Routes,
@@ -76,6 +77,8 @@ function LinkPreviewSettingRow() {
 }
 
 export default function SettingsTabScreen() {
+  usePageTitle('Settings');
+
   const { identityKey } = useCurrentIdentity();
 
   return (
@@ -88,15 +91,15 @@ export default function SettingsTabScreen() {
             contentContainerStyle={[{ paddingBottom: TAB_BAR_HEIGHT + 16 }]}
           >
             <View style={[Atoms.p_lg, Atoms.gap_xl]}>
-              <ListItemWrapper
-                onPress={() => router.push(Routes.tabs.settings.identity)}
-              >
-                <>
+              <ListItemGroup>
+                <ListItemWrapper
+                  onPress={() => router.push(Routes.tabs.settings.identity)}
+                >
                   {identityKey && (
                     <CurrentIdentityBadge identityKey={identityKey} />
                   )}
-                </>
-              </ListItemWrapper>
+                </ListItemWrapper>
+              </ListItemGroup>
 
               <ListItemGroup label="Appearance">
                 <AppearanceSettingRow />
@@ -111,6 +114,16 @@ export default function SettingsTabScreen() {
                   onPress={() => router.push(Routes.tabs.settings.pairIdentity)}
                 >
                   <Text variant="body">Pair Identity</Text>
+                </ListItemWrapper>
+                <ListItemWrapper
+                  onPress={() => router.push(Routes.tabs.settings.createBackup)}
+                >
+                  <Text variant="body">Back Up Identity</Text>
+                </ListItemWrapper>
+                <ListItemWrapper
+                  onPress={() => router.push(Routes.tabs.settings.checkBackup)}
+                >
+                  <Text variant="body">Test Backup</Text>
                 </ListItemWrapper>
               </ListItemGroup>
 
@@ -132,7 +145,7 @@ export default function SettingsTabScreen() {
                 </ListItemWrapper>
               </ListItemGroup>
 
-              <ListItemGroup>
+              <ListItemGroup label="Troubleshooting">
                 <ListItemWrapper
                   onPress={() => Linking.openURL(REPORT_BUG_URL)}
                 >

@@ -5,9 +5,9 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
-    feeds_service_client::FeedsServiceClient,
+    AttributedTo, EventBundle, EventHint, GetAttributionFeedRequest, GetExploreFeedRequest,
+    GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
+    GetPostThreadResponse, PageParams, SortPostsBy, feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
@@ -36,38 +36,39 @@ pub struct GetIdentityFeedArgs {
     pub omit_labels: Vec<String>,
 }
 
+/// Order a sortable feed is returned in. `Top` ranks by reaction count,
+/// the others by creation time.
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum FeedSort {
+    Default,
+    Top,
+    Latest,
+}
+
+impl From<FeedSort> for SortPostsBy {
+    fn from(sort: FeedSort) -> Self {
+        match sort {
+            FeedSort::Default => SortPostsBy::Default,
+            FeedSort::Top => SortPostsBy::Top,
+            FeedSort::Latest => SortPostsBy::Latest,
+        }
+    }
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetFollowingFeedArgs {
     pub follower_identity: String,
+    pub sort_by: Option<FeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
 }
 
-/// Order the explore feed is returned in. `Top` ranks by reaction count,
-/// the others by creation time.
-#[derive(Clone, Copy, Debug, uniffi::Enum)]
-pub enum ExploreFeedSort {
-    Default,
-    Top,
-    Latest,
-}
-
-impl From<ExploreFeedSort> for SortPostsBy {
-    fn from(sort: ExploreFeedSort) -> Self {
-        match sort {
-            ExploreFeedSort::Default => SortPostsBy::Default,
-            ExploreFeedSort::Top => SortPostsBy::Top,
-            ExploreFeedSort::Latest => SortPostsBy::Latest,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetExploreFeedArgs {
     pub identity: Option<String>,
-    pub sort_by: Option<ExploreFeedSort>,
+    pub sort_by: Option<FeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
@@ -78,6 +79,19 @@ pub struct GetExploreFeedArgs {
 pub struct GetPostThreadArgs {
     pub event_key: EventKey,
     pub limit: i32,
+    pub omit_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetAttributionFeedArgs {
+    /// Serialized `AttributedTo` proto to match posts against. Passed as
+    /// bytes so the whole (future-extensible) message crosses the FFI
+    /// intact; decoded server-side by URL for the link case.
+    pub attributed_to: Vec<u8>,
+    pub limit: Option<i32>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
 }
 
 /// The key servers ordered a feed by. Merging has to order pages by the
@@ -98,11 +112,11 @@ impl FeedOrder {
     }
 }
 
-impl From<ExploreFeedSort> for FeedOrder {
-    fn from(sort: ExploreFeedSort) -> Self {
+impl From<FeedSort> for FeedOrder {
+    fn from(sort: FeedSort) -> Self {
         match sort {
-            ExploreFeedSort::Top => Self::Upvotes,
-            ExploreFeedSort::Default | ExploreFeedSort::Latest => Self::CreatedAt,
+            FeedSort::Top => Self::Upvotes,
+            FeedSort::Default | FeedSort::Latest => Self::CreatedAt,
         }
     }
 }
@@ -257,15 +271,15 @@ pub fn get_identity_feed(
     ))
 }
 
-/// Returns posts an identity is following
-pub fn get_following_feed(
+/// Returns posts attributed to the same target (e.g. all posts about a URL).
+pub fn get_attribution_feed(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,
-    args: GetFollowingFeedArgs,
+    args: GetAttributionFeedArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let GetFollowingFeedArgs {
-        follower_identity,
+    let GetAttributionFeedArgs {
+        attributed_to,
         limit,
         backward_token,
         forward_token,
@@ -274,7 +288,7 @@ pub fn get_following_feed(
     let client = query_client.client().clone();
 
     let query_fn = move |server_url: String| {
-        let follower_identity = follower_identity.clone();
+        let attributed_to = attributed_to.clone();
         let omit_labels = omit_labels.clone();
         let client = client.clone();
 
@@ -283,19 +297,21 @@ pub fn get_following_feed(
         let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
 
         async move {
+            let attributed_to = AttributedTo::decode(&attributed_to[..])
+                .map_err(|e| format!("decode AttributedTo: {e}"))?;
+
             let mut response = FeedsServiceClient::new(channel(&server_url).await?)
-                .get_following_feed(GetFollowingFeedRequest {
-                    follower_identity,
+                .get_attribution_feed(GetAttributionFeedRequest {
+                    attributed_to: Some(attributed_to),
                     page_params: Some(PageParams {
                         limit,
                         backward_token,
                         forward_token,
                     }),
                     omit_labels,
-                    sort_by: None,
                 })
                 .await
-                .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
+                .map_err(|e| format!("get_attribution_feed [{server_url}]: {e}"))?
                 .into_inner();
 
             prepare_page_info(
@@ -318,6 +334,128 @@ pub fn get_following_feed(
         validated_feed_merge(FeedOrder::CreatedAt),
         opts,
     ))
+}
+
+/// Returns posts an identity is following
+pub fn get_following_feed(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetFollowingFeedArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetFollowingFeedArgs {
+        follower_identity,
+        sort_by,
+        limit,
+        backward_token,
+        forward_token,
+        omit_labels,
+    } = args;
+    let client = query_client.client().clone();
+    let order = sort_by.map_or(FeedOrder::CreatedAt, FeedOrder::from);
+
+    let query_fn = move |server_url: String| {
+        let follower_identity = follower_identity.clone();
+        let omit_labels = omit_labels.clone();
+        let client = client.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
+        async move {
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
+                .get_following_feed(GetFollowingFeedRequest {
+                    follower_identity,
+                    page_params: Some(PageParams {
+                        limit,
+                        backward_token,
+                        forward_token,
+                    }),
+                    omit_labels,
+                    sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
+                })
+                .await
+                .map_err(|e| format!("get_following_feed [{server_url}]: {e}"))?
+                .into_inner();
+
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
+            let bytes = response.encode_to_vec();
+
+            copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
+            Ok(bytes)
+        }
+    };
+
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
+}
+
+/// Returns posts the follower or the identities they follow created, reacted
+/// to, reposted, quoted or replied to. Takes the same request as the following
+/// feed, so it shares `GetFollowingFeedArgs`.
+pub fn get_recommended_feed(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetFollowingFeedArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetFollowingFeedArgs {
+        follower_identity,
+        sort_by,
+        limit,
+        backward_token,
+        forward_token,
+        omit_labels,
+    } = args;
+    let client = query_client.client().clone();
+    let order = sort_by.map_or(FeedOrder::CreatedAt, FeedOrder::from);
+
+    let query_fn = move |server_url: String| {
+        let follower_identity = follower_identity.clone();
+        let omit_labels = omit_labels.clone();
+        let client = client.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
+        async move {
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
+                .get_recommended_feed(GetFollowingFeedRequest {
+                    follower_identity,
+                    page_params: Some(PageParams {
+                        limit,
+                        backward_token,
+                        forward_token,
+                    }),
+                    omit_labels,
+                    sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
+                })
+                .await
+                .map_err(|e| format!("get_recommended_feed [{server_url}]: {e}"))?
+                .into_inner();
+
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
+            let bytes = response.encode_to_vec();
+
+            copy_hints(&client, response.event_hints);
+            client.lock().unwrap().copy_bundles(response.event_bundles);
+            Ok(bytes)
+        }
+    };
+
+    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
@@ -391,11 +529,15 @@ pub fn get_post_thread(
     args: GetPostThreadArgs,
     opts: Option<QueryOpts>,
 ) -> Arc<dyn QueryObservable> {
-    let GetPostThreadArgs { event_key, limit } = args;
+    let GetPostThreadArgs {
+        event_key,
+        limit,
+        omit_labels,
+    } = args;
     let request = GetPostThreadRequest {
         event_key: Some(event_key.into()),
         limit,
-        omit_labels: vec![],
+        omit_labels,
     };
 
     let client = query_client.client().clone();

@@ -11,10 +11,12 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { AttributedTo } from "./content";
 import { EventKey } from "./event_key";
 import { PageInfo } from "./common";
 import { EventHint } from "./events";
 import { EventBundle } from "./events";
+import { SortPostsBy } from "./search";
 import { PageParams } from "./common";
 /**
  * @generated from protobuf message polycentric.v2.GetIdentityFeedRequest
@@ -57,13 +59,17 @@ export interface GetFollowingFeedRequest {
      * @generated from protobuf field: repeated string omit_labels = 3
      */
     omitLabels: string[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     */
+    sortBy?: SortPostsBy;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetExploreFeedRequest
  */
 export interface GetExploreFeedRequest {
     /**
-     * Identity of the caller to return relevant posts fort
+     * Identity of the caller to return relevant posts for
      *
      * @generated from protobuf field: optional string identity = 1
      */
@@ -78,6 +84,10 @@ export interface GetExploreFeedRequest {
      * @generated from protobuf field: repeated string omit_labels = 3
      */
     omitLabels: string[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     */
+    sortBy?: SortPostsBy;
 }
 /**
  * @generated from protobuf message polycentric.v2.GetFeedResponse
@@ -123,6 +133,29 @@ export interface GetPostThreadRequest {
      * @generated from protobuf field: int32 limit = 2
      */
     limit: number;
+    /**
+     * Label values for which the requester does not want to see content
+     *
+     * @generated from protobuf field: repeated string omit_labels = 3
+     */
+    omitLabels: string[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributionFeedRequest
+ */
+export interface GetAttributionFeedRequest {
+    /**
+     * Attribution to match posts against. A post is included when any of
+     * its `attributed_to` entries is similar to this one — for a link,
+     * similar means the same URL, ignoring other Link metadata.
+     *
+     * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
+     */
+    attributedTo?: AttributedTo;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 2
+     */
+    pageParams?: PageParams;
     /**
      * Label values for which the requester does not want to see content
      *
@@ -215,7 +248,8 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         super("polycentric.v2.GetFollowingFeedRequest", [
             { no: 1, name: "follower_identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => PageParams },
-            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] }
         ]);
     }
     create(value?: PartialMessage<GetFollowingFeedRequest>): GetFollowingFeedRequest {
@@ -240,6 +274,9 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
                 case /* repeated string omit_labels */ 3:
                     message.omitLabels.push(reader.string());
                     break;
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                    message.sortBy = reader.int32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -261,6 +298,9 @@ class GetFollowingFeedRequest$Type extends MessageType<GetFollowingFeedRequest> 
         /* repeated string omit_labels = 3; */
         for (let i = 0; i < message.omitLabels.length; i++)
             writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        if (message.sortBy !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.sortBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -277,7 +317,8 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
         super("polycentric.v2.GetExploreFeedRequest", [
             { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => PageParams },
-            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] }
         ]);
     }
     create(value?: PartialMessage<GetExploreFeedRequest>): GetExploreFeedRequest {
@@ -301,6 +342,9 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
                 case /* repeated string omit_labels */ 3:
                     message.omitLabels.push(reader.string());
                     break;
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                    message.sortBy = reader.int32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -322,6 +366,9 @@ class GetExploreFeedRequest$Type extends MessageType<GetExploreFeedRequest> {
         /* repeated string omit_labels = 3; */
         for (let i = 0; i < message.omitLabels.length; i++)
             writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        if (message.sortBy !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.sortBy);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -511,12 +558,75 @@ class GetPostThreadRequest$Type extends MessageType<GetPostThreadRequest> {
  * @generated MessageType for protobuf message polycentric.v2.GetPostThreadRequest
  */
 export const GetPostThreadRequest = new GetPostThreadRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributionFeedRequest$Type extends MessageType<GetAttributionFeedRequest> {
+    constructor() {
+        super("polycentric.v2.GetAttributionFeedRequest", [
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo },
+            { no: 2, name: "page_params", kind: "message", T: () => PageParams },
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributionFeedRequest>): GetAttributionFeedRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.omitLabels = [];
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributionFeedRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributionFeedRequest): GetAttributionFeedRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.AttributedTo attributed_to */ 1:
+                    message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
+                    break;
+                case /* optional polycentric.v2.PageParams page_params */ 2:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                case /* repeated string omit_labels */ 3:
+                    message.omitLabels.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributionFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.AttributedTo attributed_to = 1; */
+        if (message.attributedTo)
+            AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PageParams page_params = 2; */
+        if (message.pageParams)
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string omit_labels = 3; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributionFeedRequest
+ */
+export const GetAttributionFeedRequest = new GetAttributionFeedRequest$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.FeedsService
  */
 export const FeedsService = new ServiceType("polycentric.v2.FeedsService", [
     { name: "GetIdentityFeed", options: {}, I: GetIdentityFeedRequest, O: GetFeedResponse },
     { name: "GetFollowingFeed", options: {}, I: GetFollowingFeedRequest, O: GetFeedResponse },
+    { name: "GetRecommendedFeed", options: {}, I: GetFollowingFeedRequest, O: GetFeedResponse },
     { name: "GetExploreFeed", options: {}, I: GetExploreFeedRequest, O: GetFeedResponse },
-    { name: "GetPostThread", options: {}, I: GetPostThreadRequest, O: GetPostThreadResponse }
+    { name: "GetPostThread", options: {}, I: GetPostThreadRequest, O: GetPostThreadResponse },
+    { name: "GetAttributionFeed", options: {}, I: GetAttributionFeedRequest, O: GetFeedResponse }
 ]);

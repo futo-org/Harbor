@@ -10,7 +10,14 @@ import {
   ZIndex,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { useId, useRef, useState, type ComponentProps } from 'react';
+import {
+  forwardRef,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -68,6 +75,12 @@ type HorizontalScrollGroupProps = {
   surfaceColor?: string;
 } & ComponentProps<typeof View>;
 
+/** Imperative handle exposed by `HorizontalScrollGroup`. */
+export type HorizontalScrollGroupRef = {
+  /** Scroll the minimum needed to bring `[x, x + width]` into view. */
+  reveal: (x: number, width: number) => void;
+};
+
 /** Current scroll information that we mutate on update. */
 type Metrics = {
   offset: number;
@@ -88,13 +101,16 @@ type Metrics = {
  * to scroll horizontally instead and also display chevrons on hover that
  * can jump left/right.
  */
-export function HorizontalScrollGroup({
-  children,
-  style,
-  contentContainerStyle,
-  surfaceColor,
-  ...props
-}: HorizontalScrollGroupProps) {
+export const HorizontalScrollGroup = forwardRef(function HorizontalScrollGroup(
+  {
+    children,
+    style,
+    contentContainerStyle,
+    surfaceColor,
+    ...props
+  }: HorizontalScrollGroupProps,
+  ref: React.Ref<HorizontalScrollGroupRef>,
+) {
   const { theme } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const metrics = useRef<Metrics>({ offset: 0, viewport: 0, content: 0 });
@@ -152,6 +168,25 @@ export function HorizontalScrollGroup({
 
     scrollRef.current?.scrollTo({ x: next, animated: true });
   };
+
+  useImperativeHandle(ref, () => ({
+    reveal: (x, width) => {
+      const { offset, viewport, content } = metrics.current;
+      if (!viewport) return;
+
+      // Padded so the revealed region isn't sitting under an edge fade.
+      const from = x - FADE_WIDTH / 2;
+      const to = x + width + FADE_WIDTH / 2;
+      let next = offset;
+      if (from < offset) next = from;
+      else if (to > offset + viewport) next = to - viewport;
+
+      next = Math.min(Math.max(0, content - viewport), Math.max(0, next));
+      if (next !== offset) {
+        scrollRef.current?.scrollTo({ x: next, animated: true });
+      }
+    },
+  }));
 
   const resolvedSurface = surfaceColor ?? theme.palette.neutral_0;
 
@@ -216,7 +251,7 @@ export function HorizontalScrollGroup({
       )}
     </View>
   );
-}
+});
 
 /**
  * Position an overlay against one edge.
@@ -302,18 +337,24 @@ function EdgeChevron({
       ]}
     >
       <View style={[styles.chevronBackdrop, { backgroundColor }]}>
-        <IconButton
-          size="sm"
-          onPress={onPress}
-          accessibilityLabel={side === 'left' ? 'Scroll left' : 'Scroll right'}
-          icon={({ size, color }) => (
-            <Icon
-              name={side === 'left' ? 'chevronBack' : 'chevronForward'}
-              size={size}
-              color={color}
-            />
-          )}
-        />
+        {/* Unmounted while hidden: the button's inner pressable re-enables
+            pointer events and would steal clicks from the tab beneath. */}
+        {visible && (
+          <IconButton
+            size="sm"
+            onPress={onPress}
+            accessibilityLabel={
+              side === 'left' ? 'Scroll left' : 'Scroll right'
+            }
+            icon={({ size, color }) => (
+              <Icon
+                name={side === 'left' ? 'chevronBack' : 'chevronForward'}
+                size={size}
+                color={color}
+              />
+            )}
+          />
+        )}
       </View>
     </Animated.View>
   );

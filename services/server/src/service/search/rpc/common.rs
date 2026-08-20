@@ -1,3 +1,4 @@
+use crate::data::PaginationParams;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::Fetched;
 use crate::data::{CursorFilter, EventRow, PageInfo};
@@ -39,8 +40,10 @@ impl<SortedBy> Params<SortedBy> {
     {
         let query = prepare_search_query(&query)
             .ok_or_else(|| Status::invalid_argument("empty search query"))?;
-        let (cursor_filter, limit) =
-            CursorFilter::from_page_params(params.as_ref())?;
+        let PaginationParams {
+            cursor_filter,
+            limit,
+        } = PaginationParams::from_req_params(params.as_ref())?;
         Ok(Params {
             query,
             limit: limit.into(),

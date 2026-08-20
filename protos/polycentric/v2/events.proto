@@ -176,6 +176,18 @@ message GetReactionsResponse {
   optional PageInfo page_info = 3;
 }
 
+message GetAttributedToReactionCountsRequest {
+  // The attributed target (e.g. a video URL) to get reaction counts for.
+  AttributedTo attributed_to = 1;
+}
+
+message GetAttributedToReactionCountsResponse {
+  // The server's estimate for positive reactions on the target.
+  int64 upvote_count = 1;
+  // The server's estimate for negative reactions on the target.
+  int64 downvote_count = 2;
+}
+
 // Sync between clients and servers
 service EventSyncService {
   // Returns a list of events (with content) from the server
@@ -187,4 +199,7 @@ service EventSyncService {
   rpc ListHeads(ListHeadsRequest) returns (ListHeadsResponse);
   // Get the reactions targeting an event.
   rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
+  // Get the reaction counts for an out-of-network target (e.g. a video URL).
+  rpc GetAttributedToReactionCounts(GetAttributedToReactionCountsRequest)
+      returns (GetAttributedToReactionCountsResponse);
 }

@@ -137,11 +137,10 @@ route('POST', /^\/identity$/, async (_req, res) => {
     res.end();
     return;
   }
-  await client.identityManager.publish(
-    null,
-    [client.currentKeyPair.publicKey],
-    [],
-  );
+  await client.identityManager.publish({
+    rotationKeys: [client.currentKeyPair.publicKey],
+    signingKeys: [],
+  });
   res.statusCode = 303;
   res.setHeader('Location', '/');
   res.end();

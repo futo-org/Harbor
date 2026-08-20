@@ -1,0 +1,9 @@
+# uniffi-bindgen configuration for the Kotlin bindings.
+# Passed to `uniffi-bindgen generate --config` by the uniffiGenerate task.
+
+[bindings.kotlin]
+# Generated code lands in this package; the hand-written shell in
+# org.futo.polycentric.core imports it as `org.futo.polycentric.ffi.*`.
+package_name = "org.futo.polycentric.ffi"
+cdylib_name = "polycentric_core"
+generate_immutable_records = true

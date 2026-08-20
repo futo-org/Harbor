@@ -4,6 +4,7 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { FeedsService } from "./feeds";
+import type { GetAttributionFeedRequest } from "./feeds";
 import type { GetPostThreadResponse } from "./feeds";
 import type { GetPostThreadRequest } from "./feeds";
 import type { GetExploreFeedRequest } from "./feeds";
@@ -27,10 +28,22 @@ export interface IFeedsServiceClient {
      */
     getIdentityFeed(input: GetIdentityFeedRequest, options?: RpcOptions): UnaryCall<GetIdentityFeedRequest, GetFeedResponse>;
     /**
+     * Get posts created by the identity themselves and all identities they
+     * follow.
+     *
      * @generated from protobuf rpc: GetFollowingFeed
      */
     getFollowingFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse>;
     /**
+     * Get posts created by, reacted to, reposted by, quoted or replied to by the
+     * identity themselves and all identities they follow.
+     *
+     * @generated from protobuf rpc: GetRecommendedFeed
+     */
+    getRecommendedFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse>;
+    /**
+     * Get posts by any identity.
+     *
      * @generated from protobuf rpc: GetExploreFeed
      */
     getExploreFeed(input: GetExploreFeedRequest, options?: RpcOptions): UnaryCall<GetExploreFeedRequest, GetFeedResponse>;
@@ -40,6 +53,12 @@ export interface IFeedsServiceClient {
      * @generated from protobuf rpc: GetPostThread
      */
     getPostThread(input: GetPostThreadRequest, options?: RpcOptions): UnaryCall<GetPostThreadRequest, GetPostThreadResponse>;
+    /**
+     * Posts attributed to the same target (e.g. all posts about a URL)
+     *
+     * @generated from protobuf rpc: GetAttributionFeed
+     */
+    getAttributionFeed(input: GetAttributionFeedRequest, options?: RpcOptions): UnaryCall<GetAttributionFeedRequest, GetFeedResponse>;
 }
 /**
  * *
@@ -63,6 +82,9 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
         return stackIntercept<GetIdentityFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * Get posts created by the identity themselves and all identities they
+     * follow.
+     *
      * @generated from protobuf rpc: GetFollowingFeed
      */
     getFollowingFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse> {
@@ -70,10 +92,22 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
         return stackIntercept<GetFollowingFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * Get posts created by, reacted to, reposted by, quoted or replied to by the
+     * identity themselves and all identities they follow.
+     *
+     * @generated from protobuf rpc: GetRecommendedFeed
+     */
+    getRecommendedFeed(input: GetFollowingFeedRequest, options?: RpcOptions): UnaryCall<GetFollowingFeedRequest, GetFeedResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetFollowingFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Get posts by any identity.
+     *
      * @generated from protobuf rpc: GetExploreFeed
      */
     getExploreFeed(input: GetExploreFeedRequest, options?: RpcOptions): UnaryCall<GetExploreFeedRequest, GetFeedResponse> {
-        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetExploreFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -82,7 +116,16 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetPostThread
      */
     getPostThread(input: GetPostThreadRequest, options?: RpcOptions): UnaryCall<GetPostThreadRequest, GetPostThreadResponse> {
-        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetPostThreadRequest, GetPostThreadResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Posts attributed to the same target (e.g. all posts about a URL)
+     *
+     * @generated from protobuf rpc: GetAttributionFeed
+     */
+    getAttributionFeed(input: GetAttributionFeedRequest, options?: RpcOptions): UnaryCall<GetAttributionFeedRequest, GetFeedResponse> {
+        const method = this.methods[5], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetAttributionFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
     }
 }

@@ -63,6 +63,13 @@ fn content_identities(
                 out.insert(follow.identity);
             }
         }
+        Some(ContentBody::Repost(repost)) => {
+            if let Some(post) = repost.post
+                && !post.identity.is_empty()
+            {
+                out.insert(post.identity);
+            }
+        }
         Some(ContentBody::VerificationTarget(target)) => {
             out.extend(
                 target
