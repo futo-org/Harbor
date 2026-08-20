@@ -36,12 +36,17 @@ import {
   useProfileContext,
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
+import { ProfileVerifiesList } from './ProfileVerifiesList';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { truncateText } from '@/src/common/util/truncateText';
 
 /** Page order behind the profile's tab bar. */
-const PROFILE_TABS: readonly ActiveFeed[] = ['posts', 'verifications'];
+const PROFILE_TABS: readonly ActiveFeed[] = [
+  'posts',
+  'verification-claims',
+  'verification-verifies',
+];
 
 /** Clears the tab bar at the bottom of the screen. */
 const FEED_PADDING = { paddingBottom: 40 };
@@ -92,9 +97,11 @@ function IdentityProfile({
   useEffect(() => {
     // Redirecting to the canonical alias URL keeps the current tab.
     const aliasPath = (alias: string) =>
-      tab === 'verifications'
-        ? Routes.tabs.profileVerifications(alias)
-        : Routes.tabs.profile(alias);
+      tab === 'verification-claims'
+        ? Routes.tabs.profileVerificationClaims(alias)
+        : tab === 'verification-verifies'
+          ? Routes.tabs.profileVerificationVerifies(alias)
+          : Routes.tabs.profile(alias);
 
     if (!identityKey || redirectedRef.current) return;
 
@@ -209,7 +216,12 @@ function ProfileScreenContent() {
             active={activeFeed === 'posts'}
             contentContainerStyle={FEED_PADDING}
           />
-          <ProfileVerificationsList active={activeFeed === 'verifications'} />
+          <ProfileVerificationsList
+            active={activeFeed === 'verification-claims'}
+          />
+          <ProfileVerifiesList
+            active={activeFeed === 'verification-verifies'}
+          />
         </PagerViewWithHeader>
 
         {!isWeb ? (
