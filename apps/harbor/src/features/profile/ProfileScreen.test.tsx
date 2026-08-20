@@ -74,6 +74,9 @@ jest.mock('@/src/features/feed/FeedList', () => ({
 jest.mock('./ProfileVerificationsList', () => ({
   ProfileVerificationsList: () => null,
 }));
+jest.mock('./ProfileVerifiesList', () => ({
+  ProfileVerifiesList: () => null,
+}));
 jest.mock('@/src/features/feed/hooks/useIdentityFeed', () => ({
   useIdentityFeed: () => ({ refresh: () => undefined }),
 }));

@@ -23,45 +23,50 @@ jest.mock('@/src/common/components/Icon', () => ({
   default: () => null,
 }));
 
-// Renders every row so the section composition is observable.
+// Renders the header, rows, and empty state so composition is observable.
 jest.mock('@/src/common/components/List', () => {
   const react = require('react');
-  const { Text, View } = require('react-native');
+  const { View } = require('react-native');
   return {
     List: ({
       data,
       renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
     }: {
       data: { key: string }[];
       renderItem: (info: { item: unknown; index: number }) => unknown;
+      ListHeaderComponent?: unknown;
+      ListEmptyComponent?: unknown;
     }) =>
       react.createElement(
         View,
         null,
-        data.map((item, index) =>
-          react.createElement(
-            View,
-            { key: item.key },
-            renderItem({ item, index }),
-          ),
-        ),
+        ListHeaderComponent,
+        data.length === 0
+          ? ListEmptyComponent
+          : data.map((item, index) =>
+              react.createElement(
+                View,
+                { key: item.key },
+                renderItem({ item, index }),
+              ),
+            ),
       ),
-    SectionHeader: ({ title }: { title: string }) =>
-      react.createElement(Text, null, title),
+  };
+});
+
+jest.mock('@/src/common/components/ListEmpty', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    ListEmpty: ({ children }: { children?: unknown }) =>
+      react.createElement(Text, null, children),
   };
 });
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
-
-jest.mock('@/src/common/lib/polycentric-hooks', () => ({
-  useUsername: () => 'alice',
-  truncateName: (name: string) => name,
-}));
-
-jest.mock('./hooks/useProfile', () => ({
-  useProfile: () => ({ name: 'Alice' }),
 }));
 
 let mockIsSelf = false;
@@ -83,34 +88,17 @@ function claim(sequence: number, identity = 'profile-id'): DecodedClaim {
   };
 }
 
-let mockRequested: DecodedClaim[] = [];
-let mockVerified: DecodedClaim[] = [];
-let mockPending: DecodedClaim[] = [];
-let mockPendingArg: string | undefined;
+let mockClaims: DecodedClaim[] = [];
+let mockLoading = false;
 
 jest.mock('@/src/features/verifications/hooks/useClaimsList', () => ({
   useClaimsList: () => ({
-    claims: mockRequested,
-    isLoading: false,
+    claims: mockClaims,
+    isLoading: mockLoading,
+    isRefreshing: false,
     refresh: jest.fn(),
   }),
 }));
-jest.mock('@/src/features/verifications/hooks/useVerifiedClaims', () => ({
-  useVerifiedClaims: () => ({
-    claims: mockVerified,
-    isLoading: false,
-    refresh: jest.fn(),
-  }),
-}));
-jest.mock(
-  '@/src/features/verifications/hooks/useVerificationRequestsTo',
-  () => ({
-    useVerificationRequestsTo: (identity: string | undefined) => {
-      mockPendingArg = identity;
-      return { claims: mockPending, isLoading: false, refresh: jest.fn() };
-    },
-  }),
-);
 
 jest.mock('@/src/features/verifications/claims/ClaimListItem', () => {
   const react = require('react');
@@ -125,22 +113,21 @@ jest.mock('@/src/features/verifications/claims/ClaimListItem', () => {
   };
 });
 
+jest.mock('@/src/features/verifications/claims/ClaimSkeleton', () => {
+  const react = require('react');
+  const { View } = require('react-native');
+  return {
+    ClaimSkeletonList: () =>
+      react.createElement(View, { testID: 'claim-skeleton' }),
+  };
+});
+
 jest.mock('@/src/features/verifications/claims/ClaimActionRow', () => {
   const react = require('react');
   const { Text } = require('react-native');
   return {
-    ClaimActionRow: ({
-      title,
-      subtitle,
-    }: {
-      title: string;
-      subtitle?: string;
-    }) =>
-      react.createElement(
-        Text,
-        { testID: 'request-row' },
-        `${title} ${subtitle ?? ''}`,
-      ),
+    ClaimActionRow: ({ title }: { title: string }) =>
+      react.createElement(Text, { testID: 'request-row' }, title),
   };
 });
 
@@ -156,47 +143,39 @@ jest.mock(
   }),
 );
 
-import { fireEvent, render } from '@testing-library/react-native';
-import * as React from 'react';
+import { render } from '@testing-library/react-native';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsSelf = false;
-  mockRequested = [];
-  mockVerified = [];
-  mockPending = [];
-  mockPendingArg = undefined;
+  mockClaims = [];
+  mockLoading = false;
   mockSheetProps = null;
 });
 
 describe('ProfileVerificationsList on another profile', () => {
-  it('leads with the request row naming the profile', async () => {
+  it('leads with the request row', async () => {
     const screen = await render(<ProfileVerificationsList />);
 
-    const row = screen.getByTestId('request-row');
-    expect(row).toHaveTextContent(/Request a verification/);
-    expect(row).toHaveTextContent(/Alice can verify/);
+    expect(screen.getByTestId('request-row')).toHaveTextContent(
+      /Request a verification/,
+    );
   });
 
-  it('shows pending requests in the verified section', async () => {
-    mockPending = [claim(9, 'me')];
+  it('shows a skeleton while loading', async () => {
+    mockLoading = true;
     const screen = await render(<ProfileVerificationsList />);
 
-    expect(screen.getByTestId('claim-9')).toBeTruthy();
-    expect(screen.queryByText('No verified claims yet.')).toBeNull();
+    expect(screen.getByTestId('claim-skeleton')).toBeTruthy();
+    expect(screen.queryByText('No claims yet.')).toBeNull();
   });
 
-  it('previews three claims and expands with show more', async () => {
-    mockRequested = [claim(1), claim(2), claim(3), claim(4), claim(5)];
+  it('lists every claim', async () => {
+    mockClaims = [claim(1), claim(2), claim(3), claim(4), claim(5)];
     const screen = await render(<ProfileVerificationsList />);
-
-    expect(screen.getAllByTestId(/^claim-/)).toHaveLength(3);
-
-    await fireEvent.press(screen.getByText('Show more'));
 
     expect(screen.getAllByTestId(/^claim-/)).toHaveLength(5);
-    expect(screen.queryByText('Show more')).toBeNull();
   });
 });
 
@@ -210,11 +189,5 @@ describe('ProfileVerificationsList on the own profile', () => {
 
     expect(screen.queryByTestId('request-row')).toBeNull();
     expect(mockSheetProps).toBeNull();
-  });
-
-  it('does not query for pending requests', async () => {
-    await render(<ProfileVerificationsList />);
-
-    expect(mockPendingArg).toBeUndefined();
   });
 });

@@ -4,6 +4,7 @@ import type { useAnimatedScrollHandler } from 'react-native-reanimated';
 /** A scrollable's handle for whoever coordinates it. */
 export type ForwardedScrollable = {
   scrollToOffset: (offset: number) => void;
+  getScrollOffset: () => number;
 };
 
 type Forwarding = {
@@ -12,8 +13,6 @@ type Forwarding = {
   onScroll?: ReturnType<typeof useAnimatedScrollHandler>;
   /** Room a floating header needs above the content. */
   contentPaddingTop: number;
-  /** Stretches short content until it can scroll a header's collapse range. */
-  minContentHeight?: number;
   /** Where the scrollable registers itself for offset syncing. */
   register?: (scrollable: ForwardedScrollable | null) => void;
 };
@@ -28,13 +27,12 @@ const ScrollForwarderContext = createContext<Forwarding | null>(null);
 export function ScrollForwarder({
   onScroll,
   contentPaddingTop,
-  minContentHeight,
   register,
   children,
 }: Forwarding & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ onScroll, contentPaddingTop, minContentHeight, register }),
-    [onScroll, contentPaddingTop, minContentHeight, register],
+    () => ({ onScroll, contentPaddingTop, register }),
+    [onScroll, contentPaddingTop, register],
   );
   return (
     <ScrollForwarderContext.Provider value={value}>

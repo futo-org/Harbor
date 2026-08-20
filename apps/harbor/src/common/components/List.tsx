@@ -147,25 +147,24 @@ function NativeList<T>({
     register({
       scrollToOffset: (offset) =>
         ref.current?.scrollToOffset({ offset, animated: false }),
+      getScrollOffset: () => ref.current?.getAbsoluteLastScrollOffset() ?? 0,
     });
     return () => register(null);
   }, [register]);
 
   const renderedHeader = renderNode(HeaderComponent);
 
-  const minContentHeight = forwarded?.minContentHeight;
   // A new style object each render invalidates FlashList's layout cache.
   const mergedContentContainerStyle = useMemo(
     () => ({
       ...Atoms.flex_grow_1,
       paddingTop: contentPaddingTop,
-      ...(minContentHeight != null ? { minHeight: minContentHeight } : {}),
       ...(typeof contentContainerStyle === 'object' &&
       contentContainerStyle !== null
         ? contentContainerStyle
         : {}),
     }),
-    [contentPaddingTop, minContentHeight, contentContainerStyle],
+    [contentPaddingTop, contentContainerStyle],
   );
 
   // Positions Android's refresh spinner; iOS ignores it.
