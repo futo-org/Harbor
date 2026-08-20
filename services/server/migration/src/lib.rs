@@ -117,9 +117,6 @@ impl MigratorTrait for Migrator {
                 m20260818_000002_reply_table::Migration,
             ),
             Box::new(
-                m20260818_000003_reaction_count_decay::Migration,
-            ),
-            Box::new(
                 m20260728_000001_add_content_post_attributed_url_table::Migration,
             ),
             Box::new(
@@ -130,6 +127,9 @@ impl MigratorTrait for Migrator {
             ),
             Box::new(
                 m20260812_000002_add_attributed_to_reaction_summaries::Migration,
+            ),
+            Box::new(
+                m20260818_000003_reaction_count_decay::Migration,
             ),
         ]
     }
