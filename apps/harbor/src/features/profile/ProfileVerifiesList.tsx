@@ -3,10 +3,16 @@ import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { Spacing } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ClaimListItem } from '@/src/features/verifications/claims/ClaimListItem';
-import { ClaimSkeletonList } from '@/src/features/verifications/claims/ClaimSkeleton';
-import { useRequestedVerifications } from '@/src/features/verifications/hooks/useRequestedVerifications';
-import type { ClaimWithStatus } from '@/src/features/verifications/utils/claim-status';
-import { useMemo } from 'react';
+import {
+  ClaimSkeleton,
+  ClaimSkeletonList,
+} from '@/src/features/verifications/claims/ClaimSkeleton';
+import { useClaimById } from '@/src/features/verifications/hooks/useClaimById';
+import { useClaimVerifiers } from '@/src/features/verifications/hooks/useClaimVerifiers';
+import {
+  useVerifies,
+  type VerifiedClaimKey,
+} from '@/src/features/verifications/hooks/useVerifies';
 import { RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfileContext } from './ProfileContext';
@@ -20,28 +26,15 @@ export function ProfileVerifiesList({
 }) {
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
-  const requested = useRequestedVerifications(identityKey ?? undefined, active);
-
-  // The requests inbox, kept only where this identity's verify exists.
-  const claims = useMemo(
-    () =>
-      requested.claims.filter((claim) =>
-        claim.status.verifiers.some(
-          (verifier) => verifier.identity === identityKey && verifier.verified,
-        ),
-      ),
-    [requested.claims, identityKey],
-  );
+  const verified = useVerifies(identityKey ?? undefined, active);
 
   return (
-    <List<ClaimWithStatus>
-      data={claims}
-      keyExtractor={(claim) =>
-        `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
-      }
-      renderItem={({ item }) => <ClaimListItem claim={item} showOwner />}
+    <List<VerifiedClaimKey>
+      data={verified.verifies}
+      keyExtractor={(verify) => verify.id}
+      renderItem={({ item }) => <VerifiedClaimRow verify={item} />}
       ListEmptyComponent={
-        requested.isLoading ? (
+        verified.isLoading ? (
           <ClaimSkeletonList count={3} />
         ) : (
           <ListEmpty>
@@ -55,12 +48,31 @@ export function ProfileVerifiesList({
       refreshControl={
         isWeb ? undefined : (
           <RefreshControl
-            refreshing={requested.isRefreshing}
-            onRefresh={requested.refresh}
+            refreshing={verified.isRefreshing}
+            onRefresh={verified.refresh}
           />
         )
       }
       showsVerticalScrollIndicator={false}
     />
   );
+}
+
+/** A verify names only the claim's key; the claim and status load here. */
+function VerifiedClaimRow({ verify }: { verify: VerifiedClaimKey }) {
+  const { claim, isLoading } = useClaimById(
+    verify.identity,
+    verify.keyFingerprint,
+    verify.sequence,
+  );
+  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
+
+  if (claim) {
+    return (
+      <ClaimListItem
+        claim={{ ...claim, status: { verifiers, verifiedCount, totalCount } }}
+      />
+    );
+  }
+  return isLoading ? <ClaimSkeleton /> : null;
 }

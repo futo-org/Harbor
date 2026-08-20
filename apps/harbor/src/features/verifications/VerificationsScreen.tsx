@@ -51,7 +51,6 @@ function InboxPage({ active, ready }: PageProps) {
       isLoading={inbox.isLoading || (!active && inbox.claims.length === 0)}
       isRefreshing={inbox.isRefreshing}
       onRefresh={inbox.refresh}
-      showOwner
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
@@ -79,7 +78,6 @@ function OutboxPage({
       isLoading={outbox.isLoading}
       isRefreshing={outbox.isRefreshing}
       onRefresh={outbox.refresh}
-      showOwner={false}
       onCreateClaim={onCreateClaim}
       empty={
         <ListEmpty>

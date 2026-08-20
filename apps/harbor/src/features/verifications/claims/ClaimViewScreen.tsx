@@ -1,8 +1,9 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
-import Topbar from '@/src/common/components/layout/Topbar';
+import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isIOS } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
@@ -11,8 +12,11 @@ import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimVerifiersList } from './ClaimVerifiersList';
 import { ClaimVerifyActions } from './ClaimVerifyActions';
+import { CLAIM_TYPES } from '../utils/forms';
+import { getPlatformFromClaim } from '../utils/platforms';
 import { resolveClaimTitle } from '../utils/render';
-import { Toolbar } from './toolbar';
+import { ClaimAuthorLine } from './ClaimAuthorLine';
+import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,6 +44,12 @@ export default function ViewClaimScreen() {
 
   const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
 
+  const claimType = CLAIM_TYPES.find((t) => t.name === claim?.schemaName);
+  // Platform claims chip as their platform (brand logo + name).
+  const platform = claim
+    ? getPlatformFromClaim(claim.schemaName, claim.fields)
+    : undefined;
+
   const { title, bodyFields } = useMemo<{
     title: string;
     bodyFields: ClaimField[];
@@ -64,7 +74,9 @@ export default function ViewClaimScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             Atoms.flex_1,
-            { paddingBottom: insets.bottom },
+            // iOS's sliding header overhangs the scroll view by the topbar
+            // height; pad it back so the bottom actions start on screen.
+            { paddingBottom: insets.bottom + (isIOS ? TOPBAR_HEIGHT : 0) },
           ]}
         >
           <View style={[Atoms.p_lg, Atoms.gap_lg, Atoms.flex_1]}>
@@ -82,6 +94,12 @@ export default function ViewClaimScreen() {
 
             {claim && (
               <>
+                <ClaimAuthorLine
+                  identity={claim.identity}
+                  createdAt={claim.createdAt}
+                  avatarSize="md"
+                />
+
                 <View
                   style={[
                     Atoms.flex_row,
@@ -91,10 +109,22 @@ export default function ViewClaimScreen() {
                     Atoms.flex_wrap,
                   ]}
                 >
-                  <Text variant="title" style={theme.atoms.text}>
+                  <Text
+                    variant="body"
+                    style={[theme.atoms.text, Atoms.flex_shrink_1]}
+                  >
                     {title}
                   </Text>
-
+                </View>
+                <View
+                  style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}
+                >
+                  <ClaimTypeChip
+                    name={platform?.name ?? claim.schemaName}
+                    icon={claimType?.icon ?? 'verify'}
+                    logo={platform?.logo}
+                    color={platform?.color ?? claimType?.color}
+                  />
                   {/* Verified status */}
                   <StatusChip
                     verifiedCount={verifiedCount}
@@ -102,7 +132,7 @@ export default function ViewClaimScreen() {
                   />
                 </View>
 
-                <View style={Atoms.gap_md}>
+                <View style={Atoms.gap_lg}>
                   {bodyFields.map((field) => {
                     const value = field.value.trim();
                     // URL values (e.g. a Platform claim's profile URL) open
@@ -147,13 +177,6 @@ export default function ViewClaimScreen() {
                 <ClaimVerifiersList verifiers={verifiers} />
 
                 <View style={[Atoms.flex_1]} />
-                <Toolbar
-                  identity={claim.identity}
-                  createdAt={claim.createdAt}
-                  schemaName={claim.schemaName}
-                  fields={claim.fields}
-                />
-
                 <ClaimVerifyActions
                   claim={claim}
                   verifiers={verifiers}

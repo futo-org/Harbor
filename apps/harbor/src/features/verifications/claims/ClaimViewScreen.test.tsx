@@ -6,6 +6,7 @@ jest.mock('@/src/common/theme', () => ({
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
+  withHexOpacity: (color: string) => color,
 }));
 
 // Rendered Button props by title — `fireEvent.press` fires the composite's
@@ -111,6 +112,10 @@ jest.mock('../hooks/useClaimById', () => ({
 
 jest.mock('../utils/render', () => ({
   resolveClaimTitle: () => ({ title: 'My claim', bodyFields: [] }),
+}));
+
+jest.mock('./ClaimAuthorLine', () => ({
+  ClaimAuthorLine: () => null,
 }));
 
 jest.mock('./ClaimMenu', () => ({ ClaimMenu: () => null }));

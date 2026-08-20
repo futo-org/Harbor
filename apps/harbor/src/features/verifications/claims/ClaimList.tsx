@@ -14,8 +14,6 @@ type ClaimListProps = {
   isLoading: boolean;
   isRefreshing: boolean;
   onRefresh: () => void;
-  /** Own claims need not name the owner. */
-  showOwner: boolean;
   /** Leads the list with a "Create new claim" row when given. */
   onCreateClaim?: () => void;
   empty?: ReactElement | null;
@@ -27,7 +25,6 @@ export function ClaimList({
   isLoading,
   isRefreshing,
   onRefresh,
-  showOwner,
   onCreateClaim,
   empty,
 }: ClaimListProps) {
@@ -39,9 +36,7 @@ export function ClaimList({
       keyExtractor={(claim) =>
         `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
       }
-      renderItem={({ item }) => (
-        <ClaimListItem claim={item} showOwner={showOwner} />
-      )}
+      renderItem={({ item }) => <ClaimListItem claim={item} />}
       ListHeaderComponent={
         onCreateClaim && claims.length > 0 ? (
           <ClaimActionRow
