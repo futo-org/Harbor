@@ -1,10 +1,7 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { showAlert } from '@/src/common/lib/dialogs';
-import {
-  usePolycentric,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import {
   assembleIdentityBackup,
@@ -62,10 +59,11 @@ export default function CreateBackupScreen() {
   const insets = useSafeAreaInsets();
 
   const client = usePolycentric();
-  const { currentIdentity } = usePolycentricContext();
 
   const [state, setState] = useState<NewBackupState>({ stage: 'warning' });
-  const [hadExisting] = useState(() => !!currentIdentity?.recoveryKey);
+  const [hadExisting] = useState(
+    () => !!client.identityManager.resolveIdentity()?.recoveryKey,
+  );
 
   const onContinue = () => {
     switch (state.stage) {
