@@ -4,9 +4,28 @@ import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
   docsSidebar: [
-    'intro',
-    'running-a-server',
-    'setting-up-an-alias',
+    {
+      type: 'category',
+      label: 'Overview',
+      collapsed: false,
+      items: ['intro', 'faq', 'servers', 'support'],
+    },
+    {
+      type: 'category',
+      label: 'Features',
+      items: [
+        'features/posts',
+        'features/feeds',
+        'features/reactions',
+        'features/following',
+        'features/profiles',
+        'features/search',
+        'features/notifications',
+        'features/verifications',
+        'features/moderation',
+        'features/identity',
+      ],
+    },
     {
       type: 'category',
       label: 'Polycentric Protocol',
@@ -15,25 +34,24 @@ const sidebars: SidebarsConfig = {
         'protocol/data-model',
         'protocol/grpc',
         'protocol/server-auth',
+        'protocol/verifiers',
       ],
     },
     {
       type: 'category',
-      label: 'Verifiers',
+      label: 'Developer',
+      items: ['developer/setup', 'developer/project-structure'],
+    },
+    {
+      type: 'category',
+      label: 'Guides',
       items: [
-        'verifiers/overview',
-        'verifiers/platforms',
-        'verifiers/self-hosting',
-        'verifiers/creating-a-verifier',
+        'guides/running-a-server',
+        'guides/self-hosting-a-verifier',
+        'guides/add-a-platform-verifier',
+        'guides/setting-up-an-alias',
       ],
     },
-    {
-      type: 'category',
-      label: 'Development',
-      items: ['development/setup', 'development/project-structure'],
-    },
-    'contributing',
-    'support',
     'privacy-policy',
   ],
 };

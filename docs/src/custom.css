@@ -118,6 +118,39 @@
   background: #1e2127;
 }
 
+/* The doc sidebar mirrors the app's NavItem look too: neutral_700 text
+   in a rounded pill, neutral_50 hover and neutral_25 active backgrounds;
+   the active page and its section titles are bold in the primary color. */
+.theme-doc-sidebar-menu {
+  --ifm-menu-color: #3d4555;
+  --ifm-menu-color-active: var(--ifm-color-primary);
+  --ifm-menu-color-background-active: #f2f5f9;
+  --ifm-menu-color-background-hover: #e8edf5;
+  --ifm-menu-link-padding-vertical: 12px;
+  --ifm-menu-link-padding-horizontal: 16px;
+}
+
+[data-theme="dark"] .theme-doc-sidebar-menu {
+  --ifm-menu-color: #a9aaac;
+  --ifm-menu-color-background-active: #1e2127;
+  --ifm-menu-color-background-hover: #303237;
+}
+
+/* Padding lives on the links (via the variables above), not on the
+   collapsible wrapper around category links, so every row pads the same. */
+.theme-doc-sidebar-menu .menu__link,
+.theme-doc-sidebar-menu .menu__list-item-collapsible {
+  border-radius: 9999px;
+}
+
+.theme-doc-sidebar-menu .menu__link {
+  font-weight: 700;
+}
+
+.theme-doc-sidebar-menu .menu__link--active {
+  font-weight: 700;
+}
+
 /* footer.style: 'dark' hard-codes Infima's #303846; match the landing
    pages' ground instead (app palette neutral_900). */
 .footer--dark {
