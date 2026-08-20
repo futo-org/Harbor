@@ -1,11 +1,11 @@
 import { Atoms } from '@/src/common/theme';
-import ExpoPagerView, {
-  type PageScrollStateChangedEvent,
+import { Children, useEffect, useRef, type ReactNode } from 'react';
+import { View } from 'react-native';
+import RNPagerView, {
+  type PageScrollStateChangedNativeEvent,
   type PagerViewOnPageScrollEvent,
   type PagerViewOnPageSelectedEvent,
-  type PagerViewRef,
-} from '@expo/ui/community/pager-view';
-import { Children, useEffect, useRef, type ReactNode } from 'react';
+} from 'react-native-pager-view';
 import type { SharedValue } from 'react-native-reanimated';
 
 export type PagerViewCoreProps<T extends string> = {
@@ -35,7 +35,7 @@ export function PagerViewCore<T extends string>({
   children,
 }: PagerViewCoreProps<T>) {
   const activeIndex = Math.max(0, values.indexOf(active));
-  const pagerRef = useRef<PagerViewRef>(null);
+  const pagerRef = useRef<RNPagerView>(null);
   // `initialPage` is only read on mount.
   const initialIndex = useRef(activeIndex).current;
 
@@ -68,13 +68,15 @@ export function PagerViewCore<T extends string>({
     if (next !== undefined) onChange(next);
   };
 
-  const onPageScrollStateChanged = (event: PageScrollStateChangedEvent) => {
+  const onPageScrollStateChanged = (
+    event: PageScrollStateChangedNativeEvent,
+  ) => {
     if (event.nativeEvent.pageScrollState !== 'dragging') return;
     onLeavePage?.(indexRef.current);
   };
 
   return (
-    <ExpoPagerView
+    <RNPagerView
       ref={pagerRef}
       style={Atoms.flex_1}
       initialPage={initialIndex}
@@ -82,7 +84,10 @@ export function PagerViewCore<T extends string>({
       onPageSelected={onPageSelected}
       onPageScrollStateChanged={onPageScrollStateChanged}
     >
-      {Children.map(children, wrapPage)}
-    </ExpoPagerView>
+      {Children.map(children, (child, index) => (
+        // Each page needs a real host view; flattening would remove a bare one.
+        <View collapsable={false}>{wrapPage(child, index)}</View>
+      ))}
+    </RNPagerView>
   );
 }

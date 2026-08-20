@@ -11,7 +11,7 @@ export const stickyHeaderStyle: ViewStyle[] = [
 ];
 
 /**
- * `@expo/ui`'s pager is native-only, and web has no swipe anyway: pages switch
+ * `react-native-pager-view` is native-only, and web has no swipe anyway: pages switch
  * instantly. The tab bar pins to the window instead of hiding on scroll.
  */
 export function PagerView<T extends string>({

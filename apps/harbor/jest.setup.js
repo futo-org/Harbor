@@ -49,7 +49,7 @@ jest.mock('@bsky.app/react-native-uitextview', () => ({
 }));
 
 // Renders pages as plain children under test, and stubs the page controls.
-jest.mock('@expo/ui/community/pager-view', () => {
+jest.mock('react-native-pager-view', () => {
   const react = require('react');
   const { View } = require('react-native');
   return {
