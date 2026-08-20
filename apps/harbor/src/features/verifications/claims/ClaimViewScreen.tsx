@@ -42,7 +42,10 @@ export default function ViewClaimScreen() {
     sequence ? BigInt(sequence) : undefined,
   );
 
-  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(claim?.id);
+  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(
+    claim?.id,
+    claim?.schemaName,
+  );
 
   const claimType = CLAIM_TYPES.find((t) => t.name === claim?.schemaName);
   // Platform claims chip as their platform (brand logo + name).

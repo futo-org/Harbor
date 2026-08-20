@@ -13,6 +13,10 @@ const mockApi = {
   requestTextVerify: jest.fn(async () => undefined),
   requestOAuthVerify: jest.fn(async () => undefined),
 };
+jest.mock('./useRequestVerification', () => ({
+  publishVerifierBotTargets: jest.fn(async () => undefined),
+}));
+
 jest.mock('../utils/verifier-api', () => ({
   // Lazy: jest hoists this factory above the const.
   get verifierApi() {
@@ -35,6 +39,9 @@ import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import type { Platform } from '../utils/platforms';
 import useRequestPlatformVerification from './useRequestPlatformVerification';
+import { publishVerifierBotTargets } from './useRequestVerification';
+
+const mockPublishTargets = publishVerifierBotTargets as jest.Mock;
 
 const GITHUB = { name: 'GitHub', slug: 'github' } as Platform;
 const X = { name: 'X', slug: 'x' } as Platform;
@@ -73,6 +80,11 @@ describe('useRequestPlatformVerification', () => {
     expect(mockApi.requestTextVerify).toHaveBeenCalledWith(
       'github',
       'claim-id',
+    );
+    // The request to the bots precedes their verify.
+    expect(mockPublishTargets).toHaveBeenCalledWith(mockClient, 'claim-id');
+    expect(mockPublishTargets.mock.invocationCallOrder[0]).toBeLessThan(
+      mockApi.requestTextVerify.mock.invocationCallOrder[0],
     );
     expect(mockOAuthSignIn).not.toHaveBeenCalled();
     expect(invalidateQuery).toHaveBeenCalledWith(mockClient, [

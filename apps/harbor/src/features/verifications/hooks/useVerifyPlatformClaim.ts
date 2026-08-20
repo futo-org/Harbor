@@ -6,6 +6,7 @@ import { formToSchema } from '../utils/schemas';
 import { type VerifierClaimField, verifierApi } from '../utils/verifier-api';
 import { deleteClaim } from './useClaimActions';
 import useCreateClaim, { type ClaimRef } from './useCreateClaim';
+import { publishVerifierBotTargets } from './useRequestVerification';
 
 // The bot addresses account fields by ordinal; these names double as labels.
 function fieldKey(index: number): string {
@@ -109,6 +110,7 @@ export default function useVerifyPlatformClaim() {
         // Verify needs the claim published; roll it back on failure so
         // retries don't pile up claims.
         try {
+          await publishVerifierBotTargets(client, ref.id);
           await verifierApi.requestTextVerify(platform.slug, ref.id);
         } catch (e) {
           await deleteClaim(client, ref.id).catch(() => {});

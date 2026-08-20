@@ -35,6 +35,7 @@ export class VerifierApi {
   private readonly servers: string[];
   // Cached for the session.
   private verifiersPromise?: Promise<Map<string, Set<string>>>;
+  private identitiesPromise?: Promise<Set<string>>;
 
   constructor(servers: string[]) {
     this.servers = servers;
@@ -77,6 +78,40 @@ export class VerifierApi {
       },
     );
     return this.verifiersPromise;
+  }
+
+  /**
+   * The Polycentric identities the configured bots publish verifications
+   * under, unioned across the servers. Unreachable servers are skipped;
+   * throws only when none answers, and retries on the next call.
+   */
+  verifierIdentities(): Promise<Set<string>> {
+    this.identitiesPromise ??= this.fetchVerifierIdentities().catch(
+      (e: unknown) => {
+        this.identitiesPromise = undefined; // Retry on the next call.
+        throw e;
+      },
+    );
+    return this.identitiesPromise;
+  }
+
+  private async fetchVerifierIdentities(): Promise<Set<string>> {
+    const results = await Promise.allSettled(
+      this.servers.map(async (server) => {
+        const res = await this.request(server, '/identity');
+        if (!res.ok) throw new Error(await errorMessage(res));
+        return (await res.json()) as { identity?: string };
+      }),
+    );
+    if (!results.some((r) => r.status === 'fulfilled')) {
+      throw new Error('No verifier server reachable');
+    }
+    const identities = new Set<string>();
+    for (const result of results) {
+      if (result.status !== 'fulfilled') continue;
+      if (result.value.identity) identities.add(result.value.identity);
+    }
+    return identities;
   }
 
   private async fetchPlatformVerifiers(): Promise<Map<string, Set<string>>> {

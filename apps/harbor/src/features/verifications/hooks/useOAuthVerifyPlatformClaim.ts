@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import type { Platform } from '../utils/platforms';
 import { verifierApi } from '../utils/verifier-api';
+import { publishVerifierBotTargets } from './useRequestVerification';
 import { deleteClaim } from './useClaimActions';
 import useCreateClaim, { type ClaimRef } from './useCreateClaim';
 import { platformClaimParts } from './useVerifyPlatformClaim';
@@ -101,6 +102,7 @@ export default function useOAuthVerifyPlatformClaim() {
         // Verify needs the claim published; roll it back on failure so
         // retries don't pile up claims.
         try {
+          await publishVerifierBotTargets(client, ref.id);
           await verifierApi.requestOAuthVerify(
             server,
             platform.slug,
