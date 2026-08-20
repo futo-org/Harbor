@@ -8,7 +8,7 @@ use polycentric_common::models::protos_v2::{
     AttributedTo, Content, ContentDigest, ContentDigestType, Delete, Event,
     EventBundle, EventKey, EventProofTarget, FieldDef, FieldKind, Follow,
     Identity, KeyType, Labels, Link, Post, PostReply, ProfileUpdate, PublicKey,
-    PutEventsRequest, Reaction, Repost, RevocationBound, SearchResult,
+    PutEventsRequest, Reaction, Repost, RevocationBound,
     SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
     VerificationClaim, VerificationSchema, attributed_to, content,
 };

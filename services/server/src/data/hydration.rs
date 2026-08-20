@@ -288,6 +288,7 @@ where
             // Don't have event keys.
             Some(ContentBody::Follow(_))
             | Some(ContentBody::Block(_))
+            | Some(ContentBody::AttributedToReaction(_))
             | Some(ContentBody::ProfileUpdate(_))
             | Some(ContentBody::Identity(_))
             | Some(ContentBody::VerificationClaim(_))
