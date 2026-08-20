@@ -50,12 +50,16 @@ impl PolycentricClient {
     /// Copy a signed event into the event store.
     pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
         let event_key = EventKey::from_signed_event(&signed_event)?;
+        let identity =
+            (event_key.collection == collections::IDENTITY).then(|| event_key.identity.clone());
 
-        if event_key.collection == collections::IDENTITY {
-            self.identity_store.invalidate(&event_key.identity);
+        // Do the insertion
+        let inserted = self.event_store.insert_at(signed_event, event_key);
+
+        // If we inserted an identity event, invalidate the relevant identity chain
+        if inserted && let Some(identity) = identity {
+            self.identity_store.invalidate(&identity);
         }
-
-        self.event_store.insert_at(signed_event, event_key);
 
         Ok(())
     }
@@ -75,14 +79,17 @@ impl PolycentricClient {
             )));
         }
 
+        if !self.content_store.insert(digest, content_bytes) {
+            return Ok(());
+        }
+
         // Adding this content may make an identity chain resolve differently if
         // it's an identity document.
-        let is_identity = Content::decode(content_bytes.as_slice())
-            .ok()
-            .map(|content| matches!(content.content_body, Some(ContentBody::Identity(_))))
-            .unwrap_or(false);
-
-        self.content_store.insert(digest, content_bytes);
+        let is_identity = self
+            .content_store
+            .get_decoded(digest)
+            .and_then(|content| content.content_body)
+            .is_some_and(|body| matches!(body, ContentBody::Identity(_)));
 
         if is_identity {
             self.identity_store.invalidate_all();

@@ -4,7 +4,7 @@ use polycentric_common::{
     models::{protos_v2 as Proto, protos_v2::SignedEvent},
 };
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashSet, btree_map::Entry},
     ops::Bound,
 };
 
@@ -25,9 +25,17 @@ impl EventStore {
         Ok(())
     }
 
-    /// Insert an event using the event key provided instead of deriving it.
-    pub fn insert_at(&mut self, signed_event: SignedEvent, event_key: EventKey) {
-        self.events.entry(event_key).or_insert(signed_event);
+    /// Try to insert an event using the event key provided instead of deriving it.
+    /// No-op when an event with the provided key is already present.
+    /// Returns whether an insertion was made.
+    pub fn insert_at(&mut self, signed_event: SignedEvent, event_key: EventKey) -> bool {
+        match self.events.entry(event_key) {
+            Entry::Vacant(slot) => {
+                slot.insert(signed_event);
+                true
+            }
+            Entry::Occupied(_) => false,
+        }
     }
 
     /// Point lookup by EventKey.
