@@ -1,7 +1,6 @@
 import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
-  Atoms,
   Spacing,
   useTheme,
   withHexOpacity,
@@ -36,16 +35,7 @@ export function ListItem({
 
   if (!pressable) {
     return (
-      <View
-        style={[
-          Atoms.rounded_md,
-          {
-            ...padding,
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          },
-        ]}
-        {...props}
-      >
+      <View style={padding} {...props}>
         {children}
       </View>
     );
@@ -55,21 +45,18 @@ export function ListItem({
     <Animated.View style={animatedStyle}>
       <Pressable
         onPress={onPress}
-        hitSlop={8}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
-        style={[
-          Atoms.rounded_md,
-          {
-            ...padding,
-            backgroundColor: withHexOpacity(
-              theme.palette.neutral_500,
-              hovered ? '35' : '20',
-            ),
-          },
-        ]}
+        style={{
+          ...padding,
+          // We assume that the container has drawn the background,
+          // so we only handle tinting on hover.
+          backgroundColor: hovered
+            ? withHexOpacity(theme.palette.neutral_500, '20')
+            : 'transparent',
+        }}
       >
         <View {...props}>{children}</View>
       </Pressable>

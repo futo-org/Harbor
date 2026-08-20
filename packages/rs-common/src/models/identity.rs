@@ -122,11 +122,11 @@ pub fn resolve_chain<'a>(
         let mut map: HashMap<u64, Vec<IdentityEvent>> = HashMap::new();
 
         for candidate in candidates {
-            let Some(candidate) = preprocess_candidate(identity, candidate) else {
+            let Some(decoded) = preprocess_candidate(identity, &candidate) else {
                 continue;
             };
 
-            map.entry(candidate.sequence).or_default().push(candidate);
+            map.entry(decoded.sequence).or_default().push(decoded);
         }
 
         map
@@ -154,20 +154,16 @@ pub fn resolve_chain<'a>(
 
         let next = candidates
             .into_iter()
-            .filter(|c| {
-                if head.document.authorizes_rotation(&c.signer) {
-                    // A rotation key can always create a new identity document
-                    true
-                } else {
-                    // Permit even a non-rotation key to add to the chain if it
-                    // doesn't change anything
-                    c.document == head.document && head.document.authorizes_signer(&c.signer)
-                }
+            // Keep only candidates that can succeed the head and record why
+            .filter_map(|c| {
+                let reason = justify_succession(identity, head, &c)?;
+                Some((c, reason))
             })
             // Pick among the valid candidates deterministically:
-            .max_by(|a, b| compare_successors(&head.document, a, b));
+            // We need both the identity event and the succession reason
+            .max_by(|(e1, r1), (e2, r2)| compare_successors((e1, *r1), (e2, *r2)));
 
-        if let Some(next) = next {
+        if let Some((next, _)) = next {
             chain.push(next);
         } else {
             break;
@@ -192,7 +188,7 @@ pub fn resolve_latest<'a>(
 
 /// Extract the information we need from the candidate and ensure it is
 /// internally consistent (valid signature and digest).
-fn preprocess_candidate(identity: &str, candidate: IdentityCandidate) -> Option<IdentityEvent> {
+fn preprocess_candidate(identity: &str, candidate: &IdentityCandidate) -> Option<IdentityEvent> {
     // Extract event data
     let event = Event::decode(candidate.event_bytes).ok()?;
     let event_key = event.key?;
@@ -220,14 +216,8 @@ fn preprocess_candidate(identity: &str, candidate: IdentityCandidate) -> Option<
     }?;
 
     // Validate event signature
-    match signer.key_type {
-        t if t == KeyType::Ed25519 as i32 => {
-            let key = &signer.key;
-            let sig = candidate.signature;
-            let bytes = candidate.event_bytes;
-            signing::verify_signature(key, sig, bytes).ok()?;
-        }
-        _ => return None,
+    if !signature_matches(&signer, candidate.signature, candidate.event_bytes) {
+        return None;
     }
 
     // Validate content digest
@@ -243,6 +233,63 @@ fn preprocess_candidate(identity: &str, candidate: IdentityCandidate) -> Option<
     };
 
     Some(out)
+}
+
+/// Reasons for an identity event to succeed another one.
+/// Ordered by lowest precedence to highest.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+enum SuccessionReason {
+    Republish,
+    Recovery,
+    Rotation,
+}
+
+/// Return a reason to allow `candidate` to succeed `head` or `None` if it
+/// should not be permitted to do so.
+fn justify_succession(
+    identity: &str,
+    head: &IdentityEvent,
+    candidate: &IdentityEvent,
+) -> Option<SuccessionReason> {
+    // A rotation key can always create a new identity document
+    if head.document.authorizes_rotation(&candidate.signer) {
+        return Some(SuccessionReason::Rotation);
+    }
+
+    // Permit even a non-rotation key to add to the chain if it doesn't change anything
+    if candidate.document == head.document && head.document.authorizes_signer(&candidate.signer) {
+        return Some(SuccessionReason::Republish);
+    }
+
+    // Allow a brand new document to continue the chain if the recovery key vouches
+    // for the signing rotation key of the event:
+
+    // Require the signer to be in the document as a rotation key.
+    if !candidate.document.authorizes_rotation(&candidate.signer) {
+        return None;
+    }
+
+    // Check if we have a valid recovery signature.
+    let key = head.document.recovery_key.as_ref()?;
+    let signature = candidate.document.recovery_signature.as_deref()?;
+    let payload = assemble_recovery_payload(identity, &candidate.signer);
+
+    if signature_matches(key, signature, &payload) {
+        Some(SuccessionReason::Recovery)
+    } else {
+        None
+    }
+}
+
+/// The bytes a recovery signature covers:
+/// (identity_string, rotation_key_type, rotation_key_bytes)
+/// These should be appended back-to-back and the key type should be in network byte order.
+pub fn assemble_recovery_payload(identity: &str, rotation_key: &PublicKey) -> Vec<u8> {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(identity.as_bytes());
+    payload.extend_from_slice(&rotation_key.key_type.to_be_bytes());
+    payload.extend_from_slice(&rotation_key.key);
+    payload
 }
 
 impl IdentityChain {
@@ -298,32 +345,44 @@ fn compare_signers(a: &PublicKey, b: &PublicKey) -> Ordering {
 /// Canonical total order over identity events.
 /// Used for selecting a canonical identity event among multiple valid candidates.
 /// Take the max to select the preferred one.
-fn compare_successors(previous: &Identity, a: &IdentityEvent, b: &IdentityEvent) -> Ordering {
+fn compare_successors(
+    a: (&IdentityEvent, SuccessionReason),
+    b: (&IdentityEvent, SuccessionReason),
+) -> Ordering {
+    let (e1, r1) = a;
+    let (e2, r2) = b;
+
     // We really should only be comparing identity events with the same sequence number,
     // but we will include sequence in the comparison just in case.
-    a.sequence
-        .cmp(&b.sequence)
-        // Ensure that we always prefer a rotation key over a signing key.
+    e1.sequence
+        .cmp(&e2.sequence)
+        // We will prefer rotation > recovery > republish.
         // This prevents a malicious signing key with a high priority as
         // determined by `compare_signers()` from stalling its own revocation by
         // repeatedly republishing the latest valid identity document that
         // still includes it.
-        // More generally, this prevents a rotation from being swallowed by
-        // a signing key republishing.
-        .then_with(|| {
-            previous
-                .authorizes_rotation(&a.signer)
-                .cmp(&previous.authorizes_rotation(&b.signer))
-        })
-        .then_with(|| compare_signers(&a.signer, &b.signer))
+        // More generally, this prevents a legitimate rotation or recovery from
+        // being swallowed by a signing key republishing.
+        .then_with(|| r1.cmp(&r2))
+        .then_with(|| compare_signers(&e1.signer, &e2.signer))
         // This also shouldn't happen since both events would have the same event key.
         // We will order them by the identity document, and if those are the same,
         // then we conclude that the events are the same.
         .then_with(|| {
-            a.document
+            e1.document
                 .derive_hex_key()
-                .cmp(&b.document.derive_hex_key())
+                .cmp(&e2.document.derive_hex_key())
         })
+}
+
+fn signature_matches(key: &PublicKey, sig: &[u8], data: &[u8]) -> bool {
+    match key.key_type {
+        t if t == KeyType::Ed25519 as i32 => {
+            let key = &key.key;
+            signing::verify_signature(key, sig, data).is_ok()
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -346,6 +405,8 @@ mod tests {
             signing_keys: signing,
             revocation_bounds: Vec::new(),
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         }
     }
 

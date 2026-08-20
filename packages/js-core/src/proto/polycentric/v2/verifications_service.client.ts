@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { VerificationsService } from "./verifications_service";
+import type { ResolveVerifiedClaimsResponse } from "./verifications_service";
+import type { ResolveVerifiedClaimsRequest } from "./verifications_service";
 import type { ListTargetedVerificationClaimsResponse } from "./verifications_service";
 import type { ListTargetedVerificationClaimsRequest } from "./verifications_service";
 import type { ListVerificationVerifiesResponse } from "./verifications_service";
@@ -45,6 +47,13 @@ export interface IVerificationsServiceClient {
      * @generated from protobuf rpc: ListTargetedVerificationClaims
      */
     listTargetedVerificationClaims(input: ListTargetedVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse>;
+    /**
+     * Reverse lookup: claims matching the given schema + field values that are
+     * verified by a trusted identity, with each claim's targets and verifies.
+     *
+     * @generated from protobuf rpc: ResolveVerifiedClaims
+     */
+    resolveVerifiedClaims(input: ResolveVerifiedClaimsRequest, options?: RpcOptions): UnaryCall<ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse>;
 }
 /**
  * @generated from protobuf service polycentric.v2.VerificationsService
@@ -92,5 +101,15 @@ export class VerificationsServiceClient implements IVerificationsServiceClient, 
     listTargetedVerificationClaims(input: ListTargetedVerificationClaimsRequest, options?: RpcOptions): UnaryCall<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListTargetedVerificationClaimsRequest, ListTargetedVerificationClaimsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Reverse lookup: claims matching the given schema + field values that are
+     * verified by a trusted identity, with each claim's targets and verifies.
+     *
+     * @generated from protobuf rpc: ResolveVerifiedClaims
+     */
+    resolveVerifiedClaims(input: ResolveVerifiedClaimsRequest, options?: RpcOptions): UnaryCall<ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse> {
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse>("unary", this._transport, method, opt, input);
     }
 }

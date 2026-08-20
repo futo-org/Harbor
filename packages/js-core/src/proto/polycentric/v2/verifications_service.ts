@@ -11,6 +11,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
 import { EventHint } from "./events";
 import { EventBundle } from "./events";
@@ -135,6 +136,62 @@ export interface ListTargetedVerificationClaimsRequest {
 export interface ListTargetedVerificationClaimsResponse {
     /**
      * Claims whose owner targeted `target_identity`. The 'inbox'.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
+     */
+    claimBundles: VerificationClaimBundle[];
+    /**
+     * Additional events that may be helpful, like relevant identity and profiles
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
+     */
+    eventHints: EventHint[];
+}
+/**
+ * Reverse lookup: find the identities that claim something, starting from the
+ * claim's field values rather than from an identity. Answers "who claims this
+ * (e.g. this platform channel, this occupation), verified by a trusted party?"
+ * — the inverse of the identity-keyed queries above. Works for any claim type.
+ *
+ * @generated from protobuf message polycentric.v2.ResolveVerifiedClaimsRequest
+ */
+export interface ResolveVerifiedClaimsRequest {
+    /**
+     * Optional type scope: restrict to claims of exactly this schema, by the
+     * schema's content digest. Unset (or empty value) = any schema. This is the
+     * schema's content-addressed identifier; it only groups cross-client when
+     * claimants pin identical canonical schema bytes.
+     *
+     * @generated from protobuf field: polycentric.v2.ContentDigest schema_digest = 1
+     */
+    schemaDigest?: ContentDigest;
+    /**
+     * Field key/value pairs a claim's (STRING) fields must contain, matched by
+     * JSONB containment. A claim matches only when it contains every supplied
+     * pair (AND); it may carry additional fields. A claim missing any supplied
+     * field does not match. May be empty when `schema_digest` scopes the query.
+     *
+     * @generated from protobuf field: map<string, string> fields = 2
+     */
+    fields: {
+        [key: string]: string;
+    };
+    /**
+     * Only return claims that carry a VerificationVerify authored by one of
+     * these identities (the trust roots). Required and non-empty — this is what
+     * makes a match "verified" rather than merely "claimed".
+     *
+     * @generated from protobuf field: repeated string verified_by_identities = 3
+     */
+    verifiedByIdentities: string[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.ResolveVerifiedClaimsResponse
+ */
+export interface ResolveVerifiedClaimsResponse {
+    /**
+     * Matching claims, each wrapped with its targets and verifies (the verifies
+     * include at least one authored by a trusted identity).
      *
      * @generated from protobuf field: repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1
      */
@@ -614,6 +671,139 @@ class ListTargetedVerificationClaimsResponse$Type extends MessageType<ListTarget
  * @generated MessageType for protobuf message polycentric.v2.ListTargetedVerificationClaimsResponse
  */
 export const ListTargetedVerificationClaimsResponse = new ListTargetedVerificationClaimsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ResolveVerifiedClaimsRequest$Type extends MessageType<ResolveVerifiedClaimsRequest> {
+    constructor() {
+        super("polycentric.v2.ResolveVerifiedClaimsRequest", [
+            { no: 1, name: "schema_digest", kind: "message", T: () => ContentDigest },
+            { no: 2, name: "fields", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
+            { no: 3, name: "verified_by_identities", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ResolveVerifiedClaimsRequest>): ResolveVerifiedClaimsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.fields = {};
+        message.verifiedByIdentities = [];
+        if (value !== undefined)
+            reflectionMergePartial<ResolveVerifiedClaimsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ResolveVerifiedClaimsRequest): ResolveVerifiedClaimsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.ContentDigest schema_digest */ 1:
+                    message.schemaDigest = ContentDigest.internalBinaryRead(reader, reader.uint32(), options, message.schemaDigest);
+                    break;
+                case /* map<string, string> fields */ 2:
+                    this.binaryReadMap2(message.fields, reader, options);
+                    break;
+                case /* repeated string verified_by_identities */ 3:
+                    message.verifiedByIdentities.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    private binaryReadMap2(map: ResolveVerifiedClaimsRequest["fields"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof ResolveVerifiedClaimsRequest["fields"] | undefined, val: ResolveVerifiedClaimsRequest["fields"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = reader.string();
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for polycentric.v2.ResolveVerifiedClaimsRequest.fields");
+            }
+        }
+        map[key ?? ""] = val ?? "";
+    }
+    internalBinaryWrite(message: ResolveVerifiedClaimsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.ContentDigest schema_digest = 1; */
+        if (message.schemaDigest)
+            ContentDigest.internalBinaryWrite(message.schemaDigest, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* map<string, string> fields = 2; */
+        for (let k of globalThis.Object.keys(message.fields))
+            writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.fields[k]).join();
+        /* repeated string verified_by_identities = 3; */
+        for (let i = 0; i < message.verifiedByIdentities.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.verifiedByIdentities[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ResolveVerifiedClaimsRequest
+ */
+export const ResolveVerifiedClaimsRequest = new ResolveVerifiedClaimsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ResolveVerifiedClaimsResponse$Type extends MessageType<ResolveVerifiedClaimsResponse> {
+    constructor() {
+        super("polycentric.v2.ResolveVerifiedClaimsResponse", [
+            { no: 1, name: "claim_bundles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => VerificationClaimBundle },
+            { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+        ]);
+    }
+    create(value?: PartialMessage<ResolveVerifiedClaimsResponse>): ResolveVerifiedClaimsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.claimBundles = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<ResolveVerifiedClaimsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ResolveVerifiedClaimsResponse): ResolveVerifiedClaimsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.VerificationClaimBundle claim_bundles */ 1:
+                    message.claimBundles.push(VerificationClaimBundle.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 2:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ResolveVerifiedClaimsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.VerificationClaimBundle claim_bundles = 1; */
+        for (let i = 0; i < message.claimBundles.length; i++)
+            VerificationClaimBundle.internalBinaryWrite(message.claimBundles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 2; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.ResolveVerifiedClaimsResponse
+ */
+export const ResolveVerifiedClaimsResponse = new ResolveVerifiedClaimsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.VerificationsService
  */
@@ -621,5 +811,6 @@ export const VerificationsService = new ServiceType("polycentric.v2.Verification
     { name: "ListVerificationClaims", options: {}, I: ListVerificationClaimsRequest, O: ListVerificationClaimsResponse },
     { name: "ListVerificationTargets", options: {}, I: ListVerificationTargetsRequest, O: ListVerificationTargetsResponse },
     { name: "ListVerificationVerifies", options: {}, I: ListVerificationVerifiesRequest, O: ListVerificationVerifiesResponse },
-    { name: "ListTargetedVerificationClaims", options: {}, I: ListTargetedVerificationClaimsRequest, O: ListTargetedVerificationClaimsResponse }
+    { name: "ListTargetedVerificationClaims", options: {}, I: ListTargetedVerificationClaimsRequest, O: ListTargetedVerificationClaimsResponse },
+    { name: "ResolveVerifiedClaims", options: {}, I: ResolveVerifiedClaimsRequest, O: ResolveVerifiedClaimsResponse }
 ]);

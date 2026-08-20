@@ -11,6 +11,7 @@ import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { AttributedTo } from "./content";
 import { PageInfo } from "./common";
 import { PageParams } from "./common";
 import { Blob } from "./content";
@@ -20,7 +21,9 @@ import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
 /**
  * Contains the sequences (of the same event collection) that the current KeyPair is aware of.
- * The order of the sequences is determined by the the keys listed
+ * The order of the sequences is determined by the keys listed in the relevant identity document:
+ * The rotation keys first and then the signing keys, with duplicates skipped when they appear again.
+ * Use `Identity::deduplicated_keys()` to get the keys in this order.
  *
  * @generated from protobuf message polycentric.v2.VectorClock
  */
@@ -400,6 +403,34 @@ export interface GetReactionsResponse {
      * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 3
      */
     pageInfo?: PageInfo;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributedToReactionCountsRequest
+ */
+export interface GetAttributedToReactionCountsRequest {
+    /**
+     * The attributed target (e.g. a video URL) to get reaction counts for.
+     *
+     * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
+     */
+    attributedTo?: AttributedTo;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributedToReactionCountsResponse
+ */
+export interface GetAttributedToReactionCountsResponse {
+    /**
+     * The server's estimate for positive reactions on the target.
+     *
+     * @generated from protobuf field: int64 upvote_count = 1
+     */
+    upvoteCount: bigint;
+    /**
+     * The server's estimate for negative reactions on the target.
+     *
+     * @generated from protobuf field: int64 downvote_count = 2
+     */
+    downvoteCount: bigint;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class VectorClock$Type extends MessageType<VectorClock> {
@@ -1481,6 +1512,107 @@ class GetReactionsResponse$Type extends MessageType<GetReactionsResponse> {
  * @generated MessageType for protobuf message polycentric.v2.GetReactionsResponse
  */
 export const GetReactionsResponse = new GetReactionsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToReactionCountsRequest$Type extends MessageType<GetAttributedToReactionCountsRequest> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToReactionCountsRequest", [
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToReactionCountsRequest>): GetAttributedToReactionCountsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToReactionCountsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToReactionCountsRequest): GetAttributedToReactionCountsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.AttributedTo attributed_to */ 1:
+                    message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToReactionCountsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.AttributedTo attributed_to = 1; */
+        if (message.attributedTo)
+            AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToReactionCountsRequest
+ */
+export const GetAttributedToReactionCountsRequest = new GetAttributedToReactionCountsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToReactionCountsResponse$Type extends MessageType<GetAttributedToReactionCountsResponse> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToReactionCountsResponse", [
+            { no: 1, name: "upvote_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 2, name: "downvote_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToReactionCountsResponse>): GetAttributedToReactionCountsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.upvoteCount = 0n;
+        message.downvoteCount = 0n;
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToReactionCountsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToReactionCountsResponse): GetAttributedToReactionCountsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int64 upvote_count */ 1:
+                    message.upvoteCount = reader.int64().toBigInt();
+                    break;
+                case /* int64 downvote_count */ 2:
+                    message.downvoteCount = reader.int64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToReactionCountsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int64 upvote_count = 1; */
+        if (message.upvoteCount !== 0n)
+            writer.tag(1, WireType.Varint).int64(message.upvoteCount);
+        /* int64 downvote_count = 2; */
+        if (message.downvoteCount !== 0n)
+            writer.tag(2, WireType.Varint).int64(message.downvoteCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToReactionCountsResponse
+ */
+export const GetAttributedToReactionCountsResponse = new GetAttributedToReactionCountsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.EventSyncService
  */
@@ -1488,5 +1620,6 @@ export const EventSyncService = new ServiceType("polycentric.v2.EventSyncService
     { name: "ListEvents", options: {}, I: ListEventsRequest, O: ListEventsResponse },
     { name: "PutEvents", options: {}, I: PutEventsRequest, O: PutEventsResponse },
     { name: "ListHeads", options: {}, I: ListHeadsRequest, O: ListHeadsResponse },
-    { name: "GetReactions", options: {}, I: GetReactionsRequest, O: GetReactionsResponse }
+    { name: "GetReactions", options: {}, I: GetReactionsRequest, O: GetReactionsResponse },
+    { name: "GetAttributedToReactionCounts", options: {}, I: GetAttributedToReactionCountsRequest, O: GetAttributedToReactionCountsResponse }
 ]);

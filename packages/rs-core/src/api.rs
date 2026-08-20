@@ -1,6 +1,7 @@
 use crate::client::PolycentricClient;
 use crate::media::process_image;
 use crate::sync;
+use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
     ContentDigest, CreatePairingSessionRequest, Event, GetAttributedToReactionCountsRequest,
     GetPairingSessionRequest, GetServerInfoRequest, Identity, JoinPairingSessionRequest,
@@ -179,6 +180,24 @@ impl PolycentricCore {
         chain
             .latest_state()
             .map(|document| document.encode_to_vec())
+    }
+
+    /// Returns the canonical identity chain for `identity` as a serialized
+    /// `ListEventsResponse`.
+    pub fn resolve_identity_chain(&self, identity: String) -> Result<Vec<u8>, CoreError> {
+        let event_bundles = self
+            .client
+            .lock()
+            .unwrap()
+            .identity_chain_bundles(&identity)
+            .map_err(|e| CoreError::Store(format!("resolve_identity_chain: {e}")))?;
+
+        let response = ListEventsResponse {
+            event_bundles,
+            event_hints: Vec::new(),
+        };
+
+        Ok(response.encode_to_vec())
     }
 
     /// Merkle root over the canonically-ordered signatures in
@@ -702,5 +721,19 @@ impl PolycentricCore {
             .await
             .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
         Ok(())
+    }
+
+    /// Derive the bytes that should be signed by the recovery key in order to
+    /// authorize `public_key` as a new rotation key for the identity.
+    /// `public_key` should be a serialized `PublicKey` protobuf.
+    pub fn assemble_recovery_payload(
+        &self,
+        identity: String,
+        public_key: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let public_key = PublicKey::decode(public_key.as_slice())
+            .map_err(|e| CoreError::Decode(format!("assemble_recovery_payload: {e}")))?;
+
+        Ok(assemble_recovery_payload(&identity, &public_key))
     }
 }

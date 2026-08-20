@@ -235,6 +235,8 @@ impl TestClient {
             signing_keys: vec![],
             revocation_bounds: vec![],
             servers: None,
+            recovery_key: None,
+            recovery_signature: None,
         };
         let mut client = TestClient {
             key,
@@ -780,6 +782,8 @@ pub fn test_moderator_identity() -> String {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     initial.derive_hex_key()
 }

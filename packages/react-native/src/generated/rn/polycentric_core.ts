@@ -4480,6 +4480,12 @@ const uniffiCallbackInterfaceSignBytesCallback: { vtable: any; register: () => v
 export interface PolycentricCoreLike {
     
 /**
+ * Derive the bytes that should be signed by the recovery key in order to
+ * authorize `public_key` as a new rotation key for the identity.
+ * `public_key` should be a serialized `PublicKey` protobuf.
+ */
+    assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer) /*throws*/: ArrayBuffer;
+/**
  * Build a vector clock (returns serialized `VectorClock` proto bytes).
  * For identity events, callers should pass the new event's identity
  * content as `identity_content` (serialized `Identity` proto bytes).
@@ -4607,6 +4613,11 @@ export interface PolycentricCoreLike {
  */
     resolveIdentity(identity: string): ArrayBuffer | undefined;
 /**
+ * Returns the canonical identity chain for `identity` as a serialized
+ * `ListEventsResponse`.
+ */
+    resolveIdentityChain(identity: string) /*throws*/: ArrayBuffer;
+/**
  * Register the provider consulted for the auth token attached to every
  * outgoing gRPC request.
  */
@@ -4672,6 +4683,31 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
 
     
 
+    
+/**
+ * Derive the bytes that should be signed by the recovery key in order to
+ * authorize `public_key` as a new rotation key for the identity.
+ * `public_key` should be a serialized `PublicKey` protobuf.
+ */
+    assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer): ArrayBuffer /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterArrayBuffer.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+        FfiConverterArrayBuffer.lower(publicKey, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
     
 /**
  * Build a vector clock (returns serialized `VectorClock` proto bytes).
@@ -5296,6 +5332,29 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Returns the canonical identity chain for `identity` as a serialized
+ * `ListEventsResponse`.
+ */
+    resolveIdentityChain(identity: string): ArrayBuffer /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterArrayBuffer.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity_chain(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+    
+/**
  * Register the provider consulted for the auth token attached to every
  * outgoing gRPC request.
  */
@@ -5667,6 +5726,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new() !== 49425) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_constructor_polycentriccore_new");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload() !== 35652) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !== 16886) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock");
     }
@@ -5738,6 +5800,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity() !== 43194) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain() !== 11511) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider() !== 38042) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider");
