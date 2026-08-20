@@ -1,14 +1,15 @@
 //! `search_posts`: searches posts.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline::{create_pipeline, finalize_fetch};
+use crate::data::Marker;
+use crate::data::hydration::{HydrationState, post_hydrate};
+use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
 use crate::service::context::ServiceContext;
 use crate::service::proto::{
     SearchPostsRequest, SearchPostsResponse, SortPostsBy,
 };
 use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
-    self, Fetched, Marker, SearchResponseFilter, SearchResponseView,
+    self, SearchResponseFilter, SearchResponseView, SearchRow,
 };
 use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
@@ -51,7 +52,7 @@ pub async fn handle(
 async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
-) -> Result<Fetched<SortedPostsBy>, Status> {
+) -> Result<Fetched<SearchRow, SortedPostsBy>, Status> {
     let mut rows = Query::search_posts(
         &ctx.db,
         &params.common.query,
@@ -102,15 +103,15 @@ impl SortedPostsBy {
 async fn hydrate(
     ctx: &ServiceContext,
     _: &Params,
-    fetched: &Fetched<SortedPostsBy>,
+    fetched: &Fetched<SearchRow, SortedPostsBy>,
 ) -> Result<HydrationState, Status> {
-    rpc::hydrate(ctx, fetched).await
+    post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
     _: &ServiceContext,
     params: &Params,
-    fetched: Fetched<SortedPostsBy>,
+    fetched: Fetched<SearchRow, SortedPostsBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedPostsBy>, Status> {
     rpc::filter(fetched, hydration, &params.omit_labels).await

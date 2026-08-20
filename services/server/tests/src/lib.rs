@@ -8,7 +8,7 @@ use polycentric_common::models::protos_v2::{
     AttributedTo, Content, ContentDigest, ContentDigestType, Delete, Event,
     EventBundle, EventKey, EventProofTarget, FieldDef, FieldKind, Follow,
     Identity, KeyType, Labels, Link, Post, PostReply, ProfileUpdate, PublicKey,
-    PutEventsRequest, Reaction, Repost, RevocationBound, SearchResult,
+    PutEventsRequest, Reaction, Repost, RevocationBound,
     SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
     VerificationClaim, VerificationSchema, attributed_to, content,
 };
@@ -16,7 +16,6 @@ use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::fmt;
 use std::mem::take;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
@@ -65,73 +64,6 @@ pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
         result.truncate(result.len() - separator.len()); // Remove last separator.
     }
     result
-}
-
-pub fn fmt_search_results(results: &[SearchResult]) -> impl fmt::Debug {
-    struct Debug<'a>(&'a [SearchResult]);
-
-    impl<'a> fmt::Debug for Debug<'a> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_list()
-                .entries(self.0.iter().map(fmt_search_result))
-                .finish()
-        }
-    }
-    Debug(results)
-}
-
-pub fn fmt_search_result(result: &SearchResult) -> impl fmt::Debug {
-    struct Debug<'a>(&'a SearchResult);
-
-    impl<'a> fmt::Debug for Debug<'a> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let SearchResult { event_bundle, rank } = self.0;
-            let event_bundle: &dyn fmt::Debug = match event_bundle {
-                Some(event_bundle) => &fmt_event(event_bundle),
-                _ => &"None",
-            };
-            f.debug_struct("SearchResult")
-                .field("event_bundle", event_bundle)
-                .field("rank", &rank)
-                .finish()
-        }
-    }
-    Debug(result)
-}
-
-pub fn fmt_event(event: &EventBundle) -> impl fmt::Debug {
-    struct Debug<'a>(&'a EventBundle);
-
-    impl<'a> fmt::Debug for Debug<'a> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let EventBundle {
-                signed_event,
-                serialized_content,
-                event_proofs,
-                meta,
-            } = self.0;
-            let tmp_c;
-            let content: &dyn fmt::Debug = match serialized_content {
-                Some(c)
-                    if let Ok(content) = Content::decode(&*c.content_bytes) =>
-                {
-                    tmp_c = content;
-                    &tmp_c
-                }
-                _ => &"invalid content",
-            };
-
-            // TODO: add more deserialised content as needed.
-            f.debug_struct("EventBundle")
-                .field("signed_event", &signed_event.is_some())
-                .field("content", &content)
-                .field("event_proofs", &event_proofs)
-                .field("meta", &meta)
-                .finish()
-        }
-    }
-
-    Debug(event)
 }
 
 pub async fn connect_event_sync()

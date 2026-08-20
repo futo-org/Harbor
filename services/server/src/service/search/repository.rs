@@ -1,8 +1,8 @@
+use crate::data::{Cursor, CursorFilter, Marker};
 use crate::service::feeds::repository::content_join;
 use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
-use crate::service::search::rpc::{Cursor, CursorFilter, Marker};
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use entity::{content_model, event_model};
 use sea_orm::sea_query::{Expr, Order, Value};
