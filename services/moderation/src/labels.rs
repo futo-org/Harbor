@@ -1,5 +1,6 @@
 //! Map an Azure Content Safety response into label events
 
+use polycentric_common::models::moderation_label::ModerationLabel;
 use polycentric_common::models::protos_v2::ReportCategory;
 use serde_json::Value;
 
@@ -8,7 +9,7 @@ const MAX_SEVERITY: i64 = 6;
 
 /// A label and the Azure category + inclusive severity band that triggers it.
 struct LabelRule {
-    label: &'static str,
+    label: ModerationLabel,
     category: &'static str,
     min: i64,
     max: i64,
@@ -18,31 +19,31 @@ struct LabelRule {
 /// bands; the remaining categories use a single `>= 4` threshold.
 const LABEL_RULES: &[LabelRule] = &[
     LabelRule {
-        label: "hate",
+        label: ModerationLabel::Hate,
         category: "Hate",
         min: 4,
         max: MAX_SEVERITY,
     },
     LabelRule {
-        label: "self-harm",
+        label: ModerationLabel::SelfHarm,
         category: "SelfHarm",
         min: 4,
         max: MAX_SEVERITY,
     },
     LabelRule {
-        label: "sexually-suggestive",
+        label: ModerationLabel::SexuallySuggestive,
         category: "Sexual",
         min: 2,
         max: 4,
     },
     LabelRule {
-        label: "sexually-explicit",
+        label: ModerationLabel::SexuallyExplicit,
         category: "Sexual",
         min: 5,
         max: MAX_SEVERITY,
     },
     LabelRule {
-        label: "violence",
+        label: ModerationLabel::Violence,
         category: "Violence",
         min: 4,
         max: MAX_SEVERITY,
@@ -58,18 +59,18 @@ pub fn labels_from_azure(response: &Value) -> Vec<String> {
             let severity = max_severity(response, rule.category);
             severity >= rule.min && severity <= rule.max
         })
-        .map(|rule| rule.label.to_string())
+        .map(|rule| rule.label.value().to_string())
         .collect()
 }
 
 /// Some report categories correspond to label events, as defined
 /// in this function.
-pub fn label_from_report_category(category: i32) -> Option<&'static str> {
+pub fn label_from_report_category(category: i32) -> Option<ModerationLabel> {
     match ReportCategory::try_from(category).ok()? {
-        ReportCategory::Hate => Some("hate"),
-        ReportCategory::SelfHarm => Some("self-harm"),
-        ReportCategory::SexuallyExplicit => Some("sexually-explicit"),
-        ReportCategory::Violence => Some("violence"),
+        ReportCategory::Hate => Some(ModerationLabel::Hate),
+        ReportCategory::SelfHarm => Some(ModerationLabel::SelfHarm),
+        ReportCategory::SexuallyExplicit => Some(ModerationLabel::SexuallyExplicit),
+        ReportCategory::Violence => Some(ModerationLabel::Violence),
         ReportCategory::Unspecified
         | ReportCategory::Spam
         | ReportCategory::ChildSafety
@@ -189,10 +190,13 @@ mod tests {
     #[test]
     fn report_categories_with_a_label_counterpart_map_to_it() {
         for (category, label) in [
-            (ReportCategory::Hate, "hate"),
-            (ReportCategory::SelfHarm, "self-harm"),
-            (ReportCategory::SexuallyExplicit, "sexually-explicit"),
-            (ReportCategory::Violence, "violence"),
+            (ReportCategory::Hate, ModerationLabel::Hate),
+            (ReportCategory::SelfHarm, ModerationLabel::SelfHarm),
+            (
+                ReportCategory::SexuallyExplicit,
+                ModerationLabel::SexuallyExplicit,
+            ),
+            (ReportCategory::Violence, ModerationLabel::Violence),
         ] {
             assert_eq!(
                 label_from_report_category(category as i32),
@@ -234,7 +238,8 @@ mod tests {
 
     #[test]
     fn sexually_suggestive_is_not_reportable() {
-        let reportable: Vec<&str> = (0..64).filter_map(label_from_report_category).collect();
-        assert!(!reportable.contains(&"sexually-suggestive"));
+        let reportable: Vec<ModerationLabel> =
+            (0..64).filter_map(label_from_report_category).collect();
+        assert!(!reportable.contains(&ModerationLabel::SexuallySuggestive));
     }
 }
