@@ -303,19 +303,28 @@ impl Query {
                     )
                     .inner_join(
                         TableRef::FunctionCall(
-                            Func::cust("reaction_count_decay").args([
-                                Expr::col(
+                            {
+                                let func = Func::cust("reaction_count_decay");
+                                let positive_count = Expr::col(
                                     ReactionTallyModel::Column::PositiveCount
                                         .as_column_ref(),
-                                ),
-                                Expr::col(
+                                );
+                                let created_at = Expr::col(
                                     EventModel::Column::CreatedAt
                                         .as_column_ref(),
-                                ),
-                                Expr::Constant(
-                                    config::get().feeds_gravity.into(),
-                                ),
-                            ]),
+                                );
+                                if let Some(gravity) =
+                                    config::get().feeds_gravity
+                                {
+                                    func.args([
+                                        positive_count,
+                                        created_at,
+                                        Expr::Constant(gravity.into()),
+                                    ])
+                                } else {
+                                    func.args([positive_count, created_at])
+                                }
+                            },
                             REACTION_COUNT_COLUMN.into(),
                         ),
                         Condition::all(), // Always join.
