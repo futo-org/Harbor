@@ -10,7 +10,13 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 
-export default function PairSuccessScreen() {
+export default function LoginSuccessScreen({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const profile = useProfile(identityKey);
@@ -33,9 +39,9 @@ export default function PairSuccessScreen() {
       ]}
     >
       <View style={[Atoms.items_center, Atoms.gap_xs]}>
-        <Text variant="title">Pair Successful!</Text>
+        <Text variant="title">{title}</Text>
         <Text variant="body" color="neutral_500" style={Atoms.text_center}>
-          Your device has been paired
+          {subtitle}
         </Text>
       </View>
 

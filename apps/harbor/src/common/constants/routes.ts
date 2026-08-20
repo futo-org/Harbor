@@ -53,8 +53,10 @@ export const Routes = {
     claims: '/claims',
     identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,
-    profileVerifications: (identityId: string) =>
-      `/${identityId}/verifications` as const,
+    profileVerificationClaims: (identityId: string) =>
+      `/${identityId}/verifications/claims` as const,
+    profileVerificationVerifies: (identityId: string) =>
+      `/${identityId}/verifications/verifies` as const,
     profileFollowing: (identityId: string) =>
       `/${identityId}/following` as const,
     profileFollowers: (identityId: string) =>
@@ -71,6 +73,8 @@ export const Routes = {
       index: '/settings',
       identity: '/settings/identity',
       pairIdentity: '/settings/pair-identity',
+      createBackup: '/settings/create-backup',
+      checkBackup: '/settings/check-backup',
       servers: '/settings/servers',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
@@ -90,6 +94,8 @@ export const Routes = {
   },
   onboarding: {
     index: '/',
+    login: '/login',
+    recover: '/recover',
     signup: {
       index: '/signup',
       about: '/signup/about',

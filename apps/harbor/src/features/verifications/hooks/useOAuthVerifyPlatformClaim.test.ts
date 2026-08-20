@@ -24,6 +24,10 @@ const mockApi = {
   checkOAuthClaim: jest.fn(async () => undefined),
   requestOAuthVerify: jest.fn(async () => undefined),
 };
+jest.mock('./useRequestVerification', () => ({
+  publishVerifierBotTargets: jest.fn(async () => undefined),
+}));
+
 jest.mock('../utils/verifier-api', () => ({
   // Lazy: jest hoists this factory above the const.
   get verifierApi() {

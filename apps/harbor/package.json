@@ -20,6 +20,7 @@
     "typecheck": "tsc && tsc -p tsconfig.test.json"
   },
   "dependencies": {
+    "@bsky.app/react-native-uitextview": "^2.7.1",
     "@codeherence/react-native-header": "^1.0.1",
     "@expo/metro-runtime": "~57.0.11",
     "@expo/ui": "~57.0.11",
@@ -29,6 +30,7 @@
     "@noble/hashes": "catalog:",
     "@polycentric/react-native": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-documents/picker": "^12.0.2",
     "@rn-primitives/dropdown-menu": "^1.4.0",
     "@rn-primitives/hover-card": "^1.4.0",
     "@rn-primitives/popover": "^1.4.0",

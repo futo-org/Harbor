@@ -1,10 +1,10 @@
 ---
-title: Self-hosting
-sidebar_label: Self-hosting
-sidebar_position: 3
+title: Host a Verifier Bot
+sidebar_label: Host a Verifier Bot
+sidebar_position: 2
 ---
 
-# Self-hosting the verifier bot
+# Host a Verifier Bot
 
 The verifier bot lives at `services/verifier-bot` in the Harbor monorepo.
 

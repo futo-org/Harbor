@@ -14,7 +14,8 @@ function useSignupLinks() {
   const params = { [RETURN_TO_PARAM]: returnTo };
   return {
     create: { pathname: Routes.onboarding.signup.index, params },
-    pair: { pathname: '/login', params },
+    pair: { pathname: Routes.onboarding.login, params },
+    recover: { pathname: Routes.onboarding.recover, params },
   } as const;
 }
 
@@ -69,6 +70,13 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
               href={links.pair}
               onPress={onAction}
             />
+            <Button
+              title="Recover using backup"
+              variant="tertiary"
+              fullWidth
+              href={links.recover}
+              onPress={onAction}
+            />
           </View>
         ) : (
           <Text variant="small" color="neutral_500">
@@ -120,6 +128,7 @@ export function SignupBar() {
         <View style={[Atoms.flex_row, Atoms.gap_sm]}>
           <Button title="Sign up" variant="primary" href={links.create} />
           <Button title="Pair" variant="tertiary" href={links.pair} />
+          <Button title="Recover" variant="tertiary" href={links.recover} />
         </View>
       ) : null}
     </View>

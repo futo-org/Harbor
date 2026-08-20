@@ -11,15 +11,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import {
-  type LayoutChangeEvent,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { type LayoutChangeEvent, View } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { PagerViewCore } from './PagerViewCore';
 import type { PagerViewWithHeaderProps } from './types';
@@ -100,9 +97,14 @@ export function PagerViewWithHeader<T extends string>({
     [scrollY, headerHeightShared],
   );
 
-  // Every page must reach the collapse point on its own, or landing on a
-  // short one would force the header back open.
-  const { height: windowHeight } = useWindowDimensions();
+  // A page too short to hold the aligned offset clamps to its own end, so
+  // ease the header out to wherever the landing page actually sits.
+  useEffect(() => {
+    const offset = pageLists.current[activeIndex]?.getScrollOffset() ?? 0;
+    if (offset < scrollY.value) {
+      scrollY.value = withTiming(offset, { duration: 180 });
+    }
+  }, [activeIndex, scrollY]);
 
   const wrapPage = useCallback(
     (child: ReactNode, index: number) => (
@@ -110,20 +112,12 @@ export function PagerViewWithHeader<T extends string>({
         // Only the showing page's scroll moves the header.
         onScroll={index === activeIndex ? onActivePageScroll : undefined}
         contentPaddingTop={headerHeight + tabBarHeight}
-        minContentHeight={windowHeight + headerHeight}
         register={registerAt(index)}
       >
         {child}
       </ScrollForwarder>
     ),
-    [
-      activeIndex,
-      onActivePageScroll,
-      headerHeight,
-      tabBarHeight,
-      windowHeight,
-      registerAt,
-    ],
+    [activeIndex, onActivePageScroll, headerHeight, tabBarHeight, registerAt],
   );
 
   return (

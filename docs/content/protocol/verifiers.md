@@ -1,7 +1,7 @@
 ---
 title: Verifiers
-sidebar_label: Overview
-sidebar_position: 1
+sidebar_label: Verifiers
+sidebar_position: 5
 ---
 
 # Verifiers
@@ -54,5 +54,39 @@ Routes are derived from each platform's slug (`slug(name)`, e.g. `GitHub` →
 | `GET /platforms/:slug/oauth/token` | (OAuth) Exchange the OAuth code for a token. |
 | `POST /platforms/:slug/text/get-claim-fields-by-url` | (Text) Derive claim fields from a profile URL. |
 
-See [Supported platforms](platforms) for the full list, and
-[Creating a verifier](creating-a-verifier) to add a new one.
+## Supported platforms
+
+The verifier bot ships with verifiers for the platforms below. Each uses one of
+two methods:
+
+- **Text** — reads the account's public bio/description (via the platform's API,
+  or a headless browser where noted) and checks for the user's token.
+- **OAuth** — the user signs in to the platform; the bot confirms the
+  authenticated account matches the claim. OAuth platforms require credentials
+  (see [Host a Verifier Bot](../guides/self-hosting-a-verifier.md#environment-variables)).
+
+| Platform | Method | OAuth credentials required |
+|---|---|---|
+| Discord | OAuth | Yes |
+| GitHub | Text | — |
+| GitLab | Text | — |
+| Hacker News | Text | — |
+| Instagram | OAuth | Yes |
+| Kick | Text (headless browser) | — |
+| Nebula | Text | — |
+| Odysee | Text | — |
+| Patreon | OAuth | Yes |
+| Rumble | Text | — |
+| SoundCloud | Text | — |
+| Spotify | OAuth | Yes |
+| Spreadshop | Text | — |
+| Substack | Text | — |
+| Twitch | Text | — |
+| Vimeo | Text | — |
+| Website | Text | — |
+| X | OAuth | Yes |
+| YouTube | Text | — |
+
+The authoritative list is the set of platforms registered in
+`services/verifier-bot/src/platforms/platforms.ts`. To add a platform, see
+[Add a Platform Verifier](../guides/add-a-platform-verifier.md).

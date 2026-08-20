@@ -30,6 +30,25 @@ export interface PublicKey {
     key: Uint8Array;
 }
 /**
+ * The private key corresponding to a public key.
+ *
+ * @generated from protobuf message polycentric.v2.PrivateKey
+ */
+export interface PrivateKey {
+    /**
+     * Type of key used. Defaults to ED25519.
+     *
+     * @generated from protobuf field: polycentric.v2.KeyType key_type = 1
+     */
+    keyType: KeyType;
+    /**
+     * Value of the key
+     *
+     * @generated from protobuf field: bytes key = 2
+     */
+    key: Uint8Array;
+}
+/**
  * @generated from protobuf enum polycentric.v2.KeyType
  */
 export enum KeyType {
@@ -97,3 +116,58 @@ class PublicKey$Type extends MessageType<PublicKey> {
  * @generated MessageType for protobuf message polycentric.v2.PublicKey
  */
 export const PublicKey = new PublicKey$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class PrivateKey$Type extends MessageType<PrivateKey> {
+    constructor() {
+        super("polycentric.v2.PrivateKey", [
+            { no: 1, name: "key_type", kind: "enum", T: () => ["polycentric.v2.KeyType", KeyType, "KEY_TYPE_"] },
+            { no: 2, name: "key", kind: "scalar", T: 12 /*ScalarType.BYTES*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PrivateKey>): PrivateKey {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.keyType = 0;
+        message.key = new Uint8Array(0);
+        if (value !== undefined)
+            reflectionMergePartial<PrivateKey>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PrivateKey): PrivateKey {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.KeyType key_type */ 1:
+                    message.keyType = reader.int32();
+                    break;
+                case /* bytes key */ 2:
+                    message.key = reader.bytes();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PrivateKey, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.KeyType key_type = 1; */
+        if (message.keyType !== 0)
+            writer.tag(1, WireType.Varint).int32(message.keyType);
+        /* bytes key = 2; */
+        if (message.key.length)
+            writer.tag(2, WireType.LengthDelimited).bytes(message.key);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.PrivateKey
+ */
+export const PrivateKey = new PrivateKey$Type();

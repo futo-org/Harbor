@@ -82,16 +82,18 @@ impl fmt::Debug for SignedEvent {
             signature,
             event_bytes,
         } = self;
-        let tmp;
-        let event: &dyn fmt::Debug = if let Ok(event) = Event::decode(&**event_bytes) {
-            tmp = event;
-            &tmp
+
+        let signature = &URL_SAFE_NO_PAD.encode(signature);
+
+        let decoded_event = Event::decode(event_bytes.as_slice()).ok();
+        let event: &dyn fmt::Debug = if let Some(event) = decoded_event.as_ref() {
+            event
         } else {
             &format_args!("invalid event: {event_bytes:?}")
         };
 
         f.debug_struct("SignedEvent")
-            .field("signature", &URL_SAFE_NO_PAD.encode(signature))
+            .field("signature", signature)
             .field("event", event)
             .finish()
     }

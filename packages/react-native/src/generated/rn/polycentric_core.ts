@@ -4480,6 +4480,12 @@ const uniffiCallbackInterfaceSignBytesCallback: { vtable: any; register: () => v
 export interface PolycentricCoreLike {
     
 /**
+ * Derive the bytes that should be signed by the recovery key in order to
+ * authorize `public_key` as a new rotation key for the identity.
+ * `public_key` should be a serialized `PublicKey` protobuf.
+ */
+    assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer) /*throws*/: ArrayBuffer;
+/**
  * Identities the active identity blocks, derived from its non-tombstoned
  * social graph events.
  */
@@ -4613,6 +4619,11 @@ export interface PolycentricCoreLike {
  */
     resolveIdentity(identity: string): ArrayBuffer | undefined;
 /**
+ * Returns the canonical identity chain for `identity` as a serialized
+ * `ListEventsResponse`.
+ */
+    resolveIdentityChain(identity: string) /*throws*/: ArrayBuffer;
+/**
  * Set the user's identity for user-specific state (i.e. the set of identities
  * a user blocks).
  */
@@ -4683,6 +4694,31 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
 
     
 
+    
+/**
+ * Derive the bytes that should be signed by the recovery key in order to
+ * authorize `public_key` as a new rotation key for the identity.
+ * `public_key` should be a serialized `PublicKey` protobuf.
+ */
+    assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer): ArrayBuffer /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterArrayBuffer.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+        FfiConverterArrayBuffer.lower(publicKey, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
     
 /**
  * Identities the active identity blocks, derived from its non-tombstoned
@@ -5340,6 +5376,29 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Returns the canonical identity chain for `identity` as a serialized
+ * `ListEventsResponse`.
+ */
+    resolveIdentityChain(identity: string): ArrayBuffer /*throws*/ {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterArrayBuffer.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity_chain(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+    
+/**
  * Set the user's identity for user-specific state (i.e. the set of identities
  * a user blocks).
  */
@@ -5725,6 +5784,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new() !== 49425) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_constructor_polycentriccore_new");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload() !== 35652) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities() !== 52117) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities");
     }
@@ -5802,6 +5864,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity() !== 43194) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain() !== 11511) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity() !== 55936) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity");

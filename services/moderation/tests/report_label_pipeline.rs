@@ -272,6 +272,8 @@ fn make_identity(key: &SigningKey) -> (String, EventBundle) {
         signing_keys: vec![],
         revocation_bounds: vec![],
         servers: None,
+        recovery_key: None,
+        recovery_signature: None,
     };
     let identity = content.derive_hex_key();
     let bundle = signed_bundle(

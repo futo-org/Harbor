@@ -1,6 +1,6 @@
 use polycentric_common::models::protos_v2::{Content, ContentDigest};
 use prost::Message;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map::Entry};
 
 /// Content digest as a stable map key: (digest type, hash bytes).
 type DigestKey = (i32, Vec<u8>);
@@ -21,8 +21,16 @@ impl ContentStore {
     }
 
     /// Insert serialized content bytes keyed by digest.
-    pub fn insert(&mut self, digest: &ContentDigest, content_bytes: Vec<u8>) {
-        self.contents.insert(digest_key(digest), content_bytes);
+    /// No-op when an entry with the given digest is already present.
+    /// Returns whether an insertion was made.
+    pub fn insert(&mut self, digest: &ContentDigest, content_bytes: Vec<u8>) -> bool {
+        match self.contents.entry(digest_key(digest)) {
+            Entry::Vacant(slot) => {
+                slot.insert(content_bytes);
+                true
+            }
+            Entry::Occupied(_) => false,
+        }
     }
 
     /// Get the raw content bytes for a digest.
