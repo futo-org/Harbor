@@ -25,7 +25,7 @@ function renderSegment(segment: TextSegment, key: number, size: PostTextSize) {
       key={key}
       variant="secondary"
       color="primary_500"
-      fontWeight="bold"
+      fontWeight="regular"
       {...size}
       onPress={(e) => {
         e.stopPropagation?.();
