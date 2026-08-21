@@ -71,13 +71,11 @@ jest.mock('@/src/features/moderation/hooks/useModerationStatus', () => ({
 // gate the editing actions.
 // We will mock it to always be authorized unless changed.
 let mockCanRotate = true;
-jest.mock('@/src/common/lib/polycentric-hooks', () => ({
-  usePolycentric: () => ({
-    activeIdentityKey: 'identity',
-    currentKeyPair: { publicKey: 'public-key' },
-    identityManager: {
-      isRotationKeyForIdentity: () => mockCanRotate,
-    },
+jest.mock('@/src/common/lib/polycentric-hooks/useCurrentAuthorization', () => ({
+  useCurrentAuthorization: () => ({
+    canRotate: mockCanRotate,
+    canSign: mockCanRotate,
+    refresh: () => {},
   }),
 }));
 
