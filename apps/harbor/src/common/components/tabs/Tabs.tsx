@@ -10,6 +10,7 @@ import {
   useState,
   type ComponentProps,
   type ReactElement,
+  type ReactNode,
 } from 'react';
 import { type LayoutChangeEvent, Pressable, View } from 'react-native';
 import Animated, {
@@ -17,12 +18,13 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { TABS_HEIGHT } from './metrics';
+import Icon from '../Icon';
+import { TABS_HEIGHT } from '../metrics';
 import {
   HorizontalScrollGroup,
   type HorizontalScrollGroupRef,
   Text,
-} from './primitives';
+} from '../primitives';
 
 /** See `expand` in `TabsProps`. */
 const ExpandContext = createContext(true);
@@ -217,10 +219,14 @@ export function Tabs({
 type TabProps = {
   children: string;
   active?: boolean;
+  /** Renders the tab's menu, marked by a down chevron; pressing the tab
+   *  while active opens it instead of firing `onPress`. */
+  menu?: (props: { open: boolean; onClose: () => void }) => ReactNode;
 } & Omit<ComponentProps<typeof Pressable>, 'children' | 'style'>;
 
-function Tab({ children, active = false, ...props }: TabProps) {
+function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
   const { theme } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
   const expand = useContext(ExpandContext);
   const index = useContext(TabIndexContext);
   const report = useContext(SlidingIndicatorContext);
@@ -249,59 +255,81 @@ function Tab({ children, active = false, ...props }: TabProps) {
     : undefined;
 
   return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      onLayout={onSlotLayout}
-      style={({ hovered, pressed }) => [
-        expand && Atoms.flex_grow_1,
-        Atoms.flex_row,
-        Atoms.align_center,
-        Atoms.justify_center,
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
-      ]}
-      {...props}
-    >
-      <View
-        onLayout={onLabelLayout}
-        style={[
-          Atoms.p_md,
-          Atoms.self_center,
+    <>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active }}
+        onPress={(event) => {
+          if (menu && active) {
+            setMenuOpen(true);
+            return;
+          }
+          onPress?.(event);
+        }}
+        onLayout={onSlotLayout}
+        style={({ hovered, pressed }) => [
+          expand && Atoms.flex_grow_1,
+          Atoms.flex_row,
+          Atoms.align_center,
           Atoms.justify_center,
-          Atoms.items_center,
-          { minWidth: 56 },
+          (hovered || pressed) && {
+            backgroundColor: theme.palette.neutral_25,
+          },
         ]}
+        {...props}
       >
-        <Text
-          variant="secondary"
-          // Content-sized tabs keep a constant weight so they don't change
-          // width when selected.
-          fontWeight={expand ? (active ? 'bold' : 'regular') : 'semibold'}
-          color={active ? 'neutral_900' : 'neutral_500'}
-          selectable={false}
+        <View
+          onLayout={onLabelLayout}
+          style={[
+            Atoms.p_md,
+            Atoms.flex_row,
+            Atoms.gap_xs,
+            Atoms.self_center,
+            Atoms.justify_center,
+            Atoms.items_center,
+            { minWidth: 56 },
+          ]}
         >
-          {children}
-        </Text>
-        {/* With a sliding indicator the bar draws the underline instead. */}
-        {active && !report && (
-          <View
-            style={[
-              Atoms.absolute,
-              Atoms.self_center,
-              Atoms.w_full,
-              Atoms.rounded_full,
-              {
-                height: INDICATOR_HEIGHT,
-                bottom: 0,
-                backgroundColor: theme.palette.primary_500,
-              },
-            ]}
-          />
-        )}
-      </View>
-    </Pressable>
+          <Text
+            variant="secondary"
+            // Content-sized tabs keep a constant weight so they don't change
+            // width when selected.
+            fontWeight={expand ? (active ? 'bold' : 'regular') : 'semibold'}
+            color={active ? 'neutral_900' : 'neutral_500'}
+            selectable={false}
+          >
+            {children}
+          </Text>
+          {menu && (
+            <Icon
+              name="chevronDown"
+              size={14}
+              color={active ? 'neutral_900' : 'neutral_500'}
+              // The glyph's ink centers on the cap height; sink it to the
+              // mostly-lowercase label's x-height center.
+              style={{ transform: [{ translateY: 2 }] }}
+            />
+          )}
+          {/* With a sliding indicator the bar draws the underline instead. */}
+          {active && !report && (
+            <View
+              style={[
+                Atoms.absolute,
+                Atoms.self_center,
+                Atoms.w_full,
+                Atoms.rounded_full,
+                {
+                  height: INDICATOR_HEIGHT,
+                  bottom: 0,
+                  backgroundColor: theme.palette.primary_500,
+                },
+              ]}
+            />
+          )}
+        </View>
+      </Pressable>
+      {menu?.({ open: menuOpen, onClose: () => setMenuOpen(false) })}
+    </>
   );
 }
 

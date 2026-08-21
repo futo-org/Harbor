@@ -2,7 +2,9 @@ import { Fab } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
+import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
+import { TabFilterSheet } from '@/src/common/components/tabs';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
@@ -12,9 +14,15 @@ import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { SearchBar } from '../search/SearchBar';
 import { FeedPage } from './FeedPage';
-import { FeedTabs, SORT_TABS, SORT_TAB_VALUES } from './FeedTabs';
+import {
+  EXPLORE_TABS,
+  EXPLORE_TAB_VALUES,
+  FeedTabs,
+  SORT_OPTIONS,
+} from './FeedTabs';
 import type { FeedSortOption } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
+import { useFeedSettingsStore } from './hooks/useFeedSettingsStore';
 import { useFeedTabs } from './hooks/useFeedTabs';
 
 function ExplorePage({
@@ -41,6 +49,13 @@ export default function ExploreScreen() {
 
   const ready = useEagerLoad();
   const { tab, hydrated, onTabPress } = useFeedTabs('explore');
+  const sort = useFeedSettingsStore((state) => state.feeds.explore.sort);
+
+  const onSortChange = (next: FeedSortOption) => {
+    useFeedSettingsStore.getState().setFeedSettings('explore', {
+      sort: next,
+    });
+  };
 
   const renderTabBar = ({
     dragProgress,
@@ -71,10 +86,23 @@ export default function ExploreScreen() {
         />
       )}
       <FeedTabs
-        tabs={SORT_TABS}
+        tabs={EXPLORE_TABS}
         active={tab}
         onPress={onTabPress}
         progress={dragProgress}
+        menu={({ open, onClose }) => (
+          <TabFilterSheet
+            open={open}
+            onClose={onClose}
+            title="Sort by"
+            options={SORT_OPTIONS}
+            selected={sort}
+            onChange={(next) => {
+              onSortChange(next);
+              onClose();
+            }}
+          />
+        )}
       />
     </>
   );
@@ -85,17 +113,13 @@ export default function ExploreScreen() {
         {/* Held back so the pager does not open on the default tab first. */}
         {hydrated ? (
           <PagerView
-            values={SORT_TAB_VALUES}
+            values={EXPLORE_TAB_VALUES}
             active={tab}
             onChange={onTabPress}
             renderTabBar={renderTabBar}
           >
-            <ExplorePage sort="top" active={tab === 'top'} ready={ready} />
-            <ExplorePage
-              sort="latest"
-              active={tab === 'latest'}
-              ready={ready}
-            />
+            <ExplorePage sort={sort} active={tab === 'posts'} ready={ready} />
+            <ListEmpty>No people to suggest yet</ListEmpty>
           </PagerView>
         ) : null}
 

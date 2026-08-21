@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import { Sheet } from '@/src/common/components/sheet';
-import { Tabs } from '@/src/common/components/Tabs';
+import { Tabs } from '@/src/common/components/tabs';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing } from '@/src/common/theme';

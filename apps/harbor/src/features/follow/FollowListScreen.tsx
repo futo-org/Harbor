@@ -1,6 +1,6 @@
 import { Screen } from '@/src/common/components/layout';
 import { PagerView } from '@/src/common/components/PagerView';
-import { Tabs } from '@/src/common/components/Tabs';
+import { Tabs } from '@/src/common/components/tabs';
 import { Routes } from '@/src/common/constants';
 import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';

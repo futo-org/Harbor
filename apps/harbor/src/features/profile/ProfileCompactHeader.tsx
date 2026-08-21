@@ -1,5 +1,5 @@
 import { BackButton } from '@/src/common/components/composites';
-import { TABS_HEIGHT } from '@/src/common/components/Tabs';
+import { TABS_HEIGHT } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import {
   Button,

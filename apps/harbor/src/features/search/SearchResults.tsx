@@ -2,7 +2,7 @@ import Icon from '@/src/common/components/Icon';
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
-import { Tabs } from '@/src/common/components/Tabs';
+import { Tabs } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';

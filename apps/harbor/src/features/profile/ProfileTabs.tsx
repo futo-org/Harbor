@@ -1,4 +1,4 @@
-import { Tabs } from '@/src/common/components/Tabs';
+import { Tabs } from '@/src/common/components/tabs';
 import type { SharedValue } from 'react-native-reanimated';
 import { useProfileContext } from './ProfileContext';
 
