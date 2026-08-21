@@ -5,6 +5,7 @@ import {
   usePolycentric,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import {
   assembleIdentityBackup,
@@ -44,10 +45,6 @@ async function createNewBackup(client: PolycentricClient) {
 
   await client.sync(SyncStrategy.PARTIAL_PULL);
 
-  if (!client.identityManager.isRotationKeyForIdentity(identity, myPublicKey)) {
-    throw new Error('Non-rotation keys cannot create backups');
-  }
-
   const privateKey = await client.identityManager.rotateRecoveryKey();
   const backup = assembleIdentityBackup(client, privateKey);
 
@@ -63,8 +60,19 @@ export default function CreateBackupScreen() {
 
   const client = usePolycentric();
   const { currentIdentity } = usePolycentricContext();
+  const { canRotate } = useCurrentAuthorization();
 
-  const [state, setState] = useState<NewBackupState>({ stage: 'warning' });
+  const [state, setState] = useState<NewBackupState>(() => {
+    if (!canRotate) {
+      return {
+        stage: 'failed',
+        message: 'Only rotation keys can create backups',
+      };
+    }
+
+    return { stage: 'warning' };
+  });
+
   const [hadExisting] = useState(() => !!currentIdentity?.recoveryKey);
 
   const onContinue = () => {
