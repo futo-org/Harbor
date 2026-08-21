@@ -6,12 +6,10 @@ import { ClaimListItem } from '@/src/features/verifications/claims/ClaimListItem
 import { ClaimSkeletonList } from '@/src/features/verifications/claims/ClaimSkeleton';
 import { useRequestedVerifications } from '@/src/features/verifications/hooks/useRequestedVerifications';
 import type { ClaimWithStatus } from '@/src/features/verifications/utils/claim-status';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfileContext } from './ProfileContext';
-import { ClaimCreateSheet } from '@/src/features/verifications/claims/create/ClaimCreateSheet';
-import { ClaimActionRow } from '../verifications/claims/ClaimActionRow';
 
 /**
  * The profile's Verifies tab: claims by others that the identity verified.
@@ -30,8 +28,6 @@ export function ProfileVerifiesList({
 
   const requested = useRequestedVerifications(identityKey ?? undefined, active);
 
-  const [requestOpen, setRequestOpen] = useState(false);
-
   const verified = useMemo(
     () =>
       requested.claims.filter((claim) =>
@@ -42,52 +38,38 @@ export function ProfileVerifiesList({
     [requested.claims, identityKey],
   );
 
+  // An unopened page has nothing and is not fetching, so it stands as a
+  // skeleton rather than claiming there are no vouches.
+  const pending = !active && verified.length === 0;
+
   return (
-    <>
-      <List<ClaimWithStatus>
-        data={verified}
-        keyExtractor={(claim) =>
-          `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
-        }
-        renderItem={({ item }) => <ClaimListItem claim={item} />}
-        // Requesting a verification is meaningless on your own profile.
-        ListHeaderComponent={
-          !isSelf && identityKey ? (
-            <ClaimActionRow
-              title="Request a verification"
-              onPress={() => setRequestOpen(true)}
-            />
-          ) : null
-        }
-        ListEmptyComponent={
-          requested.isLoading ? (
-            <ClaimSkeletonList count={3} />
-          ) : (
-            <ListEmpty>
-              {isSelf
-                ? "You haven't vouched for any claims yet."
-                : 'No vouches yet.'}
-            </ListEmpty>
-          )
-        }
-        contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
-        refreshControl={
-          isWeb ? undefined : (
-            <RefreshControl
-              refreshing={requested.isRefreshing}
-              onRefresh={requested.refresh}
-            />
-          )
-        }
-        showsVerticalScrollIndicator={false}
-      />
-      {!isSelf && identityKey && (
-        <ClaimCreateSheet
-          open={requestOpen}
-          onClose={() => setRequestOpen(false)}
-          requestFrom={identityKey}
-        />
-      )}
-    </>
+    <List<ClaimWithStatus>
+      data={verified}
+      keyExtractor={(claim) =>
+        `${claim.identity}-${claim.keyFingerprint}-${claim.sequence}`
+      }
+      renderItem={({ item }) => <ClaimListItem claim={item} />}
+      ListEmptyComponent={
+        requested.isLoading || pending ? (
+          <ClaimSkeletonList count={3} />
+        ) : (
+          <ListEmpty>
+            {isSelf
+              ? "You haven't vouched for any claims yet."
+              : 'No vouches yet.'}
+          </ListEmpty>
+        )
+      }
+      contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.lg }}
+      refreshControl={
+        isWeb ? undefined : (
+          <RefreshControl
+            refreshing={requested.isRefreshing}
+            onRefresh={requested.refresh}
+          />
+        )
+      }
+      showsVerticalScrollIndicator={false}
+    />
   );
 }
