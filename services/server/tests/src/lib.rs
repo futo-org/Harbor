@@ -28,6 +28,21 @@ pub fn grpc_addr() -> String {
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
+/// JWT auth token audience.
+fn audience() -> String {
+    match std::env::var("POLYCENTRIC_ALLOW_HOSTS") {
+        Ok(hosts) => hosts
+            .split(',')
+            .map(str::trim)
+            .filter(|host| !host.is_empty())
+            .next()
+            .expect("invalid POLYCENTRIC_ALLOW_HOSTS")
+            .to_owned(),
+        Err(_) => std::env::var("POLYCENTRIC_SERVER_NAME")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string()),
+    }
+}
+
 /// 2025-01-15T12:00:00Z in milliseconds.
 pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
 pub const HOUR: u64 = 3_600_000;
@@ -435,7 +450,7 @@ impl TestClient {
         let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
         let payload = ServerJwtClaims {
             iss: self.identity().to_owned(),
-            aud: grpc_addr(),
+            aud: audience(),
             iat: now,
             exp: now + (24 * 60 * 60),
         };
