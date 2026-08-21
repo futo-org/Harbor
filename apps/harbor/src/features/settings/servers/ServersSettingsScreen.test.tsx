@@ -67,6 +67,18 @@ jest.mock('@/src/features/moderation/hooks/useModerationStatus', () => ({
   }),
 }));
 
+// The only authorization check in the servers settings screen is used to
+// gate the editing actions.
+// We will mock it to always be authorized unless changed.
+let mockCanRotate = true;
+jest.mock('@/src/common/lib/polycentric-hooks/useCurrentAuthorization', () => ({
+  useCurrentAuthorization: () => ({
+    canRotate: mockCanRotate,
+    canSign: mockCanRotate,
+    refresh: () => {},
+  }),
+}));
+
 const mockHook = {
   servers: [] as string[],
   suggestedServers: [] as string[],
@@ -89,6 +101,7 @@ async function renderScreen() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockCanRotate = true;
   mockHook.servers = [];
   mockHook.suggestedServers = [];
   mockHook.isBusy = false;
@@ -111,6 +124,25 @@ describe('server list', () => {
 
     await fireEvent.press(screen.getAllByTestId('icon-remove')[1]);
     expect(mockHook.removeServer).toHaveBeenCalledWith('https://two.example');
+  });
+});
+
+describe('rotation gate', () => {
+  it('hides every editing affordance for a non-rotation key', async () => {
+    mockCanRotate = false;
+    mockHook.servers = ['https://one.example'];
+    mockHook.suggestedServers = ['https://seed.example'];
+    const screen = await renderScreen();
+
+    expect(screen.getByText('https://one.example')).toBeTruthy();
+    expect(screen.queryByTestId('icon-remove')).toBeNull();
+    expect(screen.queryByTestId('icon-addOutline')).toBeNull();
+    expect(
+      screen.queryByPlaceholderText('https://server.example.com'),
+    ).toBeNull();
+
+    await fireEvent.press(screen.getByText('https://seed.example'));
+    expect(mockHook.addServer).not.toHaveBeenCalled();
   });
 });
 

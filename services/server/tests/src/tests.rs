@@ -3015,7 +3015,8 @@ async fn recommended_feed_does_not_include_posts_reacted_self() {
 }
 
 #[tokio::test]
-async fn recommended_feed_does_not_include_own_posts_even_with_followee_interaction() {
+async fn recommended_feed_does_not_include_own_posts_even_with_followee_interaction()
+ {
     let mut follower_client = TestClient::new().await;
     follower_client.post_text("Post 1", DEFAULT_CREATED_AT);
     let post1_key = follower_client.get_last_event_key();

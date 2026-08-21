@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { AddServerForm } from './AddServerForm';
 import { ServerRow } from './ServerRow';
 import { useServerSettings } from './useServerSettings';
+import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 export function ServersSettingsSheet() {
   const {
@@ -20,6 +21,7 @@ export function ServersSettingsSheet() {
     removeServer,
   } = useServerSettings();
   const { moderatedServers } = useModerationStatus();
+  const { canRotate } = useCurrentAuthorization();
 
   // The dashboard is a route outside this sheet's stack, so close the
   // sheet before pushing it.
@@ -54,8 +56,8 @@ export function ServersSettingsSheet() {
               <ServerRow
                 key={server}
                 server={server}
-                action="remove"
-                onAction={() => removeServer(server)}
+                status="active"
+                onAction={canRotate ? () => removeServer(server) : undefined}
                 trailing={
                   moderatedServers.includes(server) ? (
                     <IconButton
@@ -86,14 +88,20 @@ export function ServersSettingsSheet() {
               <ServerRow
                 key={server}
                 server={server}
-                action="add"
-                onAction={() => addServer(server)}
+                status="suggested"
+                onAction={canRotate ? () => addServer(server) : undefined}
               />
             ))}
           </View>
         )}
 
-        <AddServerForm isBusy={isBusy} error={addError} onSubmit={addServer} />
+        {canRotate ? (
+          <AddServerForm
+            isBusy={isBusy}
+            error={addError}
+            onSubmit={addServer}
+          />
+        ) : null}
       </Sheet.Content>
     </Sheet>
   );
