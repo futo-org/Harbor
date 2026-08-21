@@ -241,19 +241,16 @@ impl Query {
                 .from(FOLLOWING_TABLE);
 
             query = query.filter({
-                let condition = Condition::any()
+                let mut condition = Condition::any()
                     // Created by an identity the `for_identity` is following.
                     .add(
                         EventModel::Column::Identity
                             .in_subquery(select_followee.clone()),
                     );
 
-                if posts_created_only {
-                    // Only include posts created by someone `for_identity` is following.
-                    condition
-                } else {
+                if !posts_created_only {
                     // Include additional interactions.
-                    condition
+                    condition = condition
                         // Reacted on by an identity the `for_identity` is following.
                         .add(EventModel::Column::Id.in_subquery({
                             let mut q = SelectStatement::new();
@@ -299,6 +296,15 @@ impl Query {
                             q
                         }))
                 }
+
+                if !include_own_posts {
+                    // Explicitly exclude any posts made by the user themselves.
+                    condition = Condition::all()
+                        .add(EventModel::Column::Identity.ne(for_identity))
+                        .add(condition);
+                }
+
+                condition
             });
         }
 
