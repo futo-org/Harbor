@@ -5,6 +5,7 @@ import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/Sett
 import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
+import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { TabFilterSheet } from '@/src/common/components/tabs';
@@ -60,6 +61,7 @@ export default function FeedScreen() {
     useFeedSettingsStore.getState().setFeedSettings('following', {
       sort: next,
     });
+    emitFocusedRefresh();
   };
 
   const renderTabBar = ({

@@ -7,6 +7,7 @@ import { PagerView } from '@/src/common/components/PagerView';
 import { TabFilterSheet } from '@/src/common/components/tabs';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
+import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
@@ -55,6 +56,7 @@ export default function ExploreScreen() {
     useFeedSettingsStore.getState().setFeedSettings('explore', {
       sort: next,
     });
+    emitFocusedRefresh();
   };
 
   const renderTabBar = ({
