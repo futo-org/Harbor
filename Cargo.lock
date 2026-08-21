@@ -2785,11 +2785,14 @@ dependencies = [
 name = "integration-tests"
 version = "0.0.1"
 dependencies = [
+ "base64",
  "ed25519-dalek",
  "getrandom 0.4.3",
+ "hex",
  "polycentric-common",
  "prost",
  "rand 0.10.1",
+ "serde_json",
  "sha2 0.10.9",
  "tokio",
  "tonic",

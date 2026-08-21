@@ -1,4 +1,7 @@
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
+use polycentric_common::jwt::ServerJwtClaims;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
@@ -17,6 +20,7 @@ use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::mem::take;
+use std::time::SystemTime;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
@@ -419,6 +423,34 @@ impl TestClient {
             .put_events(PutEventsRequest { event_bundles })
             .await
             .expect("put_events failed");
+    }
+
+    pub fn create_auth_token(&self) -> String {
+        let header = serde_json::json!({
+            "alg": "EdDSA",
+            "typ": "JWT",
+            "kid": hex::encode(self.key.verifying_key().as_bytes()),
+        });
+
+        let now = SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs();
+        let payload = ServerJwtClaims {
+            iss: self.identity().to_owned(),
+            aud: grpc_addr(),
+            iat: now,
+            exp: now + (24 * 60 * 60),
+        };
+
+        let to_sign = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload).unwrap()),
+        );
+        let signature = self.key.sign(to_sign.as_bytes());
+
+        format!(
+            "Bearer {to_sign}.{}",
+            URL_SAFE_NO_PAD.encode(signature.to_bytes().as_slice()),
+        )
     }
 }
 

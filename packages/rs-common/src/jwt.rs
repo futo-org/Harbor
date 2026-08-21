@@ -4,7 +4,7 @@
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::signing::verify_signature;
 
@@ -29,7 +29,7 @@ struct Header {
     kid: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ServerJwtClaims {
     /// The identity authenticating (its identity key).
     pub iss: String,

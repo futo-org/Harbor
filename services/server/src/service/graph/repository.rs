@@ -2,11 +2,13 @@ use ::entity::block_model as BlockModel;
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
+use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use prost::Message;
-use sea_orm::sea_query::Expr;
-use sea_orm::sea_query::extension::postgres::PgFunc;
 use sea_orm::*;
+use sea_query::{
+    CommonTableExpression, Expr, Func, PgFunc, SelectStatement, WithClause,
+};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
@@ -18,8 +20,39 @@ use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
+use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 
 const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
+
+#[derive(Debug)]
+pub struct FollowSuggestionEvent {
+    pub event: EventModel::Model,
+    pub content: ContentModel::Model,
+    pub followers: Vec<String>,
+}
+
+impl TryGetableMany for FollowSuggestionEvent {
+    fn try_get_many(
+        res: &QueryResult,
+        _: &str,
+        _: &[String],
+    ) -> Result<Self, TryGetError> {
+        Self::try_get_many_by_index(res)
+    }
+
+    fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
+        Ok(FollowSuggestionEvent {
+            event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
+            content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
+            followers: TryGetable::try_get_by(res, FOLLOWERS_COLUMN)?,
+        })
+    }
+}
+
+const FOLLOWERS_COLUMN: &str = "followers";
+
+/// Data to sort [`FollowSuggestionEvent`].
+pub type FollowSuggestionsSortedBy = i32;
 
 pub struct Query;
 
@@ -204,6 +237,137 @@ impl Query {
         let query = follow_events_query()
             .filter(ContentFollowModel::Column::IdentityId.eq(identity));
         page_follow_events(db, query, limit, cursor_filter).await
+    }
+
+    pub async fn suggest_follow(
+        db: &DbConn,
+        identity: &str,
+        cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
+        limit: u32,
+    ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
+        let cursor_filter =
+            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
+
+        // List of identities the `identity` is following.
+        let mut following = SelectStatement::new();
+        following
+            .column(FollowModel::Column::Followee)
+            .from(FollowModel::Entity)
+            .and_where(FollowModel::Column::Follower.eq(identity));
+        // List of identities that are followed by identities that `identity`
+        // follows. Are you following this? In other words in you follow Alice,
+        // and Alice follows Bob, this list will include Bob.
+        const SUGGESTIONS_TABLE: &str = "suggestions";
+        let mut suggestions = SelectStatement::new();
+        suggestions
+            .column(FollowModel::Column::Followee)
+            // NOTE: the tuple (followee, follower) is not unique in the follow
+            // table because the user can create multiple valid events that
+            // follow the same identity. As a result we can return duplicate
+            // identities here.
+            //
+            // If this becomes an issue we can fix this by calling
+            // `array_agg(DISTINCT followers)`, except currently SeaORM doesn't
+            // allow use to do this easily as it doesn't expose
+            // `FunctionCall::arg_with` or a similar function to set DISTINCT in
+            // the function call.
+            .expr_as(
+                PgFunc::array_agg(Expr::col(FollowModel::Column::Follower)),
+                FOLLOWERS_COLUMN,
+            )
+            .from(FollowModel::Entity)
+            .and_where(FollowModel::Column::Follower.in_subquery(following))
+            .group_by_col(FollowModel::Column::Followee);
+
+        let mut query = EventModel::Entity::find().select_only();
+        QuerySelect::query(&mut query).with_cte({
+            let mut c = WithClause::new();
+            let mut cte = CommonTableExpression::new();
+            cte.table_name(SUGGESTIONS_TABLE).query(suggestions);
+            c.recursive(false).cte(cte);
+            c
+        });
+        query = select_model_columns(
+            query,
+            EVENT_PREFIX,
+            EventModel::Column::iter(),
+        );
+        query = select_model_columns(
+            query,
+            CONTENT_PREFIX,
+            ContentModel::Column::iter(),
+        );
+        query = query.join(JoinType::InnerJoin, content_join());
+        QuerySelect::query(&mut query)
+            .inner_join(
+                SUGGESTIONS_TABLE,
+                Expr::col(EventModel::Column::Identity.as_column_ref()).eq(
+                    Expr::col((
+                        SUGGESTIONS_TABLE,
+                        FollowModel::Column::Followee,
+                    )),
+                ),
+            )
+            .expr_as(
+                Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)),
+                FOLLOWERS_COLUMN,
+            )
+            .cond_where(
+                Expr::col(EventModel::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(collections::IDENTITY.into())),
+            );
+
+        // NOTE: this ordering isn't very stable, as users following and
+        // unfollowing users it will break this ordering between calls.
+        let order_column = Expr::from(
+            Func::cust("array_length")
+                .arg(Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)))
+                .arg(Expr::Constant(1.into())),
+        );
+        QuerySelect::query(&mut query)
+            .order_by_expr(order_column.clone(), Order::Desc)
+            .order_by_expr(
+                Expr::col(EventModel::Column::Id.as_column_ref()),
+                Order::Asc,
+            );
+
+        match cursor_filter {
+            CursorFilter::Forward(cur) => match cur {
+                Cursor::Start => { /* No filtering. */ }
+                Cursor::Mid(marker) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .lt(Expr::tuple([
+                            Expr::from(marker.sorted_by),
+                            Expr::from(marker.event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => return Ok(Vec::new()),
+            },
+            CursorFilter::Backward(cur) => match cur {
+                Cursor::Start => return Ok(Vec::new()),
+                Cursor::Mid(marker) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .gt(Expr::tuple([
+                            Expr::from(marker.sorted_by),
+                            Expr::from(marker.event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => { /* No filtering. */ }
+            },
+        }
+        query = query.limit(Some((limit + 1).into())); // + 1 for pagination.
+
+        query.into_tuple().all(db).await
     }
 }
 
