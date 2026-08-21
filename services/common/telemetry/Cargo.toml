@@ -11,4 +11,4 @@ opentelemetry-prometheus.workspace = true
 prometheus.workspace = true
 tokio = { workspace = true, features = ["rt", "net"] }
 tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["fmt"] }
+tracing-subscriber = { workspace = true, features = ["fmt", "ansi"] }
