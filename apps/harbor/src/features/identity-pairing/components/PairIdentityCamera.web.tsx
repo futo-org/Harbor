@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
+import { hexToBytes } from '@polycentric/react-native';
 
 function supportsGetUserMedia() {
   return (
@@ -99,7 +100,13 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   const handleContinue = () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-    onCodeScanned(trimmed);
+
+    // Invalid hex will pass through as an empty string that fails to parse
+    // in the claimer hook and displays the correct error message.
+    const bytes = hexToBytes(trimmed);
+    const code = new TextDecoder().decode(bytes);
+
+    onCodeScanned(code);
   };
 
   return (
