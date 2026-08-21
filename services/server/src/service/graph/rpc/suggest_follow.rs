@@ -80,7 +80,7 @@ async fn hydrate(
     let identities = fetched
         .rows
         .iter()
-        .map(|row| {
+        .flat_map(|row| {
             [
                 slice::from_ref(&row.event.identity),
                 row.followers.as_slice(),
@@ -89,9 +89,8 @@ async fn hydrate(
             .flatten()
             .map(Clone::clone)
         })
-        .flatten()
         .collect();
-    let profile_events_fut = list_profile_events(&ctx.service, identities);
+    let profile_events_fut = list_profile_events(ctx.service, identities);
 
     let blocked_fut = Query::blocked_set_for_caller(ctx);
 
