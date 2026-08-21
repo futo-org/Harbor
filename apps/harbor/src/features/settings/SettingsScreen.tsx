@@ -28,6 +28,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Linking, Switch, View } from 'react-native';
+import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 function AppearanceSettingRow() {
   const { theme, setActiveThemeName } = useTheme();
@@ -80,6 +81,7 @@ export default function SettingsTabScreen() {
   usePageTitle('Settings');
 
   const { identityKey } = useCurrentIdentity();
+  const { canRotate } = useCurrentAuthorization();
 
   return (
     <Screen>
@@ -111,12 +113,20 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="Identity">
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.pairIdentity)}
+                  onPress={
+                    canRotate
+                      ? () => router.push(Routes.tabs.settings.pairIdentity)
+                      : undefined
+                  }
                 >
                   <Text variant="body">Pair Identity</Text>
                 </ListItemWrapper>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.createBackup)}
+                  onPress={
+                    canRotate
+                      ? () => router.push(Routes.tabs.settings.createBackup)
+                      : undefined
+                  }
                 >
                   <Text variant="body">Back Up Identity</Text>
                 </ListItemWrapper>
@@ -131,7 +141,9 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={() => router.push(Routes.tabs.settings.servers)}
                 >
-                  <Text variant="body">Configure servers</Text>
+                  <Text variant="body">
+                    {canRotate ? 'Configure servers' : 'View servers'}
+                  </Text>
                 </ListItemWrapper>
               </ListItemGroup>
 
@@ -206,16 +218,17 @@ function ListItemWrapper({
   onPress,
 }: {
   children: React.ReactNode;
-  onPress: () => void;
+  onPress?: () => void;
 }) {
   return (
-    <ListItem onPress={onPress}>
+    <ListItem pressable={!!onPress} onPress={onPress}>
       <View
         style={[
           Atoms.flex_row,
           Atoms.items_center,
           Atoms.justify_between,
           Atoms.pl_xs,
+          !onPress && { opacity: 0.5 },
         ]}
       >
         {children}
