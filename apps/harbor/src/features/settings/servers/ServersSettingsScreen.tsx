@@ -9,8 +9,7 @@ import { View } from 'react-native';
 import { AddServerForm } from './AddServerForm';
 import { ServerRow } from './ServerRow';
 import { useServerSettings } from './useServerSettings';
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { useState } from 'react';
+import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 export function ServersSettingsSheet() {
   const {
@@ -22,15 +21,7 @@ export function ServersSettingsSheet() {
     removeServer,
   } = useServerSettings();
   const { moderatedServers } = useModerationStatus();
-
-  const client = usePolycentric();
-
-  const [canRotate] = useState(() => {
-    const myIdentity = client.activeIdentityKey;
-    const myKey = client.currentKeyPair?.publicKey;
-    if (!myIdentity || !myKey) return false;
-    return client.identityManager.isRotationKeyForIdentity(myIdentity, myKey);
-  });
+  const { canRotate } = useCurrentAuthorization();
 
   // The dashboard is a route outside this sheet's stack, so close the
   // sheet before pushing it.
