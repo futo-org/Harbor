@@ -48,5 +48,6 @@ export function useIdentityFeed(
     loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
+    queryKey,
   };
 }
