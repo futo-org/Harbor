@@ -14,6 +14,7 @@ import { useVerifierIdentities } from './useVerifierIdentities';
 
 export type ClaimVerifiersResult = ClaimVerificationStatus & {
   isLoading: boolean;
+  isRefreshing: boolean;
   refresh: () => void;
 };
 
@@ -118,6 +119,7 @@ export function useClaimVerifiers(
   return {
     ...status,
     isLoading: targets.isLoading || verifies.isLoading,
+    isRefreshing: targets.hasPendingRefresh || verifies.hasPendingRefresh,
     refresh: () => {
       targets.refresh(RefreshStrategy.Lazy);
       verifies.refresh(RefreshStrategy.Lazy);

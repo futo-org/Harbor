@@ -2,7 +2,7 @@ import {
   eventKeyId,
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
+import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, Query, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeFieldValue } from '../utils/schemas';
@@ -76,7 +76,13 @@ export function useClaimById(
   identityId: string | undefined,
   keyFingerprint: string | undefined,
   sequence: bigint | undefined,
-): { claim: DecodedClaim | null; isLoading: boolean; error: Error | null } {
+): {
+  claim: DecodedClaim | null;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: Error | null;
+  refresh: () => void;
+} {
   const enabled = !!identityId && sequence != null && !!keyFingerprint;
 
   const query = useQuery(
@@ -119,6 +125,8 @@ export function useClaimById(
   return {
     claim,
     isLoading: query.isLoading,
+    isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
+    refresh: () => query.refresh(RefreshStrategy.Lazy),
   };
 }

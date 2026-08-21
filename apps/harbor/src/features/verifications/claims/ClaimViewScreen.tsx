@@ -1,9 +1,10 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
+import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { isIOS } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
@@ -36,16 +37,24 @@ export default function ViewClaimScreen() {
     requestVerification?: string;
   }>();
 
-  const { claim, isLoading } = useClaimById(
+  const {
+    claim,
+    isLoading,
+    isRefreshing: claimRefreshing,
+    refresh: refreshClaim,
+  } = useClaimById(
     identityId,
     keyFingerprint,
     sequence ? BigInt(sequence) : undefined,
   );
 
-  const { verifiers, verifiedCount, totalCount } = useClaimVerifiers(
-    claim?.id,
-    claim?.schemaName,
-  );
+  const {
+    verifiers,
+    verifiedCount,
+    totalCount,
+    isRefreshing: verifiersRefreshing,
+    refresh: refreshVerifiers,
+  } = useClaimVerifiers(claim?.id, claim?.schemaName);
 
   const claimType = CLAIM_TYPES.find((t) => t.name === claim?.schemaName);
   // Platform claims chip as their platform (brand logo + name).
@@ -74,15 +83,27 @@ export default function ViewClaimScreen() {
               right={claim ? <ClaimMenu claim={claim} /> : undefined}
             />
           }
+          style={Atoms.flex_1}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            isWeb ? undefined : (
+              <PullRefreshControl
+                refreshing={claimRefreshing || verifiersRefreshing}
+                onRefresh={() => {
+                  refreshClaim();
+                  refreshVerifiers();
+                }}
+              />
+            )
+          }
           contentContainerStyle={[
-            Atoms.flex_1,
+            Atoms.flex_grow_1,
             // iOS's sliding header overhangs the scroll view by the topbar
             // height; pad it back so the bottom actions start on screen.
             { paddingBottom: insets.bottom + (isIOS ? TOPBAR_HEIGHT : 0) },
           ]}
         >
-          <View style={[Atoms.p_lg, Atoms.gap_lg, Atoms.flex_1]}>
+          <View style={[Atoms.p_lg, Atoms.gap_lg, Atoms.flex_grow_1]}>
             {isLoading && !claim && (
               <View style={[Atoms.items_center, Atoms.mt_lg]}>
                 <ActivityIndicator />
