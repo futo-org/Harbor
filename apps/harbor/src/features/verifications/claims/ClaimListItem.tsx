@@ -53,7 +53,8 @@ export function ClaimListItem({
     >
       <View
         style={[
-          Atoms.m_xs,
+          Atoms.my_xs,
+          Atoms.ml_xs,
           Atoms.p_sm,
           {
             backgroundColor: isVerified
