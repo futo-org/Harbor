@@ -1,0 +1,75 @@
+diff --git a/ios/ExpoUITouchHandlerHelper.mm b/ios/ExpoUITouchHandlerHelper.mm
+index eb34427..d5447ac 100644
+--- a/ios/ExpoUITouchHandlerHelper.mm
++++ b/ios/ExpoUITouchHandlerHelper.mm
+@@ -7,10 +7,20 @@
+ @implementation ExpoUITouchHandlerHelper
+ 
+ + (nullable UIGestureRecognizer *)createAndAttachTouchHandlerForView:(UIView *)view {
+-  for (UIGestureRecognizer *recognizer in [view.gestureRecognizers copy]) {
+-    if ([recognizer isKindOfClass:[RCTSurfaceTouchHandler class]]) {
+-      return nil;
++  // Skip when a surface touch handler already covers this view — its own or an
++  // ancestor's. An inline-hosted view sits under the root surface's handler;
++  // adding a second one streams every touch twice, and the duplicate start
++  // re-runs the responder negotiation, terminating the pressed child in
++  // favour of its pressable ancestor. Presented hierarchies (sheets, menus)
++  // have no ancestor handler and still get their own.
++  UIView *current = view;
++  while (current != nil) {
++    for (UIGestureRecognizer *recognizer in [current.gestureRecognizers copy]) {
++      if ([recognizer isKindOfClass:[RCTSurfaceTouchHandler class]]) {
++        return nil;
++      }
+     }
++    current = current.superview;
+   }
+   RCTSurfaceTouchHandler *touchHandler = [[RCTSurfaceTouchHandler alloc] init];
+   [touchHandler attachToView:view];
+diff --git a/ios/RNHostView.swift b/ios/RNHostView.swift
+index 4cf3893..368bc42 100644
+--- a/ios/RNHostView.swift
++++ b/ios/RNHostView.swift
+@@ -61,8 +61,16 @@ private final class RNHostTouchHandler: ObservableObject {
+       return
+     }
+     detach()
+-    touchHandler = ExpoUITouchHandlerHelper.createAndAttachTouchHandler(for: view)
+     attachedView = view
++    // Deferred a runloop turn: `onAppear` fires before the hosted view is in
++    // the window, and the helper must see the mounted ancestor chain to know
++    // whether a surface touch handler already covers this view.
++    DispatchQueue.main.async { [weak self, weak view] in
++      guard let self, let view, self.attachedView === view, self.touchHandler == nil else {
++        return
++      }
++      self.touchHandler = ExpoUITouchHandlerHelper.createAndAttachTouchHandler(for: view)
++    }
+   }
+ 
+   func detach() {
+diff --git a/src/community/pager-view/PagerView.ios.tsx b/src/community/pager-view/PagerView.ios.tsx
+index 9af0dc6..8f619e9 100644
+--- a/src/community/pager-view/PagerView.ios.tsx
++++ b/src/community/pager-view/PagerView.ios.tsx
+@@ -9,7 +9,7 @@ import {
+   useState,
+   type ReactElement,
+ } from 'react';
+-import { Platform } from 'react-native';
++import { Platform, StyleSheet } from 'react-native';
+ 
+ import { wrapNativeEvent, type PagerViewProps } from './types';
+ import { useNativeState, worklets } from '../../State';
+@@ -198,7 +198,10 @@ export function PagerView(props: PagerViewProps) {
+     <Group
+       key={child.key ?? String(index)}
+       modifiers={[containerRelativeFrame({ axes: 'horizontal' }), id(String(index))]}>
+-      <RNHostView>{child}</RNHostView>
++      {/* Overlap pages at one origin so each page's RN shadow position matches
++          where SwiftUI draws it; otherwise `measure()`-based positioning
++          (popovers, menus) misfires on pages after the first (#46386). */}
++      <RNHostView style={StyleSheet.absoluteFill}>{child}</RNHostView>
+     </Group>
+   ));
+ 
