@@ -41,7 +41,7 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       backBehavior="history"
-      minimizeBehavior="onScrollDown"
+      minimizeBehavior="never"
       backgroundColor={theme.palette.neutral_0}
       iconColor={theme.palette.neutral_900}
       tintColor={theme.palette.neutral_900}
