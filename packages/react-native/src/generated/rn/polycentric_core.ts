@@ -20,6 +20,160 @@ const uniffiIsDebug =
 // Public interface members begin here.
 
 /**
+ * Whether a string `value` is considered a moderation label.
+ */
+export function isModerationLabel(value: string): boolean {
+    return FfiConverterBool.lift(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(
+        FfiConverterString.lower(value, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Whether two label sets differ, ignoring order. Empty and absent are
+ * considered equivalent.
+ */
+export function labelsChanged(a: Array<PostLabel>, b: Array<PostLabel>): boolean {
+    return FfiConverterBool.lift(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_changed(
+        FfiConverterSequenceTypePostLabel.lower(a, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypePostLabel.lower(b, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Labels carried by a `GetFeedResponse` — what every feed RPC emits.
+ */
+export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceTypeLabelSet.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Labels carried by a `ListNotificationsResponse`. Servers only ship
+ * labels for the events that triggered a notification, so a notification's
+ * target event is normally unlabelled.
+ */
+export function labelsFromNotificationsResponse(response: ArrayBuffer): Array<LabelSet> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceTypeLabelSet.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Labels carried by a `SearchPostsResponse`.
+ */
+export function labelsFromSearchResponse(response: ArrayBuffer): Array<LabelSet> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceTypeLabelSet.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Labels carried by a `GetPostThreadResponse`.
+ */
+export function labelsFromThreadResponse(response: ArrayBuffer): Array<LabelSet> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceTypeLabelSet.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Union two label sets, deduplicated, and assuming all labels are additive
+ * (does not check for labels being deleted).
+ */
+export function mergeLabels(orig: Array<PostLabel>, latest: Array<PostLabel>): Array<PostLabel> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceTypePostLabel.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_merge_labels(
+        FfiConverterSequenceTypePostLabel.lower(orig, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypePostLabel.lower(latest, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Moderation label enumeration for FFI. Rust callers should use
+ * [`ModerationLabel`] in the `rs-common` crate.
+ */
+export function moderationLabels(): Array<string> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceString.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_labels(
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Set the minimum level forwarded to the host. Messages below this are
  * dropped in Rust without crossing the FFI boundary.
  */
@@ -803,6 +957,99 @@ const FfiConverterTypeIsModeratorArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return 0;
+        }
+    };
+    return new FFIConverter();
+})();
+
+/**
+ * A representation of a single moderation label applied by a single identity.
+ * `PostLabel`s are collected by clients for each post.
+ */
+export type PostLabel = {
+    value: string,
+    labeledBy: string
+}
+
+/**
+ * Generated factory for {@link PostLabel} record objects.
+ */
+export const PostLabel = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<PostLabel, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<PostLabel>,
+    });
+})();
+
+const FfiConverterTypePostLabel = (() => {
+    type TypeName = PostLabel;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                value: FfiConverterString.read(from), 
+                labeledBy: FfiConverterString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterString.write(value.value, into);
+            FfiConverterString.write(value.labeledBy, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.value) +
+             FfiConverterString.allocationSize(value.labeledBy);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+/**
+ * Set of all labels applied to some target event.
+ */
+export type LabelSet = {
+    target: EventKey,
+    labels: Array<PostLabel>
+}
+
+/**
+ * Generated factory for {@link LabelSet} record objects.
+ */
+export const LabelSet = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<LabelSet, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<LabelSet>,
+    });
+})();
+
+const FfiConverterTypeLabelSet = (() => {
+    type TypeName = LabelSet;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                target: FfiConverterTypeEventKey.read(from), 
+                labels: FfiConverterSequenceTypePostLabel.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterTypeEventKey.write(value.target, into);
+            FfiConverterSequenceTypePostLabel.write(value.labels, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterTypeEventKey.allocationSize(value.target) +
+             FfiConverterSequenceTypePostLabel.allocationSize(value.labels);
+            
         }
     };
     return new FFIConverter();
@@ -5687,6 +5934,9 @@ const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 // FfiConverter for FeedSort | undefined
 const FfiConverterOptionalTypeFeedSort = new FfiConverterOptional(FfiConverterTypeFeedSort);
 
+// FfiConverter for Array<PostLabel>
+const FfiConverterSequenceTypePostLabel = new FfiConverterArray(FfiConverterTypePostLabel);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
@@ -5741,6 +5991,9 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterT
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
 
+// FfiConverter for Array<LabelSet>
+const FfiConverterSequenceTypeLabelSet = new FfiConverterArray(FfiConverterTypeLabelSet);
+
 
 /**
  * This should be called before anything else.
@@ -5759,6 +6012,30 @@ function uniffiEnsureInitialized() {
     const scaffoldingContractVersion = nativeModule().ubrn_ffi_polycentric_core_uniffi_contract_version();
     if (bindingsContractVersion !== scaffoldingContractVersion) {
         throw new UniffiInternalError.ContractVersionMismatch(scaffoldingContractVersion, bindingsContractVersion);
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label() !== 8536) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_is_moderation_label");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_changed() !== 39783) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_changed");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response() !== 47195) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_feed_response");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response() !== 20781) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_notifications_response");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response() !== 39427) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_search_response");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response() !== 7678) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_thread_response");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_merge_labels() !== 35796) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_merge_labels");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_labels() !== 61242) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_labels");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !== 1521) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_log_level");
@@ -5942,6 +6219,7 @@ export default Object.freeze({
     FfiConverterTypeGetReactionsArgs,
     FfiConverterTypeIsBannedArgs,
     FfiConverterTypeIsModeratorArgs,
+    FfiConverterTypeLabelSet,
     FfiConverterTypeListBansArgs,
     FfiConverterTypeListEventsArgs,
     FfiConverterTypeListFollowersArgs,
@@ -5955,6 +6233,7 @@ export default Object.freeze({
     FfiConverterTypeLogger,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
+    FfiConverterTypePostLabel,
     FfiConverterTypeProcessedImage,
     FfiConverterTypePublicKey,
     FfiConverterTypeQuery,

@@ -554,6 +554,38 @@ extern "C" {
         /*handle*/ uint64_t logger, 
         RustCallStatus *uniffi_out_err
     );
+    int8_t uniffi_polycentric_core_fn_func_is_moderation_label(
+        RustBuffer value, 
+        RustCallStatus *uniffi_out_err
+    );
+    int8_t uniffi_polycentric_core_fn_func_labels_changed(
+        RustBuffer a, 
+        RustBuffer b, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_labels_from_feed_response(
+        RustBuffer response, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_labels_from_notifications_response(
+        RustBuffer response, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_labels_from_search_response(
+        RustBuffer response, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_labels_from_thread_response(
+        RustBuffer response, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_merge_labels(
+        RustBuffer orig, 
+        RustBuffer latest, 
+        RustCallStatus *uniffi_out_err
+    );
+    RustBuffer uniffi_polycentric_core_fn_func_moderation_labels(RustCallStatus *uniffi_out_err
+    );
     RustBuffer ffi_polycentric_core_rustbuffer_alloc(
         uint64_t size, 
         RustCallStatus *uniffi_out_err
@@ -754,6 +786,22 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_func_set_log_level(
     );
     uint16_t uniffi_polycentric_core_checksum_func_set_logger(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_is_moderation_label(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_changed(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_from_feed_response(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_from_notifications_response(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_from_search_response(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_from_thread_response(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_merge_labels(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_moderation_labels(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload(
     );
@@ -5895,6 +5943,70 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_func_set_logger(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_func_is_moderation_label"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_is_moderation_label"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_is_moderation_label(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_changed"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_changed"),
+        2,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_changed(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_from_feed_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_from_notifications_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_from_search_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_from_thread_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_merge_labels"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_merge_labels"),
+        2,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_merge_labels(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_fn_func_moderation_labels"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_moderation_labels"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_moderation_labels(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_ffi_polycentric_core_rust_future_poll_u8"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_ffi_polycentric_core_rust_future_poll_u8"),
@@ -6293,6 +6405,70 @@ NativePolycentricCore::NativePolycentricCore(
         0,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_checksum_func_set_logger(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_is_moderation_label(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_changed"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_changed"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_changed(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_feed_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_notifications_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_search_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_thread_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_merge_labels"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_merge_labels"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_merge_labels(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_moderation_labels"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_moderation_labels"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_moderation_labels(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload"] = jsi::Function::createFromHostFunction(
@@ -7696,6 +7872,85 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_set_logger
         
         return jsi::Value::undefined();
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_is_moderation_label(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_is_moderation_label(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_changed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_changed(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_feed_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_from_feed_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_notifications_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_from_notifications_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_search_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_from_search_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_thread_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_from_thread_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_merge_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_merge_labels(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_moderation_labels(&status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_ffi_polycentric_core_rust_future_poll_u8(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         ffi_polycentric_core_rust_future_poll_u8(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<UniffiRustFutureContinuationCallback>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[2])
         );
@@ -8077,6 +8332,62 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_set_
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_set_logger(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_func_set_logger(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_is_moderation_label(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_is_moderation_label(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_changed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_changed(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_feed_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_from_feed_response(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_notifications_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_from_notifications_response(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_search_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_from_search_response(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_thread_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_from_thread_response(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_merge_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_merge_labels(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_moderation_labels(
         );
 
         
