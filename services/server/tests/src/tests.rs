@@ -3015,6 +3015,25 @@ async fn recommended_feed_does_not_include_posts_reacted_self() {
 }
 
 #[tokio::test]
+async fn recommended_feed_does_not_include_own_posts_even_with_followee_interaction() {
+    let mut follower_client = TestClient::new().await;
+    follower_client.post_text("Post 1", DEFAULT_CREATED_AT);
+    let post1_key = follower_client.get_last_event_key();
+    follower_client.submit_events().await;
+
+    let mut followee_client = TestClient::new().await;
+    followee_client.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT);
+    followee_client.submit_events().await;
+    let followee = followee_client.identity();
+
+    follower_client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    follower_client.submit_events().await;
+    let follower = follower_client.identity();
+
+    recommended_feed(follower, &[]).await;
+}
+
+#[tokio::test]
 async fn recommended_feed_includes_posts_reacted_by_followee() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
