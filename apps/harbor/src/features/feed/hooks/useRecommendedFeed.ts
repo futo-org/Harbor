@@ -58,5 +58,6 @@ export function useRecommendedFeed(options?: {
     loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
+    queryKey,
   };
 }

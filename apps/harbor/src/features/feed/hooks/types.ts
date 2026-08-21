@@ -8,6 +8,8 @@ export interface FeedHookResult {
   loadMore: () => Promise<void>;
   hasMore: boolean;
   refresh: () => void;
+  /** Identifies the feed, e.g. for scroll restoration. */
+  queryKey?: string[];
 }
 
 export const EMPTY_POSTS: PostData[] = [];

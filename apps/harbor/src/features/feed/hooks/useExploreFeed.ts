@@ -57,5 +57,6 @@ export function useExploreFeed(options?: {
     loadMore: async () => requestMore(),
     hasMore: hasNext,
     refresh: () => query.refresh(RefreshStrategy.Lazy),
+    queryKey,
   };
 }
