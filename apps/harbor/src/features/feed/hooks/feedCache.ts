@@ -30,11 +30,10 @@ import {
 export type FeedSortOption = 'top' | 'latest';
 
 /**
- * A tab in a feed screen's tab row. Home mixes the recommended feed in with
- * the following feed's sorts, so `'for-you'` selects a different feed rather
- * than a different order.
+ * A tab in a feed screen's tab row. Sortable feed tabs ('following' /
+ * 'posts') hold their sort as a separate setting behind a menu.
  */
-export type FeedTab = FeedSortOption | 'for-you';
+export type FeedTab = 'for-you' | 'following' | 'posts' | 'people';
 
 export function feedSortBy(sort: FeedSortOption): FeedSort {
   return sort === 'top' ? FeedSort.Top : FeedSort.Latest;

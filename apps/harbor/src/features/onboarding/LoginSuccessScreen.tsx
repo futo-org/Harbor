@@ -65,7 +65,7 @@ export default function LoginSuccessScreen({
           variant="primary"
           fullWidth
           onPress={() =>
-            router.dismissTo((returnTo ?? Routes.tabs.feed.index) as Href)
+            router.dismissTo((returnTo ?? Routes.tabs.explore.index) as Href)
           }
         />
       </View>

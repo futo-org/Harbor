@@ -105,6 +105,9 @@ pub struct Query;
 const CREATED_POSTS_ONLY: bool = true;
 const ALL_INTERACTIONS: bool = false;
 
+const OWN_POSTS: bool = true;
+const NOT_OWN_POSTS: bool = false;
+
 impl Query {
     /// Returns posts for the global Explore feed.
     pub async fn explore_feed(
@@ -117,6 +120,7 @@ impl Query {
             db,
             None,
             CREATED_POSTS_ONLY,
+            OWN_POSTS,
             sort_by,
             limit,
             cursor_filter,
@@ -136,6 +140,7 @@ impl Query {
             db,
             Some(for_identity),
             CREATED_POSTS_ONLY,
+            OWN_POSTS,
             sort_by,
             limit,
             cursor_filter,
@@ -155,6 +160,7 @@ impl Query {
             db,
             Some(for_identity),
             ALL_INTERACTIONS,
+            NOT_OWN_POSTS,
             sort_by,
             limit,
             cursor_filter,
@@ -174,6 +180,7 @@ impl Query {
         db: &DbConn,
         for_identity: Option<&str>,
         posts_created_only: bool,
+        include_own_posts: bool,
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: Option<&CursorFilter<SortedBy>>,
@@ -210,12 +217,14 @@ impl Query {
                         FollowModel::Column::Follower,
                     ))
                     .eq(for_identity),
-                )
-                .union(UnionType::All, {
+                );
+            if include_own_posts {
+                following.union(UnionType::All, {
                     let mut q = SelectStatement::new();
                     q.expr(Expr::value(for_identity));
                     q
                 });
+            }
 
             const FOLLOWING_TABLE: &str = "following";
             QuerySelect::query(&mut query).with_cte({
@@ -232,19 +241,16 @@ impl Query {
                 .from(FOLLOWING_TABLE);
 
             query = query.filter({
-                let condition = Condition::any()
+                let mut condition = Condition::any()
                     // Created by an identity the `for_identity` is following.
                     .add(
                         EventModel::Column::Identity
                             .in_subquery(select_followee.clone()),
                     );
 
-                if posts_created_only {
-                    // Only include posts created by someone `for_identity` is following.
-                    condition
-                } else {
+                if !posts_created_only {
                     // Include additional interactions.
-                    condition
+                    condition = condition
                         // Reacted on by an identity the `for_identity` is following.
                         .add(EventModel::Column::Id.in_subquery({
                             let mut q = SelectStatement::new();
@@ -290,6 +296,15 @@ impl Query {
                             q
                         }))
                 }
+
+                if !include_own_posts {
+                    // Explicitly exclude any posts made by the user themselves.
+                    condition = Condition::all()
+                        .add(EventModel::Column::Identity.ne(for_identity))
+                        .add(condition);
+                }
+
+                condition
             });
         }
 

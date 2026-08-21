@@ -12,6 +12,7 @@ import { ClaimAuthorLine } from './ClaimAuthorLine';
 import { ClaimMenu } from './ClaimMenu';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { StatusChip } from './toolbar/StatusChip';
+import Icon from '@/src/common/components/Icon';
 
 export function ClaimListItem({
   claim,
@@ -25,6 +26,9 @@ export function ClaimListItem({
   const claimType = CLAIM_TYPES.find((t) => t.name === claim.schemaName);
   // Platform claims chip as their platform (brand logo + name).
   const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
+
+  // TODO: Make this more sophisticated
+  const isVerified = (claim.status?.verifiedCount || 0) > 0;
 
   return (
     <Pressable
@@ -40,6 +44,8 @@ export function ClaimListItem({
           ))
       }
       style={({ hovered, pressed }) => [
+        Atoms.flex_1,
+        Atoms.flex_row,
         (hovered || pressed) && {
           backgroundColor: theme.palette.neutral_25,
         },
@@ -47,6 +53,25 @@ export function ClaimListItem({
     >
       <View
         style={[
+          Atoms.my_xs,
+          Atoms.ml_xs,
+          Atoms.p_sm,
+          {
+            backgroundColor: isVerified
+              ? theme.palette.positive_300
+              : theme.palette.neutral_50,
+          },
+        ]}
+      >
+        <Icon
+          name="verify"
+          color={isVerified ? 'neutral_0' : 'neutral_600'}
+          size={24}
+        />
+      </View>
+      <View
+        style={[
+          Atoms.flex_1,
           Atoms.gap_sm,
           Atoms.px_lg,
           Atoms.py_md,

@@ -21,6 +21,8 @@ struct AppState {
     filestore: ContentFilestore,
 }
 
+const CACHE_CONTROL: &str = "public, max-age=604800, stale-while-revalidate=604800, stale-if-error=604800";
+
 /// Routes defined here for the polycentric server
 pub fn build_routes(
     db: DatabaseConnection,
@@ -74,7 +76,14 @@ async fn get_blob(
         }
     })?;
 
-    Ok(([(header::CONTENT_TYPE, row.mime_type)], body).into_response())
+    Ok((
+        [
+            (header::CONTENT_TYPE, row.mime_type),
+            (header::CACHE_CONTROL, CACHE_CONTROL.to_string()),
+        ],
+        body,
+    )
+        .into_response())
 }
 
 /// Proxy a preview image from an untrusted URL (`?url=`) for display. The
@@ -104,19 +113,13 @@ async fn image_proxy(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("application/octet-stream")
         .to_string();
-    let cache_control = resp
-        .headers()
-        .get(reqwest::header::CACHE_CONTROL)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("public, max-age=86400")
-        .to_string();
 
     let body = resp.bytes().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
 
     Ok((
         [
             (header::CONTENT_TYPE, content_type),
-            (header::CACHE_CONTROL, cache_control),
+            (header::CACHE_CONTROL, CACHE_CONTROL.to_string()),
         ],
         body,
     )

@@ -1,10 +1,7 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { showAlert } from '@/src/common/lib/dialogs';
-import {
-  usePolycentric,
-  usePolycentricContext,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import {
@@ -58,10 +55,7 @@ export default function CreateBackupScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const client = usePolycentric();
-  const { currentIdentity } = usePolycentricContext();
   const { canRotate } = useCurrentAuthorization();
-
   const [state, setState] = useState<NewBackupState>(() => {
     if (!canRotate) {
       return {
@@ -73,7 +67,10 @@ export default function CreateBackupScreen() {
     return { stage: 'warning' };
   });
 
-  const [hadExisting] = useState(() => !!currentIdentity?.recoveryKey);
+  const client = usePolycentric();
+  const [hadExisting] = useState(
+    () => !!client.identityManager.resolveIdentity()?.recoveryKey,
+  );
 
   const onContinue = () => {
     switch (state.stage) {

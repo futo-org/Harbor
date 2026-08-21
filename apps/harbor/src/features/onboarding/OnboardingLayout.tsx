@@ -25,7 +25,7 @@ export default function OnboardingLayout() {
 
   const close = () => {
     if (router.canGoBack()) router.dismissAll();
-    else router.dismissTo(Routes.tabs.feed.index);
+    else router.dismissTo(Routes.tabs.explore.index);
   };
 
   const showScene = width > Breakpoints.md;

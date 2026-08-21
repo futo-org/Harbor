@@ -97,7 +97,7 @@ jest.mock('@/src/common/components/ListEmpty', () => {
   };
 });
 
-jest.mock('@/src/common/components/Tabs', () => {
+jest.mock('@/src/common/components/tabs', () => {
   const react = require('react');
   const { Text, View } = require('react-native');
   const Tabs = ({ children }: { children?: unknown }) =>

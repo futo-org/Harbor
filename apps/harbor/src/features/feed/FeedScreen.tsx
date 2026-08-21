@@ -5,13 +5,16 @@ import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/Sett
 import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
+import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { isIOS, isWeb } from '@/src/common/util/platform';
+import { TabFilterSheet } from '@/src/common/components/tabs';
 import { ComposerInput } from '@/src/features/composer';
 import type { SharedValue } from 'react-native-reanimated';
 import { FeedPage } from './FeedPage';
-import { FeedTabs, HOME_TABS, HOME_TAB_VALUES } from './FeedTabs';
+import { FeedTabs, HOME_TABS, HOME_TAB_VALUES, SORT_OPTIONS } from './FeedTabs';
 import type { FeedSortOption } from './hooks/feedCache';
+import { useFeedSettingsStore } from './hooks/useFeedSettingsStore';
 import { useFeedTabs } from './hooks/useFeedTabs';
 import { useFollowingFeed } from './hooks/useFollowingFeed';
 import { useRecommendedFeed } from './hooks/useRecommendedFeed';
@@ -52,6 +55,14 @@ export default function FeedScreen() {
 
   const ready = useEagerLoad();
   const { tab, hydrated, onTabPress } = useFeedTabs('following');
+  const sort = useFeedSettingsStore((state) => state.feeds.following.sort);
+
+  const onSortChange = (next: FeedSortOption) => {
+    useFeedSettingsStore.getState().setFeedSettings('following', {
+      sort: next,
+    });
+    emitFocusedRefresh();
+  };
 
   const renderTabBar = ({
     dragProgress,
@@ -65,6 +76,19 @@ export default function FeedScreen() {
         active={tab}
         onPress={onTabPress}
         progress={dragProgress}
+        menu={({ open, onClose }) => (
+          <TabFilterSheet
+            open={open}
+            onClose={onClose}
+            title="Sort by"
+            options={SORT_OPTIONS}
+            selected={sort}
+            onChange={(next) => {
+              onSortChange(next);
+              onClose();
+            }}
+          />
+        )}
       />
     </>
   );
@@ -81,10 +105,9 @@ export default function FeedScreen() {
             renderTabBar={renderTabBar}
           >
             <ForYouPage active={tab === 'for-you'} ready={ready} />
-            <FollowingPage sort="top" active={tab === 'top'} ready={ready} />
             <FollowingPage
-              sort="latest"
-              active={tab === 'latest'}
+              sort={sort}
+              active={tab === 'following'}
               ready={ready}
             />
           </PagerView>

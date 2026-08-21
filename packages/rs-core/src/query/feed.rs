@@ -108,13 +108,39 @@ enum FeedOrder {
     Upvotes,
 }
 
+/// Servers tune their gravity dynamically; this is only their seed value.
+const FEED_GRAVITY: f64 = 1.8;
+
 impl FeedOrder {
-    fn key(self, bundle: &EventBundle) -> Option<u64> {
+    fn key(self, bundle: &EventBundle, now_ms: u64) -> Option<u64> {
         match self {
             Self::CreatedAt => bundle_created_at(bundle),
-            Self::Upvotes => Some(bundle_upvote_count(bundle)),
+            Self::Upvotes => Some(decayed_upvote_key(bundle, now_ms)),
         }
     }
+}
+
+/// The score servers rank top feeds by: `count / (hours + 2) ^ gravity`
+/// (the server's `reaction_count_decay`). `to_bits` preserves the order
+/// of non-negative floats.
+fn decayed_upvote_key(bundle: &EventBundle, now_ms: u64) -> u64 {
+    let count = bundle_upvote_count(bundle) as f64;
+    let age_ms = bundle_created_at(bundle).map_or(0, |created| now_ms.saturating_sub(created));
+    let hours = age_ms as f64 / 3_600_000.0;
+    (count / (hours + 2.0).powf(FEED_GRAVITY)).to_bits()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+#[cfg(target_arch = "wasm32")]
+fn now_ms() -> u64 {
+    js_sys::Date::now() as u64
 }
 
 impl From<FeedSort> for FeedOrder {
@@ -146,6 +172,9 @@ fn do_feed_merge(
     validate: bool,
     order: FeedOrder,
 ) -> Vec<u8> {
+    // Every bundle decays against the same moment.
+    let now_ms = now_ms();
+
     let mut response = GetFeedResponse::default();
     let mut oldest_by_server: BTreeMap<String, u64> = BTreeMap::new();
     for v in values {
@@ -158,7 +187,7 @@ fn do_feed_merge(
             let oldest = incoming
                 .event_bundles
                 .iter()
-                .filter_map(|bundle| order.key(bundle))
+                .filter_map(|bundle| order.key(bundle, now_ms))
                 .min();
             if let (Some(server), Some(oldest)) = (server, oldest) {
                 oldest_by_server
@@ -217,7 +246,7 @@ fn do_feed_merge(
     // event key break ties so input order can't affect the result.
     response.event_bundles.sort_by_cached_key(|bundle| {
         (
-            Reverse(order.key(bundle)),
+            Reverse(order.key(bundle, now_ms)),
             Reverse(bundle_created_at(bundle)),
             event_dedup_key(bundle),
         )
@@ -232,7 +261,7 @@ fn do_feed_merge(
     if let Some(horizon) = horizon {
         response
             .event_bundles
-            .retain(|b| order.key(b).is_some_and(|k| k >= horizon));
+            .retain(|b| order.key(b, now_ms).is_some_and(|k| k >= horizon));
     }
 
     response.encode_to_vec()
@@ -899,6 +928,21 @@ mod tests {
         let merged = do_feed_merge(&[page1, page2], &test_client(), false, FeedOrder::Upvotes);
         assert_eq!(upvotes(&merged), vec![5, 4]);
         assert_eq!(created_ats(&merged), vec![10, 20]);
+    }
+
+    #[test]
+    fn top_order_decays_counts_by_age() {
+        // A fresh post with one vote outranks an old post with two.
+        let now = now_ms();
+        let two_months_ms = 60 * 24 * 3_600_000;
+        let bundles = vec![
+            make_bundle_voted("old", now - two_months_ms, Some(2)),
+            make_bundle_voted("fresh", now - 5_000, Some(1)),
+        ];
+        let response = encode_response(bundles, vec![]);
+
+        let merged = do_feed_merge(&[response], &test_client(), false, FeedOrder::Upvotes);
+        assert_eq!(upvotes(&merged), vec![1, 2]);
     }
 
     #[test]

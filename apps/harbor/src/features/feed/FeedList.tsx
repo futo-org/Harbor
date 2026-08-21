@@ -114,6 +114,7 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
       getItemType={getItemType}
       data={items}
       initialHeaderHeight={initialHeaderHeight}
+      restorationKey={feed.queryKey?.join('\0')}
       ListEmptyComponent={emptyComponent}
       ListFooterComponent={footerComponent}
       onEndReached={feed.hasMore ? feed.loadMore : undefined}

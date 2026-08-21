@@ -9,7 +9,7 @@ jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   emitFocusedRefresh: jest.fn(),
 }));
 
-const STORE_KEY = 'polycentric:feed-settings';
+const STORE_KEY = 'polycentric:feed-settings-v3';
 
 const renderers: TestRenderer.ReactTestRenderer[] = [];
 
@@ -34,7 +34,10 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   act(() => {
     useFeedSettingsStore.setState({
-      feeds: { following: { tab: 'latest' }, explore: { tab: 'top' } },
+      feeds: {
+        following: { tab: 'following', sort: 'latest' },
+        explore: { tab: 'posts', sort: 'top' },
+      },
     });
   });
 });
@@ -46,14 +49,16 @@ afterEach(() => {
 });
 
 describe('useFeedTabs selection', () => {
-  it('defaults the home feed to latest and explore to top', async () => {
+  it('defaults home to following/latest and explore to posts/top', async () => {
     await useFeedSettingsStore.persist.rehydrate();
 
     const following = await renderTabs('following');
     const explore = await renderTabs('explore');
 
-    expect(following.current.tab).toBe('latest');
-    expect(explore.current.tab).toBe('top');
+    expect(following.current.tab).toBe('following');
+    expect(useFeedSettingsStore.getState().feeds.following.sort).toBe('latest');
+    expect(explore.current.tab).toBe('posts');
+    expect(useFeedSettingsStore.getState().feeds.explore.sort).toBe('top');
   });
 
   it('hydrates the stored selection', async () => {
@@ -61,7 +66,10 @@ describe('useFeedTabs selection', () => {
       STORE_KEY,
       JSON.stringify({
         state: {
-          feeds: { following: { tab: 'for-you' }, explore: { tab: 'top' } },
+          feeds: {
+            following: { tab: 'for-you', sort: 'top' },
+            explore: { tab: 'posts', sort: 'top' },
+          },
         },
       }),
     );
@@ -82,8 +90,8 @@ describe('useFeedTabs selection', () => {
 
     const stored = await AsyncStorage.getItem(STORE_KEY);
     expect(JSON.parse(stored ?? '{}').state.feeds).toEqual({
-      following: { tab: 'for-you' },
-      explore: { tab: 'top' },
+      following: { tab: 'for-you', sort: 'latest' },
+      explore: { tab: 'posts', sort: 'top' },
     });
   });
 });
@@ -106,10 +114,12 @@ describe('useFeedTabs re-tap', () => {
     const tabs = await renderTabs();
 
     act(() => {
-      tabs.current.onTabPress('latest');
+      tabs.current.onTabPress('following');
     });
 
     expect(emitFocusedRefresh).toHaveBeenCalled();
-    expect(useFeedSettingsStore.getState().feeds.following.tab).toBe('latest');
+    expect(useFeedSettingsStore.getState().feeds.following.tab).toBe(
+      'following',
+    );
   });
 });

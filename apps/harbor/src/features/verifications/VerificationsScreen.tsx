@@ -4,7 +4,7 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
-import { Tabs } from '@/src/common/components/Tabs';
+import { Tabs } from '@/src/common/components/tabs';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';

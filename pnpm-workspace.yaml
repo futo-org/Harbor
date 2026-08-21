@@ -38,5 +38,6 @@ overrides:
 
 patchedDependencies:
   "@expo/cli": patches/@expo__cli.patch
+  "@expo/ui": patches/@expo__ui.patch
   "@rn-primitives/hooks@1.5.2": patches/@rn-primitives__hooks@1.5.2.patch
   uniffi-bindgen-react-native@0.31.0-3: patches/uniffi-bindgen-react-native@0.31.0-3.patch
