@@ -46,12 +46,11 @@ pub async fn auth_middleware(
         .headers()
         .get(http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .map(str::to_owned);
+        .and_then(|value| value.strip_prefix("Bearer "));
 
     let mut authenticated = None;
     if let Some(token) = token {
-        match verify_auth_token(&state.ctx, &token, &state.allow_hosts).await {
+        match verify_auth_token(&state.ctx, token, &state.allow_hosts).await {
             Ok(identity) => {
                 let identity = AuthenticatedIdentity(identity);
                 authenticated = Some(identity.clone());
