@@ -1,9 +1,7 @@
 import {
-  isModerationLabel as isModerationLabelFfi,
-  moderationLabelEntries,
   moderationLabels,
+  isModerationLabel as isModerationLabelFfi,
 } from '@polycentric/react-native';
-import type { ModerationLabelEntry as ModerationLabelEntryFfi } from '@polycentric/react-native';
 
 /**
  * The moderation label vocabulary, mirroring `ModerationLabel` in rs-common.
@@ -36,17 +34,45 @@ export function moderationLabelFromValue(
 }
 
 /** A moderation label paired with its display name and description. */
-export type ModerationLabelEntry = Omit<ModerationLabelEntryFfi, 'key'> & {
+export type ModerationLabelEntry = {
   key: ModerationLabel;
+  name: string;
+  description: string;
 };
+
+const LABEL_ENTRIES: readonly ModerationLabelEntry[] = [
+  {
+    key: 'hate',
+    name: 'Hate',
+    description: 'Hate speech or incitement against groups',
+  },
+  {
+    key: 'self-harm',
+    name: 'Self-Harm',
+    description: 'Self-harm, eating disorders, suicide',
+  },
+  {
+    key: 'sexually-suggestive',
+    name: 'Sexually Suggestive',
+    description: 'Innuendo or implied sexual acts',
+  },
+  {
+    key: 'sexually-explicit',
+    name: 'Sexually Explicit',
+    description: 'Pornography or explicit sexual acts',
+  },
+  {
+    key: 'violence',
+    name: 'Violence',
+    description: 'Violent acts, gore, injury, or terrorism',
+  },
+] as const;
 
 /** Every moderation label paired with its display name and description. */
 export function getModerationLabelEntries(): ModerationLabelEntry[] {
-  return moderationLabelEntries() as ModerationLabelEntry[];
+  return [...LABEL_ENTRIES];
 }
 
 export function moderationLabelName(label: string): string {
-  return (
-    getModerationLabelEntries().find((e) => e.key === label)?.name ?? label
-  );
+  return LABEL_ENTRIES.find((e) => e.key === label)?.name ?? label;
 }

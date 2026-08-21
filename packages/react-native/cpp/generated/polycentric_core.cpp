@@ -558,7 +558,6 @@ extern "C" {
         RustBuffer value, 
         RustCallStatus *uniffi_out_err
     );
-    RustBuffer uniffi_polycentric_core_fn_func_moderation_label_entries(RustCallStatus *uniffi_out_err
     );
     RustBuffer uniffi_polycentric_core_fn_func_moderation_labels(RustCallStatus *uniffi_out_err
     );
@@ -765,11 +764,9 @@ extern "C" {
     );
     uint16_t uniffi_polycentric_core_checksum_func_is_moderation_label(
     );
-    uint16_t uniffi_polycentric_core_checksum_func_moderation_label_entries(
-    );
     uint16_t uniffi_polycentric_core_checksum_func_moderation_labels(
     );
-    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload(
+    uint16_t uniffi_polycentric_core_checksum_func_set_logger(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(
     );
@@ -5917,14 +5914,6 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_func_is_moderation_label(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_func_moderation_label_entries"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_moderation_label_entries"),
-        0,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_func_moderation_label_entries(rt, thisVal, args, count);
-        }
-    );
     props["ubrn_uniffi_polycentric_core_fn_func_moderation_labels"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_moderation_labels"),
@@ -6339,14 +6328,6 @@ NativePolycentricCore::NativePolycentricCore(
         0,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_checksum_func_is_moderation_label(rt, thisVal, args, count);
-        }
-    );
-    props["ubrn_uniffi_polycentric_core_checksum_func_moderation_label_entries"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_moderation_label_entries"),
-        0,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_checksum_func_moderation_label_entries(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_checksum_func_moderation_labels"] = jsi::Function::createFromHostFunction(
@@ -7768,15 +7749,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_is_moderat
         
         return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
 }
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_moderation_label_entries(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
-        auto value = uniffi_polycentric_core_fn_func_moderation_label_entries(&status
-        );
-        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
-
-        
-        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
-}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         auto value = uniffi_polycentric_core_fn_func_moderation_labels(&status
@@ -8174,13 +8146,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_set_
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_is_moderation_label(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_func_is_moderation_label(
-        );
-
-        
-        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_moderation_label_entries(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_checksum_func_moderation_label_entries(
         );
 
         

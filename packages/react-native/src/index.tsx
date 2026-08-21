@@ -11,7 +11,6 @@ export {
   FeedSort,
   FetchMode,
   isModerationLabel,
-  moderationLabelEntries,
   PolycentricCore,
   Query,
   QueryStatus,
@@ -24,7 +23,6 @@ export {
 export type {
   EventKey,
   Logger,
-  ModerationLabelEntry,
   PublicKey,
   QueryObservable,
   QueryObserver,

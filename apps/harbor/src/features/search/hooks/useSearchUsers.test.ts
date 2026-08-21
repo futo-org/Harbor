@@ -4,7 +4,6 @@ jest.mock('@polycentric/react-native', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
   // Pulled in transitively via useOmitLabels
   moderationLabels: () => [],
-  moderationLabelEntries: () => [],
   isModerationLabel: () => false,
   Query: {
     SearchUsers: function SearchUsers() {},

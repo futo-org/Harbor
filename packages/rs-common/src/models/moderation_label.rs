@@ -47,28 +47,6 @@ impl ModerationLabel {
     pub fn from_value(value: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|label| label.value() == value)
     }
-
-    /// The user-facing display name for this moderation label.
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Hate => "Hate",
-            Self::SelfHarm => "Self-Harm",
-            Self::SexuallySuggestive => "Sexually Suggestive",
-            Self::SexuallyExplicit => "Sexually Explicit",
-            Self::Violence => "Violence",
-        }
-    }
-
-    /// The user-facing description for this moderation label.
-    pub const fn description(self) -> &'static str {
-        match self {
-            Self::Hate => "Hate speech or incitement against groups",
-            Self::SelfHarm => "Self-harm, eating disorders, suicide",
-            Self::SexuallySuggestive => "Innuendo or implied sexual acts",
-            Self::SexuallyExplicit => "Pornography or explicit sexual acts",
-            Self::Violence => "Violent acts, gore, injury, or terrorism",
-        }
-    }
 }
 
 #[cfg(test)]
@@ -102,33 +80,5 @@ mod tests {
         assert_eq!(ModerationLabel::from_value("Hate"), None);
         assert_eq!(ModerationLabel::from_value("self_harm"), None);
         assert_eq!(ModerationLabel::from_value(""), None);
-    }
-
-    #[test]
-    fn names_are_stable_and_ordered() {
-        assert_eq!(
-            ModerationLabel::ALL.map(ModerationLabel::name),
-            [
-                "Hate",
-                "Self-Harm",
-                "Sexually Suggestive",
-                "Sexually Explicit",
-                "Violence"
-            ]
-        );
-    }
-
-    #[test]
-    fn descriptions_are_stable_and_ordered() {
-        assert_eq!(
-            ModerationLabel::ALL.map(ModerationLabel::description),
-            [
-                "Hate speech or incitement against groups",
-                "Self-harm, eating disorders, suicide",
-                "Innuendo or implied sexual acts",
-                "Pornography or explicit sexual acts",
-                "Violent acts, gore, injury, or terrorism"
-            ]
-        );
     }
 }

@@ -9,7 +9,6 @@ export {
   FeedSort,
   FetchMode,
   isModerationLabel,
-  moderationLabelEntries,
   moderationLabels,
   PolycentricCore,
   Query,
@@ -20,7 +19,6 @@ export {
 } from '@polycentric/rs-core-uniffi-web';
 export type {
   EventKey,
-  ModerationLabelEntry,
   QueryResultFfi,
   QueryOpts,
 } from '@polycentric/rs-core-uniffi-web';

@@ -32,26 +32,6 @@ export function isModerationLabel(value: string): boolean {
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
     }
-
-/**
- * Every moderation label and its associated metadata.
- */
-export function moderationLabelEntries(): Array<ModerationLabelEntry> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypeModerationLabelEntry.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
-            /*caller:*/ (callStatus) => {
-                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_label_entries(
-                callStatus);
-            },
-            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
-    }
-
 /**
  * Every moderation label value in canonical order.
  */
@@ -1287,66 +1267,6 @@ const FfiConverterTypeListVerificationVerifiesArgs = (() => {
     };
     return new FFIConverter();
 })();
-
-/**
- * A moderation label with its display name and description.
- */
-export type ModerationLabelEntry = {
-    /**
-     * The canonical string value (e.g. "hate", "self-harm").
-     */
-    key: string,
-    /**
-     * A human-readable display name (e.g. "Sexually Suggestive").
-     */
-    name: string,
-    /**
-     * A short description of what this label covers.
-     */
-    description: string
-}
-
-/**
- * Generated factory for {@link ModerationLabelEntry} record objects.
- */
-export const ModerationLabelEntry = (() => {
-    const defaults = () => ({
-    });
-    const create = (() => {
-        return uniffiCreateRecord<ModerationLabelEntry, ReturnType<typeof defaults>>(defaults);
-    })();
-    return Object.freeze({
-        create,
-        new: create,
-        defaults: () => Object.freeze(defaults()) as Partial<ModerationLabelEntry>,
-    });
-})();
-
-const FfiConverterTypeModerationLabelEntry = (() => {
-    type TypeName = ModerationLabelEntry;
-    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            return {
-                key: FfiConverterString.read(from), 
-                name: FfiConverterString.read(from), 
-                description: FfiConverterString.read(from)
-            };
-        }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.key, into);
-            FfiConverterString.write(value.name, into);
-            FfiConverterString.write(value.description, into);
-        }
-        allocationSize(value: TypeName): number {
-            return FfiConverterString.allocationSize(value.key) +
-             FfiConverterString.allocationSize(value.name) +
-             FfiConverterString.allocationSize(value.description);
-            
-        }
-    };
-    return new FFIConverter();
-})();
-
 /**
  * JPEG bytes plus the exact output dimensions of the resized image.
  */
@@ -5852,10 +5772,6 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterT
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
 
-// FfiConverter for Array<ModerationLabelEntry>
-const FfiConverterSequenceTypeModerationLabelEntry = new FfiConverterArray(FfiConverterTypeModerationLabelEntry);
-
-
 /**
  * This should be called before anything else.
  *
@@ -5876,9 +5792,6 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label() !== 26201) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_is_moderation_label");
-    }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_label_entries() !== 13832) {
-        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_label_entries");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_labels() !== 13965) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_labels");
@@ -6076,7 +5989,6 @@ export default Object.freeze({
     FfiConverterTypeListVerificationVerifiesArgs,
     FfiConverterTypeLogLevel,
     FfiConverterTypeLogger,
-    FfiConverterTypeModerationLabelEntry,
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
     FfiConverterTypeProcessedImage,
