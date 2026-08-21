@@ -54,7 +54,9 @@ function RootStack() {
             : [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
           ...(isWeb
             ? { animation: 'none' as const }
-            : { orientation: 'portrait_up' }),
+            : {
+                orientation: 'portrait_up' as const,
+              }),
         }}
       >
         {/* Mobile requires an account for the tabs (feeds, notifications,
