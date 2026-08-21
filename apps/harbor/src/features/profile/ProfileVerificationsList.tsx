@@ -21,6 +21,10 @@ export function ProfileVerificationsList({
   const { identityKey, isSelf } = useProfileContext();
   const claims = useClaimsList(identityKey ?? undefined, active);
 
+  // An unopened page has nothing and is not fetching, so it stands as a
+  // skeleton rather than claiming there are no claims.
+  const pending = !active && claims.claims.length === 0;
+
   return (
     <List<DecodedClaim>
       data={claims.claims}
@@ -29,7 +33,7 @@ export function ProfileVerificationsList({
       }
       renderItem={({ item }) => <ClaimListItem claim={item} />}
       ListEmptyComponent={
-        claims.isLoading ? (
+        claims.isLoading || pending ? (
           <ClaimSkeletonList count={3} />
         ) : (
           <ListEmpty>

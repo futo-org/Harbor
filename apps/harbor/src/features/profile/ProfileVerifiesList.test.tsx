@@ -42,22 +42,6 @@ jest.mock('@/src/common/components/List', () => {
   };
 });
 
-jest.mock('@/src/features/verifications/claims/ClaimActionRow', () => {
-  const react = require('react');
-  const { Text } = require('react-native');
-  return {
-    ClaimActionRow: ({ title }: { title: string }) =>
-      react.createElement(Text, { testID: 'request-row' }, title),
-  };
-});
-
-jest.mock(
-  '@/src/features/verifications/claims/create/ClaimCreateSheet',
-  () => ({
-    ClaimCreateSheet: () => null,
-  }),
-);
-
 jest.mock('@/src/common/components/ListEmpty', () => {
   const react = require('react');
   const { Text } = require('react-native');
@@ -174,18 +158,9 @@ describe('ProfileVerifiesList', () => {
     expect(screen.getByText('No vouches yet.')).toBeTruthy();
   });
 
-  it('leads with the request row on another profile', async () => {
-    const screen = await render(<ProfileVerifiesList />);
+  it('stands as a skeleton while inactive instead of an empty state', async () => {
+    const screen = await render(<ProfileVerifiesList active={false} />);
 
-    expect(screen.getByTestId('request-row')).toHaveTextContent(
-      /Request a verification/,
-    );
-  });
-
-  it('has no request row on the own profile', async () => {
-    mockIsSelf = true;
-    const screen = await render(<ProfileVerifiesList />);
-
-    expect(screen.queryByTestId('request-row')).toBeNull();
+    expect(screen.queryByText('No vouches yet.')).toBeNull();
   });
 });

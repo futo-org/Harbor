@@ -36,7 +36,7 @@ export const typography = {
     xs: 12,
     sm: 14,
     md: 15,
-    lg: 18,
+    lg: 17,
     xl: 20,
   } as const,
   fontWeight: {
@@ -49,7 +49,7 @@ export const typography = {
     xs: 16,
     sm: 20,
     md: 20,
-    lg: 28,
+    lg: 24,
     xl: 32,
   } as const,
 };
