@@ -74,6 +74,8 @@ export function Avatar({
   const image = (
     <Image
       cachePolicy="memory-disk"
+      // Fades in rather than popping when it lands a frame after the row.
+      transition={150}
       {...restImageProps}
       source={source}
       recyclingKey={recyclingKey ?? sourceUri(source)}
