@@ -2973,14 +2973,13 @@ async fn recommended_feed_empty() {
 }
 
 #[tokio::test]
-async fn recommended_feed_includes_own_posts() {
+async fn recommended_feed_does_not_include_own_posts() {
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
-    let post1_key = client.get_last_event_key();
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key]).await;
+    recommended_feed(follower, &[]).await;
 }
 
 #[tokio::test]
@@ -3000,7 +2999,7 @@ async fn recommended_feed_includes_posts_by_followee() {
 }
 
 #[tokio::test]
-async fn recommended_feed_includes_posts_reacted_self() {
+async fn recommended_feed_does_not_include_posts_reacted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
@@ -3012,7 +3011,7 @@ async fn recommended_feed_includes_posts_reacted_self() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key]).await;
+    recommended_feed(follower, &[]).await;
 }
 
 #[tokio::test]
@@ -3037,7 +3036,7 @@ async fn recommended_feed_includes_posts_reacted_by_followee() {
 }
 
 #[tokio::test]
-async fn recommended_feed_includes_posts_reposted_self() {
+async fn recommended_feed_does_not_include_posts_reposted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
@@ -3049,7 +3048,7 @@ async fn recommended_feed_includes_posts_reposted_self() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key]).await;
+    recommended_feed(follower, &[]).await;
 }
 
 #[tokio::test]
@@ -3074,7 +3073,7 @@ async fn recommended_feed_includes_posts_reposted_by_followee() {
 }
 
 #[tokio::test]
-async fn recommended_feed_includes_posts_quoted_self() {
+async fn recommended_feed_does_not_include_posts_quoted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
@@ -3083,11 +3082,10 @@ async fn recommended_feed_includes_posts_quoted_self() {
 
     let mut client = TestClient::new().await;
     client.quote(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
-    let reply1_key = client.get_last_event_key();
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[]).await;
 }
 
 #[tokio::test]
@@ -3113,7 +3111,7 @@ async fn recommended_feed_includes_posts_quoted_by_followee() {
 }
 
 #[tokio::test]
-async fn recommended_feed_includes_posts_replies_self() {
+async fn recommended_feed_does_not_include_posts_replies_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
     client.post_text("Post 1", DEFAULT_CREATED_AT);
@@ -3122,11 +3120,10 @@ async fn recommended_feed_includes_posts_replies_self() {
 
     let mut client = TestClient::new().await;
     client.reply(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
-    let reply1_key = client.get_last_event_key();
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[]).await;
 }
 
 #[tokio::test]
