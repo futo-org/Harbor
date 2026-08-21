@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use prost::Message;
 use sha2::{Digest, Sha256};
 
+use crate::models::protos_v2::{RevocationBound, ServerList};
 use crate::{
     models::{
         collections,
@@ -244,6 +245,52 @@ enum SuccessionReason {
     Rotation,
 }
 
+/// A subset of the identity document that contains the actual identity content.
+/// Non-rotation signing keys are not allowed to publish identity documents with
+/// any of these fields modified.
+#[derive(PartialEq)]
+struct IdentityContent<'a> {
+    rotation_keys: &'a [PublicKey],
+    signing_keys: &'a [PublicKey],
+    revocation_bounds: &'a [RevocationBound],
+    servers: &'a Option<ServerList>,
+    recovery_key: &'a Option<PublicKey>,
+}
+
+impl<'a> From<&'a Identity> for IdentityContent<'a> {
+    fn from(val: &'a Identity) -> Self {
+        // Explicitly include/exclude fields to prevent drift
+        let Identity {
+            rotation_keys,
+            signing_keys,
+            revocation_bounds,
+            servers,
+            recovery_key,
+            recovery_signature: _,
+        } = val;
+
+        IdentityContent {
+            rotation_keys,
+            signing_keys,
+            revocation_bounds,
+            servers,
+            recovery_key,
+        }
+    }
+}
+
+/// Returns whether `to` is a valid republish of `from`.
+/// This is based on the identity documents and ignores the sequencing.
+fn is_republish(from: &IdentityEvent, to: &IdentityEvent) -> bool {
+    if !from.document.authorizes_signer(&to.signer) {
+        return false;
+    }
+
+    let from = IdentityContent::from(&from.document);
+    let to = IdentityContent::from(&to.document);
+    from == to
+}
+
 /// Return a reason to allow `candidate` to succeed `head` or `None` if it
 /// should not be permitted to do so.
 fn justify_succession(
@@ -257,7 +304,7 @@ fn justify_succession(
     }
 
     // Permit even a non-rotation key to add to the chain if it doesn't change anything
-    if candidate.document == head.document && head.document.authorizes_signer(&candidate.signer) {
+    if is_republish(head, candidate) {
         return Some(SuccessionReason::Republish);
     }
 
