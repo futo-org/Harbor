@@ -47,7 +47,7 @@ export default function OnboardingLayout() {
           Atoms.items_center,
           showScene ? { width: CONTENT_WIDTH } : Atoms.flex_1,
         ]}
-        behavior={isIOS ? 'padding' : 'height'}
+        behavior={isIOS ? 'padding' : undefined}
         keyboardVerticalOffset={-insets.bottom}
       >
         <View
