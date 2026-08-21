@@ -20,20 +20,6 @@ const uniffiIsDebug =
 // Public interface members begin here.
 
 /**
- * Whether a string `value` is considered a moderation label.
- */
-export function isModerationLabel(value: string): boolean {
-    return FfiConverterBool.lift(uniffiCaller.rustCall(
-            /*caller:*/ (callStatus) => {
-                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(
-        FfiConverterString.lower(value, nativeModule().rustbuffer_alloc),
-                callStatus);
-            },
-            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
-    }
-
-/**
  * Whether two label sets differ, ignoring order. Empty and absent are
  * considered equivalent.
  */
@@ -50,7 +36,7 @@ export function labelsChanged(a: Array<PostLabel>, b: Array<PostLabel>): boolean
     }
 
 /**
- * Labels carried by a `GetFeedResponse` — what every feed RPC emits.
+ * Return the labels from the `event_hints` field of a feed response
  */
 export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
     return ((__rb: Uint8Array) => {
@@ -70,9 +56,8 @@ export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
     }
 
 /**
- * Labels carried by a `ListNotificationsResponse`. Servers only ship
- * labels for the events that triggered a notification, so a notification's
- * target event is normally unlabelled.
+ * Return the labels from the `event_hints` field of a list notifications
+ * response.
  */
 export function labelsFromNotificationsResponse(response: ArrayBuffer): Array<LabelSet> {
     return ((__rb: Uint8Array) => {
@@ -92,7 +77,7 @@ export function labelsFromNotificationsResponse(response: ArrayBuffer): Array<La
     }
 
 /**
- * Labels carried by a `SearchPostsResponse`.
+ * Return the labels from the `event_hints` field of a search posts response.
  */
 export function labelsFromSearchResponse(response: ArrayBuffer): Array<LabelSet> {
     return ((__rb: Uint8Array) => {
@@ -112,7 +97,7 @@ export function labelsFromSearchResponse(response: ArrayBuffer): Array<LabelSet>
     }
 
 /**
- * Labels carried by a `GetPostThreadResponse`.
+ * Return the labels from the `event_hints` field of a thread response
  */
 export function labelsFromThreadResponse(response: ArrayBuffer): Array<LabelSet> {
     return ((__rb: Uint8Array) => {
@@ -147,26 +132,6 @@ export function mergeLabels(orig: Array<PostLabel>, latest: Array<PostLabel>): A
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_merge_labels(
         FfiConverterSequenceTypePostLabel.lower(orig, nativeModule().rustbuffer_alloc),
         FfiConverterSequenceTypePostLabel.lower(latest, nativeModule().rustbuffer_alloc),
-                callStatus);
-            },
-            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
-    }
-
-/**
- * Moderation label enumeration for FFI. Rust callers should use
- * [`ModerationLabel`] in the `rs-common` crate.
- */
-export function moderationLabels(): Array<string> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceString.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
-            /*caller:*/ (callStatus) => {
-                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_labels(
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
@@ -963,7 +928,6 @@ const FfiConverterTypeIsModeratorArgs = (() => {
 })();
 
 /**
- * A representation of a single moderation label applied by a single identity.
  * `PostLabel`s are collected by clients for each post.
  */
 export type PostLabel = {
@@ -6013,29 +5977,23 @@ function uniffiEnsureInitialized() {
     if (bindingsContractVersion !== scaffoldingContractVersion) {
         throw new UniffiInternalError.ContractVersionMismatch(scaffoldingContractVersion, bindingsContractVersion);
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label() !== 8536) {
-        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_is_moderation_label");
-    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_changed() !== 39783) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_changed");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response() !== 47195) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response() !== 29678) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_feed_response");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response() !== 20781) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response() !== 4814) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_notifications_response");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response() !== 39427) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response() !== 12725) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_search_response");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response() !== 7678) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response() !== 19584) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_thread_response");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_merge_labels() !== 35796) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_merge_labels");
-    }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_labels() !== 61242) {
-        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_labels");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !== 1521) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_log_level");
