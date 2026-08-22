@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { encodePairingCode } from '../pairingCode';
+import { bytesToHex } from '@polycentric/react-native';
 
 const PAIRING_BLOCK_WIDTH = 200;
 
@@ -414,7 +415,14 @@ export default function PairIdentityIssuerScreen() {
                         return;
                       }
 
-                      void Clipboard.setStringAsync(pairingCode);
+                      // Encode the pairing code to hex rather than exposing the
+                      // raw JSON string to the user.
+                      const pairingCodeBytes = new TextEncoder().encode(
+                        pairingCode,
+                      );
+                      const hexPairingCode = bytesToHex(pairingCodeBytes);
+
+                      void Clipboard.setStringAsync(hexPairingCode);
                       setJustCopied(true);
                       setTimeout(() => setJustCopied(false), 2000);
                     }}

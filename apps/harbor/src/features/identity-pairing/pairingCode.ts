@@ -12,6 +12,16 @@ export type PairingSessionInfo = {
   readonly code: string;
 };
 
+/**
+ * -----------------------------------------------------------------------------
+ * The pairing code is a JSON string that contains enough info for the claimer
+ * to join the pairing session securely.
+ * The QR code contains the raw string directly to keep it small-ish.
+ * The copy button and manual entry use a hex-encoded version so that it appears
+ * as an opaque token string to the user.
+ * -----------------------------------------------------------------------------
+ */
+
 export function encodePairingCode(info: PairingSessionInfo): string {
   return JSON.stringify(info);
 }
