@@ -669,7 +669,7 @@ importers:
         version: 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       html-get:
         specifier: ^2.24.6
-        version: 2.26.9(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 2.26.10(@noble/hashes@2.2.0)(debug@4.4.3)
       metascraper:
         specifier: ^5.50.6
         version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
@@ -7761,8 +7761,8 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
-  html-get@2.26.9:
-    resolution: {integrity: sha512-A57wN229k9UF+q1gMywXX4sUvR0BTtXY0fiqevAFI9OXaMbTfyFMX5T1cohz9l15++do4R4sBSF9+98xXduutw==}
+  html-get@2.26.10:
+    resolution: {integrity: sha512-jcIvEiWNxx1WaoCiIhfhdut8LBV9uWSrbbJcCb2KOmKbqAT6YO9O6EDZyo3fMEcn8HMLFy6VXQIDxO8gD4pdaw==}
     engines: {node: '>= 10'}
     hasBin: true
 
@@ -19850,7 +19850,7 @@ snapshots:
 
   chrome-launcher@0.15.2:
     dependencies:
-      '@types/node': 24.13.1
+      '@types/node': 26.2.0
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -19867,7 +19867,7 @@ snapshots:
 
   chromium-edge-launcher@0.3.0:
     dependencies:
-      '@types/node': 24.13.1
+      '@types/node': 26.2.0
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -22189,7 +22189,7 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html-get@2.26.9(@noble/hashes@2.2.0)(debug@4.4.3):
+  html-get@2.26.10(@noble/hashes@2.2.0)(debug@4.4.3):
     dependencies:
       '@kikobeats/time-span': 1.0.13
       '@metascraper/helpers': 5.55.2(@noble/hashes@2.2.0)(debug@4.4.3)
