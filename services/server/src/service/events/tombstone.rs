@@ -1,4 +1,3 @@
-use crate::data::EventRow;
 use crate::service::context::ServiceContext;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::{
@@ -16,25 +15,7 @@ use sea_orm::{
 use std::collections::{HashMap, HashSet};
 use tonic::{Code, Status};
 
-/// `(EventModel::Model, Option<ContentModel::Model>)` — the shape
-/// every event-returning query already produces.
-pub type EventWithContentRow = (EventModel::Model, Option<ContentModel::Model>);
-
-impl EventRow for EventWithContentRow {
-    fn as_event_with_content(
-        &self,
-    ) -> (&EventModel::Model, Option<&ContentModel::Model>) {
-        (&self.0, self.1.as_ref())
-    }
-
-    fn as_event(&self) -> &EventModel::Model {
-        &self.0
-    }
-
-    fn as_content(&self) -> Option<&ContentModel::Model> {
-        self.1.as_ref()
-    }
-}
+pub use crate::data::EventWithContentRow;
 
 use super::TargetEventKey;
 

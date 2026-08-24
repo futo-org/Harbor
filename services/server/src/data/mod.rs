@@ -35,6 +35,43 @@ pub trait EventRow {
     }
 }
 
+/// `(event_model::Model, Option<content_model::Model>)` — the shape every
+/// event-returning query already produces.
+pub type EventWithContentRow =
+    (event_model::Model, Option<content_model::Model>);
+
+impl EventRow for EventWithContentRow {
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        (&self.0, self.1.as_ref())
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        &self.0
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.1.as_ref()
+    }
+}
+
+impl EventRow for (&event_model::Model, Option<&content_model::Model>) {
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        *self
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        self.0
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.1
+    }
+}
+
 impl<T> EventRow for &T
 where
     T: EventRow,
