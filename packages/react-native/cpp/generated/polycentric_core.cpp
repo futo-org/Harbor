@@ -558,7 +558,6 @@ extern "C" {
         RustBuffer value, 
         RustCallStatus *uniffi_out_err
     );
-    );
     RustBuffer uniffi_polycentric_core_fn_func_moderation_labels(RustCallStatus *uniffi_out_err
     );
     RustBuffer ffi_polycentric_core_rustbuffer_alloc(
@@ -766,7 +765,7 @@ extern "C" {
     );
     uint16_t uniffi_polycentric_core_checksum_func_moderation_labels(
     );
-    uint16_t uniffi_polycentric_core_checksum_func_set_logger(
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(
     );

@@ -32,6 +32,7 @@ export function isModerationLabel(value: string): boolean {
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ));
     }
+
 /**
  * Every moderation label value in canonical order.
  */
@@ -1267,6 +1268,7 @@ const FfiConverterTypeListVerificationVerifiesArgs = (() => {
     };
     return new FFIConverter();
 })();
+
 /**
  * JPEG bytes plus the exact output dimensions of the resized image.
  */
@@ -5771,6 +5773,7 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterT
 
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
+
 
 /**
  * This should be called before anything else.
