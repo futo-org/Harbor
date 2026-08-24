@@ -41,7 +41,7 @@ async function pickBackupFile(): Promise<PickedBackupFile | undefined> {
 
 export interface BackupFilePickerProps {
   /** Filename to display if the user has already picked a file. */
-  picked: PickedBackupFile | undefined;
+  picked?: PickedBackupFile;
   disabled?: boolean;
   /** Callback for a successful file selection and read. */
   onPicked: (file: PickedBackupFile) => void;
