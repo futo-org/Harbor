@@ -255,7 +255,7 @@ impl Query {
             .from(FollowModel::Entity)
             .and_where(FollowModel::Column::Follower.eq(identity));
         // List of identities that are followed by identities that `identity`
-        // follows. Are you following this? In other words in you follow Alice,
+        // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
         const SUGGESTIONS_TABLE: &str = "suggestions";
         let mut suggestions = SelectStatement::new();
