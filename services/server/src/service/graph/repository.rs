@@ -272,11 +272,16 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         // List of identities the `identity` is following.
+        const FOLLOWING_TABLE: &str = "following";
         let mut following = SelectStatement::new();
         following
             .column(FollowModel::Column::Followee)
             .from(FollowModel::Entity)
             .and_where(FollowModel::Column::Follower.eq(identity));
+        let mut select_following = SelectStatement::new();
+        select_following
+            .column(FollowModel::Column::Followee)
+            .from(FOLLOWING_TABLE);
         // List of identities that are followed by identities that `identity`
         // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
@@ -299,15 +304,28 @@ impl Query {
                 FOLLOWERS_COLUMN,
             )
             .from(FollowModel::Entity)
-            .and_where(FollowModel::Column::Follower.in_subquery(following))
+            .and_where(
+                FollowModel::Column::Follower
+                    .in_subquery(select_following.clone()),
+            )
+            // Don't suggest ourselves.
+            .and_where(FollowModel::Column::Followee.ne(identity))
+            // Don't suggest identities the identity is already following.
+            .and_where(
+                FollowModel::Column::Followee.not_in_subquery(select_following),
+            )
             .group_by_col(FollowModel::Column::Followee);
 
         let mut query = EventModel::Entity::find().select_only();
         QuerySelect::query(&mut query).with_cte({
             let mut c = WithClause::new();
-            let mut cte = CommonTableExpression::new();
-            cte.table_name(SUGGESTIONS_TABLE).query(suggestions);
-            c.recursive(false).cte(cte);
+            let mut following_cte = CommonTableExpression::new();
+            following_cte.table_name(FOLLOWING_TABLE).query(following);
+            let mut suggestions_cte = CommonTableExpression::new();
+            suggestions_cte
+                .table_name(SUGGESTIONS_TABLE)
+                .query(suggestions);
+            c.recursive(false).cte(following_cte).cte(suggestions_cte);
             c
         });
         query = select_model_columns(
@@ -405,6 +423,10 @@ impl Query {
         //follows: impl Iterator<Item = (&str, &str)>,
         follows: Vec<(&str, &str)>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        if follows.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let mut values = SelectStatement::new();
         values
             .expr(Expr::col(Asterisk))

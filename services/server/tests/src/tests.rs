@@ -3446,6 +3446,68 @@ async fn suggest_follow_with_profile_updates() {
 }
 
 #[tokio::test]
+async fn suggest_follow_exclude_self() {
+    // The client themselves.
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+
+    // Two identities that both follow the client and the client follows them.
+    for _ in 0..2 {
+        let mut followee_client = TestClient::new().await;
+        followee_client
+            .follow_identity(client.identity().to_owned(), DEFAULT_CREATED_AT);
+        followee_client.submit_events().await;
+        client.follow_identity(
+            followee_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+    }
+    client.submit_events().await;
+
+    // We don't want a suggestion to follow ourselves.
+    let expected_suggestions = Vec::new();
+    let expected_hints = Vec::new();
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
+async fn suggest_follow_exclude_already_following() {
+    // The client themselves.
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+
+    let mut suggested_client = TestClient::new().await;
+    suggested_client.submit_events().await;
+
+    // Two identities that both follow the client and the client follows them.
+    for _ in 0..2 {
+        let mut followee_client = TestClient::new().await;
+        followee_client.follow_identity(
+            suggested_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+        followee_client.submit_events().await;
+        client.follow_identity(
+            followee_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+    }
+
+    client.follow_identity(
+        suggested_client.identity().to_owned(),
+        DEFAULT_CREATED_AT,
+    );
+    client.submit_events().await;
+
+    // Since all identities are already followed we don't get any suggestions.
+    let expected_suggestions = Vec::new();
+    let expected_hints = Vec::new();
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
 async fn suggest_follow_pagination() {
     let mut suggested = Vec::with_capacity(3);
     for _ in 0..suggested.capacity() {
@@ -3616,6 +3678,7 @@ async fn suggest_follow(
 ) {
     suggest_follow2(
         async {
+            eprintln!("Own identity: {}", identity.identity());
             let mut client = graph_service().await;
             let auth_token = identity.create_auth_token();
             let mut request =
