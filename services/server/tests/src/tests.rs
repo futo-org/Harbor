@@ -3355,12 +3355,27 @@ async fn suggest_follow_no_profile_updates() {
     }
     client.submit_events().await;
 
+    let expected_hints = vec![
+        ExpectedHint {
+            identity: suggested.to_owned(),
+            expect_profile: false,
+            expect_follow: Vec::new(),
+        },
+        ExpectedHint {
+            identity: followees[0].clone(),
+            expect_profile: false,
+            expect_follow: vec![suggested.to_owned()],
+        },
+        ExpectedHint {
+            identity: followees[1].clone(),
+            expect_profile: false,
+            expect_follow: vec![suggested.to_owned()],
+        },
+    ];
     let expected_suggestions = vec![ExpectedFollowSuggestion {
         suggestion: suggested.to_owned(),
         followers: followees,
     }];
-    // Since none of the identities updated their profile we get no hints.
-    let expected_hints = Vec::new();
 
     suggest_follow(&client, expected_suggestions, expected_hints).await;
 }
@@ -3409,20 +3424,85 @@ async fn suggest_follow_with_profile_updates() {
         ExpectedHint {
             identity: suggested.to_owned(),
             expect_profile: true,
+            expect_follow: Vec::new(),
         },
         ExpectedHint {
             identity: followees[0].clone(),
             expect_profile: true,
+            expect_follow: vec![suggested.to_owned()],
         },
         ExpectedHint {
             identity: followees[1].clone(),
             expect_profile: true,
+            expect_follow: vec![suggested.to_owned()],
         },
     ];
     let expected_suggestions = vec![ExpectedFollowSuggestion {
         suggestion: suggested.to_owned(),
         followers: followees,
     }];
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
+async fn suggest_follow_exclude_self() {
+    // The client themselves.
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+
+    // Two identities that both follow the client and the client follows them.
+    for _ in 0..2 {
+        let mut followee_client = TestClient::new().await;
+        followee_client
+            .follow_identity(client.identity().to_owned(), DEFAULT_CREATED_AT);
+        followee_client.submit_events().await;
+        client.follow_identity(
+            followee_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+    }
+    client.submit_events().await;
+
+    // We don't want a suggestion to follow ourselves.
+    let expected_suggestions = Vec::new();
+    let expected_hints = Vec::new();
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
+async fn suggest_follow_exclude_already_following() {
+    // The client themselves.
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+
+    let mut suggested_client = TestClient::new().await;
+    suggested_client.submit_events().await;
+
+    // Two identities that both follow the client and the client follows them.
+    for _ in 0..2 {
+        let mut followee_client = TestClient::new().await;
+        followee_client.follow_identity(
+            suggested_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+        followee_client.submit_events().await;
+        client.follow_identity(
+            followee_client.identity().to_owned(),
+            DEFAULT_CREATED_AT,
+        );
+    }
+
+    client.follow_identity(
+        suggested_client.identity().to_owned(),
+        DEFAULT_CREATED_AT,
+    );
+    client.submit_events().await;
+
+    // Since all identities are already followed we don't get any suggestions.
+    let expected_suggestions = Vec::new();
+    let expected_hints = Vec::new();
 
     suggest_follow(&client, expected_suggestions, expected_hints).await;
 }
@@ -3486,18 +3566,22 @@ async fn suggest_follow_pagination() {
                 ExpectedHint {
                     identity: suggested[0].clone(),
                     expect_profile: true,
+                    expect_follow: Vec::new(),
                 },
                 ExpectedHint {
                     identity: followees[0].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[0].clone()],
                 },
                 ExpectedHint {
                     identity: followees[1].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[0].clone()],
                 },
                 ExpectedHint {
                     identity: followees[2].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[0].clone()],
                 },
             ],
         ),
@@ -3510,14 +3594,17 @@ async fn suggest_follow_pagination() {
                 ExpectedHint {
                     identity: suggested[1].clone(),
                     expect_profile: true,
+                    expect_follow: Vec::new(),
                 },
                 ExpectedHint {
                     identity: followees[0].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[1].clone()],
                 },
                 ExpectedHint {
                     identity: followees[1].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[1].clone()],
                 },
             ],
         ),
@@ -3530,10 +3617,12 @@ async fn suggest_follow_pagination() {
                 ExpectedHint {
                     identity: suggested[2].clone(),
                     expect_profile: true,
+                    expect_follow: Vec::new(),
                 },
                 ExpectedHint {
                     identity: followees[0].clone(),
                     expect_profile: true,
+                    expect_follow: vec![suggested[2].clone()],
                 },
             ],
         ),
@@ -3579,6 +3668,7 @@ struct ExpectedFollowSuggestion {
 struct ExpectedHint {
     identity: String,
     expect_profile: bool,
+    expect_follow: Vec<String>,
 }
 
 async fn suggest_follow(
@@ -3588,6 +3678,7 @@ async fn suggest_follow(
 ) {
     suggest_follow2(
         async {
+            eprintln!("Own identity: {}", identity.identity());
             let mut client = graph_service().await;
             let auth_token = identity.create_auth_token();
             let mut request =
@@ -3611,14 +3702,14 @@ async fn suggest_follow2<Fut>(
     Fut: Future<Output = SuggestFollowResponse>,
 {
     eprintln!("expected suggestions: {expected_suggestions:#?}");
-    let result = request.await;
+    let mut result = request.await;
     eprintln!("actual suggestions: {:#?}", &result.suggestions);
 
     assert_eq!(result.suggestions.len(), expected_suggestions.len());
-    for (mut got, mut expected) in
-        result.suggestions.into_iter().zip(expected_suggestions)
+    for (got, mut expected) in
+        result.suggestions.iter_mut().zip(expected_suggestions)
     {
-        let suggestion = got.suggestion.unwrap();
+        let suggestion = got.suggestion.as_ref().unwrap();
 
         let content = Content::decode(
             &*suggestion
@@ -3652,11 +3743,13 @@ async fn suggest_follow2<Fut>(
     for ExpectedHint {
         identity,
         expect_profile,
+        expect_follow,
     } in expected_hints
     {
-        assert!(expect_profile, "no expectations");
-
+        let mut found_identity_hint = false;
         let mut found_profile_hint = !expect_profile;
+        let mut unfound_follow_events: Vec<&str> =
+            expect_follow.iter().map(String::as_str).collect();
 
         for hint in &result.event_hints {
             let bundle = hint.event_bundle.as_ref().unwrap();
@@ -3675,17 +3768,64 @@ async fn suggest_follow2<Fut>(
             )
             .unwrap();
             match &content.content_body {
+                Some(ContentBody::Follow(follow)) => {
+                    let Some(idx) = unfound_follow_events
+                        .iter()
+                        .position(|e| **e == follow.identity)
+                    else {
+                        panic!("unexpected follow event content: {follow:?}");
+                    };
+                    unfound_follow_events.remove(idx);
+                }
                 Some(ContentBody::ProfileUpdate(_)) => {
                     found_profile_hint = true;
                 }
-                Some(ContentBody::Identity(_)) => {}
+                Some(ContentBody::Identity(_)) => {
+                    found_identity_hint = true;
+                }
                 _ => panic!("unexpected event content: {content:?}"),
             }
         }
 
+        if !found_identity_hint {
+            // The to-follow identities are in the suggestions.
+            for suggestion in &result.suggestions {
+                let bundle = suggestion.suggestion.as_ref().unwrap();
+                let event = Event::decode(
+                    &*bundle.signed_event.as_ref().unwrap().event_bytes,
+                )
+                .unwrap();
+                let got_identity = event.key.unwrap().identity;
+                if got_identity != identity {
+                    continue;
+                }
+
+                let content = Content::decode(
+                    &*bundle.serialized_content.as_ref().unwrap().content_bytes,
+                )
+                .unwrap();
+                if !matches!(
+                    &content.content_body,
+                    Some(ContentBody::Identity(_))
+                ) {
+                    panic!("unexpected event content: {content:?}");
+                };
+                found_identity_hint = true;
+                break;
+            }
+        }
+
+        assert!(
+            found_identity_hint,
+            "didn't get an identity hint for {identity}"
+        );
         assert!(
             found_profile_hint,
             "didn't get a profile hint for {identity}"
+        );
+        assert!(
+            unfound_follow_events.is_empty(),
+            "didn't get a follow hint for {identity}: {unfound_follow_events:?} (all expected: {expect_follow:?})"
         );
     }
 }

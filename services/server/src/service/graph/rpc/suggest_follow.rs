@@ -75,7 +75,28 @@ async fn hydrate(
     _: &Params,
     fetched: &Fetched,
 ) -> Result<HydrationState, Status> {
-    hydration::hydrate(ctx, &fetched.rows, &HydrateConfig::default()).await
+    let mut hydration =
+        hydration::hydrate(ctx, &fetched.rows, &HydrateConfig::default())
+            .await?;
+
+    let follows = fetched
+        .rows
+        .iter()
+        .flat_map(|row| {
+            row.followers
+                .iter()
+                .map(|follower| (&*row.event.identity, &**follower))
+        })
+        .collect::<Vec<_>>();
+    let follow_events = Query::follow_events(&ctx.service.db, follows)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to get follow events");
+            Status::internal("internal server error")
+        })?;
+    hydration.follow_events.extend(follow_events);
+
+    Ok(hydration)
 }
 
 struct Filtered {

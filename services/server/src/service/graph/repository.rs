@@ -7,7 +7,8 @@ use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::*;
 use sea_query::{
-    CommonTableExpression, Expr, Func, PgFunc, SelectStatement, WithClause,
+    Asterisk, CommonTableExpression, Expr, Func, PgFunc, SelectStatement,
+    WithClause,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -22,8 +23,6 @@ use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
-
-const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
 
 #[derive(Debug)]
 pub struct FollowSuggestionEvent {
@@ -273,11 +272,16 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         // List of identities the `identity` is following.
+        const FOLLOWING_TABLE: &str = "following";
         let mut following = SelectStatement::new();
         following
             .column(FollowModel::Column::Followee)
             .from(FollowModel::Entity)
             .and_where(FollowModel::Column::Follower.eq(identity));
+        let mut select_following = SelectStatement::new();
+        select_following
+            .column(FollowModel::Column::Followee)
+            .from(FOLLOWING_TABLE);
         // List of identities that are followed by identities that `identity`
         // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
@@ -300,15 +304,28 @@ impl Query {
                 FOLLOWERS_COLUMN,
             )
             .from(FollowModel::Entity)
-            .and_where(FollowModel::Column::Follower.in_subquery(following))
+            .and_where(
+                FollowModel::Column::Follower
+                    .in_subquery(select_following.clone()),
+            )
+            // Don't suggest ourselves.
+            .and_where(FollowModel::Column::Followee.ne(identity))
+            // Don't suggest identities the identity is already following.
+            .and_where(
+                FollowModel::Column::Followee.not_in_subquery(select_following),
+            )
             .group_by_col(FollowModel::Column::Followee);
 
         let mut query = EventModel::Entity::find().select_only();
         QuerySelect::query(&mut query).with_cte({
             let mut c = WithClause::new();
-            let mut cte = CommonTableExpression::new();
-            cte.table_name(SUGGESTIONS_TABLE).query(suggestions);
-            c.recursive(false).cte(cte);
+            let mut following_cte = CommonTableExpression::new();
+            following_cte.table_name(FOLLOWING_TABLE).query(following);
+            let mut suggestions_cte = CommonTableExpression::new();
+            suggestions_cte
+                .table_name(SUGGESTIONS_TABLE)
+                .query(suggestions);
+            c.recursive(false).cte(following_cte).cte(suggestions_cte);
             c
         });
         query = select_model_columns(
@@ -393,6 +410,48 @@ impl Query {
 
         query.into_tuple().all(db).await
     }
+
+    /// `follows` is (followee, follower).
+    pub async fn follow_events(
+        db: &DbConn,
+        // NOTE: we should use an iterator here, but that triggers a "known
+        // limitation" in the compiler:
+        // > lifetime bound not satisfied
+        // > note: this is a known limitation that will be removed in the future
+        // > (see issue #100014 <https://github.com/rust-lang/rust/issues/100013>
+        // > for more information)
+        //follows: impl Iterator<Item = (&str, &str)>,
+        follows: Vec<(&str, &str)>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        if follows.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut values = SelectStatement::new();
+        values
+            .expr(Expr::col(Asterisk))
+            .from_values(follows, "follows");
+
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(
+                JoinType::InnerJoin,
+                FollowModel::Relation::EventModel.def().rev(),
+            )
+            .filter(
+                EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH),
+            )
+            .filter(
+                Expr::tuple([
+                    Expr::col(FollowModel::Column::Followee),
+                    Expr::col(FollowModel::Column::Follower),
+                ])
+                .eq(Expr::any(values)),
+            )
+            .all(db)
+            .await
+    }
 }
 
 /// Obtains the targets of graph events authored by `caller`. The `extract`
@@ -405,7 +464,7 @@ async fn list_graph_targets(
     let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
         .select_also(ContentModel::Entity)
         .join(JoinType::InnerJoin, content_join())
-        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH))
         .filter(EventModel::Column::Identity.eq(caller))
         .all(&ctx.db)
         .await
@@ -447,7 +506,7 @@ fn follow_events_query() -> SelectTwo<EventModel::Entity, ContentModel::Entity>
         .select_also(ContentModel::Entity)
         .join(JoinType::InnerJoin, content_join())
         .join(JoinType::InnerJoin, follow_join())
-        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH))
 }
 
 /// Relation joining a content row to its Follow row.
@@ -544,7 +603,7 @@ mod tests {
     fn event_row(id: i64, identity: &str, sequence: i64) -> EventModel::Model {
         EventModel::Model {
             id,
-            collection: GRAPH_COLLECTION,
+            collection: collections::SOCIAL_GRAPH,
             identity: identity.to_string(),
             public_key_type: 1,
             public_key: vec![0xaa],
