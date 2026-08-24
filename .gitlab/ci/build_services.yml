@@ -357,7 +357,6 @@ verifier-bot-tests:
   extends: .verifier-bot-workflow
   image: node:24-slim
   stage: test
-  allow_failure: true
   needs:
     - job: js-sdks-build
       artifacts: true
@@ -379,7 +378,31 @@ verifier-bot-tests:
     reports:
       junit: services/verifier-bot/junit.xml
   rules:
+    # Platforms change their pages without us touching the bot.
+    - if: $CI_PIPELINE_SOURCE == "schedule"
     - !reference [.verifier-bot-workflow, rules]
+
+verifier-bot-integration:
+  extends: .verifier-bot-workflow
+  stage: test
+  needs:
+    - job: verifier-bot-image
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - .gitlab/ci/scripts/verifier-image-health.sh "$CI_REGISTRY_IMAGE/verifier-bot:$CI_COMMIT_SHA"
+  rules:
+    - !reference [.verifier-bot-workflow, rules]
+
+# Scheduled run against prod bot
+verifier-bot-integration-prod:
+  image: node:24-slim
+  stage: test
+  needs: []
+  script:
+    - node .gitlab/ci/scripts/verifier-health.mjs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 # The bot consumes the CI-built js SDKs and rs-core-uniffi-web dist (pulled in
 # as artifacts); the image build typechecks the bot (see Dockerfile).
