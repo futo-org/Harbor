@@ -124,7 +124,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               </Text>
             ) : null}
             <Link
-              href="https://join.harbor.social/docs/setting-up-an-alias"
+              href="https://join.harbor.social/docs/guides/setting-up-an-alias"
               accessibilityRole="link"
             >
               <Text variant="small" color="neutral_500">
