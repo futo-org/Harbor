@@ -42,9 +42,9 @@ class TwitchTextVerifier extends TextVerifier {
       return Result.err({ message: 'Failed to get client id.' });
     }
 
+    // Twitch rejects a request that carries both the query and the hash of a
+    // persisted one, so send the hash alone.
     const postData = {
-      query:
-        'query ChannelRoot_AboutPanel($channelLogin: String! $skipSchedule: Boolean!) { currentUser { id login } user(login: $channelLogin) { id description displayName isPartner primaryColorHex profileImageURL(width: 300) followers { totalCount } channel { id socialMedias { ...SocialMedia } schedule @skip(if: $skipSchedule) { id nextSegment { id startAt hasReminder } } } lastBroadcast { id game { id displayName } } primaryTeam { id name displayName } videos(first: 30 sort: TIME type: ARCHIVE) { edges { ...userBioVideo } } } } fragment userBioVideo on VideoEdge { node { id game { id displayName } status } } fragment SocialMedia on SocialMedia { id name title url }',
       operationName: 'ChannelRoot_AboutPanel',
       variables: {
         channelLogin: claimField.value,

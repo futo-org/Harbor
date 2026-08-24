@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "test:ci": "tsx --test --test-name-pattern=\"CI\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
+    "test:ci": "tsx --test --test-skip-pattern=\"^LOCAL:\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js"

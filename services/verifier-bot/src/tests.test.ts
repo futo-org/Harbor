@@ -81,7 +81,7 @@ class DummyVerifier extends TextVerifier {
 describe('text pre-check', () => {
   const verifier = new DummyVerifier('X', 'my bio with token-abc inside');
 
-  test('CI: passes when the profile contains the token', async () => {
+  test('passes when the profile contains the token', async () => {
     const result = await verifier.checkFields(
       [{ key: 0, value: 'someuser' }],
       'token-abc',
@@ -89,7 +89,7 @@ describe('text pre-check', () => {
     assert.ok(result.success);
   });
 
-  test('CI: fails when the token is missing', async () => {
+  test('fails when the token is missing', async () => {
     const result = await verifier.checkFields(
       [{ key: 0, value: 'someuser' }],
       'other-token',
@@ -122,13 +122,12 @@ describe('requestVerify input validation', () => {
   });
 });
 
-// ── Per-platform health checks (live: network; some need Chrome) ───────────
+// ── Fixture coverage (no network) ─────────────────────────────────────────
 //
-// Meta-guard + one health check per text verifier, mirroring the original
-// suite. The list is derived from `platforms` so it can't drift out of sync.
-// CI vs LOCAL is encoded in the test name; `test:ci` runs `--test-name-pattern=CI`.
+// `healthCheck` only fetches the profiles named in `testDataVerification`, so
+// a claim type missing from it is never exercised against the live site.
 
-test('CI: every text verifier has a health check', () => {
+test('every text verifier has a health check', () => {
   const covered = platforms.filter((p) =>
     p.verifiers.some((v) => v instanceof TextVerifier),
   );
@@ -136,10 +135,39 @@ test('CI: every text verifier has a health check', () => {
 });
 
 for (const platform of platforms) {
+  for (const verifier of platform.verifiers) {
+    if (!(verifier instanceof TextVerifier)) continue;
+
+    test(`${platform.name}: every claim type it accepts is health checked`, () => {
+      assert.ok(
+        verifier.parsedClaimTypes.length > 0,
+        `${platform.name} has no claim field fixtures`,
+      );
+
+      const checked = new Set(verifier.checkedClaimTypes);
+      const missing = [...new Set(verifier.parsedClaimTypes)].filter(
+        (key) => !checked.has(key),
+      );
+      assert.deepEqual(
+        missing,
+        [],
+        `${platform.name} parses claim type(s) ${missing.join(', ')} out of URLs ` +
+          'but never fetches a profile for them. Add a testDataVerification entry.',
+      );
+    });
+  }
+}
+
+// ── Per-platform health checks (live: network; some need Chrome) ───────────
+//
+// One health check per text verifier, derived from `platforms` so the list
+// can't drift. LIVE tests reach third parties; `test:live` runs those.
+
+for (const platform of platforms) {
   describe(platform.name, () => {
     for (const verifier of platform.verifiers) {
       if (!(verifier instanceof TextVerifier)) continue;
-      const tag = LOCAL_ONLY.has(platform.name) ? 'LOCAL' : 'CI';
+      const tag = LOCAL_ONLY.has(platform.name) ? 'LOCAL' : 'LIVE';
       test(`${tag}: ${verifier.verifierType} health check`, async () => {
         await verifier.init();
         try {
@@ -225,7 +253,7 @@ async function publishClaim(
 }
 
 describe('requestVerify flow', () => {
-  test('CI: text success', async () => {
+  test('LIVE: text success', async () => {
     const client = await makeClient();
     // The loop-back token is the claim author's identity key (see claims.ts).
     const token = client.activeIdentityKey ?? '';
@@ -252,7 +280,7 @@ describe('requestVerify flow', () => {
     assert.ok(result.value);
   });
 
-  test('CI: text fail on wrong schema', async () => {
+  test('LIVE: text fail on wrong schema', async () => {
     const client = await makeClient();
     const claimId = await publishClaim(client, 'Freeform', { name: 'test' });
 
@@ -268,7 +296,7 @@ describe('requestVerify flow', () => {
     assert.equal(result.success, false);
   });
 
-  test('CI: text fail on platform mismatch', async () => {
+  test('LIVE: text fail on platform mismatch', async () => {
     const client = await makeClient();
     const token = client.activeIdentityKey ?? '';
     const claimId = await publishClaim(client, SCHEMA_NAME, {

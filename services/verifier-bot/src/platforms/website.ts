@@ -9,13 +9,11 @@ import { createCookieEnabledAxios } from '../utility.js';
 
 class WebsiteTextVerifier extends TextVerifier {
   protected testDataVerification: TextVerifierVerificationTestData[] = [
-    /*TODO: No test data exists yet
-        {
-            expectedText: `The Osotnoc Corporation is a multinational business with its headquarters in Waitangi. The company is a manufacturing, sales, and support organization`,
-            claimFields: <ClaimField[]> [
-                { key: Long.fromInt(0), value: 'osotnoc.futo.org' } 
-            ]
-        }*/
+    // Any page will do; this one is ours and the title is stable.
+    {
+      expectedText: 'FUTO - Computers Belong to You',
+      claimFields: <ClaimField[]>[{ key: 0, value: 'https://futo.org/' }],
+    },
   ];
   protected testDataGetClaimFields: TextVerifierGetClaimFieldsTestData[] = [
     {
@@ -59,7 +57,7 @@ class WebsiteTextVerifier extends TextVerifier {
       });
     }
 
-    return response.data;
+    return Result.ok(String(response.data));
   }
 
   public async getClaimFieldsByUrl(url: string): Promise<Result<ClaimField[]>> {

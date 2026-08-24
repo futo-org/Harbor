@@ -162,6 +162,20 @@ export abstract class TextVerifier extends Verifier {
     super(VerifierType.Text, platform);
   }
 
+  /** Claim types the URL fixtures produce. */
+  public get parsedClaimTypes(): number[] {
+    return this.testDataGetClaimFields.flatMap((data) =>
+      data.expectedClaimFields.map((field) => field.key),
+    );
+  }
+
+  /** Claim types `healthCheck` fetches a profile for. */
+  public get checkedClaimTypes(): number[] {
+    return this.testDataVerification.flatMap((data) =>
+      data.claimFields.map((field) => field.key),
+    );
+  }
+
   /**
    * Check the profile the fields point at contains the loop-back token.
    * Used to verify published claims and as the client pre-check.
