@@ -1,17 +1,17 @@
 //! Common functions for feed rpc requests
 //! Mostly pipeline related
 
-use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, to_target_event_key};
-use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
+use crate::data::{
+    CursorFilter, EventWithContentRow, Marker, PageInfo, PaginationParams,
+    assemble_bundles, assemble_hint, bundle_into_hint, pipeline,
+};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::EventCreatedAt;
-use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, EventBundle, EventHint, PageParams};
-use crate::service::stats::service::assemble_bundles;
 use entity::content_model;
 use prost::Message;
 use serde::Deserialize;
@@ -315,7 +315,7 @@ pub async fn view<SortedBy>(
 
     let mut event_bundles = assemble_bundles(live_rows, &stats);
 
-    let mut label_bundles = rows_to_bundles(label_events);
+    let mut label_bundles = assemble_bundles(label_events, &stats);
 
     tokio::try_join!(
         attach_proofs(ctx, &mut event_bundles),
@@ -325,21 +325,15 @@ pub async fn view<SortedBy>(
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.
-    let hint_rows: Vec<EventWithContentRow> = identity_events
+    let mut event_hints = identity_events
         .into_iter()
         .chain(profile_events)
         .chain(event_hints)
-        .collect();
-
-    let mut event_hints = assemble_bundles(hint_rows, &stats)
-        .into_iter()
-        .map(|bundle| EventHint {
-            event_bundle: Some(bundle),
-        })
+        .map(|row| assemble_hint(row, &stats))
         .collect::<Vec<_>>();
 
-    event_hints.extend(bundles_to_hints(tombstone_bundles));
-    event_hints.extend(bundles_to_hints(label_bundles));
+    event_hints.extend(tombstone_bundles.into_iter().map(bundle_into_hint));
+    event_hints.extend(label_bundles.into_iter().map(bundle_into_hint));
 
     Ok(GetFeedResponseView {
         event_bundles,

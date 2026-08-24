@@ -3,12 +3,13 @@
 use tonic::Status;
 
 use crate::data::hydration::{self, HydrateConfig, HydrationState};
-use crate::data::{Marker, PageInfo, PaginationParams, pipeline};
+use crate::data::{
+    EventRow, Marker, PageInfo, PaginationParams, assemble_bundle, pipeline,
+};
 use crate::service::context::RequestContext;
 use crate::service::graph::repository::{
     FollowSuggestionEvent, FollowSuggestionsSortedBy, Query,
 };
-use crate::service::identity::service::{row_to_bundle, rows_to_hints};
 use crate::service::proto::{
     FollowSuggestion, SuggestFollowRequest, SuggestFollowResponse,
 };
@@ -93,6 +94,7 @@ async fn filter(
         .into_iter()
         .filter(|row| {
             !hydration.blocked_identities.contains(&row.event.identity)
+                && !hydration.deletes_by_target.contains_key(&row.event_key())
         })
         .collect();
 
@@ -112,7 +114,10 @@ async fn view(
         .live_rows
         .into_iter()
         .map(|row| FollowSuggestion {
-            suggestion: Some(row_to_bundle((row.event, Some(row.content)))),
+            suggestion: Some(assemble_bundle(
+                (row.event, Some(row.content)),
+                &hydration.stats,
+            )),
             followers: row.followers,
         })
         .collect();
@@ -120,6 +125,6 @@ async fn view(
     Ok(SuggestFollowResponse {
         suggestions,
         page_info: Some(filtered.page_info.to_proto()?),
-        event_hints: rows_to_hints(hydration.profile_events),
+        event_hints: hydration.into_hints(),
     })
 }

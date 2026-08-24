@@ -1,10 +1,11 @@
 //! `get_profile`: the identity's latest profile events plus its
 //! follow counters.
 
+use crate::data::{rows_into_bundles, rows_into_hints};
 use crate::service::context::ServiceContext;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
-    list_identity_events, list_profile_events, rows_to_bundles, rows_to_hints,
+    list_identity_events, list_profile_events,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{GetProfileRequest, GetProfileResponse};
@@ -25,11 +26,11 @@ pub async fn handle(
         GraphRepository::count_followers(ctx, &req.identity),
     )?;
 
-    let mut event_bundles = rows_to_bundles(profile_rows);
+    let mut event_bundles = rows_into_bundles(profile_rows);
     attach_proofs(ctx, &mut event_bundles).await?;
 
     // The identity's key chain, so clients can validate the bundles.
-    let event_hints = rows_to_hints(identity_rows);
+    let event_hints = rows_into_hints(identity_rows);
 
     Ok(GetProfileResponse {
         event_bundles,

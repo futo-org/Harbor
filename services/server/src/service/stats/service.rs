@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventMetadata, ReactionTally as ProtoReactionTally,
+    EventMetadata, ReactionTally as ProtoReactionTally,
 };
 use sea_orm::{DbConn, DbErr};
 
-use crate::data::EventWithContentRow;
 use crate::service::{
     events::TargetEventKey,
-    identity::service::row_to_bundle,
     stats::repository::{Query, ReactionSummary, ReactionTally},
 };
 
@@ -74,21 +72,4 @@ pub fn include_stats(
             })
             .collect();
     }
-}
-
-/// Create event bundles with metadata.
-pub fn assemble_bundles(
-    rows: Vec<EventWithContentRow>,
-    stats: &EventStats,
-) -> Vec<EventBundle> {
-    rows.into_iter()
-        .map(|row| {
-            let (event, _) = &row;
-            let key = TargetEventKey::of(event);
-
-            let mut bundle = row_to_bundle(row);
-            include_stats(&mut bundle.meta, &key, stats);
-            bundle
-        })
-        .collect::<Vec<_>>()
 }

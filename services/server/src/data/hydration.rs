@@ -1,5 +1,6 @@
-use crate::data::EventRow;
-use crate::data::EventWithContentRow;
+use crate::data::{
+    EventRow, EventWithContentRow, assemble_hint, row_into_hint,
+};
 use crate::service::context::RequestContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
@@ -37,12 +38,28 @@ impl HydrationState {
     /// clients can validate and render the referenced identities without
     /// extra queries.
     pub fn identity_profile_hints(self) -> Vec<EventHint> {
-        crate::service::identity::service::rows_to_hints(
-            self.identity_events
-                .into_iter()
-                .chain(self.profile_events)
-                .collect(),
-        )
+        self.identity_events
+            .into_iter()
+            .chain(self.profile_events)
+            .map(row_into_hint)
+            .collect()
+    }
+
+    /// # Notes
+    ///
+    /// Before calling this `deletes_by_target` and `blocked_identities` should
+    /// be used to filter any rows that should be removed.
+    ///
+    /// Furthermore `stats` should be used when creating the bundles.
+    pub fn into_hints(self) -> Vec<EventHint> {
+        self.identity_events
+            .into_iter()
+            .chain(self.profile_events)
+            .chain(self.quote_post_events)
+            .chain(self.repost_events)
+            .chain(self.label_events)
+            .map(|row| assemble_hint(row, &self.stats))
+            .collect()
     }
 }
 

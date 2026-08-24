@@ -1,18 +1,18 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
-use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, collect_identities};
-use crate::data::{CursorFilter, PaginationParams, pipeline};
+use crate::data::{
+    CursorFilter, EventWithContentRow, PaginationParams, assemble_bundles,
+    pipeline,
+};
 use crate::service::context::ServiceContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
-use crate::service::identity::service::{
-    list_identity_and_profile_events, rows_to_bundles,
-};
+use crate::service::identity::service::list_identity_and_profile_events;
 use crate::service::proto::{ListFollowsResponse, PageParams};
 use sea_orm::DbConn;
 use tonic::Status;
@@ -163,7 +163,7 @@ async fn view(
     hydration: HydrationState,
 ) -> Result<ListFollowsResponse, Status> {
     Ok(ListFollowsResponse {
-        event_bundles: rows_to_bundles(filtered.live_rows),
+        event_bundles: assemble_bundles(filtered.live_rows, &hydration.stats),
         page_info: Some(filtered.page_info.page_info.to_proto()?),
         event_hints: hydration.identity_profile_hints(),
     })
