@@ -24,13 +24,17 @@ export async function migrate(db: SqliteDb): Promise<void> {
     await db.run(sql`BEGIN`);
     try {
       await m.up(db);
+      // Statements are idempotent; an already recorded name is not a conflict.
       await db.run(
-        sql`INSERT INTO __migrations (name, applied_at) VALUES (${m.name}, ${Date.now()})`,
+        sql`INSERT OR IGNORE INTO __migrations (name, applied_at) VALUES (${m.name}, ${Date.now()})`,
       );
       await db.run(sql`COMMIT`);
     } catch (err) {
-      await db.run(sql`ROLLBACK`);
-      throw err;
+      try {
+        await db.run(sql`ROLLBACK`);
+      } catch {}
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(`migration ${m.name} failed: ${reason}`, { cause: err });
     }
   }
 }
