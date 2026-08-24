@@ -1,5 +1,6 @@
 use crate::data::hydration::event_identities;
 use crate::service::events::TargetEventKey;
+use crate::service::stats::service::{EventStats, include_stats};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use entity::{content_model, event_model};
@@ -97,6 +98,39 @@ where
     fn collect_identities(&self, identities: &mut HashSet<String>) {
         T::collect_identities(self, identities)
     }
+}
+
+pub fn row_to_bundle(
+    (event, content): EventWithContentRow,
+    stats: &EventStats,
+) -> proto::EventBundle {
+    let mut meta = None;
+    let key = TargetEventKey::of(&event);
+    include_stats(&mut meta, &key, stats);
+    proto::EventBundle {
+        signed_event: Some(proto::SignedEvent {
+            event_bytes: event.event_bytes,
+            signature: event.signature,
+        }),
+        serialized_content: content.map(|c| proto::SerializedContent {
+            content_bytes: c.serialized_bytes,
+        }),
+        event_proofs: Vec::new(),
+        meta,
+    }
+}
+
+pub fn bundle_to_hint(bundle: proto::EventBundle) -> proto::EventHint {
+    proto::EventHint {
+        event_bundle: Some(bundle),
+    }
+}
+
+pub fn row_to_hint(
+    row: EventWithContentRow,
+    stats: &EventStats,
+) -> proto::EventHint {
+    bundle_to_hint(row_to_bundle(row, stats))
 }
 
 const DEFAULT_LIMIT: u32 = 50;

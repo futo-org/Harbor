@@ -1,5 +1,4 @@
-use crate::data::EventRow;
-use crate::data::EventWithContentRow;
+use crate::data::{EventRow, EventWithContentRow, row_to_hint};
 use crate::service::context::RequestContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
@@ -43,6 +42,23 @@ impl HydrationState {
                 .chain(self.profile_events)
                 .collect(),
         )
+    }
+
+    /// # Notes
+    ///
+    /// Before calling this `deletes_by_target` and `blocked_identities` should
+    /// be used to filter any rows that should be removed.
+    ///
+    /// Furthermore `stats` should be used when creating the bundles.
+    pub fn into_hints(self) -> Vec<EventHint> {
+        self.identity_events
+            .into_iter()
+            .chain(self.profile_events.into_iter())
+            .chain(self.quote_post_events.into_iter())
+            .chain(self.repost_events.into_iter())
+            .chain(self.label_events.into_iter())
+            .map(|row| row_to_hint(row, &self.stats))
+            .collect()
     }
 }
 
