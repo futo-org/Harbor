@@ -28,6 +28,7 @@ pub struct HydrationState {
     pub repost_events: Vec<EventWithContentRow>,
     pub stats: EventStats,
     pub label_events: Vec<EventWithContentRow>,
+    pub follow_events: Vec<EventWithContentRow>,
     /// Blocked identities for the authenticated caller. Empty for anonymous
     /// requests or pipelines where blocking is not applicable.
     pub blocked_identities: Arc<HashSet<String>>,
@@ -58,6 +59,7 @@ impl HydrationState {
             .chain(self.quote_post_events)
             .chain(self.repost_events)
             .chain(self.label_events)
+            .chain(self.follow_events)
             .map(|row| assemble_hint(row, &self.stats))
             .collect()
     }
@@ -177,6 +179,7 @@ where
         quote_post_events,
         repost_events,
         label_events,
+        follow_events: Vec::new(),
         stats,
         blocked_identities,
     })
