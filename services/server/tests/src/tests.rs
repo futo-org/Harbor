@@ -14,7 +14,8 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::mem::take;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
+use tokio::sync::OnceCell;
 use std::time::SystemTime;
 
 mod event_sync;
@@ -175,6 +176,7 @@ impl TestClient {
 
     /// Create a client for the trusted moderator.
     pub async fn trusted_moderator() -> TestClient {
+        ensure_moderator_setup().await;
         let key = test_moderator_key();
         TestClient::new_with_identity(key).await
     }
@@ -812,16 +814,10 @@ pub fn make_labels_bundle(
 /// Ensures the moderator's genesis identity event is published exactly once
 /// across all tests (the moderator identity is deterministic, so sequence
 /// collisions would silently fail on the second insert).
-static MODERATOR_READY: AtomicBool = AtomicBool::new(false);
+static MODERATOR_READY: OnceCell<()> = OnceCell::const_new();
 
 async fn ensure_moderator_setup() {
-    if MODERATOR_READY.load(Ordering::Acquire) {
-        return;
-    }
-    if MODERATOR_READY
-        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-        .is_ok()
-    {
+    MODERATOR_READY.get_or_init(|| async {
         let mut event = connect_event_sync().await;
         let mod_key = test_moderator_key();
         let mod_identity = test_moderator_identity();
@@ -832,7 +828,7 @@ async fn ensure_moderator_setup() {
             DEFAULT_CREATED_AT,
         )
         .await;
-    }
+    }).await;
 }
 
 /// Monotonic sequence number for the moderator's Labels events — each test
