@@ -1,11 +1,11 @@
 //! `get_post_thread`: ancestors (root → direct parent), the subject
 //! itself, then descendants (one branch deep for now).
 
+use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
 use crate::service::context::RequestContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,

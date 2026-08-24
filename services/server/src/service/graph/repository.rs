@@ -13,11 +13,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
 
+use crate::data::EventWithContentRow;
 use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
 use crate::service::context::{RequestContext, ServiceContext};
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;

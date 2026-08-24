@@ -1,7 +1,7 @@
 use crate::data::EventRow;
+use crate::data::EventWithContentRow;
 use crate::service::context::RequestContext;
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{

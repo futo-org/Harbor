@@ -1,8 +1,9 @@
+use crate::data::EventWithContentRow;
 use crate::{
     data::pipeline,
     service::{
         context::RequestContext,
-        events::{TargetEventKey, tombstone::EventWithContentRow},
+        events::TargetEventKey,
         feeds::{
             repository::Query as FeedsRepository,
             rpc::common::has_matching_label, util::map_db_err,

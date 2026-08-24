@@ -1,11 +1,11 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
+use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::{CursorFilter, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;

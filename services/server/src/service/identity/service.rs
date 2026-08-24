@@ -2,10 +2,9 @@
 //! feed/list/thread responses. Split into per-data-source functions
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
+use crate::data::EventWithContentRow;
 use crate::service::context::ServiceContext;
-use crate::service::feeds::repository::{
-    self as FeedsRepository, EventWithContentRow,
-};
+use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::Query as IdentityRepo;
 use crate::service::proofs::cache::ProofCache;

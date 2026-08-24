@@ -1,3 +1,4 @@
+use crate::data::EventWithContentRow;
 use crate::service::context::ServiceContext;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::{
@@ -14,8 +15,6 @@ use sea_orm::{
 };
 use std::collections::{HashMap, HashSet};
 use tonic::{Code, Status};
-
-pub use crate::data::EventWithContentRow;
 
 use super::TargetEventKey;
 

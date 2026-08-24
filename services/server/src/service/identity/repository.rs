@@ -1,4 +1,5 @@
-use crate::service::feeds::repository::{EventWithContentRow, content_join};
+use crate::data::EventWithContentRow;
+use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
 use crate::service::proto::{Identity, PublicKey};
 use ::entity::{

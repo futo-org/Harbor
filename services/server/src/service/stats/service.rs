@@ -5,8 +5,9 @@ use polycentric_common::models::protos_v2::{
 };
 use sea_orm::{DbConn, DbErr};
 
+use crate::data::EventWithContentRow;
 use crate::service::{
-    events::{TargetEventKey, tombstone::EventWithContentRow},
+    events::TargetEventKey,
     identity::service::row_to_bundle,
     stats::repository::{Query, ReactionSummary, ReactionTally},
 };

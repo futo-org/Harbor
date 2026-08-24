@@ -13,12 +13,11 @@ pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
 /// Stages producing `VerificationClaimBundle`s: each claim wrapped with the
 /// targets and verifies referencing it.
 pub(crate) mod claim_bundles {
+    use crate::data::EventWithContentRow;
     use crate::data::hydration::{HydrationState, collect_identities};
     use crate::service::context::ServiceContext;
     use crate::service::events::TargetEventKey;
-    use crate::service::events::tombstone::{
-        self, EventWithContentRow, HasEventKey,
-    };
+    use crate::service::events::tombstone::{self, HasEventKey};
     use crate::service::identity::service::{
         list_identity_and_profile_events, rows_to_bundles,
     };
@@ -203,12 +202,11 @@ pub(crate) mod claim_bundles {
 
 /// Stages producing a flat `EventBundle` list.
 pub(crate) mod event_list {
+    use crate::data::EventWithContentRow;
     use crate::data::hydration::{HydrationState, collect_identities};
     use crate::service::context::ServiceContext;
     use crate::service::events::TargetEventKey;
-    use crate::service::events::tombstone::{
-        self, EventWithContentRow, HasEventKey,
-    };
+    use crate::service::events::tombstone::{self, HasEventKey};
     use crate::service::identity::service::{
         list_identity_and_profile_events, rows_to_bundles,
     };

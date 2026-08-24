@@ -1,10 +1,10 @@
+use crate::data::EventWithContentRow;
 use crate::data::PaginationParams;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::Fetched;
 use crate::data::{CursorFilter, EventRow, PageInfo};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::feeds::repository::EventWithContentRow;
 use crate::service::feeds::rpc::common::{
     Referenced, has_matching_label, referenced_target2,
 };
