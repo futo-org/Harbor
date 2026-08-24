@@ -159,12 +159,11 @@ export function ComposerFields({
               fieldTextRef.current = next;
               setText(next);
             }}
-            // disabled={submitting}
+            disabled={submitting}
             maxLength={MAX_POST_LENGTH}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
             style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
-            disabled={submitting}
           />
           {attachments.length > 0 && (
             <AttachmentGrid
