@@ -13,10 +13,6 @@ import {
 // Rumble answers plain HTTP requests from our hosts with 403.
 puppeteer.use(StealthPlugin());
 
-// Only channel pages have a description, so only they can be verified.
-const USE_A_CHANNEL_URL =
-  'Rumble user pages no longer show a description. Put the token in your channel description and claim your channel URL (rumble.com/c/...).';
-
 class RumbleTextVerifier extends TextVerifier {
   private puppeteerBrowser?: Browser;
 
@@ -25,8 +21,18 @@ class RumbleTextVerifier extends TextVerifier {
       expectedText: '8YTgkgK6jTImETJdUa+kd7HURgZrhKjLVDL6yp5ETik=',
       claimFields: <ClaimField[]>[{ key: 1, value: 'c-3366838' }],
     },
+    // User pages carry a description too, so the other claim type needs an
+    // account that has one set.
+    {
+      expectedText: 'harbor.social/5640b24e53a3b1edb65360840aaf085373b23d4ff',
+      claimFields: <ClaimField[]>[{ key: 0, value: 'mark_futo' }],
+    },
   ];
   protected testDataGetClaimFields: TextVerifierGetClaimFieldsTestData[] = [
+    {
+      url: 'https://rumble.com/user/futo',
+      expectedClaimFields: [{ key: 0, value: 'futo' }],
+    },
     {
       url: 'https://rumble.com/c/c-213123',
       expectedClaimFields: [{ key: 1, value: 'c-213123' }],
@@ -57,13 +63,10 @@ class RumbleTextVerifier extends TextVerifier {
 
   protected async getText(claimField: ClaimField): Promise<Result<string>> {
     switch (claimField.key) {
-      // Claimed before user pages dropped their description. Kept so the
-      // failure explains itself rather than reading as a broken verifier.
       case 0:
-        return Result.err({
-          message: USE_A_CHANNEL_URL,
-          extendedMessage: `Rumble user pages carry no description (user '${claimField.value}').`,
-        });
+        return this.getDescription(
+          `https://rumble.com/user/${claimField.value}/about`,
+        );
       case 1:
         return this.getDescription(
           `https://rumble.com/c/${claimField.value}/about`,
@@ -100,7 +103,7 @@ class RumbleTextVerifier extends TextVerifier {
     const node = parse(html).querySelector('.channel-about--description');
     if (!node) {
       return Result.err({
-        message: 'No description found on your channel page.',
+        message: 'No description found on your About page.',
         extendedMessage: `Failed to find node '.channel-about--description' on ${url}`,
       });
     }
@@ -109,6 +112,18 @@ class RumbleTextVerifier extends TextVerifier {
   }
 
   public async getClaimFieldsByUrl(url: string): Promise<Result<ClaimField[]>> {
+    const userMatch = /https:\/\/(?:www\.)?rumble\.com\/user\/([^/]+)\/?/.exec(
+      url,
+    );
+    if (userMatch) {
+      return Result.ok([
+        {
+          key: 0,
+          value: userMatch[1],
+        },
+      ]);
+    }
+
     const channelMatch = /https:\/\/(?:www\.)?rumble\.com\/c\/([^/]+)\/?/.exec(
       url,
     );
@@ -121,11 +136,7 @@ class RumbleTextVerifier extends TextVerifier {
       ]);
     }
 
-    if (/https:\/\/(?:www\.)?rumble\.com\/user\//.test(url)) {
-      return Result.err({ message: USE_A_CHANNEL_URL });
-    }
-
-    return Result.err({ message: 'Failed to match a channel.' });
+    return Result.err({ message: 'Failed to match either channel or user.' });
   }
 }
 
