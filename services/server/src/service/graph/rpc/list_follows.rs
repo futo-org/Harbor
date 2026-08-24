@@ -1,17 +1,17 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
-use crate::data::hydration::HydrationState;
+use crate::data::EventWithContentRow;
+use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::{CursorFilter, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
 use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
-    collect_identities, list_identity_and_profile_events, rows_to_bundles,
+    list_identity_and_profile_events, rows_to_bundles,
 };
 use crate::service::proto::{ListFollowsResponse, PageParams};
 use sea_orm::DbConn;
@@ -120,10 +120,8 @@ async fn hydrate(
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
 
     let identities = collect_identities(
-        fetched
-            .rows
-            .iter()
-            .map(|(event, content)| (event, content.as_ref())),
+        ctx.trusted_moderator.as_deref(),
+        fetched.rows.iter(),
     );
     let (identity_events, profile_events) =
         list_identity_and_profile_events(ctx, identities).await?;

@@ -1,11 +1,11 @@
 //! Common functions for feed rpc requests
 //! Mostly pipeline related
 
+use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, to_target_event_key};
 use crate::data::{CursorFilter, Marker, PageInfo, PaginationParams, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::proofs::service::attach_proofs;

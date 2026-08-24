@@ -1,10 +1,9 @@
+use crate::data::EventWithContentRow;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{
-    self, EventWithContentRow, HasEventKey,
-};
+use crate::service::events::tombstone::{self, HasEventKey};
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::util::{map_db_err, page_limit};
 use crate::service::identity::service::{

@@ -9,8 +9,9 @@ use sea_orm::sea_query::{Alias, Expr, Query as SeaQuery};
 use sea_orm::*;
 use std::collections::HashSet;
 
+use crate::data::EventWithContentRow;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{EventWithContentRow, HasEventKey};
+use crate::service::events::tombstone::HasEventKey;
 use crate::service::feeds::repository::content_join;
 
 const VERIFICATIONS_COLLECTION: i16 = collections::VERIFICATIONS as i16;

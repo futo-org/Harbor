@@ -1,9 +1,9 @@
 //! VerificationVerify events for a claim: who has verified it.
 
+use crate::data::EventWithContentRow;
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::proto::{
     ListVerificationVerifiesRequest, ListVerificationVerifiesResponse,
 };

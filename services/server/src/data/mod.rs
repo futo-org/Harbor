@@ -1,8 +1,10 @@
+use crate::data::hydration::event_identities;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2 as proto;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tonic::Status;
 
 pub mod hydration;
@@ -23,6 +25,72 @@ pub trait EventRow {
     /// Returns the content of the event, if any.
     fn as_content(&self) -> Option<&content_model::Model> {
         self.as_event_with_content().1
+    }
+
+    /// Collects all identities in the event and adds them to `identities`.
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        let (event, content) = self.as_event_with_content();
+        event_identities(event, content, identities);
+    }
+}
+
+/// `(event_model::Model, Option<content_model::Model>)` — the shape every
+/// event-returning query already produces.
+pub type EventWithContentRow =
+    (event_model::Model, Option<content_model::Model>);
+
+impl EventRow for EventWithContentRow {
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        (&self.0, self.1.as_ref())
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        &self.0
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.1.as_ref()
+    }
+}
+
+impl EventRow for (&event_model::Model, Option<&content_model::Model>) {
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        *self
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        self.0
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        self.1
+    }
+}
+
+impl<T> EventRow for &T
+where
+    T: EventRow,
+{
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        T::as_event_with_content(self)
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        T::as_event(self)
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        T::as_content(self)
+    }
+
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        T::collect_identities(self, identities)
     }
 }
 

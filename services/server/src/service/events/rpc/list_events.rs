@@ -2,17 +2,14 @@
 //! the query produced, **including tombstoned ones** — callers
 //! (sync clients, debug tools) need the unfiltered stream.
 
-use crate::data::hydration::HydrationState;
+use crate::data::EventWithContentRow;
+use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
-use crate::service::events::TargetEventKey;
 use crate::service::events::repository::Query as EventsRepository;
-use crate::service::events::tombstone::{
-    self as tombstone, EventWithContentRow,
-};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::identity::service::{
-    bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, rows_to_hints,
+    bundles_to_hints, list_identity_events, list_profile_events, rows_to_hints,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
@@ -94,10 +91,8 @@ async fn hydrate(
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
-    let identities = collect_identities(
-        rows.iter()
-            .map(|(event, content)| (event, content.as_ref())),
-    );
+    let identities =
+        collect_identities(ctx.trusted_moderator.as_deref(), rows.iter());
 
     let keys = rows
         .iter()

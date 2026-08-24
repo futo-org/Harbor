@@ -14,9 +14,9 @@ use polycentric_common::models::protos_v2::{
 use prost::Message as _;
 use sea_orm::DbConn;
 
+use crate::data::EventWithContentRow;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::EventWithContentRow;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::stats::repository::Mutation;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};

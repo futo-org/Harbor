@@ -2,85 +2,18 @@
 //! feed/list/thread responses. Split into per-data-source functions
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
+use crate::data::EventWithContentRow;
 use crate::service::context::ServiceContext;
-use crate::service::feeds::repository::{
-    self as FeedsRepository, EventWithContentRow,
-};
+use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::Query as IdentityRepo;
 use crate::service::proofs::cache::ProofCache;
-use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Content, EventBundle, EventHint, PublicKey, SerializedContent, SignedEvent,
+    EventBundle, EventHint, PublicKey, SerializedContent, SignedEvent,
 };
-use prost::Message;
 use sea_orm::ConnectionTrait;
 use std::collections::HashMap;
 use tonic::Status;
-
-/// Collect every identity referenced by the rows: each event's author
-/// plus any identities its content names (a Post's reply parent, a
-/// Follow's target, a VerificationTarget's requested verifiers).
-pub fn collect_identities<'a>(
-    rows: impl IntoIterator<
-        Item = (
-            &'a ::entity::event_model::Model,
-            Option<&'a ::entity::content_model::Model>,
-        ),
-    >,
-) -> Vec<String> {
-    let mut set: std::collections::HashSet<String> =
-        std::collections::HashSet::new();
-    for (event, content) in rows {
-        set.insert(event.identity.clone());
-        if let Some(content) = content {
-            content_identities(content, &mut set);
-        }
-    }
-    set.into_iter().collect()
-}
-
-/// Identities named inside a content body, added to `out`.
-fn content_identities(
-    content: &::entity::content_model::Model,
-    out: &mut std::collections::HashSet<String>,
-) {
-    let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
-    else {
-        return;
-    };
-    match decoded.content_body {
-        Some(ContentBody::Post(post)) => {
-            if let Some(identity) =
-                post.reply.and_then(|r| r.parent).map(|p| p.identity)
-                && !identity.is_empty()
-            {
-                out.insert(identity);
-            }
-        }
-        Some(ContentBody::Follow(follow)) => {
-            if !follow.identity.is_empty() {
-                out.insert(follow.identity);
-            }
-        }
-        Some(ContentBody::Repost(repost)) => {
-            if let Some(post) = repost.post
-                && !post.identity.is_empty()
-            {
-                out.insert(post.identity);
-            }
-        }
-        Some(ContentBody::VerificationTarget(target)) => {
-            out.extend(
-                target
-                    .target_identities
-                    .into_iter()
-                    .filter(|identity| !identity.is_empty()),
-            );
-        }
-        _ => {}
-    }
-}
 
 /// The identity-chain and profile events for `identities`. Fetched
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the

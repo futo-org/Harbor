@@ -13,10 +13,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
 
-use crate::data::{Cursor, CursorFilter};
+use crate::data::EventWithContentRow;
+use crate::data::hydration::event_identities;
+use crate::data::{Cursor, CursorFilter, EventRow};
 use crate::service::context::{RequestContext, ServiceContext};
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
@@ -46,6 +47,29 @@ impl TryGetableMany for FollowSuggestionEvent {
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             followers: TryGetable::try_get_by(res, FOLLOWERS_COLUMN)?,
         })
+    }
+}
+
+impl EventRow for FollowSuggestionEvent {
+    fn as_event_with_content(
+        &self,
+    ) -> (&EventModel::Model, Option<&ContentModel::Model>) {
+        (&self.event, Some(&self.content))
+    }
+
+    fn as_event(&self) -> &EventModel::Model {
+        &self.event
+    }
+
+    fn as_content(&self) -> Option<&ContentModel::Model> {
+        Some(&self.content)
+    }
+
+    /// Collects all identities in the event and adds them to `identities`.
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        let (event, content) = self.as_event_with_content();
+        event_identities(event, content, identities);
+        identities.extend(self.followers.iter().cloned());
     }
 }
 
@@ -255,7 +279,7 @@ impl Query {
             .from(FollowModel::Entity)
             .and_where(FollowModel::Column::Follower.eq(identity));
         // List of identities that are followed by identities that `identity`
-        // follows. Are you following this? In other words in you follow Alice,
+        // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
         const SUGGESTIONS_TABLE: &str = "suggestions";
         let mut suggestions = SelectStatement::new();
