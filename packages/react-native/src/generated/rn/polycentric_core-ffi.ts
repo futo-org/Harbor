@@ -88,6 +88,8 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_init_callback_vtable_observer(vtable: UniffiVTableCallbackInterfacePolycentricCoreObserver): void;
     ubrn_uniffi_polycentric_core_fn_init_callback_vtable_queryobserver(vtable: UniffiVTableCallbackInterfacePolycentricCoreQueryObserver): void;
     ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(vtable: UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback): void;
+    ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(value: Uint8Array, uniffi_out_err: UniffiRustCallStatus): number;
+    ubrn_uniffi_polycentric_core_fn_func_moderation_labels(uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_set_log_level(level: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_func_set_logger(logger: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_authtokenprovider_auth_token(uniffiSelf: bigint, serverUrl: Uint8Array): bigint;
@@ -140,6 +142,8 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_subscription_is_closed(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): number;
     ubrn_uniffi_polycentric_core_fn_method_subscription_unsubscribe(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_ffi_polycentric_core_uniffi_contract_version(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_moderation_labels(): number;
     ubrn_uniffi_polycentric_core_checksum_func_set_log_level(): number;
     ubrn_uniffi_polycentric_core_checksum_func_set_logger(): number;
     ubrn_uniffi_polycentric_core_checksum_method_authtokenprovider_auth_token(): number;

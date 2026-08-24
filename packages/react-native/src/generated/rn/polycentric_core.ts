@@ -20,6 +20,38 @@ const uniffiIsDebug =
 // Public interface members begin here.
 
 /**
+ * Whether `value` is one of the defined moderation labels.
+ */
+export function isModerationLabel(value: string): boolean {
+    return FfiConverterBool.lift(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(
+        FfiConverterString.lower(value, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+/**
+ * Every moderation label value in canonical order.
+ */
+export function moderationLabels(): Array<string> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceString.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_labels(
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Set the minimum level forwarded to the host. Messages below this are
  * dropped in Rust without crossing the FFI boundary.
  */
@@ -1235,7 +1267,6 @@ const FfiConverterTypeListVerificationVerifiesArgs = (() => {
     };
     return new FFIConverter();
 })();
-
 /**
  * JPEG bytes plus the exact output dimensions of the resized image.
  */
@@ -5741,7 +5772,6 @@ const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterT
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
 
-
 /**
  * This should be called before anything else.
  *
@@ -5759,6 +5789,12 @@ function uniffiEnsureInitialized() {
     const scaffoldingContractVersion = nativeModule().ubrn_ffi_polycentric_core_uniffi_contract_version();
     if (bindingsContractVersion !== scaffoldingContractVersion) {
         throw new UniffiInternalError.ContractVersionMismatch(scaffoldingContractVersion, bindingsContractVersion);
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label() !== 26201) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_is_moderation_label");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_labels() !== 13965) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_labels");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !== 1521) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_log_level");

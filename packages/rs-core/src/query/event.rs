@@ -1,4 +1,5 @@
 pub mod key;
+pub mod labels;
 pub mod merge;
 
 use std::sync::{Arc, Mutex};

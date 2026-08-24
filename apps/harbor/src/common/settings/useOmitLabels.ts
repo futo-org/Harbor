@@ -1,4 +1,5 @@
-import { MODERATION_LABELS, useSettings } from './index';
+import { useSettings } from './index';
+import { getModerationLabels } from './moderationLabels';
 
 /**
  * Returns the list of label values the user has chosen to hide in their
@@ -6,5 +7,5 @@ import { MODERATION_LABELS, useSettings } from './index';
  */
 export function useOmitLabels(): string[] {
   const moderation = useSettings((s) => s.moderation);
-  return MODERATION_LABELS.filter((label) => moderation[label] === 'hide');
+  return getModerationLabels().filter((label) => moderation[label] === 'hide');
 }

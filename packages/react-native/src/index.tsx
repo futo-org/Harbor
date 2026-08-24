@@ -10,6 +10,7 @@ export {
   EmitMode,
   FeedSort,
   FetchMode,
+  isModerationLabel,
   PolycentricCore,
   Query,
   QueryStatus,
@@ -17,6 +18,7 @@ export {
   SearchUsersSort,
   UpdateMode,
   setLogger,
+  moderationLabels,
 } from './generated/rn/polycentric_core';
 export type {
   EventKey,
