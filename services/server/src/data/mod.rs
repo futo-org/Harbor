@@ -1,4 +1,4 @@
-use crate::service::identity::service::content_identities;
+use crate::data::hydration::event_identities;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use entity::{content_model, event_model};
@@ -29,9 +29,8 @@ pub trait EventRow {
 
     /// Collects all identities in the event and adds them to `identities`.
     fn collect_identities(&self, identities: &mut HashSet<String>) {
-        if let Some(content) = self.as_content() {
-            content_identities(content, identities)
-        }
+        let (event, content) = self.as_event_with_content();
+        event_identities(event, content, identities);
     }
 }
 

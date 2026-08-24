@@ -8,6 +8,7 @@ use crate::service::identity::service::{
     list_identity_events, list_profile_events,
 };
 use crate::service::stats::service::{EventStats, gather_stats_for};
+use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
     Content, EventBundle, EventHint, EventKey,
@@ -77,19 +78,10 @@ where
         collect_referenced_keys(rows, config);
     let mut target_event_keys = to_target_event_keys(&ref_keys);
 
-    let mut identities = HashSet::new();
-    rows.iter()
-        .for_each(|row| row.collect_identities(&mut identities));
-    // Add moderation service identity to every request, such that clients can
-    // verify label events. This ships the identity events more times than the
-    // client needs, and even when labels aren't present in the feed page -- can
-    // be optimized later.
-    if let Some(moderator) = &ctx.service.trusted_moderator
-        && !identities.is_empty()
-    {
-        identities.insert(moderator.clone());
-    }
-    let identities: Vec<String> = identities.into_iter().collect();
+    let identities = collect_identities(
+        ctx.service.trusted_moderator.as_deref(),
+        rows.iter(),
+    );
 
     // Event keys for all referenced post events that may be displayed by the client.
     // Fetch labels and additional metadata for these.
@@ -328,4 +320,77 @@ pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
         public_key: signed_by.key.clone(),
         sequence: key.sequence as i64,
     })
+}
+
+pub fn collect_identities<Row>(
+    trusted_moderator: Option<&str>,
+    rows: impl Iterator<Item = Row>,
+) -> Vec<String>
+where
+    Row: EventRow,
+{
+    let mut identities = HashSet::new();
+    for row in rows {
+        row.collect_identities(&mut identities);
+    }
+
+    // Add moderation service identity to every request, such that clients can
+    // verify label events. This ships the identity events more times than the
+    // client needs, and even when labels aren't present in the feed page -- can
+    // be optimized later.
+    if let Some(moderator) = trusted_moderator
+        && !identities.is_empty()
+    {
+        identities.insert(moderator.to_owned());
+    }
+
+    identities.into_iter().collect()
+}
+
+pub fn event_identities(
+    event: &event_model::Model,
+    content: Option<&content_model::Model>,
+    identities: &mut HashSet<String>,
+) {
+    identities.insert(event.identity.clone());
+    if let Some(content) = content {
+        let Ok(decoded) = Content::decode(content.serialized_bytes.as_slice())
+        else {
+            return;
+        };
+        match decoded.content_body {
+            Some(ContentBody::Post(post)) => {
+                if let Some(identity) =
+                    post.reply.and_then(|r| r.parent).map(|p| p.identity)
+                    && !identity.is_empty()
+                {
+                    identities.insert(identity);
+                }
+            }
+            Some(ContentBody::Follow(follow)) => {
+                if !follow.identity.is_empty() {
+                    identities.insert(follow.identity);
+                }
+            }
+            Some(ContentBody::Identity(identity)) => {
+                identities.insert(identity.derive_hex_key());
+            }
+            Some(ContentBody::Repost(repost)) => {
+                if let Some(post) = repost.post
+                    && !post.identity.is_empty()
+                {
+                    identities.insert(post.identity);
+                }
+            }
+            Some(ContentBody::VerificationTarget(target)) => {
+                identities.extend(
+                    target
+                        .target_identities
+                        .into_iter()
+                        .filter(|identity| !identity.is_empty()),
+                );
+            }
+            _ => {}
+        }
+    }
 }
